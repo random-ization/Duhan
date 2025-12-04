@@ -61,6 +61,12 @@ interface AppContextType {
   saveAnnotation: (annotation: Annotation) => Promise<void>;
   saveExamAttempt: (attempt: ExamAttempt) => Promise<void>;
   logActivity: (activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM', duration?: number, itemsStudied?: number, metadata?: any) => Promise<void>;
+  updateLearningProgress: (institute: string, level: number, unit?: number, module?: string) => Promise<void>;
+  
+  // Permission Checking
+  canAccessContent: (content: TextbookContent | TopikExam) => boolean;
+  showUpgradePrompt: boolean;
+  setShowUpgradePrompt: (show: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -99,6 +105,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [textbookContexts, setTextbookContexts] = useState<TextbookContextMap>({});
   const [topikExams, setTopikExams] = useState<TopikExam[]>([]);
+  
+  // Permission/Upgrade UI
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Initial Session Check
   useEffect(() => {
@@ -110,6 +119,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           setUser(data.user);
           setPage('home');
           await fetchInitialData();
+          
+          // Resume learning from last position
+          if (data.user.lastInstitute && data.user.lastLevel) {
+            setSelectedInstitute(data.user.lastInstitute);
+            setSelectedLevel(data.user.lastLevel);
+          }
         } catch (e) {
           console.error('Session expired or invalid');
           localStorage.removeItem('token');
@@ -269,6 +284,38 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     [user]
   );
 
+  const updateLearningProgress = useCallback(
+    async (institute: string, level: number, unit?: number, module?: string) => {
+      if (!user) return;
+      try {
+        await api.updateLearningProgress({
+          lastInstitute: institute,
+          lastLevel: level,
+          lastUnit: unit,
+          lastModule: module
+        });
+        // Update local user state
+        setUser({
+          ...user,
+          lastInstitute: institute,
+          lastLevel: level,
+          lastUnit: unit,
+          lastModule: module
+        });
+      } catch (e) {
+        console.error('Failed to update learning progress', e);
+      }
+    },
+    [user]
+  );
+
+  const canAccessContent = useCallback((content: TextbookContent | TopikExam): boolean => {
+    if (!user) return false;
+    if (user.tier === 'PAID') return true;
+    // Free users can only access free content
+    return !content.isPaid;
+  }, [user]);
+
   // Admin/Data Actions
   const addInstitute = useCallback(
     async (name: string) => {
@@ -366,6 +413,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     saveAnnotation,
     saveExamAttempt,
     logActivity,
+    updateLearningProgress,
+    canAccessContent,
+    showUpgradePrompt,
+    setShowUpgradePrompt,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

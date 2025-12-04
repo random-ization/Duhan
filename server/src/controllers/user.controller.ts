@@ -160,3 +160,26 @@ export const logActivity = async (req: any, res: any) => {
         res.status(500).json({ error: "Failed to log activity" });
     }
 };
+
+// Update Learning Progress
+export const updateLearningProgress = async (req: any, res: any) => {
+    try {
+        const userId = req.user!.userId;
+        const { lastInstitute, lastLevel, lastUnit, lastModule } = req.body;
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                lastInstitute,
+                lastLevel,
+                lastUnit,
+                lastModule
+            }
+        });
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Update Learning Progress Error:", e);
+        res.status(500).json({ error: "Failed to update learning progress" });
+    }
+};

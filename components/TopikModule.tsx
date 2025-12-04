@@ -11,9 +11,11 @@ interface TopikModuleProps {
     onSaveHistory: (attempt: ExamAttempt) => void;
     annotations: Annotation[];
     onSaveAnnotation: (annotation: Annotation) => void;
+    canAccessContent?: (content: any) => boolean;
+    onShowUpgradePrompt?: () => void;
 }
 
-const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onSaveHistory, annotations, onSaveAnnotation }) => {
+const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onSaveHistory, annotations, onSaveAnnotation, canAccessContent, onShowUpgradePrompt }) => {
     const [view, setView] = useState<'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'>('LIST');
     const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
@@ -72,6 +74,12 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     }, [showAnnotationMenu]);
 
     const selectExam = (exam: TopikExam) => {
+        // Check if user can access this exam
+        if (canAccessContent && !canAccessContent(exam)) {
+            onShowUpgradePrompt?.();
+            return;
+        }
+        
         setCurrentExam(exam);
         setUserAnswers({});
         setTimeLeft(exam.timeLimit * 60);

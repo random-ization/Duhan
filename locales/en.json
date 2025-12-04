@@ -255,5 +255,20 @@
   "monthlyProgress": "Monthly Progress",
   "totalScore": "Total Score",
   "averageScore": "Average Score",
-  "examsTaken": "Exams Taken"
+  "examsTaken": "Exams Taken",
+  "upgradeToPremium": "Upgrade to Premium",
+  "premiumTextbookAccess": "This textbook unit requires a premium subscription",
+  "premiumExamAccess": "This TOPIK exam requires a premium subscription",
+  "premiumFeatures": "Premium Features",
+  "unlimitedAccess": "Unlimited Access to All Content",
+  "allTextbooks": "Access All Textbook Units",
+  "allExams": "Access All TOPIK Exams",
+  "prioritySupport": "Priority Support",
+  "offlineMode": "Offline Learning Mode",
+  "perMonth": "per month",
+  "upgradNow": "Upgrade Now",
+  "upgradeComingSoon": "Payment integration coming soon! Please contact support.",
+  "continueFromLast": "Continue from Last Session",
+  "resumeLearning": "Resume Learning",
+  "startNew": "Start New"
 }

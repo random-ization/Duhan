@@ -254,5 +254,20 @@
   "monthlyProgress": "Сарын явц",
   "totalScore": "Нийт оноо",
   "averageScore": "Дундаж оноо",
-  "examsTaken": "Өгсөн шалгалт"
+  "examsTaken": "Өгсөн шалгалт",
+  "upgradeToPremium": "Premium руу шилжих",
+  "premiumTextbookAccess": "Энэ хичээл Premium эрх шаарддаг",
+  "premiumExamAccess": "Энэ TOPIK шалгалт Premium эрх шаарддаг",
+  "premiumFeatures": "Premium боломжууд",
+  "unlimitedAccess": "Бүх контентод хязгааргүй хандах",
+  "allTextbooks": "Бүх хичээлд хандах",
+  "allExams": "Бүх TOPIK шалгалтад хандах",
+  "prioritySupport": "Тэргүүлэх дэмжлэг",
+  "offlineMode": "Оффлайн суралцах горим",
+  "perMonth": "сард",
+  "upgradNow": "Одоо шилжих",
+  "upgradeComingSoon": "Төлбөрийн систем удахгүй! Дэмжлэгтэй холбогдоно уу.",
+  "continueFromLast": "Сүүлчээс үргэлжлүүлэх",
+  "resumeLearning": "Суралцахыг үргэлжлүүлэх",
+  "startNew": "Шинээр эхлэх"
 }

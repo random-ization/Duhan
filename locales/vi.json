@@ -253,5 +253,20 @@
   "monthlyProgress": "Tiến độ tháng",
   "totalScore": "Tổng điểm",
   "averageScore": "Điểm trung bình",
-  "examsTaken": "Số bài thi đã làm"
+  "examsTaken": "Số bài thi đã làm",
+  "upgradeToPremium": "Nâng cấp lên Premium",
+  "premiumTextbookAccess": "Bài học này yêu cầu gói Premium",
+  "premiumExamAccess": "Bài thi TOPIK này yêu cầu gói Premium",
+  "premiumFeatures": "Tính năng Premium",
+  "unlimitedAccess": "Truy cập không giới hạn tất cả nội dung",
+  "allTextbooks": "Truy cập tất cả bài học",
+  "allExams": "Truy cập tất cả bài thi TOPIK",
+  "prioritySupport": "Hỗ trợ ưu tiên",
+  "offlineMode": "Chế độ học ngoại tuyến",
+  "perMonth": "mỗi tháng",
+  "upgradNow": "Nâng cấp ngay",
+  "upgradeComingSoon": "Tính năng thanh toán sắp ra mắt! Vui lòng liên hệ hỗ trợ.",
+  "continueFromLast": "Tiếp tục từ lần cuối",
+  "resumeLearning": "Tiếp tục học",
+  "startNew": "Bắt đầu mới"
 }

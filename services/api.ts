@@ -188,5 +188,16 @@ export const api = {
         });
         if (!res.ok) throw new Error('Failed to log activity');
         return res.json();
+    },
+
+    // Learning Progress Tracking
+    updateLearningProgress: async (progress: { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string }) => {
+        const res = await fetch(`${API_URL}/user/progress`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(progress)
+        });
+        if (!res.ok) throw new Error('Failed to update learning progress');
+        return res.json();
     }
 };

@@ -104,7 +104,12 @@ const formatUser = (user: any) => {
             listeningHours,
             dayStreak,
             activityLog
-        }
+        },
+        // Learning progress
+        lastInstitute: user.lastInstitute,
+        lastLevel: user.lastLevel,
+        lastUnit: user.lastUnit,
+        lastModule: user.lastModule
     };
 };
 

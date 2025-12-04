@@ -255,5 +255,20 @@
   "monthlyProgress": "本月进度",
   "totalScore": "总分",
   "averageScore": "平均分",
-  "examsTaken": "已参加考试"
+  "examsTaken": "已参加考试",
+  "upgradeToPremium": "升级至高级会员",
+  "premiumTextbookAccess": "此教材单元需要高级会员订阅",
+  "premiumExamAccess": "此TOPIK考试需要高级会员订阅",
+  "premiumFeatures": "高级会员功能",
+  "unlimitedAccess": "无限制访问所有内容",
+  "allTextbooks": "访问所有教材单元",
+  "allExams": "访问所有TOPIK考试",
+  "prioritySupport": "优先客服支持",
+  "offlineMode": "离线学习模式",
+  "perMonth": "每月",
+  "upgradNow": "立即升级",
+  "upgradeComingSoon": "支付功能即将推出！请联系客服。",
+  "continueFromLast": "从上次继续",
+  "resumeLearning": "继续学习",
+  "startNew": "开始新课程"
 }

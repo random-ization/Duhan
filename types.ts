@@ -52,6 +52,11 @@ export interface User {
   annotations: Annotation[];
   statistics?: UserStatistics;
   examHistory: ExamAttempt[]; // New: Track exam results
+  // Learning progress tracking
+  lastInstitute?: string;
+  lastLevel?: number;
+  lastUnit?: number;
+  lastModule?: string;
 }
 
 export interface SavedWord {
@@ -116,6 +121,7 @@ export interface TextbookContent {
   listeningAudioUrl: string | null; // Base64 or URL to uploaded audio
   
   grammarList?: string; // New: Raw list of GrammarPoint[] provided by admin
+  isPaid?: boolean; // Whether this unit requires paid subscription
 }
 
 // Map key "instituteId-level-unit" to the structured content
@@ -164,4 +170,5 @@ export interface TopikExam {
   timeLimit: number; // in minutes (60 or 70)
   audioUrl?: string; // New: For Listening exams
   questions: TopikQuestion[];
+  isPaid?: boolean; // Whether this exam requires paid subscription
 }

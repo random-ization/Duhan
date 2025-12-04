@@ -18,6 +18,12 @@ model User {
   tier         String        @default("FREE")
   avatar       String?
   createdAt    DateTime      @default(now())
+  
+  // Learning progress tracking
+  lastInstitute String?       // Last selected institute
+  lastLevel     Int?          // Last selected level
+  lastUnit      Int?          // Last selected unit
+  lastModule    String?       // Last active module (VOCAB, READING, LISTENING, GRAMMAR)
 
   savedWords         SavedWord[]
   mistakes           Mistake[]
@@ -33,7 +39,7 @@ model Institute {
 }
 
 model TextbookContent {
-  key                  String @id
+  key                  String  @id
   generalContext       String?
   vocabularyList       String?
   readingText          String?
@@ -44,6 +50,7 @@ model TextbookContent {
   listeningTitle       String?
   listeningAudioUrl    String?
   grammarList          String?
+  isPaid               Boolean @default(false) // Whether this unit requires paid subscription
 }
 
 model TopikExam {
@@ -56,6 +63,7 @@ model TopikExam {
   audioUrl  String?
   questions String
   createdAt DateTime @default(now())
+  isPaid    Boolean  @default(false) // Whether this exam requires paid subscription
 }
 
 model SavedWord {

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import Layout from './components/Layout';
 import Auth from './components/Auth';
 import Home from './components/Home';
@@ -10,6 +10,7 @@ import GrammarModule from './components/GrammarModule';
 import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
 import TopikModule from './components/TopikModule';
+import UpgradePrompt from './components/UpgradePrompt';
 import { LearningModuleType, TextbookContent } from './types';
 import { getLabels } from './utils/i18n';
 import { useApp } from './contexts/AppContext';
@@ -49,9 +50,20 @@ function App() {
     clearMistakes,
     saveAnnotation,
     saveExamAttempt,
+    updateLearningProgress,
+    canAccessContent,
+    showUpgradePrompt,
+    setShowUpgradePrompt,
   } = useApp();
 
   const labels = getLabels(language);
+
+  // Track learning progress when user changes institute/level
+  useEffect(() => {
+    if (user && selectedInstitute && selectedLevel) {
+      updateLearningProgress(selectedInstitute, selectedLevel);
+    }
+  }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
 
   const currentLevelContexts = useMemo(() => {
     if (!selectedInstitute || !selectedLevel) return {};
@@ -119,6 +131,8 @@ function App() {
           onSaveHistory={saveExamAttempt}
           annotations={user.annotations || []}
           onSaveAnnotation={saveAnnotation}
+          canAccessContent={canAccessContent}
+          onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
         />
       );
     }
@@ -205,7 +219,18 @@ function App() {
               setActiveModule(LearningModuleType.VOCABULARY);
             }}
             onClearMistakes={clearMistakes}
-            onStartModule={mod => setActiveModule(mod)}
+            onStartModule={(mod) => {
+              // Check if content requires payment
+              const contextKey = `${selectedInstitute}-${selectedLevel}-1`;
+              const content = textbookContexts[contextKey];
+              
+              if (content && !canAccessContent(content)) {
+                setShowUpgradePrompt(true);
+                return;
+              }
+              
+              setActiveModule(mod);
+            }}
           />
         );
       }
@@ -270,21 +295,30 @@ function App() {
   };
 
   return (
-    <Layout
-      user={user}
-      onLogout={logout}
-      currentPage={page}
-      onNavigate={p => {
-        setPage(p);
-        setActiveModule(null);
-        setActiveCustomList(null);
-        setActiveListType(null);
-      }}
-      language={language}
-      onLanguageChange={setLanguage}
-    >
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout
+        user={user}
+        onLogout={logout}
+        currentPage={page}
+        onNavigate={p => {
+          setPage(p);
+          setActiveModule(null);
+          setActiveCustomList(null);
+          setActiveListType(null);
+        }}
+        language={language}
+        onLanguageChange={setLanguage}
+      >
+        {renderContent()}
+      </Layout>
+      
+      <UpgradePrompt
+        isOpen={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        language={language}
+        contentType="textbook"
+      />
+    </>
   );
 }
 
