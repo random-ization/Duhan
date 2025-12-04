@@ -54,6 +54,11 @@ const VocabModule: React.FC<VocabModuleProps> = ({
 }) => {
   const { logActivity } = useApp();
   
+  // Helper to calculate session duration in minutes
+  const getSessionDuration = useCallback((startTime: number) => {
+    return Math.round((Date.now() - startTime) / 60000);
+  }, []);
+  
   // --- Data State ---
   const [allWords, setAllWords] = useState<ExtendedVocabularyItem[]>([]);
   const [filteredWords, setFilteredWords] = useState<ExtendedVocabularyItem[]>([]);
@@ -357,10 +362,9 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           const remaining = prev.slice(1);
           if (remaining.length === 0) {
               setIsSessionComplete(true);
-              // Log vocabulary learning activity
-              const durationMinutes = Math.round((Date.now() - sessionStartTime) / 60000);
-              const totalItems = sessionStats.correct.length + sessionStats.incorrect.length;
-              logActivity('VOCAB', durationMinutes, totalItems);
+              // Log vocabulary learning activity - add 1 for current item
+              const totalItems = sessionStats.correct.length + sessionStats.incorrect.length + 1;
+              logActivity('VOCAB', getSessionDuration(sessionStartTime), totalItems);
               return [];
           }
           prepareNextQuestion(remaining[0], filteredWords.length >= 4 ? filteredWords : allWords);
@@ -408,10 +412,9 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       } else {
           setIsSessionComplete(true);
           // Log vocabulary flashcard activity
-          const durationMinutes = Math.round((Date.now() - sessionStartTime) / 60000);
-          logActivity('VOCAB', durationMinutes, cardQueue.length);
+          logActivity('VOCAB', getSessionDuration(sessionStartTime), cardQueue.length);
       }
-  }, [cardIndex, cardQueue, onSaveWord, sessionStartTime, logActivity]);
+  }, [cardIndex, cardQueue, onSaveWord, sessionStartTime, logActivity, getSessionDuration]);
 
   // --- Flashcard Gestures & Keyboard ---
 

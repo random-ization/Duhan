@@ -6,6 +6,9 @@ import { AuthRequest } from '../middleware/auth.middleware';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 
+// Constants
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 // Helper to calculate day streak
 const calculateDayStreak = (activities: any[]): number => {
     if (!activities || activities.length === 0) return 0;
@@ -19,23 +22,25 @@ const calculateDayStreak = (activities: any[]): number => {
     
     // Check if today or yesterday has activity
     const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const yesterday = new Date(Date.now() - MS_PER_DAY).toDateString();
     
     if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
         return 0; // Streak broken
     }
     
-    let streak = 0;
-    let currentDate = new Date();
+    let streak = 1; // Start with 1 since we have at least one day
     
-    for (const dateStr of uniqueDates) {
-        const activityDate = new Date(dateStr);
-        const daysDiff = Math.floor((currentDate.getTime() - activityDate.getTime()) / 86400000);
+    // Check consecutive days going backwards
+    for (let i = 1; i < uniqueDates.length; i++) {
+        const currentDateMs = new Date(uniqueDates[i - 1]).getTime();
+        const prevDateMs = new Date(uniqueDates[i]).getTime();
+        const daysDiff = Math.floor((currentDateMs - prevDateMs) / MS_PER_DAY);
         
-        if (daysDiff === streak) {
+        if (daysDiff === 1) {
+            // Consecutive day found
             streak++;
-            currentDate = activityDate;
         } else {
+            // Streak broken
             break;
         }
     }
@@ -70,7 +75,7 @@ const formatUser = (user: any) => {
     const activityLog: boolean[] = [];
     const now = Date.now();
     for (let i = 364; i >= 0; i--) {
-        const date = new Date(now - i * 86400000).toDateString();
+        const date = new Date(now - i * MS_PER_DAY).toDateString();
         const hasActivity = activities.some((a: any) => 
             new Date(a.date).toDateString() === date
         );
