@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import Layout from './components/Layout';
 import Auth from './components/Auth';
 import Home from './components/Home';
+import Profile from './components/Profile';
 import VocabModule from './components/VocabModule';
 import ReadingModule from './components/ReadingModule';
 import ListeningModule from './components/ListeningModule';
@@ -106,7 +107,7 @@ function App() {
     }
 
     if (page === 'profile') {
-      return <div className="text-center p-8">Profile settings coming soon.</div>;
+      return <Profile language={language} />;
     }
 
     if (page === 'topik') {

@@ -130,5 +130,45 @@ export const api = {
             method: 'DELETE',
             headers: getHeaders()
         });
+    },
+
+    // Profile Management
+    updateProfile: async (updates: { name?: string; avatar?: string }) => {
+        const res = await fetch(`${API_URL}/user/profile`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update profile');
+        return res.json();
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string) => {
+        const res = await fetch(`${API_URL}/user/password`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.message || 'Failed to change password');
+        }
+        return res.json();
+    },
+
+    uploadAvatar: async (file: File) => {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/user/avatar`, {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+        });
+        if (!res.ok) throw new Error('Failed to upload avatar');
+        return res.json();
     }
 };
