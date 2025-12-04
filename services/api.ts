@@ -160,11 +160,13 @@ export const api = {
         const formData = new FormData();
         formData.append('avatar', file);
         
+        // Note: FormData requires special handling, don't include Content-Type header
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_URL}/user/avatar`, {
             method: 'POST',
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                // Content-Type is automatically set by browser for FormData
             },
             body: formData
         });

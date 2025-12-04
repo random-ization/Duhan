@@ -120,13 +120,14 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
   };
 
-  // Calculate statistics
+  // Calculate statistics - use consistent optional chaining
   const totalWords = user.savedWords.length;
-  const examsTaken = user.examHistory?.length || 0;
+  const examHistory = user.examHistory || [];
+  const examsTaken = examHistory.length;
   const averageScore =
     examsTaken > 0
       ? Math.round(
-          user.examHistory.reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) /
+          examHistory.reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) /
             examsTaken
         )
       : 0;
@@ -134,7 +135,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const daysSinceJoin = Math.floor((Date.now() - user.joinDate) / (1000 * 60 * 60 * 24));
 
   // Get recent exam history (last 5)
-  const recentExams = [...(user.examHistory || [])].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  const recentExams = [...examHistory].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 
   return (
     <div className="max-w-6xl mx-auto">
