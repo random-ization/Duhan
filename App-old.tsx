@@ -10,7 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
 import TopikModule from './components/TopikModule';
 import { LearningModuleType } from './types';
-import { getLabels } from './utils/i18n';
+import { getLabels } from './utils/i18n-new';
 import { useApp } from './contexts/AppContext';
 import { Library } from 'lucide-react';
 import { Loading } from './components/common/Loading';
