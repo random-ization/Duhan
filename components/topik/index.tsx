@@ -155,7 +155,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   };
 
   const pauseTimer = () => setTimerActive(false);
-  const resumeTimer = () => setTimeLeft > 0 && setTimerActive(true);
+  const resumeTimer = () => timeLeft > 0 && setTimerActive(true);
 
   // View Rendering
   if (view === 'LIST') {
