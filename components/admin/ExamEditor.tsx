@@ -32,6 +32,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Description',
       timeLimit: 'Time Limit (minutes)',
       paidContent: 'Paid Content',
+      freeContent: 'Free',
       questionNumber: 'Question',
       passage: 'Passage',
       questionText: 'Question Text',
@@ -53,6 +54,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: '描述',
       timeLimit: '时间限制（分钟）',
       paidContent: '付费内容',
+      freeContent: '免费',
       questionNumber: '问题',
       passage: '文章',
       questionText: '问题文本',
@@ -74,6 +76,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Mô tả',
       timeLimit: 'Giới hạn thời gian (phút)',
       paidContent: 'Nội dung trả phí',
+      freeContent: 'Miễn phí',
       questionNumber: 'Câu hỏi',
       passage: 'Đoạn văn',
       questionText: 'Văn bản câu hỏi',
@@ -95,6 +98,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Тайлбар',
       timeLimit: 'Цагийн хязгаар (минут)',
       paidContent: 'Төлбөртэй контент',
+      freeContent: 'Үнэгүй',
       questionNumber: 'Асуулт',
       passage: 'Хэсэг',
       questionText: 'Асуултын текст',
@@ -254,7 +258,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                           ) : (
                             <>
                               <Unlock className="w-3 h-3" />
-                              Free
+                              {t.freeContent}
                             </>
                           )}
                         </span>
@@ -318,7 +322,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                         }`}
                       >
                         <Unlock className="w-4 h-4" />
-                        Free
+                        {t.freeContent}
                       </button>
                       <button
                         onClick={() => updateExamMetadata('isPaid', true)}
