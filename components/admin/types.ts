@@ -1,4 +1,33 @@
 // Shared types and constants for admin components
+import {
+  Language,
+  AdminStats,
+  User,
+  Institute,
+  TextbookContextMap,
+  TopikExam,
+  LegalDocument,
+} from '../../types';
+
+export interface AdminPanelProps {
+  language: Language;
+  stats: AdminStats;
+  users: User[];
+  onUpdateUser: (userId: string, updates: Partial<User>) => void;
+  onDeleteUser: (userId: string) => void;
+  institutes: Institute[];
+  onAddInstitute: (institute: Institute) => void;
+  onDeleteInstitute: (instituteId: string) => void;
+  onUpdateInstitutes: (institutes: Institute[]) => void;
+  textbookContexts: TextbookContextMap;
+  onSaveContext: (contextKey: string, content: any) => void;
+  topikExams: TopikExam[];
+  onAddTopikExam: (exam: TopikExam) => void;
+  onUpdateTopikExam: (examId: string, updates: Partial<TopikExam>) => void;
+  onDeleteTopikExam: (examId: string) => void;
+  legalDocuments?: LegalDocument[];
+  onSaveLegalDocument?: (doc: LegalDocument) => void;
+}
 
 export interface ExamSectionStructure {
   range: number[];

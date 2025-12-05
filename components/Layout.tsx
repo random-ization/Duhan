@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { User as UserType, UserTier, Language } from '../types';
 import { getLabels } from '../utils/i18n';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -229,6 +230,9 @@ const Layout: React.FC<LayoutProps> = ({
       <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      {/* Footer */}
+      <Footer language={language} onNavigate={onNavigate} />
     </div>
   );
 };

@@ -39,13 +39,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
 // Type definitions for auth endpoints
 interface RegisterData {
-  username: string;
+  name: string;
+  email: string;
   password: string;
-  email?: string;
 }
 
 interface LoginData {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -185,13 +185,13 @@ export const api = {
     });
   },
 
-  uploadAvatar: async (file: File) => {
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
     const formData = new FormData();
     formData.append('avatar', file);
 
     // Note: FormData requires special handling, don't include Content-Type header
     const token = localStorage.getItem('token');
-    return request(`${API_URL}/user/avatar`, {
+    return request<{ avatarUrl: string }>(`${API_URL}/user/avatar`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -231,6 +231,23 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(progress),
+    });
+  },
+
+  // Legal Documents
+  getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') => {
+    return request(`${API_URL}/content/legal/${type}`);
+  },
+
+  saveLegalDocument: async (
+    type: 'terms' | 'privacy' | 'refund',
+    title: string,
+    content: string
+  ) => {
+    return request(`${API_URL}/content/legal/${type}`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ title, content }),
     });
   },
 };

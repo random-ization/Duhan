@@ -112,6 +112,9 @@ const formatUser = (user: any) => {
     lastLevel: user.lastLevel,
     lastUnit: user.lastUnit,
     lastModule: user.lastModule,
+    // Subscription details
+    subscriptionType: user.subscriptionType,
+    subscriptionExpiry: user.subscriptionExpiry ? user.subscriptionExpiry.getTime() : undefined,
   };
 };
 

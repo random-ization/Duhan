@@ -8,7 +8,18 @@ import {
   GrammarPoint,
 } from '../../types';
 import { getLabels } from '../../utils/i18n';
-import { Upload, FileSpreadsheet, Save, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
+import {
+  Upload,
+  FileSpreadsheet,
+  Save,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Lock,
+  Unlock,
+  DollarSign,
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface ContentEditorProps {
@@ -20,6 +31,7 @@ interface ContentEditorProps {
 
 type ContentType = 'vocab' | 'reading' | 'listening' | 'grammar';
 type UploadStatus = 'IDLE' | 'PARSING' | 'READY' | 'SAVING' | 'SUCCESS' | 'ERROR';
+type ViewMode = 'upload' | 'payment';
 
 const ContentEditor: React.FC<ContentEditorProps> = ({
   institutes,
@@ -31,11 +43,13 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State
+  const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [selectedInstitute, setSelectedInstitute] = useState<Institute | null>(null);
   const [contentType, setContentType] = useState<ContentType>('vocab');
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [bulkCount, setBulkCount] = useState<number>(3);
 
   // Helper: Get or create content object
   const getContent = (level: number, unit: number): TextbookContent => {
@@ -246,6 +260,58 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Payment management functions
+  const toggleUnitPaymentStatus = (level: number, unit: number) => {
+    if (!selectedInstitute) return;
+
+    const key = `${selectedInstitute.id}-${level}-${unit}`;
+    const content = getContent(level, unit);
+    content.isPaid = !content.isPaid;
+    onSaveContext(key, content);
+  };
+
+  const setFirstNUnitsFree = () => {
+    if (!selectedInstitute) return;
+
+    const count = bulkCount;
+    let unitCounter = 0;
+
+    selectedInstitute.levels.forEach(level => {
+      const levelNum = typeof level === 'number' ? level : (level as any).level;
+      const maxUnits = typeof level === 'number' ? 10 : (level as any).units;
+
+      for (let unit = 1; unit <= maxUnits; unit++) {
+        const key = `${selectedInstitute.id}-${levelNum}-${unit}`;
+        const content = getContent(levelNum, unit);
+        content.isPaid = unitCounter >= count;
+        onSaveContext(key, content);
+        unitCounter++;
+      }
+    });
+  };
+
+  const setAllUnits = (isPaid: boolean) => {
+    if (!selectedInstitute) return;
+
+    selectedInstitute.levels.forEach(level => {
+      const levelNum = typeof level === 'number' ? level : (level as any).level;
+      const maxUnits = typeof level === 'number' ? 10 : (level as any).units;
+
+      for (let unit = 1; unit <= maxUnits; unit++) {
+        const key = `${selectedInstitute.id}-${levelNum}-${unit}`;
+        const content = getContent(levelNum, unit);
+        content.isPaid = isPaid;
+        onSaveContext(key, content);
+      }
+    });
+  };
+
+  const getUnitPaymentStatus = (level: number, unit: number): boolean => {
+    if (!selectedInstitute) return false;
+    const key = `${selectedInstitute.id}-${level}-${unit}`;
+    return textbookContexts[key]?.isPaid || false;
+  };
+
   // Content type tabs
   const contentTypes = [
     { value: 'vocab', label: labels.vocabulary || 'Vocabulary', icon: '📚' },
@@ -261,7 +327,37 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           {labels.contentManagement || 'Content Management'}
         </h2>
-        <p className="text-gray-600">Upload Excel files to batch update textbook content</p>
+        <p className="text-gray-600">
+          {viewMode === 'upload'
+            ? 'Upload Excel files to batch update textbook content'
+            : 'Manage free/paid status for textbook units'}
+        </p>
+      </div>
+
+      {/* View Mode Tabs */}
+      <div className="bg-white p-2 rounded-lg border border-gray-200 flex gap-2">
+        <button
+          onClick={() => setViewMode('upload')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+            viewMode === 'upload'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Upload className="w-4 h-4" />
+          Content Upload
+        </button>
+        <button
+          onClick={() => setViewMode('payment')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+            viewMode === 'payment'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <DollarSign className="w-4 h-4" />
+          Payment Management
+        </button>
       </div>
 
       {/* Institute Selection */}
@@ -287,8 +383,101 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         </select>
       </div>
 
+      {/* Payment Management View */}
+      {viewMode === 'payment' && selectedInstitute && (
+        <div className="bg-white p-6 rounded-lg border border-gray-200 space-y-6">
+          {/* Bulk Actions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Bulk Actions</h3>
+            <div className="flex gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={bulkCount}
+                  onChange={e => setBulkCount(parseInt(e.target.value) || 1)}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={setFirstNUnitsFree}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <Unlock className="w-4 h-4" />
+                  {labels.bulkSetFree || 'Set first N units free'}
+                </button>
+              </div>
+              <button
+                onClick={() => setAllUnits(false)}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+              >
+                <Unlock className="w-4 h-4" />
+                {labels.bulkSetAllFree || 'Set all free'}
+              </button>
+              <button
+                onClick={() => setAllUnits(true)}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+              >
+                <Lock className="w-4 h-4" />
+                {labels.bulkSetAllPaid || 'Set all paid'}
+              </button>
+            </div>
+          </div>
+
+          {/* Units List by Level */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Units by Level</h3>
+            {selectedInstitute.levels.map(level => {
+              const levelNum = typeof level === 'number' ? level : (level as any).level;
+              const maxUnits = typeof level === 'number' ? 10 : (level as any).units;
+
+              return (
+                <div key={levelNum} className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3">Level {levelNum}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Array.from({ length: maxUnits }, (_, i) => i + 1).map(unit => {
+                      const isPaid = getUnitPaymentStatus(levelNum, unit);
+
+                      return (
+                        <button
+                          key={unit}
+                          onClick={() => toggleUnitPaymentStatus(levelNum, unit)}
+                          className={`p-3 rounded-lg border-2 transition-all flex items-center justify-between ${
+                            isPaid
+                              ? 'border-orange-300 bg-orange-50 hover:bg-orange-100'
+                              : 'border-green-300 bg-green-50 hover:bg-green-100'
+                          }`}
+                        >
+                          <span className="font-medium text-gray-800">Unit {unit}</span>
+                          <div
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                              isPaid ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
+                            }`}
+                          >
+                            {isPaid ? (
+                              <>
+                                <Lock className="w-3 h-3" />
+                                {labels.paidContent || 'Paid'}
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-3 h-3" />
+                                {labels.freeContent || 'Free'}
+                              </>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Content Type Tabs */}
-      {selectedInstitute && (
+      {viewMode === 'upload' && selectedInstitute && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex gap-2 mb-4 overflow-x-auto">
             {contentTypes.map(ct => (
@@ -325,7 +514,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       )}
 
       {/* Upload Section */}
-      {selectedInstitute && (
+      {viewMode === 'upload' && selectedInstitute && (
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">
@@ -442,10 +631,21 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       {/* No Institute Selected */}
       {!selectedInstitute && (
         <div className="bg-gray-50 p-8 rounded-lg border border-gray-200 text-center">
-          <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-600">
-            {labels.selectTextbookFirst || 'Please select a textbook first'}
-          </p>
+          {viewMode === 'upload' ? (
+            <>
+              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-600">
+                {labels.selectTextbookFirst || 'Please select a textbook first'}
+              </p>
+            </>
+          ) : (
+            <>
+              <DollarSign className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-600">
+                {labels.selectTextbookFirst || 'Please select a textbook first'}
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

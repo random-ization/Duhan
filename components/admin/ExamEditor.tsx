@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { TopikExam, TopikQuestion, TopikType, Language } from '../../types';
 import { TOPIK_READING_STRUCTURE, TOPIK_LISTENING_STRUCTURE } from './types';
-import { Plus, Save, Trash2, FileText, Headphones, Loader2, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  Save,
+  Trash2,
+  FileText,
+  Headphones,
+  Loader2,
+  ChevronRight,
+  Lock,
+  Unlock,
+} from 'lucide-react';
 
 interface ExamEditorProps {
   topikExams: TopikExam[];
@@ -32,6 +42,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Description',
       timeLimit: 'Time Limit (minutes)',
       paidContent: 'Paid Content',
+      freeContent: 'Free',
       questionNumber: 'Question',
       passage: 'Passage',
       questionText: 'Question Text',
@@ -53,6 +64,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: '描述',
       timeLimit: '时间限制（分钟）',
       paidContent: '付费内容',
+      freeContent: '免费',
       questionNumber: '问题',
       passage: '文章',
       questionText: '问题文本',
@@ -74,6 +86,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Mô tả',
       timeLimit: 'Giới hạn thời gian (phút)',
       paidContent: 'Nội dung trả phí',
+      freeContent: 'Miễn phí',
       questionNumber: 'Câu hỏi',
       passage: 'Đoạn văn',
       questionText: 'Văn bản câu hỏi',
@@ -95,6 +108,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
       description: 'Тайлбар',
       timeLimit: 'Цагийн хязгаар (минут)',
       paidContent: 'Төлбөртэй контент',
+      freeContent: 'Үнэгүй',
       questionNumber: 'Асуулт',
       passage: 'Хэсэг',
       questionText: 'Асуултын текст',
@@ -239,8 +253,27 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">{exam.title}</div>
-                      <div className="text-xs text-gray-500">
-                        {exam.timeLimit} min | {exam.isPaid ? '💎' : '🆓'}
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <span>{exam.timeLimit} min</span>
+                        <span
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${
+                            exam.isPaid
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {exam.isPaid ? (
+                            <>
+                              <Lock className="w-3 h-3" />
+                              {t.paidContent}
+                            </>
+                          ) : (
+                            <>
+                              <Unlock className="w-3 h-3" />
+                              {t.freeContent}
+                            </>
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -296,17 +329,33 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t.paidContent}
                     </label>
-                    <select
-                      value={selectedExam.isPaid ? 'paid' : 'free'}
-                      onChange={e => updateExamMetadata('isPaid', e.target.value === 'paid')}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="free">Free</option>
-                      <option value="paid">Paid</option>
-                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updateExamMetadata('isPaid', false)}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                          !selectedExam.isPaid
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Unlock className="w-4 h-4" />
+                        {t.freeContent}
+                      </button>
+                      <button
+                        onClick={() => updateExamMetadata('isPaid', true)}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                          selectedExam.isPaid
+                            ? 'bg-orange-500 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Lock className="w-4 h-4" />
+                        {t.paidContent}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

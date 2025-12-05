@@ -136,3 +136,80 @@ export const deleteTopikExam = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete exam' });
   }
 };
+
+// --- Legal Documents ---
+export const getLegalDocument = async (req: Request, res: Response) => {
+  try {
+    const { type } = req.params;
+
+    // Validate type
+    if (!['terms', 'privacy', 'refund'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid document type' });
+    }
+
+    const document = await prisma.legalDocument.findUnique({
+      where: { id: type },
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json({
+      id: document.id,
+      title: document.title,
+      content: document.content,
+      updatedAt: document.updatedAt.getTime(),
+    });
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch legal document' });
+  }
+};
+
+export const saveLegalDocument = async (req: Request, res: Response) => {
+  try {
+    const { type } = req.params;
+    const { title, content } = req.body;
+
+    // Validate type
+    if (!['terms', 'privacy', 'refund'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid document type' });
+    }
+
+    // Validate input
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' });
+    }
+
+    // Get user ID from authenticated request
+    const userId = (req as any).user?.userId;
+
+    // Upsert the document
+    const document = await prisma.legalDocument.upsert({
+      where: { id: type },
+      update: {
+        title,
+        content,
+        updatedAt: new Date(),
+        updatedBy: userId,
+      },
+      create: {
+        id: type,
+        title,
+        content,
+        updatedBy: userId,
+      },
+    });
+
+    res.json({
+      id: document.id,
+      title: document.title,
+      content: document.content,
+      updatedAt: document.updatedAt.getTime(),
+    });
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to save legal document' });
+  }
+};

@@ -19,6 +19,10 @@ model User {
   avatar       String?
   createdAt    DateTime      @default(now())
   
+  // Subscription details
+  subscriptionType   String?   // ANNUAL or LIFETIME for PAID users
+  subscriptionExpiry DateTime? // Expiry date for annual subscriptions
+  
   // Learning progress tracking
   lastInstitute String?       // Last selected institute
   lastLevel     Int?          // Last selected level
@@ -126,4 +130,12 @@ model LearningActivity {
   date          DateTime @default(now()) // Date part for daily tracking
 
   @@index([userId, date])
+}
+
+model LegalDocument {
+  id        String   @id // 'terms', 'privacy', 'refund'
+  title     String
+  content   String   @db.Text
+  updatedAt DateTime @default(now())
+  updatedBy String?  // Admin user ID who updated it
 }
