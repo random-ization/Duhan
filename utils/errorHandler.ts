@@ -22,19 +22,19 @@ export class AppError extends Error {
 
 const getErrorMessage = (error: unknown, customMessage?: string): string => {
   if (customMessage) return customMessage;
-  
+
   if (error instanceof AppError) {
     return error.message;
   }
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
+
   if (typeof error === 'string') {
     return error;
   }
-  
+
   return 'An unexpected error occurred';
 };
 
@@ -94,7 +94,7 @@ export const handleApiError = (error: unknown, customMessage?: string): string =
         return customMessage || 'An error occurred while processing your request.';
     }
   }
-  
+
   return getErrorMessage(error, customMessage);
 };
 

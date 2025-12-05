@@ -23,9 +23,11 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   annotations,
   onSaveAnnotation,
   canAccessContent,
-  onShowUpgradePrompt
+  onShowUpgradePrompt,
 }) => {
-  const [view, setView] = useState<'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'>('LIST');
+  const [view, setView] = useState<
+    'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
+  >('LIST');
   const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -56,7 +58,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       onShowUpgradePrompt?.();
       return;
     }
-    
+
     setCurrentExam(exam);
     setUserAnswers({});
     setTimeLeft(exam.timeLimit * 60);
@@ -85,7 +87,12 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       }
     });
 
-    setExamResult({ score, totalScore, correctCount, totalQuestions: currentExam.questions.length });
+    setExamResult({
+      score,
+      totalScore,
+      correctCount,
+      totalQuestions: currentExam.questions.length,
+    });
 
     // Save to history
     const attempt: ExamAttempt = {
@@ -128,7 +135,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const handleAnswerChange = (questionIndex: number, optionIndex: number) => {
     setUserAnswers(prev => ({
       ...prev,
-      [questionIndex]: optionIndex
+      [questionIndex]: optionIndex,
     }));
   };
 
@@ -142,7 +149,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       contextKey,
       selectedText: '',
       note: '',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
     onSaveAnnotation(deleteAnnotation);
   };
@@ -243,3 +250,5 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   return null;
 };
+
+export default TopikModule;

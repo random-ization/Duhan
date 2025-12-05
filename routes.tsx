@@ -19,12 +19,27 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
       <Route path="/" element={<AuthPage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/dashboard" element={<DashboardPage canAccessContent={canAccessContent} onShowUpgradePrompt={onShowUpgradePrompt} />} />
+      <Route
+        path="/dashboard"
+        element={
+          <DashboardPage
+            canAccessContent={canAccessContent}
+            onShowUpgradePrompt={onShowUpgradePrompt}
+          />
+        }
+      />
       <Route path="/module" element={<ModulePage />} />
-      <Route path="/topik" element={<TopikPage canAccessContent={canAccessContent} onShowUpgradePrompt={onShowUpgradePrompt} />} />
+      <Route
+        path="/topik"
+        element={
+          <TopikPage
+            canAccessContent={canAccessContent}
+            onShowUpgradePrompt={onShowUpgradePrompt}
+          />
+        }
+      />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
-

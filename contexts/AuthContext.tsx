@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 import {
   User,
   Language,
@@ -15,22 +22,32 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   language: Language;
-  
+
   // Auth Actions
   login: (user: User) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   setLanguage: (lang: Language) => void;
-  
+
   // User Actions
   saveWord: (vocabItem: VocabularyItem | string, meaning?: string) => Promise<void>;
   recordMistake: (word: VocabularyItem) => Promise<void>;
   clearMistakes: () => void;
   saveAnnotation: (annotation: Annotation) => Promise<void>;
   saveExamAttempt: (attempt: ExamAttempt) => Promise<void>;
-  logActivity: (activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM', duration?: number, itemsStudied?: number, metadata?: any) => Promise<void>;
-  updateLearningProgress: (institute: string, level: number, unit?: number, module?: string) => Promise<void>;
-  
+  logActivity: (
+    activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
+    duration?: number,
+    itemsStudied?: number,
+    metadata?: any
+  ) => Promise<void>;
+  updateLearningProgress: (
+    institute: string,
+    level: number,
+    unit?: number,
+    module?: string
+  ) => Promise<void>;
+
   // Permission Checking
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
   showUpgradePrompt: boolean;
@@ -181,7 +198,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       try {
         await api.saveExamAttempt(attempt);
         // Log exam activity
-        await api.logActivity('EXAM', undefined, 1, { examId: attempt.examId, score: attempt.score });
+        await api.logActivity('EXAM', undefined, 1, {
+          examId: attempt.examId,
+          score: attempt.score,
+        });
       } catch (e) {
         console.error(e);
       }
@@ -190,7 +210,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   );
 
   const logActivity = useCallback(
-    async (activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM', duration?: number, itemsStudied?: number, metadata?: any) => {
+    async (
+      activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
+      duration?: number,
+      itemsStudied?: number,
+      metadata?: any
+    ) => {
       if (!user) return;
       try {
         await api.logActivity(activityType, duration, itemsStudied, metadata);
@@ -209,14 +234,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
           lastInstitute: institute,
           lastLevel: level,
           lastUnit: unit,
-          lastModule: module
+          lastModule: module,
         });
         setUser({
           ...user,
           lastInstitute: institute,
           lastLevel: level,
           lastUnit: unit,
-          lastModule: module
+          lastModule: module,
         });
       } catch (e) {
         console.error('Failed to update learning progress', e);
@@ -225,11 +250,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     [user]
   );
 
-  const canAccessContent = useCallback((content: TextbookContent | TopikExam): boolean => {
-    if (!user) return false;
-    if (user.tier === 'PAID') return true;
-    return !content.isPaid;
-  }, [user]);
+  const canAccessContent = useCallback(
+    (content: TextbookContent | TopikExam): boolean => {
+      if (!user) return false;
+      if (user.tier === 'PAID') return true;
+      return !content.isPaid;
+    },
+    [user]
+  );
 
   const value: AuthContextType = {
     user,

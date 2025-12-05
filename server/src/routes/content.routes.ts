@@ -1,9 +1,12 @@
-
 import { Router } from 'express';
-import { 
-    getInstitutes, createInstitute, 
-    getContent, saveContent,
-    getTopikExams, saveTopikExam, deleteTopikExam
+import {
+  getInstitutes,
+  createInstitute,
+  getContent,
+  saveContent,
+  getTopikExams,
+  saveTopikExam,
+  deleteTopikExam,
 } from '../controllers/content.controller';
 import { authenticate } from '../middleware/auth.middleware';
 

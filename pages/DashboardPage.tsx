@@ -56,16 +56,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowU
           navigate('/module');
         }}
         onClearMistakes={clearMistakes}
-        onStartModule={(mod) => {
+        onStartModule={mod => {
           // Check if content requires payment
           const contextKey = `${selectedInstitute}-${selectedLevel}-1`;
           const content = textbookContexts[contextKey];
-          
+
           if (content && !canAccessContent(content)) {
             onShowUpgradePrompt();
             return;
           }
-          
+
           setActiveModule(mod);
           navigate('/module');
         }}

@@ -71,12 +71,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, language }) => {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        {language === 'en' ? 'Admin Dashboard' : 
-         language === 'zh' ? '管理员仪表板' :
-         language === 'vi' ? 'Bảng điều khiển quản trị' : 
-         'Админ самбар'}
+        {language === 'en'
+          ? 'Admin Dashboard'
+          : language === 'zh'
+            ? '管理员仪表板'
+            : language === 'vi'
+              ? 'Bảng điều khiển quản trị'
+              : 'Админ самбар'}
       </h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card, index) => {
           const Icon = card.icon;
@@ -86,16 +89,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, language }) => {
               className={`bg-gradient-to-br ${card.bgGradient} rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow`}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${card.gradient} rounded-lg flex items-center justify-center`}>
+                <div
+                  className={`w-12 h-12 bg-gradient-to-br ${card.gradient} rounded-lg flex items-center justify-center`}
+                >
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div className="text-3xl font-bold text-gray-800 mb-1">
                 {card.value.toLocaleString()}
               </div>
-              <div className="text-sm font-medium text-gray-600">
-                {card.label}
-              </div>
+              <div className="text-sm font-medium text-gray-600">{card.label}</div>
             </div>
           );
         })}

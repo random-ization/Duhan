@@ -12,9 +12,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   return (
     <AuthProvider>
       <DataProvider>
-        <LearningProvider>
-          {children}
-        </LearningProvider>
+        <LearningProvider>{children}</LearningProvider>
       </DataProvider>
     </AuthProvider>
   );
@@ -45,7 +43,7 @@ export const useApp = () => {
     canAccessContent: auth.canAccessContent,
     showUpgradePrompt: auth.showUpgradePrompt,
     setShowUpgradePrompt: auth.setShowUpgradePrompt,
-    
+
     // Learning context
     selectedInstitute: learning.selectedInstitute,
     setSelectedInstitute: learning.setSelectedInstitute,
@@ -57,7 +55,7 @@ export const useApp = () => {
     setActiveCustomList: learning.setActiveCustomList,
     activeListType: learning.activeListType,
     setActiveListType: learning.setActiveListType,
-    
+
     // Data context
     institutes: data.institutes,
     textbookContexts: data.textbookContexts,

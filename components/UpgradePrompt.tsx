@@ -11,7 +11,12 @@ interface UpgradePromptProps {
   contentType?: 'textbook' | 'exam';
 }
 
-const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language, contentType = 'textbook' }) => {
+const UpgradePrompt: React.FC<UpgradePromptProps> = ({
+  isOpen,
+  onClose,
+  language,
+  contentType = 'textbook',
+}) => {
   const labels = getLabels(language);
 
   if (!isOpen) return null;
@@ -51,7 +56,8 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
             </h2>
             <p className="text-white/90 text-sm">
               {contentType === 'textbook'
-                ? labels.premiumTextbookAccess || 'This textbook unit requires a premium subscription'
+                ? labels.premiumTextbookAccess ||
+                  'This textbook unit requires a premium subscription'
                 : labels.premiumExamAccess || 'This TOPIK exam requires a premium subscription'}
             </p>
           </div>
@@ -81,11 +87,7 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
           </div>
 
           <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              onClick={onClose}
-              className="flex-1"
-            >
+            <Button variant="ghost" onClick={onClose} className="flex-1">
               {labels.cancel}
             </Button>
             <Button

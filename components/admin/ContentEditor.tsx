@@ -1,5 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Institute, Language, TextbookContextMap, TextbookContent, VocabularyItem, GrammarPoint } from '../../types';
+import {
+  Institute,
+  Language,
+  TextbookContextMap,
+  TextbookContent,
+  VocabularyItem,
+  GrammarPoint,
+} from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { Upload, FileSpreadsheet, Save, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -18,7 +25,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   institutes,
   textbookContexts,
   language,
-  onSaveContext
+  onSaveContext,
 }) => {
   const labels = getLabels(language);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,22 +40,24 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   // Helper: Get or create content object
   const getContent = (level: number, unit: number): TextbookContent => {
     if (!selectedInstitute) throw new Error('No institute selected');
-    
+
     const key = `${selectedInstitute.id}-${level}-${unit}`;
     const existing = textbookContexts[key];
-    
-    return existing ? { ...existing } : {
-      generalContext: '',
-      vocabularyList: '',
-      readingText: '',
-      readingTranslation: '',
-      readingTitle: `Lesson ${unit}`,
-      listeningScript: '',
-      listeningTranslation: '',
-      listeningTitle: `Lesson ${unit}`,
-      listeningAudioUrl: null,
-      grammarList: ''
-    };
+
+    return existing
+      ? { ...existing }
+      : {
+          generalContext: '',
+          vocabularyList: '',
+          readingText: '',
+          readingTranslation: '',
+          readingTitle: `Lesson ${unit}`,
+          listeningScript: '',
+          listeningTranslation: '',
+          listeningTitle: `Lesson ${unit}`,
+          listeningAudioUrl: null,
+          grammarList: '',
+        };
   };
 
   // Handle Excel file upload
@@ -58,26 +67,26 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
     setUploadStatus('PARSING');
     setErrorMessage('');
-    
+
     const reader = new FileReader();
 
-    reader.onload = (evt) => {
+    reader.onload = evt => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        
+
         // Get array of arrays, skipping header row
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-        
+
         // Remove header row and filter empty rows
         const rows = data.slice(1).filter(r => r && r.length > 0 && r[0] !== undefined);
-        
+
         if (rows.length === 0) {
           throw new Error('No valid data found in Excel file');
         }
-        
+
         setPreviewData(rows);
         setUploadStatus('READY');
       } catch (err) {
@@ -110,11 +119,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         // Group vocabulary by Level/Unit
         const grouped: Record<string, VocabularyItem[]> = {};
 
-        previewData.forEach((row) => {
+        previewData.forEach(row => {
           // Expected columns: Level(0), Unit(1), Word(2), POS(3), Meaning(4), Example(5)
           const level = parseInt(row[0]);
           const unit = parseInt(row[1]);
-          
+
           if (!level || !unit) return;
 
           const key = `${selectedInstitute.id}-${level}-${unit}`;
@@ -126,7 +135,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
             english: row[4] || '',
             exampleSentence: row[5] || '',
             exampleTranslation: '',
-            unit: unit
+            unit: unit,
           });
         });
 
@@ -140,11 +149,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       }
 
       if (contentType === 'reading') {
-        previewData.forEach((row) => {
+        previewData.forEach(row => {
           // Expected columns: Level(0), Unit(1), Text(2), Translation(3)
           const level = parseInt(row[0]);
           const unit = parseInt(row[1]);
-          
+
           if (!level || !unit) return;
 
           const key = `${selectedInstitute.id}-${level}-${unit}`;
@@ -157,11 +166,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       }
 
       if (contentType === 'listening') {
-        previewData.forEach((row) => {
+        previewData.forEach(row => {
           // Expected columns: Level(0), Unit(1), Script(2), Translation(3)
           const level = parseInt(row[0]);
           const unit = parseInt(row[1]);
-          
+
           if (!level || !unit) return;
 
           const key = `${selectedInstitute.id}-${level}-${unit}`;
@@ -177,11 +186,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         // Group grammar by Level/Unit
         const grouped: Record<string, GrammarPoint[]> = {};
 
-        previewData.forEach((row) => {
+        previewData.forEach(row => {
           // Expected columns: Level(0), Unit(1), Pattern(2), Definition(3), Example(4), ExampleTranslation(5)
           const level = parseInt(row[0]);
           const unit = parseInt(row[1]);
-          
+
           if (!level || !unit) return;
 
           const key = `${selectedInstitute.id}-${level}-${unit}`;
@@ -190,11 +199,13 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
           grouped[key].push({
             pattern: row[2] || '',
             explanation: row[3] || '',
-            usages: [{
-              situation: 'General',
-              example: row[4] || '',
-              translation: row[5] || ''
-            }]
+            usages: [
+              {
+                situation: 'General',
+                example: row[4] || '',
+                translation: row[5] || '',
+              },
+            ],
           });
         });
 
@@ -213,7 +224,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       });
 
       setUploadStatus('SUCCESS');
-      
+
       // Reset after success
       setTimeout(() => {
         setUploadStatus('IDLE');
@@ -240,7 +251,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     { value: 'vocab', label: labels.vocabulary || 'Vocabulary', icon: '📚' },
     { value: 'reading', label: labels.reading || 'Reading', icon: '📖' },
     { value: 'listening', label: labels.listening || 'Listening', icon: '🎧' },
-    { value: 'grammar', label: labels.grammar || 'Grammar', icon: '📝' }
+    { value: 'grammar', label: labels.grammar || 'Grammar', icon: '📝' },
   ];
 
   return (
@@ -250,9 +261,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           {labels.contentManagement || 'Content Management'}
         </h2>
-        <p className="text-gray-600">
-          Upload Excel files to batch update textbook content
-        </p>
+        <p className="text-gray-600">Upload Excel files to batch update textbook content</p>
       </div>
 
       {/* Institute Selection */}
@@ -262,7 +271,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         </label>
         <select
           value={selectedInstitute?.id || ''}
-          onChange={(e) => {
+          onChange={e => {
             const inst = institutes.find(i => i.id === e.target.value);
             setSelectedInstitute(inst || null);
             handleClearUpload();
@@ -271,7 +280,9 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         >
           <option value="">-- {labels.select || 'Select'} --</option>
           {institutes.map(inst => (
-            <option key={inst.id} value={inst.id}>{inst.name}</option>
+            <option key={inst.id} value={inst.id}>
+              {inst.name}
+            </option>
           ))}
         </select>
       </div>
@@ -306,7 +317,8 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
               {contentType === 'vocab' && 'Level | Unit | Word | POS | Meaning | Example'}
               {contentType === 'reading' && 'Level | Unit | Text | Translation'}
               {contentType === 'listening' && 'Level | Unit | Script | Translation'}
-              {contentType === 'grammar' && 'Level | Unit | Pattern | Definition | Example | Example Translation'}
+              {contentType === 'grammar' &&
+                'Level | Unit | Pattern | Definition | Example | Example Translation'}
             </p>
           </div>
         </div>
@@ -397,7 +409,9 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                     <tr>
                       <th className="px-3 py-2 text-left">#</th>
                       {previewData[0]?.map((_: any, idx: number) => (
-                        <th key={idx} className="px-3 py-2 text-left">Col {idx + 1}</th>
+                        <th key={idx} className="px-3 py-2 text-left">
+                          Col {idx + 1}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -406,7 +420,9 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                       <tr key={idx} className="border-t border-gray-200 hover:bg-gray-50">
                         <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
                         {row.map((cell: any, cellIdx: number) => (
-                          <td key={cellIdx} className="px-3 py-2">{cell?.toString() || '-'}</td>
+                          <td key={cellIdx} className="px-3 py-2">
+                            {cell?.toString() || '-'}
+                          </td>
                         ))}
                       </tr>
                     ))}

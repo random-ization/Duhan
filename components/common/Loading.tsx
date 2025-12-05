@@ -7,11 +7,7 @@ interface LoadingProps {
   fullScreen?: boolean;
 }
 
-export const Loading: React.FC<LoadingProps> = ({ 
-  size = 'md', 
-  text,
-  fullScreen = false 
-}) => {
+export const Loading: React.FC<LoadingProps> = ({ size = 'md', text, fullScreen = false }) => {
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -29,17 +25,13 @@ export const Loading: React.FC<LoadingProps> = ({
   const content = (
     <div className="flex flex-col items-center justify-center gap-3">
       <Loader2 className={`${sizeClasses[size]} text-indigo-600 animate-spin`} />
-      {text && (
-        <p className={`${textSizeClasses[size]} text-gray-600 animate-pulse`}>{text}</p>
-      )}
+      {text && <p className={`${textSizeClasses[size]} text-gray-600 animate-pulse`}>{text}</p>}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        {content}
-      </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">{content}</div>
     );
   }
 

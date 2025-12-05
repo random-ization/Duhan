@@ -1,7 +1,6 @@
-
 export enum UserTier {
   FREE = 'FREE',
-  PAID = 'PAID'
+  PAID = 'PAID',
 }
 
 export type UserRole = 'STUDENT' | 'ADMIN';
@@ -75,7 +74,7 @@ export enum LearningModuleType {
   VOCABULARY = 'VOCABULARY',
   LISTENING = 'LISTENING',
   READING = 'READING',
-  GRAMMAR = 'GRAMMAR'
+  GRAMMAR = 'GRAMMAR',
 }
 
 export interface VocabularyItem {
@@ -110,16 +109,16 @@ export interface CourseSelection {
 export interface TextbookContent {
   generalContext: string; // General themes/notes
   vocabularyList: string; // Raw list of words provided by admin
-  
+
   readingText: string; // The specific reading passage text
   readingTranslation: string; // Manual translation provided by admin
-  readingTitle: string; 
-  
+  readingTitle: string;
+
   listeningScript: string; // The script for the audio
   listeningTranslation?: string; // New: Translation for the script
   listeningTitle?: string; // New: Title for listening
   listeningAudioUrl: string | null; // Base64 or URL to uploaded audio
-  
+
   grammarList?: string; // New: Raw list of GrammarPoint[] provided by admin
   isPaid?: boolean; // Whether this unit requires paid subscription
 }
@@ -139,11 +138,11 @@ export interface AdminStats {
 
 export type TopikType = 'READING' | 'LISTENING';
 
-export type QuestionLayout = 
-  | 'DEFAULT' 
-  | 'IMAGE'           // New: For pure image questions (Q5-8, Q9, Q10)
-  | 'NEWS_HEADLINE'   // Q25-27
-  | 'INSERT_BOX';     // Q39-41 (<보기>)
+export type QuestionLayout =
+  | 'DEFAULT'
+  | 'IMAGE' // New: For pure image questions (Q5-8, Q9, Q10)
+  | 'NEWS_HEADLINE' // Q25-27
+  | 'INSERT_BOX'; // Q39-41 (<보기>)
 
 export interface TopikQuestion {
   id: number;

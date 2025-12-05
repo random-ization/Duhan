@@ -178,8 +178,8 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 <input
                   type="text"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleNameUpdate()}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleNameUpdate()}
                   className="bg-white/20 border border-white/30 rounded-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
                   autoFocus
                 />
@@ -325,9 +325,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                {labels.changePassword}
-              </h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">{labels.changePassword}</h3>
               <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -336,7 +334,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   <input
                     type="password"
                     value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    onChange={e => setCurrentPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
@@ -349,7 +347,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   <input
                     type="password"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={e => setNewPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
@@ -362,7 +360,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   <input
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={e => setConfirmPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
@@ -438,7 +436,9 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   </div>
                   <div>
                     <span className="text-slate-500">Days Active:</span>
-                    <p className="font-medium text-slate-900">{daysSinceJoin} {labels.days}</p>
+                    <p className="font-medium text-slate-900">
+                      {daysSinceJoin} {labels.days}
+                    </p>
                   </div>
                   <div>
                     <span className="text-slate-500">{labels.plan}:</span>
@@ -460,7 +460,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                     {labels.recentActivity}
                   </h3>
                   <div className="space-y-3">
-                    {recentExams.map((exam) => {
+                    {recentExams.map(exam => {
                       const percentage = Math.round((exam.score / exam.maxScore) * 100);
                       const passed = percentage >= 60;
 

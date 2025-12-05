@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+} from 'react';
 import { LearningModuleType, VocabularyItem } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -10,7 +17,7 @@ interface LearningContextType {
   setSelectedLevel: (level: number) => void;
   activeModule: LearningModuleType | null;
   setActiveModule: (module: LearningModuleType | null) => void;
-  
+
   // Custom List State (for saved words / mistakes review)
   activeCustomList: VocabularyItem[] | null;
   setActiveCustomList: (list: VocabularyItem[] | null) => void;
