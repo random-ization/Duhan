@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Volume2, Hand, Keyboard, CheckCircle, XCircle } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings } from './types';
 import { Language } from '../../types';
@@ -13,14 +13,14 @@ interface FlashcardViewProps {
   onSaveWord?: (word: ExtendedVocabularyItem) => void;
 }
 
-const FlashcardView: React.FC<FlashcardViewProps> = ({
+const FlashcardView: React.FC<FlashcardViewProps> = React.memo(({
   words,
   settings,
   language,
   onComplete,
   onSaveWord,
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionStats, setSessionStats] = useState<{ correct: ExtendedVocabularyItem[]; incorrect: ExtendedVocabularyItem[] }>({ 
@@ -36,16 +36,16 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({
 
   const currentCard = words[cardIndex];
 
-  const resetDrag = () => {
+  const resetDrag = useCallback(() => {
     setDragStart(null);
     setDragOffset({x: 0, y: 0});
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleDragStart = (x: number, y: number) => {
+  const handleDragStart = useCallback((x: number, y: number) => {
     setDragStart({x, y});
     setIsDragging(true);
-  };
+  }, []);
 
   const handleDragMove = (x: number, y: number) => {
     if (!dragStart) return;
@@ -235,6 +235,6 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default FlashcardView;

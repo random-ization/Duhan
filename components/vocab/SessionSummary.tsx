@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trophy, XCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { ExtendedVocabularyItem } from './types';
 import { Language } from '../../types';
@@ -14,13 +14,13 @@ interface SessionSummaryProps {
   onReviewIncorrect: () => void;
 }
 
-const SessionSummary: React.FC<SessionSummaryProps> = ({
+const SessionSummary: React.FC<SessionSummaryProps> = React.memo(({
   language,
   sessionStats,
   onNewSession,
   onReviewIncorrect,
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
 
   return (
     <div className="max-w-4xl mx-auto w-full">
@@ -90,6 +90,6 @@ const SessionSummary: React.FC<SessionSummaryProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default SessionSummary;

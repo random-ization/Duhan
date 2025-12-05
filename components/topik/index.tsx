@@ -243,3 +243,5 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   return null;
 };
+
+export default TopikModule;

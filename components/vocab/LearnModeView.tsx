@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Pencil, AlignLeft, Check, X, Volume2, ArrowRight } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings, QuestionType, SessionStats } from './types';
 import { Language } from '../../types';
@@ -14,7 +14,7 @@ interface LearnModeViewProps {
   onRecordMistake?: (word: ExtendedVocabularyItem) => void;
 }
 
-const LearnModeView: React.FC<LearnModeViewProps> = ({
+const LearnModeView: React.FC<LearnModeViewProps> = React.memo(({
   words,
   settings,
   language,
@@ -22,7 +22,7 @@ const LearnModeView: React.FC<LearnModeViewProps> = ({
   onComplete,
   onRecordMistake,
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
   const [learnQueue, setLearnQueue] = useState<ExtendedVocabularyItem[]>([]);
   const [learnIndex, setLearnIndex] = useState(0);
   const [currentQuestionType, setCurrentQuestionType] = useState<QuestionType>('CHOICE_K_TO_N');
@@ -271,6 +271,6 @@ const LearnModeView: React.FC<LearnModeViewProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default LearnModeView;

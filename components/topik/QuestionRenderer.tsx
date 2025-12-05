@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { TopikQuestion, Language, Annotation } from '../../types';
 import { Volume2, Check, X } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
@@ -16,7 +16,7 @@ interface QuestionRendererProps {
   contextPrefix?: string;
 }
 
-export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
+export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(({
   question,
   questionIndex,
   userAnswer,
@@ -28,14 +28,17 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   annotations = [],
   contextPrefix = ''
 }) => {
-  const labels = getLabels(language);
-  const contextKey = `${contextPrefix}-Q${questionIndex}`;
+  const labels = useMemo(() => getLabels(language), [language]);
+  const contextKey = useMemo(() => `${contextPrefix}-Q${questionIndex}`, [contextPrefix, questionIndex]);
 
   // Get annotations for this question
-  const questionAnnotations = annotations.filter(a => a.contextKey === contextKey);
+  const questionAnnotations = useMemo(() => 
+    annotations.filter(a => a.contextKey === contextKey),
+    [annotations, contextKey]
+  );
 
   // Highlight annotated text
-  const highlightText = (text: string) => {
+  const highlightText = useCallback((text: string) => {
     if (questionAnnotations.length === 0) return text;
 
     let result = text;
@@ -44,21 +47,21 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       result = result.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
     });
     return result;
-  };
+  }, [questionAnnotations]);
 
   // Play audio for listening questions
-  const playAudio = (audioUrl: string) => {
+  const playAudio = useCallback((audioUrl: string) => {
     const audio = new Audio(audioUrl);
     audio.play();
-  };
+  }, []);
 
   // Determine if answer is correct/incorrect
-  const getOptionStatus = (optionIndex: number) => {
+  const getOptionStatus = useCallback((optionIndex: number) => {
     if (!showCorrect) return null;
     if (optionIndex === correctAnswer) return 'correct';
     if (optionIndex === userAnswer && optionIndex !== correctAnswer) return 'incorrect';
     return null;
-  };
+  }, [showCorrect, correctAnswer, userAnswer]);
 
   const getOptionClass = (optionIndex: number) => {
     const status = getOptionStatus(optionIndex);
@@ -176,4 +179,4 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       )}
     </div>
   );
-};
+});

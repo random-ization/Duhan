@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TopikExam, Language, Annotation } from '../../types';
 import { Clock, FileText, Trophy, RotateCcw, ArrowLeft, CheckCircle, Calendar } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
@@ -12,8 +12,8 @@ interface ExamCoverViewProps {
   onBack: () => void;
 }
 
-export const ExamCoverView: React.FC<ExamCoverViewProps> = ({ exam, language, onStart, onBack }) => {
-  const labels = getLabels(language);
+export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(({ exam, language, onStart, onBack }) => {
+  const labels = useMemo(() => getLabels(language), [language]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
@@ -58,7 +58,7 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = ({ exam, language, on
       </div>
     </div>
   );
-};
+});
 
 // Exam Result View
 interface ExamResultViewProps {
@@ -75,7 +75,7 @@ interface ExamResultViewProps {
   onBackToList: () => void;
 }
 
-export const ExamResultView: React.FC<ExamResultViewProps> = ({
+export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(({
   exam,
   result,
   language,
@@ -83,8 +83,8 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
   onTryAgain,
   onBackToList
 }) => {
-  const labels = getLabels(language);
-  const percentage = (result.score / result.totalScore) * 100;
+  const labels = useMemo(() => getLabels(language), [language]);
+  const percentage = useMemo(() => (result.score / result.totalScore) * 100, [result.score, result.totalScore]);
   const passed = percentage >= 60;
 
   return (
@@ -164,7 +164,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       </div>
     </div>
   );
-};
+});
 
 // Exam Review View
 interface ExamReviewViewProps {
@@ -177,7 +177,7 @@ interface ExamReviewViewProps {
   onBack: () => void;
 }
 
-export const ExamReviewView: React.FC<ExamReviewViewProps> = ({
+export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(({
   exam,
   userAnswers,
   language,
@@ -186,15 +186,18 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = ({
   onDeleteAnnotation,
   onBack
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
 
   // Calculate stats
-  let correctCount = 0;
-  exam.questions.forEach((q, idx) => {
-    if (userAnswers[idx] === q.correctOptionIndex) {
-      correctCount++;
-    }
-  });
+  const correctCount = useMemo(() => {
+    let count = 0;
+    exam.questions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.correctOptionIndex) {
+        count++;
+      }
+    });
+    return count;
+  }, [exam.questions, userAnswers]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -243,4 +246,4 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = ({
       </div>
     </div>
   );
-};
+});

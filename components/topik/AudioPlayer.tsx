@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
 import { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
@@ -8,8 +8,8 @@ interface AudioPlayerProps {
   language: Language;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, language }) => {
-  const labels = getLabels(language);
+export const AudioPlayer: React.FC<AudioPlayerProps> = React.memo(({ audioUrl, language }) => {
+  const labels = useMemo(() => getLabels(language), [language]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,7 +55,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, language }) 
     }
   }, [playbackRate]);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     if (!audioRef.current) return;
 
     if (isPlaying) {
@@ -64,50 +64,50 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, language }) 
       audioRef.current.play();
     }
     setIsPlaying(!isPlaying);
-  };
+  }, [isPlaying]);
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
-  };
+  }, []);
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
     if (newVolume > 0 && isMuted) {
       setIsMuted(false);
     }
-  };
+  }, [isMuted]);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     setIsMuted(!isMuted);
-  };
+  }, [isMuted]);
 
-  const skipBackward = () => {
+  const skipBackward = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.max(0, currentTime - 10);
     }
-  };
+  }, [currentTime]);
 
-  const skipForward = () => {
+  const skipForward = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.min(duration, currentTime + 10);
     }
-  };
+  }, [duration, currentTime]);
 
-  const changeSpeed = (speed: number) => {
+  const changeSpeed = useCallback((speed: number) => {
     setPlaybackRate(speed);
     setShowSpeedMenu(false);
-  };
+  }, []);
 
-  const formatTime = (time: number) => {
+  const formatTime = useCallback((time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-r from-purple-600 to-indigo-600 shadow-2xl">
@@ -224,4 +224,4 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, language }) 
       `}</style>
     </div>
   );
-};
+});

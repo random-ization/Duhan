@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { TopikExam, TopikQuestion, Language, Annotation } from '../../types';
 import { Clock, FastForward, MessageSquare, Trash2, Check } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
@@ -20,7 +20,7 @@ interface ExamSessionProps {
   onResumeTimer: () => void;
 }
 
-export const ExamSession: React.FC<ExamSessionProps> = ({
+export const ExamSession: React.FC<ExamSessionProps> = React.memo(({
   exam,
   language,
   userAnswers,
@@ -34,7 +34,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
   onPauseTimer,
   onResumeTimer
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
   const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   
   // Annotation state
@@ -43,11 +43,13 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [noteInput, setNoteInput] = useState('');
 
-  const examContextPrefix = `TOPIK-${exam.id}`;
+  const examContextPrefix = useMemo(() => `TOPIK-${exam.id}`, [exam.id]);
   
   // Sidebar annotations with notes
-  const sidebarAnnotations = annotations
-    .filter(a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0);
+  const sidebarAnnotations = useMemo(() => 
+    annotations.filter(a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0),
+    [annotations, examContextPrefix]
+  );
 
   // Format time
   const formatTime = (seconds: number) => {
@@ -283,4 +285,4 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
       )}
     </div>
   );
-};
+});

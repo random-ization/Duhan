@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Calendar, CheckCircle, FileText, History as HistoryIcon, ArrowLeft, Eye } from 'lucide-react';
 import { TopikExam, ExamAttempt, Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
@@ -14,7 +14,7 @@ interface ExamListProps {
   onBack?: () => void;
 }
 
-export const ExamList: React.FC<ExamListProps> = ({
+export const ExamList: React.FC<ExamListProps> = React.memo(({
   exams,
   history,
   language,
@@ -24,18 +24,18 @@ export const ExamList: React.FC<ExamListProps> = ({
   showHistoryView = false,
   onBack,
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
 
-  const getAttemptCount = (examId: string) => {
+  const getAttemptCount = useCallback((examId: string) => {
     return history.filter(h => h.examId === examId).length;
-  };
+  }, [history]);
 
-  const getBestScore = (examId: string): number | null => {
+  const getBestScore = useCallback((examId: string): number | null => {
     const attempts = history.filter(h => h.examId === examId);
     if (attempts.length === 0) return null;
     const scores = attempts.map(a => (a.score / a.totalScore) * 100);
     return Math.max(...scores);
-  };
+  }, [history]);
 
   // Show history view
   if (showHistoryView) {
@@ -180,7 +180,7 @@ export const ExamList: React.FC<ExamListProps> = ({
       )}
     </div>
   );
-};
+});
 
 // Export as named export
 export default ExamList;

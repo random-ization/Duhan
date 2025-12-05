@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { X, Settings as SettingsIcon } from 'lucide-react';
 import { VocabSettings } from './types';
 import { Language } from '../../types';
@@ -13,7 +13,7 @@ interface VocabSettingsModalProps {
   onUpdate: (newSettings: VocabSettings) => void;
 }
 
-const VocabSettingsModal: React.FC<VocabSettingsModalProps> = ({
+const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(({
   isOpen,
   settings,
   language,
@@ -21,34 +21,34 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = ({
   onClose,
   onUpdate,
 }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
   const [activeTab, setActiveTab] = useState<'FLASHCARD' | 'LEARN'>(initialTab);
   const [localSettings, setLocalSettings] = useState<VocabSettings>(settings);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     onUpdate(localSettings);
     onClose();
-  };
+  }, [localSettings, onUpdate, onClose]);
 
-  const toggleLearnType = (type: 'multipleChoice' | 'writing') => {
+  const toggleLearnType = useCallback((type: 'multipleChoice' | 'writing') => {
     setLocalSettings(prev => {
       const newTypes = { ...prev.learn.types, [type]: !prev.learn.types[type] };
       // Ensure at least one type is selected
       if (!newTypes.multipleChoice && !newTypes.writing) return prev;
       return { ...prev, learn: { ...prev.learn, types: newTypes } };
     });
-  };
+  }, []);
 
-  const toggleLearnAnswer = (lang: 'korean' | 'native') => {
+  const toggleLearnAnswer = useCallback((lang: 'korean' | 'native') => {
     setLocalSettings(prev => {
       const newAnswers = { ...prev.learn.answers, [lang]: !prev.learn.answers[lang] };
       // Ensure at least one answer type is selected
       if (!newAnswers.korean && !newAnswers.native) return prev;
       return { ...prev, learn: { ...prev.learn, answers: newAnswers } };
     });
-  };
+  }, []);
 
   const Switch = ({ checked, onChange, label }: { checked: boolean; onChange: () => void; label?: string }) => (
     <div className="flex items-center justify-between py-3">
@@ -294,6 +294,6 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default VocabSettingsModal;
