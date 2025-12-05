@@ -64,11 +64,8 @@ export const getTopikExams = async (req: any, res: any) => {
         const exams = await prisma.topikExam.findMany({
             orderBy: { createdAt: 'desc' }
         });
-        const formatted = exams.map(e => ({
-            ...e,
-            questions: JSON.parse(e.questions)
-        }));
-        res.json(formatted);
+        // Prisma automatically handles Json type - questions is already an object
+        res.json(exams);
     } catch (e) {
         res.status(500).json({ error: "Failed to fetch exams" });
     }
@@ -86,19 +83,21 @@ export const saveTopikExam = async (req: any, res: any) => {
                 where: { id },
                 data: {
                     ...data,
-                    questions: JSON.stringify(questions)
+                    // Prisma automatically handles Json type - no need to stringify
+                    questions
                 }
             });
-            res.json({ ...updated, questions: JSON.parse(updated.questions) });
+            res.json(updated);
         } else {
             const created = await prisma.topikExam.create({
                 data: {
                     id, // Allow client-side ID generation for simplicity or omit to auto-gen
                     ...data,
-                    questions: JSON.stringify(questions)
+                    // Prisma automatically handles Json type - no need to stringify
+                    questions
                 }
             });
-            res.json({ ...created, questions: JSON.parse(created.questions) });
+            res.json(created);
         }
     } catch (e) {
         console.error(e);

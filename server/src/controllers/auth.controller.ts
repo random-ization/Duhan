@@ -52,8 +52,8 @@ const calculateDayStreak = (activities: any[]): number => {
 const formatUser = (user: any) => {
     const formattedHistory = user.examHistory.map((h: any) => ({
         ...h,
-        timestamp: h.timestamp.getTime(),
-        userAnswers: JSON.parse(h.userAnswers)
+        timestamp: h.timestamp.getTime()
+        // userAnswers is already an object (Json type in Prisma)
     }));
 
     // Calculate real statistics from learning activities

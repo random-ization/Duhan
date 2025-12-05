@@ -117,8 +117,8 @@ export const saveExamAttempt = async (req: any, res: any) => {
                 examTitle,
                 score,
                 maxScore,
-                // Prisma Schema defines this as String, so we must stringify the JSON object
-                userAnswers: JSON.stringify(userAnswers),
+                // Prisma automatically handles Json type - no need to stringify
+                userAnswers,
                 timestamp: timestamp ? new Date(timestamp) : new Date()
             }
         });
@@ -149,7 +149,8 @@ export const logActivity = async (req: any, res: any) => {
                 activityType,
                 duration: duration || null,
                 itemsStudied: itemsStudied || null,
-                metadata: metadata ? JSON.stringify(metadata) : null,
+                // Prisma automatically handles Json type - no need to stringify
+                metadata: metadata || null,
                 date: today
             }
         });

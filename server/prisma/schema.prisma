@@ -61,7 +61,7 @@ model TopikExam {
   paperType String?
   timeLimit Int
   audioUrl  String?
-  questions String
+  questions Json
   createdAt DateTime @default(now())
   isPaid    Boolean  @default(false) // Whether this exam requires paid subscription
 }
@@ -110,7 +110,7 @@ model ExamAttempt {
   examTitle   String
   score       Int
   maxScore    Int
-  userAnswers String
+  userAnswers Json
   timestamp   DateTime @default(now())
 }
 
@@ -121,7 +121,7 @@ model LearningActivity {
   activityType  String   // 'VOCAB', 'READING', 'LISTENING', 'GRAMMAR', 'EXAM'
   duration      Int?     // Duration in minutes
   itemsStudied  Int?     // Number of words/questions/passages studied
-  metadata      String?  // JSON string for additional data
+  metadata      Json?    // JSON for additional data
   createdAt     DateTime @default(now())
   date          DateTime @default(now()) // Date part for daily tracking
 
