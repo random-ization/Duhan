@@ -613,7 +613,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
             <>
               <DollarSign className="w-12 h-12 mx-auto text-gray-400 mb-3" />
               <p className="text-gray-600">
-                Please select a textbook to manage payment settings
+                {labels.selectTextbookFirst || 'Please select a textbook first'}
               </p>
             </>
           )}

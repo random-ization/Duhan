@@ -130,7 +130,7 @@ export const ExamList: React.FC<ExamListProps> = ({
         {exams.map((exam) => {
           const attemptCount = getAttemptCount(exam.id);
           const bestScore = getBestScore(exam.id);
-          const isLocked = canAccessContent ? !canAccessContent(exam) : false;
+          const isLocked = canAccessContent != null && !canAccessContent(exam);
 
           return (
             <div
