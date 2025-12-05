@@ -105,7 +105,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const t = labels[language];
 
   const filteredUsers = users.filter(
-    (u) =>
+    u =>
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearch.toLowerCase())
   );
@@ -139,7 +139,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
           type="text"
           placeholder={t.searchUsers}
           value={userSearch}
-          onChange={(e) => setUserSearch(e.target.value)}
+          onChange={e => setUserSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -171,7 +171,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => {
+              {filteredUsers.map(user => {
                 const isEditing = editingUser === user.id;
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
@@ -180,7 +180,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         <input
                           type="text"
                           value={editForm.name || ''}
-                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                           className="border border-gray-300 rounded px-2 py-1 w-full"
                         />
                       ) : (
@@ -192,7 +192,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         <input
                           type="email"
                           value={editForm.email || ''}
-                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                          onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                           className="border border-gray-300 rounded px-2 py-1 w-full"
                         />
                       ) : (
@@ -203,17 +203,27 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       {isEditing ? (
                         <select
                           value={editForm.role || user.role}
-                          onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
+                          onChange={e =>
+                            setEditForm({ ...editForm, role: e.target.value as UserRole })
+                          }
                           className="border border-gray-300 rounded px-2 py-1"
                         >
                           <option value="STUDENT">{t.student}</option>
                           <option value="ADMIN">{t.admin}</option>
                         </select>
                       ) : (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.role === 'ADMIN' ? <Crown className="w-3 h-3 mr-1" /> : <GraduationCap className="w-3 h-3 mr-1" />}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'ADMIN'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {user.role === 'ADMIN' ? (
+                            <Crown className="w-3 h-3 mr-1" />
+                          ) : (
+                            <GraduationCap className="w-3 h-3 mr-1" />
+                          )}
                           {user.role === 'ADMIN' ? t.admin : t.student}
                         </span>
                       )}
@@ -222,23 +232,33 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       {isEditing ? (
                         <select
                           value={editForm.tier || user.tier}
-                          onChange={(e) => setEditForm({ ...editForm, tier: e.target.value as UserTier })}
+                          onChange={e =>
+                            setEditForm({ ...editForm, tier: e.target.value as UserTier })
+                          }
                           className="border border-gray-300 rounded px-2 py-1"
                         >
                           <option value="FREE">{t.free}</option>
                           <option value="PAID">{t.paid}</option>
                         </select>
                       ) : (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.tier === 'PAID' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.tier === 'PAID'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
                           {user.tier === 'PAID' ? t.paid : t.free}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{user.wordsLearned} {t.wordsLearned}</div>
-                      <div>{user.examsTaken} {t.examsTaken}</div>
+                      <div>
+                        {user.wordsLearned} {t.wordsLearned}
+                      </div>
+                      <div>
+                        {user.examsTaken} {t.examsTaken}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {isEditing ? (

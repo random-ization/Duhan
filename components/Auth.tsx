@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, UserTier, Language } from '../types';
 import { getLabels } from '../utils/i18n';
@@ -17,7 +16,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const labels = getLabels(language);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,23 +25,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
     setLoading(true);
 
     try {
-        let response;
-        if (isRegistering) {
-            response = await api.register({ name, email, password });
-        } else {
-            response = await api.login({ email, password });
-        }
+      let response;
+      if (isRegistering) {
+        response = await api.register({ name, email, password });
+      } else {
+        response = await api.login({ email, password });
+      }
 
-        // Save token
-        localStorage.setItem('token', response.token);
-        
-        // Pass user to App
-        onLogin(response.user);
+      // Save token
+      localStorage.setItem('token', response.token);
 
+      // Pass user to App
+      onLogin(response.user);
     } catch (err: any) {
-        setError(err.message || "Authentication failed");
+      setError(err.message || 'Authentication failed');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -55,21 +53,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
         </div>
 
         {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-start">
-                <AlertCircle className="w-5 h-5 mr-2 shrink-0 mt-0.5" />
-                <span>{error}</span>
-            </div>
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-start">
+            <AlertCircle className="w-5 h-5 mr-2 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegistering && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">{labels.displayName}</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                {labels.displayName}
+              </label>
               <input
                 type="text"
                 required={isRegistering}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
                 className="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                 placeholder="Gil-dong Hong"
               />
@@ -82,19 +82,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{labels.password}</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {labels.password}
+            </label>
             <input
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               className="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               placeholder="••••••••"
             />
@@ -105,13 +107,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
             disabled={loading}
             className={`w-full text-white font-semibold py-2.5 rounded-lg transition-colors shadow-lg shadow-indigo-200 ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
-            {loading ? 'Processing...' : (isRegistering ? labels.register : labels.login)}
+            {loading ? 'Processing...' : isRegistering ? labels.register : labels.login}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setError('');
+            }}
             className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
           >
             {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register"}

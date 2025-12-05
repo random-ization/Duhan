@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import contentRoutes from './routes/content.routes';

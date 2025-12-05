@@ -1,7 +1,13 @@
-
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { saveWord, saveMistake, saveAnnotation, saveExamAttempt, logActivity, updateLearningProgress } from '../controllers/user.controller';
+import {
+  saveWord,
+  saveMistake,
+  saveAnnotation,
+  saveExamAttempt,
+  logActivity,
+  updateLearningProgress,
+} from '../controllers/user.controller';
 
 const router = Router();
 

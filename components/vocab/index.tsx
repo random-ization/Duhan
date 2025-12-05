@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Beaker, Filter, Layers, Brain, List as ListIcon, Settings as SettingsIcon } from 'lucide-react';
+import {
+  Beaker,
+  Filter,
+  Layers,
+  Brain,
+  List as ListIcon,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 import { CourseSelection, VocabularyItem, Language, TextbookContent } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { useApp } from '../../contexts/AppContext';
@@ -83,7 +90,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       });
     } else {
       // Parse from context
-      Object.keys(levelContexts).forEach((unitStr) => {
+      Object.keys(levelContexts).forEach(unitStr => {
         const unit = parseInt(unitStr);
         const content = levelContexts[unit];
         if (content && content.vocabularyList && content.vocabularyList.startsWith('[')) {
@@ -111,7 +118,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   useEffect(() => {
     let filtered = allWords;
     if (selectedUnitFilter !== 'ALL') {
-      filtered = allWords.filter((w) => w.unit === selectedUnitFilter);
+      filtered = allWords.filter(w => w.unit === selectedUnitFilter);
     }
     setFilteredWords(filtered);
   }, [allWords, selectedUnitFilter]);
@@ -132,15 +139,18 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     setLoading(false);
   };
 
-  const handleSessionComplete = useCallback((stats: SessionStats) => {
-    setSessionStats(stats);
-    setIsSessionComplete(true);
+  const handleSessionComplete = useCallback(
+    (stats: SessionStats) => {
+      setSessionStats(stats);
+      setIsSessionComplete(true);
 
-    // Log activity
-    const duration = Math.round((Date.now() - sessionStartTime) / 60000);
-    const itemsStudied = stats.correct.length + stats.incorrect.length;
-    logActivity('VOCAB', duration, itemsStudied);
-  }, [sessionStartTime, logActivity]);
+      // Log activity
+      const duration = Math.round((Date.now() - sessionStartTime) / 60000);
+      const itemsStudied = stats.correct.length + stats.incorrect.length;
+      logActivity('VOCAB', duration, itemsStudied);
+    },
+    [sessionStartTime, logActivity]
+  );
 
   const handleNewSession = () => {
     setIsSessionComplete(false);
@@ -156,7 +166,8 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   };
 
   const getSessionWords = (): ExtendedVocabularyItem[] => {
-    const batchSize = viewMode === 'CARDS' ? settings.flashcard.batchSize : settings.learn.batchSize;
+    const batchSize =
+      viewMode === 'CARDS' ? settings.flashcard.batchSize : settings.learn.batchSize;
     const shouldShuffle = viewMode === 'CARDS' ? settings.flashcard.random : settings.learn.random;
 
     let words = [...filteredWords];
@@ -175,7 +186,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     );
   }
 
-  const availableUnits = Array.from(new Set(allWords.map((w) => w.unit))).sort((a, b) => a - b);
+  const availableUnits = Array.from(new Set(allWords.map(w => w.unit))).sort((a, b) => a - b);
 
   if (allWords.length === 0) {
     return (
@@ -224,11 +235,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           <div className="relative flex-1 lg:flex-none min-w-[200px]">
             <select
               value={selectedUnitFilter}
-              onChange={(e) => setSelectedUnitFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+              onChange={e =>
+                setSelectedUnitFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))
+              }
               className="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
             >
               <option value="ALL">{labels.allUnits}</option>
-              {availableUnits.map((u) => (
+              {availableUnits.map(u => (
                 <option key={u} value={u}>
                   {labels.unit} {u}
                 </option>
@@ -328,7 +341,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
         language={language}
         initialTab={viewMode === 'LEARN' ? 'LEARN' : 'FLASHCARD'}
         onClose={() => setShowSettings(false)}
-        onUpdate={(newSettings) => {
+        onUpdate={newSettings => {
           setSettings(newSettings);
           setIsSessionComplete(false); // Reset session when settings change
         }}

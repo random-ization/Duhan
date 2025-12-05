@@ -8,15 +8,8 @@ import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 
 function App() {
-  const {
-    user,
-    loading,
-    logout,
-    language,
-    setLanguage,
-    canAccessContent,
-    updateLearningProgress,
-  } = useAuth();
+  const { user, loading, logout, language, setLanguage, canAccessContent, updateLearningProgress } =
+    useAuth();
   const {
     selectedInstitute,
     selectedLevel,
@@ -65,7 +58,7 @@ function App() {
           onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
         />
       </Layout>
-      
+
       <UpgradePrompt
         isOpen={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}

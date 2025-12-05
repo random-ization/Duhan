@@ -24,7 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
     } else {
       document.body.style.overflow = 'unset';
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -58,11 +58,11 @@ export const Modal: React.FC<ModalProps> = ({
         className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div
         className={`relative bg-white rounded-lg shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] flex flex-col`}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
@@ -79,11 +79,9 @@ export const Modal: React.FC<ModalProps> = ({
             )}
           </div>
         )}
-        
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );

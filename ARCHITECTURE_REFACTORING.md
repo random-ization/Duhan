@@ -9,33 +9,40 @@ This document outlines the comprehensive architectural refactoring implemented t
 ## ✅ Completed: Phase 1 - Context Splitting
 
 ### Problem
+
 The monolithic `AppContext` (423 lines) stored all application state, causing unnecessary re-renders.
 
 ### Solution
+
 Split into 3 focused contexts:
 
 **1. AuthContext** - User & Authentication
+
 ```typescript
 const { user, login, logout, language, saveWord, canAccessContent } = useAuth();
 ```
 
 **2. LearningContext** - Learning Position
+
 ```typescript
 const { selectedInstitute, selectedLevel, activeModule } = useLearning();
 ```
 
 **3. DataContext** - Static/Semi-Static Data
+
 ```typescript
 const { institutes, textbookContexts, topikExams } = useData();
 ```
 
 ### Benefits
+
 - **60-80% reduction** in unnecessary re-renders
 - Language change now only re-renders auth-dependent components
 - Better component isolation and debugging
 - Maintains backward compatibility via `useApp()` hook
 
 ### Files Created
+
 - `contexts/AuthContext.tsx` (233 lines)
 - `contexts/LearningContext.tsx` (73 lines)
 - `contexts/DataContext.tsx` (147 lines)
@@ -47,17 +54,18 @@ const { institutes, textbookContexts, topikExams } = useData();
 
 ### Current Component Sizes
 
-| Component | Lines | Status | Priority |
-|-----------|-------|--------|----------|
-| VocabModule.tsx | 1,157 | ❌ Too large | HIGH |
-| TopikModule.tsx | 1,012 | ❌ Too large | HIGH |
-| AdminPanel.tsx | 943 | ❌ Too large | MEDIUM |
+| Component       | Lines | Status       | Priority |
+| --------------- | ----- | ------------ | -------- |
+| VocabModule.tsx | 1,157 | ❌ Too large | HIGH     |
+| TopikModule.tsx | 1,012 | ❌ Too large | HIGH     |
+| AdminPanel.tsx  | 943   | ❌ Too large | MEDIUM   |
 
 ### Refactoring Strategy
 
 #### VocabModule.tsx (1157 lines → 5 files)
 
 **Structure:**
+
 ```
 components/vocab/
 ├── types.ts              ✅ (exists)
@@ -70,6 +78,7 @@ components/vocab/
 ```
 
 **1. FlashcardView.tsx** (~300 lines)
+
 - Card flip animations
 - Drag gestures (left/right swipe)
 - Confidence rating buttons
@@ -77,6 +86,7 @@ components/vocab/
 - Progress indicator
 
 **Responsibilities:**
+
 ```typescript
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
@@ -87,10 +97,12 @@ interface FlashcardViewProps {
 ```
 
 **Key State:**
+
 - `cardIndex`, `isFlipped`, `cardQueue`
 - `dragStart`, `dragOffset`, `isDragging`
 
 **2. LearnModeView.tsx** (~350 lines)
+
 - Multiple choice questions (Korean → Native, Native → Korean)
 - Writing/spelling questions
 - Answer validation and feedback
@@ -98,6 +110,7 @@ interface FlashcardViewProps {
 - Incorrect answer tracking
 
 **Responsibilities:**
+
 ```typescript
 interface LearnModeViewProps {
   words: ExtendedVocabularyItem[];
@@ -108,16 +121,19 @@ interface LearnModeViewProps {
 ```
 
 **Key State:**
+
 - `learnQueue`, `currentLearnItem`, `currentQuestionType`
 - `quizOptions`, `userAnswer`, `showFeedback`
 
 **3. VocabSettingsModal.tsx** (~180 lines)
+
 - Settings modal UI
 - Flashcard settings tab
 - Learn mode settings tab
 - Preferences persistence
 
 **Responsibilities:**
+
 ```typescript
 interface VocabSettingsModalProps {
   isOpen: boolean;
@@ -129,6 +145,7 @@ interface VocabSettingsModalProps {
 ```
 
 **4. SessionSummary.tsx** (~150 lines)
+
 - End-of-session statistics display
 - Star rating visualization
 - Accuracy breakdown
@@ -136,6 +153,7 @@ interface VocabSettingsModalProps {
 - Action buttons (restart, exit)
 
 **Responsibilities:**
+
 ```typescript
 interface SessionSummaryProps {
   stats: SessionStats;
@@ -146,6 +164,7 @@ interface SessionSummaryProps {
 ```
 
 **5. index.tsx** (~200 lines)
+
 - Main coordinator component
 - Mode selection (CARDS/LEARN/LIST)
 - Word filtering and loading
@@ -157,6 +176,7 @@ interface SessionSummaryProps {
 #### TopikModule.tsx (1012 lines → 4 files)
 
 **Structure:**
+
 ```
 components/topik/
 ├── ExamPaper.tsx         ⏳ (~300 lines)
@@ -166,6 +186,7 @@ components/topik/
 ```
 
 **1. ExamPaper.tsx**
+
 - Exam layout and structure
 - Question navigation
 - Timer display
@@ -173,6 +194,7 @@ components/topik/
 - Progress tracking
 
 **2. QuestionRenderer.tsx**
+
 - Question type detection
 - Reading question rendering
 - Listening question rendering
@@ -180,6 +202,7 @@ components/topik/
 - Answer selection handling
 
 **3. AudioPlayer.tsx**
+
 - Floating audio player component
 - Play/pause controls
 - Progress bar
@@ -187,6 +210,7 @@ components/topik/
 - Keyboard shortcuts
 
 **4. index.tsx**
+
 - Exam list view
 - Exam session management
 - Results review
@@ -197,6 +221,7 @@ components/topik/
 #### AdminPanel.tsx (943 lines → 4 files)
 
 **Structure:**
+
 ```
 components/admin/
 ├── UserManagement.tsx    ⏳ (~250 lines)
@@ -206,6 +231,7 @@ components/admin/
 ```
 
 **1. UserManagement.tsx**
+
 - User list display
 - User search and filtering
 - User role management
@@ -213,6 +239,7 @@ components/admin/
 - User statistics
 
 **2. ContentEditor.tsx**
+
 - Excel file upload
 - Content parsing and validation
 - Textbook content editing
@@ -220,6 +247,7 @@ components/admin/
 - Preview mode
 
 **3. ExamEditor.tsx**
+
 - TOPIK exam creation
 - Question editor
 - Audio file upload
@@ -227,6 +255,7 @@ components/admin/
 - Publishing controls
 
 **4. index.tsx**
+
 - Tab navigation
 - Dashboard stats
 - Route handling between sub-components
@@ -236,6 +265,7 @@ components/admin/
 ## 🔄 Phase 3 - React Router Integration
 
 ### Current State
+
 ```typescript
 const [page, setPage] = useState('auth');
 // Manual page switching
@@ -244,6 +274,7 @@ if (page === 'profile') return <Profile />;
 ```
 
 ### Target State
+
 ```typescript
 <BrowserRouter>
   <Routes>
@@ -258,6 +289,7 @@ if (page === 'profile') return <Profile />;
 ```
 
 ### Benefits
+
 - ✅ Browser back/forward buttons work
 - ✅ Bookmarkable URLs
 - ✅ Deep linking support
@@ -265,6 +297,7 @@ if (page === 'profile') return <Profile />;
 - ✅ Reduced initial bundle size
 
 ### Implementation Plan
+
 1. Wrap App in `<BrowserRouter>`
 2. Replace page state with `<Routes>`
 3. Update navigation calls to use `useNavigate()`
@@ -276,16 +309,19 @@ if (page === 'profile') return <Profile />;
 ## 📊 Expected Performance Improvements
 
 ### Bundle Size
+
 - **Current**: 772 KB (warning: chunks > 500KB)
 - **After Component Splitting**: ~650 KB
 - **After Code Splitting**: ~200 KB initial + lazy chunks
 
 ### Re-render Performance
+
 - **Context Splitting**: 60-80% reduction in unnecessary re-renders
 - **Component Splitting**: Isolated component updates
 - **React.memo()**: Prevent pure component re-renders
 
 ### Load Time
+
 - **Initial Load**: 40-50% faster with code splitting
 - **Navigation**: Instant with prefetching
 - **Perceived Performance**: Skeleton loaders
@@ -302,12 +338,14 @@ if (page === 'profile') return <Profile />;
    - Identify reusable logic
 
 2. **Extract State**
+
    ```typescript
    // Move component-specific state to new file
    const [localState, setLocalState] = useState();
    ```
 
 3. **Define Props Interface**
+
    ```typescript
    interface ComponentProps {
      data: DataType;
@@ -316,6 +354,7 @@ if (page === 'profile') return <Profile />;
    ```
 
 4. **Extract Component**
+
    ```typescript
    export const Component: React.FC<ComponentProps> = ({ data, onAction }) => {
      // Component implementation
@@ -331,6 +370,7 @@ if (page === 'profile') return <Profile />;
 ### Testing Strategy
 
 1. **Build After Each Change**
+
    ```bash
    npm run build
    ```
@@ -350,6 +390,7 @@ if (page === 'profile') return <Profile />;
 ## 📝 Migration Checklist
 
 ### Phase 1: Context Splitting ✅
+
 - [x] Create AuthContext
 - [x] Create LearningContext
 - [x] Create DataContext
@@ -358,6 +399,7 @@ if (page === 'profile') return <Profile />;
 - [x] Test backward compatibility
 
 ### Phase 2: VocabModule Split
+
 - [ ] Create FlashcardView component
 - [ ] Create LearnModeView component
 - [ ] Create VocabSettingsModal component
@@ -368,6 +410,7 @@ if (page === 'profile') return <Profile />;
 - [ ] Commit changes
 
 ### Phase 3: TopikModule Split
+
 - [ ] Create ExamPaper component
 - [ ] Create QuestionRenderer component
 - [ ] Create AudioPlayer component
@@ -377,6 +420,7 @@ if (page === 'profile') return <Profile />;
 - [ ] Commit changes
 
 ### Phase 4: AdminPanel Split
+
 - [ ] Create UserManagement component
 - [ ] Create ContentEditor component
 - [ ] Create ExamEditor component
@@ -386,6 +430,7 @@ if (page === 'profile') return <Profile />;
 - [ ] Commit changes
 
 ### Phase 5: React Router Integration
+
 - [ ] Install react-router-dom ✅
 - [ ] Create route configuration
 - [ ] Wrap App in BrowserRouter
@@ -397,6 +442,7 @@ if (page === 'profile') return <Profile />;
 - [ ] Commit changes
 
 ### Phase 6: Performance Optimization
+
 - [ ] Add React.memo() to components
 - [ ] Add useCallback() to handlers
 - [ ] Add useMemo() for computations
@@ -409,18 +455,21 @@ if (page === 'profile') return <Profile />;
 ## 🎯 Success Metrics
 
 ### Code Quality
+
 - ✅ No file > 400 lines
 - ✅ Clear separation of concerns
 - ✅ Reusable components
 - ✅ Type-safe props
 
 ### Performance
+
 - ✅ Initial bundle < 300 KB
 - ✅ 60-80% fewer re-renders
 - ✅ Lazy loading working
 - ✅ No build warnings
 
 ### Developer Experience
+
 - ✅ Easy to find code
 - ✅ Clear component responsibilities
 - ✅ Documented patterns

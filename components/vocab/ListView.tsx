@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Volume2, Eye, EyeOff } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings } from './types';
 import { Language } from '../../types';
@@ -11,24 +11,27 @@ interface ListViewProps {
   language: Language;
 }
 
-const ListView: React.FC<ListViewProps> = ({ words, settings, language }) => {
-  const labels = getLabels(language);
+const ListView: React.FC<ListViewProps> = React.memo(({ words, settings, language }) => {
+  const labels = useMemo(() => getLabels(language), [language]);
   const [revealedItems, setRevealedItems] = useState<Set<string>>(new Set());
 
-  const toggleReveal = (id: string, textToSpeak: string) => {
-    setRevealedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-        if (settings.flashcard.autoTTS) {
-          speak(textToSpeak);
+  const toggleReveal = useCallback(
+    (id: string, textToSpeak: string) => {
+      setRevealedItems(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+          if (settings.flashcard.autoTTS) {
+            speak(textToSpeak);
+          }
         }
-      }
-      return newSet;
-    });
-  };
+        return newSet;
+      });
+    },
+    [settings.flashcard.autoTTS]
+  );
 
   if (words.length === 0) {
     return (
@@ -123,6 +126,6 @@ const ListView: React.FC<ListViewProps> = ({ words, settings, language }) => {
       </div>
     </div>
   );
-};
+});
 
 export default ListView;
