@@ -19,6 +19,10 @@ model User {
   avatar       String?
   createdAt    DateTime      @default(now())
   
+  // Subscription details
+  subscriptionType   String?   // ANNUAL or LIFETIME for PAID users
+  subscriptionExpiry DateTime? // Expiry date for annual subscriptions
+  
   // Learning progress tracking
   lastInstitute String?       // Last selected institute
   lastLevel     Int?          // Last selected level

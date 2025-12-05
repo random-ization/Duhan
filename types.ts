@@ -4,6 +4,11 @@ export enum UserTier {
   PAID = 'PAID'
 }
 
+export enum SubscriptionType {
+  ANNUAL = 'ANNUAL',
+  LIFETIME = 'LIFETIME'
+}
+
 export type UserRole = 'STUDENT' | 'ADMIN';
 
 export type Language = 'en' | 'zh' | 'vi' | 'mn';
@@ -57,6 +62,9 @@ export interface User {
   lastLevel?: number;
   lastUnit?: number;
   lastModule?: string;
+  // Subscription details
+  subscriptionType?: SubscriptionType; // ANNUAL or LIFETIME for PAID users
+  subscriptionExpiry?: number; // Timestamp for annual subscriptions
 }
 
 export interface SavedWord {

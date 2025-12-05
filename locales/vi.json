@@ -287,5 +287,12 @@
   "bulkSetAllFree": "Đặt tất cả miễn phí",
   "bulkSetAllPaid": "Đặt tất cả trả phí",
   "free": "Miễn phí",
-  "paid": "Trả phí"
+  "paid": "Trả phí",
+  "subscriptionType": "Loại đăng ký",
+  "annualMember": "Thành viên hàng năm",
+  "lifetimeMember": "Thành viên trọn đời",
+  "freeMember": "Thành viên miễn phí",
+  "daysRemaining": "Số ngày còn lại",
+  "expiresOn": "Hết hạn vào",
+  "membershipStatus": "Trạng thái thành viên"
 }

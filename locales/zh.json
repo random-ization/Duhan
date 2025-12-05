@@ -289,5 +289,12 @@
   "bulkSetAllFree": "全部设为免费",
   "bulkSetAllPaid": "全部设为付费",
   "free": "免费",
-  "paid": "付费"
+  "paid": "付费",
+  "subscriptionType": "订阅类型",
+  "annualMember": "年度会员",
+  "lifetimeMember": "终身会员",
+  "freeMember": "免费会员",
+  "daysRemaining": "剩余天数",
+  "expiresOn": "到期时间",
+  "membershipStatus": "会员状态"
 }

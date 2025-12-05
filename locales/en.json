@@ -289,5 +289,12 @@
   "bulkSetAllFree": "Set all free",
   "bulkSetAllPaid": "Set all paid",
   "free": "Free",
-  "paid": "Paid"
+  "paid": "Paid",
+  "subscriptionType": "Subscription Type",
+  "annualMember": "Annual Member",
+  "lifetimeMember": "Lifetime Member",
+  "freeMember": "Free Member",
+  "daysRemaining": "Days Remaining",
+  "expiresOn": "Expires on",
+  "membershipStatus": "Membership Status"
 }

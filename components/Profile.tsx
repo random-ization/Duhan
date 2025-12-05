@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Language, ExamAttempt } from '../types';
+import { Language, ExamAttempt, SubscriptionType } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../services/api';
@@ -18,6 +18,8 @@ import {
   Activity,
   CheckCircle,
   XCircle,
+  Crown,
+  Clock,
 } from 'lucide-react';
 
 interface ProfileProps {
@@ -134,6 +136,27 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
   const daysSinceJoin = Math.floor((Date.now() - user.joinDate) / (1000 * 60 * 60 * 24));
 
+  // Calculate subscription details
+  const getMembershipLabel = () => {
+    if (user.tier === 'FREE') {
+      return labels.freeMember || 'Free Member';
+    }
+    if (user.subscriptionType === SubscriptionType.LIFETIME) {
+      return labels.lifetimeMember || 'Lifetime Member';
+    }
+    return labels.annualMember || 'Annual Member';
+  };
+
+  const getDaysRemaining = () => {
+    if (user.tier === 'PAID' && user.subscriptionType === SubscriptionType.ANNUAL && user.subscriptionExpiry) {
+      const days = Math.ceil((user.subscriptionExpiry - Date.now()) / (1000 * 60 * 60 * 24));
+      return days > 0 ? days : 0;
+    }
+    return null;
+  };
+
+  const daysRemaining = getDaysRemaining();
+
   // Get recent exam history (last 5)
   const recentExams = [...examHistory].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 
@@ -212,14 +235,25 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
               </h1>
             )}
             <p className="text-white/80">{user.email}</p>
-            <div className="flex items-center gap-4 mt-2 text-sm">
+            <div className="flex items-center gap-3 mt-2 text-sm flex-wrap">
               <span className="flex items-center gap-1">
                 <Calendar size={16} />
                 {labels.joinedDate}: {new Date(user.joinDate).toLocaleDateString()}
               </span>
-              <span className="px-2 py-1 bg-white/20 rounded-full">
-                {user.tier === 'PAID' ? labels.premium : labels.free}
+              <span className={`flex items-center gap-1 px-3 py-1 rounded-full font-medium ${
+                user.tier === 'PAID' 
+                  ? 'bg-amber-400 text-amber-900' 
+                  : 'bg-white/20 text-white'
+              }`}>
+                {user.tier === 'PAID' && <Crown size={14} />}
+                {getMembershipLabel()}
               </span>
+              {daysRemaining !== null && (
+                <span className="flex items-center gap-1 px-3 py-1 bg-white/20 rounded-full">
+                  <Clock size={14} />
+                  {daysRemaining} {labels.daysRemaining || 'days remaining'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -302,12 +336,55 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {labels.plan}
+                  {labels.membershipStatus || 'Membership Status'}
                 </label>
-                <div className="flex items-center gap-2">
-                  <span className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg font-medium">
-                    {user.tier === 'PAID' ? labels.premium : labels.free}
-                  </span>
+                <div className="space-y-3">
+                  <div className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium ${
+                    user.tier === 'PAID' 
+                      ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300' 
+                      : 'bg-slate-50 border-2 border-slate-200'
+                  }`}>
+                    {user.tier === 'PAID' && <Crown className="text-amber-600" size={20} />}
+                    <span className={user.tier === 'PAID' ? 'text-amber-900' : 'text-slate-700'}>
+                      {getMembershipLabel()}
+                    </span>
+                  </div>
+                  
+                  {user.tier === 'PAID' && user.subscriptionType === SubscriptionType.ANNUAL && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">
+                            {labels.daysRemaining || 'Days Remaining'}
+                          </p>
+                          <p className="text-2xl font-bold text-blue-700 mt-1">
+                            {daysRemaining} {labels.days || 'days'}
+                          </p>
+                        </div>
+                        {user.subscriptionExpiry && (
+                          <div className="text-right">
+                            <p className="text-xs text-blue-600">
+                              {labels.expiresOn || 'Expires on'}
+                            </p>
+                            <p className="text-sm font-medium text-blue-900">
+                              {new Date(user.subscriptionExpiry).toLocaleDateString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {user.tier === 'PAID' && user.subscriptionType === SubscriptionType.LIFETIME && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="text-purple-600" size={20} />
+                        <p className="text-sm text-purple-900 font-medium">
+                          Unlimited access - No expiration
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -441,15 +518,24 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                     <p className="font-medium text-slate-900">{daysSinceJoin} {labels.days}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">{labels.plan}:</span>
-                    <p className="font-medium text-slate-900">
-                      {user.tier === 'PAID' ? labels.premium : labels.free}
+                    <span className="text-slate-500">{labels.membershipStatus || 'Membership'}:</span>
+                    <p className="font-medium text-slate-900 flex items-center gap-1">
+                      {user.tier === 'PAID' && <Crown size={14} className="text-amber-600" />}
+                      {getMembershipLabel()}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-500">{labels.role}:</span>
                     <p className="font-medium text-slate-900">{user.role}</p>
                   </div>
+                  {daysRemaining !== null && (
+                    <div className="col-span-2">
+                      <span className="text-slate-500">{labels.daysRemaining || 'Days Remaining'}:</span>
+                      <p className="font-bold text-blue-600 text-lg">
+                        {daysRemaining} {labels.days}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

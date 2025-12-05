@@ -288,5 +288,12 @@
   "bulkSetAllFree": "Бүгдийг үнэгүй болгох",
   "bulkSetAllPaid": "Бүгдийг төлбөртэй болгох",
   "free": "Үнэгүй",
-  "paid": "Төлбөртэй"
+  "paid": "Төлбөртэй",
+  "subscriptionType": "Захиалгын төрөл",
+  "annualMember": "Жилийн гишүүн",
+  "lifetimeMember": "Насан туршийн гишүүн",
+  "freeMember": "Үнэгүй гишүүн",
+  "daysRemaining": "Үлдсэн өдөр",
+  "expiresOn": "Дуусах хугацаа",
+  "membershipStatus": "Гишүүнчлэлийн төлөв"
 }
