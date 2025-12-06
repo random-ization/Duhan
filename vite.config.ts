@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
     },
+    preview: {
+      port: 3000,
+      host: '0.0.0.0',
+      allowedHosts: ['koreanstudy.me', 'www.koreanstudy.me', 'joyhan-foq2p.ondigitalocean.app'],
+    },
     plugins: [react()],
     resolve: {
       alias: {
