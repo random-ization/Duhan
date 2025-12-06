@@ -152,7 +152,7 @@ export const saveExamAttempt = async (req: AuthRequest, res: Response) => {
         score,
         maxScore,
         // Prisma automatically handles Json type - no need to stringify
-        userAnswers,
+        userAnswers: userAnswers as Record<string, number>,
         timestamp: timestamp ? new Date(timestamp) : new Date(),
       },
     });
@@ -186,7 +186,7 @@ export const logActivity = async (req: AuthRequest, res: Response) => {
         duration: duration || null,
         itemsStudied: itemsStudied || null,
         // Prisma automatically handles Json type - no need to stringify
-        metadata: metadata || null,
+        metadata: metadata ?? undefined,
         date: today,
       },
     });

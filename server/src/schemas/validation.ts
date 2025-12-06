@@ -44,7 +44,7 @@ export const SaveExamAttemptSchema = z.object({
   examTitle: z.string().min(1, 'Exam title is required'),
   score: z.number().int().min(0),
   maxScore: z.number().int().min(1),
-  userAnswers: z.record(z.number()),
+  userAnswers: z.record(z.string(), z.number()),
   timestamp: z.union([z.string(), z.number()]).optional(),
 });
 
@@ -52,7 +52,7 @@ export const LogActivitySchema = z.object({
   activityType: z.enum(['VOCAB', 'READING', 'LISTENING', 'GRAMMAR', 'EXAM']),
   duration: z.number().int().min(0).optional().nullable(),
   itemsStudied: z.number().int().min(0).optional().nullable(),
-  metadata: z.record(z.any()).optional().nullable(),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export const UpdateLearningProgressSchema = z.object({
@@ -115,6 +115,7 @@ export const SaveTopikExamSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   type: z.enum(['READING', 'LISTENING']),
+  round: z.number().int(),
   timeLimit: z.number().int().min(1),
   isPaid: z.boolean().optional(),
   questions: z.array(
