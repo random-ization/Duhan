@@ -3,6 +3,8 @@ import cors from 'cors';
 import contentRoutes from './routes/content.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import adminRoutes from './routes/admin.routes';
+app.use('/api/admin', adminRoutes);
 
 const app = express();
 
