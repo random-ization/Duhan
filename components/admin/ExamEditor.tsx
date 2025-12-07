@@ -164,7 +164,17 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
   const createNewExam = (type: TopikType) => {
     const structure = type === 'READING' ? TOPIK_READING_STRUCTURE : TOPIK_LISTENING_STRUCTURE;
     const questions: TopikQuestion[] = [];
-
+    const newExam: TopikExam = {
+      id: `exam-${Date.now()}`,
+      type,
+      title: `TOPIK II ${type === 'READING' ? t.reading : t.listening} - New`,
+      description: '',
+      round: 0, // [新增] 初始化届数，避免后端校验失败
+      timeLimit: type === 'READING' ? 70 : 60,
+      isPaid: false,
+      questions,
+    };
+    
     for (let i = 1; i <= 50; i++) {
       questions.push({
         number: i,
@@ -331,7 +341,21 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold mb-4">Exam Metadata</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
+{/* [新增] Round (届数) 输入框 */}
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t.round || 'Round (e.g. 64)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={selectedExam.round}
+                      onChange={e => updateExamMetadata('round', parseInt(e.target.value) || 0)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    />
+                  </div>
+
+                  {/* [修改] Title 输入框 (改为只占一半宽度) */}
+                  <div className="col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t.title}
                     </label>
