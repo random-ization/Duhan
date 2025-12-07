@@ -145,3 +145,17 @@ export type UpdateLearningProgressInput = z.infer<typeof UpdateLearningProgressS
 export type CreateInstituteInput = z.infer<typeof CreateInstituteSchema>;
 export type SaveContentInput = z.infer<typeof SaveContentSchema>;
 export type SaveTopikExamInput = z.infer<typeof SaveTopikExamSchema>;
+export const UpdateProfileSchema = z.object({
+  name: z.string().min(1, 'Name cannot be empty').optional(),
+  avatar: z.string().optional(),
+});
+
+// 修改密码校验 (Change Password Validation)
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+// 导出类型定义 (Export Types)
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
