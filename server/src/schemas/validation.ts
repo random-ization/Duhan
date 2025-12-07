@@ -117,14 +117,22 @@ export const SaveTopikExamSchema = z.object({
   type: z.enum(['READING', 'LISTENING']),
   round: z.number().int(),
   timeLimit: z.number().int().min(1),
+  
+  // [新增] 添加音频字段，否则上传了音频也存不进去
+  audioUrl: z.string().optional().nullable(),
+  
   isPaid: z.boolean().optional(),
+  
   questions: z.array(
     z.object({
       number: z.number().int(),
       passage: z.string().optional(),
       audioUrl: z.string().optional(),
       question: z.string(),
-      Image: z.string().optional(),
+      
+      // [修改] 将 questionImage 改为 image，与前端 ExamEditor.tsx 保持一致
+      image: z.string().optional().nullable(),
+      
       options: z.array(z.string()),
       optionImages: z.array(z.string()).optional(),
       correctAnswer: z.number().int().min(0),
