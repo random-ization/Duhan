@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import bcrypt from 'bcryptjs';
 import {
   SaveWordSchema,
   SaveWordInput,
@@ -14,6 +15,10 @@ import {
   LogActivityInput,
   UpdateLearningProgressSchema,
   UpdateLearningProgressInput,
+  UpdateProfileSchema,
+  UpdateProfileInput,
+  ChangePasswordSchema,
+  ChangePasswordInput,
 } from '../schemas/validation';
 
 // Save a Vocabulary Word
