@@ -19,7 +19,6 @@ const getHeaders = () => {
   };
 };
 
-// Unified request function with error handling
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
 
@@ -37,7 +36,6 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-// Type definitions for auth endpoints
 interface RegisterData {
   name: string;
   email: string;
@@ -55,7 +53,7 @@ interface AuthResponse {
 }
 
 export const api = {
-  // Auth
+  // --- Auth ---
   register: async (data: RegisterData): Promise<AuthResponse> => {
     return request<AuthResponse>(`${API_URL}/auth/register`, {
       method: 'POST',
@@ -79,7 +77,50 @@ export const api = {
     });
   },
 
-  // User Data
+  // --- General Upload (Optimization: Storage Space) ---
+  uploadMedia: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('token');
+    
+    // 使用 fetch 直接上传，不设置 Content-Type 让浏览器自动处理 boundary
+    const res = await fetch(`${API_URL}/upload`, { 
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errorMessage = 'Upload failed';
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {}
+      throw new Error(errorMessage);
+    }
+    
+    return res.json();
+  },
+
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
+    // 复用 uploadMedia 的逻辑，或者保持独立以匹配后端路由
+    // 这里保持原样以防后端区别处理
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/user/avatar`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData
+    });
+    if(!res.ok) throw new Error('Avatar upload failed');
+    return res.json();
+  },
+
+  // --- User Data ---
   saveWord: async (word: Partial<VocabularyItem> & { unit?: number }) => {
     return request(`${API_URL}/user/word`, {
       method: 'POST',
@@ -112,7 +153,7 @@ export const api = {
     });
   },
 
-  // Content Management (Public Read, Admin Write)
+  // --- Content ---
   getInstitutes: async (): Promise<Institute[]> => {
     try {
       return await request<Institute[]>(`${API_URL}/content/institutes`);
@@ -168,7 +209,7 @@ export const api = {
     });
   },
 
-  // Profile Management
+  // --- Profile ---
   updateProfile: async (updates: { name?: string; avatar?: string }) => {
     return request(`${API_URL}/user/profile`, {
       method: 'PUT',
@@ -185,49 +226,7 @@ export const api = {
     });
   },
 
-  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-
-    // Note: FormData requires special handling, don't include Content-Type header
-    const token = localStorage.getItem('token');
-    return request<{ avatarUrl: string }>(`${API_URL}/user/avatar`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        // Content-Type is automatically set by browser for FormData
-      },
-      body: formData,
-    });
-  },
-  uploadMedia: async (file: File): Promise<{ url: string }> => {
-    const formData = new FormData();
-    formData.append('file', file); // 对应后端 upload.routes.ts 中的 uploadMedia.single('file')
-
-    const token = localStorage.getItem('token');
-    
-    // 注意：这里使用 fetch 而不是 request 封装函数，以确保 FormData 的 Content-Type 被浏览器自动正确处理
-    const res = await fetch(`${API_URL}/upload`, { 
-      method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      let errorMessage = 'Upload failed';
-      try {
-        const errorData = await res.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {}
-      throw new Error(errorMessage);
-    }
-    
-    return res.json();
-  },
-
-  // Learning Activity Tracking
+  // --- Tracking ---
   logActivity: async (
     activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
     duration?: number,
@@ -246,7 +245,6 @@ export const api = {
     });
   },
 
-  // Learning Progress Tracking
   updateLearningProgress: async (progress: {
     lastInstitute?: string;
     lastLevel?: number;
@@ -260,7 +258,7 @@ export const api = {
     });
   },
 
-  // Legal Documents
+  // --- Legal ---
   getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') => {
     return request(`${API_URL}/content/legal/${type}`);
   },
