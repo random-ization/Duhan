@@ -229,3 +229,31 @@ export const updateLearningProgress = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ error: 'Failed to update learning progress' });
   }
 };
+export const updateProfileAvatar = async (req: AuthRequest, res: Response) => {
+  try {
+    // 1. 检查是否有文件被 Multer 中间件处理过
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // 2. 获取 Spaces 返回的文件信息 (Multer-S3 会把 URL 放在 location 字段)
+    const fileData = req.file as any;
+    const avatarUrl = fileData.location;
+
+    // 3. 获取当前登录用户的 ID
+    const userId = req.user!.userId;
+
+    // 4. 将新的头像 URL 更新到数据库
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { avatar: avatarUrl },
+    });
+
+    // 5. 返回更新后的头像 URL 给前端
+    res.json({ avatarUrl: user.avatar });
+  } catch (e) {
+    console.error('Avatar update failed', e);
+    res.status(500).json({ error: 'Failed to update avatar' });
+  }
+};
+

@@ -13,13 +13,18 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\""
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.946.0",
     "lucide-react": "^0.555.0",
+    "multer": "^2.0.2",
+    "multer-s3": "^3.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.10.1",
     "xlsx": "latest"
   },
   "devDependencies": {
+    "@types/multer": "^2.0.0",
+    "@types/multer-s3": "^3.0.3",
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",

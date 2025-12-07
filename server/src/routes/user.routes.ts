@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
+import { uploadAvatar } from '../lib/storage'; // 👈 导入 storage
+import { updateProfileAvatar } from '../controllers/user.controller';
 import {
   saveWord,
   saveMistake,
@@ -19,5 +21,6 @@ router.post('/annotation', saveAnnotation);
 router.post('/exam', saveExamAttempt);
 router.post('/activity', logActivity);
 router.post('/progress', updateLearningProgress);
+router.post('/avatar', uploadAvatar.single('avatar'), updateProfileAvatar);
 
 export default router;
