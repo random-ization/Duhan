@@ -201,6 +201,30 @@ export const api = {
       body: JSON.stringify(exam),
     });
   },
+  // --- Admin: Users ---
+  getUsers: async (): Promise<User[]> => {
+  try {
+    return await request<User[]>(`${API_URL}/admin/users`);
+  } catch (err) {
+    console.error('getUsers failed', err);
+    return [];
+  }
+},
+
+updateUser: async (userId: string, updates: Partial<User>) => {
+  return request(`${API_URL}/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(updates),
+  });
+},
+
+deleteUser: async (userId: string) => {
+  return request(`${API_URL}/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+},
 
   deleteTopikExam: async (id: string) => {
     return request(`${API_URL}/content/topik/${id}`, {
