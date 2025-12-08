@@ -96,14 +96,15 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     // Save to history
     const attempt: ExamAttempt = {
+      id: Date.now().toString(),
       examId: currentExam.id,
       examTitle: currentExam.title,
       score,
+      maxScore: totalScore,
       totalScore,
       correctCount,
-      totalQuestions: currentExam.questions.length,
+      timestamp: Date.now(),
       userAnswers,
-      date: new Date().toISOString(),
     };
     onSaveHistory(attempt);
 
@@ -146,10 +147,12 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const handleDeleteAnnotation = (contextKey: string) => {
     // Create a "delete" annotation by saving with empty note
     const deleteAnnotation: Annotation = {
+      id: Date.now().toString(),
       contextKey,
-      selectedText: '',
+      text: '',
       note: '',
-      createdAt: new Date().toISOString(),
+      color: null, // Delete annotation
+      timestamp: Date.now(),
     };
     onSaveAnnotation(deleteAnnotation);
   };

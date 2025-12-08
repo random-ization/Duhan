@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { TopikExam, TopikQuestion, Language, Annotation } from '../../types';
-import { Clock, FastForward, MessageSquare, Trash2, Check } from 'lucide-react';
+import { Clock, MessageSquare, Trash2, Check, X, ArrowLeft } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 import { AudioPlayer } from './AudioPlayer';
@@ -19,6 +19,36 @@ interface ExamSessionProps {
   onPauseTimer: () => void;
   onResumeTimer: () => void;
 }
+
+// PDF 仿真样式常量
+const PAPER_MAX_WIDTH = "max-w-[900px]";
+const FONT_SERIF = "font-serif";
+
+// TOPIK Reading 结构定义
+const TOPIK_READING_STRUCTURE = [
+  { range: [1, 2], instruction: "※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)" },
+  { range: [3, 4], instruction: "※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)" },
+  { range: [5, 8], instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)" },
+  { range: [9, 12], instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)" },
+  { range: [13, 15], instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)" },
+  { range: [16, 18], instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)" },
+  { range: [19, 24], instruction: "※ [19～24] 다음을 읽고 물음에 답하십시오. (각 2점)" },
+  { range: [25, 27], instruction: "※ [25～27] 다음은 신문 기사의 제목입니다. 가장 잘 설명한 것을 고르십시오. (각 2점)" },
+  { range: [28, 31], instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)" },
+  { range: [32, 34], instruction: "※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)" },
+  { range: [35, 38], instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)" },
+  { range: [39, 41], instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)" },
+  { range: [42, 50], instruction: "※ [42～50] 다음을 읽고 물음에 답하십시오. (각 2점)" },
+];
+
+const TOPIK_LISTENING_STRUCTURE = [
+  { range: [1, 3], instruction: "※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)" },
+  { range: [4, 8], instruction: "※ [4～8] 다음 대화를 잘 듣고 이어질 수 있는 말을 고르십시오. (각 2점)" },
+  { range: [9, 12], instruction: "※ [9～12] 다음 대화를 잘 듣고 여자가 이어서 할 행동으로 알맞은 것을 고르십시오. (각 2점)" },
+  { range: [13, 16], instruction: "※ [13～16] 다음을 듣고 내용과 일치하는 것을 고르십시오. (각 2점)" },
+  { range: [17, 20], instruction: "※ [17～20] 다음을 듣고 남자의 중심 생각을 고르십시오. (각 2점)" },
+  { range: [21, 50], instruction: "※ [21～50] 다음을 듣고 물음에 답하십시오. (각 2점)" },
+];
 
 export const ExamSession: React.FC<ExamSessionProps> = React.memo(
   ({
@@ -51,251 +81,159 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
     const examContextPrefix = useMemo(() => `TOPIK-${exam.id}`, [exam.id]);
 
-    // Sidebar annotations with notes
-    const sidebarAnnotations = useMemo(
-      () =>
-        annotations.filter(
-          a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0
-        ),
-      [annotations, examContextPrefix]
-    );
+    // 选择结构定义
+    const structure = exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
 
     // Format time
     const formatTime = (seconds: number) => {
-      const h = Math.floor(seconds / 3600);
-      const m = Math.floor((seconds % 3600) / 60);
+      const m = Math.floor(seconds / 60);
       const s = seconds % 60;
-      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      return `${m}:${s.toString().padStart(2, '0')}`;
     };
-
-    // Text selection handler
-    const handleTextSelect = (questionIndex: number) => {
-      const selection = window.getSelection();
-      if (!selection || selection.toString().trim() === '') return;
-
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const selectedText = selection.toString().trim();
-      const contextKey = `${examContextPrefix}-Q${questionIndex}`;
-
-      setSelectionRange({
-        start: range.startOffset,
-        end: range.endOffset,
-        text: selectedText,
-        contextKey,
-      });
-      setMenuPosition({ top: rect.bottom + window.scrollY + 5, left: rect.left + window.scrollX });
-      setShowAnnotationMenu(true);
-    };
-
-    const saveAnnotation = () => {
-      if (!selectionRange) return;
-
-      const annotation: Annotation = {
-        contextKey: selectionRange.contextKey,
-        selectedText: selectionRange.text,
-        note: noteInput,
-        createdAt: new Date().toISOString(),
-      };
-
-      onSaveAnnotation(annotation);
-      setShowAnnotationMenu(false);
-      setNoteInput('');
-      setSelectionRange(null);
-      window.getSelection()?.removeAllRanges();
-    };
-
-    // Close annotation menu on click outside
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (showAnnotationMenu) {
-          const target = event.target as HTMLElement;
-          if (!target.closest('.annotation-menu')) {
-            setShowAnnotationMenu(false);
-            setSelectionRange(null);
-            window.getSelection()?.removeAllRanges();
-          }
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showAnnotationMenu]);
 
     // Scroll to question
     const scrollToQuestion = (index: number) => {
       questionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // 获取当前题目所属的 instruction
+    const getInstructionForQuestion = (qIndex: number) => {
+      const qNum = qIndex + 1;
+      for (const section of structure) {
+        if (qNum >= section.range[0] && qNum <= section.range[1]) {
+          return section.instruction;
+        }
+      }
+      return null;
+    };
+
+    // 判断是否需要显示 instruction (仅在该 section 的第一道题时显示)
+    const shouldShowInstruction = (qIndex: number) => {
+      const qNum = qIndex + 1;
+      for (const section of structure) {
+        if (qNum === section.range[0]) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     // Progress calculation
     const answeredCount = Object.keys(userAnswers).length;
-    const progressPercentage = (answeredCount / exam.questions.length) * 100;
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Timer Bar */}
-        <div className="sticky top-0 z-30 bg-white border-b shadow-sm">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-lg font-semibold">{exam.title}</h2>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Clock className="w-4 h-4" />
-                  <span className={timeLeft < 300 ? 'text-red-600 font-bold' : ''}>
-                    {formatTime(timeLeft)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={timerActive ? onPauseTimer : onResumeTimer}
-                  className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
-                >
-                  {timerActive ? labels.pause || 'Pause' : labels.resume || 'Resume'}
-                </button>
-                <button
-                  onClick={onSubmit}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center space-x-2"
-                >
-                  <FastForward className="w-4 h-4" />
-                  <span>{labels.submitExam || 'Submit'}</span>
-                </button>
-              </div>
+      <div className="min-h-screen bg-slate-200 flex flex-col">
+        {/* 顶部工具栏 */}
+        <div className="sticky top-0 z-30 bg-slate-800 text-white shadow-lg shrink-0">
+          <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="font-bold text-lg tracking-wide">{exam.title}</span>
+              <span className="text-xs bg-slate-700 px-2 py-1 rounded">
+                제 {exam.round || '?'} 회
+              </span>
             </div>
-            {/* Progress Bar */}
-            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
-              />
+
+            <div className={`text-xl font-mono font-bold flex items-center ${timeLeft < 300 ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`}>
+              <Clock className="w-5 h-5 mr-2" />
+              {formatTime(timeLeft)}
             </div>
-            <div className="mt-1 text-xs text-gray-600 text-center">
-              {answeredCount} / {exam.questions.length}{' '}
-              {labels.questionsAnswered || 'questions answered'}
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-300">
+                {answeredCount} / {exam.questions.length}
+              </span>
+              <button
+                onClick={onSubmit}
+                className="px-5 py-2 bg-white text-slate-900 rounded font-bold text-sm hover:bg-indigo-50 transition-colors"
+              >
+                제출 (Submit)
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8 flex gap-6">
-          {/* Main Content */}
-          <div className="flex-1">
-            <div className="space-y-6">
+        {/* 主内容区域 */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+          {/* PDF 试卷纸张 */}
+          <div className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen pb-16 relative border border-slate-300`}>
+
+            {/* 试卷头部 */}
+            <div className="border-b-2 border-black mx-8 mt-8 pb-4 mb-8">
+              <div className="flex justify-between items-end">
+                <h1 className={`text-3xl font-extrabold tracking-widest ${FONT_SERIF} text-slate-900`}>
+                  TOPIK Ⅱ
+                </h1>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-slate-700">
+                    {exam.type === 'READING' ? '읽기 (Reading)' : '듣기 (Listening)'}
+                  </div>
+                  <div className="text-sm text-slate-500 font-mono">
+                    제 {exam.round || '?'} 회 한국어능력시험
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 题目区域 */}
+            <div className="px-8 md:px-12 select-none">
               {exam.questions.map((question, idx) => (
-                <div
-                  key={idx}
-                  ref={el => (questionRefs.current[idx] = el)}
-                  className="bg-white p-6 rounded-lg shadow"
-                >
-                  <QuestionRenderer
-                    question={question}
-                    questionIndex={idx}
-                    userAnswer={userAnswers[idx]}
-                    language={language}
-                    showCorrect={false}
-                    onAnswerChange={optionIndex => onAnswerChange(idx, optionIndex)}
-                    onTextSelect={() => handleTextSelect(idx)}
-                    annotations={annotations}
-                    contextPrefix={examContextPrefix}
-                  />
+                <div key={idx} ref={el => (questionRefs.current[idx] = el)}>
+
+                  {/* Instruction Bar (每个 section 的第一题显示) */}
+                  {shouldShowInstruction(idx) && (
+                    <div className="bg-slate-50 border-l-4 border-slate-800 px-4 py-2 mb-6 mt-8 first:mt-0">
+                      <span className={`text-[16px] font-bold text-slate-800 ${FONT_SERIF}`}>
+                        {getInstructionForQuestion(idx)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 题目 */}
+                  <div className="mb-10">
+                    <QuestionRenderer
+                      question={question}
+                      questionIndex={idx}
+                      userAnswer={userAnswers[idx]}
+                      language={language}
+                      showCorrect={false}
+                      onAnswerChange={optionIndex => onAnswerChange(idx, optionIndex)}
+                      annotations={annotations}
+                      contextPrefix={examContextPrefix}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Sidebar: Question Navigator + Annotations */}
-          <div className="w-64 space-y-4">
-            {/* Question Navigator */}
-            <div className="bg-white p-4 rounded-lg shadow sticky top-24">
-              <h3 className="font-semibold mb-3 text-sm">{labels.questions || 'Questions'}</h3>
-              <div className="grid grid-cols-5 gap-2">
-                {exam.questions.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => scrollToQuestion(idx)}
-                    className={`
-                    w-10 h-10 rounded flex items-center justify-center text-sm font-medium transition-colors
-                    ${
-                      userAnswers[idx] !== undefined
-                        ? 'bg-green-100 text-green-700 border-2 border-green-600'
-                        : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
-                    }
-                  `}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
-              </div>
+            {/* 试卷页脚 */}
+            <div className="border-t border-slate-200 mx-8 pt-6 mt-12 text-center text-slate-400 font-mono text-xs">
+              <div>한국어능력시험 (TOPIK)</div>
+              <div className="mt-1">- End of Paper -</div>
             </div>
-
-            {/* Annotations Sidebar */}
-            {sidebarAnnotations.length > 0 && (
-              <div className="bg-white p-4 rounded-lg shadow sticky top-96 max-h-96 overflow-y-auto">
-                <h3 className="font-semibold mb-3 text-sm flex items-center space-x-2">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{labels.myNotes || 'My Notes'}</span>
-                </h3>
-                <div className="space-y-3">
-                  {sidebarAnnotations.map((annotation, idx) => (
-                    <div
-                      key={idx}
-                      className="border-l-4 border-yellow-400 pl-3 py-2 bg-yellow-50 rounded"
-                    >
-                      <div className="text-xs text-gray-600 mb-1 italic">
-                        "{annotation.selectedText}"
-                      </div>
-                      <div className="text-sm">{annotation.note}</div>
-                      <button
-                        onClick={() => onDeleteAnnotation(annotation.contextKey)}
-                        className="mt-2 text-xs text-red-600 hover:text-red-700 flex items-center space-x-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>{labels.delete || 'Delete'}</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Annotation Menu */}
-        {showAnnotationMenu && menuPosition && (
-          <div
-            className="annotation-menu fixed z-50 bg-white border border-gray-300 shadow-lg rounded-lg p-3 w-64"
-            style={{ top: menuPosition.top, left: menuPosition.left }}
-          >
-            <div className="text-xs text-gray-600 mb-2 italic">"{selectionRange?.text}"</div>
-            <textarea
-              value={noteInput}
-              onChange={e => setNoteInput(e.target.value)}
-              placeholder={labels.addNote || 'Add your note...'}
-              className="w-full border border-gray-300 rounded p-2 text-sm mb-2 resize-none"
-              rows={3}
-              autoFocus
-            />
-            <div className="flex justify-end space-x-2">
+        {/* 题目导航浮动栏 */}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+          <div className="bg-white/95 backdrop-blur-sm rounded-full shadow-xl border border-slate-200 px-4 py-2 flex items-center gap-1 overflow-x-auto max-w-[90vw]">
+            <span className="text-xs text-slate-500 font-bold mr-2 shrink-0">题目</span>
+            {exam.questions.map((_, idx) => (
               <button
-                onClick={() => {
-                  setShowAnnotationMenu(false);
-                  setNoteInput('');
-                  setSelectionRange(null);
-                  window.getSelection()?.removeAllRanges();
-                }}
-                className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
+                key={idx}
+                onClick={() => scrollToQuestion(idx)}
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0
+                  ${userAnswers[idx] !== undefined
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }
+                `}
               >
-                {labels.cancel || 'Cancel'}
+                {idx + 1}
               </button>
-              <button
-                onClick={saveAnnotation}
-                disabled={!noteInput.trim()}
-                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50 flex items-center space-x-1"
-              >
-                <Check className="w-3 h-3" />
-                <span>{labels.save || 'Save'}</span>
-              </button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Audio Player (if listening exam) */}
         {exam.type === 'LISTENING' && exam.audioUrl && (
