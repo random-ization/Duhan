@@ -76,10 +76,15 @@ export interface SavedWord {
   dateAdded: number;
 }
 
+export interface LevelConfig {
+  level: number;
+  units: number;  // Number of units in this level
+}
+
 export interface Institute {
   id: string;
   name: string; // e.g., Yonsei, Sogang, Ewha
-  levels: number[]; // 1 to 6
+  levels: LevelConfig[] | number[]; // Support both old format and new format
 }
 
 export enum LearningModuleType {

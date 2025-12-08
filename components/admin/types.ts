@@ -7,6 +7,7 @@ import {
   TextbookContextMap,
   TopikExam,
   LegalDocument,
+  LevelConfig,
 } from '../../types';
 
 export interface AdminPanelProps {
@@ -16,7 +17,7 @@ export interface AdminPanelProps {
   onUpdateUser: (userId: string, updates: Partial<User>) => void;
   onDeleteUser: (userId: string) => void;
   institutes: Institute[];
-  onAddInstitute: (name: string) => void | Promise<void>;
+  onAddInstitute: (name: string, levels?: LevelConfig[]) => void | Promise<void>;
   onDeleteInstitute: (instituteId: string) => void;
   onUpdateInstitutes: (institutes: Institute[]) => void;
   textbookContexts: TextbookContextMap;

@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useEffect,
 } from 'react';
-import { Institute, TextbookContextMap, TopikExam, TextbookContent } from '../types';
+import { Institute, TextbookContextMap, TopikExam, TextbookContent, LevelConfig } from '../types';
 import { api } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -18,7 +18,7 @@ interface DataContextType {
 
   // Data Actions
   fetchInitialData: () => Promise<void>;
-  addInstitute: (name: string) => Promise<void>;
+  addInstitute: (name: string, levels?: LevelConfig[]) => Promise<void>;
   deleteInstitute: (id: string) => void;
   saveTextbookContext: (key: string, content: TextbookContent) => Promise<void>;
   saveTopikExam: (exam: TopikExam) => Promise<void>;
@@ -68,12 +68,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, [user, fetchInitialData]);
 
   const addInstitute = useCallback(
-    async (name: string) => {
+    async (name: string, levels?: LevelConfig[]) => {
       try {
+        // Use provided levels or default to 6 levels with 10 units each
+        const levelConfig = levels || Array.from({ length: 6 }, (_, i) => ({ level: i + 1, units: 10 }));
         const newInst = await api.createInstitute({
           id: name.toLowerCase().replace(/\s+/g, '-'),
           name,
-          levels: [1, 2, 3, 4, 5, 6],
+          levels: levelConfig,
         });
         setInstitutes([...institutes, newInst]);
       } catch (e) {
