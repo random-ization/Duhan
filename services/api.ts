@@ -78,53 +78,53 @@ export const api = {
   // --- Admin / Users ---
   getUsers: async (): Promise<any[]> => {
     // 采用绝对路径以兼容部署下的 base
-    return request<any[]>('/hangyeol-server/api/admin/users');
+    return request<any[]>('/admin/users');
   },
 
   updateUser: async (userId: string, updates: Record<string, any>) =>
-    request(`/hangyeol-server/api/admin/users/${userId}`, {
+    request(`/admin/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
 
   deleteUser: async (userId: string) =>
-    request(`/hangyeol-server/api/admin/users/${userId}`, {
+    request(`/admin/users/${userId}`, {
       method: 'DELETE',
     }),
 
   // --- Content / Textbook ---
-  getInstitutes: async () => request('/hangyeol-server/api/content/institutes'),
+  getInstitutes: async () => request('/content/institutes'),
   createInstitute: async (institute: any) =>
-    request('/hangyeol-server/api/content/institutes', {
+    request('/content/institutes', {
       method: 'POST',
       body: JSON.stringify(institute),
     }),
 
-  getTextbookContent: async () => request<Record<string, any>>('/hangyeol-server/api/content/textbook'),
+  getTextbookContent: async () => request<Record<string, any>>('/content/textbook'),
   saveTextbookContent: async (key: string, content: any) =>
-    request('/hangyeol-server/api/content/textbook', {
+    request('/content/textbook', {
       method: 'POST',
       body: JSON.stringify({ key, ...content }),
     }),
 
   // --- TOPIK ---
-  getTopikExams: async () => request<any[]>('/hangyeol-server/api/content/topik'),
+  getTopikExams: async () => request<any[]>('/content/topik'),
   saveTopikExam: async (exam: any) =>
-    request('/hangyeol-server/api/content/topik', {
+    request('/content/topik', {
       method: 'POST',
       body: JSON.stringify(exam),
     }),
   deleteTopikExam: async (id: string) =>
-    request(`/hangyeol-server/api/content/topik/${id}`, {
+    request(`/content/topik/${id}`, {
       method: 'DELETE',
     }),
 
   // --- Legal Docs ---
   getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') =>
-    request(`/hangyeol-server/api/content/legal/${type}`),
+    request(`/content/legal/${type}`),
 
   saveLegalDocument: async (type: 'terms' | 'privacy' | 'refund', title: string, content: string) =>
-    request(`/hangyeol-server/api/content/legal/${type}`, {
+    request(`/content/legal/${type}`, {
       method: 'POST',
       body: JSON.stringify({ title, content }),
     }),
@@ -135,7 +135,7 @@ export const api = {
     formData.append('file', file);
     const token = getTokenFromStorage();
 
-    const res = await fetch('/hangyeol-server/api/upload', {
+    const res = await fetch(`${API_URL}/upload`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
