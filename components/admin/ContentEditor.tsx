@@ -211,7 +211,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
       await onSaveContext(contentKey, content);
       setSaveStatus('success');
-      setTextInput('');
       setShowPreview(false);
 
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -250,42 +249,68 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     }
   };
 
-  // Load existing content when tab or selection changes
-  React.useEffect(() => {
-    if (!existingContent) {
-      setTextInput('');
-      return;
-    }
+  // Helper: Convert content object to text format
+  const getContentText = (content: any, tab: ContentTab): string => {
+    if (!content) return '';
 
-    if (activeTab === 'vocab' && existingContent.vocabularyList) {
+    if (tab === 'vocab' && content.vocabularyList) {
       try {
-        const vocab = JSON.parse(existingContent.vocabularyList);
-        const lines = vocab.map((v: any) =>
+        const vocab = JSON.parse(content.vocabularyList);
+        return vocab.map((v: any) =>
           `${v.korean} | ${v.pos || ''} | ${v.english} | ${v.exampleSentence || ''}`
         ).join('\n');
-        setTextInput(lines);
-      } catch { setTextInput(''); }
-    } else if (activeTab === 'reading') {
-      const text = existingContent.readingText || '';
-      const trans = existingContent.readingTranslation || '';
-      setTextInput(text && trans ? `${text}\n---\n${trans}` : text || trans);
-    } else if (activeTab === 'listening') {
-      const text = existingContent.listeningScript || '';
-      const trans = existingContent.listeningTranslation || '';
-      setTextInput(text && trans ? `${text}\n---\n${trans}` : text || trans);
-    } else if (activeTab === 'grammar' && existingContent.grammarList) {
+      } catch { return ''; }
+    }
+
+    if (tab === 'reading') {
+      const text = content.readingText || '';
+      const trans = content.readingTranslation || '';
+      return text && trans ? `${text}\n---\n${trans}` : text || trans;
+    }
+
+    if (tab === 'listening') {
+      const text = content.listeningScript || '';
+      const trans = content.listeningTranslation || '';
+      return text && trans ? `${text}\n---\n${trans}` : text || trans;
+    }
+
+    if (tab === 'grammar' && content.grammarList) {
       try {
-        const grammar = JSON.parse(existingContent.grammarList);
-        const lines = grammar.map((g: any) => {
+        const grammar = JSON.parse(content.grammarList);
+        return grammar.map((g: any) => {
           const usage = g.usages?.[0] || {};
           return `${g.pattern} | ${g.explanation} | ${usage.example || ''} | ${usage.translation || ''}`;
         }).join('\n');
-        setTextInput(lines);
-      } catch { setTextInput(''); }
-    } else {
-      setTextInput('');
+      } catch { return ''; }
     }
-    setShowPreview(false);
+
+    return '';
+  };
+
+  // State tracking to prevent overwriting user input on spurious re-renders
+  const lastState = React.useRef({ key: '', tab: '', text: '' });
+
+  // Load existing content when tab or selection changes
+  React.useEffect(() => {
+    const formattedText = getContentText(existingContent, activeTab);
+    const currentKeyStr = contentKey || '';
+
+    const isContextChange =
+      currentKeyStr !== lastState.current.key ||
+      activeTab !== lastState.current.tab;
+
+    // Only update if context changed OR the underlying content actually changed (external update)
+    // Note: We check formattedText against lastState.text (the prop value), not textInput (the user value)
+    const isExternalUpdate = formattedText !== lastState.current.text;
+
+    if (isContextChange || isExternalUpdate) {
+      setTextInput(formattedText);
+      lastState.current = {
+        key: currentKeyStr,
+        tab: activeTab,
+        text: formattedText
+      };
+    }
   }, [activeTab, contentKey, existingContent]);
 
   return (

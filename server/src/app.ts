@@ -4,6 +4,7 @@ import contentRoutes from './routes/content.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import adminRoutes from './routes/admin.routes';
+import uploadRoutes from './routes/upload.routes';
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use('/api/content', contentRoutes);
 console.log('[Server] /api/content registered');
 app.use('/api/admin', adminRoutes);
 console.log('[Server] /api/admin registered');
+app.use('/api/upload', uploadRoutes);
+console.log('[Server] /api/upload registered');
 
 // Health Check
 app.get('/health', (req, res) => {

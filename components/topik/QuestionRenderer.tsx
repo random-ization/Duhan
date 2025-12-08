@@ -141,7 +141,9 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 const isSelected = userAnswer === optionIndex;
 
                 // 动态样式
-                let optionClass = "flex items-start gap-2 cursor-pointer py-2 px-3 rounded transition-all border select-text ";
+                // Dynamic styles
+                const cursorStyle = showCorrect ? 'cursor-text' : 'cursor-pointer';
+                let optionClass = `flex items-start gap-2 ${cursorStyle} py-2 px-3 rounded transition-all border select-text `;
 
                 if (status === 'correct') {
                   optionClass += "bg-green-50 border-green-400 text-green-900";

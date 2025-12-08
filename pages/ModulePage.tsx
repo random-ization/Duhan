@@ -33,7 +33,11 @@ const ModulePage: React.FC = () => {
 
     Object.keys(textbookContexts).forEach(key => {
       if (key.startsWith(prefix)) {
-        const unit = parseInt(key.split('-')[2]);
+        // Robust parsing: slice off the prefix to get the unit number
+        // This handles Institute IDs that contain dashes (e.g. UUIDs)
+        const unitStr = key.slice(prefix.length);
+        const unit = parseInt(unitStr, 10);
+
         if (!isNaN(unit)) {
           contexts[unit] = textbookContexts[key];
         }
