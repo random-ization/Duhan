@@ -401,57 +401,71 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         )}
 
         {/* Add New Institute Button/Form */}
-        {onAddInstitute && (
-          <div className="mt-4">
-            {!showAddForm ? (
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add New Textbook
-              </button>
-            ) : (
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h4 className="font-medium text-green-800 mb-3">Add New Textbook</h4>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newInstituteName}
-                    onChange={e => setNewInstituteName(e.target.value)}
-                    placeholder="Enter textbook name (e.g., Yonsei, Sogang, Ewha)"
-                    className="flex-1 px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                  <button
-                    onClick={() => {
-                      if (newInstituteName.trim()) {
+        <div className="mt-4">
+          {!showAddForm ? (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add New Textbook
+            </button>
+          ) : (
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 className="font-medium text-green-800 mb-3">Add New Textbook</h4>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newInstituteName}
+                  onChange={e => setNewInstituteName(e.target.value)}
+                  placeholder="Enter textbook name (e.g., Yonsei, Sogang, Ewha)"
+                  className="flex-1 px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newInstituteName.trim()) {
+                      if (onAddInstitute) {
                         onAddInstitute(newInstituteName.trim());
-                        setNewInstituteName('');
-                        setShowAddForm(false);
+                      } else {
+                        alert('Add textbook function not available. Please check backend connection.');
                       }
-                    }}
-                    disabled={!newInstituteName.trim()}
-                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
                       setNewInstituteName('');
                       setShowAddForm(false);
-                    }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-green-600 text-xs mt-2">
-                  This will create a textbook with 6 levels (1-6), each with 10 units.
-                </p>
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (newInstituteName.trim()) {
+                      if (onAddInstitute) {
+                        onAddInstitute(newInstituteName.trim());
+                      } else {
+                        alert('Add textbook function not available. Please check backend connection.');
+                      }
+                      setNewInstituteName('');
+                      setShowAddForm(false);
+                    }
+                  }}
+                  disabled={!newInstituteName.trim()}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setNewInstituteName('');
+                    setShowAddForm(false);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            )}
-          </div>
-        )}
+              <p className="text-green-600 text-xs mt-2">
+                This will create a textbook with 6 levels (1-6), each with 10 units.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Payment Management View */}
