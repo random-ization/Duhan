@@ -13,6 +13,7 @@ interface TopikModuleProps {
   onSaveAnnotation: (annotation: Annotation) => void;
   canAccessContent?: (content: any) => boolean;
   onShowUpgradePrompt?: () => void;
+  onDeleteHistory?: (id: string) => void;
 }
 
 export const TopikModule: React.FC<TopikModuleProps> = ({
@@ -24,6 +25,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   onSaveAnnotation,
   canAccessContent,
   onShowUpgradePrompt,
+  onDeleteHistory,
 }) => {
   const [view, setView] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
@@ -173,6 +175,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         onViewHistory={() => setView('HISTORY_LIST')}
         onReviewAttempt={reviewExam}
         canAccessContent={canAccessContent}
+        onDeleteAttempt={onDeleteHistory}
       />
     );
   }
@@ -189,6 +192,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         showHistoryView={true}
         onBack={() => setView('LIST')}
         canAccessContent={canAccessContent}
+        onDeleteAttempt={onDeleteHistory}
       />
     );
   }
@@ -200,6 +204,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         language={language}
         onStart={startExam}
         onBack={resetExam}
+        hasAttempted={history.some(h => h.examId === currentExam.id)}
       />
     );
   }

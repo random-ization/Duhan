@@ -172,6 +172,32 @@ export const saveExamAttempt = async (req: AuthRequest, res: Response) => {
 };
 
 // Log Learning Activity
+export const deleteExamAttempt = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    // Verify ownership
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      // If not found or not owned by user, return 404
+      return res.status(404).json({ error: 'Attempt not found' });
+    }
+
+    await prisma.examAttempt.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, id });
+  } catch (e: any) {
+    console.error('Delete Exam Attempt Error', e);
+    res.status(500).json({ error: 'Failed to delete exam attempt' });
+  }
+};
+
 export const logActivity = async (req: AuthRequest, res: Response) => {
   try {
     // Validate input

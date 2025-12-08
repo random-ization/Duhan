@@ -176,6 +176,11 @@ export const api = {
       body: JSON.stringify(attempt),
     }),
 
+  deleteExamAttempt: async (id: string) =>
+    request(`/user/exam/${id}`, {
+      method: 'DELETE',
+    }),
+
   logActivity: async (activityType: string, duration?: number, itemsStudied?: number, metadata?: any) =>
     request('/user/activity', {
       method: 'POST',

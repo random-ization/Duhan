@@ -6,6 +6,7 @@ import {
   saveMistake,
   saveAnnotation,
   saveExamAttempt,
+  deleteExamAttempt,
   logActivity,
   updateLearningProgress,
   updateProfileAvatar,
@@ -21,6 +22,7 @@ router.post('/word', saveWord);
 router.post('/mistake', saveMistake);
 router.post('/annotation', saveAnnotation);
 router.post('/exam', saveExamAttempt);
+router.delete('/exam/:id', deleteExamAttempt);
 router.post('/activity', logActivity);
 router.post('/progress', updateLearningProgress);
 router.post('/avatar', uploadAvatar.single('avatar'), updateProfileAvatar);

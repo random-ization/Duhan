@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Eye,
   Lock,
+  Trash2,
 } from 'lucide-react';
 import { TopikExam, ExamAttempt, Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
@@ -21,6 +22,7 @@ interface ExamListProps {
   showHistoryView?: boolean;
   onBack?: () => void;
   canAccessContent?: (exam: TopikExam) => boolean;
+  onDeleteAttempt?: (attemptId: string) => void;
 }
 
 export const ExamList: React.FC<ExamListProps> = ({
@@ -33,6 +35,7 @@ export const ExamList: React.FC<ExamListProps> = ({
   showHistoryView = false,
   onBack,
   canAccessContent,
+  onDeleteAttempt,
 }) => {
   const labels = getLabels(language);
 
@@ -80,7 +83,7 @@ export const ExamList: React.FC<ExamListProps> = ({
           )}
 
           {history.map((attempt, idx) => {
-            const percentage = (attempt.score / attempt.totalScore) * 100;
+            const percentage = attempt.totalScore > 0 ? (attempt.score / attempt.totalScore) * 100 : 0;
             const passed = percentage >= 60;
 
             return (
@@ -92,7 +95,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-800">{attempt.examTitle}</h3>
                     <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
-                      <span>{new Date(attempt.date).toLocaleDateString()}</span>
+                      <span>{attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'}</span>
                       <span>
                         {attempt.correctCount} / {attempt.totalQuestions}{' '}
                         {labels.correct || 'correct'}
@@ -102,9 +105,8 @@ export const ExamList: React.FC<ExamListProps> = ({
 
                   <div className="flex items-center gap-4">
                     <div
-                      className={`text-right px-4 py-2 rounded-lg ${
-                        passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}
+                      className={`text-right px-4 py-2 rounded-lg ${passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}
                     >
                       <div className="text-2xl font-bold">{percentage.toFixed(1)}%</div>
                       <div className="text-xs">
@@ -112,13 +114,29 @@ export const ExamList: React.FC<ExamListProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onReviewAttempt(attempt)}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>{labels.review || 'Review'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onReviewAttempt(attempt)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>{language === 'zh' ? '复习' : (labels.review || 'Review')}</span>
+                      </button>
+
+                      {onDeleteAttempt && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(language === 'zh' ? '确定要删除这条记录吗？' : 'Delete this attempt?')) {
+                              onDeleteAttempt(attempt.id);
+                            }
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title={labels.delete || 'Delete'}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -157,9 +175,8 @@ export const ExamList: React.FC<ExamListProps> = ({
             <div
               key={exam.id}
               onClick={() => onSelectExam(exam)}
-              className={`bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-indigo-300 hover:shadow-lg cursor-pointer transition-all relative ${
-                isLocked ? 'opacity-75' : ''
-              }`}
+              className={`bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-indigo-300 hover:shadow-lg cursor-pointer transition-all relative ${isLocked ? 'opacity-75' : ''
+                }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">

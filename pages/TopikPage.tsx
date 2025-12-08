@@ -10,7 +10,7 @@ interface TopikPageProps {
 }
 
 const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { user, language, saveExamAttempt, saveAnnotation } = useAuth();
+  const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
   const { topikExams } = useData();
 
   if (!user) {
@@ -27,6 +27,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
       onSaveAnnotation={saveAnnotation}
       canAccessContent={canAccessContent}
       onShowUpgradePrompt={onShowUpgradePrompt}
+      onDeleteHistory={deleteExamAttempt}
     />
   );
 };

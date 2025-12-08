@@ -35,6 +35,7 @@ interface AuthContextType {
   clearMistakes: () => void;
   saveAnnotation: (annotation: Annotation) => Promise<void>;
   saveExamAttempt: (attempt: ExamAttempt) => Promise<void>;
+  deleteExamAttempt: (attemptId: string) => Promise<void>;
   logActivity: (
     activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
     duration?: number,
@@ -165,14 +166,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   const saveAnnotation = useCallback(
     async (annotation: Annotation) => {
-      if (!user) return;
+      // Use functional update to avoid stale state (race conditions)
+      setUser(prevUser => {
+        if (!prevUser) return prevUser;
 
-      try {
-        let updatedAnnotations = [...(user.annotations || [])];
+        const updatedAnnotations = [...(prevUser.annotations || [])];
         const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
 
         if (index !== -1) {
-          if (!annotation.color && !annotation.note) {
+          if (!annotation.color && (!annotation.note || annotation.note.trim() === '')) {
             updatedAnnotations.splice(index, 1);
           } else {
             updatedAnnotations[index] = annotation;
@@ -181,18 +183,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
           updatedAnnotations.push(annotation);
         }
 
-        setUser({ ...user, annotations: updatedAnnotations });
+        return { ...prevUser, annotations: updatedAnnotations };
+      });
 
-        try {
-          await api.saveAnnotation(annotation);
-        } catch (apiError) {
-          console.error('Failed to save annotation to server:', apiError);
-        }
-      } catch (error) {
-        console.error('Error in saveAnnotation:', error);
+      try {
+        await api.saveAnnotation(annotation);
+      } catch (apiError) {
+        console.error('Failed to save annotation to server:', apiError);
+        // Ideally rollback here, but for now we prioritized UI responsiveness
       }
     },
-    [user]
+    []
   );
 
   const saveExamAttempt = useCallback(
@@ -212,6 +213,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       }
     },
     [user]
+  );
+
+  const deleteExamAttempt = useCallback(
+    async (attemptId: string) => {
+      // Optimistic update
+      setUser(prev => {
+        if (!prev) return prev;
+        const updatedHistory = (prev.examHistory || []).filter(h => h.id !== attemptId);
+        return { ...prev, examHistory: updatedHistory };
+      });
+
+      try {
+        await api.deleteExamAttempt(attemptId);
+      } catch (e) {
+        console.error('Failed to delete exam attempt', e);
+        // Maybe revert? unlikely to fail if UI up to date
+      }
+    },
+    []
   );
 
   const logActivity = useCallback(
@@ -277,6 +297,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     clearMistakes,
     saveAnnotation,
     saveExamAttempt,
+    deleteExamAttempt,
     logActivity,
     updateLearningProgress,
     canAccessContent,

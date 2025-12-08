@@ -40,10 +40,11 @@ interface ExamCoverViewProps {
   language: Language;
   onStart: () => void;
   onBack: () => void;
+  hasAttempted?: boolean;
 }
 
 export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
-  ({ exam, language, onStart, onBack }) => {
+  ({ exam, language, onStart, onBack, hasAttempted }) => {
     const labels = useMemo(() => getLabels(language), [language]);
 
     return (
@@ -118,7 +119,10 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
             onClick={onStart}
             className={`w-full py-5 bg-slate-900 text-white text-xl font-bold ${FONT_SERIF} hover:bg-slate-800 transition-colors shadow-xl tracking-widest`}
           >
-            시험 시작 (START EXAM)
+            {hasAttempted
+              ? (language === 'zh' ? '重新考试 (RETAKE EXAM)' : '시험 다시 보기 (RETAKE EXAM)')
+              : (language === 'zh' ? '开始考试 (START EXAM)' : '시험 시작 (START EXAM)')
+            }
           </button>
         </div>
       </div>
