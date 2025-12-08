@@ -167,24 +167,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     async (annotation: Annotation) => {
       if (!user) return;
 
-      let updatedAnnotations = [...(user.annotations || [])];
-      const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
-
-      if (index !== -1) {
-        if (!annotation.color && !annotation.note) {
-          updatedAnnotations.splice(index, 1);
-        } else {
-          updatedAnnotations[index] = annotation;
-        }
-      } else {
-        updatedAnnotations.push(annotation);
-      }
-
-      setUser({ ...user, annotations: updatedAnnotations });
       try {
-        await api.saveAnnotation(annotation);
-      } catch (e) {
-        console.error(e);
+        let updatedAnnotations = [...(user.annotations || [])];
+        const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
+
+        if (index !== -1) {
+          if (!annotation.color && !annotation.note) {
+            updatedAnnotations.splice(index, 1);
+          } else {
+            updatedAnnotations[index] = annotation;
+          }
+        } else {
+          updatedAnnotations.push(annotation);
+        }
+
+        setUser({ ...user, annotations: updatedAnnotations });
+
+        try {
+          await api.saveAnnotation(annotation);
+        } catch (apiError) {
+          console.error('Failed to save annotation to server:', apiError);
+        }
+      } catch (error) {
+        console.error('Error in saveAnnotation:', error);
       }
     },
     [user]

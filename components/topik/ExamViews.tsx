@@ -286,7 +286,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
     // Sidebar annotations with notes
     const sidebarAnnotations = useMemo(
-      () => annotations.filter(a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0),
+      () => (annotations || []).filter(a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0),
       [annotations, examContextPrefix]
     );
 
@@ -308,7 +308,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     };
 
     // Save annotation
-    const saveAnnotation = () => {
+    const saveAnnotation = async () => {
       if (!selectionText || !noteInput.trim()) return;
 
       const annotation: Annotation = {
@@ -320,7 +320,12 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         timestamp: Date.now(),
       };
 
-      onSaveAnnotation(annotation);
+      try {
+        await onSaveAnnotation(annotation);
+      } catch (error) {
+        console.error('Failed to save annotation:', error);
+      }
+
       setShowAnnotationMenu(false);
       setNoteInput('');
       setSelectionText('');

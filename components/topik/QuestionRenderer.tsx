@@ -55,8 +55,12 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
         let result = text;
         questionAnnotations.forEach(annotation => {
+          // Use text (primary) or selectedText (alias), skip if neither exists
+          const annotatedText = annotation.text || annotation.selectedText;
+          if (!annotatedText) return;
+
           const regex = new RegExp(
-            `(${annotation.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
+            `(${annotatedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
             'gi'
           );
           result = result.replace(regex, '<mark class="bg-yellow-200 px-0.5">$1</mark>');
