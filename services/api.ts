@@ -1,15 +1,9 @@
-import {
-  User,
-  VocabularyItem,
-  Annotation,
-  ExamAttempt,
-  TopikQuestion,
-  Institute,
-  TextbookContent,
-  TopikExam,
-} from '../types';
+// services/api.ts
+// 统一的 request helper + 单一 export const api 对象
+// 替换或合并到你的项目中，确保没有其它文件再 export 同名 api
 
-// minimal request helper - replace or merge with your existing services/api.ts
+type Nullable<T> = T | null;
+
 const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || '';
 
 function getTokenFromStorage(): string | null {
@@ -26,8 +20,17 @@ function buildHeaders(userHeaders?: Record<string, string>): Record<string, stri
   return {
     'Content-Type': 'application/json',
     ...(userHeaders || {}),
-    ...authHeader, // auth goes last to override if necessary
+    ...authHeader, // auth goes last to override if必要
   };
+}
+
+async function parseResponse(res: Response) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text;
+  }
 }
 
 export async function request<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -35,8 +38,8 @@ export async function request<T = any>(path: string, opts: RequestInit = {}): Pr
   const userHeaders = (opts.headers || {}) as Record<string, string>;
   const headers = buildHeaders(userHeaders);
 
-  // temporary debug - remove later
-  console.debug('[api] Request:', url, { method: opts.method || 'GET', headers });
+  // DEBUG: 在本地调试时可以打开，生产可去掉
+  // console.debug('[api] Request:', url, { method: opts.method || 'GET', headers });
 
   const res = await fetch(url, {
     ...opts,
@@ -44,9 +47,7 @@ export async function request<T = any>(path: string, opts: RequestInit = {}): Pr
     credentials: opts.credentials ?? 'same-origin',
   });
 
-  const text = await res.text();
-  let data: any = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  const data = await parseResponse(res);
 
   if (!res.ok) {
     const err: any = new Error(data?.error || data?.message || `Request failed ${res.status}`);
@@ -57,277 +58,100 @@ export async function request<T = any>(path: string, opts: RequestInit = {}): Pr
   return data as T;
 }
 
-// Example wrapper - ensure api.getUsers uses the request helper
+// 单一的 api 导出对象 —— 把所有前端需要调用的接口方法都放在这里
 export const api = {
+  // --- Auth ---
+  register: async (data: { email: string; password: string }) =>
+    request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  login: async (data: { email: string; password: string }) =>
+    request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMe: async () => request('/auth/me'),
+
+  // --- Admin / Users ---
   getUsers: async (): Promise<any[]> => {
-    // Use the same path pattern your backend expects. If API_URL already contains /hangyeol-server/api,
-    // pass the path accordingly. Example assumes API_URL='' and absolute path needed:
+    // 采用绝对路径以兼容部署下的 base
     return request<any[]>('/hangyeol-server/api/admin/users');
   },
 
-  // ...other api methods should use request(...) as well
-};
+  updateUser: async (userId: string, updates: Record<string, any>) =>
+    request(`/hangyeol-server/api/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
 
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-}
+  deleteUser: async (userId: string) =>
+    request(`/hangyeol-server/api/admin/users/${userId}`, {
+      method: 'DELETE',
+    }),
 
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-interface AuthResponse {
-  token: string;
-  user: User;
-}
-
-export const api = {
-  // --- Auth ---
-  register: async (data: RegisterData): Promise<AuthResponse> => {
-    return request<AuthResponse>(`${API_URL}/auth/register`, {
+  // --- Content / Textbook ---
+  getInstitutes: async () => request('/hangyeol-server/api/content/institutes'),
+  createInstitute: async (institute: any) =>
+    request('/hangyeol-server/api/content/institutes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-  },
+      body: JSON.stringify(institute),
+    }),
 
-  login: async (data: LoginData): Promise<AuthResponse> => {
-    return request<AuthResponse>(`${API_URL}/auth/login`, {
+  getTextbookContent: async () => request<Record<string, any>>('/hangyeol-server/api/content/textbook'),
+  saveTextbookContent: async (key: string, content: any) =>
+    request('/hangyeol-server/api/content/textbook', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-  },
+      body: JSON.stringify({ key, ...content }),
+    }),
 
-  getMe: async (): Promise<{ user: User }> => {
-    return request<{ user: User }>(`${API_URL}/auth/me`, {
-      method: 'GET',
-      headers: getHeaders(),
-    });
-  },
+  // --- TOPIK ---
+  getTopikExams: async () => request<any[]>('/hangyeol-server/api/content/topik'),
+  saveTopikExam: async (exam: any) =>
+    request('/hangyeol-server/api/content/topik', {
+      method: 'POST',
+      body: JSON.stringify(exam),
+    }),
+  deleteTopikExam: async (id: string) =>
+    request(`/hangyeol-server/api/content/topik/${id}`, {
+      method: 'DELETE',
+    }),
 
-  // --- General Upload (Optimization: Storage Space) ---
+  // --- Legal Docs ---
+  getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') =>
+    request(`/hangyeol-server/api/content/legal/${type}`),
+
+  saveLegalDocument: async (type: 'terms' | 'privacy' | 'refund', title: string, content: string) =>
+    request(`/hangyeol-server/api/content/legal/${type}`, {
+      method: 'POST',
+      body: JSON.stringify({ title, content }),
+    }),
+
+  // --- Uploads (example) ---
   uploadMedia: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
     formData.append('file', file);
+    const token = getTokenFromStorage();
 
-    const token = localStorage.getItem('token');
-    
-    // 使用 fetch 直接上传，不设置 Content-Type 让浏览器自动处理 boundary
-    const res = await fetch(`${API_URL}/upload`, { 
+    const res = await fetch('/hangyeol-server/api/upload', {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      } as any,
       body: formData,
+      credentials: 'same-origin',
     });
 
     if (!res.ok) {
-      let errorMessage = 'Upload failed';
-      try {
-        const errorData = await res.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {}
-      throw new Error(errorMessage);
+      const errText = await res.text();
+      throw new Error(errText || 'Upload failed');
     }
-    
-    return res.json();
+    return (await res.json()) as { url: string };
   },
 
-  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
-    // 复用 uploadMedia 的逻辑，或者保持独立以匹配后端路由
-    // 这里保持原样以防后端区别处理
-    const formData = new FormData();
-    formData.append('avatar', file);
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/user/avatar`, {
-        method: 'POST',
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: formData
-    });
-    if(!res.ok) throw new Error('Avatar upload failed');
-    return res.json();
-  },
-
-  // --- User Data ---
-  saveWord: async (word: Partial<VocabularyItem> & { unit?: number }) => {
-    return request(`${API_URL}/user/word`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(word),
-    });
-  },
-
-  saveMistake: async (word: Partial<VocabularyItem>) => {
-    return request(`${API_URL}/user/mistake`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(word),
-    });
-  },
-
-  saveAnnotation: async (annotation: Annotation) => {
-    return request(`${API_URL}/user/annotation`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(annotation),
-    });
-  },
-
-  saveExamAttempt: async (attempt: ExamAttempt) => {
-    return request(`${API_URL}/user/exam`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(attempt),
-    });
-  },
-
-  // --- Content ---
-  getInstitutes: async (): Promise<Institute[]> => {
-    try {
-      return await request<Institute[]>(`${API_URL}/content/institutes`);
-    } catch {
-      return [];
-    }
-  },
-
-  createInstitute: async (institute: Institute) => {
-    return request(`${API_URL}/content/institutes`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(institute),
-    });
-  },
-
-  getTextbookContent: async (): Promise<Record<string, TextbookContent>> => {
-    try {
-      return await request<Record<string, TextbookContent>>(`${API_URL}/content/textbook`);
-    } catch {
-      return {};
-    }
-  },
-
-  saveTextbookContent: async (key: string, content: TextbookContent) => {
-    return request(`${API_URL}/content/textbook`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({ key, ...content }),
-    });
-  },
-
-  getTopikExams: async (): Promise<TopikExam[]> => {
-    try {
-      return await request<TopikExam[]>(`${API_URL}/content/topik`);
-    } catch {
-      return [];
-    }
-  },
-
-  saveTopikExam: async (exam: TopikExam) => {
-    return request(`${API_URL}/content/topik`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(exam),
-    });
-  },
-  // --- Admin: Users ---
-  getUsers: async (): Promise<User[]> => {
-  try {
-    return await request<User[]>(`${API_URL}/admin/users`);
-  } catch (err) {
-    console.error('getUsers failed', err);
-    return [];
-  }
-},
-
-updateUser: async (userId: string, updates: Partial<User>) => {
-  return request(`${API_URL}/admin/users/${userId}`, {
-    method: 'PUT',
-    headers: getHeaders(),
-    body: JSON.stringify(updates),
-  });
-},
-
-deleteUser: async (userId: string) => {
-  return request(`${API_URL}/admin/users/${userId}`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  });
-},
-
-  deleteTopikExam: async (id: string) => {
-    return request(`${API_URL}/content/topik/${id}`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-    });
-  },
-
-  // --- Profile ---
-  updateProfile: async (updates: { name?: string; avatar?: string }) => {
-    return request(`${API_URL}/user/profile`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(updates),
-    });
-  },
-
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    return request(`${API_URL}/user/password`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-  },
-
-  // --- Tracking ---
-  logActivity: async (
-    activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
-    duration?: number,
-    itemsStudied?: number,
-    metadata?: any
-  ) => {
-    return request(`${API_URL}/user/activity`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        activityType,
-        duration,
-        itemsStudied,
-        metadata,
-      }),
-    });
-  },
-
-  updateLearningProgress: async (progress: {
-    lastInstitute?: string;
-    lastLevel?: number;
-    lastUnit?: number;
-    lastModule?: string;
-  }) => {
-    return request(`${API_URL}/user/progress`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(progress),
-    });
-  },
-
-  // --- Legal ---
-  getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') => {
-    return request(`${API_URL}/content/legal/${type}`);
-  },
-
-  saveLegalDocument: async (
-    type: 'terms' | 'privacy' | 'refund',
-    title: string,
-    content: string
-  ) => {
-    return request(`${API_URL}/content/legal/${type}`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({ title, content }),
-    });
-  },
+  // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
+
+export default api; // 如果项目里有使用 default import 的地方，保留 default 导出；否则可删
