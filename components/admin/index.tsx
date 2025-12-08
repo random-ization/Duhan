@@ -13,7 +13,8 @@ import DashboardView from './DashboardView';
 import UserManagement from './UserManagement';
 import ContentEditor from './ContentEditor';
 import ExamEditor from './ExamEditor';
-import { LayoutDashboard, Users, BookOpen, FileText } from 'lucide-react';
+import LegalDocumentEditor from './LegalDocumentEditor';
+import { LayoutDashboard, Users, BookOpen, FileText, Scale } from 'lucide-react';
 
 interface AdminPanelProps {
   institutes: Institute[];
@@ -50,7 +51,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddTopikExam,
   onDeleteTopikExam,
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'curriculum' | 'topik'>(
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'curriculum' | 'topik' | 'legal'>(
     'dashboard'
   );
 
@@ -74,6 +75,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       id: 'topik' as const,
       label: { en: 'TOPIK Exams', zh: 'TOPIK考试', vi: 'Kỳ thi TOPIK', mn: 'TOPIK шалгалт' },
       icon: FileText,
+    },
+    {
+      id: 'legal' as const,
+      label: { en: 'Legal', zh: '法律条款', vi: 'Pháp lý', mn: 'Хууль эрх зүй' },
+      icon: Scale,
     },
   ];
 
@@ -140,6 +146,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             onAddTopikExam={onAddTopikExam}
             onDeleteTopikExam={onDeleteTopikExam}
           />
+        )}
+        {activeTab === 'legal' && (
+          <LegalDocumentEditor language={language} />
         )}
       </div>
     </div>
