@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     async (annotation: Annotation) => {
       if (!user) return;
 
-      let updatedAnnotations = [...user.annotations];
+      let updatedAnnotations = [...(user.annotations || [])];
       const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
 
       if (index !== -1) {

@@ -272,6 +272,15 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [selectionText, setSelectionText] = useState('');
     const [selectionContextKey, setSelectionContextKey] = useState('');
     const [noteInput, setNoteInput] = useState('');
+    const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
+
+    // Available highlight colors
+    const COLORS = [
+      { name: 'yellow', bgClass: 'bg-yellow-300', ringClass: 'ring-yellow-500' },
+      { name: 'green', bgClass: 'bg-green-300', ringClass: 'ring-green-500' },
+      { name: 'blue', bgClass: 'bg-blue-300', ringClass: 'ring-blue-500' },
+      { name: 'pink', bgClass: 'bg-pink-300', ringClass: 'ring-pink-500' },
+    ] as const;
 
     const examContextPrefix = `TOPIK-${exam.id}`;
 
@@ -307,7 +316,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         contextKey: selectionContextKey,
         text: selectionText,
         note: noteInput,
-        color: 'yellow',
+        color: selectedColor,
         timestamp: Date.now(),
       };
 
@@ -497,6 +506,21 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               placeholder="写下你的笔记..."
               autoFocus
             />
+            {/* Color Picker */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-slate-500">高亮颜色:</span>
+              <div className="flex gap-1">
+                {COLORS.map((color) => (
+                  <button
+                    key={color.name}
+                    onClick={() => setSelectedColor(color.name)}
+                    className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${selectedColor === color.name ? `ring-2 ${color.ringClass} ring-offset-1` : 'hover:scale-110'
+                      }`}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => {
