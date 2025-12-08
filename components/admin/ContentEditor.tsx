@@ -29,7 +29,7 @@ interface ContentEditorProps {
   textbookContexts: TextbookContextMap;
   language: Language;
   onSaveContext: (key: string, content: TextbookContent) => void;
-  onAddInstitute?: (name: string) => void;
+  onAddInstitute: (name: string) => void | Promise<void>;
 }
 
 type ContentType = 'vocab' | 'reading' | 'listening' | 'grammar';
@@ -422,11 +422,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                   className="flex-1 px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && newInstituteName.trim()) {
-                      if (onAddInstitute) {
-                        onAddInstitute(newInstituteName.trim());
-                      } else {
-                        alert('Add textbook function not available. Please check backend connection.');
-                      }
+                      onAddInstitute(newInstituteName.trim());
                       setNewInstituteName('');
                       setShowAddForm(false);
                     }
@@ -435,11 +431,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                 <button
                   onClick={() => {
                     if (newInstituteName.trim()) {
-                      if (onAddInstitute) {
-                        onAddInstitute(newInstituteName.trim());
-                      } else {
-                        alert('Add textbook function not available. Please check backend connection.');
-                      }
+                      onAddInstitute(newInstituteName.trim());
                       setNewInstituteName('');
                       setShowAddForm(false);
                     }

@@ -16,7 +16,7 @@ export interface AdminPanelProps {
   onUpdateUser: (userId: string, updates: Partial<User>) => void;
   onDeleteUser: (userId: string) => void;
   institutes: Institute[];
-  onAddInstitute: (institute: Institute) => void;
+  onAddInstitute: (name: string) => void | Promise<void>;
   onDeleteInstitute: (instituteId: string) => void;
   onUpdateInstitutes: (institutes: Institute[]) => void;
   textbookContexts: TextbookContextMap;
