@@ -145,15 +145,16 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     onSaveAnnotation(annotation);
   };
 
-  const handleDeleteAnnotation = (contextKey: string) => {
-    // Create a "delete" annotation by saving with empty note
+  const handleDeleteAnnotation = (annotationId: string) => {
+    // Find the annotation to delete
+    const toDelete = annotations.find(a => a.id === annotationId);
+    if (!toDelete) return;
+
+    // Create a "delete" annotation by saving with empty note and null color
     const deleteAnnotation: Annotation = {
-      id: Date.now().toString(),
-      contextKey,
-      text: '',
+      ...toDelete,
       note: '',
-      color: null, // Delete annotation
-      timestamp: Date.now(),
+      color: null,
     };
     onSaveAnnotation(deleteAnnotation);
   };

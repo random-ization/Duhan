@@ -333,8 +333,8 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     };
 
     // Delete annotation
-    const deleteAnnotation = (contextKey: string) => {
-      onDeleteAnnotation(contextKey);
+    const deleteAnnotation = (annotationId: string) => {
+      onDeleteAnnotation(annotationId);
     };
 
     return (
@@ -444,7 +444,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                       </div>
                       <div className="text-sm text-slate-700 font-medium">{ann.note}</div>
                       <button
-                        onClick={() => deleteAnnotation(ann.contextKey)}
+                        onClick={() => deleteAnnotation(ann.id)}
                         className="mt-2 text-xs text-red-500 hover:text-red-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Trash2 className="w-3 h-3" /> 删除

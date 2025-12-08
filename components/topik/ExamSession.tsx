@@ -197,7 +197,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                       language={language}
                       showCorrect={false}
                       onAnswerChange={optionIndex => onAnswerChange(idx, optionIndex)}
-                      annotations={annotations}
+                      annotations={[]} // Don't show annotation highlights in exam-taking mode
                       contextPrefix={examContextPrefix}
                     />
                   </div>
