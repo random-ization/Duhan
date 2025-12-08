@@ -9,32 +9,64 @@ import {
   TopikExam,
 } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// minimal request helper - replace or merge with your existing services/api.ts
+const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || '';
 
-const getHeaders = () => {
-  const token = localStorage.getItem('token');
+function getTokenFromStorage(): string | null {
+  try {
+    return localStorage.getItem('token');
+  } catch {
+    return null;
+  }
+}
+
+function buildHeaders(userHeaders?: Record<string, string>): Record<string, string> {
+  const token = getTokenFromStorage();
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   return {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(userHeaders || {}),
+    ...authHeader, // auth goes last to override if necessary
   };
-};
+}
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
+export async function request<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
+  const url = path.startsWith('http') ? path : `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const userHeaders = (opts.headers || {}) as Record<string, string>;
+  const headers = buildHeaders(userHeaders);
+
+  // temporary debug - remove later
+  console.debug('[api] Request:', url, { method: opts.method || 'GET', headers });
+
+  const res = await fetch(url, {
+    ...opts,
+    headers,
+    credentials: opts.credentials ?? 'same-origin',
+  });
+
+  const text = await res.text();
+  let data: any = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
   if (!res.ok) {
-    let errorMessage = `Request failed with status ${res.status}`;
-    try {
-      const errorData = await res.json();
-      errorMessage = errorData.error || errorData.message || errorMessage;
-    } catch {
-      // If parsing JSON fails, use default error message
-    }
-    throw new Error(errorMessage);
+    const err: any = new Error(data?.error || data?.message || `Request failed ${res.status}`);
+    err.status = res.status;
+    err.raw = data;
+    throw err;
   }
-
-  return res.json();
+  return data as T;
 }
+
+// Example wrapper - ensure api.getUsers uses the request helper
+export const api = {
+  getUsers: async (): Promise<any[]> => {
+    // Use the same path pattern your backend expects. If API_URL already contains /hangyeol-server/api,
+    // pass the path accordingly. Example assumes API_URL='' and absolute path needed:
+    return request<any[]>('/hangyeol-server/api/admin/users');
+  },
+
+  // ...other api methods should use request(...) as well
+};
 
 interface RegisterData {
   name: string;
