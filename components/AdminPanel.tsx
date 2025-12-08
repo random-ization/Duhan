@@ -54,11 +54,10 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center transition-colors ${
-                isActive
+              className={`text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center transition-colors ${isActive
                   ? 'bg-indigo-600 text-white shadow-md'
                   : 'text-slate-500 hover:bg-white hover:text-indigo-600'
-              }`}
+                }`}
             >
               <Icon className={`w-4 h-4 mr-3 ${isActive ? 'text-white' : 'text-slate-400'}`} />
               {item.label}
@@ -68,7 +67,7 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden h-full">
+      <div className="flex-1 overflow-auto h-full">
         {activeTab === 'dashboard' && <DashboardView stats={stats} language={language} />}
 
         {activeTab === 'users' && (

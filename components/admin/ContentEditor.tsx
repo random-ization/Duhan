@@ -61,17 +61,17 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     return existing
       ? { ...existing }
       : {
-          generalContext: '',
-          vocabularyList: '',
-          readingText: '',
-          readingTranslation: '',
-          readingTitle: `Lesson ${unit}`,
-          listeningScript: '',
-          listeningTranslation: '',
-          listeningTitle: `Lesson ${unit}`,
-          listeningAudioUrl: null,
-          grammarList: '',
-        };
+        generalContext: '',
+        vocabularyList: '',
+        readingText: '',
+        readingTranslation: '',
+        readingTitle: `Lesson ${unit}`,
+        listeningScript: '',
+        listeningTranslation: '',
+        listeningTitle: `Lesson ${unit}`,
+        listeningAudioUrl: null,
+        grammarList: '',
+      };
   };
 
   // Handle Excel file upload
@@ -338,22 +338,20 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       <div className="bg-white p-2 rounded-lg border border-gray-200 flex gap-2">
         <button
           onClick={() => setViewMode('upload')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-            viewMode === 'upload'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${viewMode === 'upload'
+            ? 'bg-blue-500 text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
         >
           <Upload className="w-4 h-4" />
           Content Upload
         </button>
         <button
           onClick={() => setViewMode('payment')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-            viewMode === 'payment'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${viewMode === 'payment'
+            ? 'bg-blue-500 text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
         >
           <DollarSign className="w-4 h-4" />
           Payment Management
@@ -365,22 +363,29 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {labels.selectTextbook || 'Select Textbook'}
         </label>
-        <select
-          value={selectedInstitute?.id || ''}
-          onChange={e => {
-            const inst = institutes.find(i => i.id === e.target.value);
-            setSelectedInstitute(inst || null);
-            handleClearUpload();
-          }}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">-- {labels.select || 'Select'} --</option>
-          {institutes.map(inst => (
-            <option key={inst.id} value={inst.id}>
-              {inst.name}
-            </option>
-          ))}
-        </select>
+        {institutes.length > 0 ? (
+          <select
+            value={selectedInstitute?.id || ''}
+            onChange={e => {
+              const inst = institutes.find(i => i.id === e.target.value);
+              setSelectedInstitute(inst || null);
+              handleClearUpload();
+            }}
+            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">-- {labels.select || 'Select'} --</option>
+            {institutes.map(inst => (
+              <option key={inst.id} value={inst.id}>
+                {inst.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="bg-red-50 p-3 rounded-lg border border-red-200 text-red-700">
+            <p className="font-medium">No textbooks available</p>
+            <p className="text-sm mt-1">Please add textbooks/institutes in the database first.</p>
+          </div>
+        )}
       </div>
 
       {/* Payment Management View */}
@@ -441,17 +446,15 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                         <button
                           key={unit}
                           onClick={() => toggleUnitPaymentStatus(levelNum, unit)}
-                          className={`p-3 rounded-lg border-2 transition-all flex items-center justify-between ${
-                            isPaid
-                              ? 'border-orange-300 bg-orange-50 hover:bg-orange-100'
-                              : 'border-green-300 bg-green-50 hover:bg-green-100'
-                          }`}
+                          className={`p-3 rounded-lg border-2 transition-all flex items-center justify-between ${isPaid
+                            ? 'border-orange-300 bg-orange-50 hover:bg-orange-100'
+                            : 'border-green-300 bg-green-50 hover:bg-green-100'
+                            }`}
                         >
                           <span className="font-medium text-gray-800">Unit {unit}</span>
                           <div
-                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                              isPaid ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
-                            }`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${isPaid ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
+                              }`}
                           >
                             {isPaid ? (
                               <>
@@ -487,11 +490,10 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
                   setContentType(ct.value as ContentType);
                   handleClearUpload();
                 }}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                  contentType === ct.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${contentType === ct.value
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 <span className="mr-2">{ct.icon}</span>
                 {ct.label}
@@ -630,22 +632,16 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 
       {/* No Institute Selected */}
       {!selectedInstitute && (
-        <div className="bg-gray-50 p-8 rounded-lg border border-gray-200 text-center">
-          {viewMode === 'upload' ? (
-            <>
-              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-600">
-                {labels.selectTextbookFirst || 'Please select a textbook first'}
-              </p>
-            </>
-          ) : (
-            <>
-              <DollarSign className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-600">
-                {labels.selectTextbookFirst || 'Please select a textbook first'}
-              </p>
-            </>
-          )}
+        <div className="bg-amber-50 p-8 rounded-lg border-2 border-amber-300 border-dashed text-center">
+          <div className="text-4xl mb-3">☝️</div>
+          <p className="text-amber-800 font-medium text-lg">
+            {labels.selectTextbookFirst || 'Please select a textbook first'}
+          </p>
+          <p className="text-amber-600 text-sm mt-2">
+            {viewMode === 'upload'
+              ? 'Select a textbook from the dropdown above to start uploading content'
+              : 'Select a textbook from the dropdown above to manage payment settings'}
+          </p>
         </div>
       )}
     </div>
