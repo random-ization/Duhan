@@ -501,87 +501,72 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     // Check if question has image options
     const hasImageOptions = q.optionImages && q.optionImages.some(img => img && img.length > 0);
 
+    // 仿真 TOPIK 试卷样式
     return (
-      <div key={q.id} ref={el => { questionRefs.current[q.id] = el; }} className={`flex gap-4 ${isGroupedChild ? 'mb-8' : 'mb-12'}`}>
-        <div className="text-lg font-sans text-slate-900 min-w-[28px] pt-0.5">
-          {q.id}.
-        </div>
-        <div className="flex-1 w-full min-w-0">
-          {showPassage && renderPassageContent(q)}
+      <div key={q.id} ref={el => { questionRefs.current[q.id] = el; }} className={`${isGroupedChild ? 'mb-6' : 'mb-10'}`}>
+        {showPassage && renderPassageContent(q)}
+
+        {/* 题号 + 题干 - 在同一行显示 */}
+        <div className="flex items-baseline mb-4">
+          <span className="text-[15px] text-slate-900 mr-2 shrink-0">{q.id}.</span>
           {q.question && (
-            <div className="mb-4 text-[18px] font-bold text-slate-900 leading-relaxed break-keep tracking-tight">
+            <span className="text-[15px] text-slate-900 leading-relaxed">
               {renderAnnotatedText(q.question, questionKey)}
-            </div>
-          )}
-
-          {hasImageOptions ? (
-            <div className="grid grid-cols-2 gap-4">
-              {q.optionImages!.map((img, optIdx) => {
-                let borderClass = "border-slate-200 hover:border-indigo-300";
-                let bgClass = "bg-white";
-                let opacityClass = "";
-
-                if (isReview) {
-                  if (optIdx === q.correctAnswer) borderClass = "border-green-500 ring-2 ring-green-100";
-                  else if (userAnswer === optIdx && userAnswer !== q.correctAnswer) borderClass = "border-red-500 ring-2 ring-red-100";
-                  else opacityClass = "opacity-50";
-                } else {
-                  if (userAnswer === optIdx) borderClass = "border-indigo-600 ring-2 ring-indigo-100";
-                }
-
-                return (
-                  <button
-                    key={optIdx}
-                    onClick={() => handleAnswer(q.id, optIdx)}
-                    disabled={isReview}
-                    className={`relative aspect-[4/3] rounded-xl border-2 overflow-hidden transition-all ${borderClass} ${bgClass} ${opacityClass}`}
-                  >
-                    <div className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 ${userAnswer === optIdx || (isReview && optIdx === q.correctAnswer) ? 'bg-indigo-600 text-white' : 'bg-slate-100/90 text-slate-600 shadow-sm'}`}>
-                      {getCircleNumber(optIdx)}
-                    </div>
-                    {img ? (
-                      <img src={img} className="w-full h-full object-contain" alt={`Option ${optIdx + 1}`} />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">No Image</div>
-                    )}
-                    {isReview && optIdx === q.correctAnswer && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-green-500/10">
-                        <Check className="w-12 h-12 text-green-600 drop-shadow-md" />
-                      </div>
-                    )}
-                    {isReview && userAnswer === optIdx && userAnswer !== q.correctAnswer && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-red-500/10">
-                        <X className="w-12 h-12 text-red-600 drop-shadow-md" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className={`grid ${q.options.some(o => o.length > 25) ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-x-8 gap-y-2`}>
-              {q.options.map((opt, optIdx) => {
-                let optionClass = "hover:bg-slate-100 border-transparent bg-transparent";
-                if (isReview) {
-                  if (optIdx === q.correctAnswer) optionClass = "bg-green-100 border-green-500 text-green-900 font-bold";
-                  else if (userAnswer === optIdx && userAnswer !== q.correctAnswer) optionClass = "bg-red-100 border-red-500 text-red-900 font-bold";
-                  else optionClass = "opacity-50";
-                } else {
-                  if (userAnswer === optIdx) optionClass = "bg-indigo-50/50";
-                }
-                return (
-                  <label key={optIdx} className={`flex items-start cursor-pointer p-2 rounded -ml-2 transition-colors border ${optionClass}`}>
-                    <input type="radio" name={`q-${q.id}`} className="hidden" checked={userAnswer === optIdx} onChange={() => handleAnswer(q.id, optIdx)} disabled={isReview} />
-                    <span className={`text-lg mr-2 font-sans ${userAnswer === optIdx ? 'text-black font-bold' : 'text-slate-500'}`}>{getCircleNumber(optIdx)}</span>
-                    <span className={`text-[17px] leading-relaxed mt-0.5 ${userAnswer === optIdx && !isReview ? 'text-indigo-900 font-bold underline decoration-indigo-300 underline-offset-4' : 'text-slate-800'}`}>{opt}</span>
-                    {isReview && optIdx === q.correctAnswer && <Check className="w-5 h-5 text-green-600 ml-auto" />}
-                    {isReview && userAnswer === optIdx && userAnswer !== q.correctAnswer && <X className="w-5 h-5 text-red-600 ml-auto" />}
-                  </label>
-                )
-              })}
-            </div>
+            </span>
           )}
         </div>
+
+        {/* 选项区域 */}
+        {hasImageOptions ? (
+          <div className="grid grid-cols-2 gap-4 ml-6">
+            {q.optionImages!.map((img, optIdx) => {
+              let borderClass = "border-slate-200 hover:border-indigo-300";
+              let bgClass = "bg-white";
+              let opacityClass = "";
+              if (isReview) {
+                if (optIdx === q.correctAnswer) borderClass = "border-green-500 ring-2 ring-green-100";
+                else if (userAnswer === optIdx && userAnswer !== q.correctAnswer) borderClass = "border-red-500 ring-2 ring-red-100";
+                else opacityClass = "opacity-50";
+              } else {
+                if (userAnswer === optIdx) borderClass = "border-indigo-600 ring-2 ring-indigo-100";
+              }
+              return (
+                <button key={optIdx} onClick={() => handleAnswer(q.id, optIdx)} disabled={isReview}
+                  className={`relative aspect-[4/3] rounded-xl border-2 overflow-hidden transition-all ${borderClass} ${bgClass} ${opacityClass}`}>
+                  <div className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 ${userAnswer === optIdx || (isReview && optIdx === q.correctAnswer) ? 'bg-indigo-600 text-white' : 'bg-slate-100/90 text-slate-600 shadow-sm'}`}>
+                    {getCircleNumber(optIdx)}
+                  </div>
+                  {img ? <img src={img} className="w-full h-full object-contain" alt={`Option ${optIdx + 1}`} /> : <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">No Image</div>}
+                  {isReview && optIdx === q.correctAnswer && <div className="absolute inset-0 flex items-center justify-center bg-green-500/10"><Check className="w-12 h-12 text-green-600 drop-shadow-md" /></div>}
+                  {isReview && userAnswer === optIdx && userAnswer !== q.correctAnswer && <div className="absolute inset-0 flex items-center justify-center bg-red-500/10"><X className="w-12 h-12 text-red-600 drop-shadow-md" /></div>}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* 仿真 TOPIK 文字选项 - 2列网格布局 */
+          <div className="grid grid-cols-2 gap-x-16 gap-y-2 ml-6">
+            {q.options.map((opt, optIdx) => {
+              let optionClass = "hover:bg-slate-50";
+              if (isReview) {
+                if (optIdx === q.correctAnswer) optionClass = "bg-green-100 text-green-900";
+                else if (userAnswer === optIdx && userAnswer !== q.correctAnswer) optionClass = "bg-red-100 text-red-900";
+                else optionClass = "opacity-60";
+              } else {
+                if (userAnswer === optIdx) optionClass = "bg-blue-50";
+              }
+              return (
+                <label key={optIdx} className={`flex items-start cursor-pointer py-1 rounded transition-colors ${optionClass}`}>
+                  <input type="radio" name={`q-${q.id}`} className="hidden" checked={userAnswer === optIdx} onChange={() => handleAnswer(q.id, optIdx)} disabled={isReview} />
+                  <span className="text-[15px] mr-2 text-slate-700">{getCircleNumber(optIdx)}</span>
+                  <span className={`text-[15px] leading-relaxed text-slate-900 ${userAnswer === optIdx ? 'font-medium' : ''}`}>{opt}</span>
+                  {isReview && optIdx === q.correctAnswer && <Check className="w-4 h-4 text-green-600 ml-1 shrink-0" />}
+                  {isReview && userAnswer === optIdx && userAnswer !== q.correctAnswer && <X className="w-4 h-4 text-red-600 ml-1 shrink-0" />}
+                </label>
+              )
+            })}
+          </div>
+        )}
       </div>
     );
   };
