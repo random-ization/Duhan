@@ -81,7 +81,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     currentExam.questions.forEach((q, idx) => {
       totalScore += q.points;
-      if (userAnswers[idx] === q.correctOptionIndex) {
+      if (userAnswers[idx] === q.correctAnswer) {
         score += q.points;
         correctCount++;
       }

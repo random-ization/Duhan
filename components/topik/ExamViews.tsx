@@ -1,6 +1,6 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { TopikExam, Language, Annotation } from '../../types';
-import { Clock, Trophy, RotateCcw, ArrowLeft, CheckCircle, Eye } from 'lucide-react';
+import { Clock, Trophy, RotateCcw, ArrowLeft, CheckCircle, Eye, MessageSquare, Trash2, X, Check } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 
@@ -231,7 +231,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       let correct = 0;
       let wrong = 0;
       exam.questions.forEach((q, idx) => {
-        if (userAnswers[idx] === q.correctOptionIndex) {
+        if (userAnswers[idx] === q.correctAnswer) {
           correct++;
         } else {
           wrong++;
@@ -264,6 +264,63 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
     const scrollToQuestion = (index: number) => {
       questionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // --- Annotation State ---
+    const [showAnnotationMenu, setShowAnnotationMenu] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+    const [selectionText, setSelectionText] = useState('');
+    const [selectionContextKey, setSelectionContextKey] = useState('');
+    const [noteInput, setNoteInput] = useState('');
+
+    const examContextPrefix = `TOPIK-${exam.id}`;
+
+    // Sidebar annotations with notes
+    const sidebarAnnotations = useMemo(
+      () => annotations.filter(a => a.contextKey.startsWith(examContextPrefix) && a.note && a.note.trim().length > 0),
+      [annotations, examContextPrefix]
+    );
+
+    // Handle text selection for annotation
+    const handleTextSelect = (questionIndex: number) => {
+      const selection = window.getSelection();
+      if (!selection || selection.toString().trim() === '') return;
+
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const selectedText = selection.toString().trim();
+      const contextKey = `${examContextPrefix}-Q${questionIndex}`;
+
+      setSelectionText(selectedText);
+      setSelectionContextKey(contextKey);
+      setMenuPosition({ top: rect.bottom + window.scrollY + 10, left: rect.left + window.scrollX });
+      setShowAnnotationMenu(true);
+      setNoteInput('');
+    };
+
+    // Save annotation
+    const saveAnnotation = () => {
+      if (!selectionText || !noteInput.trim()) return;
+
+      const annotation: Annotation = {
+        id: Date.now().toString(),
+        contextKey: selectionContextKey,
+        text: selectionText,
+        note: noteInput,
+        color: 'yellow',
+        timestamp: Date.now(),
+      };
+
+      onSaveAnnotation(annotation);
+      setShowAnnotationMenu(false);
+      setNoteInput('');
+      setSelectionText('');
+      window.getSelection()?.removeAllRanges();
+    };
+
+    // Delete annotation
+    const deleteAnnotation = (contextKey: string) => {
+      onDeleteAnnotation(contextKey);
     };
 
     return (
@@ -330,16 +387,17 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                   )}
 
                   {/* 题目 */}
-                  <div className="mb-10">
+                  <div className="mb-10" onMouseUp={() => handleTextSelect(idx)}>
                     <QuestionRenderer
                       question={question}
                       questionIndex={idx}
                       userAnswer={userAnswers[idx]}
-                      correctAnswer={question.correctOptionIndex}
+                      correctAnswer={question.correctAnswer}
                       language={language}
                       showCorrect={true}
                       annotations={annotations}
                       contextPrefix={`TOPIK-${exam.id}`}
+                      onTextSelect={() => handleTextSelect(idx)}
                     />
                   </div>
                 </div>
@@ -352,6 +410,37 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               <div className="mt-1">- End of Review -</div>
             </div>
           </div>
+
+          {/* 笔记侧边栏 */}
+          {sidebarAnnotations.length > 0 && (
+            <div className="w-72 shrink-0 space-y-4 hidden lg:block">
+              <div className="bg-white rounded-xl shadow-lg p-4 sticky top-24">
+                <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-indigo-500" />
+                  我的笔记 ({sidebarAnnotations.length})
+                </h3>
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                  {sidebarAnnotations.map((ann) => (
+                    <div
+                      key={ann.id}
+                      className="p-3 rounded-lg border border-slate-200 bg-yellow-50 hover:border-yellow-300 transition-colors group"
+                    >
+                      <div className="text-xs text-slate-500 mb-1 italic line-clamp-2">
+                        "{ann.text}"
+                      </div>
+                      <div className="text-sm text-slate-700 font-medium">{ann.note}</div>
+                      <button
+                        onClick={() => deleteAnnotation(ann.contextKey)}
+                        className="mt-2 text-xs text-red-500 hover:text-red-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" /> 删除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 题目导航 */}
@@ -359,7 +448,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
           <div className="bg-white/95 backdrop-blur-sm rounded-full shadow-xl border border-slate-200 px-4 py-2 flex items-center gap-1 overflow-x-auto max-w-[90vw]">
             <span className="text-xs text-slate-500 font-bold mr-2 shrink-0">题目</span>
             {exam.questions.map((q, idx) => {
-              const isCorrect = userAnswers[idx] === q.correctOptionIndex;
+              const isCorrect = userAnswers[idx] === q.correctAnswer;
               return (
                 <button
                   key={idx}
@@ -378,6 +467,57 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             })}
           </div>
         </div>
+
+        {/* Annotation Popup Menu */}
+        {showAnnotationMenu && menuPosition && (
+          <div
+            className="fixed z-50 bg-white border border-slate-200 shadow-xl rounded-xl p-4 w-72 animate-in zoom-in-95"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-bold text-slate-700 text-sm">添加笔记</h4>
+              <button
+                onClick={() => {
+                  setShowAnnotationMenu(false);
+                  window.getSelection()?.removeAllRanges();
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="text-xs text-slate-500 mb-3 italic border-l-2 border-yellow-400 pl-2 line-clamp-2">
+              "{selectionText}"
+            </div>
+            <textarea
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-500 outline-none mb-3"
+              rows={3}
+              placeholder="写下你的笔记..."
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowAnnotationMenu(false);
+                  window.getSelection()?.removeAllRanges();
+                }}
+                className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600"
+              >
+                取消
+              </button>
+              <button
+                onClick={saveAnnotation}
+                disabled={!noteInput.trim()}
+                className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-1"
+              >
+                <Check className="w-3 h-3" />
+                保存
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
