@@ -20,11 +20,27 @@ export const getUsers = async (req: Request, res: Response) => {
         tier: true,
         avatar: true,
         createdAt: true,
+        savedWords: true,
+        examHistory: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 1000,
     });
-    res.json(users);
+
+    // Map users to include computed statistics
+    const usersWithStats = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tier: user.tier,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
+      wordsLearned: user.savedWords.length,
+      examsTaken: user.examHistory.length,
+    }));
+
+    res.json(usersWithStats);
   } catch (err) {
     console.error('getUsers error', err);
     res.status(500).json({ error: 'Failed to get users' });
