@@ -88,7 +88,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     .sort((a, b) => (a.startOffset || 0) - (b.startOffset || 0));
 
   // Sidebar Logic
-  const sidebarAnnotations = currentAnnotations;
+  const sidebarAnnotations = currentAnnotations.filter(a => a.note && a.note.trim().length > 0);
 
   // Fetch Text Content when active unit changes
   useEffect(() => {
@@ -191,19 +191,19 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
         // STYLE LOGIC UPDATE (Listening Module):
         const isActive = activeAnnotationId === currentAnn.id || editingAnnotationId === currentAnn.id;
 
-        const colorMap: { [key: string]: { border: string, bg: string, hover: string } } = {
-          'yellow': { border: 'border-yellow-400', bg: 'bg-yellow-200', hover: 'hover:bg-yellow-100' },
-          'green': { border: 'border-green-400', bg: 'bg-green-200', hover: 'hover:bg-green-100' },
-          'blue': { border: 'border-blue-400', bg: 'bg-blue-200', hover: 'hover:bg-blue-100' },
-          'pink': { border: 'border-pink-400', bg: 'bg-pink-200', hover: 'hover:bg-pink-100' },
+        const colorMap: { [key: string]: { bg: string, activeBg: string } } = {
+          'yellow': { bg: 'bg-yellow-200', activeBg: 'bg-yellow-300 ring-2 ring-yellow-400' },
+          'green': { bg: 'bg-green-200', activeBg: 'bg-green-300 ring-2 ring-green-400' },
+          'blue': { bg: 'bg-blue-200', activeBg: 'bg-blue-300 ring-2 ring-blue-400' },
+          'pink': { bg: 'bg-pink-200', activeBg: 'bg-pink-300 ring-2 ring-pink-400' },
         };
         const colors = colorMap[currentAnn.color || 'yellow'] || colorMap['yellow'];
 
-        className += `${colors.border} border-b-2 cursor-pointer `;
+        className += 'cursor-pointer rounded-sm ';
         if (isActive) {
-          className += `${colors.bg} `;
+          className += `${colors.activeBg} `;
         } else {
-          className += `${colors.hover} `;
+          className += `${colors.bg} hover:brightness-95 `;
         }
       }
 

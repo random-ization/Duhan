@@ -48,7 +48,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language }) => {
     <div className="flex flex-col items-center justify-center min-h-[80vh] bg-slate-50 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700 mb-2">한 HanGyeol</h1>
+          <div className="flex justify-center mb-4">
+            <img src="/logo.jpg" alt="Logo" className="w-20 h-20 rounded-xl shadow-lg border border-slate-100" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            {language === 'zh' ? '读韩' : 'DuHan'}
+          </h1>
           <p className="text-slate-500">Your journey to Korean mastery starts here.</p>
         </div>
 

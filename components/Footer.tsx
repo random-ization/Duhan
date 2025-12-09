@@ -18,9 +18,11 @@ const Footer: React.FC<FooterProps> = ({ language, onNavigate }) => {
           {/* About Section */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <div className="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg">
-                {language === 'zh' ? '读' : 'D'}
-              </div>
+              <img
+                src="/logo.jpg"
+                alt="DuHan Logo"
+                className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-100 shadow-sm"
+              />
               <span className="text-xl font-bold text-white">
                 {language === 'zh' ? '读韩' : 'DuHan'}
               </span>

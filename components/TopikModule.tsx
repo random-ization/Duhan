@@ -112,7 +112,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     .filter(a => a.contextKey === contextKey && a.startOffset !== undefined)
     .sort((a, b) => (a.startOffset || 0) - (b.startOffset || 0));
 
-  const sidebarAnnotations = currentAnnotations; // Alias
+  const sidebarAnnotations = currentAnnotations.filter(a => a.note && a.note.trim().length > 0); // Alias
 
   const handleDeleteAnnotation = (id: string) => {
     const ann = currentAnnotations.find(a => a.id === id);
@@ -229,15 +229,16 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
       if (currentAnn) {
         const isActive = activeAnnotationId === currentAnn.id || editingAnnotationId === currentAnn.id;
         const colorMap: any = {
-          'yellow': { border: 'border-yellow-400', bg: 'bg-yellow-200', hover: 'hover:bg-yellow-100' },
-          'green': { border: 'border-green-400', bg: 'bg-green-200', hover: 'hover:bg-green-100' },
-          'blue': { border: 'border-blue-400', bg: 'bg-blue-200', hover: 'hover:bg-blue-100' },
-          'pink': { border: 'border-pink-400', bg: 'bg-pink-200', hover: 'hover:bg-pink-100' },
+          'yellow': { bg: 'bg-yellow-200', activeBg: 'bg-yellow-300 ring-2 ring-yellow-400' },
+          'green': { bg: 'bg-green-200', activeBg: 'bg-green-300 ring-2 ring-green-400' },
+          'blue': { bg: 'bg-blue-200', activeBg: 'bg-blue-300 ring-2 ring-blue-400' },
+          'pink': { bg: 'bg-pink-200', activeBg: 'bg-pink-300 ring-2 ring-pink-400' },
         };
         const colors = colorMap[currentAnn.color || 'yellow'] || colorMap['yellow'];
-        className += `${colors.border} border-b-2 cursor-pointer `;
-        if (isActive) className += `${colors.bg} `;
-        else className += `${colors.hover} `;
+
+        className += 'cursor-pointer rounded-sm ';
+        if (isActive) className += `${colors.activeBg} `;
+        else className += `${colors.bg} hover:brightness-95 `;
       }
 
       if (currentAnn) {

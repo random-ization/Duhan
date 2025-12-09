@@ -62,11 +62,13 @@ const Layout: React.FC<LayoutProps> = ({
               className="flex items-center space-x-2 cursor-pointer"
               onClick={() => onNavigate('home')}
             >
-              <div className="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-md">
-                한
-              </div>
+              <img
+                src="/logo.jpg"
+                alt="DuHan Logo"
+                className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-100 shadow-sm"
+              />
               <span className="text-xl font-bold text-slate-800 tracking-tight hidden sm:block">
-                HanGyeol
+                {language === 'zh' ? '读韩' : 'DuHan'}
               </span>
             </div>
 
@@ -76,11 +78,10 @@ const Layout: React.FC<LayoutProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    currentPage === item.id
-                      ? 'bg-indigo-50 text-indigo-600'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                  className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === item.id
+                    ? 'bg-indigo-50 text-indigo-600'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                 >
                   <item.icon
                     className={`w-4 h-4 mr-2 ${currentPage === item.id ? 'text-indigo-600' : 'text-slate-400'}`}
@@ -210,11 +211,10 @@ const Layout: React.FC<LayoutProps> = ({
                     onNavigate(item.id);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`flex w-full items-center px-4 py-3 rounded-lg text-base font-medium ${
-                    currentPage === item.id
-                      ? 'bg-indigo-50 text-indigo-600'
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`flex w-full items-center px-4 py-3 rounded-lg text-base font-medium ${currentPage === item.id
+                    ? 'bg-indigo-50 text-indigo-600'
+                    : 'text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
                   {item.label}
