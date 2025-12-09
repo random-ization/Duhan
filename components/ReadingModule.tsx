@@ -532,6 +532,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             }, 100);
           }
         }}
+        onHighlight={(color) => {
+          saveAnnotation(color, undefined, true);
+        }}
         selectedColor={selectedColor}
         setSelectedColor={setSelectedColor}
         onSaveWord={(text) => {

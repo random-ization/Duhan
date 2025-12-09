@@ -5,6 +5,7 @@ interface AnnotationMenuProps {
     visible: boolean;
     position: { top: number; left: number } | null;
     onAddNote: () => void;
+    onHighlight?: (color: string) => void;
     selectedColor: string;
     setSelectedColor: (val: string) => void;
     onSaveWord?: (text: string) => void;
@@ -25,6 +26,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
     visible,
     position,
     onAddNote,
+    onHighlight,
     selectedColor,
     setSelectedColor,
     onSaveWord,
@@ -53,6 +55,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                     <button
                         onClick={() => {
                             setSelectedColor(''); // Clear highlight
+                            if (onHighlight) onHighlight(''); // Save as cleared/white? Or delete? Actually '' might imply remove.
                             setShowColorPicker(false);
                         }}
                         className={`w-6 h-6 rounded-full border border-slate-200 bg-white transition-all ${selectedColor === '' ? 'ring-2 ring-slate-400 ring-offset-1' : 'hover:scale-110'
@@ -64,6 +67,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                             key={color.name}
                             onClick={() => {
                                 setSelectedColor(color.name);
+                                if (onHighlight) onHighlight(color.name);
                                 setShowColorPicker(false);
                             }}
                             className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${selectedColor === color.name ? `ring-2 ${color.ringClass} ring-offset-1` : 'hover:scale-110'

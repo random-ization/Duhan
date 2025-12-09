@@ -19,9 +19,11 @@ const Footer: React.FC<FooterProps> = ({ language, onNavigate }) => {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <div className="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg">
-                한
+                {language === 'zh' ? '读' : 'D'}
               </div>
-              <span className="text-xl font-bold text-white">HanGyeol</span>
+              <span className="text-xl font-bold text-white">
+                {language === 'zh' ? '读韩' : 'DuHan'}
+              </span>
             </div>
             <p className="text-sm text-slate-400">
               {labels.footerDescription || 'Your comprehensive Korean language learning platform'}
@@ -94,7 +96,7 @@ const Footer: React.FC<FooterProps> = ({ language, onNavigate }) => {
         {/* Bottom Bar */}
         <div className="border-t border-slate-700 mt-8 pt-6 text-center text-sm text-slate-400">
           <p>
-            © {currentYear} HanGyeol. {labels.allRightsReserved || 'All rights reserved.'}
+            © {currentYear} {language === 'zh' ? '读韩' : 'DuHan'}. {labels.allRightsReserved || 'All rights reserved.'}
           </p>
         </div>
       </div>

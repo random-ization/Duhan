@@ -1,62 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HanGyeol - Korean Learning</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', 'Noto Sans KR', sans-serif;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DuHan - Korean Learning</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    }
+
+    .highlight-yellow {
+      background-color: #fef08a;
+    }
+
+    .highlight-green {
+      background-color: #bbf7d0;
+    }
+
+    .highlight-blue {
+      background-color: #bfdbfe;
+    }
+
+    .highlight-pink {
+      background-color: #fbcfe8;
+    }
+
+    /* Toast animations */
+    @keyframes slide-in {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
       }
-      .highlight-yellow { background-color: #fef08a; }
-      .highlight-green { background-color: #bbf7d0; }
-      .highlight-blue { background-color: #bfdbfe; }
-      .highlight-pink { background-color: #fbcfe8; }
-      
-      /* Toast animations */
-      @keyframes slide-in {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
       }
-      
-      .animate-slide-in {
-        animation: slide-in 0.3s ease-out;
-      }
-      
-      /* Tailwind utilities for 3D transforms used in VocabModule */
-      .perspective-1000 {
-        perspective: 1000px;
-      }
-      
-      .transform-style-3d {
-        transform-style: preserve-3d;
-      }
-      
-      .backface-hidden {
-        backface-visibility: hidden;
-      }
-      
-      .rotate-y-180 {
-        transform: rotateY(180deg);
-      }
-      /* Dynamic Selection Colors */
-      .selection-yellow *::selection { background-color: #fef08a; color: #854d0e; }
-      .selection-green *::selection { background-color: #bbf7d0; color: #166534; }
-      .selection-blue *::selection { background-color: #bfdbfe; color: #1e40af; }
-      .selection-pink *::selection { background-color: #fbcfe8; color: #9d174d; }
-    </style>
-<link rel="stylesheet" href="/index.css">
+    }
+
+    .animate-slide-in {
+      animation: slide-in 0.3s ease-out;
+    }
+
+    /* Tailwind utilities for 3D transforms used in VocabModule */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+
+    .transform-style-3d {
+      transform-style: preserve-3d;
+    }
+
+    .backface-hidden {
+      backface-visibility: hidden;
+    }
+
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+
+    /* Dynamic Selection Colors */
+    .selection-yellow *::selection {
+      background-color: #fef08a;
+      color: #854d0e;
+    }
+
+    .selection-green *::selection {
+      background-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .selection-blue *::selection {
+      background-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    .selection-pink *::selection {
+      background-color: #fbcfe8;
+      color: #9d174d;
+    }
+  </style>
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50 text-slate-900 antialiased">
-    <div id="root"></div>
+
+<body class="bg-slate-50 text-slate-900 antialiased">
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

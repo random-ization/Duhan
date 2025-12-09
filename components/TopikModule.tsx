@@ -690,6 +690,9 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
               }, 100);
             }
           }}
+          onHighlight={(color) => {
+            saveAnnotation(color, undefined, true);
+          }}
           selectedColor={selectedColor}
           setSelectedColor={setSelectedColor}
           onClose={cancelAnnotation}

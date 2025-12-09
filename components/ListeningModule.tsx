@@ -503,6 +503,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             }, 100);
           }
         }}
+        onHighlight={(color) => {
+          saveAnnotation(color, undefined, true);
+        }}
         selectedColor={selectedColor}
         setSelectedColor={setSelectedColor}
         // Save word usually not needed in listening but why not support it?
