@@ -618,6 +618,12 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
                           <textarea
                             value={editNoteInput}
                             onChange={(e) => setEditNoteInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleUpdateNote(ann.id);
+                              }
+                            }}
                             className="w-full border border-slate-200 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
                             rows={3}
                             autoFocus

@@ -369,7 +369,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
               <div className="mt-4 p-4 bg-slate-50 rounded-xl animate-in slide-in-from-top-4 relative overflow-y-auto flex-1">
                 <div
                   ref={contentRef}
-                  className="text-lg leading-relaxed text-slate-800 whitespace-pre-line select-text font-serif"
+                  className={`text-lg leading-relaxed text-slate-800 whitespace-pre-line select-text font-serif ${selectedColor ? `selection-${selectedColor}` : ''}`}
                   onMouseUp={handleTextSelection}
                 >
                   {renderHighlightedText(passage.koreanText)}
@@ -411,6 +411,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                         <textarea
                           value={editNoteInput}
                           onChange={(e) => setEditNoteInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleUpdateNote(ann.id);
+                            }
+                          }}
                           className="w-full border border-slate-200 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
                           rows={3}
                           autoFocus

@@ -133,6 +133,14 @@ function escapeHtml(text: string): string {
 function formatContent(content: string): string {
   if (!content) return '';
 
+  const parseInline = (text: string): string => {
+    let parsed = text;
+    parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    parsed = parsed.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+    parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    return parsed;
+  };
+
   // Convert line breaks to paragraphs
   const paragraphs = content.split('\n\n').filter(p => p.trim());
 
@@ -140,11 +148,11 @@ function formatContent(content: string): string {
     .map(para => {
       // Check if it's a heading (starts with #)
       if (para.trim().startsWith('# ')) {
-        return `<h1>${escapeHtml(para.substring(2).trim())}</h1>`;
+        return `<h1>${parseInline(escapeHtml(para.substring(2).trim()))}</h1>`;
       } else if (para.trim().startsWith('## ')) {
-        return `<h2>${escapeHtml(para.substring(3).trim())}</h2>`;
+        return `<h2>${parseInline(escapeHtml(para.substring(3).trim()))}</h2>`;
       } else if (para.trim().startsWith('### ')) {
-        return `<h3>${escapeHtml(para.substring(4).trim())}</h3>`;
+        return `<h3>${parseInline(escapeHtml(para.substring(4).trim()))}</h3>`;
       }
 
       // Check if it's a list
@@ -153,7 +161,7 @@ function formatContent(content: string): string {
         const listItems = items
           .map(item => {
             const cleanItem = item.replace(/^[-*]\s/, '').trim();
-            return `<li>${escapeHtml(cleanItem)}</li>`;
+            return `<li>${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
         return `<ul>${listItems}</ul>`;
@@ -165,14 +173,14 @@ function formatContent(content: string): string {
         const listItems = items
           .map(item => {
             const cleanItem = item.replace(/^\d+\.\s/, '').trim();
-            return `<li>${escapeHtml(cleanItem)}</li>`;
+            return `<li>${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
         return `<ol>${listItems}</ol>`;
       }
 
       // Regular paragraph
-      return `<p>${escapeHtml(para.trim())}</p>`;
+      return `<p>${parseInline(escapeHtml(para.trim()))}</p>`;
     })
     .join('');
 }

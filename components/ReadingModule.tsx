@@ -370,7 +370,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
               {/* Korean Text - Always Visible */}
               <div
                 ref={contentRef}
-                className={`transition-all duration-300 ${showTranslation ? 'w-1/2' : 'w-full max-w-5xl mx-auto'}`}
+                className={`transition-all duration-300 ${showTranslation ? 'w-1/2' : 'w-full max-w-5xl mx-auto'} ${selectedColor ? `selection-${selectedColor}` : ''}`}
                 onMouseUp={handleTextSelection}
               >
                 <div className="text-lg leading-loose text-slate-800 font-serif whitespace-pre-line select-text">
@@ -434,6 +434,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         <textarea
                           value={editNoteInput}
                           onChange={(e) => setEditNoteInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleUpdateNote(ann.id);
+                            }
+                          }}
                           className="w-full border border-slate-200 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
                           rows={3}
                           autoFocus

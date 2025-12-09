@@ -3,7 +3,7 @@ import { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { api } from '../../services/api';
 import { Button } from '../common/Button';
-import { Save, FileText, Eye, Edit } from 'lucide-react';
+import { Save, FileText, Eye, Edit, Bold, Italic, Link as LinkIcon, List as ListIcon, Heading } from 'lucide-react';
 
 interface LegalDocument {
   id: string;
@@ -105,6 +105,17 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
     return text.replace(/[&<>"']/g, m => map[m]);
   };
 
+  const parseInline = (text: string): string => {
+    let parsed = text;
+    // Bold
+    parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    parsed = parsed.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+    // Link
+    parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline" target="_blank">$1</a>');
+    return parsed;
+  };
+
   const formatPreview = (content: string): string => {
     if (!content) return '';
 
@@ -113,11 +124,11 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
     return paragraphs
       .map(para => {
         if (para.trim().startsWith('# ')) {
-          return `<h1 class="text-3xl font-bold mb-6 mt-8">${escapeHtml(para.substring(2).trim())}</h1>`;
+          return `<h1 class="text-3xl font-bold mb-6 mt-8">${parseInline(escapeHtml(para.substring(2).trim()))}</h1>`;
         } else if (para.trim().startsWith('## ')) {
-          return `<h2 class="text-2xl font-bold mb-4 mt-6">${escapeHtml(para.substring(3).trim())}</h2>`;
+          return `<h2 class="text-2xl font-bold mb-4 mt-6">${parseInline(escapeHtml(para.substring(3).trim()))}</h2>`;
         } else if (para.trim().startsWith('### ')) {
-          return `<h3 class="text-xl font-bold mb-3 mt-5">${escapeHtml(para.substring(4).trim())}</h3>`;
+          return `<h3 class="text-xl font-bold mb-3 mt-5">${parseInline(escapeHtml(para.substring(4).trim()))}</h3>`;
         }
 
         if (para.trim().match(/^[-*]\s/)) {
@@ -125,7 +136,7 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
           const listItems = items
             .map(item => {
               const cleanItem = item.replace(/^[-*]\s/, '').trim();
-              return `<li class="mb-2">${escapeHtml(cleanItem)}</li>`;
+              return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
             })
             .join('');
           return `<ul class="my-4 ml-6 list-disc">${listItems}</ul>`;
@@ -136,15 +147,34 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
           const listItems = items
             .map(item => {
               const cleanItem = item.replace(/^\d+\.\s/, '').trim();
-              return `<li class="mb-2">${escapeHtml(cleanItem)}</li>`;
+              return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
             })
             .join('');
           return `<ol class="my-4 ml-6 list-decimal">${listItems}</ol>`;
         }
 
-        return `<p class="mb-4 leading-relaxed">${escapeHtml(para.trim())}</p>`;
+        return `<p class="mb-4 leading-relaxed">${parseInline(escapeHtml(para.trim()))}</p>`;
       })
       .join('');
+  };
+
+  const insertSyntax = (prefix: string, suffix: string = '') => {
+    const textarea = document.getElementById('legal-editor-textarea') as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editingContent;
+
+    const selected = text.substring(start, end);
+    const newText = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
+
+    setEditingContent(newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
   };
 
   const docTypes = [
@@ -171,11 +201,10 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
             <button
               key={doc.id}
               onClick={() => setSelectedDoc(doc.id)}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-                selectedDoc === doc.id
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${selectedDoc === doc.id
+                ? 'bg-indigo-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               <FileText className="w-4 h-4" />
               {doc.label}
@@ -191,18 +220,16 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPreviewMode(false)}
-              className={`px-3 py-1.5 rounded text-sm font-medium ${
-                !previewMode ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-medium ${!previewMode ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <Edit className="w-4 h-4 inline mr-1" />
               {labels.edit || 'Edit'}
             </button>
             <button
               onClick={() => setPreviewMode(true)}
-              className={`px-3 py-1.5 rounded text-sm font-medium ${
-                previewMode ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-medium ${previewMode ? 'bg-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <Eye className="w-4 h-4 inline mr-1" />
               {labels.preview || 'Preview'}
@@ -241,16 +268,43 @@ const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) =
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {labels.content || 'Content'}
                 </label>
-                <div className="text-xs text-gray-500 mb-2 bg-blue-50 p-2 rounded">
+                <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                  {/* Toolbar */}
+                  <div className="bg-gray-50 border-b border-gray-300 p-2 flex items-center gap-1">
+                    <button onClick={() => insertSyntax('**', '**')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Bold">
+                      <Bold className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => insertSyntax('*', '*')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Italic">
+                      <Italic className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    <button onClick={() => insertSyntax('[', '](url)')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Link">
+                      <LinkIcon className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    <button onClick={() => insertSyntax('# ')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Heading 1">
+                      <Heading className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => insertSyntax('## ')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="Heading 2">
+                      <Heading className="w-3 h-3" />
+                    </button>
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    <button onClick={() => insertSyntax('- ')} className="p-1.5 hover:bg-gray-200 rounded text-gray-600" title="List">
+                      <ListIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    id="legal-editor-textarea"
+                    value={editingContent}
+                    onChange={e => setEditingContent(e.target.value)}
+                    className="w-full h-96 px-4 py-3 border-none resize-none focus:ring-0 font-mono text-sm"
+                    placeholder={labels.enterContent || 'Enter document content...'}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
                   {labels.markdownTip ||
                     'Formatting tips: Use # for headings (# H1, ## H2, ### H3), - or * for bullet lists, 1. for numbered lists, blank lines for paragraphs'}
                 </div>
-                <textarea
-                  value={editingContent}
-                  onChange={e => setEditingContent(e.target.value)}
-                  className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-                  placeholder={labels.enterContent || 'Enter document content...'}
-                />
               </div>
             </div>
           ) : (
