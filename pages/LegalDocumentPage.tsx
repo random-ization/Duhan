@@ -99,17 +99,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
       {/* Content */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
         <div
-          className="prose prose-slate max-w-none
-            prose-headings:font-bold prose-headings:text-slate-800
-            prose-h1:text-3xl prose-h1:mb-6 prose-h1:mt-8
-            prose-h2:text-2xl prose-h2:mb-4 prose-h2:mt-6
-            prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-5
-            prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-4
-            prose-ul:my-4 prose-ul:ml-6
-            prose-ol:my-4 prose-ol:ml-6
-            prose-li:text-slate-700 prose-li:mb-2
-            prose-strong:text-slate-900 prose-strong:font-semibold
-            prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline"
+          className="prose prose-slate max-w-none"
           dangerouslySetInnerHTML={{ __html: formatContent(document.content) }}
         />
       </div>
@@ -148,11 +138,11 @@ function formatContent(content: string): string {
     .map(para => {
       // Check if it's a heading (starts with #)
       if (para.trim().startsWith('# ')) {
-        return `<h1>${parseInline(escapeHtml(para.substring(2).trim()))}</h1>`;
+        return `<h1 class="text-3xl font-bold mb-6 mt-8">${parseInline(escapeHtml(para.substring(2).trim()))}</h1>`;
       } else if (para.trim().startsWith('## ')) {
-        return `<h2>${parseInline(escapeHtml(para.substring(3).trim()))}</h2>`;
+        return `<h2 class="text-2xl font-bold mb-4 mt-6">${parseInline(escapeHtml(para.substring(3).trim()))}</h2>`;
       } else if (para.trim().startsWith('### ')) {
-        return `<h3>${parseInline(escapeHtml(para.substring(4).trim()))}</h3>`;
+        return `<h3 class="text-xl font-bold mb-3 mt-5">${parseInline(escapeHtml(para.substring(4).trim()))}</h3>`;
       }
 
       // Check if it's a list
@@ -161,10 +151,10 @@ function formatContent(content: string): string {
         const listItems = items
           .map(item => {
             const cleanItem = item.replace(/^[-*]\s/, '').trim();
-            return `<li>${parseInline(escapeHtml(cleanItem))}</li>`;
+            return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
-        return `<ul>${listItems}</ul>`;
+        return `<ul class="my-4 ml-6 list-disc">${listItems}</ul>`;
       }
 
       // Check if it's a numbered list
@@ -173,14 +163,14 @@ function formatContent(content: string): string {
         const listItems = items
           .map(item => {
             const cleanItem = item.replace(/^\d+\.\s/, '').trim();
-            return `<li>${parseInline(escapeHtml(cleanItem))}</li>`;
+            return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
-        return `<ol>${listItems}</ol>`;
+        return `<ol class="my-4 ml-6 list-decimal">${listItems}</ol>`;
       }
 
       // Regular paragraph
-      return `<p>${parseInline(escapeHtml(para.trim()))}</p>`;
+      return `<p class="mb-4 leading-relaxed">${parseInline(escapeHtml(para.trim()))}</p>`;
     })
     .join('');
 }
