@@ -4,9 +4,9 @@ import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../services/api';
 import { useToast } from '../hooks/useToast';
-import { ToastContainer } from './common/Toast';
-import { Button } from './common/Button';
-import { Loading } from './common/Loading';
+import { ToastContainer } from '../components/common/Toast';
+import { Button } from '../components/common/Button';
+import { Loading } from '../components/common/Loading';
 import {
   User as UserIcon, Camera, Lock, BarChart3, Calendar,
   Trophy, TrendingUp, Activity, CheckCircle, XCircle, Crown, Clock
