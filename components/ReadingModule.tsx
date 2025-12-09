@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { generateReadingPassage } from '../services/geminiService';
 import { CourseSelection, ReadingContent, Language, TextbookContent, Annotation } from '../types';
-import { X, ChevronRight, MessageSquare, Trash2 } from 'lucide-react';
+import { X, ChevronRight, MessageSquare, Trash2, Check } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
 import { useAnnotation } from '../hooks/useAnnotation';
 import AnnotationMenu from './AnnotationMenu';
@@ -41,15 +41,20 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     ? `${course.instituteId}-${course.level}-${activeUnit}-READING`
     : '';
 
+  // Sidebar Edit State
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
+  const [editNoteInput, setEditNoteInput] = useState('');
+  // Active state for highlighting (User Request: Underline default, Highlight on active)
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
+
   const {
     contentRef,
     handleTextSelection,
     saveAnnotation,
+    deleteAnnotation,
     cancelAnnotation,
     showAnnotationMenu,
     menuPosition,
-    noteInput,
-    setNoteInput,
     selectedColor,
     setSelectedColor,
     currentSelectionRange
@@ -63,7 +68,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     .sort((a, b) => (a.startOffset || 0) - (b.startOffset || 0));
 
   // Sidebar Logic
-  const sidebarAnnotations = currentAnnotations.filter(a => a.note && a.note.trim().length > 0);
+  const sidebarAnnotations = currentAnnotations;
 
   // Load reading when active unit changes
   useEffect(() => {
@@ -93,11 +98,19 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   }, [activeUnit, instituteName, course.level, language, levelContexts]);
 
 
-  const deleteAnnotation = (id: string) => {
+  const handleDeleteAnnotation = (id: string) => {
     const ann = currentAnnotations.find(a => a.id === id);
     if (ann) {
-      onSaveAnnotation({ ...ann, color: null, note: '' });
+      onSaveAnnotation({ ...ann, color: null, note: '' }); // Treat as delete
     }
+  };
+
+  const handleUpdateNote = (id: string) => {
+    const ann = currentAnnotations.find(a => a.id === id);
+    if (ann) {
+      onSaveAnnotation({ ...ann, note: editNoteInput });
+    }
+    setEditingAnnotationId(null);
   };
 
   // Sentence parsing logic for Hover Sync
@@ -158,17 +171,49 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       let className = 'relative rounded px-0 py-0.5 box-decoration-clone transition-all ';
 
       if (currentAnn) {
-        const colorClass = currentAnn.color ? `highlight-${currentAnn.color}` : 'bg-slate-200';
-        className += `${colorClass} cursor-pointer hover:brightness-95 `;
+        // STYLE LOGIC UPDATE:
+        // Default: Border Bottom Only
+        // Active (Clicked/Edited): Background Highlight
+        const isActive = activeAnnotationId === currentAnn.id || editingAnnotationId === currentAnn.id;
+
+        // Define colors map specifically for this
+        const colorMap: { [key: string]: { border: string, bg: string } } = {
+          'yellow': { border: 'border-yellow-400', bg: 'bg-yellow-200/50' },
+          'green': { border: 'border-green-400', bg: 'bg-green-200/50' },
+          'blue': { border: 'border-blue-400', bg: 'bg-blue-200/50' },
+          'pink': { border: 'border-pink-400', bg: 'bg-pink-200/50' },
+        };
+        const colors = colorMap[currentAnn.color || 'yellow'] || colorMap['yellow'];
+
+        className += `${colors.border} border-b-2 cursor-pointer `;
+        if (isActive) {
+          className += `${colors.bg} `;
+        } else {
+          className += `hover:bg-opacity-50 hover:${colors.bg.split('/')[0]} `; // Subtle hover hint
+        }
       }
 
-      if (isHovered) {
-        className += 'border-b-2 border-indigo-500 bg-indigo-50/30 ';
+      if (isHovered && !currentAnn) { // Only show sentence hover if not an annotation (or mix them?)
+        // If annotation is present, maybe we don't underline sentence to avoid conflict?
+        // Or we just add separate style.
+        // Let's keep sentence hover subtle.
+        className += 'bg-indigo-50/30 ';
       }
 
       if (currentAnn) {
         result.push(
-          <span key={i} id={`annotation-${currentAnn.id}`} className={className}>
+          <span
+            key={i}
+            id={`annotation-${currentAnn.id}`}
+            className={className}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveAnnotationId(currentAnn.id);
+              // Also scroll sidebar
+              const el = document.getElementById(`sidebar-card-${currentAnn.id}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          >
             {segmentText}
             {currentAnn.note && (
               <span className="absolute -top-1.5 -right-1 w-2 h-2 bg-red-400 rounded-full border border-white"></span>
@@ -187,8 +232,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     return result;
   };
 
-  // Table of Contents View
+  // ... (TOC and Loading) ... //
+
+  // Keeping the return same until Sidebar
   if (!activeUnit) {
+    // (Keep TOC)
     const availableUnits = Object.keys(levelContexts)
       .map(Number)
       .sort((a, b) => a - b);
@@ -196,6 +244,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
     return (
       <div className="max-w-4xl mx-auto">
+        {/* TOC Items */}
+        {/* Reuse existing rendering logic via "unchanged" assumption or just overwrite if small */}
+        {/* Since I am replacing the top half, I should just handle the TOC return correctly */}
         <h2 className="text-2xl font-bold text-slate-800 mb-6">
           {labels.toc} - {labels.reading}
         </h2>
@@ -341,34 +392,87 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   No notes yet
                 </div>
               ) : (
-                sidebarAnnotations.map(ann => (
-                  <div
-                    key={ann.id}
-                    className="group bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer relative"
-                    onClick={() => {
-                      // Scroll to annotation
-                      const el = document.getElementById(`annotation-${ann.id}`);
-                      if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Trigger selection highlight manually if needed, or just view
-                      }
-                    }}
-                  >
-                    <div className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit bg-${ann.color === 'yellow' ? 'yellow-100 text-yellow-800' : ann.color === 'green' ? 'green-100 text-green-800' : ann.color === 'blue' ? 'blue-100 text-blue-800' : 'pink-100 text-pink-800'}`}>
-                      {ann.text.substring(0, 20)}...
-                    </div>
-                    <p className="text-sm text-slate-700">{ann.note}</p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteAnnotation(ann.id);
+                sidebarAnnotations.map(ann => {
+                  const isEditing = editingAnnotationId === ann.id;
+                  const isActive = activeAnnotationId === ann.id;
+
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={ann.id}
+                        id={`sidebar-card-${ann.id}`}
+                        className="bg-white p-3 rounded-lg border-2 border-indigo-500 shadow-md scroll-mt-20"
+                      >
+                        <div className="text-xs font-bold mb-2 text-slate-500">
+                          Editing note for "{ann.text.substring(0, 15)}..."
+                        </div>
+                        <textarea
+                          value={editNoteInput}
+                          onChange={(e) => setEditNoteInput(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
+                          rows={3}
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => setEditingAnnotationId(null)}
+                            className="px-3 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleUpdateNote(ann.id)}
+                            className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1"
+                          >
+                            <Check className="w-3 h-3" /> Save
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={ann.id}
+                      id={`sidebar-card-${ann.id}`}
+                      className={`group p-3 rounded-lg border transition-all cursor-pointer relative scroll-mt-20
+                        ${isActive
+                          ? 'bg-indigo-50 border-indigo-300 shadow-md'
+                          : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:shadow-sm'
+                        }`}
+                      onClick={() => {
+                        // Activate highlight
+                        setActiveAnnotationId(ann.id);
+                        // Enter edit mode
+                        setEditingAnnotationId(ann.id);
+                        setEditNoteInput(ann.note || '');
+
+                        // Scroll to text?
+                        const el = document.getElementById(`annotation-${ann.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       }}
-                      className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))
+                      <div className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit bg-${ann.color === 'yellow' ? 'yellow-100 text-yellow-800' : ann.color === 'green' ? 'green-100 text-green-800' : ann.color === 'blue' ? 'blue-100 text-blue-800' : 'pink-100 text-pink-800'}`}>
+                        {ann.text.substring(0, 20)}...
+                      </div>
+                      {ann.note ? (
+                        <p className="text-sm text-slate-700">{ann.note}</p>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">Click to add note...</p>
+                      )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAnnotation(ann.id);
+                        }}
+                        className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -379,16 +483,27 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         visible={showAnnotationMenu}
         position={menuPosition}
         selectionText={currentSelectionRange?.text}
-        noteInput={noteInput}
-        setNoteInput={setNoteInput}
+        onAddNote={() => {
+          // Quick save and enter edit mode
+          const id = saveAnnotation(undefined, undefined, true); // Use current/default color, empty note, and close menu
+          if (id) {
+            setEditingAnnotationId(id);
+            setEditNoteInput('');
+            // Use setTimeout to allow render to happen before scrolling
+            setTimeout(() => {
+              const el = document.getElementById(`sidebar-card-${id}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          }
+        }}
         selectedColor={selectedColor}
         setSelectedColor={setSelectedColor}
-        onSave={saveAnnotation}
-        onCancel={cancelAnnotation}
         onSaveWord={(text) => {
           onSaveWord(text, '');
           cancelAnnotation();
         }}
+        onClose={cancelAnnotation}
+        onDelete={deleteAnnotation}
         labels={labels}
       />
     </div>

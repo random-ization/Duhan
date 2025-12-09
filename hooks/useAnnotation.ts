@@ -8,12 +8,11 @@ interface UseAnnotationReturn {
     showAnnotationMenu: boolean;
     setShowAnnotationMenu: (show: boolean) => void;
     menuPosition: { top: number; left: number } | null;
-    noteInput: string;
-    setNoteInput: (note: string) => void;
     selectedColor: string;
     setSelectedColor: (color: string) => void;
     handleTextSelection: (e?: React.MouseEvent) => void;
-    saveAnnotation: () => void;
+    saveAnnotation: (colorOverride?: string, noteOverride?: string, shouldCloseMenu?: boolean) => string | null;
+    deleteAnnotation: () => void;
     cancelAnnotation: () => void;
 }
 
@@ -32,7 +31,6 @@ export const useAnnotation = (
 
     const [showAnnotationMenu, setShowAnnotationMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-    const [noteInput, setNoteInput] = useState('');
     const [selectedColor, setSelectedColor] = useState<string>('yellow');
 
     const currentAnnotations = annotations.filter(a => a.contextKey === contextKey);
@@ -86,18 +84,16 @@ export const useAnnotation = (
         );
 
         if (exactMatch) {
-            setNoteInput(exactMatch.note || '');
             setSelectedColor(exactMatch.color || 'yellow');
         } else {
-            setNoteInput('');
             setSelectedColor('yellow');
         }
 
         setShowAnnotationMenu(true);
     }, [contextKey, currentAnnotations]);
 
-    const saveAnnotation = useCallback(() => {
-        if (!currentSelectionRange) return;
+    const saveAnnotation = useCallback((colorOverride?: string, noteOverride?: string, shouldCloseMenu: boolean = true) => {
+        if (!currentSelectionRange) return null;
 
         const exactMatch = currentAnnotations.find(
             a =>
@@ -105,21 +101,45 @@ export const useAnnotation = (
                 Math.abs((a.endOffset || 0) - currentSelectionRange.end) < 2
         );
 
+        const finalColor = colorOverride !== undefined ? colorOverride : selectedColor;
+        const finalNote = noteOverride !== undefined ? noteOverride : (exactMatch?.note || '');
+
         const newAnnotation: Annotation = {
             id: exactMatch?.id || Date.now().toString(),
             contextKey,
             startOffset: currentSelectionRange.start,
             endOffset: currentSelectionRange.end,
             text: currentSelectionRange.text,
-            color: selectedColor,
-            note: noteInput,
+            color: finalColor,
+            note: finalNote,
             timestamp: Date.now(),
         };
+
         onSaveAnnotation(newAnnotation);
+
+        if (shouldCloseMenu) {
+            setShowAnnotationMenu(false);
+            setCurrentSelectionRange(null);
+            window.getSelection()?.removeAllRanges();
+        }
+
+        return newAnnotation.id;
+    }, [currentSelectionRange, currentAnnotations, contextKey, selectedColor, onSaveAnnotation]);
+
+    const deleteAnnotation = useCallback(() => {
+        if (!currentSelectionRange) return;
+        const exactMatch = currentAnnotations.find(
+            a =>
+                Math.abs((a.startOffset || 0) - currentSelectionRange.start) < 2 &&
+                Math.abs((a.endOffset || 0) - currentSelectionRange.end) < 2
+        );
+        if (exactMatch) {
+            onSaveAnnotation({ ...exactMatch, color: null, note: '' }); // Treat as delete
+        }
         setShowAnnotationMenu(false);
         setCurrentSelectionRange(null);
         window.getSelection()?.removeAllRanges();
-    }, [currentSelectionRange, currentAnnotations, contextKey, selectedColor, noteInput, onSaveAnnotation]);
+    }, [currentSelectionRange, currentAnnotations, onSaveAnnotation]);
 
     const cancelAnnotation = useCallback(() => {
         setShowAnnotationMenu(false);
@@ -134,12 +154,13 @@ export const useAnnotation = (
         showAnnotationMenu,
         setShowAnnotationMenu,
         menuPosition,
-        noteInput,
-        setNoteInput,
+        // noteInput, // Removed: Managed by sidebar now
+        // setNoteInput, // Removed
         selectedColor,
         setSelectedColor,
         handleTextSelection,
         saveAnnotation,
+        deleteAnnotation,
         cancelAnnotation
     };
 };
