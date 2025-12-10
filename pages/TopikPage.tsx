@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import ExamListContainer from '../src/features/exam/ExamListContainer';
+import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 
 interface TopikPageProps {
   canAccessContent: (content: any) => boolean;
@@ -9,16 +10,24 @@ interface TopikPageProps {
 }
 
 const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { user } = useAuth();
+  const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
+  const { topikExams } = useData();
 
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <ExamListContainer
+    <TopikModule
+      exams={topikExams}
+      language={language}
+      history={user.examHistory || []}
+      onSaveHistory={saveExamAttempt}
+      annotations={user.annotations || []}
+      onSaveAnnotation={saveAnnotation}
       canAccessContent={canAccessContent}
       onShowUpgradePrompt={onShowUpgradePrompt}
+      onDeleteHistory={deleteExamAttempt}
     />
   );
 };

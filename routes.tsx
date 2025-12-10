@@ -14,7 +14,6 @@ const ModulePage = lazy(() => import('./pages/ModulePage'));
 const TopikPage = lazy(() => import('./pages/TopikPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
-const ExamSessionContainer = lazy(() => import('./src/features/exam/ExamSessionContainer'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -77,10 +76,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
                 onShowUpgradePrompt={onShowUpgradePrompt}
               />
             }
-          />
-          <Route
-            path="/topik/exam/:examId"
-            element={<ExamSessionContainer />}
           />
         </Route>
 
