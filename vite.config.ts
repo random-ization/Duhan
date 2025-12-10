@@ -27,8 +27,6 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           // Canvas 画板功能 - 懒加载，不阻塞首页
           'canvas': ['konva', 'react-konva'],
-          // PDF 功能 - 懒加载
-          'pdf': ['react-pdf'],
           // UI 图标库
           'ui': ['lucide-react'],
           // Excel 处理
