@@ -30,6 +30,8 @@ app.use('/api/daily-phrase', dailyPhraseRoutes);
 console.log('[Server] /api/daily-phrase registered');
 app.use('/api/annotation', annotationRoutes);
 console.log('[Server] /api/annotation registered');
+app.use('/api/annotations', annotationRoutes);  // 别名，兼容复数形式
+console.log('[Server] /api/annotations registered');
 
 // Health Check
 app.get('/health', (req, res) => {

@@ -97,6 +97,8 @@ model Annotation {
   id            String   @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id])
+  
+  // 文本标注字段（教材模块使用）
   contextKey    String
   startOffset   Int?
   endOffset     Int?
@@ -104,7 +106,18 @@ model Annotation {
   text          String
   color         String?
   note          String?
+  
+  // TOPIK 画板字段（新增）
+  targetType    String   @default("TEXTBOOK")  // "TEXTBOOK" 或 "EXAM"
+  targetId      String?  // ExamID（可选）
+  pageIndex     Int?     // 题号/页码（可选）
+  data          Json?    // Canvas 矢量线条数据（可选）
+  visibility    String   @default("PRIVATE")   // PRIVATE, PUBLIC, CLASS
+  
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@index([userId, targetType, targetId, pageIndex])
 }
 
 model ExamAttempt {
