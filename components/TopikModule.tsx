@@ -38,6 +38,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
   const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
   const [editNoteInput, setEditNoteInput] = useState('');
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
+  const [localMenuPosition, setLocalMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   const labels = getLabels(language);
   const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -91,10 +92,11 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     deleteAnnotation,
     cancelAnnotation,
     showAnnotationMenu,
-    menuPosition,
+    setShowAnnotationMenu,
     selectedColor,
     setSelectedColor,
-    currentSelectionRange
+    currentSelectionRange,
+    setCurrentSelectionRange
   } = useAnnotation(contextKey, annotations, onSaveAnnotation);
 
   const handleTextSelection = (e: React.MouseEvent) => {
@@ -103,8 +105,43 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     if (!selection || selection.isCollapsed) {
       setActiveAnnotationId(null);
       setEditingAnnotationId(null);
+      return;
     }
-    originalHandleTextSelection(e);
+
+    // Get the selected text directly since TopikModule doesn't use a single contentRef
+    const range = selection.getRangeAt(0);
+    const text = range.toString().trim();
+
+    if (!text || text.length === 0) return;
+
+    const rect = range.getBoundingClientRect();
+
+    // Calculate menu position
+    let menuTop = rect.top + window.scrollY - 10;
+    let menuLeft = rect.left + rect.width / 2 + window.scrollX;
+
+    // Fallback position using mouse coordinates
+    if (rect.width === 0 && rect.height === 0) {
+      menuTop = e.clientY + window.scrollY - 10;
+      menuLeft = e.clientX + window.scrollX;
+    }
+
+    // Check if this text matches an existing annotation
+    const exactMatch = currentAnnotations.find(
+      a => a.text === text
+    );
+
+    if (exactMatch) {
+      setSelectedColor(exactMatch.color || 'yellow');
+    } else {
+      setSelectedColor('yellow');
+    }
+
+    // Manually set selection range and show menu
+    // Note: We use text matching instead of offset for TopikModule
+    setCurrentSelectionRange({ start: 0, end: text.length, text });
+    setShowAnnotationMenu(true);
+    setLocalMenuPosition({ top: menuTop, left: menuLeft });
   };
 
   // Filter annotations
@@ -678,7 +715,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
 
         <AnnotationMenu
           visible={showAnnotationMenu}
-          position={menuPosition}
+          position={localMenuPosition}
           selectionText={currentSelectionRange?.text}
           onAddNote={() => {
             const id = saveAnnotation(undefined, undefined, true);
