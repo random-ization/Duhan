@@ -93,11 +93,15 @@ export const SaveContentSchema = z.object({
 export const SaveTopikExamSchema = z.object({
   id: z.string().min(1, 'Exam ID is required'),
   title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   type: z.enum(['READING', 'LISTENING']),
   round: z.number().int(),
   timeLimit: z.number().int().min(1),
-  paperType: z.enum(['A', 'B']).optional().nullable(),
+  // ✅ 修复：paperType 允许空字符串（转为 null）
+  paperType: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.enum(['A', 'B']).optional().nullable()
+  ),
 
   // ✅ 修复：添加音频字段，允许为空
   audioUrl: z.string().optional().nullable(),
