@@ -207,8 +207,8 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                                 document.getElementById(`q-anchor-${section.range[0]}`)?.scrollIntoView({ behavior: 'smooth' });
                             }}
                             className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all ${activeQuestionId >= section.range[0] && activeQuestionId <= section.range[1]
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             title={section.instruction}
                         >
@@ -337,24 +337,44 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                                                                     </div>
                                                                 )}
 
-                                                                {/* Box / 보기 Editor */}
+                                                                {/* 보기 题型 (Q39-41): 先显示正文，再显示보기框 */}
                                                                 {section.hasBox && (
-                                                                    <div className="border border-slate-800 p-4 mb-4 relative">
-                                                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border border-slate-200">&lt;보 기&gt;</span>
+                                                                    <div className="space-y-4">
+                                                                        {/* Main Passage - 正文 */}
                                                                         <textarea
-                                                                            className="w-full bg-white p-2 text-[15px] resize-none outline-none border-b border-dashed border-slate-300 focus:border-indigo-500 h-24"
-                                                                            placeholder="Box content..."
+                                                                            className="w-full bg-white border border-slate-200 rounded p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-indigo-400 h-40"
+                                                                            placeholder="Enter main passage (문장이 들어갈 본문)..."
                                                                             value={q.passage || ''}
                                                                             onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
                                                                         />
+                                                                        {/* Box / 보기 - 在正文下方 */}
+                                                                        <div className="border border-slate-800 p-4 relative">
+                                                                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border border-slate-200">&lt;보 기&gt;</span>
+                                                                            <textarea
+                                                                                className="w-full bg-white p-2 text-[15px] resize-none outline-none border-b border-dashed border-slate-300 focus:border-indigo-500 h-16"
+                                                                                placeholder="보기 content (插入的句子)..."
+                                                                                value={q.contextBox || ''}
+                                                                                onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
+                                                                            />
+                                                                        </div>
                                                                     </div>
                                                                 )}
 
-                                                                {/* Simple Passage */}
-                                                                {!section.type && !section.hasBox && (
+                                                                {/* Headline Style (Q25-27) */}
+                                                                {section.style === 'HEADLINE' && (
                                                                     <textarea
-                                                                        className={`w-full bg-white border-none focus:ring-0 text-[17px] leading-8 font-serif resize-none outline-none ${section.style === 'HEADLINE' ? 'font-bold border-2 border-slate-800 p-4 shadow-[3px_3px_0px_#000]' : 'h-24'}`}
-                                                                        placeholder={section.style === 'HEADLINE' ? "Enter Headline..." : "Enter Passage..."}
+                                                                        className="w-full bg-white font-bold border-2 border-slate-800 p-4 shadow-[3px_3px_0px_#000] text-[17px] leading-8 font-serif resize-none outline-none h-24"
+                                                                        placeholder="Enter Headline..."
+                                                                        value={q.passage || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                    />
+                                                                )}
+
+                                                                {/* Regular Passage - 只为需要正文的题型显示 (11-12, 13-18, 28-38) */}
+                                                                {!section.type && !section.hasBox && !section.style && (
+                                                                    <textarea
+                                                                        className="w-full bg-white border border-slate-200 rounded p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-indigo-400 h-32"
+                                                                        placeholder="Enter Passage (optional)..."
                                                                         value={q.passage || ''}
                                                                         onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
                                                                     />

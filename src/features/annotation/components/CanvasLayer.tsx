@@ -96,8 +96,6 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
     const currentKonvaLineRef = useRef<Konva.Line | null>(null);
     const stageRef = useRef<Konva.Stage>(null);
     const layerRef = useRef<Konva.Layer>(null);
-    const rafIdRef = useRef<number | null>(null);
-    const pendingPointsRef = useRef<number[]>([]);
 
     // 缓存样式计算
     const currentStyle = useMemo(() => ({
@@ -147,21 +145,6 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
         onChange?.(newData);
     }, [onChange]);
 
-    // 使用 RAF 批量更新 Konva 节点
-    const flushPendingPoints = useCallback(() => {
-        if (pendingPointsRef.current.length === 0) return;
-
-        if (currentKonvaLineRef.current && currentLineRef.current) {
-            // 直接更新 Konva 节点，绕过 React
-            const newPoints = [...currentLineRef.current.points, ...pendingPointsRef.current];
-            currentLineRef.current.points = newPoints;
-            currentKonvaLineRef.current.points(newPoints);
-            layerRef.current?.batchDraw();
-        }
-        pendingPointsRef.current = [];
-        rafIdRef.current = null;
-    }, []);
-
     // 鼠标按下 - 开始画线
     const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         if (readOnly) return;
@@ -171,6 +154,7 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
 
         isDrawingRef.current = true;
 
+        // 创建新线条数据（使用普通数组，后续直接 push）
         const newLine: LineData = {
             id: generateId(),
             tool,
@@ -182,7 +166,7 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
 
         currentLineRef.current = newLine;
 
-        // 创建 Konva Line 节点并添加到 layer
+        // 直接创建 Konva Line 节点并添加到 layer
         if (layerRef.current) {
             const konvaLine = new Konva.Line({
                 points: newLine.points,
@@ -196,45 +180,46 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
             });
             currentKonvaLineRef.current = konvaLine;
             layerRef.current.add(konvaLine);
-            layerRef.current.batchDraw();
         }
     }, [readOnly, tool, currentStyle, generateId]);
 
-    // 鼠标移动 - 继续画线 (高性能版本)
+    // 鼠标移动 - 继续画线 (直接操作 Konva 节点，绕过 React)
     const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         if (!isDrawingRef.current || readOnly) return;
+        if (!currentLineRef.current || !currentKonvaLineRef.current) return;
 
         const stage = e.target.getStage();
         const pos = stage?.getPointerPosition();
-        if (!pos || !currentLineRef.current) return;
+        if (!pos) return;
 
-        // 将新点添加到待处理队列
-        pendingPointsRef.current.push(pos.x, pos.y);
+        // 直接 push 到数组，避免创建新数组
+        currentLineRef.current.points.push(pos.x, pos.y);
 
-        // 使用 RAF 节流更新
-        if (rafIdRef.current === null) {
-            rafIdRef.current = requestAnimationFrame(flushPendingPoints);
-        }
-    }, [readOnly, flushPendingPoints]);
+        // 直接更新 Konva 节点的 points，并立即绘制
+        currentKonvaLineRef.current.points(currentLineRef.current.points);
+
+        // 使用 batchDraw 进行高性能绘制
+        layerRef.current?.batchDraw();
+    }, [readOnly]);
 
     // 鼠标抬起 - 结束画线
     const handleMouseUp = useCallback(() => {
         if (!isDrawingRef.current) return;
 
-        // 取消待处理的 RAF
-        if (rafIdRef.current !== null) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
-        }
-
-        // 立即处理剩余的点
-        flushPendingPoints();
-
         isDrawingRef.current = false;
 
-        if (currentLineRef.current) {
-            // 将完成的线条添加到 state
-            const completedLine = { ...currentLineRef.current };
+        if (currentLineRef.current && currentKonvaLineRef.current) {
+            // 创建完成线条的副本（因为 points 数组会被继续使用）
+            const completedLine: LineData = {
+                ...currentLineRef.current,
+                points: [...currentLineRef.current.points], // 创建副本
+            };
+
+            // 销毁临时创建的 Konva 节点（React 会重新渲染）
+            currentKonvaLineRef.current.destroy();
+            layerRef.current?.batchDraw();
+
+            // 更新 React state，触发重新渲染
             setLines(prev => {
                 const newLines = [...prev, completedLine];
                 // 通知变化
@@ -242,45 +227,22 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
                 return newLines;
             });
 
-            // 清除当前绘制状态（但保留 Konva 节点，它会被 React 重新渲染替代）
+            // 清除当前绘制状态
             currentLineRef.current = null;
             currentKonvaLineRef.current = null;
         }
-    }, [flushPendingPoints, notifyChange]);
-
-    // 同步 lines 到 layer（当 lines 变化时，移除临时 Konva 节点）
-    useEffect(() => {
-        // 清理由直接操作创建的临时节点
-        // React-Konva 会自动渲染 lines 中的所有线条
-        if (layerRef.current && currentKonvaLineRef.current === null) {
-            // 移除所有不在 lines 中的临时节点
-            const layer = layerRef.current;
-            const children = layer.getChildren();
-            const lineIds = new Set(lines.map(l => l.id));
-
-            children.forEach(child => {
-                if (child instanceof Konva.Line) {
-                    const id = child.id();
-                    // 移除没有 id 或 id 不在 lines 中的临时节点
-                    if (!id || !lineIds.has(id)) {
-                        child.destroy();
-                    }
-                }
-            });
-        }
-    }, [lines]);
+    }, [notifyChange]);
 
     // 清空画板
     const handleClear = useCallback(() => {
         // 取消进行中的绘制
-        if (rafIdRef.current !== null) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
+        if (isDrawingRef.current && currentKonvaLineRef.current) {
+            currentKonvaLineRef.current.destroy();
+            layerRef.current?.batchDraw();
         }
         isDrawingRef.current = false;
         currentLineRef.current = null;
         currentKonvaLineRef.current = null;
-        pendingPointsRef.current = [];
 
         setLines([]);
         notifyChange([]);
@@ -303,15 +265,6 @@ const CanvasLayer: React.FC<CanvasLayerProps> = ({
         };
         onSave?.(canvasData);
     }, [lines, onSave]);
-
-    // 清理 RAF
-    useEffect(() => {
-        return () => {
-            if (rafIdRef.current !== null) {
-                cancelAnimationFrame(rafIdRef.current);
-            }
-        };
-    }, []);
 
     return (
         <div
