@@ -7,10 +7,10 @@ import { useData } from '../contexts/DataContext';
 import { Institute, LevelConfig } from '../types';
 import { getLabels } from '../utils/i18n';
 import {
-  BookOpen,
   Library,
-  ArrowRight,
+  BookOpen,
   GraduationCap,
+  Star,
   Clock
 } from 'lucide-react';
 
@@ -26,25 +26,48 @@ const parseLevels = (levels: LevelConfig[] | number[]): LevelConfig[] => {
 // 辅助函数：根据学校名称生成确定性的主题色
 const getThemeColor = (name: string) => {
   const themes = [
-    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', icon: 'text-blue-500', hover: 'group-hover:border-blue-300' },
-    { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', icon: 'text-indigo-500', hover: 'group-hover:border-indigo-300' },
-    { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', icon: 'text-violet-500', hover: 'group-hover:border-violet-300' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-500', hover: 'group-hover:border-emerald-300' },
-    { bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', icon: 'text-rose-500', hover: 'group-hover:border-rose-300' },
-    { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', icon: 'text-amber-500', hover: 'group-hover:border-amber-300' },
+    {
+      bg: 'bg-blue-100',
+      spine: 'bg-blue-300',
+      text: 'text-blue-900',
+      accent: 'bg-blue-600',
+    },
+    {
+      bg: 'bg-indigo-100',
+      spine: 'bg-indigo-300',
+      text: 'text-indigo-900',
+      accent: 'bg-indigo-600',
+    },
+    {
+      bg: 'bg-emerald-100',
+      spine: 'bg-emerald-300',
+      text: 'text-emerald-900',
+      accent: 'bg-emerald-600',
+    },
+    {
+      bg: 'bg-rose-100',
+      spine: 'bg-rose-300',
+      text: 'text-rose-900',
+      accent: 'bg-rose-600',
+    },
+    {
+      bg: 'bg-amber-100',
+      spine: 'bg-amber-300',
+      text: 'text-amber-900',
+      accent: 'bg-amber-600',
+    },
+    {
+      bg: 'bg-violet-100',
+      spine: 'bg-violet-300',
+      text: 'text-violet-900',
+      accent: 'bg-violet-600',
+    },
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   return themes[Math.abs(hash) % themes.length];
-};
-
-// 辅助函数：获取难度标签
-const getDifficultyLabel = (level: number) => {
-  if (level <= 2) return { text: 'Beginner', color: 'bg-green-100 text-green-700' };
-  if (level <= 4) return { text: 'Intermediate', color: 'bg-yellow-100 text-yellow-700' };
-  return { text: 'Advanced', color: 'bg-red-100 text-red-700' };
 };
 
 interface DashboardPageProps {
@@ -89,7 +112,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowU
         }}
         onClearMistakes={clearMistakes}
         onStartModule={mod => {
-          // 简单的权限检查逻辑 (可扩展)
           const contextKey = `${selectedInstitute}-${selectedLevel}-1`;
           const content = textbookContexts[contextKey];
 
@@ -103,7 +125,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowU
     );
   }
 
-  // 3. 核心重构：扁平化所有教材列表
+  // 3. 核心数据准备
   const allTextbooks = institutes.flatMap(inst => {
     const levels = parseLevels(inst.levels);
     return levels.map(lvl => ({
@@ -116,7 +138,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowU
     }));
   });
 
-  // 将"上次学习"的教材排在最前面
   allTextbooks.sort((a, b) => (b.isLastActive ? 1 : 0) - (a.isLastActive ? 1 : 0));
 
   // --- 4. 渲染：书架视图 (Bookshelf View) ---
@@ -124,105 +145,138 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowU
     <div className="max-w-[1200px] mx-auto pb-20 px-4 sm:px-6">
 
       {/* 顶部欢迎区 */}
-      <div className="mb-10 mt-4">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-          <Library className="w-8 h-8 text-indigo-600" />
+      <div className="mb-12 mt-8 text-center">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center justify-center gap-3 font-serif">
+          <Library className="w-10 h-10 text-indigo-600" />
           {labels.selectInstitute || '我的书架'}
         </h1>
-        <p className="text-slate-500 mt-2 text-lg">
-          选择一本教材开始今天的学习吧。
+        <p className="text-slate-500 mt-3 text-lg font-medium">
+          请选择一本教材，开始您的韩语学习之旅
         </p>
       </div>
 
       {/* 书籍网格 */}
       {allTextbooks.length === 0 ? (
-        // 空状态
-        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-            <BookOpen className="w-8 h-8" />
+        <div className="text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+            <BookOpen className="w-10 h-10" />
           </div>
-          <p className="text-slate-500 font-medium">暂无教材数据，请联系管理员添加。</p>
+          <p className="text-slate-500 font-medium text-lg">书架空空如也，请联系管理员添加教材。</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allTextbooks.map((book) => {
-            const difficulty = getDifficultyLabel(book.level);
-
-            return (
-              <button
-                key={book.id}
-                onClick={() => {
-                  setInstitute(book.institute.id);
-                  setLevel(book.level);
-                }}
-                className={`group relative flex flex-col h-full bg-white rounded-3xl border transition-all duration-300 text-left overflow-hidden
-                  ${book.isLastActive
-                    ? 'border-indigo-200 shadow-xl shadow-indigo-100 ring-2 ring-indigo-500 ring-offset-2'
-                    : 'border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-slate-300'
-                  }
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-12 px-4">
+          {allTextbooks.map((book) => (
+            <button
+              key={book.id}
+              onClick={() => {
+                setInstitute(book.institute.id);
+                setLevel(book.level);
+              }}
+              className="group relative flex flex-col items-center perspective-1000 outline-none"
+            >
+              {/* 书籍主体容器 */}
+              <div
+                className={`
+                  relative w-full aspect-[3/4] 
+                  rounded-r-lg rounded-l-sm 
+                  shadow-lg group-hover:shadow-2xl 
+                  transition-all duration-300 ease-out 
+                  transform group-hover:-translate-y-3 group-hover:-translate-x-1 group-hover:rotate-y-[-5deg]
+                  overflow-hidden
+                  ${book.theme.bg}
+                  border-r-4 border-b-4 border-black/5
                 `}
               >
-                {/* 书籍封面装饰区 */}
-                <div className={`h-32 ${book.theme.bg} p-6 relative overflow-hidden`}>
-                  {/* 背景装饰图案 */}
-                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full ${book.theme.bg} brightness-90 -mr-10 -mt-10 blur-2xl`}></div>
-                  <div className={`absolute bottom-0 left-0 w-24 h-24 rounded-full ${book.theme.bg} brightness-90 -ml-10 -mb-10 blur-xl`}></div>
+                {/* 1. 书脊效果 (始终显示，提供立体感) */}
+                <div className={`absolute left-0 top-0 bottom-0 w-3 ${book.theme.spine} z-30 shadow-inner opacity-80`}></div>
+                <div className="absolute left-3 top-0 bottom-0 w-[1px] bg-white/30 z-30"></div>
 
-                  {/* 书籍元信息 */}
-                  <div className="relative z-10 flex justify-between items-start">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white/80 backdrop-blur-sm ${difficulty.color} shadow-sm`}>
-                      {difficulty.text}
-                    </span>
-                    {book.isLastActive && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-md animate-pulse">
-                        <Clock className="w-3 h-3" /> 继续学习
-                      </span>
-                    )}
-                  </div>
+                {/* 2. 封面图片 (如果有) */}
+                {(book.institute as any).coverUrl ? (
+                  <img
+                    src={(book.institute as any).coverUrl}
+                    alt={book.institute.name}
+                    className="absolute inset-0 w-full h-full object-cover z-20"
+                  />
+                ) : (
+                  /* 3. 默认 CSS 封面 (如果没有图片) */
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none z-10"></div>
 
-                  {/* 装饰图标 */}
-                  <div className={`absolute -bottom-4 -right-4 opacity-10 transform rotate-12 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500`}>
-                    <GraduationCap className={`w-32 h-32 ${book.theme.text}`} />
-                  </div>
-                </div>
+                    <div className="relative z-10 h-full flex flex-col p-6 pl-8">
+                      <div className="border-b-2 border-black/10 pb-3 mb-4">
+                        <h3 className={`text-lg font-bold ${book.theme.text} uppercase tracking-wider leading-tight`}>
+                          {book.institute.name}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-500 opacity-70 mt-1 uppercase tracking-widest">
+                          Korean Language Institute
+                        </p>
+                      </div>
 
-                {/* 书籍内容区 */}
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-slate-900 mb-1 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                      {book.institute.name}
-                    </h3>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-slate-800">Level {book.level}</span>
-                      <span className="text-sm text-slate-500 font-medium">({book.unitsCount} 课)</span>
+                      <div className="flex-1 flex flex-col justify-center items-center relative">
+                        <div className="absolute w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center">
+                          <div className="w-20 h-20 rounded-full border border-white/50"></div>
+                        </div>
+
+                        <span className={`text-8xl font-black ${book.theme.text} drop-shadow-sm relative z-10 font-serif`}>
+                          {book.level}
+                        </span>
+                        <span className="text-xs font-bold bg-white/60 px-3 py-1 rounded-full backdrop-blur-sm mt-[-10px] relative z-20 uppercase tracking-widest text-slate-700 shadow-sm">
+                          Level
+                        </span>
+                      </div>
+
+                      <div className="mt-auto pt-4 border-t border-white/40 flex justify-between items-end opacity-80">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-600">STANDARD</span>
+                          <span className="text-[10px] font-bold text-slate-600">TEXTBOOK</span>
+                        </div>
+                        <GraduationCap className={`w-8 h-8 ${book.theme.text} opacity-50`} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 上次学习的标签 (贴在封面顶层) */}
+                {book.isLastActive && (
+                  <div className="absolute top-4 right-4 z-40 animate-bounce">
+                    <div className="bg-white text-indigo-600 text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-indigo-100 flex items-center gap-1 transform rotate-3">
+                      <Clock className="w-3 h-3" />
+                      继续
                     </div>
                   </div>
+                )}
 
-                  {/* 底部信息栏 */}
-                  <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <BookOpen className="w-4 h-4" />
-                      <span>标准课程</span>
-                    </div>
-                    <div className={`flex items-center font-bold ${book.theme.text} opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300`}>
-                      开始 <ArrowRight className="w-4 h-4 ml-1" />
-                    </div>
+                {/* 新书标签 */}
+                {!(book.institute as any).coverUrl && book.level === 1 && (
+                  <div className="absolute top-0 right-0 z-20">
+                    <div className={`w-16 h-16 ${book.theme.accent} absolute top-[-32px] right-[-32px] rotate-45`}></div>
+                    <div className="absolute top-1 right-1 text-white text-[10px] font-bold rotate-45">NEW</div>
                   </div>
-                </div>
+                )}
 
-                {/* 悬停时的光效 */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/0 to-white/20 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500"></div>
-              </button>
-            );
-          })}
+              </div>
+
+              {/* 阴影底座 */}
+              <div className="w-[90%] h-4 bg-black/10 blur-md rounded-[100%] mt-[-5px] transition-all duration-300 group-hover:w-[95%] group-hover:bg-black/20 group-hover:blur-lg group-hover:translate-y-2"></div>
+
+              {/* 书籍标题 */}
+              <div className="mt-4 text-center">
+                <h4 className="font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">
+                  {book.institute.name}
+                </h4>
+                <p className="text-sm text-slate-400 font-medium">第 {book.level} 册</p>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 
-      {/* 底部提示 */}
-      <div className="mt-12 text-center">
-        <p className="text-slate-400 text-sm">
-          找不到想学的教材？
-          <button className="text-indigo-600 font-bold hover:underline ml-1">联系我们添加</button>
+      <div className="mt-20 text-center border-t border-slate-200 pt-8">
+        <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
+          <Star className="w-4 h-4" />
+          <span>找不到想学的教材？</span>
+          <button className="text-indigo-600 font-bold hover:underline">联系我们添加</button>
         </p>
       </div>
     </div>
