@@ -234,7 +234,10 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
 
     const currentExam = selectedExam;
     const STRUCTURE = currentExam?.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
-    const getQ = (id: number) => currentExam?.questions?.find(q => q.id === id);
+    const getQ = (id: number) => {
+        if (!currentExam || !Array.isArray(currentExam.questions)) return undefined;
+        return currentExam.questions.find(q => q.id === id);
+    };
 
     // --- Render Visual Editor (您最喜欢的 UI 部分) ---
     const renderVisualEditor = () => {

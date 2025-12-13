@@ -115,8 +115,21 @@ export const getTopikExams = async (req: Request, res: Response) => {
     const exams = await prisma.topikExam.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    // Prisma 自动处理 Json 类型
-    res.json(exams);
+
+    // Normalize data structure for frontend
+    const normalizedExams = exams.map(exam => {
+      const questions = exam.questions as any;
+      if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
+        return {
+          ...exam,
+          questions: null,
+          questionsUrl: questions.url
+        };
+      }
+      return exam;
+    });
+
+    res.json(normalizedExams);
   } catch (e: any) {
     console.error('[getTopikExams] Error:', e);
     res.status(500).json({ error: 'Failed to fetch exams' });
