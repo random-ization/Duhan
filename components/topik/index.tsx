@@ -59,34 +59,53 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   }, [timerActive, timeLeft]);
 
   const selectExam = async (exam: TopikExam) => {
+    // 权限检查
     if (canAccessContent && !canAccessContent(exam)) {
       onShowUpgradePrompt?.();
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // 开始加载
     try {
-      let fullExam = { ...exam };
+      let fullQuestions = exam.questions;
 
-      // S3 Optimization: If questions are missing but URL exists, fetch them
-      const questions = fullExam.questions as any;
-      if ((!questions || questions.length === 0) && (fullExam as any).questionsUrl) {
-        console.log('[selectExam] Fetching questions from S3:', (fullExam as any).questionsUrl);
-        const res = await fetch((fullExam as any).questionsUrl);
-        if (!res.ok) throw new Error('Failed to load exam content');
-        const fetchedQuestions = await res.json();
-        fullExam.questions = fetchedQuestions;
+      // 检查：如果 questions 为空，但有 S3 URL，则去下载
+      // (使用 exam as any 是为了避开 TS 类型检查，确保能读到 questionsUrl)
+      const examWithUrl = exam as any;
+
+      if ((!fullQuestions || fullQuestions.length === 0) && examWithUrl.questionsUrl) {
+        console.log('Fetching questions from CDN:', examWithUrl.questionsUrl);
+        const res = await fetch(examWithUrl.questionsUrl);
+
+        if (!res.ok) {
+          throw new Error(`Fetch failed: ${res.status}`);
+        }
+
+        fullQuestions = await res.json();
       }
+
+      // 如果下载后还是空的（说明可能是旧数据或者出错了），给个默认空数组防止白屏
+      if (!fullQuestions) {
+        fullQuestions = [];
+        console.warn('Warning: No questions found for this exam');
+      }
+
+      // 组装完整的考试对象
+      const fullExam = {
+        ...exam,
+        questions: fullQuestions
+      };
 
       setCurrentExam(fullExam);
       setUserAnswers({});
       setTimeLeft(exam.timeLimit * 60);
       setView('COVER');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to load exam. Please check your network connection.');
+
+    } catch (error) {
+      console.error("Failed to load exam content:", error);
+      alert("无法加载试卷内容，请检查：\n1. 网络连接是否正常\n2. 浏览器缓存是否已清理\n3. 资源是否存在 (404/403)");
     } finally {
-      setLoading(false);
+      setLoading(false); // 结束加载
     }
   };
 
@@ -187,12 +206,18 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const pauseTimer = () => setTimerActive(false);
   const resumeTimer = () => timeLeft > 0 && setTimerActive(true);
 
-  // View Rendering
+  // 3. 在 return 之前添加 Loading 界面
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">Loading exam content...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        {/* 如果有 Loader2 图标就用这个，没有就用文字 */}
+        <div className="animate-spin text-indigo-600">
+          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <p className="text-slate-500 font-medium text-lg">正在下载试卷数据...</p>
       </div>
     );
   }
