@@ -120,6 +120,7 @@ export const api = {
 
   // --- TOPIK ---
   getTopikExams: async () => request<any[]>('/content/topik'),
+  getTopikExamById: async (id: string) => request<any>(`/content/topik/${id}`),
   saveTopikExam: async (exam: any) =>
     request('/content/topik', {
       method: 'POST',

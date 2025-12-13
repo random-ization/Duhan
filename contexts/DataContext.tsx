@@ -122,14 +122,21 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const saveTopikExam = useCallback(
     async (exam: TopikExam) => {
       try {
+        // 保存考试（后端会自动上传 questions 到 S3）
         const saved = await api.saveTopikExam(exam);
+
+        // 后端返回完整的 questions + questionsUrl
+        // 更新本地状态
         const exists = topikExams.find(e => e.id === saved.id);
         if (exists) {
           setTopikExams(topikExams.map(e => (e.id === saved.id ? saved : e)));
         } else {
           setTopikExams([saved, ...topikExams]);
         }
+
+        console.log(`[DataContext] Exam saved, questionsUrl: ${saved.questionsUrl}`);
       } catch (e) {
+        console.error('[DataContext] Failed to save exam:', e);
         alert('Failed to save exam');
       }
     },

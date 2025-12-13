@@ -7,6 +7,7 @@ import {
   getContent,
   saveContent,
   getTopikExams,
+  getTopikExamById,
   saveTopikExam,
   deleteTopikExam,
   getLegalDocument,
@@ -19,7 +20,8 @@ const router = Router();
 // Public read access (or protected depending on requirements, usually public for learners)
 router.get('/institutes', getInstitutes);
 router.get('/textbook', getContent); // Get all context map for simplicity in this demo
-router.get('/topik', getTopikExams);
+router.get('/topik', getTopikExams); // 列表（不含 questions）
+router.get('/topik/:id', getTopikExamById); // 单个详情（含 questionsUrl）
 router.get('/legal/:type', getLegalDocument); // Public access to legal documents
 
 // Admin write access

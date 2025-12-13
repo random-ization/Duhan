@@ -3,10 +3,11 @@ import { TopikExam, Language, TopikQuestion, ExamAttempt, Annotation } from '../
 import {
   Clock, Trophy, ArrowLeft, Calendar, Check, X,
   MessageSquare, Trash2, Play, Pause, FastForward,
-  RotateCcw, Eye, ChevronRight, ChevronLeft, Volume2
+  RotateCcw, Eye, ChevronRight, ChevronLeft, Volume2, Loader2
 } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
 import { useAnnotation } from '../hooks/useAnnotation';
+import { useTopikQuestions, prefetchQuestions, TopikExamWithUrl } from '../hooks/useTopikQuestions';
 import AnnotationMenu from './AnnotationMenu';
 
 interface TopikModuleProps {
@@ -47,16 +48,18 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
   const listeningExams = exams.filter(e => e.type === 'LISTENING');
   const examContextPrefix = currentExam ? `TOPIK-${currentExam.id}` : '';
 
-  // DEBUG: 检查 Q5-10 的图片数据
-  useEffect(() => {
-    if (currentExam) {
-      console.log('[TopikModule] Exam loaded:', currentExam.id);
-      const q5to10 = currentExam.questions.filter(q => Number(q.id) >= 5 && Number(q.id) <= 10);
-      q5to10.forEach(q => {
-        console.log(`[TopikModule] Q${q.id}: image="${q.image}", imageUrl="${q.imageUrl}", passage="${q.passage?.substring(0, 30)}..."`);
-      });
+  // 使用 Hook 按需从 CDN 加载题目数据
+  const { questions: loadedQuestions, loading: questionsLoading, error: questionsError } =
+    useTopikQuestions(currentExam as TopikExamWithUrl | null);
+
+  // 兼容处理：优先使用加载的题目，或直接使用 exam.questions
+  const currentQuestions = useMemo(() => {
+    if (loadedQuestions.length > 0) return loadedQuestions;
+    if (currentExam?.questions && Array.isArray(currentExam.questions)) {
+      return currentExam.questions;
     }
-  }, [currentExam]);
+    return [];
+  }, [loadedQuestions, currentExam]);
 
   // New Hook Usage
   // Note: internal contextKey handling needs to be dynamic based on what we select?
@@ -176,10 +179,10 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
 
   // --- 分组逻辑 (核心：实现 PDF 样式的关键) ---
   const questionGroups = useMemo(() => {
-    if (!currentExam) return [];
+    if (!currentExam || currentQuestions.length === 0) return [];
     const groups: TopikQuestion[][] = [];
     let i = 0;
-    const questions = [...currentExam.questions].sort((a, b) => (a.id || 0) - (b.id || 0));
+    const questions = [...currentQuestions].sort((a, b) => (a.id || 0) - (b.id || 0));
 
     while (i < questions.length) {
       const q = questions[i];
@@ -188,7 +191,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
       i += count;
     }
     return groups;
-  }, [currentExam]);
+  }, [currentExam, currentQuestions]);
 
   // --- Timer ---
   useEffect(() => {
@@ -218,7 +221,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     setTimerActive(false);
     if (!currentExam) return;
     let score = 0, total = 0;
-    currentExam.questions.forEach(q => {
+    currentQuestions.forEach(q => {
       total += q.score || 2;
       if (userAnswers[q.id] === q.correctAnswer) score += q.score || 2;
     });
@@ -643,7 +646,24 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
 
               {/* Content */}
               <div className={`flex-1 px-8 md:px-12 pb-12 ${view === 'EXAM' ? 'select-none' : ''}`}>
-                {questionGroups.map((group, idx) => (
+                {/* 题目加载中状态 */}
+                {questionsLoading && (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+                    <p className="text-slate-500 font-medium">加载题目中...</p>
+                  </div>
+                )}
+
+                {/* 加载错误状态 */}
+                {questionsError && (
+                  <div className="flex flex-col items-center justify-center py-20 text-red-500">
+                    <p className="font-medium">加载题目失败</p>
+                    <p className="text-sm text-slate-500 mt-2">{questionsError.message}</p>
+                  </div>
+                )}
+
+                {/* 正常显示题目 */}
+                {!questionsLoading && !questionsError && questionGroups.map((group, idx) => (
                   <React.Fragment key={idx}>
                     {renderGroup(group)}
                   </React.Fragment>
