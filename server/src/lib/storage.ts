@@ -83,8 +83,28 @@ const createUploader = (folder: string, type: 'avatar' | 'media') => {
   });
 };
 
-export const uploadAvatar = createUploader('avatars', 'avatar');
-export const uploadMedia = createUploader('uploads', 'media');
+// 缓存上传中间件实例
+let _avatarUploader: multer.Multer | null = null;
+let _mediaUploader: multer.Multer | null = null;
+
+// 使用 Proxy 包装为惰性实例，保持 .single() 等方法的兼容性
+export const uploadAvatar = new Proxy({} as multer.Multer, {
+  get: (target, prop) => {
+    if (!_avatarUploader) {
+      _avatarUploader = createUploader('avatars', 'avatar');
+    }
+    return (_avatarUploader as any)[prop];
+  },
+});
+
+export const uploadMedia = new Proxy({} as multer.Multer, {
+  get: (target, prop) => {
+    if (!_mediaUploader) {
+      _mediaUploader = createUploader('uploads', 'media');
+    }
+    return (_mediaUploader as any)[prop];
+  },
+});
 
 // 上传 JSON 数据到 S3
 export interface UploadJsonResult {
