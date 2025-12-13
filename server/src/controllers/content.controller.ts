@@ -108,62 +108,27 @@ export const saveContent = async (req: Request, res: Response) => {
 // --- TOPIK Exam ---
 
 /**
- * 获取考试列表 (兼容旧数据和新 S3 格式)
+ * 获取考试列表
  */
 export const getTopikExams = async (req: Request, res: Response) => {
   try {
     const exams = await prisma.topikExam.findMany({
       orderBy: { createdAt: 'desc' },
     });
-
-    // 处理返回数据：兼容旧格式（完整 questions）和新格式（URL 引用）
-    const formattedExams = exams.map(exam => {
-      try {
-        const questions = exam.questions as any;
-
-        // 检查是否为 URL 引用格式（新格式）
-        if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
-          return {
-            ...exam,
-            questions: null, // 列表页不返回题目数据
-            questionsUrl: questions.url, // 返回 CDN URL
-            hasQuestions: true,
-          };
-        }
-
-        // 兼容旧数据：直接返回完整题目
-        return {
-          ...exam,
-          questions, // 保留原始 questions 数据
-          questionsUrl: null,
-          hasQuestions: Array.isArray(questions) && questions.length > 0,
-        };
-      } catch (formatError) {
-        console.error(`[getTopikExams] Error formatting exam ${exam.id}:`, formatError);
-        // 返回原始数据以保持兼容
-        return {
-          ...exam,
-          questionsUrl: null,
-          hasQuestions: false,
-        };
-      }
-    });
-
-    res.json(formattedExams);
+    // Prisma 自动处理 Json 类型
+    res.json(exams);
   } catch (e: any) {
     console.error('[getTopikExams] Error:', e);
-    res.status(500).json({ error: 'Failed to fetch exams', details: e.message });
+    res.status(500).json({ error: 'Failed to fetch exams' });
   }
 };
 
-
 /**
- * 获取单个考试详情（包含完整 questions，用于编辑器）
+ * 获取单个考试详情
  */
 export const getTopikExamById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
     const exam = await prisma.topikExam.findUnique({
       where: { id },
     });
@@ -171,19 +136,6 @@ export const getTopikExamById = async (req: Request, res: Response) => {
     if (!exam) {
       return res.status(404).json({ error: 'Exam not found' });
     }
-
-    const questions = exam.questions as any;
-
-    // 如果 questions 是 URL 引用格式，需要通知前端从 CDN 获取
-    if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
-      return res.json({
-        ...exam,
-        questions: null,
-        questionsUrl: questions.url,
-      });
-    }
-
-    // 兼容旧数据：直接返回完整题目
     res.json(exam);
   } catch (e: any) {
     console.error('[getTopikExamById] Error:', e);
@@ -192,7 +144,7 @@ export const getTopikExamById = async (req: Request, res: Response) => {
 };
 
 /**
- * 保存考试 (将 questions 上传到 S3)
+ * 保存考试
  */
 export const saveTopikExam = async (req: Request, res: Response) => {
   try {
@@ -200,36 +152,8 @@ export const saveTopikExam = async (req: Request, res: Response) => {
     const validatedData: SaveTopikExamInput = SaveTopikExamSchema.parse(req.body);
     const { id, questions, ...data } = validatedData;
 
-    // 生成 S3 key：exams/{examId}/{timestamp}.json
-    const timestamp = Date.now();
-    const s3Key = `exams/${id}/${timestamp}.json`;
-
-    console.log(`[saveTopikExam] Uploading questions to S3: ${s3Key}`);
-
-    // 上传 questions JSON 到 S3
-    const uploadResult = await uploadJsonToS3(questions, s3Key);
-    console.log(`[saveTopikExam] Upload success: ${uploadResult.url}`);
-
-    // 在数据库中只存储 URL 引用
-    const questionsRef = {
-      url: uploadResult.url,
-      key: uploadResult.key,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    // 检查是否存在旧记录，如果有则删除旧的 S3 文件
+    // Check if exists to determine update or create
     const existing = await prisma.topikExam.findUnique({ where: { id } });
-    if (existing) {
-      const oldQuestions = existing.questions as any;
-      if (oldQuestions?.key) {
-        try {
-          console.log(`[saveTopikExam] Deleting old S3 file: ${oldQuestions.key}`);
-          await deleteFromS3(oldQuestions.key);
-        } catch (deleteError) {
-          console.warn(`[saveTopikExam] Failed to delete old file (non-fatal):`, deleteError);
-        }
-      }
-    }
 
     let result;
     if (existing) {
@@ -237,7 +161,7 @@ export const saveTopikExam = async (req: Request, res: Response) => {
         where: { id },
         data: {
           ...data,
-          questions: questionsRef, // 存储 URL 引用而非完整数据
+          questions,
         },
       });
     } else {
@@ -245,21 +169,15 @@ export const saveTopikExam = async (req: Request, res: Response) => {
         data: {
           id,
           ...data,
-          questions: questionsRef, // 存储 URL 引用而非完整数据
+          questions,
         },
       });
     }
 
-    // 返回时把 questions 替换回完整数据供前端使用
-    res.json({
-      ...result,
-      questions, // 返回原始题目数据
-      questionsUrl: uploadResult.url, // 同时返回 CDN URL
-    });
+    res.json(result);
   } catch (e: any) {
     console.error('[saveTopikExam] Error:', e);
     if (e.name === 'ZodError') {
-      console.error('[saveTopikExam] Zod validation errors:', JSON.stringify(e.errors, null, 2));
       return res.status(400).json({ error: 'Invalid input', details: e.errors });
     }
     res.status(500).json({ error: 'Failed to save exam' });
@@ -267,30 +185,14 @@ export const saveTopikExam = async (req: Request, res: Response) => {
 };
 
 /**
- * 删除考试 (同时删除 S3 文件)
+ * 删除考试
  */
 export const deleteTopikExam = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    // 先获取记录以便删除 S3 文件
-    const exam = await prisma.topikExam.findUnique({ where: { id } });
-    if (exam) {
-      const questions = exam.questions as any;
-      if (questions?.key) {
-        try {
-          console.log(`[deleteTopikExam] Deleting S3 file: ${questions.key}`);
-          await deleteFromS3(questions.key);
-        } catch (deleteError) {
-          console.warn(`[deleteTopikExam] Failed to delete S3 file (non-fatal):`, deleteError);
-        }
-      }
-    }
-
     await prisma.topikExam.delete({ where: { id } });
     res.json({ success: true });
   } catch (e: any) {
-    console.error('[deleteTopikExam] Error:', e);
     res.status(500).json({ error: 'Failed to delete exam' });
   }
 };
