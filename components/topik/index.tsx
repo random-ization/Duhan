@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';
@@ -42,6 +43,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     totalQuestions: number;
   } | null>(null);
 
+  const [loading, setLoading] = useState(false);
+
   // Timer logic
   React.useEffect(() => {
     let interval: number;
@@ -55,16 +58,36 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     return () => clearInterval(interval);
   }, [timerActive, timeLeft]);
 
-  const selectExam = (exam: TopikExam) => {
+  const selectExam = async (exam: TopikExam) => {
     if (canAccessContent && !canAccessContent(exam)) {
       onShowUpgradePrompt?.();
       return;
     }
 
-    setCurrentExam(exam);
-    setUserAnswers({});
-    setTimeLeft(exam.timeLimit * 60);
-    setView('COVER');
+    setLoading(true);
+    try {
+      let fullExam = { ...exam };
+
+      // S3 Optimization: If questions are missing but URL exists, fetch them
+      const questions = fullExam.questions as any;
+      if ((!questions || questions.length === 0) && (fullExam as any).questionsUrl) {
+        console.log('[selectExam] Fetching questions from S3:', (fullExam as any).questionsUrl);
+        const res = await fetch((fullExam as any).questionsUrl);
+        if (!res.ok) throw new Error('Failed to load exam content');
+        const fetchedQuestions = await res.json();
+        fullExam.questions = fetchedQuestions;
+      }
+
+      setCurrentExam(fullExam);
+      setUserAnswers({});
+      setTimeLeft(exam.timeLimit * 60);
+      setView('COVER');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to load exam. Please check your network connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startExam = () => {
@@ -165,6 +188,15 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const resumeTimer = () => timeLeft > 0 && setTimerActive(true);
 
   // View Rendering
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">Loading exam content...</p>
+      </div>
+    );
+  }
+
   if (view === 'LIST') {
     return (
       <ExamList
