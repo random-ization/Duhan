@@ -233,14 +233,33 @@ const sendToSpacesNative = async (key: string, body: Buffer, contentType: string
 
 const createUploadMiddleware = (folder: string, type: 'avatar' | 'media', fieldName: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Check required environment variables
+    const requiredEnvVars = ['SPACES_ENDPOINT', 'SPACES_BUCKET', 'SPACES_KEY', 'SPACES_SECRET'];
+    const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+
+    if (missingVars.length > 0) {
+      console.error('[storage] Missing environment variables:', missingVars);
+      return res.status(500).json({
+        error: 'Storage configuration error',
+        details: `Missing environment variables: ${missingVars.join(', ')}`
+      });
+    }
+
     const upload = fieldName === 'avatar' ? memoryUpload.single('avatar') : memoryUpload.single('file');
 
     upload(req, res, async (err: any) => {
-      if (err) return next(err);
-      if (!req.file) return next();
+      if (err) {
+        console.error('[storage] Multer error:', err);
+        return next(err);
+      }
+      if (!req.file) {
+        console.error('[storage] No file received');
+        return next();
+      }
 
       const file = req.file;
       const key = `${folder}/${Date.now()}-${file.originalname}`;
+      console.log('[storage] Uploading file:', { key, mimetype: file.mimetype, size: file.size });
 
       try {
         await sendToSpacesNative(key, file.buffer, file.mimetype);
@@ -249,14 +268,20 @@ const createUploadMiddleware = (folder: string, type: 'avatar' | 'media', fieldN
         (req.file as any).location = `${cdnUrl}/${key}`;
         (req.file as any).key = key;
         delete (req.file as any).buffer;
+        console.log('[storage] Upload successful:', (req.file as any).location);
         next();
-      } catch (e) {
-        console.error('[storage] Upload failed:', e);
-        next(new Error('Storage upload failed'));
+      } catch (e: any) {
+        console.error('[storage] Upload failed:', e.message || e);
+        console.error('[storage] Full error:', e);
+        return res.status(500).json({
+          error: 'Storage upload failed',
+          details: e.message || 'Unknown error'
+        });
       }
     });
   };
 };
+
 
 // 导出兼容对象
 const createCompatWrapper = (folder: string, type: 'avatar' | 'media') => {
