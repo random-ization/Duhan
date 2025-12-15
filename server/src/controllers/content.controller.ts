@@ -191,7 +191,6 @@ export const getTopikExamQuestions = async (req: Request, res: Response) => {
     // If questions is stored as URL reference, fetch from S3
     if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
       try {
-        console.log('[getTopikExamQuestions] Fetching from S3:', questions.url);
         const response = await fetch(questions.url);
 
         if (!response.ok) {

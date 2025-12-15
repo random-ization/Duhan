@@ -133,10 +133,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           </span>
 
           <div className="flex-1 w-full min-w-0">
-            {/* Image */}
-            {question.imageUrl && (
+            {/* Image - support both imageUrl and image field names */}
+            {(question.imageUrl || question.image) && (
               <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
-                <img src={question.imageUrl} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
+                <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
               </div>
             )}
 

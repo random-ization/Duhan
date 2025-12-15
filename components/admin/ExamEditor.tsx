@@ -90,14 +90,6 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
     };
     const t = labels[language as keyof typeof labels] || labels.en;
 
-    // ✅ 修复：引入 CDN Fetch 逻辑
-    // 由于 TopikExamWithUrl 定义在 hook 文件中，这里简单定义一个兼容类型或直接断言
-    const fetchQuestionsFromUrl = async (url: string) => {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to load questions');
-        return await res.json() as TopikQuestion[];
-    };
-
     const handleFileUpload = async (
         file: File,
         onSuccess: (url: string) => void
@@ -124,7 +116,6 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
             if (!selectedExam.questions || selectedExam.questions.length === 0) {
                 setLoadingQuestions(true);
                 try {
-                    console.log('[ExamEditor] Loading questions via backend proxy for:', selectedExam.id);
                     const questions = await api.getTopikExamQuestions(selectedExam.id);
                     // Update state without triggering infinite loop
                     setSelectedExam(prev => prev ? { ...prev, questions } : null);
@@ -138,9 +129,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
         };
 
         loadQuestions();
-    }, [selectedExam?.id]); // Only re-run when ID changes to avoid loop when we update 'questions'
-
-
+    }, [selectedExam?.id]);
 
     // --- Handlers ---
     const createNewExam = (type: TopikType) => {

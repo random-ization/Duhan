@@ -69,9 +69,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     try {
       let fullQuestions = exam.questions;
 
-      // 如果 questions 为空，通过后端代理获取 (避免 CORS 问题)
+      // 如果 questions 为空，通过后端代理获取
       if (!fullQuestions || fullQuestions.length === 0) {
-        console.log('Fetching questions via backend proxy for exam:', exam.id);
         const { api } = await import('../../services/api');
         fullQuestions = await api.getTopikExamQuestions(exam.id);
       }
@@ -100,7 +99,6 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       setLoading(false); // 结束加载
     }
   };
-
 
   const startExam = () => {
     setTimerActive(true);
