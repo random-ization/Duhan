@@ -8,12 +8,14 @@ import {
   saveContent,
   getTopikExams,
   getTopikExamById,
+  getTopikExamQuestions,
   saveTopikExam,
   deleteTopikExam,
   getLegalDocument,
   saveLegalDocument,
 } from '../controllers/content.controller';
 import { authenticate } from '../middleware/auth.middleware';
+
 
 const router = Router();
 
@@ -22,6 +24,7 @@ router.get('/institutes', getInstitutes);
 router.get('/textbook', getContent); // Get all context map for simplicity in this demo
 router.get('/topik', getTopikExams); // 列表（不含 questions）
 router.get('/topik/:id', getTopikExamById); // 单个详情（含 questionsUrl）
+router.get('/topik/:id/questions', getTopikExamQuestions); // 代理获取题目数据 (避免 CORS)
 router.get('/legal/:type', getLegalDocument); // Public access to legal documents
 
 // Admin write access

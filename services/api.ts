@@ -121,6 +121,7 @@ export const api = {
   // --- TOPIK ---
   getTopikExams: async () => request<any[]>('/content/topik'),
   getTopikExamById: async (id: string) => request<any>(`/content/topik/${id}`),
+  getTopikExamQuestions: async (id: string) => request<any[]>(`/content/topik/${id}/questions`),
 
   saveTopikExam: async (exam: any) => {
     // S3 Migration Optimization: Direct Upload

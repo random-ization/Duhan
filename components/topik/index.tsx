@@ -69,22 +69,14 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     try {
       let fullQuestions = exam.questions;
 
-      // 检查：如果 questions 为空，但有 S3 URL，则去下载
-      // (使用 exam as any 是为了避开 TS 类型检查，确保能读到 questionsUrl)
-      const examWithUrl = exam as any;
-
-      if ((!fullQuestions || fullQuestions.length === 0) && examWithUrl.questionsUrl) {
-        console.log('Fetching questions from CDN:', examWithUrl.questionsUrl);
-        const res = await fetch(examWithUrl.questionsUrl);
-
-        if (!res.ok) {
-          throw new Error(`Fetch failed: ${res.status}`);
-        }
-
-        fullQuestions = await res.json();
+      // 如果 questions 为空，通过后端代理获取 (避免 CORS 问题)
+      if (!fullQuestions || fullQuestions.length === 0) {
+        console.log('Fetching questions via backend proxy for exam:', exam.id);
+        const { api } = await import('../../services/api');
+        fullQuestions = await api.getTopikExamQuestions(exam.id);
       }
 
-      // 如果下载后还是空的（说明可能是旧数据或者出错了），给个默认空数组防止白屏
+      // 如果还是空的，给个默认空数组防止白屏
       if (!fullQuestions) {
         fullQuestions = [];
         console.warn('Warning: No questions found for this exam');
@@ -103,11 +95,12 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     } catch (error) {
       console.error("Failed to load exam content:", error);
-      alert("无法加载试卷内容，请检查：\n1. 网络连接是否正常\n2. 浏览器缓存是否已清理\n3. 资源是否存在 (404/403)");
+      alert("无法加载试卷内容，请检查：\n1. 网络连接是否正常\n2. 服务器是否运行正常");
     } finally {
       setLoading(false); // 结束加载
     }
   };
+
 
   const startExam = () => {
     setTimerActive(true);

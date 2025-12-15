@@ -172,6 +172,54 @@ export const getTopikExamById = async (req: Request, res: Response) => {
 };
 
 /**
+ * 代理获取考试题目 (避免 CORS 问题)
+ * GET /content/topik/:id/questions
+ */
+export const getTopikExamQuestions = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const exam = await prisma.topikExam.findUnique({
+      where: { id },
+    });
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' });
+    }
+
+    const questions = exam.questions as any;
+
+    // If questions is stored as URL reference, fetch from S3
+    if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
+      try {
+        console.log('[getTopikExamQuestions] Fetching from S3:', questions.url);
+        const response = await fetch(questions.url);
+
+        if (!response.ok) {
+          throw new Error(`S3 fetch failed: ${response.status}`);
+        }
+
+        const questionsData = await response.json();
+        return res.json(questionsData);
+      } catch (fetchError) {
+        console.error('[getTopikExamQuestions] S3 fetch error:', fetchError);
+        return res.status(502).json({ error: 'Failed to fetch questions from storage' });
+      }
+    }
+
+    // Legacy: questions stored directly in database
+    if (Array.isArray(questions)) {
+      return res.json(questions);
+    }
+
+    // No questions available
+    return res.json([]);
+  } catch (e: any) {
+    console.error('[getTopikExamQuestions] Error:', e);
+    res.status(500).json({ error: 'Failed to fetch exam questions' });
+  }
+};
+
+/**
  * 保存考试
  */
 export const saveTopikExam = async (req: Request, res: Response) => {

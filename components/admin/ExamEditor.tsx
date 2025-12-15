@@ -115,21 +115,21 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
     };
 
     // --- Effects ---
-    // 监听 selectedExam 变化，如果是 S3 托管数据（questionsUrl），则加载数据
+    // 监听 selectedExam 变化，如果是 S3 托管数据，则通过后端代理加载
     useEffect(() => {
         if (!selectedExam) return;
 
         const loadQuestions = async () => {
-            // Check if we need to load questions (Legacy: has questions array; New: has questionsUrl but no questions)
-            const exam = selectedExam as any;
-            if (!exam.questions && exam.questionsUrl) {
+            // Check if we need to load questions (no questions array present)
+            if (!selectedExam.questions || selectedExam.questions.length === 0) {
                 setLoadingQuestions(true);
                 try {
-                    const questions = await fetchQuestionsFromUrl(exam.questionsUrl);
-                    // Update state without triggering infinite loop (since we are setting questions, which invalidates this check)
+                    console.log('[ExamEditor] Loading questions via backend proxy for:', selectedExam.id);
+                    const questions = await api.getTopikExamQuestions(selectedExam.id);
+                    // Update state without triggering infinite loop
                     setSelectedExam(prev => prev ? { ...prev, questions } : null);
                 } catch (e) {
-                    console.error("Failed to load exam questions from S3", e);
+                    console.error("Failed to load exam questions", e);
                     alert("Failed to load exam content. Please check network.");
                 } finally {
                     setLoadingQuestions(false);
@@ -139,6 +139,7 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
 
         loadQuestions();
     }, [selectedExam?.id]); // Only re-run when ID changes to avoid loop when we update 'questions'
+
 
 
     // --- Handlers ---
