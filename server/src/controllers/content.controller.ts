@@ -328,11 +328,23 @@ export const getTopikExamQuestions = async (req: Request, res: Response) => {
     // If questions is stored as URL reference, fetch from S3
     if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
       try {
-        // Add cache-busting query param to bypass CDN cache
-        const urlWithCacheBust = `${questions.url}?_t=${Date.now()}`;
+        // Convert CDN URL to origin S3 URL to bypass CDN cache
+        let fetchUrl = questions.url;
+
+        // If using CDN URL, convert to origin
+        if (fetchUrl.includes('.cdn.digitaloceanspaces.com')) {
+          // Convert: bucket.region.cdn.digitaloceanspaces.com -> bucket.region.digitaloceanspaces.com
+          fetchUrl = fetchUrl.replace('.cdn.digitaloceanspaces.com', '.digitaloceanspaces.com');
+        }
+
+        // Add cache-busting query param
+        const urlWithCacheBust = `${fetchUrl}?_t=${Date.now()}`;
+        console.log('[getTopikExamQuestions] Fetching from origin:', urlWithCacheBust);
+
         const response = await fetch(urlWithCacheBust, {
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
           }
         });
 
