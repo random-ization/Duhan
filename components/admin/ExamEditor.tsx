@@ -107,24 +107,24 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
     };
 
     // --- Effects ---
-    // 监听 selectedExam 变化，如果是 S3 托管数据，则通过后端代理加载
+    // 监听 selectedExam 变化，始终从后端代理加载最新数据（避免缓存问题）
     useEffect(() => {
         if (!selectedExam) return;
 
         const loadQuestions = async () => {
-            // Check if we need to load questions (no questions array present)
-            if (!selectedExam.questions || selectedExam.questions.length === 0) {
-                setLoadingQuestions(true);
-                try {
-                    const questions = await api.getTopikExamQuestions(selectedExam.id);
-                    // Update state without triggering infinite loop
-                    setSelectedExam(prev => prev ? { ...prev, questions } : null);
-                } catch (e) {
-                    console.error("Failed to load exam questions", e);
-                    alert("Failed to load exam content. Please check network.");
-                } finally {
-                    setLoadingQuestions(false);
-                }
+            // 始终从后端获取最新数据
+            setLoadingQuestions(true);
+            try {
+                console.log('[ExamEditor] Loading fresh questions for exam:', selectedExam.id);
+                const questions = await api.getTopikExamQuestions(selectedExam.id);
+                console.log('[ExamEditor] Got', questions?.length || 0, 'questions');
+                // Update state without triggering infinite loop
+                setSelectedExam(prev => prev ? { ...prev, questions } : null);
+            } catch (e) {
+                console.error("Failed to load exam questions", e);
+                alert("Failed to load exam content. Please check network.");
+            } finally {
+                setLoadingQuestions(false);
             }
         };
 
