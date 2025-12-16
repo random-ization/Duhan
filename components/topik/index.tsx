@@ -69,7 +69,9 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     try {
       // 始终从后端代理获取最新数据，避免缓存问题
       const { api } = await import('../../services/api');
+      console.log('[selectExam] Fetching fresh questions from backend...');
       let fullQuestions = await api.getTopikExamQuestions(exam.id);
+      console.log('[selectExam] Got questions:', fullQuestions?.length || 0, 'items');
 
       // 如果还是空的，给个默认空数组防止白屏
       if (!fullQuestions) {
