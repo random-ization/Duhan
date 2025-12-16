@@ -191,13 +191,25 @@ export const getTopikExamQuestions = async (req: Request, res: Response) => {
     // If questions is stored as URL reference, fetch from S3
     if (questions && typeof questions === 'object' && questions.url && !Array.isArray(questions)) {
       try {
-        const response = await fetch(questions.url);
+        // Add cache-busting query param to bypass CDN cache
+        const urlWithCacheBust = `${questions.url}?_t=${Date.now()}`;
+        const response = await fetch(urlWithCacheBust, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
+        });
 
         if (!response.ok) {
           throw new Error(`S3 fetch failed: ${response.status}`);
         }
 
         const questionsData = await response.json();
+
+        // Set cache headers to prevent browser caching
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
         return res.json(questionsData);
       } catch (fetchError) {
         console.error('[getTopikExamQuestions] S3 fetch error:', fetchError);
@@ -207,6 +219,7 @@ export const getTopikExamQuestions = async (req: Request, res: Response) => {
 
     // Legacy: questions stored directly in database
     if (Array.isArray(questions)) {
+      res.setHeader('Cache-Control', 'no-cache');
       return res.json(questions);
     }
 
