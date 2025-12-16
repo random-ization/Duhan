@@ -140,8 +140,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               </div>
             )}
 
-            {/* Passage */}
-            {question.passage && (
+            {/* Passage - hide if question has image (IMAGE type questions like Q5-10) */}
+            {question.passage && !(question.imageUrl || question.image) && (
               <div
                 className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
                 onMouseUp={onTextSelect}
