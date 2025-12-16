@@ -185,10 +185,12 @@ const sendToSpacesNative = async (key: string, body: Buffer, contentType: string
   const endpoint = process.env.SPACES_ENDPOINT!;
   const bucket = process.env.SPACES_BUCKET!;
   const host = `${bucket}.${new URL(endpoint).host}`;
+  const contentLength = body.length;
 
-  const headers = {
+  const headers: Record<string, string> = {
     'Host': host,
     'Content-Type': contentType,
+    'Content-Length': contentLength.toString(),
     'x-amz-acl': 'public-read'
   };
 
