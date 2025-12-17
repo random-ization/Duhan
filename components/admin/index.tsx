@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Institute,
   Language,
@@ -51,33 +52,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddTopikExam,
   onDeleteTopikExam,
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'curriculum' | 'topik' | 'legal'>(
-    'dashboard'
-  );
+  const { tab } = useParams<{ tab?: string }>();
+  const activeTab = (tab || 'dashboard') as 'dashboard' | 'users' | 'curriculum' | 'topik' | 'legal';
 
   const tabs = [
     {
       id: 'dashboard' as const,
+      path: '/admin',
       label: { en: 'Dashboard', zh: '仪表板', vi: 'Bảng điều khiển', mn: 'Самбар' },
       icon: LayoutDashboard,
     },
     {
       id: 'users' as const,
+      path: '/admin/users',
       label: { en: 'Users', zh: '用户', vi: 'Người dùng', mn: 'Хэрэглэгчид' },
       icon: Users,
     },
     {
       id: 'curriculum' as const,
+      path: '/admin/curriculum',
       label: { en: 'Curriculum', zh: '课程', vi: 'Giáo trình', mn: 'Хөтөлбөр' },
       icon: BookOpen,
     },
     {
       id: 'topik' as const,
+      path: '/admin/topik',
       label: { en: 'TOPIK Exams', zh: 'TOPIK考试', vi: 'Kỳ thi TOPIK', mn: 'TOPIK шалгалт' },
       icon: FileText,
     },
     {
       id: 'legal' as const,
+      path: '/admin/legal',
       label: { en: 'Legal', zh: '法律条款', vi: 'Pháp lý', mn: 'Хууль эрх зүй' },
       icon: Scale,
     },
@@ -99,19 +104,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </h1>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+          {tabs.map(t => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+              <Link
+                key={t.id}
+                to={t.path}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
                   }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{tab.label[language]}</span>
-              </button>
+                <span className="font-medium">{t.label[language]}</span>
+              </Link>
             );
           })}
         </nav>

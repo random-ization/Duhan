@@ -205,7 +205,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 const content = (
                   <React.Fragment>
                     <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
-                    <span className={`text-lg ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+                    <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
                       <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
                     </span>
                     {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
@@ -294,7 +294,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 const content = (
                   <React.Fragment>
                     <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
-                    <span className={`text-lg ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+                    <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
                       <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
                     </span>
                     {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}

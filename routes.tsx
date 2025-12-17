@@ -77,11 +77,39 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
               />
             }
           />
+          <Route
+            path="/topik/history"
+            element={
+              <TopikPage
+                canAccessContent={canAccessContent}
+                onShowUpgradePrompt={onShowUpgradePrompt}
+              />
+            }
+          />
+          <Route
+            path="/topik/:examId"
+            element={
+              <TopikPage
+                canAccessContent={canAccessContent}
+                onShowUpgradePrompt={onShowUpgradePrompt}
+              />
+            }
+          />
+          <Route
+            path="/topik/:examId/:view"
+            element={
+              <TopikPage
+                canAccessContent={canAccessContent}
+                onShowUpgradePrompt={onShowUpgradePrompt}
+              />
+            }
+          />
         </Route>
 
         {/* === 管理员路由 (需要 Admin 权限) === */}
         <Route element={<ProtectedRoute requireAdmin={true} />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/:tab" element={<AdminPage />} />
         </Route>
 
         {/* 404 或未知路径重定向 */}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
@@ -28,7 +29,10 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   onShowUpgradePrompt,
   onDeleteHistory,
 }) => {
-  const [view, setView] = useState<
+  const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
+  const navigate = useNavigate();
+
+  const [view, setViewState] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
   >('LIST');
   const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
@@ -44,6 +48,70 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   } | null>(null);
 
   const [loading, setLoading] = useState(false);
+
+  // Custom setView that also updates URL
+  const setView = (newView: typeof view) => {
+    setViewState(newView);
+
+    // Update URL based on view
+    if (newView === 'LIST') {
+      navigate('/topik');
+    } else if (newView === 'HISTORY_LIST') {
+      navigate('/topik/history');
+    } else if (currentExam && newView === 'COVER') {
+      navigate(`/topik/${currentExam.id}`);
+    } else if (currentExam && newView === 'EXAM') {
+      navigate(`/topik/${currentExam.id}/exam`);
+    } else if (currentExam && newView === 'RESULT') {
+      navigate(`/topik/${currentExam.id}/result`);
+    } else if (currentExam && newView === 'REVIEW') {
+      navigate(`/topik/${currentExam.id}/review`);
+    }
+  };
+
+  // Sync URL params with view on mount
+  useEffect(() => {
+    if (examId && !currentExam) {
+      // Need to load exam from URL
+      const exam = exams.find(e => e.id === examId);
+      if (exam) {
+        // Load exam and set view based on URL
+        selectExamFromUrl(exam, urlView);
+      }
+    } else if (!examId && view !== 'LIST' && view !== 'HISTORY_LIST') {
+      setViewState('LIST');
+    }
+  }, [examId, urlView, exams]);
+
+  const selectExamFromUrl = async (exam: TopikExam, viewParam?: string) => {
+    setLoading(true);
+    try {
+      const { api } = await import('../../services/api');
+      let fullQuestions = await api.getTopikExamQuestions(exam.id);
+      if (!fullQuestions) fullQuestions = [];
+
+      const fullExam = { ...exam, questions: fullQuestions };
+      setCurrentExam(fullExam);
+      setUserAnswers({});
+      setTimeLeft(exam.timeLimit * 60);
+
+      // Set view based on URL param
+      if (viewParam === 'exam') {
+        setViewState('EXAM');
+        setTimerActive(true);
+      } else if (viewParam === 'result') {
+        setViewState('RESULT');
+      } else if (viewParam === 'review') {
+        setViewState('REVIEW');
+      } else {
+        setViewState('COVER');
+      }
+    } catch (error) {
+      console.error("Failed to load exam:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Timer logic
   React.useEffect(() => {
@@ -88,7 +156,9 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       setCurrentExam(fullExam);
       setUserAnswers({});
       setTimeLeft(exam.timeLimit * 60);
-      setView('COVER');
+      // Navigate to cover page (sets both URL and internal state)
+      setViewState('COVER');
+      navigate(`/topik/${exam.id}`);
 
     } catch (error) {
       console.error("Failed to load exam content:", error);

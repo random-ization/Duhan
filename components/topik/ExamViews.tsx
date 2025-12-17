@@ -481,8 +481,8 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               <button
                 onClick={() => setIsDrawingMode(!isDrawingMode)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${isDrawingMode
-                    ? 'bg-amber-50 border-amber-200 text-amber-600'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  ? 'bg-amber-50 border-amber-200 text-amber-600'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
               >
                 <Pencil className="w-4 h-4" />
@@ -642,7 +642,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
                   {/* Instruction Bar */}
                   {shouldShowInstruction(idx) && (
-                    <div className="mb-4 font-bold text-lg leading-relaxed text-black">
+                    <div className="mb-4 font-bold text-lg leading-relaxed text-black font-['Batang','KoPubBatang','Times_New_Roman',serif]">
                       {getInstructionForQuestion(idx)}
                     </div>
                   )}

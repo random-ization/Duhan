@@ -207,7 +207,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
                   {/* Instruction Bar (每个 section 的第一题显示) */}
                   {shouldShowInstruction(idx) && (
-                    <div className="mb-4 font-bold text-lg leading-relaxed text-black">
+                    <div className="mb-4 font-bold text-lg leading-relaxed text-black font-['Batang','KoPubBatang','Times_New_Roman',serif]">
                       {getInstructionForQuestion(idx)}
                     </div>
                   )}
