@@ -36,7 +36,7 @@ const TOPIK_READING_STRUCTURE: ExamSectionStructure[] = [
     { range: [42, 43], instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
     { range: [44, 45], instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
     { range: [46, 46], instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true, hasBox: true },
-    { range: [47, 47], instruction: "", grouped: true },
+    { range: [47, 47], instruction: "" },
     { range: [48, 50], instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
 ];
 
@@ -525,14 +525,15 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                                                             onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
                                                         />
 
-                                                        {/* Context Box - for INSERT_BOX questions like Q46 */}
+                                                        {/* Context Box - matches exam view style */}
                                                         {section.hasBox && (
-                                                            <div className="border border-slate-800 p-3 my-2">
+                                                            <div className="mb-4 border border-black p-4 bg-white">
                                                                 <textarea
-                                                                    className="w-full bg-white text-[15px] resize-none outline-none border-none h-12 font-serif"
+                                                                    className="w-full bg-transparent text-lg leading-loose resize-none outline-none border-none font-serif"
                                                                     placeholder="输入要插入的句子..."
                                                                     value={q.contextBox || ''}
                                                                     onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
+                                                                    rows={2}
                                                                 />
                                                             </div>
                                                         )}
