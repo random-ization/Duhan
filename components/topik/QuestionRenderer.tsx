@@ -136,111 +136,113 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
     return (
       <div className="break-inside-avoid">
-        {/* Standard layout */}
+        {/* Standard layout - number on left, content on right */}
         {!showInlineNumber && (
-          <div>
-            {/* Image */}
-            {(question.imageUrl || question.image) && (
-              <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
-                <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
-              </div>
-            )}
+          <div className="flex items-start">
+            {/* Question Number - always visible on left */}
+            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
+              {questionIndex + 1}.
+            </span>
 
-            {/* Passage - shown first, without number */}
-            {!hidePassage && question.passage && !(question.imageUrl || question.image) && (
-              <div
-                className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
-                onMouseUp={onTextSelect}
-                dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
-              />
-            )}
+            <div className="flex-1">
+              {/* Image */}
+              {(question.imageUrl || question.image) && (
+                <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
+                  <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
+                </div>
+              )}
 
-            {/* Question Number + Question Text (inline) */}
-            {question.question && (
-              <div className="flex items-start mb-3">
-                <span className={`text-lg font-bold mr-2 min-w-[28px] ${FONT_SERIF}`}>
-                  {questionIndex + 1}.
-                </span>
+              {/* Passage */}
+              {!hidePassage && question.passage && !(question.imageUrl || question.image) && (
                 <div
-                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
+                  className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
+                  onMouseUp={onTextSelect}
+                  dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
+                />
+              )}
+
+              {/* Question Text */}
+              {question.question && (
+                <div
+                  className={`text-lg leading-loose mb-3 cursor-text text-black ${FONT_SERIF}`}
                   onMouseUp={onTextSelect}
                   dangerouslySetInnerHTML={{
                     __html: highlightText(question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )'))
                   }}
                 />
-              </div>
-            )}
+              )}
 
-            {/* Context Box */}
-            {question.contextBox && (
-              <div className="mb-4 border border-black p-4 bg-white">
-                <div
-                  className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
-                  onMouseUp={onTextSelect}
-                  dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                />
-              </div>
-            )}
+              {/* Context Box */}
+              {question.contextBox && (
+                <div className="mb-4 border border-black p-4 bg-white">
+                  <div
+                    className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+                    onMouseUp={onTextSelect}
+                    dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                  />
+                </div>
+              )}
 
-            {/* Options */}
-            <div className={`
+              {/* Options */}
+              <div className={`
                 grid gap-y-2 gap-x-4
                 ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
               `}>
-              {question.options.map((option, optionIndex) => {
-                const status = getOptionStatus(optionIndex);
-                const isSelected = userAnswer === optionIndex;
-                let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
+                {question.options.map((option, optionIndex) => {
+                  const status = getOptionStatus(optionIndex);
+                  const isSelected = userAnswer === optionIndex;
+                  let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
 
-                if (status === 'correct') {
-                  optionClass += " text-green-700 font-bold bg-green-50/50";
-                } else if (status === 'incorrect') {
-                  optionClass += " text-red-700 font-bold bg-red-50/50";
-                } else {
-                  optionClass += " hover:bg-blue-50";
-                }
+                  if (status === 'correct') {
+                    optionClass += " text-green-700 font-bold bg-green-50/50";
+                  } else if (status === 'incorrect') {
+                    optionClass += " text-red-700 font-bold bg-red-50/50";
+                  } else {
+                    optionClass += " hover:bg-blue-50";
+                  }
 
-                if (showCorrect) optionClass += " cursor-text";
+                  if (showCorrect) optionClass += " cursor-text";
 
-                const content = (
-                  <React.Fragment>
-                    <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
-                    <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
-                      <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
-                    </span>
-                    {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
-                    {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
-                  </React.Fragment>
-                );
-
-                if (showCorrect) {
-                  return (
-                    <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
-                      {content}
-                    </div>
+                  const content = (
+                    <React.Fragment>
+                      <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
+                      <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+                        <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
+                      </span>
+                      {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
+                      {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
+                    </React.Fragment>
                   );
-                }
 
-                return (
-                  <button
-                    key={optionIndex}
-                    onClick={() => onAnswerChange?.(optionIndex)}
-                    onMouseUp={onTextSelect}
-                    className={optionClass}
-                  >
-                    {content}
-                  </button>
-                );
-              })}
-            </div>
+                  if (showCorrect) {
+                    return (
+                      <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
+                        {content}
+                      </div>
+                    );
+                  }
 
-            {/* Explanation */}
-            {showCorrect && question.explanation && (
-              <div className="mt-4 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
-                <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
-                <div className="leading-relaxed">{question.explanation}</div>
+                  return (
+                    <button
+                      key={optionIndex}
+                      onClick={() => onAnswerChange?.(optionIndex)}
+                      onMouseUp={onTextSelect}
+                      className={optionClass}
+                    >
+                      {content}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+
+              {/* Explanation */}
+              {showCorrect && question.explanation && (
+                <div className="mt-4 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
+                  <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
+                  <div className="leading-relaxed">{question.explanation}</div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
