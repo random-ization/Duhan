@@ -525,6 +525,18 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                                                             onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
                                                         />
 
+                                                        {/* Context Box - for INSERT_BOX questions like Q46 */}
+                                                        {section.hasBox && (
+                                                            <div className="border border-slate-800 p-3 my-2">
+                                                                <textarea
+                                                                    className="w-full bg-white text-[15px] resize-none outline-none border-none h-12 font-serif"
+                                                                    placeholder="输入要插入的句子..."
+                                                                    value={q.contextBox || ''}
+                                                                    onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        )}
+
                                                         {/* Options */}
                                                         {section.type === 'IMAGE_CHOICE' ? (
                                                             <div className="grid grid-cols-2 gap-4">
