@@ -15,6 +15,8 @@ interface QuestionRendererProps {
   annotations?: Annotation[];
   activeAnnotationId?: string | null;
   contextPrefix?: string;
+  hidePassage?: boolean; // Hide passage for grouped questions (non-first)
+  showInlineNumber?: boolean; // Show number inline with question text
 }
 
 const FONT_SERIF = "font-serif";
@@ -46,6 +48,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     annotations = [],
     contextPrefix = '',
     activeAnnotationId,
+    hidePassage = false,
+    showInlineNumber = false,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const contextKey = useMemo(
@@ -124,48 +128,49 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
     // Layout logic for options:
     // - Very short options (1-2 chars, like ㉠ ㉡ ㉢ ㉣) => 4 columns horizontal
-    // - Short options (≤8 chars) => 2 columns
-    // - Long options (>8 chars) => 1 column
+    // - Medium options (≤15 chars, like 排序题 ㉠-㉡-㉢-㉣) => 2 columns
+    // - Long options (>15 chars, sentence-like) => 1 column
     const allVeryShort = question.options.every(opt => opt.length <= 2);
-    const hasLongOptions = question.options.some(opt => opt.length > 8);
+    const hasLongOptions = question.options.some(opt => opt.length > 15);
 
     return (
       <div className="break-inside-avoid">
-        {/* Question Header */}
-        <div className="flex items-start mb-2">
-          <span className={`text-lg font-bold mr-3 min-w-[24px] ${FONT_SERIF}`}>
-            {questionIndex + 1}.
-          </span>
-
-          <div className="flex-1 w-full min-w-0">
-            {/* Image - support both imageUrl and image field names */}
+        {/* Standard layout */}
+        {!showInlineNumber && (
+          <div>
+            {/* Image */}
             {(question.imageUrl || question.image) && (
               <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
                 <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
               </div>
             )}
 
-            {/* Passage - hide if question has image (IMAGE type questions like Q5-10) */}
-            {question.passage && !(question.imageUrl || question.image) && (
+            {/* Passage - shown first, without number */}
+            {!hidePassage && question.passage && !(question.imageUrl || question.image) && (
               <div
-                className={`mb-4 p-5 border border-gray-400 bg-white w-full ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
+                className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
                 onMouseUp={onTextSelect}
                 dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
               />
             )}
 
-            {/* Question Text */}
+            {/* Question Number + Question Text (inline) */}
             {question.question && (
-              <div
-                className={`text-lg leading-loose w-full mb-3 cursor-text text-black ${FONT_SERIF}`}
-                onMouseUp={onTextSelect}
-                dangerouslySetInnerHTML={{
-                  __html: highlightText(question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )'))
-                }}
-              />
+              <div className="flex items-start mb-3">
+                <span className={`text-lg font-bold mr-2 min-w-[28px] ${FONT_SERIF}`}>
+                  {questionIndex + 1}.
+                </span>
+                <div
+                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
+                  onMouseUp={onTextSelect}
+                  dangerouslySetInnerHTML={{
+                    __html: highlightText(question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )'))
+                  }}
+                />
+              </div>
             )}
 
-            {/* Context Box (보기) - for INSERT_BOX type questions */}
+            {/* Context Box */}
             {question.contextBox && (
               <div className="mb-4 border border-black p-4 bg-white">
                 <div
@@ -178,23 +183,18 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
             {/* Options */}
             <div className={`
-              grid gap-y-2 gap-x-4
-              ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
-            `}>
+                grid gap-y-2 gap-x-4
+                ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
+              `}>
               {question.options.map((option, optionIndex) => {
                 const status = getOptionStatus(optionIndex);
                 const isSelected = userAnswer === optionIndex;
                 let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
 
-                // Conditional Styles for Review/active
                 if (status === 'correct') {
-                  // User requested to remove box/border styles, keeping only text color and icon
                   optionClass += " text-green-700 font-bold bg-green-50/50";
                 } else if (status === 'incorrect') {
                   optionClass += " text-red-700 font-bold bg-red-50/50";
-                } else if (isSelected) {
-                  // Reference style: blue text, underline, heavy decoration
-                  optionClass += " hover:bg-blue-50";
                 } else {
                   optionClass += " hover:bg-blue-50";
                 }
@@ -241,7 +241,96 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               </div>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Inline number layout - for grouped questions (Q19-20, Q46, etc.) */}
+        {showInlineNumber && (
+          <div>
+            {/* Question Text with inline number */}
+            {question.question && (
+              <div className="flex items-start mb-3">
+                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>
+                  {questionIndex + 1}.
+                </span>
+                <div
+                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
+                  onMouseUp={onTextSelect}
+                  dangerouslySetInnerHTML={{
+                    __html: highlightText(question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )'))
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Context Box */}
+            {question.contextBox && (
+              <div className="mb-4 border border-black p-4 bg-white ml-8">
+                <div
+                  className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+                  onMouseUp={onTextSelect}
+                  dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                />
+              </div>
+            )}
+
+            {/* Options - indented */}
+            <div className={`ml-8 grid gap-y-2 gap-x-4 ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+              {question.options.map((option, optionIndex) => {
+                const status = getOptionStatus(optionIndex);
+                const isSelected = userAnswer === optionIndex;
+                let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
+
+                if (status === 'correct') {
+                  optionClass += " text-green-700 font-bold bg-green-50/50";
+                } else if (status === 'incorrect') {
+                  optionClass += " text-red-700 font-bold bg-red-50/50";
+                } else {
+                  optionClass += " hover:bg-blue-50";
+                }
+
+                if (showCorrect) optionClass += " cursor-text";
+
+                const content = (
+                  <React.Fragment>
+                    <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
+                    <span className={`text-lg ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+                      <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
+                    </span>
+                    {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
+                    {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
+                  </React.Fragment>
+                );
+
+                if (showCorrect) {
+                  return (
+                    <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
+                      {content}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={optionIndex}
+                    onClick={() => onAnswerChange?.(optionIndex)}
+                    onMouseUp={onTextSelect}
+                    className={optionClass}
+                  >
+                    {content}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Explanation */}
+            {showCorrect && question.explanation && (
+              <div className="mt-4 ml-8 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
+                <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
+                <div className="leading-relaxed">{question.explanation}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

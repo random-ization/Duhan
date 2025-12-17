@@ -525,8 +525,8 @@ const ExamEditor: React.FC<ExamEditorProps> = ({
                                                             onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
                                                         />
 
-                                                        {/* Context Box - matches exam view style */}
-                                                        {section.hasBox && (
+                                                        {/* Context Box - only for grouped hasBox sections (Q46) */}
+                                                        {section.hasBox && section.grouped && (
                                                             <div className="mb-4 border border-black p-4 bg-white">
                                                                 <textarea
                                                                     className="w-full bg-transparent text-lg leading-loose resize-none outline-none border-none font-serif"
