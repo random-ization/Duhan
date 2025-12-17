@@ -1,10 +1,16 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Institute,
   Language,
   TextbookContextMap,
   TextbookContent,
   LevelConfig,
+  ReadingArticleV2,
+  ListeningTrackV2,
+  VocabularyItemV2,
+  GrammarPointV2,
+  TextbookContentV2,
+  TranslationLanguage,
 } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { api } from '../../services/api';
@@ -17,13 +23,25 @@ import {
   X,
   BookOpen,
   ChevronDown,
+  ChevronRight,
   Eye,
   Trash2,
   Upload,
   Play,
   Pause,
   Pencil,
+  Rocket,
+  FileText,
+  Headphones,
+  BookA,
+  Languages,
+  Music,
+  GripVertical,
 } from 'lucide-react';
+
+// ============================================================
+// TYPES & HELPERS
+// ============================================================
 
 interface ContentEditorProps {
   institutes: Institute[];
@@ -35,18 +53,30 @@ interface ContentEditorProps {
   onDeleteInstitute?: (id: string) => Promise<void>;
 }
 
-type ContentTab = 'vocab' | 'reading' | 'listening' | 'grammar';
+type ViewMode = 'library' | 'workbench';
+type ContentTab = 'reading' | 'listening' | 'vocab' | 'grammar';
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
-// Helper: Parse levels from Institute (supports both old number[] and new LevelConfig[] formats)
+const TRANSLATION_LANGS: { key: TranslationLanguage; label: string; flag: string }[] = [
+  { key: 'cn', label: '中文', flag: '🇨🇳' },
+  { key: 'en', label: 'English', flag: '🇺🇸' },
+  { key: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+  { key: 'mn', label: 'Монгол', flag: '🇲🇳' },
+];
+
 const parseLevels = (levels: LevelConfig[] | number[]): LevelConfig[] => {
   if (!levels || levels.length === 0) return [];
   if (typeof levels[0] === 'number') {
-    // Old format: number[]
     return (levels as number[]).map(l => ({ level: l, units: 10 }));
   }
   return levels as LevelConfig[];
 };
+
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 const ContentEditor: React.FC<ContentEditorProps> = ({
   institutes,
@@ -59,1078 +89,1448 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
 }) => {
   const labels = getLabels(language);
 
-  // Textbook selection state
+  // View state
+  const [viewMode, setViewMode] = useState<ViewMode>('library');
   const [selectedInstitute, setSelectedInstitute] = useState<Institute | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<ContentTab>('reading');
 
-  // Content entry state
-  const [activeTab, setActiveTab] = useState<ContentTab>('vocab');
-  const [textInput, setTextInput] = useState('');
-  const [previewData, setPreviewData] = useState<any[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  // Quick Add Modal
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddInstituteId, setQuickAddInstituteId] = useState<string>('');
+  const [quickAddLevel, setQuickAddLevel] = useState<number>(1);
+  const [quickAddUnit, setQuickAddUnit] = useState<number>(1);
+  const [quickAddType, setQuickAddType] = useState<'reading' | 'listening'>('reading');
+  const [quickAddTitle, setQuickAddTitle] = useState('');
+  const [quickAddKorean, setQuickAddKorean] = useState('');
+  const [quickAddTranslation, setQuickAddTranslation] = useState('');
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
 
-  // Reading/Listening entries (supports multiple entries)
-  interface ContentEntry {
-    text: string;
-    translation: string;
-    audioUrl?: string; // Restored
-  }
-  const [readingEntries, setReadingEntries] = useState<ContentEntry[]>([{ text: '', translation: '' }]);
-  const [listeningEntries, setListeningEntries] = useState<ContentEntry[]>([{ text: '', translation: '' }]);
-  const [listeningAudioUrl, setListeningAudioUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [entryUploadingIndex, setEntryUploadingIndex] = useState<number | null>(null); // Restored
-  const [entryPlayingIndex, setEntryPlayingIndex] = useState<number | null>(null); // Restored
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  // Title states for reading and listening
-  const [readingTitle, setReadingTitle] = useState('');
-  const [listeningTitle, setListeningTitle] = useState('');
-
-  // ... (activeTab state and others remain)
-
-  // Audio refs
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const entryAudioRefs = useRef<Record<number, HTMLAudioElement | null>>({}); // Restored
-
-  // ... (useEffect remains)
-
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    setIsUploading(true);
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await api.uploadFile(formData);
-      setListeningAudioUrl(response.url);
-    } catch (error) {
-      console.error('Failed to upload audio', error);
-      alert('Failed to upload audio');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleEntryAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    setEntryUploadingIndex(index);
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await api.uploadFile(formData);
-      const newEntries = [...listeningEntries];
-      newEntries[index] = { ...newEntries[index], audioUrl: response.url };
-      setListeningEntries(newEntries);
-    } catch (error) {
-      console.error('Failed to upload entry audio', error);
-      alert('Failed to upload audio');
-    } finally {
-      setEntryUploadingIndex(null);
-    }
-  };
-
-  const toggleAudioPlayback = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleEntryAudioPlayback = (index: number) => {
-    const audio = entryAudioRefs.current[index];
-    if (audio) {
-      if (entryPlayingIndex === index) {
-        audio.pause();
-        setEntryPlayingIndex(null);
-      } else {
-        // Pause others
-        Object.values(entryAudioRefs.current).forEach(a => (a as HTMLAudioElement)?.pause());
-        if (audioRef.current) {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        }
-
-        audio.play();
-        setEntryPlayingIndex(index);
-      }
-    }
-  };
-
-  // ... (handleSave logic - will be updated implicitly if it treats entries as JSON, which it does)
-
-  // ...
-
-  // Inside the render,specifically the Listening Tab part:
-  /*
-  The following replacement targets the rendering logic for listening entries.
-  We need to inject the audio control UI for each entry.
-  */
-
-
-  // Add textbook modal state
-  const [showAddModal, setShowAddModal] = useState(false);
+  // Add Textbook Modal
+  const [showAddTextbook, setShowAddTextbook] = useState(false);
   const [newTextbookName, setNewTextbookName] = useState('');
-  const [newLevelCount, setNewLevelCount] = useState(6);
-  const [newUnitsPerLevel, setNewUnitsPerLevel] = useState(10);
   const [newCoverUrl, setNewCoverUrl] = useState('');
-  const [newThemeColor, setNewThemeColor] = useState('#1e3a8a');
+  const [newThemeColor, setNewThemeColor] = useState('#3B82F6');
   const [newPublisher, setNewPublisher] = useState('');
   const [coverUploading, setCoverUploading] = useState(false);
 
-  // Get available levels and units for selected institute
-  const availableLevels = useMemo(() => {
-    if (!selectedInstitute) return [];
-    return parseLevels(selectedInstitute.levels);
-  }, [selectedInstitute]);
+  // Edit Institute Modal
+  const [showEditInstitute, setShowEditInstitute] = useState(false);
+  const [editingInstitute, setEditingInstitute] = useState<Institute | null>(null);
+  const [editInstituteName, setEditInstituteName] = useState('');
+  const [editCoverUrl, setEditCoverUrl] = useState('');
+  const [editThemeColor, setEditThemeColor] = useState('#3B82F6');
+  const [editPublisher, setEditPublisher] = useState('');
+  const [editCoverUploading, setEditCoverUploading] = useState(false);
 
-  const availableUnits = useMemo(() => {
-    const level = availableLevels.find(l => l.level === selectedLevel);
-    return level ? level.units : 10;
-  }, [availableLevels, selectedLevel]);
+  // Save status
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  // Content state (V2)
+  const [readings, setReadings] = useState<ReadingArticleV2[]>([]);
+  const [listenings, setListenings] = useState<ListeningTrackV2[]>([]);
+  const [vocabulary, setVocabulary] = useState<VocabularyItemV2[]>([]);
+  const [grammar, setGrammar] = useState<GrammarPointV2[]>([]);
+
+  // Selected item for editing
+  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+  const [selectedListeningId, setSelectedListeningId] = useState<string | null>(null);
+
+  // Translation tab
+  const [activeLang, setActiveLang] = useState<TranslationLanguage>('cn');
 
   // Get current content key
-  const contentKey = selectedInstitute
-    ? `${selectedInstitute.id}-${selectedLevel}-${selectedUnit}`
-    : null;
+  const contentKey = useMemo(() => {
+    if (!selectedInstitute) return '';
+    return `${selectedInstitute.id}-${selectedLevel}-${selectedUnit}`;
+  }, [selectedInstitute, selectedLevel, selectedUnit]);
 
-  // Get existing content for current selection
-  const existingContent = contentKey ? textbookContexts[contentKey] : null;
+  // Get available units for selected level
+  const availableUnits = useMemo(() => {
+    if (!selectedInstitute) return [];
+    const levels = parseLevels(selectedInstitute.levels);
+    const levelConfig = levels.find(l => l.level === selectedLevel);
+    if (!levelConfig) return [];
+    return Array.from({ length: levelConfig.units }, (_, i) => i + 1);
+  }, [selectedInstitute, selectedLevel]);
 
-  // Load existing content into entries when switching units (contentKey changes)
-  useEffect(() => {
-    const content = contentKey ? textbookContexts[contentKey] : null;
+  // Enter workbench for an institute
+  const enterWorkbench = useCallback((institute: Institute) => {
+    setSelectedInstitute(institute);
+    const levels = parseLevels(institute.levels);
+    if (levels.length > 0) {
+      setSelectedLevel(levels[0].level);
+      setSelectedUnit(1);
+    }
+    setViewMode('workbench');
+    // Load content for this unit
+    loadUnitContent(institute.id, levels[0]?.level || 1, 1);
+  }, []);
+
+  // Load unit content
+  const loadUnitContent = useCallback((instituteId: string, level: number, unit: number) => {
+    const key = `${instituteId}-${level}-${unit}`;
+    const content = textbookContexts[key];
+
+    // Reset to empty arrays
+    setReadings([]);
+    setListenings([]);
+    setVocabulary([]);
+    setGrammar([]);
+    setSelectedReadingId(null);
+    setSelectedListeningId(null);
 
     if (content) {
-      // Load titles
-      setReadingTitle(content.readingTitle || '');
-      setListeningTitle(content.listeningTitle || '');
-
-      // Try to parse as JSON array, fallback to single entry
-      try {
-        const readingData = content.readingText;
-        if (readingData && readingData.startsWith('[')) {
-          setReadingEntries(JSON.parse(readingData));
-        } else {
-          setReadingEntries([{
-            text: content.readingText || '',
-            translation: content.readingTranslation || ''
+      // Try to parse as V2 or convert from V1
+      if ((content as any).version === 2) {
+        const v2 = content as unknown as TextbookContentV2;
+        setReadings(v2.readings || []);
+        setListenings(v2.listenings || []);
+        setVocabulary(v2.vocabulary || []);
+        setGrammar(v2.grammar || []);
+      } else {
+        // Convert V1 to V2 format
+        const v1 = content as TextbookContent;
+        if (v1.readingText) {
+          setReadings([{
+            id: generateId(),
+            title: v1.readingTitle || '문장 1',
+            contentKr: v1.readingText,
+            translations: { cn: v1.readingTranslation || '' },
+            createdAt: Date.now(),
           }]);
         }
-      } catch {
-        setReadingEntries([{
-          text: content.readingText || '',
-          translation: content.readingTranslation || ''
-        }]);
-      }
-
-      try {
-        const listeningData = content.listeningScript;
-        if (listeningData && listeningData.startsWith('[')) {
-          setListeningEntries(JSON.parse(listeningData));
-        } else {
-          setListeningEntries([{
-            text: content.listeningScript || '',
-            translation: content.listeningTranslation || ''
+        if (v1.listeningScript) {
+          setListenings([{
+            id: generateId(),
+            title: v1.listeningTitle || '듣기 1',
+            audioUrl: v1.listeningAudioUrl,
+            scriptKr: v1.listeningScript,
+            translations: { cn: v1.listeningTranslation || '' },
+            createdAt: Date.now(),
           }]);
         }
-      } catch {
-        setListeningEntries([{
-          text: content.listeningScript || '',
-          translation: content.listeningTranslation || ''
-        }]);
+        // Parse vocabulary from V1 format
+        if (v1.vocabularyList) {
+          const vocabItems = parseVocabularyBulk(v1.vocabularyList);
+          setVocabulary(vocabItems);
+        }
       }
-
-      setListeningAudioUrl(content.listeningAudioUrl || null);
-    } else {
-      // Only reset when switching to a new empty unit
-      setReadingTitle('');
-      setListeningTitle('');
-      setReadingEntries([{ text: '', translation: '' }]);
-      setListeningEntries([{ text: '', translation: '' }]);
-      setListeningAudioUrl(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentKey]); // Only run when switching units, not when textbookContexts updates
+  }, [textbookContexts]);
 
-  // Tab configuration
-  const tabs: { id: ContentTab; label: string; icon: string; format: string; placeholder: string }[] = [
-    {
-      id: 'vocab',
-      label: String(labels.vocabulary || 'Vocabulary'),
-      icon: '📚',
-      format: '단어 | 품사 | 뜻 | 예문',
-      placeholder: '사과 | 명사 | apple | 사과를 먹어요\n바나나 | 명사 | banana | 바나나가 맛있어요',
-    },
-    {
-      id: 'reading',
-      label: String(labels.reading || 'Reading'),
-      icon: '📖',
-      format: '', // Two-column layout, no format hint needed
-      placeholder: '',
-    },
-    {
-      id: 'listening',
-      label: String(labels.listening || 'Listening'),
-      icon: '🎧',
-      format: '', // Two-column layout, no format hint needed
-      placeholder: '',
-    },
-    {
-      id: 'grammar',
-      label: String(labels.grammar || 'Grammar'),
-      icon: '📝',
-      format: '패턴 | 설명 | 예문 | 예문번역',
-      placeholder: '-아/어요 | 현재 시제 동사 어미 | 먹어요 | I eat\n-았/었어요 | 과거 시제 동사 어미 | 먹었어요 | I ate',
-    },
-  ];
-
-  const currentTab = tabs.find(t => t.id === activeTab)!;
-
-
-
-  // Parse input based on active tab
-  const parseInput = (input: string): any[] => {
+  // Parse vocabulary bulk input
+  const parseVocabularyBulk = (input: string): VocabularyItemV2[] => {
     const lines = input.trim().split('\n').filter(l => l.trim());
-
-    if (activeTab === 'vocab') {
-      return lines.map(line => {
-        const parts = line.split('|').map(p => p.trim());
-        return {
-          korean: parts[0] || '',
-          pos: parts[1] || '',
-          english: parts[2] || '',
-          exampleSentence: parts[3] || '',
-          exampleTranslation: '',
-        };
-      });
-    }
-
-    if (activeTab === 'reading' || activeTab === 'listening') {
-      // Split by --- separator
-      const sections = input.split('---').map(s => s.trim());
-      return [{
-        text: sections[0] || '',
-        translation: sections[1] || '',
-      }];
-    }
-
-    if (activeTab === 'grammar') {
-      return lines.map(line => {
-        const parts = line.split('|').map(p => p.trim());
-        return {
-          pattern: parts[0] || '',
-          explanation: parts[1] || '',
-          usages: [{
-            situation: 'General',
-            example: parts[2] || '',
-            translation: parts[3] || '',
-          }],
-        };
-      });
-    }
-
-    return [];
+    return lines.map(line => {
+      const parts = line.split(/[\t|]/).map(p => p.trim());
+      return {
+        id: generateId(),
+        korean: parts[0] || '',
+        pos: parts[1] || '',
+        translations: { cn: parts[2] || '' },
+        example: parts[3] || '',
+      };
+    });
   };
 
-  // Handle preview
-  const handlePreview = () => {
-    const parsed = parseInput(textInput);
-    setPreviewData(parsed);
-    setShowPreview(true);
+  // Handle unit change
+  const handleUnitChange = (unit: number) => {
+    setSelectedUnit(unit);
+    if (selectedInstitute) {
+      loadUnitContent(selectedInstitute.id, selectedLevel, unit);
+    }
   };
 
-  // Handle save
+  // Handle level change
+  const handleLevelChange = (level: number) => {
+    setSelectedLevel(level);
+    setSelectedUnit(1);
+    if (selectedInstitute) {
+      loadUnitContent(selectedInstitute.id, level, 1);
+    }
+  };
+
+  // Save current content
   const handleSave = async () => {
-    if (!contentKey || !selectedInstitute) return;
-
-    // Validate: for vocab/grammar, need textInput; for reading/listening, check entries
-    if (activeTab === 'vocab' || activeTab === 'grammar') {
-      if (!textInput.trim()) return;
-    } else if (activeTab === 'reading') {
-      const hasContent = readingEntries.some(e => e.text.trim() || e.translation.trim());
-      if (!hasContent) return;
-    } else if (activeTab === 'listening') {
-      const hasContent = listeningEntries.some(e => e.text.trim() || e.translation.trim()) || listeningAudioUrl;
-      if (!hasContent) return;
-    }
+    if (!selectedInstitute || !contentKey) return;
 
     setSaveStatus('saving');
-
     try {
-      const content: TextbookContent = existingContent
-        ? { ...existingContent }
-        : {
-          generalContext: '',
-          vocabularyList: '',
-          readingText: '',
-          readingTranslation: '',
-          readingTitle: `Level ${selectedLevel} Unit ${selectedUnit}`,
-          listeningScript: '',
-          listeningTranslation: '',
-          listeningTitle: `Level ${selectedLevel} Unit ${selectedUnit}`,
-          listeningAudioUrl: null,
-          grammarList: '',
-        };
+      const v2Content: TextbookContentV2 = {
+        version: 2,
+        readings,
+        listenings,
+        vocabulary,
+        grammar,
+      };
 
-      if (activeTab === 'vocab') {
-        const parsed = parseInput(textInput);
-        content.vocabularyList = JSON.stringify(parsed);
-      } else if (activeTab === 'reading') {
-        // Store as JSON array for multiple entries
-        const validEntries = readingEntries.filter(e => e.text.trim() || e.translation.trim());
-        content.readingText = JSON.stringify(validEntries);
-        content.readingTranslation = ''; // Not used when storing as JSON
-        content.readingTitle = readingTitle || `Level ${selectedLevel} Unit ${selectedUnit}`;
-      } else if (activeTab === 'listening') {
-        // Store as JSON array for multiple entries
-        const validEntries = listeningEntries.filter(e => e.text.trim() || e.translation.trim());
-        content.listeningScript = JSON.stringify(validEntries);
-        content.listeningTranslation = ''; // Not used when storing as JSON
-        content.listeningAudioUrl = listeningAudioUrl;
-        content.listeningTitle = listeningTitle || `Level ${selectedLevel} Unit ${selectedUnit}`;
-      } else if (activeTab === 'grammar') {
-        const parsed = parseInput(textInput);
-        content.grammarList = JSON.stringify(parsed);
-      }
+      // Convert to legacy format for backward compatibility with save API
+      const legacyContent: TextbookContent = {
+        generalContext: '',
+        vocabularyList: vocabulary.map(v => `${v.korean}\t${v.pos || ''}\t${v.translations.cn || ''}`).join('\n'),
+        readingText: readings[0]?.contentKr || '',
+        readingTranslation: readings[0]?.translations.cn || '',
+        readingTitle: readings[0]?.title || '',
+        listeningScript: listenings[0]?.scriptKr || '',
+        listeningTranslation: listenings[0]?.translations.cn || '',
+        listeningTitle: listenings[0]?.title || '',
+        listeningAudioUrl: listenings[0]?.audioUrl || null,
+      };
 
-      await onSaveContext(contentKey, content);
+      // Store V2 data in a separate field (backend can handle this)
+      (legacyContent as any).v2Data = v2Content;
+
+      onSaveContext(contentKey, legacyContent);
       setSaveStatus('success');
-      setShowPreview(false);
-
       setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (err) {
-      console.error('Save error:', err);
+    } catch (error) {
+      console.error('Save error:', error);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
-  // Handle cover image upload
+  // Cover upload
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-
     setCoverUploading(true);
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+      const formData = new FormData();
+      formData.append('file', e.target.files[0]);
       const response = await api.uploadFile(formData);
       setNewCoverUrl(response.url);
     } catch (error) {
-      console.error('Failed to upload cover', error);
-      alert('Failed to upload cover image');
+      console.error('Cover upload failed:', error);
+      alert(`封面上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setCoverUploading(false);
     }
   };
 
-  // Handle add textbook
+  // Add new textbook
   const handleAddTextbook = async () => {
     if (!newTextbookName.trim()) return;
-
-    // Defensive check
-    if (typeof onAddInstitute !== 'function') {
-      console.error('onAddInstitute is not a function:', onAddInstitute);
-      alert('Error: Add function not available. Please refresh the page.');
-      return;
-    }
-
-    const levels: LevelConfig[] = Array.from({ length: newLevelCount }, (_, i) => ({
-      level: i + 1,
-      units: newUnitsPerLevel,
-    }));
-
     try {
-      await onAddInstitute(newTextbookName.trim(), levels, {
-        coverUrl: newCoverUrl || undefined,
-        themeColor: newThemeColor || undefined,
-        publisher: newPublisher || undefined,
+      await onAddInstitute(newTextbookName, [{ level: 1, units: 10 }], {
+        coverUrl: newCoverUrl,
+        themeColor: newThemeColor,
+        publisher: newPublisher,
       });
+      setShowAddTextbook(false);
       setNewTextbookName('');
-      setNewLevelCount(6);
-      setNewUnitsPerLevel(10);
       setNewCoverUrl('');
-      setNewThemeColor('#1e3a8a');
+      setNewThemeColor('#3B82F6');
       setNewPublisher('');
-      setShowAddModal(false);
-    } catch (err) {
-      console.error('Failed to create textbook:', err);
-      alert('Failed to create textbook. Please check if the backend server is running.');
+    } catch (error) {
+      console.error('Add textbook failed:', error);
     }
   };
 
-  // Helper: Convert content object to text format
-  const getContentText = (content: any, tab: ContentTab): string => {
-    if (!content) return '';
+  // ============================================================
+  // READING TAB HANDLERS
+  // ============================================================
 
-    if (tab === 'vocab' && content.vocabularyList) {
-      try {
-        const vocab = JSON.parse(content.vocabularyList);
-        return vocab.map((v: any) =>
-          `${v.korean} | ${v.pos || ''} | ${v.english} | ${v.exampleSentence || ''}`
-        ).join('\n');
-      } catch { return ''; }
-    }
-
-    if (tab === 'reading') {
-      const text = content.readingText || '';
-      const trans = content.readingTranslation || '';
-      return text && trans ? `${text}\n---\n${trans}` : text || trans;
-    }
-
-    if (tab === 'listening') {
-      const text = content.listeningScript || '';
-      const trans = content.listeningTranslation || '';
-      return text && trans ? `${text}\n---\n${trans}` : text || trans;
-    }
-
-    if (tab === 'grammar' && content.grammarList) {
-      try {
-        const grammar = JSON.parse(content.grammarList);
-        return grammar.map((g: any) => {
-          const usage = g.usages?.[0] || {};
-          return `${g.pattern} | ${g.explanation} | ${usage.example || ''} | ${usage.translation || ''}`;
-        }).join('\n');
-      } catch { return ''; }
-    }
-
-    return '';
+  const addReading = () => {
+    const newArticle: ReadingArticleV2 = {
+      id: generateId(),
+      title: `문장 ${readings.length + 1}`,
+      contentKr: '',
+      translations: {},
+      createdAt: Date.now(),
+    };
+    setReadings([...readings, newArticle]);
+    setSelectedReadingId(newArticle.id);
   };
 
-  // State tracking to prevent overwriting user input on spurious re-renders
-  const lastState = React.useRef({ key: '', tab: '', text: '' });
+  const updateReading = (id: string, updates: Partial<ReadingArticleV2>) => {
+    setReadings(readings.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
 
-  // Load existing content when tab or selection changes
-  React.useEffect(() => {
-    const formattedText = getContentText(existingContent, activeTab);
-    const currentKeyStr = contentKey || '';
+  const deleteReading = (id: string) => {
+    setReadings(readings.filter(r => r.id !== id));
+    if (selectedReadingId === id) {
+      setSelectedReadingId(readings.length > 1 ? readings[0].id : null);
+    }
+  };
 
-    const isContextChange =
-      currentKeyStr !== lastState.current.key ||
-      activeTab !== lastState.current.tab;
+  // ============================================================
+  // LISTENING TAB HANDLERS
+  // ============================================================
 
-    // Only update if context changed OR the underlying content actually changed (external update)
-    // Note: We check formattedText against lastState.text (the prop value), not textInput (the user value)
-    const isExternalUpdate = formattedText !== lastState.current.text;
+  const addListening = () => {
+    const newTrack: ListeningTrackV2 = {
+      id: generateId(),
+      title: `듣기 ${listenings.length + 1}`,
+      audioUrl: null,
+      scriptKr: '',
+      translations: {},
+      createdAt: Date.now(),
+    };
+    setListenings([...listenings, newTrack]);
+    setSelectedListeningId(newTrack.id);
+  };
 
-    if (isContextChange || isExternalUpdate) {
-      setTextInput(formattedText);
-      lastState.current = {
-        key: currentKeyStr,
-        tab: activeTab,
-        text: formattedText
+  const updateListening = (id: string, updates: Partial<ListeningTrackV2>) => {
+    setListenings(listenings.map(l => l.id === id ? { ...l, ...updates } : l));
+  };
+
+  const deleteListening = (id: string) => {
+    setListenings(listenings.filter(l => l.id !== id));
+    if (selectedListeningId === id) {
+      setSelectedListeningId(listenings.length > 1 ? listenings[0].id : null);
+    }
+  };
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, trackId: string) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.uploadFile(formData);
+      updateListening(trackId, { audioUrl: response.url, audioFileName: file.name });
+    } catch (error) {
+      console.error('Audio upload failed:', error);
+      alert(`音频上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  };
+
+  // ============================================================
+  // VOCABULARY TAB HANDLERS
+  // ============================================================
+
+  const [vocabBulkInput, setVocabBulkInput] = useState('');
+  const [vocabPreview, setVocabPreview] = useState<VocabularyItemV2[]>([]);
+  const [showVocabPreview, setShowVocabPreview] = useState(false);
+
+  const handleVocabBulkParse = () => {
+    const parsed = parseVocabularyBulk(vocabBulkInput);
+    setVocabPreview(parsed);
+    setShowVocabPreview(true);
+  };
+
+  const handleVocabBulkConfirm = () => {
+    setVocabulary([...vocabulary, ...vocabPreview]);
+    setVocabBulkInput('');
+    setVocabPreview([]);
+    setShowVocabPreview(false);
+  };
+
+  // ============================================================
+  // GRAMMAR TAB HANDLERS
+  // ============================================================
+
+  const [grammarBulkInput, setGrammarBulkInput] = useState('');
+
+  const parseGrammarBulk = (input: string): GrammarPointV2[] => {
+    const lines = input.trim().split('\n').filter(l => l.trim());
+    return lines.map(line => {
+      const parts = line.split(/[\t|]/).map(p => p.trim());
+      return {
+        id: generateId(),
+        pattern: parts[0] || '',
+        meaning: parts[1] || '',
+        conjugation: parts[2] || '',
+        explanation: parts[3] || '',
       };
-    }
-  }, [activeTab, contentKey, existingContent]);
+    });
+  };
 
-  return (
-    <div className="p-6 space-y-6 h-full overflow-auto">
+  const handleGrammarBulkImport = () => {
+    const parsed = parseGrammarBulk(grammarBulkInput);
+    setGrammar([...grammar, ...parsed]);
+    setGrammarBulkInput('');
+  };
+
+  // ============================================================
+  // RENDER: LIBRARY VIEW
+  // ============================================================
+
+  const renderLibraryView = () => (
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {labels.contentManagement || 'Content Management'}
-          </h2>
-          <p className="text-gray-600">Manage textbooks and add content via copy-paste</p>
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+        <h1 className="text-2xl font-bold text-gray-900">📚 教材管理</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowQuickAdd(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+          >
+            <Rocket className="w-5 h-5" />
+            快速添加内容
+          </button>
+          <button
+            onClick={() => setShowAddTextbook(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            新增教材
+          </button>
         </div>
       </div>
 
-      {/* Textbook Selection */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* Textbook Dropdown */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <BookOpen className="inline w-4 h-4 mr-1" />
-              Textbook
-            </label>
-            <div className="relative">
-              <select
-                value={selectedInstitute?.id || ''}
-                onChange={e => {
-                  const inst = institutes.find(i => i.id === e.target.value);
-                  setSelectedInstitute(inst || null);
-                  setSelectedLevel(1);
-                  setSelectedUnit(1);
-                }}
-                className="w-full p-2.5 pr-8 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 appearance-none"
-              >
-                <option value="">-- Select Textbook --</option>
-                {institutes.map(inst => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Level Dropdown */}
-          {selectedInstitute && (
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
-              <select
-                value={selectedLevel}
-                onChange={e => {
-                  setSelectedLevel(Number(e.target.value));
-                  setSelectedUnit(1);
-                }}
-                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-              >
-                {availableLevels.map(l => (
-                  <option key={l.level} value={l.level}>Level {l.level}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Unit Dropdown */}
-          {selectedInstitute && (
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-              <select
-                value={selectedUnit}
-                onChange={e => setSelectedUnit(Number(e.target.value))}
-                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-              >
-                {Array.from({ length: availableUnits }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>Unit {i + 1}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Add Textbook Button */}
-          <div className="flex items-end gap-2">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+      {/* Institute Cards */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {institutes.map(institute => (
+            <div
+              key={institute.id}
+              onClick={() => enterWorkbench(institute)}
+              className="group cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              Add Textbook
-            </button>
+              <div className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 bg-gradient-to-br from-gray-100 to-gray-200">
+                {institute.coverUrl ? (
+                  <img
+                    src={institute.coverUrl}
+                    alt={institute.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ backgroundColor: institute.themeColor || '#3B82F6' }}
+                  >
+                    <BookOpen className="w-16 h-16 text-white/80" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-white font-bold text-lg truncate">{institute.name}</h3>
+                  {institute.publisher && (
+                    <p className="text-white/70 text-sm truncate">{institute.publisher}</p>
+                  )}
+                  <p className="text-white/60 text-xs mt-1">
+                    {parseLevels(institute.levels).length} 级
+                  </p>
+                </div>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingInstitute(institute);
+                      setEditInstituteName(institute.name);
+                      setEditCoverUrl(institute.coverUrl || '');
+                      setEditThemeColor(institute.themeColor || '#3B82F6');
+                      setEditPublisher(institute.publisher || '');
+                      setShowEditInstitute(true);
+                    }}
+                    className="p-2 bg-white/90 rounded-full shadow hover:bg-white"
+                  >
+                    <Pencil className="w-4 h-4 text-gray-700" />
+                  </button>
+                  {onDeleteInstitute && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (confirm(`确定要删除 "${institute.name}" 吗？`)) {
+                          await onDeleteInstitute(institute.id);
+                        }
+                      }}
+                      className="p-2 bg-white/90 rounded-full shadow hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
-            {selectedInstitute && onUpdateInstitute && (
-              <button
-                onClick={() => {
-                  const newName = prompt('Enter new name for textbook:', selectedInstitute.name);
-                  if (newName && newName.trim() !== selectedInstitute.name) {
-                    onUpdateInstitute(selectedInstitute.id, { name: newName.trim() });
-                  }
-                }}
-                className="p-2.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Rename textbook"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
+  // ============================================================
+  // RENDER: WORKBENCH VIEW
+  // ============================================================
 
-            {selectedInstitute && onDeleteInstitute && (
-              <button
-                onClick={() => {
-                  if (confirm(`Delete "${selectedInstitute.name}"?`)) {
-                    onDeleteInstitute(selectedInstitute.id)
-                      .then(() => setSelectedInstitute(null))
-                      .catch(() => alert('Failed to delete'));
-                  }
-                }}
-                className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete textbook"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+  const selectedReading = readings.find(r => r.id === selectedReadingId);
+  const selectedListening = listenings.find(l => l.id === selectedListeningId);
+
+  const renderWorkbenchView = () => (
+    <div className="h-full flex">
+      {/* Unit Sidebar */}
+      <div className="w-64 bg-gray-50 border-r flex flex-col">
+        {/* Back Button & Institute Info */}
+        <div className="p-4 border-b bg-white">
+          <button
+            onClick={() => setViewMode('library')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3"
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            返回教材库
+          </button>
+          <h2 className="font-bold text-lg text-gray-900 truncate">{selectedInstitute?.name}</h2>
+
+          {/* Level Selector */}
+          <div className="mt-3">
+            <select
+              value={selectedLevel}
+              onChange={(e) => handleLevelChange(Number(e.target.value))}
+              className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
+            >
+              {selectedInstitute && parseLevels(selectedInstitute.levels).map(l => (
+                <option key={l.level} value={l.level}>Level {l.level}</option>
+              ))}
+            </select>
           </div>
+        </div>
+
+        {/* Unit List */}
+        <div className="flex-1 overflow-auto p-2">
+          {availableUnits.map(unit => (
+            <button
+              key={unit}
+              onClick={() => handleUnitChange(unit)}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-1 transition-colors ${selectedUnit === unit
+                ? 'bg-blue-600 text-white'
+                : 'hover:bg-gray-100 text-gray-700'
+                }`}
+            >
+              <span className="font-medium">Unit {unit}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Save Button */}
+        <div className="p-4 border-t bg-white">
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${saveStatus === 'success'
+              ? 'bg-green-600 text-white'
+              : saveStatus === 'error'
+                ? 'bg-red-600 text-white'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+          >
+            {saveStatus === 'saving' && <Loader2 className="w-5 h-5 animate-spin" />}
+            {saveStatus === 'success' && <CheckCircle className="w-5 h-5" />}
+            {saveStatus === 'error' && <AlertCircle className="w-5 h-5" />}
+            {saveStatus === 'idle' && <Save className="w-5 h-5" />}
+            {saveStatus === 'saving' ? '保存中...' : saveStatus === 'success' ? '已保存' : saveStatus === 'error' ? '保存失败' : '保存'}
+          </button>
         </div>
       </div>
 
-      {/* Content Entry Section */}
-      {selectedInstitute ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-4 py-3 font-medium transition-colors ${activeTab === tab.id
-                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500'
-                  : 'text-gray-600 hover:bg-gray-50'
+      {/* Main Workbench */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Tabs */}
+        <div className="flex border-b bg-white">
+          {[
+            { id: 'reading' as ContentTab, label: '阅读', icon: FileText },
+            { id: 'listening' as ContentTab, label: '听力', icon: Headphones },
+            { id: 'vocab' as ContentTab, label: '单词', icon: BookA },
+            { id: 'grammar' as ContentTab, label: '语法', icon: Languages },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors border-b-2 ${activeTab === tab.id
+                ? 'border-blue-600 text-blue-600 bg-blue-50/50'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'reading' && renderReadingTab()}
+          {activeTab === 'listening' && renderListeningTab()}
+          {activeTab === 'vocab' && renderVocabTab()}
+          {activeTab === 'grammar' && renderGrammarTab()}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // RENDER: READING TAB (Master-Detail)
+  // ============================================================
+
+  const renderReadingTab = () => (
+    <div className="h-full flex">
+      {/* Left: Article List (20%) */}
+      <div className="w-1/5 min-w-[200px] border-r bg-gray-50 flex flex-col">
+        <div className="p-3 border-b bg-white flex items-center justify-between">
+          <span className="font-medium text-gray-700">文章列表</span>
+          <button
+            onClick={addReading}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Plus className="w-5 h-5 text-blue-600" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-2">
+          {readings.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">
+              点击 + 添加文章
+            </div>
+          ) : (
+            readings.map((article, idx) => (
+              <div
+                key={article.id}
+                onClick={() => setSelectedReadingId(article.id)}
+                className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${selectedReadingId === article.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white hover:bg-gray-100 text-gray-700'
                   }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Content Entry Area */}
-          <div className="p-4 space-y-4">
-            {/* Format Hint - only for vocab and grammar */}
-            {(activeTab === 'vocab' || activeTab === 'grammar') && currentTab.format && (
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <p className="text-sm font-medium text-blue-800">Format:</p>
-                <p className="text-sm text-blue-700 font-mono whitespace-pre-wrap">{currentTab.format}</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium truncate">{article.title || `文章 ${idx + 1}`}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteReading(article.id);
+                    }}
+                    className={`p-1 rounded transition-colors ${selectedReadingId === article.id
+                      ? 'hover:bg-blue-700'
+                      : 'hover:bg-gray-200'
+                      }`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            )}
+            ))
+          )}
+        </div>
+      </div>
 
-            {/* Audio Upload - Listening only */}
-            {activeTab === 'listening' && (
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <p className="text-sm font-medium text-purple-800 mb-3">🎧 音频文件</p>
-                <div className="flex items-center gap-3">
-                  <label className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 cursor-pointer transition-colors flex items-center gap-2">
-                    {isUploading ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> 上传中...</>
-                    ) : (
-                      <><Upload className="w-4 h-4" /> 上传音频</>
-                    )}
+      {/* Right: Editor (80%) */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {selectedReading ? (
+          <>
+            {/* Title */}
+            <div className="p-4 border-b bg-white">
+              <input
+                type="text"
+                value={selectedReading.title}
+                onChange={(e) => updateReading(selectedReading.id, { title: e.target.value })}
+                placeholder="文章标题"
+                className="w-full text-xl font-bold border-none outline-none placeholder-gray-400"
+              />
+            </div>
+
+            {/* Korean Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex">
+                {/* Korean Original */}
+                <div className="flex-1 flex flex-col border-r">
+                  <div className="px-4 py-2 bg-gray-50 border-b font-medium text-gray-700 flex items-center gap-2">
+                    🇰🇷 韩语原文
+                  </div>
+                  <textarea
+                    value={selectedReading.contentKr}
+                    onChange={(e) => updateReading(selectedReading.id, { contentKr: e.target.value })}
+                    placeholder="请输入韩语原文..."
+                    className="flex-1 p-4 resize-none outline-none text-lg leading-relaxed overflow-auto"
+                  />
+                </div>
+
+                {/* Translation (with tabs) */}
+                <div className="flex-1 flex flex-col">
+                  {/* Language Tabs */}
+                  <div className="flex bg-gray-50 border-b">
+                    {TRANSLATION_LANGS.map(lang => (
+                      <button
+                        key={lang.key}
+                        onClick={() => setActiveLang(lang.key)}
+                        className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${activeLang === lang.key
+                          ? 'bg-white border-b-2 border-blue-600 text-blue-600'
+                          : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                      >
+                        {lang.flag} {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={selectedReading.translations[activeLang] || ''}
+                    onChange={(e) => updateReading(selectedReading.id, {
+                      translations: { ...selectedReading.translations, [activeLang]: e.target.value }
+                    })}
+                    placeholder={`请输入${TRANSLATION_LANGS.find(l => l.key === activeLang)?.label}翻译...`}
+                    className="flex-1 p-4 resize-none outline-none text-lg leading-relaxed overflow-auto"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p>选择或新建一篇文章开始编辑</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // RENDER: LISTENING TAB (Master-Detail)
+  // ============================================================
+
+  const renderListeningTab = () => (
+    <div className="h-full flex">
+      {/* Left: Track List (20%) */}
+      <div className="w-1/5 min-w-[200px] border-r bg-gray-50 flex flex-col">
+        <div className="p-3 border-b bg-white flex items-center justify-between">
+          <span className="font-medium text-gray-700">音频列表</span>
+          <button
+            onClick={addListening}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Plus className="w-5 h-5 text-blue-600" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-2">
+          {listenings.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">
+              点击 + 添加音频
+            </div>
+          ) : (
+            listenings.map((track, idx) => (
+              <div
+                key={track.id}
+                onClick={() => setSelectedListeningId(track.id)}
+                className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${selectedListeningId === track.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white hover:bg-gray-100 text-gray-700'
+                  }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-4 h-4" />
+                    <span className="font-medium truncate">{track.title || `音频 ${idx + 1}`}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteListening(track.id);
+                    }}
+                    className={`p-1 rounded transition-colors ${selectedListeningId === track.id ? 'hover:bg-blue-700' : 'hover:bg-gray-200'
+                      }`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                {track.audioUrl && (
+                  <div className="mt-1 text-xs opacity-70 truncate">
+                    ✓ {track.audioFileName || '已上传音频'}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Right: Editor (80%) */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {selectedListening ? (
+          <>
+            {/* Title & Audio Upload */}
+            <div className="p-4 border-b bg-white space-y-3">
+              <input
+                type="text"
+                value={selectedListening.title}
+                onChange={(e) => updateListening(selectedListening.id, { title: e.target.value })}
+                placeholder="音频标题"
+                className="w-full text-xl font-bold border-none outline-none placeholder-gray-400"
+              />
+
+              {/* Audio Upload Zone */}
+              <div className="flex items-center gap-4 p-4 border-2 border-dashed rounded-lg bg-gray-50">
+                {selectedListening.audioUrl ? (
+                  <div className="flex items-center gap-4 flex-1">
+                    <audio controls src={selectedListening.audioUrl} className="flex-1" />
+                    <button
+                      onClick={() => updateListening(selectedListening.id, { audioUrl: null, audioFileName: undefined })}
+                      className="p-2 hover:bg-gray-200 rounded-lg"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer py-4">
+                    <Upload className="w-6 h-6 text-gray-400" />
+                    <span className="text-gray-500">点击或拖拽上传音频文件</span>
                     <input
                       type="file"
                       accept="audio/*"
-                      onChange={handleAudioUpload}
                       className="hidden"
-                      disabled={isUploading}
+                      onChange={(e) => handleAudioUpload(e, selectedListening.id)}
                     />
                   </label>
-
-                  {listeningAudioUrl && (
-                    <>
-                      <button
-                        onClick={toggleAudioPlayback}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        {isPlaying ? '暂停' : '播放'}
-                      </button>
-                      <button
-                        onClick={() => setListeningAudioUrl(null)}
-                        className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <span className="text-sm text-gray-500 truncate max-w-xs">
-                        {listeningAudioUrl.split('/').pop()}
-                      </span>
-                      <audio
-                        id="preview-audio"
-                        src={listeningAudioUrl}
-                        onEnded={() => setIsPlaying(false)}
-                        className="hidden"
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Multi-entry layout for Reading/Listening */}
-            {(activeTab === 'reading' || activeTab === 'listening') ? (
-              <div className="space-y-4">
-                {/* Title Input */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <label className="block text-sm font-medium text-blue-800 mb-2">
-                    📝 {activeTab === 'reading' ? '阅读标题 (Reading Title)' : '听力标题 (Listening Title)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={activeTab === 'reading' ? readingTitle : listeningTitle}
-                    onChange={(e) => {
-                      if (activeTab === 'reading') {
-                        setReadingTitle(e.target.value);
-                      } else {
-                        setListeningTitle(e.target.value);
-                      }
-                    }}
-                    placeholder={`Level ${selectedLevel} Unit ${selectedUnit} - ${activeTab === 'reading' ? '阅读练习' : '听力练习'}`}
-                    className="w-full p-2.5 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white"
-                  />
-                </div>
-
-                {(activeTab === 'reading' ? readingEntries : listeningEntries).map((entry, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-600">
-                        {activeTab === 'reading' ? `📖 阅读 #${index + 1}` : `🎧 听力 #${index + 1}`}
-                      </span>
-                      {(activeTab === 'reading' ? readingEntries : listeningEntries).length > 1 && (
-                        <button
-                          onClick={() => {
-                            if (activeTab === 'reading') {
-                              setReadingEntries(prev => prev.filter((_, i) => i !== index));
-                            } else {
-                              setListeningEntries(prev => prev.filter((_, i) => i !== index));
-                            }
-                          }}
-                          className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Audio Controls for Listening Entry */}
-                    {activeTab === 'listening' && (
-                      <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-100 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {entry.audioUrl ? (
-                            <>
-                              <button
-                                onClick={() => toggleEntryAudioPlayback(index)}
-                                className="w-8 h-8 flex items-center justify-center bg-purple-100 text-purple-600 rounded-full hover:bg-purple-200 transition-colors"
-                              >
-                                {entryPlayingIndex === index ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-purple-600 ml-0.5" />}
-                              </button>
-                              <span className="text-xs text-purple-700 font-medium">
-                                音频已上传
-                              </span>
-                              <audio
-                                ref={el => { entryAudioRefs.current[index] = el; }}
-                                src={entry.audioUrl}
-                                onEnded={() => setEntryPlayingIndex(null)}
-                              />
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400 italic">暂无音频</span>
-                          )}
-                        </div>
-
-                        <label className={`
-                          flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors
-                          ${entryUploadingIndex === index
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-white border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300'
-                          }
-                        `}>
-                          <input
-                            type="file"
-                            accept="audio/*"
-                            className="hidden"
-                            disabled={entryUploadingIndex === index}
-                            onChange={(e) => handleEntryAudioUpload(e, index)}
-                          />
-                          {entryUploadingIndex === index ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Upload className="w-3 h-3" />
-                          )}
-                          {entryUploadingIndex === index
-                            ? '上传中...'
-                            : (entry.audioUrl ? '更换音频' : '上传音频')
-                          }
-                        </label>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Left: Original text */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">原文</label>
-                        <textarea
-                          value={entry.text}
-                          onChange={e => {
-                            if (activeTab === 'reading') {
-                              setReadingEntries(prev => prev.map((item, i) =>
-                                i === index ? { ...item, text: e.target.value } : item
-                              ));
-                            } else {
-                              setListeningEntries(prev => prev.map((item, i) =>
-                                i === index ? { ...item, text: e.target.value } : item
-                              ));
-                            }
-                          }}
-                          placeholder={activeTab === 'reading'
-                            ? '오늘 날씨가 좋습니다...'
-                            : '안녕하세요?...'
-                          }
-                          rows={6}
-                          className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-y"
-                        />
-                      </div>
-                      {/* Right: Translation */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">翻译</label>
-                        <textarea
-                          value={entry.translation}
-                          onChange={e => {
-                            if (activeTab === 'reading') {
-                              setReadingEntries(prev => prev.map((item, i) =>
-                                i === index ? { ...item, translation: e.target.value } : item
-                              ));
-                            } else {
-                              setListeningEntries(prev => prev.map((item, i) =>
-                                i === index ? { ...item, translation: e.target.value } : item
-                              ));
-                            }
-                          }}
-                          placeholder="今天天气很好..."
-                          rows={6}
-                          className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-y"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {/* Add Entry Button */}
-                <button
-                  onClick={() => {
-                    if (activeTab === 'reading') {
-                      setReadingEntries(prev => [...prev, { text: '', translation: '' }]);
-                    } else {
-                      setListeningEntries(prev => [...prev, { text: '', translation: '' }]);
-                    }
-                  }}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  添加第 {(activeTab === 'reading' ? readingEntries : listeningEntries).length + 1} 条
-                </button>
-              </div>
-            ) : (
-              /* Single textarea for vocab and grammar */
-              <textarea
-                value={textInput}
-                onChange={e => setTextInput(e.target.value)}
-                placeholder={currentTab.placeholder}
-                rows={10}
-                className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 resize-y"
-              />
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {/* Preview button - only for vocab and grammar */}
-              {(activeTab === 'vocab' || activeTab === 'grammar') && (
-                <button
-                  onClick={handlePreview}
-                  disabled={!textInput.trim()}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  Preview
-                </button>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saveStatus === 'saving'}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                {saveStatus === 'saving' ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                ) : saveStatus === 'success' ? (
-                  <><CheckCircle className="w-4 h-4" /> Saved!</>
-                ) : saveStatus === 'error' ? (
-                  <><AlertCircle className="w-4 h-4" /> Error</>
-                ) : (
-                  <><Save className="w-4 h-4" /> Save</>
                 )}
-              </button>
-              {(activeTab === 'vocab' || activeTab === 'grammar') && textInput && (
-                <button
-                  onClick={() => { setTextInput(''); setShowPreview(false); }}
-                  className="px-4 py-2 text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Clear
-                </button>
-              )}
+              </div>
             </div>
 
-            {/* Preview */}
-            {showPreview && previewData.length > 0 && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Preview ({previewData.length} items)</span>
+            {/* Script & Translation */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Korean Script */}
+              <div className="flex-1 flex flex-col border-r">
+                <div className="px-4 py-2 bg-gray-50 border-b font-medium text-gray-700 flex items-center gap-2">
+                  🇰🇷 听力原文
                 </div>
-                <div className="max-h-60 overflow-auto">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {previewData.slice(0, 10).map((item, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="px-3 py-2 text-gray-500 w-8">{idx + 1}</td>
-                          <td className="px-3 py-2">
-                            <pre className="whitespace-pre-wrap font-mono text-xs">
-                              {JSON.stringify(item, null, 2)}
-                            </pre>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {previewData.length > 10 && (
-                    <div className="px-3 py-2 bg-gray-50 text-center text-sm text-gray-600">
-                      ... and {previewData.length - 10} more
-                    </div>
-                  )}
+                <textarea
+                  value={selectedListening.scriptKr}
+                  onChange={(e) => updateListening(selectedListening.id, { scriptKr: e.target.value })}
+                  placeholder="请输入听力原文..."
+                  className="flex-1 p-4 resize-none outline-none text-lg leading-relaxed overflow-auto"
+                />
+              </div>
+
+              {/* Translation (with tabs) */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex bg-gray-50 border-b">
+                  {TRANSLATION_LANGS.map(lang => (
+                    <button
+                      key={lang.key}
+                      onClick={() => setActiveLang(lang.key)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${activeLang === lang.key
+                        ? 'bg-white border-b-2 border-blue-600 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                      {lang.flag} {lang.label}
+                    </button>
+                  ))}
                 </div>
+                <textarea
+                  value={selectedListening.translations[activeLang] || ''}
+                  onChange={(e) => updateListening(selectedListening.id, {
+                    translations: { ...selectedListening.translations, [activeLang]: e.target.value }
+                  })}
+                  placeholder={`请输入${TRANSLATION_LANGS.find(l => l.key === activeLang)?.label}翻译...`}
+                  className="flex-1 p-4 resize-none outline-none text-lg leading-relaxed overflow-auto"
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <Headphones className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p>选择或新建一个音频开始编辑</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // RENDER: VOCAB TAB (Bulk Import)
+  // ============================================================
+
+  const renderVocabTab = () => (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Bulk Import */}
+        <div className="w-1/2 flex flex-col border-r">
+          <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+            <span className="font-medium text-gray-700">📥 批量导入</span>
+            <span className="text-xs text-gray-500">格式: 单词 | 词性 | 释义 | 例句</span>
+          </div>
+          <textarea
+            value={vocabBulkInput}
+            onChange={(e) => setVocabBulkInput(e.target.value)}
+            placeholder={`하다\t动词\t做\t공부를 하다
+먹다\t动词\t吃\t밥을 먹다
+학교\t名词\t学校\t학교에 가다`}
+            className="flex-1 p-4 resize-none outline-none font-mono text-sm overflow-auto"
+          />
+          <div className="p-4 border-t bg-white flex gap-3">
+            <button
+              onClick={handleVocabBulkParse}
+              disabled={!vocabBulkInput.trim()}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Eye className="w-5 h-5" />
+              预览解析
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Preview / Current List */}
+        <div className="w-1/2 flex flex-col">
+          <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+            <span className="font-medium text-gray-700">
+              {showVocabPreview ? '📋 解析预览' : `📚 当前单词 (${vocabulary.length})`}
+            </span>
+            {showVocabPreview && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowVocabPreview(false); setVocabPreview([]); }}
+                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleVocabBulkConfirm}
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  确认添加
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {(showVocabPreview ? vocabPreview : vocabulary).length === 0 ? (
+              <div className="text-center text-gray-400 py-12">
+                {showVocabPreview ? '解析结果将显示在这里' : '暂无单词，请批量导入'}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(showVocabPreview ? vocabPreview : vocabulary).map((item, idx) => (
+                  <div key={item.id || idx} className="flex items-center gap-4 p-3 bg-white border rounded-lg">
+                    <span className="font-bold text-lg text-blue-600">{item.korean}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">{item.pos}</span>
+                    <span className="flex-1 text-gray-700">{item.translations.cn}</span>
+                    {item.example && <span className="text-gray-400 text-sm">{item.example}</span>}
+                    {!showVocabPreview && (
+                      <button
+                        onClick={() => setVocabulary(vocabulary.filter(v => v.id !== item.id))}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-      ) : (
-        <div className="bg-amber-50 p-8 rounded-xl border-2 border-amber-300 border-dashed text-center">
-          <div className="text-4xl mb-3">☝️</div>
-          <p className="text-amber-800 font-medium text-lg">Select a textbook to add content</p>
-          <p className="text-amber-600 text-sm mt-2">
-            Or click "Add Textbook" to create a new one
-          </p>
-        </div>
-      )}
+      </div>
+    </div>
+  );
 
-      {/* Add Textbook Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Add New Textbook</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
+  // ============================================================
+  // RENDER: GRAMMAR TAB (Card Stream)
+  // ============================================================
+
+  const renderGrammarTab = () => (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Bulk Import Section */}
+      <div className="p-4 border-b bg-gray-50">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <textarea
+              value={grammarBulkInput}
+              onChange={(e) => setGrammarBulkInput(e.target.value)}
+              placeholder="语法点 | 含义 | 接续 | 详细解释 (每行一个)"
+              rows={3}
+              className="w-full p-3 border rounded-lg resize-none text-sm"
+            />
+          </div>
+          <button
+            onClick={handleGrammarBulkImport}
+            disabled={!grammarBulkInput.trim()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Grammar Cards */}
+      <div className="flex-1 overflow-auto p-4">
+        {grammar.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            暂无语法点，请批量导入
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {grammar.map((g, idx) => (
+              <div key={g.id} className="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-lg text-blue-600">{g.pattern}</h3>
+                  <button
+                    onClick={() => setGrammar(grammar.filter(item => item.id !== g.id))}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-1">{g.meaning}</p>
+                {g.conjugation && (
+                  <p className="text-sm text-gray-500 mb-2">접속: {g.conjugation}</p>
+                )}
+                {g.explanation && (
+                  <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{g.explanation}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Quick Add handlers
+  const quickAddInstitute = institutes.find(i => i.id === quickAddInstituteId);
+  const quickAddLevels = quickAddInstitute ? parseLevels(quickAddInstitute.levels) : [];
+  const quickAddUnits = useMemo(() => {
+    const levelConfig = quickAddLevels.find(l => l.level === quickAddLevel);
+    return levelConfig ? Array.from({ length: levelConfig.units }, (_, i) => i + 1) : [];
+  }, [quickAddLevels, quickAddLevel]);
+
+  const handleQuickAddSave = async () => {
+    if (!quickAddInstituteId || !quickAddTitle.trim()) return;
+    setQuickAddSaving(true);
+    try {
+      const key = `${quickAddInstituteId}-${quickAddLevel}-${quickAddUnit}`;
+      const existingContent = textbookContexts[key] || {
+        generalContext: '',
+        vocabularyList: '',
+        readingText: '',
+        readingTranslation: '',
+        readingTitle: '',
+        listeningScript: '',
+        listeningTranslation: '',
+        listeningTitle: '',
+        listeningAudioUrl: null,
+      };
+
+      const updatedContent = { ...existingContent };
+      if (quickAddType === 'reading') {
+        updatedContent.readingTitle = quickAddTitle;
+        updatedContent.readingText = quickAddKorean;
+        updatedContent.readingTranslation = quickAddTranslation;
+      } else {
+        updatedContent.listeningTitle = quickAddTitle;
+        updatedContent.listeningScript = quickAddKorean;
+        updatedContent.listeningTranslation = quickAddTranslation;
+      }
+
+      onSaveContext(key, updatedContent);
+
+      // Reset form
+      setQuickAddTitle('');
+      setQuickAddKorean('');
+      setQuickAddTranslation('');
+      alert('保存成功！');
+    } catch (error) {
+      console.error('Quick add save error:', error);
+      alert('保存失败');
+    } finally {
+      setQuickAddSaving(false);
+    }
+  };
+
+  // ============================================================
+  // RENDER: QUICK ADD MODAL
+  // ============================================================
+
+  const renderQuickAddModal = () => {
+    if (!showQuickAdd) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <div className="flex items-center gap-3">
+              <Rocket className="w-6 h-6 text-purple-600" />
+              <h2 className="text-xl font-bold">快速添加内容</h2>
+            </div>
+            <button
+              onClick={() => setShowQuickAdd(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Selector */}
+          <div className="px-6 py-4 border-b bg-gray-50 flex flex-wrap gap-4">
+            <select
+              value={quickAddInstituteId}
+              onChange={(e) => {
+                setQuickAddInstituteId(e.target.value);
+                setQuickAddLevel(1);
+                setQuickAddUnit(1);
+              }}
+              className="flex-1 min-w-[200px] px-4 py-2 border rounded-lg bg-white"
+            >
+              <option value="">选择教材...</option>
+              {institutes.map(i => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+            <select
+              value={quickAddLevel}
+              onChange={(e) => {
+                setQuickAddLevel(Number(e.target.value));
+                setQuickAddUnit(1);
+              }}
+              className="w-28 px-4 py-2 border rounded-lg bg-white"
+              disabled={!quickAddInstituteId}
+            >
+              {quickAddLevels.map(l => (
+                <option key={l.level} value={l.level}>Level {l.level}</option>
+              ))}
+            </select>
+            <select
+              value={quickAddUnit}
+              onChange={(e) => setQuickAddUnit(Number(e.target.value))}
+              className="w-28 px-4 py-2 border rounded-lg bg-white"
+              disabled={!quickAddInstituteId}
+            >
+              {quickAddUnits.map(u => (
+                <option key={u} value={u}>Unit {u}</option>
+              ))}
+            </select>
+            <div className="flex rounded-lg overflow-hidden border">
+              <button
+                onClick={() => setQuickAddType('reading')}
+                className={`px-4 py-2 flex items-center gap-2 ${quickAddType === 'reading' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <FileText className="w-4 h-4" /> 阅读
+              </button>
+              <button
+                onClick={() => setQuickAddType('listening')}
+                className={`px-4 py-2 flex items-center gap-2 ${quickAddType === 'listening' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <Headphones className="w-4 h-4" /> 听力
               </button>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Textbook Name</label>
-                <input
-                  type="text"
-                  value={newTextbookName}
-                  onChange={e => setNewTextbookName(e.target.value)}
-                  placeholder="e.g., 延世大学韩国语 (1)"
-                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
+          {/* Content Area */}
+          <div className="flex-1 overflow-auto p-6">
+            {!quickAddInstituteId ? (
+              <div className="text-center text-gray-400 py-12">
+                <Rocket className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                <p>选择教材和单元后开始添加内容</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">🏫 Publisher / University (用于筛选)</label>
-                <input
-                  type="text"
-                  value={newPublisher}
-                  onChange={e => setNewPublisher(e.target.value)}
-                  placeholder="e.g., 延世大学, 首尔大学, 梨花女子大学"
-                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-xs text-gray-500">同一大学/出版社的教材填写相同名称即可按大学筛选</p>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Number of Levels</label>
+            ) : (
+              <div className="space-y-4">
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">标题</label>
                   <input
-                    type="number"
-                    value={newLevelCount}
-                    onChange={e => setNewLevelCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    min={1}
-                    max={20}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    value={quickAddTitle}
+                    onChange={(e) => setQuickAddTitle(e.target.value)}
+                    placeholder={quickAddType === 'reading' ? '阅读标题' : '听力标题'}
+                    className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Units per Level</label>
-                  <input
-                    type="number"
-                    value={newUnitsPerLevel}
-                    onChange={e => setNewUnitsPerLevel(Math.max(1, parseInt(e.target.value) || 1))}
-                    min={1}
-                    max={50}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+
+                {/* Korean Content */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">🇰🇷 韩语原文</label>
+                  <textarea
+                    value={quickAddKorean}
+                    onChange={(e) => setQuickAddKorean(e.target.value)}
+                    placeholder="请输入韩语原文..."
+                    rows={6}
+                    className="w-full px-4 py-3 border rounded-lg resize-none"
+                  />
+                </div>
+
+                {/* Translation */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">🇨🇳 中文译文</label>
+                  <textarea
+                    value={quickAddTranslation}
+                    onChange={(e) => setQuickAddTranslation(e.target.value)}
+                    placeholder="请输入中文翻译..."
+                    rows={6}
+                    className="w-full px-4 py-3 border rounded-lg resize-none"
                   />
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* Cover Image Upload */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📷 Cover Image (Optional)
-                </label>
-                <div className="flex items-center gap-4">
-                  <label className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition-colors flex items-center gap-2">
+          {/* Footer */}
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+            <button
+              onClick={() => setShowQuickAdd(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleQuickAddSave}
+              disabled={!quickAddInstituteId || !quickAddTitle.trim() || quickAddSaving}
+              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {quickAddSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // RENDER: ADD TEXTBOOK MODAL
+  // ============================================================
+
+  const renderAddTextbookModal = () => {
+    if (!showAddTextbook) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <h2 className="text-xl font-bold">新增教材</h2>
+            <button onClick={() => setShowAddTextbook(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">教材名称 *</label>
+              <input
+                type="text"
+                value={newTextbookName}
+                onChange={(e) => setNewTextbookName(e.target.value)}
+                placeholder="例如: 延世韩国语"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">出版社</label>
+              <input
+                type="text"
+                value={newPublisher}
+                onChange={(e) => setNewPublisher(e.target.value)}
+                placeholder="例如: 延世大学出版社"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">封面图片</label>
+              <div className="flex items-center gap-4">
+                {newCoverUrl ? (
+                  <div className="relative w-24 h-32 rounded-lg overflow-hidden border">
+                    <img src={newCoverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setNewCoverUrl('')}
+                      className="absolute top-1 right-1 p-1 bg-white rounded-full shadow"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-24 h-32 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-50">
                     {coverUploading ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                     ) : (
-                      <><Upload className="w-4 h-4" /> {newCoverUrl ? 'Change Cover' : 'Upload Cover'}</>
+                      <Upload className="w-6 h-6 text-gray-400" />
                     )}
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleCoverUpload}
                       className="hidden"
+                      onChange={handleCoverUpload}
                       disabled={coverUploading}
                     />
                   </label>
-                  {newCoverUrl && (
-                    <div className="flex items-center gap-2">
-                      <img src={newCoverUrl} alt="Cover preview" className="w-12 h-16 object-cover rounded border" />
-                      <button
-                        onClick={() => setNewCoverUrl('')}
-                        className="text-red-500 hover:bg-red-50 p-1 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-
-              {/* Theme Color */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🎨 Theme Color
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={newThemeColor}
-                    onChange={(e) => setNewThemeColor(e.target.value)}
-                    className="w-10 h-10 rounded cursor-pointer border-2 border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={newThemeColor}
-                    onChange={(e) => setNewThemeColor(e.target.value)}
-                    placeholder="#1e3a8a"
-                    className="w-24 p-2 border border-gray-300 rounded-lg text-sm font-mono"
-                  />
-                  <span className="text-sm text-gray-500">Used for book spine and accents</span>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-500 pt-2 border-t border-gray-200">
-                This will create {newLevelCount} levels with {newUnitsPerLevel} units each ({newLevelCount * newUnitsPerLevel} total units)
-              </p>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddTextbook}
-                disabled={!newTextbookName.trim()}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create Textbook
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">主题颜色</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={newThemeColor}
+                  onChange={(e) => setNewThemeColor(e.target.value)}
+                  className="w-10 h-10 border rounded cursor-pointer"
+                />
+                <span className="text-sm text-gray-500">{newThemeColor}</span>
+              </div>
             </div>
           </div>
+
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+            <button
+              onClick={() => setShowAddTextbook(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleAddTextbook}
+              disabled={!newTextbookName.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              创建教材
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    );
+  };
+
+  // ============================================================
+  // RENDER: EDIT INSTITUTE MODAL
+  // ============================================================
+
+  const handleEditCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setEditCoverUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', e.target.files[0]);
+      const response = await api.uploadFile(formData);
+      setEditCoverUrl(response.url);
+    } catch (error) {
+      console.error('Cover upload failed:', error);
+      alert(`封面上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setEditCoverUploading(false);
+    }
+  };
+
+  const handleSaveInstituteEdit = async () => {
+    if (!editingInstitute || !editInstituteName.trim() || !onUpdateInstitute) return;
+    try {
+      await onUpdateInstitute(editingInstitute.id, {
+        name: editInstituteName,
+        coverUrl: editCoverUrl || undefined,
+        themeColor: editThemeColor,
+        publisher: editPublisher || undefined,
+      });
+      setShowEditInstitute(false);
+      setEditingInstitute(null);
+    } catch (error) {
+      console.error('Save institute failed:', error);
+      alert('保存失败');
+    }
+  };
+
+  const renderEditInstituteModal = () => {
+    if (!showEditInstitute || !editingInstitute) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <h2 className="text-xl font-bold">编辑教材</h2>
+            <button onClick={() => setShowEditInstitute(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">教材名称 *</label>
+              <input
+                type="text"
+                value={editInstituteName}
+                onChange={(e) => setEditInstituteName(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">出版社</label>
+              <input
+                type="text"
+                value={editPublisher}
+                onChange={(e) => setEditPublisher(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">封面图片</label>
+              <div className="flex items-center gap-4">
+                {editCoverUrl ? (
+                  <div className="relative w-24 h-32 rounded-lg overflow-hidden border">
+                    <img src={editCoverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setEditCoverUrl('')}
+                      className="absolute top-1 right-1 p-1 bg-white rounded-full shadow"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-24 h-32 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-50">
+                    {editCoverUploading ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    ) : (
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleEditCoverUpload}
+                      disabled={editCoverUploading}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">主题颜色</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={editThemeColor}
+                  onChange={(e) => setEditThemeColor(e.target.value)}
+                  className="w-10 h-10 border rounded cursor-pointer"
+                />
+                <span className="text-sm text-gray-500">{editThemeColor}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+            <button
+              onClick={() => setShowEditInstitute(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSaveInstituteEdit}
+              disabled={!editInstituteName.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              保存修改
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
+
+  return (
+    <div className="h-full flex flex-col bg-gray-100">
+      {viewMode === 'library' ? renderLibraryView() : renderWorkbenchView()}
+      {renderQuickAddModal()}
+      {renderAddTextbookModal()}
+      {renderEditInstituteModal()}
     </div>
   );
 };

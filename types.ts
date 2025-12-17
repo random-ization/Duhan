@@ -203,3 +203,66 @@ export interface LegalDocument {
   content: string;
   updatedAt: number;
 }
+
+// ==============================================
+// V2 CONTENT STRUCTURES (Multi-article, Multi-language)
+// ==============================================
+
+// Language codes for translations
+export type TranslationLanguage = 'cn' | 'en' | 'vi' | 'mn';
+
+// V2: Reading Article (multiple per unit)
+export interface ReadingArticleV2 {
+  id: string;
+  title: string;
+  contentKr: string;           // Korean original text
+  translations: Partial<Record<TranslationLanguage, string>>;
+  createdAt: number;
+}
+
+// V2: Listening Track (multiple per unit)
+export interface ListeningTrackV2 {
+  id: string;
+  title: string;
+  audioUrl: string | null;
+  audioFileName?: string;      // Original file name for display
+  scriptKr: string;            // Korean script
+  translations: Partial<Record<TranslationLanguage, string>>;
+  createdAt: number;
+}
+
+// V2: Enhanced Vocabulary with multi-language
+export interface VocabularyItemV2 {
+  id: string;
+  korean: string;
+  pos?: string;                // Part of Speech
+  translations: Partial<Record<TranslationLanguage, string>>;
+  example?: string;            // Example sentence in Korean
+  exampleTranslations?: Partial<Record<TranslationLanguage, string>>;
+}
+
+// V2: Grammar Point
+export interface GrammarPointV2 {
+  id: string;
+  pattern: string;             // e.g., "-아/어서"
+  meaning: string;             // Brief meaning
+  conjugation: string;         // How to conjugate
+  explanation: string;         // Detailed explanation
+  examples?: { korean: string; translation: string }[];
+}
+
+// V2: Unit Content Structure (replaces TextbookContent for new data)
+export interface TextbookContentV2 {
+  version: 2;
+  readings: ReadingArticleV2[];
+  listenings: ListeningTrackV2[];
+  vocabulary: VocabularyItemV2[];
+  grammar: GrammarPointV2[];
+  isPaid?: boolean;
+}
+
+// Helper type guard
+export const isTextbookContentV2 = (content: any): content is TextbookContentV2 => {
+  return content && content.version === 2;
+};
+

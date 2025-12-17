@@ -195,13 +195,18 @@ export const sendToS3 = async (key: string, body: Buffer, contentType: string) =
     'x-amz-acl': 'public-read'
   };
 
+  const endpointUrl = new URL(process.env.SPACES_ENDPOINT || 'https://nyc3.digitaloceanspaces.com');
+  // Handle endpoint like https://nyc3.digitaloceanspaces.com or https://digitaloceanspaces.com
+  // For DO Spaces, usually the region is the subdomain part of endpoint if not provided explicitly
+  const region = endpointUrl.hostname.split('.')[0] || 'us-east-1';
+
   const { signature, amzDate, signedHeaders, credentialScope } = signV4(
     'PUT',
     `/${key}`,
     '',
     headers,
     crypto.createHash('sha256').update(body).digest('hex'),
-    'us-east-1',
+    region,
     's3'
   );
 

@@ -249,6 +249,15 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
         {/* Inline number layout - for grouped questions (Q19-20, Q46, etc.) */}
         {showInlineNumber && (
           <div>
+            {/* Passage - shown first, only if not hidden (for first question in group) */}
+            {!hidePassage && question.passage && (
+              <div
+                className={`mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
+                onMouseUp={onTextSelect}
+                dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
+              />
+            )}
+
             {/* Question Text with inline number */}
             {question.question && (
               <div className="flex items-start mb-3">
