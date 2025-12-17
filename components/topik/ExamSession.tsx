@@ -237,7 +237,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
             {/* 题目区域 */}
             <div className="px-8 md:px-12 select-none">
               {exam.questions.map((question, idx) => (
-                <div key={idx} ref={el => (questionRefs.current[idx] = el)}>
+                <div key={idx} ref={el => { questionRefs.current[idx] = el; }}>
 
                   {/* Instruction Bar (每个 section 的第一题显示) */}
                   {shouldShowInstruction(idx) && (

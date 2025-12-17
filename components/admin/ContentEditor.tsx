@@ -50,7 +50,7 @@ interface ContentEditorProps {
   onSaveContext: (key: string, content: TextbookContent) => void;
   onAddInstitute: (name: string, levels?: LevelConfig[], options?: { coverUrl?: string; themeColor?: string; publisher?: string; displayLevel?: string; volume?: string }) => void | Promise<void>;
   onUpdateInstitute?: (id: string, updates: { name?: string; coverUrl?: string; themeColor?: string; publisher?: string; displayLevel?: string; volume?: string }) => Promise<void>;
-  onDeleteInstitute?: (id: string) => Promise<void>;
+  onDeleteInstitute?: (id: string) => void | Promise<void>;
 }
 
 type ViewMode = 'library' | 'workbench';

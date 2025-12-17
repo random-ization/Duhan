@@ -20,11 +20,12 @@ export interface AdminPanelProps {
   onAddInstitute: (name: string, levels?: LevelConfig[]) => void | Promise<void>;
   onDeleteInstitute: (instituteId: string) => void;
   onUpdateInstitutes: (institutes: Institute[]) => void;
+  onUpdateInstitute: (id: string, updates: { name?: string; coverUrl?: string; themeColor?: string; publisher?: string; displayLevel?: string; volume?: string }) => Promise<void>;
   textbookContexts: TextbookContextMap;
   onSaveContext: (contextKey: string, content: any) => void;
   topikExams: TopikExam[];
   onAddTopikExam: (exam: TopikExam) => void;
-  onUpdateTopikExam: (examId: string, updates: Partial<TopikExam>) => void;
+  onUpdateTopikExam: (exam: TopikExam) => void;
   onDeleteTopikExam: (examId: string) => void;
   legalDocuments?: LegalDocument[];
   onSaveLegalDocument?: (doc: LegalDocument) => void;

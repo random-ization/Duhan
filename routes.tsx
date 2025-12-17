@@ -40,7 +40,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         <Route path="/" element={<Landing language={language} />} />
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<AuthPage />} />
-        <Route path="/courses" element={<CoursesOverview language={language} />} />
+        <Route path="/courses" element={<CoursesOverview />} />
         <Route
           path="/terms"
           element={<LegalDocumentPage language={language} documentType="terms" />}
@@ -57,7 +57,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         {/* === 受保护路由 (需要登录) === */}
         <Route element={<ProtectedRoute />}>
           <Route path="/home" element={<HomePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage language={language} />} />
           <Route
             path="/dashboard"
             element={

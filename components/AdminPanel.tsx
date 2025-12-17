@@ -21,6 +21,7 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
     onAddInstitute,
     onDeleteInstitute, // 确保这个 prop 传递给了 ContentEditor
     onUpdateInstitutes, // 确保这个 prop 传递给了 ContentEditor
+    onUpdateInstitute,
     textbookContexts,
     onSaveContext,
     topikExams,
@@ -55,8 +56,8 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center transition-colors ${isActive
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-500 hover:bg-white hover:text-indigo-600'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-500 hover:bg-white hover:text-indigo-600'
                 }`}
             >
               <Icon className={`w-4 h-4 mr-3 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -83,6 +84,7 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
           <ContentEditor
             institutes={institutes}
             onAddInstitute={onAddInstitute}
+            onUpdateInstitute={onUpdateInstitute}
             onDeleteInstitute={onDeleteInstitute}
             // 注意：如果 ContentEditor 需要 onUpdateInstitutes，请确保在 types 中定义并传递
             // 目前 ContentEditor 主要使用 onAdd/onDelete 和选择
@@ -94,10 +96,10 @@ const AdminPanel: React.FC<AdminPanelProps> = props => {
 
         {activeTab === 'topik' && (
           <ExamEditor
-            exams={topikExams}
-            onAddExam={onAddTopikExam}
-            onUpdateExam={onUpdateTopikExam}
-            onDeleteExam={onDeleteTopikExam}
+            topikExams={topikExams}
+            onAddTopikExam={onAddTopikExam}
+            onUpdateTopikExam={onUpdateTopikExam}
+            onDeleteTopikExam={onDeleteTopikExam}
             language={language}
           />
         )}

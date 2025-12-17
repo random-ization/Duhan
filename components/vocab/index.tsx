@@ -298,7 +298,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       {/* Content */}
       {isSessionComplete ? (
         <SessionSummary
-          stats={sessionStats}
+          sessionStats={sessionStats}
           language={language}
           onNewSession={handleNewSession}
           onReviewIncorrect={handleReviewIncorrect}

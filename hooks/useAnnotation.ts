@@ -8,8 +8,8 @@ interface UseAnnotationReturn {
     showAnnotationMenu: boolean;
     setShowAnnotationMenu: (show: boolean) => void;
     menuPosition: { top: number; left: number } | null;
-    selectedColor: string;
-    setSelectedColor: (color: string) => void;
+    selectedColor: 'yellow' | 'green' | 'blue' | 'pink';
+    setSelectedColor: (color: 'yellow' | 'green' | 'blue' | 'pink') => void;
     handleTextSelection: (e?: React.MouseEvent) => void;
     saveAnnotation: (colorOverride?: string, noteOverride?: string, shouldCloseMenu?: boolean) => string | null;
     deleteAnnotation: () => void;
@@ -31,7 +31,7 @@ export const useAnnotation = (
 
     const [showAnnotationMenu, setShowAnnotationMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-    const [selectedColor, setSelectedColor] = useState<string>('yellow');
+    const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
 
     const currentAnnotations = annotations.filter(a => a.contextKey === contextKey);
 
@@ -84,7 +84,7 @@ export const useAnnotation = (
         );
 
         if (exactMatch) {
-            setSelectedColor(exactMatch.color || 'yellow');
+            setSelectedColor((exactMatch.color as 'yellow' | 'green' | 'blue' | 'pink') || 'yellow');
         } else {
             setSelectedColor('yellow');
         }
@@ -101,7 +101,7 @@ export const useAnnotation = (
                 Math.abs((a.endOffset || 0) - currentSelectionRange.end) < 2
         );
 
-        const finalColor = colorOverride !== undefined ? colorOverride : selectedColor;
+        const finalColor = (colorOverride !== undefined ? colorOverride : selectedColor) as 'yellow' | 'green' | 'blue' | 'pink' | null;
         const finalNote = noteOverride !== undefined ? noteOverride : (exactMatch?.note || '');
 
         const newAnnotation: Annotation = {
@@ -154,8 +154,6 @@ export const useAnnotation = (
         showAnnotationMenu,
         setShowAnnotationMenu,
         menuPosition,
-        // noteInput, // Removed: Managed by sidebar now
-        // setNoteInput, // Removed
         selectedColor,
         setSelectedColor,
         handleTextSelection,

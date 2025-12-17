@@ -17,28 +17,13 @@ import ExamEditor from './ExamEditor';
 import LegalDocumentEditor from './LegalDocumentEditor';
 import { LayoutDashboard, Users, BookOpen, FileText, Scale } from 'lucide-react';
 
-interface AdminPanelProps {
-  institutes: Institute[];
-  onUpdateInstitutes: (institutes: Institute[]) => void;
-  onAddInstitute: (name: string, levels?: LevelConfig[]) => void | Promise<void>;
-  onDeleteInstitute: (id: string) => void;
-  textbookContexts: TextbookContextMap;
-  onSaveContext: (key: string, content: TextbookContent) => void;
-  language: Language;
-  users: User[];
-  onUpdateUser: (id: string, updates: Partial<User>) => void;
-  onDeleteUser: (id: string) => void;
-  stats: AdminStats;
-  topikExams: TopikExam[];
-  onUpdateTopikExam: (exam: TopikExam) => void;
-  onAddTopikExam: (exam: TopikExam) => void;
-  onDeleteTopikExam: (id: string) => void;
-}
+import { AdminPanelProps } from './types';
 
 const AdminPanel: React.FC<AdminPanelProps> = ({
   institutes,
   onUpdateInstitutes,
   onAddInstitute,
+  onUpdateInstitute,
   onDeleteInstitute,
   textbookContexts,
   onSaveContext,
@@ -140,6 +125,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             language={language}
             onSaveContext={onSaveContext}
             onAddInstitute={onAddInstitute}
+            onUpdateInstitute={onUpdateInstitute}
             onDeleteInstitute={onDeleteInstitute}
           />
         )}

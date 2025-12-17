@@ -54,12 +54,15 @@ export interface User {
   tier: UserTier;
   role: UserRole;
   joinDate: number;
+  createdAt?: number; // Alias for joinDate
   lastActive: number;
   savedWords: VocabularyItem[]; // Changed to reuse VocabularyItem for simplicity
   mistakes: VocabularyItem[]; // New: For tracking mistakes
   annotations: Annotation[];
   statistics?: UserStatistics;
   examHistory: ExamAttempt[]; // New: Track exam results
+  wordsLearned?: number; // Total words learned
+  examsTaken?: number; // Total exams taken
   // Learning progress tracking
   lastInstitute?: string;
   lastLevel?: number;
@@ -151,9 +154,12 @@ export type TextbookContextMap = Record<string, TextbookContent>;
 export interface AdminStats {
   totalUsers: number;
   activeUsers: number;
+  activeLearners: number;
   premiumUsers: number;
   totalRevenue: number;
   contentCoverage: number; // percentage of units with content
+  totalTextbooks: number;
+  totalTopikExams: number;
 }
 
 // --- TOPIK TYPES ---

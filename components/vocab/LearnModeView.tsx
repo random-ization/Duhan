@@ -164,9 +164,9 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                 )}
               </div>
 
-              {currentItem.partOfSpeech && (
+              {currentItem.pos && (
                 <div className="inline-block px-3 py-1 bg-white/70 text-slate-600 text-xs font-medium rounded-full">
-                  {currentItem.partOfSpeech}
+                  {currentItem.pos}
                 </div>
               )}
             </div>
@@ -188,12 +188,12 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                         onClick={() => !showFeedback && setSelectedAnswer(choice)}
                         disabled={showFeedback}
                         className={`p-4 rounded-xl text-left font-medium transition-all ${showCorrect
-                            ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700'
-                            : showWrong
-                              ? 'bg-red-100 border-2 border-red-500 text-red-700'
-                              : isSelected
-                                ? 'bg-white border-2 border-indigo-500 text-indigo-700'
-                                : 'bg-white border border-slate-300 hover:border-indigo-300 text-slate-700'
+                          ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700'
+                          : showWrong
+                            ? 'bg-red-100 border-2 border-red-500 text-red-700'
+                            : isSelected
+                              ? 'bg-white border-2 border-indigo-500 text-indigo-700'
+                              : 'bg-white border border-slate-300 hover:border-indigo-300 text-slate-700'
                           } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
                       >
                         <div className="flex items-center justify-between">
@@ -216,10 +216,10 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                     disabled={showFeedback}
                     placeholder={labels.typeAnswer || 'Type your answer...'}
                     className={`w-full p-4 text-lg rounded-xl border-2 transition-all ${showFeedback
-                        ? isCorrect
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-red-500 bg-red-50'
-                        : 'border-slate-300 focus:border-indigo-500'
+                      ? isCorrect
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-red-500 bg-red-50'
+                      : 'border-slate-300 focus:border-indigo-500'
                       } focus:outline-none`}
                     autoFocus
                   />
@@ -253,8 +253,8 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                 <button
                   onClick={handleNext}
                   className={`px-8 py-3 font-bold rounded-xl transition-all flex items-center gap-2 ${isCorrect
-                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                     }`}
                 >
                   {learnIndex < learnQueue.length - 1 ? (

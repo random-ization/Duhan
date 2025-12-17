@@ -68,6 +68,7 @@ const AdminPage: React.FC = () => {
   // 计算实际的统计数据（可选优化）
   const stats = {
     totalUsers: users.length,
+    activeUsers: 1,
     activeLearners: 1,
     totalTextbooks: institutes.length,
     totalTopikExams: topikExams.length,
@@ -79,6 +80,7 @@ const AdminPage: React.FC = () => {
   return (
     <AdminPanel
       institutes={institutes}
+      onUpdateInstitutes={() => { }}
       onUpdateInstitute={updateInstitute}
       onAddInstitute={addInstitute}
       onDeleteInstitute={deleteInstitute}
