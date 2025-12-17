@@ -122,7 +122,9 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       [showCorrect, correctAnswer, userAnswer]
     );
 
-    const hasLongOptions = question.options.some(opt => opt.length > 25);
+    // 2-column only if ALL options are very short (single words/short phrases)
+    // Sentence-like options should use single column
+    const hasLongOptions = question.options.some(opt => opt.length > 8);
 
     return (
       <div className="break-inside-avoid">
