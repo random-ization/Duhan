@@ -35,7 +35,8 @@ const TOPIK_READING_STRUCTURE: ExamSectionStructure[] = [
     { range: [39, 41], instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", hasBox: true },
     { range: [42, 43], instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
     { range: [44, 45], instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
-    { range: [46, 47], instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
+    { range: [46, 46], instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true, hasBox: true },
+    { range: [47, 47], instruction: "", grouped: true },
     { range: [48, 50], instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
 ];
 
