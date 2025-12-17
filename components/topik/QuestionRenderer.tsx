@@ -19,19 +19,20 @@ interface QuestionRendererProps {
   showInlineNumber?: boolean; // Show number inline with question text
 }
 
-const FONT_SERIF = "font-serif";
+// Korean serif font for authentic TOPIK paper look
+const FONT_SERIF = "font-['Batang','KoPubBatang','Times_New_Roman',serif]";
 const FONT_SANS = "font-sans";
+
+// Unicode circle numbers for TOPIK-style options
+const CIRCLE_NUMBERS = ['①', '②', '③', '④'];
 
 const CircleNumber = ({ num, isSelected }: { num: number; isSelected: boolean }) => {
   return (
-    <div
-      className={`
-        inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full border border-black text-xs md:text-sm font-serif mr-2 leading-none flex-shrink-0 transition-colors
-        ${isSelected ? 'bg-black text-white' : 'bg-transparent text-black'}
-      `}
+    <span
+      className={`text-lg mr-2 flex-shrink-0 ${FONT_SERIF} ${isSelected ? 'font-bold' : ''}`}
     >
-      {num}
-    </div>
+      {CIRCLE_NUMBERS[num - 1] || num}
+    </span>
   );
 };
 
