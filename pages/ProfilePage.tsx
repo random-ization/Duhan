@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Language, SubscriptionType } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
@@ -9,7 +10,7 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import {
   User as UserIcon, Camera, Lock, BarChart3, Calendar,
-  Trophy, TrendingUp, Activity, CheckCircle, XCircle, Crown, Clock
+  Trophy, TrendingUp, Activity, CheckCircle, XCircle, Crown, Clock, Mail
 } from 'lucide-react';
 
 interface ProfileProps {
@@ -104,8 +105,8 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     <button
       onClick={() => setActiveTab(id)}
       className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all ${activeTab === id
-          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-          : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent hover:border-slate-200'
+        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+        : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent hover:border-slate-200'
         }`}
     >
       <Icon className="w-4 h-4" />
@@ -218,6 +219,32 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 </Button>
               </div>
             </form>
+
+            {/* Forgot Password Section */}
+            <div className="border-t border-slate-100 pt-6 mt-6">
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-indigo-100 rounded-lg">
+                    <Mail size={20} className="text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-slate-800 mb-1">{labels.forgotPassword || 'Forgot your password?'}</h4>
+                    <p className="text-sm text-slate-500 mb-3">
+                      {labels.forgotPasswordProfileDescription || "If you've forgotten your current password, you can reset it via email verification."}
+                    </p>
+                    <Link
+                      to="/forgot-password"
+                      className="inline-flex items-center gap-2 text-indigo-600 font-semibold text-sm hover:text-indigo-700 transition-colors"
+                    >
+                      {labels.resetPasswordViaEmail || 'Reset password via email'}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

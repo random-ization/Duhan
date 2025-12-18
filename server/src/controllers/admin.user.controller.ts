@@ -80,7 +80,15 @@ export const deleteUser = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    await prisma.user.delete({ where: { id } });
+    // Use transaction to delete all related records first, then the user
+    await prisma.$transaction([
+      prisma.savedWord.deleteMany({ where: { userId: id } }),
+      prisma.mistake.deleteMany({ where: { userId: id } }),
+      prisma.annotation.deleteMany({ where: { userId: id } }),
+      prisma.examAttempt.deleteMany({ where: { userId: id } }),
+      prisma.learningActivity.deleteMany({ where: { userId: id } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
     res.json({ success: true });
   } catch (err) {
     console.error('deleteUser error', err);

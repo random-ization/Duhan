@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { api } from '../services/api';
-import { AlertCircle, ArrowRight, Loader2, Mail, Lock, User as UserIcon, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, Loader2, Mail, Lock, User as UserIcon, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -21,12 +21,55 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language, initialMode = 'login' })
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
+  // Resend verification email state
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
   const labels = getLabels(language);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      const timer = setTimeout(() => setCooldownSeconds(cooldownSeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownSeconds]);
+
+  const handleResendVerification = async () => {
+    if (cooldownSeconds > 0 || resendLoading) return;
+
+    setResendLoading(true);
+    setResendSuccess(false);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setResendSuccess(true);
+        setCooldownSeconds(120); // 2 minutes cooldown
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to resend verification email');
+      }
+    } catch (err) {
+      setError(language === 'zh' ? '网络错误，请稍后重试' : 'Network error. Please try again.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setShowResendVerification(false);
+    setResendSuccess(false);
 
     try {
       if (isRegistering) {
@@ -52,6 +95,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language, initialMode = 'login' })
       // Handle email not verified error
       if (err.code === 'EMAIL_NOT_VERIFIED') {
         setError(language === 'zh' ? '请先验证您的邮箱后再登录' : 'Please verify your email before logging in.');
+        setShowResendVerification(true);
       } else {
         setError(err.message || 'Authentication failed');
       }
@@ -86,6 +130,40 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language, initialMode = 'login' })
                 {email}
               </p>
             </div>
+
+            {/* Resend verification email section */}
+            {resendSuccess && (
+              <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl">
+                <p className="text-sm text-green-300 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {language === 'zh' ? '验证邮件已重新发送！' : 'Verification email resent!'}
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleResendVerification}
+              disabled={cooldownSeconds > 0 || resendLoading}
+              className="w-full mb-3 flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-600/50 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-all"
+            >
+              {resendLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : cooldownSeconds > 0 ? (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  {language === 'zh'
+                    ? `${Math.floor(cooldownSeconds / 60)}:${(cooldownSeconds % 60).toString().padStart(2, '0')} 后可重发`
+                    : `Resend in ${Math.floor(cooldownSeconds / 60)}:${(cooldownSeconds % 60).toString().padStart(2, '0')}`
+                  }
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4" />
+                  {language === 'zh' ? '重新发送验证邮件' : 'Resend Verification Email'}
+                </>
+              )}
+            </button>
+
             <button
               onClick={() => navigate('/login')}
               className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
@@ -143,9 +221,47 @@ const Auth: React.FC<AuthProps> = ({ onLogin, language, initialMode = 'login' })
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-100 rounded-xl text-sm flex items-start animate-in slide-in-from-top-2">
-              <AlertCircle className="w-5 h-5 mr-3 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-100 rounded-xl text-sm animate-in slide-in-from-top-2">
+              <div className="flex items-start">
+                <AlertCircle className="w-5 h-5 mr-3 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+
+              {/* Resend Verification Email Button */}
+              {showResendVerification && (
+                <div className="mt-4 pt-4 border-t border-red-500/30">
+                  {resendSuccess ? (
+                    <div className="flex items-center gap-2 text-green-300">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{language === 'zh' ? '验证邮件已发送，请查收！' : 'Verification email sent!'}</span>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={cooldownSeconds > 0 || resendLoading}
+                    className="mt-2 w-full flex items-center justify-center gap-2 bg-indigo-600/50 hover:bg-indigo-600 disabled:bg-slate-600/50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl transition-all"
+                  >
+                    {resendLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : cooldownSeconds > 0 ? (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        {language === 'zh'
+                          ? `${Math.floor(cooldownSeconds / 60)}:${(cooldownSeconds % 60).toString().padStart(2, '0')} 后可重发`
+                          : `Resend in ${Math.floor(cooldownSeconds / 60)}:${(cooldownSeconds % 60).toString().padStart(2, '0')}`
+                        }
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4" />
+                        {language === 'zh' ? '重新发送验证邮件' : 'Resend Verification Email'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

@@ -12,6 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 // Constants
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RESET_TOKEN_EXPIRY_HOURS = 1;
+const VERIFICATION_TOKEN_EXPIRY_MINUTES = 10;
 
 // Helper to generate random token
 const generateToken = (): string => crypto.randomBytes(32).toString('hex');
@@ -141,6 +142,7 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = generateToken();
+    const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MINUTES * 60 * 1000);
 
     await prisma.user.create({
       data: {
@@ -151,6 +153,7 @@ export const register = async (req: Request, res: Response) => {
         tier: 'FREE',
         isVerified: false,
         verificationToken,
+        verificationTokenExpiry,
       },
     });
 
@@ -202,6 +205,61 @@ export const verifyEmail = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Verify Email Error:', error);
     res.status(500).json({ error: 'Email verification failed' });
+  }
+};
+
+export const resendVerificationEmail = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Don't reveal if user exists or not (security best practice)
+    if (!user) {
+      return res.json({ message: 'If an account with that email exists and is not verified, we sent a verification link.' });
+    }
+
+    // If already verified, no need to resend
+    if (user.isVerified) {
+      return res.json({ message: 'If an account with that email exists and is not verified, we sent a verification link.' });
+    }
+
+    let tokenToSend = user.verificationToken;
+
+    // Check if existing token is still valid (within 10 minutes)
+    const tokenStillValid = user.verificationTokenExpiry && user.verificationTokenExpiry > new Date();
+
+    if (!tokenStillValid || !tokenToSend) {
+      // Token expired or doesn't exist, generate new one
+      tokenToSend = generateToken();
+      const verificationTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MINUTES * 60 * 1000);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          verificationToken: tokenToSend,
+          verificationTokenExpiry,
+        },
+      });
+    }
+    // If token is still valid, we reuse the same token (don't update database)
+
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, tokenToSend);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      return res.status(500).json({ error: 'Failed to send verification email. Please try again later.' });
+    }
+
+    res.json({ message: 'If an account with that email exists and is not verified, we sent a verification link.' });
+  } catch (error) {
+    console.error('Resend Verification Email Error:', error);
+    res.status(500).json({ error: 'Failed to resend verification email' });
   }
 };
 

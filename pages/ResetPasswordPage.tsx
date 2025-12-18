@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const ResetPasswordPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { language } = useAuth();
+    const { language, logout } = useAuth();
     const labels = getLabels(language);
 
     const token = searchParams.get('token');
@@ -46,6 +46,8 @@ const ResetPasswordPage: React.FC = () => {
             const data = await response.json();
 
             if (response.ok) {
+                // Force logout to clear any existing session
+                logout();
                 setStatus('success');
             } else {
                 setError(data.error || 'Failed to reset password. Please try again.');
@@ -181,7 +183,7 @@ const ResetPasswordPage: React.FC = () => {
                                 {language === 'zh' ? '密码重置成功！' : 'Password Reset!'}
                             </h1>
                             <p className="text-indigo-200 text-sm mb-8">
-                                {language === 'zh' ? '您现在可以使用新密码登录了' : 'You can now log in with your new password'}
+                                {language === 'zh' ? '您已退出登录，请使用新密码重新登录' : 'You have been logged out. Please log in with your new password.'}
                             </p>
                             <button
                                 onClick={() => navigate('/login')}

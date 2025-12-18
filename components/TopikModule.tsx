@@ -193,7 +193,49 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     return groups;
   }, [currentExam, currentQuestions]);
 
-  // --- Timer ---
+  // --- Timer with localStorage persistence ---
+  const TIMER_STORAGE_KEY = 'topik_exam_timer';
+  const ANSWERS_STORAGE_KEY = 'topik_exam_answers';
+  const EXAM_STORAGE_KEY = 'topik_current_exam';
+
+  // Restore exam state on mount
+  useEffect(() => {
+    const savedTimer = localStorage.getItem(TIMER_STORAGE_KEY);
+    const savedExamId = localStorage.getItem(EXAM_STORAGE_KEY);
+    const savedAnswers = localStorage.getItem(ANSWERS_STORAGE_KEY);
+
+    if (savedTimer && savedExamId) {
+      const endTime = parseInt(savedTimer, 10);
+      const now = Date.now();
+      const remaining = Math.floor((endTime - now) / 1000);
+
+      if (remaining > 0) {
+        // Find the exam
+        const exam = exams.find(e => e.id === savedExamId);
+        if (exam) {
+          setCurrentExam(exam);
+          setTimeLeft(remaining);
+          setTimerActive(true);
+          setView('EXAM');
+
+          if (savedAnswers) {
+            try {
+              setUserAnswers(JSON.parse(savedAnswers));
+            } catch (e) {
+              console.error('Failed to parse saved answers:', e);
+            }
+          }
+        }
+      } else {
+        // Timer expired while away, clear storage
+        localStorage.removeItem(TIMER_STORAGE_KEY);
+        localStorage.removeItem(EXAM_STORAGE_KEY);
+        localStorage.removeItem(ANSWERS_STORAGE_KEY);
+      }
+    }
+  }, [exams]);
+
+  // Timer countdown effect
   useEffect(() => {
     let interval: number;
     if (timerActive && timeLeft > 0) {
@@ -204,6 +246,20 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
     return () => clearInterval(interval);
   }, [timerActive, timeLeft]);
 
+  // Save answers to localStorage when they change
+  useEffect(() => {
+    if (timerActive && Object.keys(userAnswers).length > 0) {
+      localStorage.setItem(ANSWERS_STORAGE_KEY, JSON.stringify(userAnswers));
+    }
+  }, [userAnswers, timerActive]);
+
+  // Clear exam state from localStorage
+  const clearExamStorage = () => {
+    localStorage.removeItem(TIMER_STORAGE_KEY);
+    localStorage.removeItem(EXAM_STORAGE_KEY);
+    localStorage.removeItem(ANSWERS_STORAGE_KEY);
+  };
+
   // --- Actions ---
   const startExam = (exam: TopikExam) => {
     setCurrentExam(exam);
@@ -213,12 +269,20 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
   };
 
   const beginTest = () => {
+    if (!currentExam) return;
+
+    // Calculate end time and save to localStorage
+    const endTime = Date.now() + currentExam.timeLimit * 60 * 1000;
+    localStorage.setItem(TIMER_STORAGE_KEY, endTime.toString());
+    localStorage.setItem(EXAM_STORAGE_KEY, currentExam.id);
+
     setTimerActive(true);
     setView('EXAM');
   };
 
   const submitExam = () => {
     setTimerActive(false);
+    clearExamStorage(); // Clear persisted timer data
     if (!currentExam) return;
     let score = 0, total = 0;
     currentQuestions.forEach(q => {

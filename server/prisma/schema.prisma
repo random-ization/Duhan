@@ -24,8 +24,9 @@ model User {
   subscriptionExpiry DateTime? // Expiry date for annual subscriptions
   
   // Email verification
-  isVerified         Boolean   @default(false)
-  verificationToken  String?   @unique
+  isVerified              Boolean   @default(false)
+  verificationToken       String?   @unique
+  verificationTokenExpiry DateTime?
   
   // Password reset
   resetToken         String?   @unique
