@@ -435,11 +435,16 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
             </div>
           )}
 
-          {/* The Box */}
-          <div className="border border-slate-800 p-5 relative mt-4 mx-1">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-3 text-sm font-bold text-slate-900 border border-slate-200">
-              &lt;보 기&gt;
-            </span>
+          {/* The Box with <보 기> header */}
+          <div className="border border-slate-800 p-5 pt-8 relative mt-6 mx-1">
+            {/* Header with lines on both sides */}
+            <div className="absolute -top-[1px] left-0 right-0 flex items-center justify-center">
+              <div className="flex-1 h-[1px] bg-slate-800"></div>
+              <span className="px-4 text-sm font-medium text-slate-800 bg-white tracking-[0.3em]">
+                &lt;보 기&gt;
+              </span>
+              <div className="flex-1 h-[1px] bg-slate-800"></div>
+            </div>
             <div
               className={`${FONT_SERIF} text-[16px] leading-[1.8] text-slate-800 whitespace-pre-wrap text-justify select-text`}
               onMouseUp={handleTextSelection}
