@@ -182,7 +182,10 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     let totalScore = 0;
     let correctCount = 0;
 
-    currentExam.questions.forEach((q, idx) => {
+    // Safety check: ensure questions array exists
+    const questions = currentExam.questions || [];
+
+    questions.forEach((q, idx) => {
       const questionScore = q.score || 2; // Default 2 points per question
       totalScore += questionScore;
       if (userAnswers[idx] === q.correctAnswer) {
@@ -195,7 +198,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       score,
       totalScore,
       correctCount,
-      totalQuestions: currentExam.questions.length,
+      totalQuestions: questions.length,
     });
 
     // Save to history

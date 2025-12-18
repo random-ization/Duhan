@@ -286,11 +286,12 @@ const createUploadMiddleware = (folder: string, type: 'avatar' | 'media', fieldN
         console.log('[storage] Upload successful:', (req.file as any).location);
         next();
       } catch (e: unknown) {
-        console.error('[storage] Upload failed:', e.message || e);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error('[storage] Upload failed:', message);
         console.error('[storage] Full error:', e);
         return res.status(500).json({
           error: 'Storage upload failed',
-          details: e.message || 'Unknown error'
+          details: message
         });
       }
     });

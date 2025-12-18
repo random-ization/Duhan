@@ -269,7 +269,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const stats = useMemo(() => {
       let correct = 0;
       let wrong = 0;
-      exam.questions.forEach((q, idx) => {
+      // Safety check: ensure questions array exists
+      const questions = exam.questions || [];
+      questions.forEach((q, idx) => {
         const userAnswer = userAnswers[idx];
         // 只有当用户作答且答对时才算正确
         if (userAnswer !== undefined && userAnswer === q.correctAnswer) {
@@ -636,7 +638,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             </div>
 
             {/* Questions (copied from ExamSession) */}
-            <div className="px-8 md:px-12 select-none">
+            <div className="px-8 md:px-12">
               {exam.questions.map((question, idx) => (
                 <div key={idx} ref={el => { questionRefs.current[idx] = el; }}>
 
