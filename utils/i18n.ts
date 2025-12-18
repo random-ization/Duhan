@@ -22,9 +22,28 @@ export const translations: Record<Language, TranslationObject> = {
   mn: mnTranslations,
 };
 
+// Helper to deep merge objects
+const deepMerge = (target: any, source: any): any => {
+  const result = { ...target };
+  for (const key in source) {
+    if (source[key] instanceof Object && key in target) {
+      Object.assign(source[key], deepMerge(target[key], source[key]));
+    }
+  }
+  Object.assign(result || {}, source);
+  return result;
+}
+
 export const getLabels = (language: Language): Labels => {
-  return translations[language] || translations.en;
+  const target = translations[language];
+  const basis = translations.en;
+
+  if (language === 'en') return basis;
+
+  // Simple shallow merge approach to ensure missing keys fall back to English
+  // For deep objects (like tooltips or instructions), we might want a deeper merge if needed.
+  // Currently most keys are top-level strings.
+  return { ...basis, ...target };
 };
 
 export default translations;
-

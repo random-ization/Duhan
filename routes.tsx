@@ -31,13 +31,13 @@ interface AppRoutesProps {
 }
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { language } = useAuth();
+  const { language, setLanguage } = useAuth();
 
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* === 公开路由 (无需登录) === */}
-        <Route path="/" element={<Landing language={language} />} />
+        <Route path="/" element={<Landing language={language} onLanguageChange={setLanguage} />} />
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<AuthPage />} />
         <Route path="/courses" element={<CoursesOverview />} />

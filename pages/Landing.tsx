@@ -5,13 +5,16 @@ import {
     CheckCircle2, Globe, PlayCircle, Star, Users, Zap
 } from 'lucide-react';
 import { Language } from '../types';
+import { getLabels } from '../utils/i18n';
 
 interface LandingProps {
     language: Language;
+    onLanguageChange: (lang: Language) => void;
 }
 
-const Landing: React.FC<LandingProps> = ({ language }) => {
+const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
     const navigate = useNavigate();
+    const labels = getLabels(language);
 
     // 滚动显现动画 Hook
     const useScrollReveal = () => {
@@ -40,13 +43,37 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center gap-2">
-                            <img src="/logo.jpg" alt="读韩" className="w-8 h-8 rounded-lg shadow-lg" />
-                            <span className="font-bold text-xl text-slate-900 tracking-tight">读韩</span>
+                            <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-lg" />
+                            <span className="font-bold text-xl text-slate-900 tracking-tight">{labels.appName}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                            <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">登录</button>
+                            {/* Language Selector */}
+                            <div className="relative group">
+                                <button className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors p-2">
+                                    <Globe className="w-4 h-4" />
+                                    <span>{language === 'en' ? 'EN' : language === 'zh' ? '中文' : language === 'vi' ? 'VN' : 'MN'}</span>
+                                </button>
+                                <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden hidden group-hover:block transition-all z-50">
+                                    {[
+                                        { val: 'en', label: 'English' },
+                                        { val: 'zh', label: '中文' },
+                                        { val: 'vi', label: 'Tiếng Việt' },
+                                        { val: 'mn', label: 'Монгол' }
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.val}
+                                            onClick={() => onLanguageChange(opt.val as Language)}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 ${language === opt.val ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">{labels.login}</button>
                             <button onClick={() => navigate('/register')} className="text-sm font-bold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-all hover:shadow-lg transform hover:-translate-y-0.5">
-                                开始学习
+                                {labels.startLearning || 'Start Learning'}
                             </button>
                         </div>
                     </div>
@@ -68,19 +95,18 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                         </span>
-                        <span className="text-sm font-medium text-indigo-900">延世·西江·首尔大 教材库同步更新中</span>
+                        <span className="text-sm font-medium text-indigo-900">{labels.landing.heroBadge}</span>
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 leading-[1.1] animate-fade-in-up animation-delay-100">
-                        把韩国名校语学院<br />
+                        {labels.landing.heroTitle1}<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">
-                            装进口袋里
+                            {labels.landing.heroTitle2}
                         </span>
                     </h1>
 
                     <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up animation-delay-200">
-                        无论你是正在备战留学的自学者，还是需要课后巩固的在校生。<br className="hidden md:block" />
-                        <b>读韩 (DuHan)</b> 助你无缝衔接语学院课程，轻松应对全韩语教学环境。
+                        {labels.landing.heroDesc}
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
@@ -88,7 +114,7 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                             onClick={() => navigate('/register')}
                             className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-1 flex items-center justify-center gap-2"
                         >
-                            免费试学教材
+                            {labels.landing.startTrial}
                             <ArrowRight className="w-5 h-5" />
                         </button>
                         <button
@@ -96,16 +122,16 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                             className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
                         >
                             <PlayCircle className="w-5 h-5 text-indigo-500" />
-                            了解课程体系
+                            {labels.landing.viewCourses}
                         </button>
                     </div>
 
                     {/* Social Proof / Stats */}
                     <div className="mt-16 pt-8 border-t border-slate-200/60 flex flex-wrap justify-center gap-8 md:gap-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
                         {[
-                            { label: '名校教材收录', value: '20+' },
-                            { label: 'TOPIK 6级通过率', value: 'High' },
-                            { label: '语学院学员推荐', value: '98%' },
+                            { label: labels.landing.statTextbooks, value: '20+' },
+                            { label: labels.landing.statPassRate, value: 'High' },
+                            { label: labels.landing.statRecommend, value: '98%' },
                         ].map((stat, i) => (
                             <div key={i} className="flex flex-col items-center">
                                 <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
@@ -143,8 +169,8 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
             <section className="py-24 bg-white relative">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
-                        <h2 className="text-base font-bold text-indigo-600 uppercase tracking-wide mb-2">学习助力</h2>
-                        <p className="text-3xl md:text-4xl font-bold text-slate-900">不仅是教材，更是你的智能助教</p>
+                        <h2 className="text-base font-bold text-indigo-600 uppercase tracking-wide mb-2">{labels.landing.featureEyebrow}</h2>
+                        <p className="text-3xl md:text-4xl font-bold text-slate-900">{labels.landing.featureTitle}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -154,9 +180,9 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-6 group-hover:scale-110 transition-transform duration-300">
                                     <BookOpen className="w-6 h-6 text-blue-600" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-900 mb-3">名校语学院同步课程</h3>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-3">{labels.landing.card1Title}</h3>
                                 <p className="text-slate-500 max-w-md">
-                                    从延世大学的严谨语法体系，到西江大学的口语强化训练。我们数字化了顶级语学院的核心教材，让您即使不在韩国，也能紧跟课堂进度，体验最正统的韩语教育。
+                                    {labels.landing.card1Desc}
                                 </p>
                             </div>
                             {/* Abstract UI Mockup */}
@@ -177,16 +203,16 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-6">
                                     <GraduationCap className="w-6 h-6 text-indigo-300" />
                                 </div>
-                                <h3 className="text-2xl font-bold mb-3">TOPIK 考级神助攻</h3>
-                                <p className="text-slate-400 mb-8">语学院的尽头是 TOPIK。我们提供历年真题模拟与智能错题分析，助你轻松拿下 6 级，申请名校奖学金。</p>
+                                <h3 className="text-2xl font-bold mb-3">{labels.landing.card2Title}</h3>
+                                <p className="text-slate-400 mb-8">{labels.landing.card2Desc}</p>
 
                                 <div className="mt-auto space-y-3">
-                                    {['全真模拟考场', '自动评分系统', '名校奖学金标准', '历年真题库'].map((item, i) => (
+                                    {Array.isArray(labels.landing.card2List) ? labels.landing.card2List.map((item: string, i: number) => (
                                         <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl backdrop-blur-sm border border-white/5">
                                             <CheckCircle2 className="w-5 h-5 text-green-400" />
                                             <span className="text-sm font-medium">{item}</span>
                                         </div>
-                                    ))}
+                                    )) : null}
                                 </div>
                             </div>
                         </div>
@@ -196,9 +222,9 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                             <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform">
                                 <Headphones className="w-6 h-6 text-violet-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">原声听力磨耳朵</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">{labels.landing.card3Title}</h3>
                             <p className="text-sm text-slate-500">
-                                语学院课堂原声重现，支持逐句精听与倍速播放，提前适应全韩语教学环境。
+                                {labels.landing.card3Desc}
                             </p>
                         </div>
 
@@ -207,9 +233,9 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                             <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform">
                                 <Brain className="w-6 h-6 text-emerald-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">自学进度管家</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">{labels.landing.card4Title}</h3>
                             <p className="text-sm text-slate-500">
-                                自动记录学习轨迹，科学规划复习。无论是自学党还是留学生，都能高效管理进度。
+                                {labels.landing.card4Desc}
                             </p>
                         </div>
                     </div>
@@ -221,12 +247,12 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row gap-12 items-center">
                         <div className="w-full md:w-1/2 opacity-0 translate-x-[-20px] reveal-on-scroll duration-700">
-                            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">三步开启学霸模式</h2>
+                            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">{labels.landing.stepTitle}</h2>
                             <div className="space-y-8">
                                 {[
-                                    { title: '选择目标教材', desc: '根据你所在的语学院或自学目标，选择延世、西江等对应教材。', icon: Globe },
-                                    { title: '同步跟读与练习', desc: '课前预习单词，课后利用 AI 辅助巩固语法与听力。', icon: Zap },
-                                    { title: '无缝对接韩国课堂', desc: '告别听不懂、跟不上的困扰，自信参与课堂互动。', icon: Star },
+                                    { title: labels.landing.step1Title, desc: labels.landing.step1Desc, icon: Globe },
+                                    { title: labels.landing.step2Title, desc: labels.landing.step2Desc, icon: Zap },
+                                    { title: labels.landing.step3Title, desc: labels.landing.step3Desc, icon: Star },
                                 ].map((step, idx) => (
                                     <div key={idx} className="flex gap-4">
                                         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold relative z-10 ring-4 ring-indigo-50">
@@ -275,19 +301,19 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
                 </div>
 
                 <div className="max-w-4xl mx-auto px-4 relative z-10 text-center reveal-on-scroll">
-                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">准备好开启留学/自学之旅了吗？</h2>
+                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">{labels.landing.ctaTitle}</h2>
                     <p className="text-xl text-indigo-200 mb-12 max-w-2xl mx-auto">
-                        读韩 (DuHan) 陪伴你从四十音到精通的每一步。现在加入，体验最地道的韩语教学资源。
+                        {labels.landing.ctaDesc}
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
                         <button
                             onClick={() => navigate('/register')}
                             className="px-10 py-5 bg-white text-indigo-900 rounded-full font-bold text-xl hover:bg-indigo-50 transition-all hover:scale-105 shadow-2xl shadow-indigo-900/50"
                         >
-                            免费注册账号
+                            {labels.landing.ctaBtn}
                         </button>
                     </div>
-                    <p className="mt-8 text-sm text-indigo-300">无需信用卡 · 免费版永久有效</p>
+                    <p className="mt-8 text-sm text-indigo-300">{labels.landing.ctaNote}</p>
                 </div>
             </section>
 
@@ -295,17 +321,17 @@ const Landing: React.FC<LandingProps> = ({ language }) => {
             <footer className="bg-white py-12 border-t border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <img src="/logo.jpg" alt="读韩" className="w-8 h-8 rounded-lg" />
-                        <span className="font-bold text-slate-900">读韩</span>
+                        <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg" />
+                        <span className="font-bold text-slate-900">{labels.appName}</span>
                     </div>
                     <div className="text-slate-500 text-sm">
-                        © {new Date().getFullYear()} DuHan Learning. All rights reserved.
+                        © {new Date().getFullYear()} DuHan Learning. {labels.allRightsReserved}
                     </div>
                     <div className="flex gap-6 text-sm font-medium text-slate-600">
-                        <a href="#" className="hover:text-indigo-600">隐私政策</a>
-                        <a href="#" className="hover:text-indigo-600">服务条款</a>
-                        <a href="/refund" className="hover:text-indigo-600">退款政策</a>
-                        <a href="#" className="hover:text-indigo-600">联系我们</a>
+                        <a href="/privacy" className="hover:text-indigo-600">{labels.privacyPolicy}</a>
+                        <a href="/terms" className="hover:text-indigo-600">{labels.termsOfService}</a>
+                        <a href="/refund" className="hover:text-indigo-600">{labels.refundPolicy}</a>
+                        <a href="#" className="hover:text-indigo-600">{labels.landing.contactUs}</a>
                     </div>
                 </div>
             </footer>

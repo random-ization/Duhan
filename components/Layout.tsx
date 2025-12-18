@@ -80,7 +80,7 @@ const Layout: React.FC<LayoutProps> = ({
             >
               <img src="/logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg group-hover:scale-105 transition-transform" />
               <span className="text-xl font-bold text-slate-900 tracking-tight hidden sm:block group-hover:text-indigo-600 transition-colors">
-                读韩
+                {labels.appName || '读韩'}
               </span>
             </div>
 
@@ -178,7 +178,7 @@ const Layout: React.FC<LayoutProps> = ({
                   <div className="hidden lg:block text-left">
                     <p className="text-sm font-bold text-slate-700 leading-none group-hover:text-indigo-900">{user.name}</p>
                     <p className="text-[10px] text-slate-500 leading-none mt-1 font-medium">
-                      {user.tier === UserTier.PAID ? 'Premium Plan' : 'Free Plan'}
+                      {user.tier === UserTier.PAID ? (labels.premium || 'Premium Plan') : (labels.free || 'Free Plan')}
                     </p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />

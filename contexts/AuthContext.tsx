@@ -16,6 +16,7 @@ import {
   TopikExam,
 } from '../types';
 import { api } from '../services/api';
+import { fetchUserCountry } from '../utils/geo';
 
 interface AuthContextType {
   // User State
@@ -73,8 +74,50 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuccess }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [language, setLanguage] = useState<Language>('zh');
+
+  // Initialize language from localStorage synchronously to avoid formatting flash
+  // This satisfies the requirement: Manual selection > Default
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('language');
+      if (stored) return stored as Language;
+    }
+    return 'zh'; // Default fallback before IP check
+  });
+
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+
+  // Persistence wrapper for setLanguage
+  const setLanguage = useCallback((lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem('language', lang);
+  }, []);
+
+  // IP Parsing & Initial Language Load
+  useEffect(() => {
+    const initLanguage = async () => {
+      // 1. Check LocalStorage - if exists, we already used it in useState initials
+      const storedLang = localStorage.getItem('language');
+      if (storedLang) {
+        return; // User has manual preference, skip IP check entirely
+      }
+
+      // 2. Check IP (Only if no manual preference)
+      const country = await fetchUserCountry();
+      console.log('Detected Country:', country);
+
+      let targetLang: Language = 'en'; // Default fallback for IP detection
+      if (country === 'CN') targetLang = 'zh';
+      else if (country === 'VN') targetLang = 'vi';
+      else if (country === 'MN') targetLang = 'mn';
+
+      setLanguageState(targetLang);
+      // We do NOT save auto-detected language to localStorage automatically
+      // to allow future IP checks if the user travels, unless they manually select.
+    };
+
+    initLanguage();
+  }, []);
 
   // Initial Session Check
   useEffect(() => {
