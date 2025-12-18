@@ -18,6 +18,7 @@ import {
 } from '../types';
 import { api } from '../services/api';
 import { fetchUserCountry } from '../utils/geo';
+import i18n from '../utils/i18next-config';
 
 interface AuthContextType {
   // User State
@@ -92,7 +93,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('language', lang);
+    i18n.changeLanguage(lang);
   }, []);
+
+  // Sync i18n on mount/change
+  useEffect(() => {
+    if (i18n.language !== language) {
+      i18n.changeLanguage(language);
+    }
+  }, [language]);
 
   // IP Parsing & Initial Language Load
   useEffect(() => {

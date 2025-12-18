@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AppProvider } from './contexts/AppContext';
+import './utils/i18next-config'; // Initialize i18n
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
