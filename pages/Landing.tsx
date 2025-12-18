@@ -56,12 +56,6 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                                 >
                                     {t('landing.viewCourses')}
                                 </button>
-                                <button
-                                    onClick={() => navigate('/courses')}
-                                    className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-                                >
-                                    {t('landing.pricing')}
-                                </button>
                             </div>
 
                             {/* Language Selector */}
@@ -151,7 +145,7 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                             className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
                         >
                             <PlayCircle className="w-5 h-5 text-indigo-500" />
-                            了解会员权益
+                            {t('landing.viewBenefits')}
                         </button>
                     </div>
 
@@ -361,6 +355,7 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                         <a href="/privacy" className="hover:text-indigo-600">{t('landing.privacy')}</a>
                         <a href="/terms" className="hover:text-indigo-600">{t('landing.term')}</a>
                         {/* {t('landing.legal')} - could handle multiple here if needed */}
+                        <a href="/refund" className="hover:text-indigo-600">{t('landing.refundPolicy')}</a>
                         <a href="#" className="hover:text-indigo-600">{t('landing.contactUs')}</a>
                     </div>
                 </div>

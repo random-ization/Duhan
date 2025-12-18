@@ -447,6 +447,7 @@
     "heroTitle2": "从这里开始。",
     "heroDesc": "从零基础到 TOPIK 6 级。包含数字化教材、历年真题和智能分析的完整课程体系。",
     "startTrial": "免费试用",
+    "viewBenefits": "了解会员权益",
     "viewCourses": "课程大纲",
     "pricing": "会员计划",
     "statTextbooks": "顶级教材",
@@ -484,6 +485,7 @@
     "contactUs": "联系我们",
     "privacy": "隐私政策",
     "term": "服务条款",
+    "refundPolicy": "退款政策",
     "legal": "法律声明"
   }
 }
