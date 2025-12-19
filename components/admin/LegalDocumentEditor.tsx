@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { api } from '../../services/api';
@@ -17,7 +17,7 @@ interface LegalDocumentEditorProps {
 }
 
 const LegalDocumentEditor: React.FC<LegalDocumentEditorProps> = ({ language }) => {
-  const labels = getLabels(language);
+  const labels = useMemo(() => getLabels(language), [language]);
   const [selectedDoc, setSelectedDoc] = useState<'terms' | 'privacy' | 'refund'>('terms');
   const [documents, setDocuments] = useState<Record<string, LegalDocument>>({});
   const [editingContent, setEditingContent] = useState('');
