@@ -196,7 +196,7 @@ export default function ModernDashboard() {
 
             {/* Upgrade Banner for Free Users - 增强版 */}
             {
-                (!user?.subscriptionType || user.subscriptionType === 'FREE') && (
+                user?.role !== 'ADMIN' && (!user?.subscriptionType || user.subscriptionType === 'FREE') && (
                     <div className="mb-8">
                         <div
                             onClick={() => navigate('/pricing')}

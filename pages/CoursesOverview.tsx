@@ -29,7 +29,7 @@ const CoursesOverview: React.FC = () => {
         <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100">
 
             {/* Navigation */}
-            <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+            <nav className="relative w-full bg-white/80 backdrop-blur-md border-b border-slate-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <button
                         onClick={() => navigate('/')}
@@ -50,7 +50,7 @@ const CoursesOverview: React.FC = () => {
             </nav>
 
             {/* Header */}
-            <header className="pt-32 pb-16 px-4 text-center max-w-4xl mx-auto">
+            <header className="pt-16 pb-16 px-4 text-center max-w-4xl mx-auto">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 text-orange-700 text-sm font-bold mb-6 border border-orange-200">
                     <Crown className="w-4 h-4 fill-current" />
                     {t('coursesOverview.enhanceExperience')}
