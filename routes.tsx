@@ -19,6 +19,8 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
+const YouTubeSearchPage = lazy(() => import('./pages/YouTubeSearchPage'));
+const YouTubeLearnPage = lazy(() => import('./pages/YouTubeLearnPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -113,6 +115,9 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
             }
           />
           <Route path="/notebook" element={<NotebookPage />} />
+
+          <Route path="/youtube/search" element={<YouTubeSearchPage />} />
+          <Route path="/youtube/learn/:youtubeId" element={<YouTubeLearnPage />} />
         </Route>
 
         {/* === 管理员路由 (需要 Admin 权限) === */}

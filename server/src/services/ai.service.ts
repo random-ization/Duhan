@@ -209,3 +209,52 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting. All text values must 
     // Step 6: 返回结果
     return { ...analysisResult, cached: false };
 };
+
+/**
+ * 处理视频字幕：恢复标点符号并翻译
+ */
+export const processTranscript = async (
+    transcriptText: string,
+    targetLanguage: string = 'zh'
+): Promise<any> => {
+    const ai = getGenAI();
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+    const prompt = `
+    You are a professional subtitle editor.
+    I will provide a raw transcript from a YouTube video. It lacks punctuation and may have minor speech recognition errors.
+    
+    Your task:
+    1. Restore proper punctuation and casing.
+    2. Divide the text into logical sentences/segments.
+    3. Translate each segment into ${targetLanguage === 'zh' ? 'Simplified Chinese' : targetLanguage}.
+    4. Extract key vocabulary words from the text (approx 5-10 words).
+
+    Input Transcript:
+    ${transcriptText.slice(0, 15000)} ... (truncated if too long)
+
+    Output JSON format:
+    {
+      "segments": [
+        { "original": "Original sentence 1...", "translated": "Translated sentence 1..." },
+        { "original": "Original sentence 2...", "translated": "Translated sentence 2..." }
+      ],
+      "vocabulary": [
+        { "word": "word1", "meaning": "meaning1" }
+      ],
+      "summary": "Brief summary of the content"
+    }
+
+    Return ONLY valid JSON.
+    `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+        return JSON.parse(cleanJson);
+    } catch (e) {
+        console.error('[AI] Transcript processing failed:', e);
+        throw new Error('Failed to process transcript');
+    }
+};

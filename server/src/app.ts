@@ -11,6 +11,8 @@ import annotationRoutes from './routes/annotation.routes';
 import aiRoutes from './routes/ai.routes';
 import notebookRoutes from './routes/notebook.routes';
 
+import videoRoutes from './routes/video.routes';
+
 const app = express();
 
 // Middleware - compression 放在最前面
@@ -40,6 +42,8 @@ app.use('/api/ai', aiRoutes);
 console.log('[Server] /api/ai registered');
 app.use('/api/notebook', notebookRoutes);
 console.log('[Server] /api/notebook registered');
+app.use('/api/video', videoRoutes);
+console.log('[Server] /api/video registered');
 
 // Health Check
 app.get('/health', (req, res) => {

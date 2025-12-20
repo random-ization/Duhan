@@ -390,6 +390,15 @@ export const api = {
   deleteNotebook: async (id: string): Promise<{ success: boolean }> =>
     request(`/notebook/${id}`, { method: 'DELETE' }),
 
+  // --- YouTube Learning ---
+  searchVideo: async (query: string) => request<{ success: boolean; data: any[] }>(`/video/search?q=${encodeURIComponent(query)}`),
+
+  importVideo: async (youtubeId: string) =>
+    request<{ success: boolean; data: { video: any; transcript: any } }>('/video/import', {
+      method: 'POST',
+      body: JSON.stringify({ youtubeId }),
+    }),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 

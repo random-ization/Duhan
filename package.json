@@ -25,6 +25,7 @@
     "react-i18next": "^16.5.0",
     "react-konva": "^19.2.1",
     "react-router-dom": "^7.10.1",
+    "react-youtube": "^10.1.0",
     "xlsx": "latest"
   },
   "devDependencies": {

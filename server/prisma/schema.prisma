@@ -246,5 +246,39 @@ model NotebookEntry {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+
   @@index([userId, type])
+}
+
+// YouTube Immersive Learning Models
+
+model Video {
+  id           String       @id @default(uuid())
+  youtubeId    String       @unique
+  title        String
+  thumbnail    String?
+  channelTitle String?
+  duration     Int?         // Duration in seconds
+  transcripts  Transcript[]
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Transcript {
+  id            String   @id @default(uuid())
+  videoId       String
+  video         Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  language      String   // e.g., "ko", "zh-CN", "en"
+  isAIProcessed Boolean  @default(false) // True if processed by Gemini with grammar analysis
+  
+  // S3 Key path for the full JSON content (e.g., "transcripts/abc123_ai.json")
+  storageKey    String   
+  
+  createdAt     DateTime @default(now())
+  
+  // Ensure we don't have duplicate transcript types for the same video
+  @@unique([videoId, language, isAIProcessed])
+  @@index([videoId])
 }
