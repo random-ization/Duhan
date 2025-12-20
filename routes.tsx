@@ -18,6 +18,7 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -111,6 +112,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
               />
             }
           />
+          <Route path="/notebook" element={<NotebookPage />} />
         </Route>
 
         {/* === 管理员路由 (需要 Admin 权限) === */}
