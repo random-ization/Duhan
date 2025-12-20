@@ -62,7 +62,9 @@ export const analyzeTopikQuestion = async (
     const languageNames: Record<string, string> = {
         'zh': 'Chinese (Simplified)',
         'ko': 'Korean',
-        'en': 'English'
+        'en': 'English',
+        'vi': 'Vietnamese',
+        'mn': 'Mongolian'
     };
 
     // Step 1: 生成 hash（包含语言）

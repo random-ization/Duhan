@@ -79,12 +79,14 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
       try {
         const questionText = question.question || question.passage || '';
-        // Map language to API format: 'zh' | 'ko' | 'en'
+        // Map language to API format
         const langMap: Record<string, string> = {
           'zh-CN': 'zh',
           'zh': 'zh',
           'ko': 'ko',
-          'en': 'en'
+          'en': 'en',
+          'vi': 'vi',
+          'mn': 'mn'
         };
         const response = await api.analyzeTopikQuestion({
           question: questionText,
