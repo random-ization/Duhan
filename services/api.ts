@@ -153,6 +153,27 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // --- AI Analysis ---
+  analyzeTopikQuestion: async (data: {
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    type?: string;
+  }): Promise<{
+    success: boolean;
+    data: {
+      translation: string;
+      keyPoint: string;
+      analysis: string;
+      wrongOptions: Record<string, string>;
+      cached?: boolean;
+    };
+  }> =>
+    request('/ai/analyze-question', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // --- Legal Docs ---
   getLegalDocument: async (type: 'terms' | 'privacy' | 'refund') =>
     request(`/content/legal/${type}`),

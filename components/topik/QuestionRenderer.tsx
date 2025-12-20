@@ -1,7 +1,8 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { TopikQuestion, Language, Annotation } from '../../types';
-import { Volume2, Check, X } from 'lucide-react';
+import { Volume2, Check, X, Sparkles, Loader2 } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
+import { api } from '../../services/api';
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -57,6 +58,46 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       () => `${contextPrefix}-Q${questionIndex}`,
       [contextPrefix, questionIndex]
     );
+
+    // AI Analysis state
+    interface AIAnalysis {
+      translation: string;
+      keyPoint: string;
+      analysis: string;
+      wrongOptions: Record<string, string>;
+    }
+    const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+
+    // AI Analysis handler
+    const handleAIAnalysis = useCallback(async () => {
+      if (aiLoading || aiAnalysis) return;
+
+      setAiLoading(true);
+      setAiError(null);
+
+      try {
+        const questionText = question.question || question.passage || '';
+        const response = await api.analyzeTopikQuestion({
+          question: questionText,
+          options: question.options,
+          correctAnswer: correctAnswer ?? 0,
+          type: 'TOPIK_QUESTION'
+        });
+
+        if (response.success && response.data) {
+          setAiAnalysis(response.data);
+        } else {
+          setAiError('AI 老师正在休息，请稍后再试');
+        }
+      } catch (err) {
+        console.error('[AI Analysis] Error:', err);
+        setAiError('AI 老师正在休息，请稍后再试');
+      } finally {
+        setAiLoading(false);
+      }
+    }, [question, correctAnswer, aiLoading, aiAnalysis]);
 
     // Helper for highlight styles
     // 高亮默认用色块背景，有笔记的用下划线区分
@@ -242,6 +283,93 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                   <div className="leading-relaxed">{question.explanation}</div>
                 </div>
               )}
+
+              {/* AI Analysis Section */}
+              {showCorrect && (
+                <div className="mt-4">
+                  {/* AI Analysis Button */}
+                  {!aiAnalysis && (
+                    <button
+                      onClick={handleAIAnalysis}
+                      disabled={aiLoading}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {aiLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      <span className="font-medium">
+                        {aiLoading ? '分析中...' : '✨ AI 老师解析'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Error Message */}
+                  {aiError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      {aiError}
+                    </div>
+                  )}
+
+                  {/* AI Analysis Card */}
+                  {aiAnalysis && (
+                    <div className="mt-3 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                        <span className="font-bold text-indigo-700">AI 老师解析</span>
+                      </div>
+
+                      {/* Translation */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                          <span>🇨🇳</span> 题干翻译
+                        </div>
+                        <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+                          {aiAnalysis.translation}
+                        </div>
+                      </div>
+
+                      {/* Key Point */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                          <span>🔑</span> 核心考点
+                        </div>
+                        <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                          {aiAnalysis.keyPoint}
+                        </div>
+                      </div>
+
+                      {/* Analysis */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                          <span>💡</span> 正解分析
+                        </div>
+                        <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+                          {aiAnalysis.analysis}
+                        </div>
+                      </div>
+
+                      {/* Wrong Options */}
+                      {aiAnalysis.wrongOptions && Object.keys(aiAnalysis.wrongOptions).length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                            <span>❌</span> 干扰项排除
+                          </div>
+                          <div className="space-y-2">
+                            {Object.entries(aiAnalysis.wrongOptions).map(([key, value]) => (
+                              <div key={key} className="bg-white/60 p-3 rounded-lg">
+                                <span className="font-medium text-gray-600">选项 {key}：</span>
+                                <span className="text-gray-700">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -339,6 +467,93 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               <div className="mt-4 ml-8 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
                 <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
                 <div className="leading-relaxed">{question.explanation}</div>
+              </div>
+            )}
+
+            {/* AI Analysis Section - Inline Layout */}
+            {showCorrect && (
+              <div className="mt-4 ml-8">
+                {/* AI Analysis Button */}
+                {!aiAnalysis && (
+                  <button
+                    onClick={handleAIAnalysis}
+                    disabled={aiLoading}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span className="font-medium">
+                      {aiLoading ? '分析中...' : '✨ AI 老师解析'}
+                    </span>
+                  </button>
+                )}
+
+                {/* Error Message */}
+                {aiError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {aiError}
+                  </div>
+                )}
+
+                {/* AI Analysis Card */}
+                {aiAnalysis && (
+                  <div className="mt-3 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      <span className="font-bold text-indigo-700">AI 老师解析</span>
+                    </div>
+
+                    {/* Translation */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                        <span>🇨🇳</span> 题干翻译
+                      </div>
+                      <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+                        {aiAnalysis.translation}
+                      </div>
+                    </div>
+
+                    {/* Key Point */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                        <span>🔑</span> 核心考点
+                      </div>
+                      <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                        {aiAnalysis.keyPoint}
+                      </div>
+                    </div>
+
+                    {/* Analysis */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                        <span>💡</span> 正解分析
+                      </div>
+                      <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+                        {aiAnalysis.analysis}
+                      </div>
+                    </div>
+
+                    {/* Wrong Options */}
+                    {aiAnalysis.wrongOptions && Object.keys(aiAnalysis.wrongOptions).length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-indigo-700 mb-1.5">
+                          <span>❌</span> 干扰项排除
+                        </div>
+                        <div className="space-y-2">
+                          {Object.entries(aiAnalysis.wrongOptions).map(([key, value]) => (
+                            <div key={key} className="bg-white/60 p-3 rounded-lg">
+                              <span className="font-medium text-gray-600">选项 {key}：</span>
+                              <span className="text-gray-700">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
