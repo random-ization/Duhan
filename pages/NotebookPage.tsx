@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, BookOpen, GraduationCap, XCircle, FileText, Plus, Loader2 } from 'lucide-react';
+import { Search, BookOpen, GraduationCap, Target, FileText, Plus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -11,7 +11,7 @@ const TABS = [
     { key: 'ALL', label: '全部', icon: FileText },
     { key: 'VOCAB', label: '生词', icon: BookOpen },
     { key: 'GRAMMAR', label: '语法', icon: GraduationCap },
-    { key: 'MISTAKE', label: '错题', icon: XCircle },
+    { key: 'MISTAKE', label: 'TOPIK', icon: Target },
 ];
 
 interface Note {
@@ -97,8 +97,8 @@ const NotebookPage: React.FC = () => {
                                         key={tab.key}
                                         onClick={() => setActiveTab(tab.key)}
                                         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
-                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                             }`}
                                     >
                                         <Icon className="w-4 h-4" />
