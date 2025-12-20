@@ -23,9 +23,9 @@ const getGenAI = () => {
     return genAI;
 };
 
-// 生成题目唯一 hash
-const generateHash = (question: string, options: string[]): string => {
-    const content = `${question}|${options.join('|')}`;
+// 生成题目唯一 hash（包含语言以区分不同语言的缓存）
+const generateHash = (question: string, options: string[], language: string): string => {
+    const content = `${question}|${options.join('|')}|${language}`;
     return crypto.createHash('md5').update(content).digest('hex');
 };
 
@@ -65,8 +65,8 @@ export const analyzeTopikQuestion = async (
         'en': 'English'
     };
 
-    // Step 1: 生成 hash
-    const hash = generateHash(question, options);
+    // Step 1: 生成 hash（包含语言）
+    const hash = generateHash(question, options, language);
 
     // Step 2: 检查 L1 内存缓存
     const cachedResult = cache.get(hash);
