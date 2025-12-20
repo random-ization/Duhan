@@ -291,12 +291,12 @@ const NoteContent: React.FC<{ type: string; content: any }> = ({ type, content }
         <div className="space-y-5">
             {content.text && (
                 <Section title="内容">
-                    <p className="text-slate-700 whitespace-pre-wrap">{content.text}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap">{safeString(content.text)}</p>
                 </Section>
             )}
             {content.notes && (
                 <Section title="笔记">
-                    <p className="text-slate-600 whitespace-pre-wrap">{content.notes}</p>
+                    <p className="text-slate-600 whitespace-pre-wrap">{safeString(content.notes)}</p>
                 </Section>
             )}
             {/* Fallback: render raw JSON for unknown structure */}
@@ -317,37 +317,37 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     </div>
 );
 
+// Helper to safely convert anything to string or return null
+const safeString = (val: any): string | null => {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'boolean') return String(val);
+    if (typeof val === 'object') {
+        try {
+            if (val.text && typeof val.text === 'string') return val.text;
+            return JSON.stringify(val);
+        } catch (e) {
+            return '[Complex Data]';
+        }
+    }
+    return String(val);
+};
+
+// Helper to safely extract wrong options
+const safeWrongOptions = (opts: any): [string, string][] => {
+    if (!opts || typeof opts !== 'object') return [];
+    try {
+        return Object.entries(opts).map(([k, v]) => [String(k), safeString(v) || '']);
+    } catch (e) {
+        return [];
+    }
+};
+
 /**
  * Robust component to display AI Analysis content safely
  */
 const SanitizedAIAnalysisContent = ({ analysis }: { analysis: any }) => {
-    // Helper to safely convert anything to string or return null
-    const safeString = (val: any): string | null => {
-        if (val === null || val === undefined) return null;
-        if (typeof val === 'string') return val;
-        if (typeof val === 'number') return String(val);
-        if (typeof val === 'boolean') return String(val);
-        if (typeof val === 'object') {
-            try {
-                if (val.text && typeof val.text === 'string') return val.text;
-                return JSON.stringify(val);
-            } catch (e) {
-                return '[Complex Data]';
-            }
-        }
-        return String(val);
-    };
-
-    // Helper to safely extract wrong options
-    const safeWrongOptions = (opts: any): [string, string][] => {
-        if (!opts || typeof opts !== 'object') return [];
-        try {
-            return Object.entries(opts).map(([k, v]) => [String(k), safeString(v) || '']);
-        } catch (e) {
-            return [];
-        }
-    };
-
     const translation = safeString(analysis.translation);
     const keyPoint = safeString(analysis.keyPoint);
     const analysisText = safeString(analysis.analysis);
