@@ -29,13 +29,21 @@ export const searchYoutube = async (query: string): Promise<VideoSearchResult[]>
     console.log('[VideoService] API Key configured:', !!process.env.YOUTUBE_API_KEY);
 
     try {
-        const res = await youtube.search.list({
-            part: ['snippet'],
-            q: query,
-            type: ['video'],
-            videoCaption: 'closedCaption', // Prefer videos with captions
-            maxResults: 10
-        });
+        const referer = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const res = await youtube.search.list(
+            {
+                part: ['snippet'],
+                q: query,
+                type: ['video'],
+                videoCaption: 'closedCaption', // Prefer videos with captions
+                maxResults: 10
+            },
+            {
+                headers: {
+                    Referer: referer
+                }
+            }
+        );
 
         if (!res.data.items) return [];
 
