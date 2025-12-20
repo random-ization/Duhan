@@ -97,8 +97,8 @@ export const analyzeTopikQuestion = async (
     console.log(`[AI] Has image: ${!!imageUrl}`);
 
     const ai = getGenAI();
-    // Use gemini-1.5-flash for multimodal support
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    // Use gemini-1.5-flash for best multimodal performance and speed
+    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const optionsStr = options.map((opt, i) => `${i + 1}. ${opt}`).join('\n');
     const correctAnswerText = options[correctAnswer] || options[0];
@@ -130,11 +130,21 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting. All text values must 
     if (imageUrl) {
         // Multimodal: Image + Text
         try {
+            // Check if imageUrl is relative
+            let targetUrl = imageUrl;
+            if (imageUrl.startsWith('/')) {
+                // Warning: relative URL requires domain, but we might not know it easily server-side
+                console.warn(`[AI] Received relative image URL: ${imageUrl}. This might fail.`);
+                // If you have a known domain env var, verify it here.
+                // Assuming absolute URLs for S3 uploads usually.
+            }
+
             // Fetch image and convert to base64
-            console.log(`[AI] Fetching image from: ${imageUrl}`);
-            const imageResponse = await fetch(imageUrl);
+            console.log(`[AI] Fetching image from: ${targetUrl}`);
+            const imageResponse = await fetch(targetUrl);
 
             if (!imageResponse.ok) {
+                console.error(`[AI] Failed to fetch image. Status: ${imageResponse.status}, URL: ${targetUrl}`);
                 throw new Error(`Failed to fetch image: ${imageResponse.status}`);
             }
 
