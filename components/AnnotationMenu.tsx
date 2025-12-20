@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, FileText, Type, ChevronDown, Check, X, Trash2, BookmarkPlus } from 'lucide-react';
+import { FileText, Type, ChevronDown, BookOpen, Loader2, Check } from 'lucide-react';
 
 interface AnnotationMenuProps {
     visible: boolean;
@@ -11,8 +11,10 @@ interface AnnotationMenuProps {
     onSaveWord?: (text: string) => void;
     selectionText?: string;
     onClose: () => void;
-    onDelete?: () => void; // Optional delete for existing annotations
+    onDelete?: () => void;
     labels: { [key: string]: string };
+    // New: For saving to vocab notebook
+    onSaveToVocab?: (text: string) => Promise<void>;
 }
 
 const COLORS = [
@@ -29,16 +31,34 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
     onHighlight,
     selectedColor,
     setSelectedColor,
-    onSaveWord,
     selectionText,
     onClose,
-    onDelete,
     labels,
+    onSaveToVocab,
 }) => {
     const [showColorPicker, setShowColorPicker] = useState(false);
-    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [vocabSaving, setVocabSaving] = useState(false);
+    const [vocabSaved, setVocabSaved] = useState(false);
 
     if (!visible || !position) return null;
+
+    const handleSaveToVocab = async () => {
+        if (!selectionText || !onSaveToVocab || vocabSaving || vocabSaved) return;
+
+        setVocabSaving(true);
+        try {
+            await onSaveToVocab(selectionText);
+            setVocabSaved(true);
+            // Reset after 2s
+            setTimeout(() => {
+                setVocabSaved(false);
+                onClose();
+            }, 1500);
+        } catch (e) {
+            console.error('[Vocab] Save failed:', e);
+            setVocabSaving(false);
+        }
+    };
 
     return (
         <div
@@ -54,8 +74,8 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                 <div className="mb-2 bg-white shadow-lg rounded-lg border border-slate-200 p-2 flex gap-1 animate-in slide-in-from-bottom-2">
                     <button
                         onClick={() => {
-                            setSelectedColor(''); // Clear highlight
-                            if (onHighlight) onHighlight(''); // Save as cleared/white? Or delete? Actually '' might imply remove.
+                            setSelectedColor('');
+                            if (onHighlight) onHighlight('');
                             setShowColorPicker(false);
                         }}
                         className={`w-6 h-6 rounded-full border border-slate-200 bg-white transition-all ${selectedColor === '' ? 'ring-2 ring-slate-400 ring-offset-1' : 'hover:scale-110'
@@ -105,6 +125,40 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                     </div>
                     <ChevronDown className="w-3 h-3 text-slate-400" />
                 </button>
+
+                {/* Save to Vocab Button - Only show if callback provided */}
+                {onSaveToVocab && selectionText && (
+                    <>
+                        <div className="w-px h-4 bg-slate-200"></div>
+                        <button
+                            onClick={handleSaveToVocab}
+                            disabled={vocabSaving || vocabSaved}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${vocabSaved
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : vocabSaving
+                                        ? 'bg-slate-50 text-slate-400 cursor-wait'
+                                        : 'hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700'
+                                }`}
+                        >
+                            {vocabSaved ? (
+                                <>
+                                    <Check className="w-4 h-4" />
+                                    已保存
+                                </>
+                            ) : vocabSaving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    保存中...
+                                </>
+                            ) : (
+                                <>
+                                    <BookOpen className="w-4 h-4" />
+                                    {labels.saveToVocab || '存入生词本'}
+                                </>
+                            )}
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );

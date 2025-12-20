@@ -10,6 +10,7 @@ import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
 import CanvasLayer, { CanvasData, ToolType, CanvasToolbar } from '../../src/features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../src/features/annotation/hooks/useCanvasAnnotation';
+import api from '../../services/api';
 
 const PAPER_MAX_WIDTH = "max-w-[900px]";
 const FONT_SERIF = "font-serif";
@@ -450,6 +451,31 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       }
     };
 
+    // Save selection to Vocab Notebook
+    const handleSaveToVocab = useCallback(async (text: string) => {
+      if (!text) return;
+
+      // Get question context from selection
+      const questionIndex = selectionContextKey.split('-Q')[1];
+      const question = questionIndex ? exam.questions[parseInt(questionIndex)] : null;
+      const context = question?.question || question?.passage?.substring(0, 100) || '';
+
+      // Save to notebook
+      await api.saveNotebook({
+        type: 'VOCAB',
+        title: text,
+        content: {
+          word: text,
+          context: context,
+          examId: exam.id,
+          examTitle: exam.title,
+          questionIndex: questionIndex ? parseInt(questionIndex) : undefined,
+          savedAt: new Date().toISOString(),
+        },
+        tags: ['exam-vocab', `topik-${exam.round}`],
+      });
+    }, [exam, selectionContextKey]);
+
     const tempAnnotation: Annotation | null = showAnnotationMenu && selectionText && selectionContextKey ? {
       id: 'temp',
       contextKey: selectionContextKey,
@@ -814,6 +840,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             setShowAnnotationMenu(false);
             window.getSelection()?.removeAllRanges();
           }}
+          onSaveToVocab={handleSaveToVocab}
           labels={labels}
         />
       </div>

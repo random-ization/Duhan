@@ -337,6 +337,58 @@ export const api = {
     return (await res.json()) as { url: string };
   },
 
+  // --- Notebook API ---
+  saveNotebook: async (data: {
+    type: string;
+    title: string;
+    content: any;
+    tags?: string[];
+  }): Promise<{
+    success: boolean;
+    data: {
+      id: string;
+      type: string;
+      title: string;
+      preview: string | null;
+      tags: string[];
+      createdAt: string;
+    };
+  }> =>
+    request('/notebook', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getNotebookList: async (type?: string): Promise<{
+    success: boolean;
+    data: Array<{
+      id: string;
+      type: string;
+      title: string;
+      preview: string | null;
+      tags: string[];
+      createdAt: string;
+    }>;
+  }> =>
+    request(`/notebook${type ? `?type=${type}` : ''}`),
+
+  getNotebookDetail: async (id: string): Promise<{
+    success: boolean;
+    data: {
+      id: string;
+      type: string;
+      title: string;
+      preview: string | null;
+      tags: string[];
+      content: any;
+      createdAt: string;
+    };
+  }> =>
+    request(`/notebook/${id}`),
+
+  deleteNotebook: async (id: string): Promise<{ success: boolean }> =>
+    request(`/notebook/${id}`, { method: 'DELETE' }),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 
