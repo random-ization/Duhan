@@ -218,36 +218,124 @@ const NoteContent: React.FC<{ type: string; content: any }> = ({ type, content }
 
     if (type === 'MISTAKE') {
         return (
-            <div className="space-y-5">
+            <div className="space-y-6">
                 {/* Question */}
-                {content.question && (
-                    <Section title="题目">
-                        <p className="text-slate-700">{content.question}</p>
-                    </Section>
-                )}
-
-                {/* Your Answer vs Correct */}
-                <div className="grid grid-cols-2 gap-4">
-                    {content.userAnswer !== undefined && (
-                        <div className="bg-red-50 rounded-xl p-4">
-                            <div className="text-xs font-medium text-red-500 uppercase mb-2">你的答案</div>
-                            <div className="text-red-700 font-bold text-lg">{content.userAnswer}</div>
+                <div className="space-y-4">
+                    {(content.questionText || content.question) && (
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">题目</h4>
+                            <div className="text-lg font-medium text-slate-800 leading-relaxed mb-4">
+                                {content.questionText || content.question}
+                            </div>
                         </div>
                     )}
-                    {content.correctAnswer !== undefined && (
-                        <div className="bg-emerald-50 rounded-xl p-4">
-                            <div className="text-xs font-medium text-emerald-500 uppercase mb-2">正确答案</div>
-                            <div className="text-emerald-700 font-bold text-lg">{content.correctAnswer}</div>
+
+                    {/* Image */}
+                    {content.imageUrl && (
+                        <div className="mb-4">
+                            <img
+                                src={content.imageUrl}
+                                alt="Question"
+                                className="rounded-lg border border-slate-200 shadow-sm max-h-60 object-contain"
+                            />
+                        </div>
+                    )}
+
+                    {/* Options */}
+                    {content.options && Array.isArray(content.options) && (
+                        <div className="grid gap-2">
+                            {content.options.map((option: string, idx: number) => {
+                                // Determine status
+                                const isCorrect = (idx + 1) === content.correctAnswer;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`p-3 rounded-lg border flex items-center gap-3 ${isCorrect
+                                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                                : 'bg-white border-slate-200 text-slate-600'
+                                            }`}
+                                    >
+                                        <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${isCorrect ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                                            }`}>
+                                            {idx + 1}
+                                        </span>
+                                        <span className="text-sm">{option}</span>
+                                        {isCorrect && (
+                                            <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                                正确答案
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
-                {/* AI Analysis */}
-                {content.analysis && (
+                {/* AI Analysis Section */}
+                {content.aiAnalysis ? (
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-1.5 bg-indigo-100 rounded text-indigo-600">
+                                <GraduationCap className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-lg font-bold text-indigo-900">AI 老师解析</h3>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-100 space-y-5">
+                            {/* Translation */}
+                            {content.aiAnalysis.translation && (
+                                <div>
+                                    <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">题干翻译</div>
+                                    <p className="text-slate-700 bg-white/60 p-3 rounded-lg text-sm leading-relaxed">
+                                        {content.aiAnalysis.translation}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Key Point */}
+                            {content.aiAnalysis.keyPoint && (
+                                <div>
+                                    <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">核心考点</div>
+                                    <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium">
+                                        {content.aiAnalysis.keyPoint}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Detailed Analysis */}
+                            {content.aiAnalysis.analysis && (
+                                <div>
+                                    <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">正解分析</div>
+                                    <p className="text-slate-700 bg-white/60 p-3 rounded-lg text-sm leading-relaxed">
+                                        {content.aiAnalysis.analysis}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Wrong Options Analysis */}
+                            {content.aiAnalysis.wrongOptions && Object.keys(content.aiAnalysis.wrongOptions).length > 0 && (
+                                <div>
+                                    <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">干扰项分析</div>
+                                    <div className="space-y-2">
+                                        {Object.entries(content.aiAnalysis.wrongOptions).map(([key, value]) => (
+                                            <div key={key} className="text-sm bg-white/40 p-2 rounded border border-indigo-50/50">
+                                                <span className="font-bold text-indigo-600 mr-2">{key}:</span>
+                                                <span className="text-slate-600">{(value as string)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : content.analysis ? (
+                    /* Legacy analysis support */
                     <Section title="AI 解析">
                         <p className="text-slate-700">{content.analysis}</p>
                     </Section>
-                )}
+                ) : null}
             </div>
         );
     }
