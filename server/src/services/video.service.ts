@@ -76,10 +76,18 @@ export const getVideoData = async (
 
     if (!video) {
         // Fetch details from YouTube API to populate DB
-        const res = await youtube.videos.list({
-            part: ['snippet', 'contentDetails'],
-            id: [youtubeId]
-        });
+        const referer = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const res = await youtube.videos.list(
+            {
+                part: ['snippet', 'contentDetails'],
+                id: [youtubeId]
+            },
+            {
+                headers: {
+                    Referer: referer
+                }
+            }
+        );
 
         const item = res.data.items?.[0];
         if (!item) throw new Error('Video not found on YouTube');
