@@ -117,6 +117,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     }, [question, correctAnswer, language, aiLoading, aiAnalysis]);
 
     // Save to Notebook handler
+    const [showSaveToast, setShowSaveToast] = useState(false);
+
     const handleSaveToNotebook = useCallback(async () => {
       if (!aiAnalysis || isSaving || isSaved) return;
 
@@ -146,6 +148,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
         });
 
         setIsSaved(true);
+        setShowSaveToast(true);
+
+        // Auto hide toast after 4 seconds
+        setTimeout(() => setShowSaveToast(false), 4000);
       } catch (err) {
         console.error('[Save to Notebook] Error:', err);
       } finally {
@@ -597,10 +603,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                         onClick={handleSaveToNotebook}
                         disabled={isSaving || isSaved}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isSaved
-                            ? 'bg-emerald-100 text-emerald-700 cursor-default'
-                            : isSaving
-                              ? 'bg-indigo-100 text-indigo-500 cursor-wait'
-                              : 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200'
+                          ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                          : isSaving
+                            ? 'bg-indigo-100 text-indigo-500 cursor-wait'
+                            : 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200'
                           }`}
                       >
                         {isSaved ? (
@@ -672,6 +678,30 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Save Success Toast */}
+        {showSaveToast && (
+          <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+              <BookmarkCheck className="w-5 h-5" />
+              <div>
+                <p className="font-medium">已保存到笔记本</p>
+                <a
+                  href="/notebook"
+                  className="text-emerald-100 text-sm hover:text-white underline"
+                >
+                  查看我的笔记 →
+                </a>
+              </div>
+              <button
+                onClick={() => setShowSaveToast(false)}
+                className="ml-2 p-1 hover:bg-emerald-500 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
