@@ -202,17 +202,17 @@ async function processVideoWithAI(videoId: string): Promise<TranscriptSegment[]>
         fs.mkdirSync(TEMP_AUDIO_DIR, { recursive: true });
     }
 
-    const audioPath = path.join(TEMP_AUDIO_DIR, `${videoId}.mp3`);
+    const audioPath = path.join(TEMP_AUDIO_DIR, `${videoId}.webm`);
 
     try {
-        // Step 1: Download audio via yt-dlp
+        // Step 1: Download audio via yt-dlp (webm format, no ffmpeg needed)
         console.log(`[AI] 1. Downloading audio for ${videoId}...`);
         await downloadAudio(videoId, audioPath);
 
         // Step 2: Upload to Gemini
         console.log(`[AI] 2. Uploading audio to Gemini...`);
         const uploadResult = await fileManager.uploadFile(audioPath, {
-            mimeType: 'audio/mp3',
+            mimeType: 'audio/webm',
             displayName: `yt_${videoId}`
         });
 
@@ -309,12 +309,10 @@ async function downloadAudio(videoId: string, outputPath: string): Promise<void>
     const ytDlp = await getYtDlpInstance();
     const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-    // Build command arguments
+    // Build command arguments - download best audio without conversion (no ffmpeg needed)
     const args = [
         url,
-        '--extract-audio',
-        '--audio-format', 'mp3',
-        '--audio-quality', '0',
+        '-f', 'bestaudio[ext=webm]/bestaudio',  // Prefer webm, fallback to best available
         '--output', outputPath,
         '--no-warnings',
         '--no-playlist'
