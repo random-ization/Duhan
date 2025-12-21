@@ -1,10 +1,12 @@
 import { google } from 'googleapis';
 import getYouTubeID from 'get-youtube-id';
-import ytdl from '@distube/ytdl-core';
-import axios from 'axios';
+import YTDlpWrap from 'yt-dlp-wrap';
+import { parse as parseVtt } from 'node-webvtt';
 import { PrismaClient } from '@prisma/client';
 import * as aiService from './ai.service';
 import * as storageService from './storage.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -134,14 +136,14 @@ export const getVideoData = async (
         // Cache Miss - Generate
         console.log(`[Video] Cache miss for ${youtubeId}, generating...`);
 
-        // Fetch raw transcript using ytdl-core
+        // Fetch raw transcript using yt-dlp
         let rawTranscripts: Array<{ start: number; duration: number; text: string }>;
         try {
             rawTranscripts = await fetchCaptionsViaYtdl(youtubeId);
-            console.log(`[VideoService] Successfully fetched ${rawTranscripts.length} transcript segments via ytdl-core`);
+            console.log(`[VideoService] Successfully fetched ${rawTranscripts.length} transcript segments via yt-dlp`);
         } catch (e: any) {
-            console.error('[VideoService] ytdl-core transcript fetch failed:', e?.message);
-            if (e?.message?.includes('No Korean captions') || e?.message?.includes('No captions available')) {
+            console.error('[VideoService] yt-dlp transcript fetch failed:', e?.message);
+            if (e?.message?.includes('No Korean captions') || e?.message?.includes('No captions available') || e?.message?.includes('SUBTITLES_NOT_FOUND')) {
                 throw new Error('该视频未提供字幕，无法生成 AI 课程。请尝试搜索其他带有字幕（CC）的视频。');
             }
             throw e;
@@ -216,96 +218,176 @@ function parseDuration(duration: string): number {
 }
 
 /**
- * Fetch captions using ytdl-core's internal metadata
+ * Fetch captions using yt-dlp
  * Prefers manual Korean captions over ASR (Automatic Speech Recognition)
  */
-interface CaptionTrack {
-    baseUrl: string;
-    languageCode: string;
-    kind?: string; // 'asr' for auto-generated
-    name?: { simpleText?: string };
-}
-
 interface TranscriptSegment {
     start: number;
     duration: number;
     text: string;
 }
 
+// yt-dlp binary path - will be downloaded if not exists
+const YT_DLP_BINARY_PATH = path.join(process.cwd(), 'bin', 'yt-dlp');
+const TEMP_SUBS_DIR = path.join(process.cwd(), 'temp_subs');
+
+// Initialize yt-dlp wrapper
+let ytDlpInstance: YTDlpWrap | null = null;
+
+async function getYtDlpInstance(): Promise<YTDlpWrap> {
+    if (ytDlpInstance) return ytDlpInstance;
+
+    // Ensure bin directory exists
+    const binDir = path.dirname(YT_DLP_BINARY_PATH);
+    if (!fs.existsSync(binDir)) {
+        fs.mkdirSync(binDir, { recursive: true });
+    }
+
+    // Download yt-dlp binary if not exists
+    if (!fs.existsSync(YT_DLP_BINARY_PATH)) {
+        console.log('[yt-dlp] Binary not found, downloading...');
+        try {
+            await YTDlpWrap.downloadFromGithub(YT_DLP_BINARY_PATH);
+            console.log('[yt-dlp] Binary downloaded successfully');
+        } catch (error: any) {
+            console.error('[yt-dlp] Failed to download binary:', error?.message);
+            throw new Error('Failed to download yt-dlp binary');
+        }
+    }
+
+    ytDlpInstance = new YTDlpWrap(YT_DLP_BINARY_PATH);
+    return ytDlpInstance;
+}
+
 async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[]> {
-    console.log(`[ytdl-core] Fetching caption info for video: ${videoId}`);
+    console.log(`[yt-dlp] Fetching captions for video: ${videoId}`);
 
-    // Get video info including caption tracks
-    const info = await ytdl.getInfo(videoId);
+    const ytDlp = await getYtDlpInstance();
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-    // Access caption tracks from player response
-    const playerResponse = info.player_response as any;
-    const captionTracks: CaptionTrack[] = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-    if (!captionTracks || captionTracks.length === 0) {
-        console.log('[ytdl-core] No caption tracks found');
-        throw new Error('No captions available for this video');
+    // Ensure temp directory exists
+    if (!fs.existsSync(TEMP_SUBS_DIR)) {
+        fs.mkdirSync(TEMP_SUBS_DIR, { recursive: true });
     }
 
-    console.log(`[ytdl-core] Found ${captionTracks.length} caption tracks:`,
-        captionTracks.map(t => `${t.languageCode}${t.kind === 'asr' ? ' (ASR)' : ''}`).join(', '));
+    const outputTemplate = path.join(TEMP_SUBS_DIR, '%(id)s');
 
-    // Filter for Korean captions (ko or ko-KR)
-    const koreanTracks = captionTracks.filter(track =>
-        track.languageCode === 'ko' || track.languageCode === 'ko-KR'
-    );
+    try {
+        // Run yt-dlp to download subtitles only
+        console.log('[yt-dlp] Downloading subtitles...');
+        await ytDlp.execPromise([
+            url,
+            '--write-auto-sub',      // Get auto-generated captions if manual don't exist
+            '--write-sub',           // Get manual captions
+            '--sub-lang', 'ko,ko-KR', // Prefer Korean
+            '--skip-download',       // Don't download video
+            '--output', outputTemplate,
+            '--no-warnings',
+            '--quiet'
+        ]);
 
-    if (koreanTracks.length === 0) {
-        console.log('[ytdl-core] No Korean caption tracks found');
-        throw new Error('No Korean captions available for this video');
+        // Find the generated subtitle file
+        const files = fs.readdirSync(TEMP_SUBS_DIR);
+        const subFile = files.find(f =>
+            f.startsWith(videoId) && (f.endsWith('.vtt') || f.endsWith('.srt'))
+        );
+
+        if (!subFile) {
+            console.log('[yt-dlp] No subtitle file created');
+            throw new Error('SUBTITLES_NOT_FOUND');
+        }
+
+        console.log(`[yt-dlp] Found subtitle file: ${subFile}`);
+
+        // Read and parse the subtitle file
+        const fullPath = path.join(TEMP_SUBS_DIR, subFile);
+        const content = fs.readFileSync(fullPath, 'utf-8');
+
+        // Cleanup: delete the file immediately after reading
+        fs.unlinkSync(fullPath);
+
+        // Parse VTT content
+        let segments: TranscriptSegment[];
+
+        if (subFile.endsWith('.vtt')) {
+            const parsed = parseVtt(content);
+            segments = parsed.cues.map((cue: any) => ({
+                start: cue.start,
+                duration: cue.end - cue.start,
+                text: cue.text.replace(/<[^>]*>/g, '').trim() // Remove HTML tags
+            }));
+        } else {
+            // SRT format - simple parsing
+            segments = parseSrt(content);
+        }
+
+        // Filter out empty segments and duplicates
+        segments = segments.filter(s => s.text.length > 0);
+
+        console.log(`[yt-dlp] Parsed ${segments.length} transcript segments`);
+
+        if (segments.length === 0) {
+            throw new Error('Failed to parse transcript segments');
+        }
+
+        return segments;
+
+    } catch (error: any) {
+        console.error('[yt-dlp] Error:', error?.message || error);
+
+        // Cleanup temp directory on error
+        try {
+            const files = fs.readdirSync(TEMP_SUBS_DIR);
+            files.forEach(f => {
+                if (f.startsWith(videoId)) {
+                    fs.unlinkSync(path.join(TEMP_SUBS_DIR, f));
+                }
+            });
+        } catch { }
+
+        if (error?.message === 'SUBTITLES_NOT_FOUND') {
+            throw new Error('No Korean captions available for this video');
+        }
+        throw error;
     }
+}
 
-    // Prefer manual captions over ASR
-    // ASR tracks have kind: 'asr'
-    let selectedTrack = koreanTracks.find(track => track.kind !== 'asr');
-    if (!selectedTrack) {
-        // Fallback to ASR if no manual captions
-        selectedTrack = koreanTracks[0];
-        console.log('[ytdl-core] Using ASR (auto-generated) Korean captions');
-    } else {
-        console.log('[ytdl-core] Using manual Korean captions');
-    }
-
-    // Fetch the transcript in JSON format
-    const transcriptUrl = selectedTrack.baseUrl + '&fmt=json3';
-    console.log(`[ytdl-core] Fetching transcript from URL`);
-
-    const response = await axios.get(transcriptUrl);
-    const transcriptData = response.data;
-
-    // Parse the JSON3 format
-    // The format has an 'events' array with segments
-    const events = transcriptData.events || [];
+// Simple SRT parser as fallback
+function parseSrt(content: string): TranscriptSegment[] {
     const segments: TranscriptSegment[] = [];
+    const blocks = content.split(/\n\n+/);
 
-    for (const event of events) {
-        // Skip events without timing info or segments
-        if (event.tStartMs === undefined || !event.segs) continue;
+    for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 3) continue;
 
-        // Combine all text segments in this event
-        const text = event.segs
-            .map((seg: any) => seg.utf8 || '')
-            .join('')
-            .trim();
+        // Parse timestamp line (e.g., "00:00:01,000 --> 00:00:04,000")
+        const timeLine = lines[1];
+        const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
 
-        if (!text) continue;
+        if (!timeMatch) continue;
 
-        segments.push({
-            start: event.tStartMs / 1000, // Convert ms to seconds
-            duration: (event.dDurationMs || 0) / 1000,
-            text
-        });
-    }
+        const startSeconds =
+            parseInt(timeMatch[1]) * 3600 +
+            parseInt(timeMatch[2]) * 60 +
+            parseInt(timeMatch[3]) +
+            parseInt(timeMatch[4]) / 1000;
 
-    console.log(`[ytdl-core] Parsed ${segments.length} transcript segments`);
+        const endSeconds =
+            parseInt(timeMatch[5]) * 3600 +
+            parseInt(timeMatch[6]) * 60 +
+            parseInt(timeMatch[7]) +
+            parseInt(timeMatch[8]) / 1000;
 
-    if (segments.length === 0) {
-        throw new Error('Failed to parse transcript segments');
+        const text = lines.slice(2).join(' ').replace(/<[^>]*>/g, '').trim();
+
+        if (text) {
+            segments.push({
+                start: startSeconds,
+                duration: endSeconds - startSeconds,
+                text
+            });
+        }
     }
 
     return segments;
