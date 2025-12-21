@@ -36,3 +36,4 @@ dist-ssr
 # yt-dlp related
 server/bin/
 server/temp_subs/
+server/temp_audio/

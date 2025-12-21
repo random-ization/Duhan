@@ -14,7 +14,6 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@distube/ytdl-core": "^4.16.12",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "aws4": "^1.13.2",

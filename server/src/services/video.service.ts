@@ -1,8 +1,9 @@
 import { google } from 'googleapis';
 import getYouTubeID from 'get-youtube-id';
 import YTDlpWrap from 'yt-dlp-wrap';
+import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
-import * as aiService from './ai.service';
 import * as storageService from './storage.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,6 +15,15 @@ const youtube = google.youtube({
     auth: process.env.YOUTUBE_API_KEY
 });
 
+// Initialize Gemini AI
+const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+
+// yt-dlp paths
+const YT_DLP_BINARY_PATH = path.join(process.cwd(), 'bin', 'yt-dlp');
+const TEMP_AUDIO_DIR = path.join(process.cwd(), 'temp_audio');
+const COOKIES_PATH = path.join(process.cwd(), 'cookies.txt');
+
 interface VideoSearchResult {
     id: string;
     title: string;
@@ -22,11 +32,17 @@ interface VideoSearchResult {
     publishedAt: string;
 }
 
+interface TranscriptSegment {
+    start: number;
+    duration: number;
+    text: string;
+    translation: string;
+}
+
 /**
  * Search YouTube videos
  */
 export const searchYoutube = async (query: string): Promise<VideoSearchResult[]> => {
-    // DEBUG: Check if Key exists
     console.log('[VideoService] Searching for:', query);
     console.log('[VideoService] API Key configured:', !!process.env.YOUTUBE_API_KEY);
 
@@ -37,7 +53,6 @@ export const searchYoutube = async (query: string): Promise<VideoSearchResult[]>
                 part: ['snippet'],
                 q: query,
                 type: ['video'],
-                videoCaption: 'closedCaption', // Prefer videos with captions
                 maxResults: 10
             },
             {
@@ -57,16 +72,15 @@ export const searchYoutube = async (query: string): Promise<VideoSearchResult[]>
             publishedAt: item.snippet?.publishedAt || ''
         }));
     } catch (error: any) {
-        console.error('YouTube Search Error Full Object:', JSON.stringify(error, null, 2));
-        // Extract inner error message from Google API response if possible
+        console.error('YouTube Search Error:', JSON.stringify(error, null, 2));
         const apiMessage = error.response?.data?.error?.message || error.message;
         throw new Error(`YouTube API Error: ${apiMessage}`);
     }
 };
 
 /**
- * Get Video Data (Metadata + Transcript)
- * Handles Freemium logic and Caching
+ * Get Video Data (Metadata + AI-Generated Transcript)
+ * Uses Gemini 1.5 Flash to transcribe audio and translate to Chinese
  */
 export const getVideoData = async (
     youtubeId: string,
@@ -77,7 +91,6 @@ export const getVideoData = async (
     let video = await prisma.video.findUnique({ where: { youtubeId } });
 
     if (!video) {
-        // Fetch details from YouTube API to populate DB
         const referer = process.env.FRONTEND_URL || 'http://localhost:5173';
         const res = await youtube.videos.list(
             {
@@ -94,9 +107,6 @@ export const getVideoData = async (
         const item = res.data.items?.[0];
         if (!item) throw new Error('Video not found on YouTube');
 
-        // Parse ISO 8601 duration (PT1H2M10S) -> seconds roughly
-        // Simplified parsing or use a library. For now, we store 0 if parsing fails.
-        // We can improve this later.
         const durationStr = item.contentDetails?.duration || '';
         const duration = parseDuration(durationStr);
 
@@ -111,9 +121,9 @@ export const getVideoData = async (
         });
     }
 
-    // 2. Check for processed transcript in DB
-    const language = 'zh'; // Default target language
-    const isAIProcessed = true; // We want the AI enhanced one
+    // 2. Check for cached transcript
+    const language = 'zh';
+    const isAIProcessed = true;
 
     let transcriptRecord = await prisma.transcript.findUnique({
         where: {
@@ -132,35 +142,27 @@ export const getVideoData = async (
         console.log(`[Video] Cache hit for ${youtubeId}`);
         transcriptData = await storageService.downloadJSON(transcriptRecord.storageKey);
     } else {
-        // Cache Miss - Generate
-        console.log(`[Video] Cache miss for ${youtubeId}, generating...`);
+        // Cache Miss - Generate using Full AI approach
+        console.log(`[Video] Cache miss for ${youtubeId}, generating with AI...`);
 
-        // Fetch raw transcript using yt-dlp
-        let rawTranscripts: Array<{ start: number; duration: number; text: string }>;
-        try {
-            rawTranscripts = await fetchCaptionsViaYtdl(youtubeId);
-            console.log(`[VideoService] Successfully fetched ${rawTranscripts.length} transcript segments via yt-dlp`);
-        } catch (e: any) {
-            console.error('[VideoService] yt-dlp transcript fetch failed:', e?.message);
-            if (e?.message?.includes('No Korean captions') || e?.message?.includes('No captions available') || e?.message?.includes('SUBTITLES_NOT_FOUND')) {
-                throw new Error('该视频未提供字幕，无法生成 AI 课程。请尝试搜索其他带有字幕（CC）的视频。');
-            }
-            throw e;
-        }
+        // Process video with Gemini AI
+        const segments = await processVideoWithAI(youtubeId);
 
-        if (!rawTranscripts || rawTranscripts.length === 0) {
-            throw new Error('No transcripts available for this video');
-        }
-
-        // Combine text for AI processing
-        const fullText = rawTranscripts.map((t: { text: string }) => t.text).join(' ');
-
-        // Process with AI
-        const aiResult = await aiService.processTranscript(fullText, language);
+        // Format for storage
+        transcriptData = {
+            segments: segments.map(seg => ({
+                original: seg.text,
+                translated: seg.translation,
+                start: seg.start,
+                duration: seg.duration
+            })),
+            generatedAt: new Date().toISOString(),
+            method: 'gemini-1.5-flash'
+        };
 
         // Upload to S3
         const storageKey = `transcripts/${youtubeId}_ai_${language}.json`;
-        await storageService.uploadJSON(storageKey, aiResult);
+        await storageService.uploadJSON(storageKey, transcriptData);
 
         // Save to DB
         transcriptRecord = await prisma.transcript.create({
@@ -171,26 +173,12 @@ export const getVideoData = async (
                 storageKey
             }
         });
-
-        transcriptData = aiResult;
     }
 
     // 3. Freemium Logic
     if (!isPremium) {
         console.log(`[Video] User is FREE, limiting content`);
-        // Limit to first 60 seconds?
-        // Our 'aiResult' structure is: { segments: [{original, translated}], ... }
-        // We don't strictly have timestamps in the AI result unless we passed them through.
-        // The prompt asked for "Divide... into segments". It didn't ask for timestamps.
-        // If we want timestamps, we should have passed them to AI or mapped them back.
-        // FOR NOW: Let's limit by NUMBER OF SEGMENTS as a proxy, or hide valid data after N items.
-
-        // Let's assume 10 segments is enough for a preview if we lack timestamps.
-        // OR: modifying ai.service prompt to include start/end times is better. 
-        // But per current prompt in ai.service.ts, we only get text.
-
-        // Workaround: Slice the array.
-        const PREVIEW_SEGMENTS = 8; // approx 1 minute of speech
+        const PREVIEW_SEGMENTS = 8;
         if (transcriptData.segments && transcriptData.segments.length > PREVIEW_SEGMENTS) {
             transcriptData.segments = transcriptData.segments.slice(0, PREVIEW_SEGMENTS);
             transcriptData.isPreview = true;
@@ -204,33 +192,155 @@ export const getVideoData = async (
     };
 };
 
-// Helper for duration parsing (PT1M30S -> seconds)
-function parseDuration(duration: string): number {
-    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-    if (!match) return 0;
+/**
+ * Process video with Gemini AI
+ * Downloads audio -> Uploads to Gemini -> Transcribes & Translates
+ */
+async function processVideoWithAI(videoId: string): Promise<TranscriptSegment[]> {
+    // Ensure temp directory exists
+    if (!fs.existsSync(TEMP_AUDIO_DIR)) {
+        fs.mkdirSync(TEMP_AUDIO_DIR, { recursive: true });
+    }
 
-    const hours = (parseInt(match[1] || '0'));
-    const minutes = (parseInt(match[2] || '0'));
-    const seconds = (parseInt(match[3] || '0'));
+    const audioPath = path.join(TEMP_AUDIO_DIR, `${videoId}.mp3`);
 
-    return hours * 3600 + minutes * 60 + seconds;
+    try {
+        // Step 1: Download audio via yt-dlp
+        console.log(`[AI] 1. Downloading audio for ${videoId}...`);
+        await downloadAudio(videoId, audioPath);
+
+        // Step 2: Upload to Gemini
+        console.log(`[AI] 2. Uploading audio to Gemini...`);
+        const uploadResult = await fileManager.uploadFile(audioPath, {
+            mimeType: 'audio/mp3',
+            displayName: `yt_${videoId}`
+        });
+
+        // Wait for Gemini to process the file
+        let file = await fileManager.getFile(uploadResult.file.name);
+        let attempts = 0;
+        while (file.state === FileState.PROCESSING && attempts < 60) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            file = await fileManager.getFile(uploadResult.file.name);
+            attempts++;
+            process.stdout.write('.');
+        }
+        console.log('');
+
+        if (file.state === FileState.FAILED) {
+            throw new Error('Gemini failed to process audio file');
+        }
+
+        // Step 3: Generate transcript with AI
+        console.log(`[AI] 3. Generating transcript with Gemini...`);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const result = await model.generateContent([
+            {
+                fileData: {
+                    mimeType: uploadResult.file.mimeType,
+                    fileUri: uploadResult.file.uri
+                }
+            },
+            {
+                text: `
+You are a Korean language expert and professional translator.
+
+Task: Listen to this audio, transcribe the Korean speech, and translate it to Simplified Chinese.
+
+Requirements:
+1. Return ONLY a valid JSON array. Do NOT use markdown code blocks.
+2. Restore proper punctuation (periods, commas, question marks) for readability.
+3. Each segment should be 5-15 seconds of speech.
+4. Structure: [{"start": 0.0, "duration": 5.0, "text": "Korean text here", "translation": "中文翻译"}]
+
+Important:
+- "start" is the timestamp in seconds when the speech begins
+- "duration" is how long this speech segment lasts in seconds  
+- "text" is the original Korean transcription
+- "translation" is the Chinese translation
+
+If there is no speech or the audio is unclear, return an empty array: []
+                `.trim()
+            }
+        ]);
+
+        // Step 4: Cleanup local file
+        if (fs.existsSync(audioPath)) {
+            fs.unlinkSync(audioPath);
+        }
+
+        // Step 5: Parse response
+        console.log(`[AI] 4. Parsing AI response...`);
+        const responseText = result.response.text();
+
+        // Clean up markdown formatting if present
+        let cleanJson = responseText
+            .replace(/```json\s*/g, '')
+            .replace(/```\s*/g, '')
+            .trim();
+
+        // Try to parse JSON
+        try {
+            const segments = JSON.parse(cleanJson) as TranscriptSegment[];
+            console.log(`[AI] Successfully generated ${segments.length} transcript segments`);
+            return segments;
+        } catch (parseError) {
+            console.error('[AI] Failed to parse JSON response:', cleanJson.substring(0, 500));
+            throw new Error('Failed to parse AI transcript response');
+        }
+
+    } catch (error: any) {
+        // Cleanup on error
+        if (fs.existsSync(audioPath)) {
+            fs.unlinkSync(audioPath);
+        }
+
+        console.error('[AI] Error processing video:', error?.message);
+        throw new Error(`AI transcription failed: ${error?.message}`);
+    }
 }
 
 /**
- * Fetch captions using yt-dlp
- * Prefers manual Korean captions over ASR (Automatic Speech Recognition)
+ * Download audio from YouTube using yt-dlp
  */
-interface TranscriptSegment {
-    start: number;
-    duration: number;
-    text: string;
+async function downloadAudio(videoId: string, outputPath: string): Promise<void> {
+    // Get or create yt-dlp instance
+    const ytDlp = await getYtDlpInstance();
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+    // Build command arguments
+    const args = [
+        url,
+        '--extract-audio',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '--output', outputPath,
+        '--no-warnings',
+        '--no-playlist'
+    ];
+
+    // Add cookies if available (helps bypass "Sign in" errors)
+    if (fs.existsSync(COOKIES_PATH)) {
+        console.log('[yt-dlp] Using cookies.txt for authentication');
+        args.push('--cookies', COOKIES_PATH);
+    }
+
+    // Add user agent to avoid detection
+    args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+    await ytDlp.execPromise(args);
+
+    if (!fs.existsSync(outputPath)) {
+        throw new Error('Failed to download audio file');
+    }
+
+    console.log(`[yt-dlp] Audio downloaded: ${outputPath}`);
 }
 
-// yt-dlp binary path - will be downloaded if not exists
-const YT_DLP_BINARY_PATH = path.join(process.cwd(), 'bin', 'yt-dlp');
-const TEMP_SUBS_DIR = path.join(process.cwd(), 'temp_subs');
-
-// Initialize yt-dlp wrapper
+/**
+ * Get or initialize yt-dlp instance
+ */
 let ytDlpInstance: YTDlpWrap | null = null;
 
 async function getYtDlpInstance(): Promise<YTDlpWrap> {
@@ -245,215 +355,24 @@ async function getYtDlpInstance(): Promise<YTDlpWrap> {
     // Download yt-dlp binary if not exists
     if (!fs.existsSync(YT_DLP_BINARY_PATH)) {
         console.log('[yt-dlp] Binary not found, downloading...');
-        try {
-            await YTDlpWrap.downloadFromGithub(YT_DLP_BINARY_PATH);
-            console.log('[yt-dlp] Binary downloaded successfully');
-        } catch (error: any) {
-            console.error('[yt-dlp] Failed to download binary:', error?.message);
-            throw new Error('Failed to download yt-dlp binary');
-        }
+        await YTDlpWrap.downloadFromGithub(YT_DLP_BINARY_PATH);
+        console.log('[yt-dlp] Binary downloaded successfully');
     }
 
     ytDlpInstance = new YTDlpWrap(YT_DLP_BINARY_PATH);
     return ytDlpInstance;
 }
 
-async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[]> {
-    console.log(`[yt-dlp] Fetching captions for video: ${videoId}`);
-
-    const ytDlp = await getYtDlpInstance();
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-
-    // Ensure temp directory exists
-    if (!fs.existsSync(TEMP_SUBS_DIR)) {
-        fs.mkdirSync(TEMP_SUBS_DIR, { recursive: true });
-    }
-
-    const outputTemplate = path.join(TEMP_SUBS_DIR, '%(id)s');
-
-    try {
-        // Run yt-dlp to download subtitles only
-        console.log('[yt-dlp] Downloading subtitles...');
-        await ytDlp.execPromise([
-            url,
-            '--write-auto-sub',      // Get auto-generated captions if manual don't exist
-            '--write-sub',           // Get manual captions
-            '--sub-lang', 'ko,ko-KR', // Prefer Korean
-            '--skip-download',       // Don't download video
-            '--output', outputTemplate,
-            '--no-warnings',
-            '--quiet'
-        ]);
-
-        // Find the generated subtitle file
-        const files = fs.readdirSync(TEMP_SUBS_DIR);
-        const subFile = files.find(f =>
-            f.startsWith(videoId) && (f.endsWith('.vtt') || f.endsWith('.srt'))
-        );
-
-        if (!subFile) {
-            console.log('[yt-dlp] No subtitle file created');
-            throw new Error('SUBTITLES_NOT_FOUND');
-        }
-
-        console.log(`[yt-dlp] Found subtitle file: ${subFile}`);
-
-        // Read and parse the subtitle file
-        const fullPath = path.join(TEMP_SUBS_DIR, subFile);
-        const content = fs.readFileSync(fullPath, 'utf-8');
-
-        // Cleanup: delete the file immediately after reading
-        fs.unlinkSync(fullPath);
-
-        // Parse subtitle content using custom robust parser
-        let segments: TranscriptSegment[];
-
-        if (subFile.endsWith('.vtt')) {
-            segments = parseVttLoose(content);
-        } else {
-            // SRT format
-            segments = parseSrt(content);
-        }
-
-        // Filter out empty segments and duplicates
-        segments = segments.filter(s => s.text.length > 0);
-
-        console.log(`[yt-dlp] Parsed ${segments.length} transcript segments`);
-
-        if (segments.length === 0) {
-            throw new Error('Failed to parse transcript segments');
-        }
-
-        return segments;
-
-    } catch (error: any) {
-        console.error('[yt-dlp] Error:', error?.message || error);
-
-        // Cleanup temp directory on error
-        try {
-            const files = fs.readdirSync(TEMP_SUBS_DIR);
-            files.forEach(f => {
-                if (f.startsWith(videoId)) {
-                    fs.unlinkSync(path.join(TEMP_SUBS_DIR, f));
-                }
-            });
-        } catch { }
-
-        if (error?.message === 'SUBTITLES_NOT_FOUND') {
-            throw new Error('No Korean captions available for this video');
-        }
-        throw error;
-    }
-}
-
 /**
- * Helper to convert VTT timestamps to seconds
- * Supports both "HH:MM:SS.ms" and "MM:SS.ms" formats
+ * Helper for duration parsing (PT1M30S -> seconds)
  */
-function parseTime(timeStr: string): number {
-    const parts = timeStr.split(':');
-    let seconds = 0;
-    if (parts.length === 3) {
-        // HH:MM:SS.ms
-        seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
-    } else if (parts.length === 2) {
-        // MM:SS.ms
-        seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
-    }
-    return seconds;
-}
+function parseDuration(duration: string): number {
+    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+    if (!match) return 0;
 
-/**
- * Custom robust VTT parser using regex
- * More tolerant than node-webvtt library
- */
-function parseVttLoose(vttContent: string): TranscriptSegment[] {
-    const lines = vttContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-    const cues: TranscriptSegment[] = [];
-    let currentStart: number | null = null;
-    let currentEnd: number | null = null;
-    let currentText: string[] = [];
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
 
-    // Regex to match "00:00:00.000 --> 00:00:05.000" (supports optional hours)
-    const timeRegex = /([\d:]+\.\d{3})\s+-->\s+([\d:]+\.\d{3})/;
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        // Check for timestamp line
-        const match = line.match(timeRegex);
-        if (match) {
-            // If we were building a previous cue, push it now
-            if (currentStart !== null && currentText.length > 0) {
-                cues.push({
-                    start: currentStart,
-                    duration: (currentEnd ?? currentStart) - currentStart,
-                    text: currentText.join(' ').replace(/<[^>]*>/g, '').trim()
-                });
-            }
-
-            // Start new cue
-            currentStart = parseTime(match[1]);
-            currentEnd = parseTime(match[2]);
-            currentText = [];
-        } else if (currentStart !== null && line !== '' && !line.startsWith('NOTE') && !line.startsWith('WEBVTT') && !line.startsWith('Kind:') && !line.startsWith('Language:')) {
-            // It's a text line (skip empty lines, NOTES, headers, metadata)
-            // Also skip numeric cue identifiers
-            if (!/^\d+$/.test(line)) {
-                currentText.push(line);
-            }
-        }
-    }
-
-    // Push the last cue
-    if (currentStart !== null && currentText.length > 0) {
-        cues.push({
-            start: currentStart,
-            duration: (currentEnd ?? currentStart) - currentStart,
-            text: currentText.join(' ').replace(/<[^>]*>/g, '').trim()
-        });
-    }
-
-    return cues;
-}
-
-// Simple SRT parser as fallback
-function parseSrt(content: string): TranscriptSegment[] {
-    const segments: TranscriptSegment[] = [];
-    const blocks = content.split(/\n\n+/);
-
-    for (const block of blocks) {
-        const lines = block.trim().split('\n');
-        if (lines.length < 3) continue;
-
-        // Parse timestamp line (e.g., "00:00:01,000 --> 00:00:04,000")
-        const timeLine = lines[1];
-        const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
-
-        if (!timeMatch) continue;
-
-        const startSeconds =
-            parseInt(timeMatch[1]) * 3600 +
-            parseInt(timeMatch[2]) * 60 +
-            parseInt(timeMatch[3]) +
-            parseInt(timeMatch[4]) / 1000;
-
-        const endSeconds =
-            parseInt(timeMatch[5]) * 3600 +
-            parseInt(timeMatch[6]) * 60 +
-            parseInt(timeMatch[7]) +
-            parseInt(timeMatch[8]) / 1000;
-
-        const text = lines.slice(2).join(' ').replace(/<[^>]*>/g, '').trim();
-
-        if (text) {
-            segments.push({
-                start: startSeconds,
-                duration: endSeconds - startSeconds,
-                text
-            });
-        }
-    }
-
-    return segments;
+    return hours * 3600 + minutes * 60 + seconds;
 }
