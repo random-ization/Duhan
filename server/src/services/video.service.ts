@@ -1,7 +1,6 @@
 import { google } from 'googleapis';
 import getYouTubeID from 'get-youtube-id';
 import YTDlpWrap from 'yt-dlp-wrap';
-import { parse as parseVtt } from 'node-webvtt';
 import { PrismaClient } from '@prisma/client';
 import * as aiService from './ai.service';
 import * as storageService from './storage.service';
@@ -306,20 +305,13 @@ async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[
         // Cleanup: delete the file immediately after reading
         fs.unlinkSync(fullPath);
 
-        // Parse VTT content
+        // Parse subtitle content using custom robust parser
         let segments: TranscriptSegment[];
 
         if (subFile.endsWith('.vtt')) {
-            // Sanitize VTT content before parsing
-            const cleanedContent = fixVttContent(content);
-            const parsed = parseVtt(cleanedContent);
-            segments = parsed.cues.map((cue: any) => ({
-                start: cue.start,
-                duration: cue.end - cue.start,
-                text: cue.text.replace(/<[^>]*>/g, '').trim() // Remove HTML tags
-            }));
+            segments = parseVttLoose(content);
         } else {
-            // SRT format - simple parsing
+            // SRT format
             segments = parseSrt(content);
         }
 
@@ -355,37 +347,74 @@ async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[
 }
 
 /**
- * Sanitize VTT content to fix common parsing issues
- * - Normalizes newlines
- * - Removes BOM
- * - Ensures proper blank line after WEBVTT header
+ * Helper to convert VTT timestamps to seconds
+ * Supports both "HH:MM:SS.ms" and "MM:SS.ms" formats
  */
-function fixVttContent(rawContent: string): string {
-    // 1. Normalize newlines
-    let content = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    // 2. Remove BOM (Byte Order Mark)
-    if (content.charCodeAt(0) === 0xFEFF) {
-        content = content.slice(1);
+function parseTime(timeStr: string): number {
+    const parts = timeStr.split(':');
+    let seconds = 0;
+    if (parts.length === 3) {
+        // HH:MM:SS.ms
+        seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+    } else if (parts.length === 2) {
+        // MM:SS.ms
+        seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
     }
+    return seconds;
+}
 
-    // 3. Ensure content starts with WEBVTT header
-    content = content.trimStart();
-    if (!content.startsWith('WEBVTT')) {
-        content = 'WEBVTT\n\n' + content;
-    }
+/**
+ * Custom robust VTT parser using regex
+ * More tolerant than node-webvtt library
+ */
+function parseVttLoose(vttContent: string): TranscriptSegment[] {
+    const lines = vttContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const cues: TranscriptSegment[] = [];
+    let currentStart: number | null = null;
+    let currentEnd: number | null = null;
+    let currentText: string[] = [];
 
-    // 4. Force blank line before first cue (fixes "Missing blank line after signature" error)
-    const firstCueIndex = content.search(/\d{2}:\d{2}:\d{2}\.\d{3}\s+-->/);
-    if (firstCueIndex > -1) {
-        const headerPart = content.substring(0, firstCueIndex);
-        const bodyPart = content.substring(firstCueIndex);
-        if (!headerPart.endsWith('\n\n')) {
-            return headerPart.trimEnd() + '\n\n' + bodyPart;
+    // Regex to match "00:00:00.000 --> 00:00:05.000" (supports optional hours)
+    const timeRegex = /([\d:]+\.\d{3})\s+-->\s+([\d:]+\.\d{3})/;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Check for timestamp line
+        const match = line.match(timeRegex);
+        if (match) {
+            // If we were building a previous cue, push it now
+            if (currentStart !== null && currentText.length > 0) {
+                cues.push({
+                    start: currentStart,
+                    duration: (currentEnd ?? currentStart) - currentStart,
+                    text: currentText.join(' ').replace(/<[^>]*>/g, '').trim()
+                });
+            }
+
+            // Start new cue
+            currentStart = parseTime(match[1]);
+            currentEnd = parseTime(match[2]);
+            currentText = [];
+        } else if (currentStart !== null && line !== '' && !line.startsWith('NOTE') && !line.startsWith('WEBVTT') && !line.startsWith('Kind:') && !line.startsWith('Language:')) {
+            // It's a text line (skip empty lines, NOTES, headers, metadata)
+            // Also skip numeric cue identifiers
+            if (!/^\d+$/.test(line)) {
+                currentText.push(line);
+            }
         }
     }
 
-    return content;
+    // Push the last cue
+    if (currentStart !== null && currentText.length > 0) {
+        cues.push({
+            start: currentStart,
+            duration: (currentEnd ?? currentStart) - currentStart,
+            text: currentText.join(' ').replace(/<[^>]*>/g, '').trim()
+        });
+    }
+
+    return cues;
 }
 
 // Simple SRT parser as fallback
