@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import getYouTubeID from 'get-youtube-id';
-import { YoutubeTranscript } from 'youtube-transcript';
+import ytdl from '@distube/ytdl-core';
+import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import * as aiService from './ai.service';
 import * as storageService from './storage.service';
@@ -133,34 +134,17 @@ export const getVideoData = async (
         // Cache Miss - Generate
         console.log(`[Video] Cache miss for ${youtubeId}, generating...`);
 
-        // Fetch raw transcript
-        // Logic: Try to fetch manual captions first, then auto-gen
-        // YoutubeTranscript fetches whatever is available.
-        let rawTranscripts;
-        let lastError;
-        // Try preferred languages first, then default
-        const attempts = [{ lang: 'ko' }, { lang: 'ko-KR' }, undefined];
-
-        for (const config of attempts) {
-            try {
-                rawTranscripts = await YoutubeTranscript.fetchTranscript(youtubeId, config);
-                if (rawTranscripts && rawTranscripts.length > 0) {
-                    console.log(`[VideoService] Successfully fetched transcript with config:`, config || 'default');
-                    break;
-                }
-            } catch (e: any) {
-                lastError = e;
-                // Don't log full stack for expected "not found" errors during trial
-                // console.log(`[VideoService] Attempt failed for ${JSON.stringify(config)}`);
-            }
-        }
-
-        if (!rawTranscripts || rawTranscripts.length === 0) {
-            console.error('[VideoService] All transcript fetch attempts failed:', lastError?.message);
-            if (lastError?.message?.includes('Transcript is disabled') || lastError?.message?.includes('Could not retrieve')) {
+        // Fetch raw transcript using ytdl-core
+        let rawTranscripts: Array<{ start: number; duration: number; text: string }>;
+        try {
+            rawTranscripts = await fetchCaptionsViaYtdl(youtubeId);
+            console.log(`[VideoService] Successfully fetched ${rawTranscripts.length} transcript segments via ytdl-core`);
+        } catch (e: any) {
+            console.error('[VideoService] ytdl-core transcript fetch failed:', e?.message);
+            if (e?.message?.includes('No Korean captions') || e?.message?.includes('No captions available')) {
                 throw new Error('该视频未提供字幕，无法生成 AI 课程。请尝试搜索其他带有字幕（CC）的视频。');
             }
-            throw lastError || new Error('No transcripts available for this video');
+            throw e;
         }
 
         if (!rawTranscripts || rawTranscripts.length === 0) {
@@ -168,7 +152,7 @@ export const getVideoData = async (
         }
 
         // Combine text for AI processing
-        const fullText = rawTranscripts.map(t => t.text).join(' ');
+        const fullText = rawTranscripts.map((t: { text: string }) => t.text).join(' ');
 
         // Process with AI
         const aiResult = await aiService.processTranscript(fullText, language);
@@ -229,4 +213,100 @@ function parseDuration(duration: string): number {
     const seconds = (parseInt(match[3] || '0'));
 
     return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Fetch captions using ytdl-core's internal metadata
+ * Prefers manual Korean captions over ASR (Automatic Speech Recognition)
+ */
+interface CaptionTrack {
+    baseUrl: string;
+    languageCode: string;
+    kind?: string; // 'asr' for auto-generated
+    name?: { simpleText?: string };
+}
+
+interface TranscriptSegment {
+    start: number;
+    duration: number;
+    text: string;
+}
+
+async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[]> {
+    console.log(`[ytdl-core] Fetching caption info for video: ${videoId}`);
+
+    // Get video info including caption tracks
+    const info = await ytdl.getInfo(videoId);
+
+    // Access caption tracks from player response
+    const playerResponse = info.player_response as any;
+    const captionTracks: CaptionTrack[] = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+    if (!captionTracks || captionTracks.length === 0) {
+        console.log('[ytdl-core] No caption tracks found');
+        throw new Error('No captions available for this video');
+    }
+
+    console.log(`[ytdl-core] Found ${captionTracks.length} caption tracks:`,
+        captionTracks.map(t => `${t.languageCode}${t.kind === 'asr' ? ' (ASR)' : ''}`).join(', '));
+
+    // Filter for Korean captions (ko or ko-KR)
+    const koreanTracks = captionTracks.filter(track =>
+        track.languageCode === 'ko' || track.languageCode === 'ko-KR'
+    );
+
+    if (koreanTracks.length === 0) {
+        console.log('[ytdl-core] No Korean caption tracks found');
+        throw new Error('No Korean captions available for this video');
+    }
+
+    // Prefer manual captions over ASR
+    // ASR tracks have kind: 'asr'
+    let selectedTrack = koreanTracks.find(track => track.kind !== 'asr');
+    if (!selectedTrack) {
+        // Fallback to ASR if no manual captions
+        selectedTrack = koreanTracks[0];
+        console.log('[ytdl-core] Using ASR (auto-generated) Korean captions');
+    } else {
+        console.log('[ytdl-core] Using manual Korean captions');
+    }
+
+    // Fetch the transcript in JSON format
+    const transcriptUrl = selectedTrack.baseUrl + '&fmt=json3';
+    console.log(`[ytdl-core] Fetching transcript from URL`);
+
+    const response = await axios.get(transcriptUrl);
+    const transcriptData = response.data;
+
+    // Parse the JSON3 format
+    // The format has an 'events' array with segments
+    const events = transcriptData.events || [];
+    const segments: TranscriptSegment[] = [];
+
+    for (const event of events) {
+        // Skip events without timing info or segments
+        if (event.tStartMs === undefined || !event.segs) continue;
+
+        // Combine all text segments in this event
+        const text = event.segs
+            .map((seg: any) => seg.utf8 || '')
+            .join('')
+            .trim();
+
+        if (!text) continue;
+
+        segments.push({
+            start: event.tStartMs / 1000, // Convert ms to seconds
+            duration: (event.dDurationMs || 0) / 1000,
+            text
+        });
+    }
+
+    console.log(`[ytdl-core] Parsed ${segments.length} transcript segments`);
+
+    if (segments.length === 0) {
+        throw new Error('Failed to parse transcript segments');
+    }
+
+    return segments;
 }
