@@ -233,7 +233,7 @@ async function processVideoWithAI(videoId: string): Promise<TranscriptSegment[]>
 
         // Step 3: Generate transcript with AI
         console.log(`[AI] 3. Generating transcript with Gemini...`);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
         const result = await model.generateContent([
             {
