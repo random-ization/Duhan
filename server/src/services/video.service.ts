@@ -310,7 +310,9 @@ async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[
         let segments: TranscriptSegment[];
 
         if (subFile.endsWith('.vtt')) {
-            const parsed = parseVtt(content);
+            // Sanitize VTT content before parsing
+            const cleanedContent = fixVttContent(content);
+            const parsed = parseVtt(cleanedContent);
             segments = parsed.cues.map((cue: any) => ({
                 start: cue.start,
                 duration: cue.end - cue.start,
@@ -350,6 +352,40 @@ async function fetchCaptionsViaYtdl(videoId: string): Promise<TranscriptSegment[
         }
         throw error;
     }
+}
+
+/**
+ * Sanitize VTT content to fix common parsing issues
+ * - Normalizes newlines
+ * - Removes BOM
+ * - Ensures proper blank line after WEBVTT header
+ */
+function fixVttContent(rawContent: string): string {
+    // 1. Normalize newlines
+    let content = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // 2. Remove BOM (Byte Order Mark)
+    if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+    }
+
+    // 3. Ensure content starts with WEBVTT header
+    content = content.trimStart();
+    if (!content.startsWith('WEBVTT')) {
+        content = 'WEBVTT\n\n' + content;
+    }
+
+    // 4. Force blank line before first cue (fixes "Missing blank line after signature" error)
+    const firstCueIndex = content.search(/\d{2}:\d{2}:\d{2}\.\d{3}\s+-->/);
+    if (firstCueIndex > -1) {
+        const headerPart = content.substring(0, firstCueIndex);
+        const bodyPart = content.substring(firstCueIndex);
+        if (!headerPart.endsWith('\n\n')) {
+            return headerPart.trimEnd() + '\n\n' + bodyPart;
+        }
+    }
+
+    return content;
 }
 
 // Simple SRT parser as fallback
