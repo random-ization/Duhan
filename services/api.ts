@@ -469,6 +469,11 @@ export const api = {
       body: JSON.stringify({ audioUrl, episodeId, language }),
     }),
 
+  deleteTranscript: async (episodeId: string) =>
+    request<{ success: boolean }>(`/ai/transcript/${episodeId}`, {
+      method: 'DELETE',
+    }),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 

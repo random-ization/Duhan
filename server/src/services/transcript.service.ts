@@ -214,6 +214,119 @@ const transcribeWithWhisper = async (filePath: string, maxDuration?: number): Pr
 }
 
 /**
+ * Step 1.5: Batch Translate Segments (Korean -> Target Language)
+ * Provider: OpenAI (GPT-4o-mini)
+ */
+const translateSegments = async (
+    segments: TranscriptSegment[],
+    targetLanguage: string = 'zh'
+): Promise<TranscriptSegment[]> => {
+    const client = getOpenAIClient();
+    console.log(`[Translation] Translating ${segments.length} segments to ${targetLanguage} with GPT-4o-mini...`);
+
+    // Batch size to prevent context window overflow (approx 20-30 segments per batch)
+    const BATCH_SIZE = 20;
+    const translatedSegments = [...segments];
+
+    for (let i = 0; i < segments.length; i += BATCH_SIZE) {
+        const batch = segments.slice(i, i + BATCH_SIZE);
+        const batchIndices = batch.map((_, idx) => i + idx);
+
+        // Prepare prompt
+        const textsToTranslate = batch.map((seg, idx) => `${idx + 1}. ${seg.text}`).join('\n');
+        const prompt = `You are a professional translator. Translate the following Korean podcast transcript segments into Chinese (Simplified).
+        
+        Rules:
+        1. Maintain the tone and nuance of spoken Korean.
+        2. Output ONLY the translations, line by line, numbered exactly as input.
+        3. Do not add explanations or notes.
+        
+        Input:
+        ${textsToTranslate}
+        `;
+
+        try {
+            const completion = await client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.3
+            });
+
+            const response = completion.choices[0].message.content || "";
+            const lines = response.split('\n').filter(line => /^\d+\./.test(line.trim()));
+
+            lines.forEach(line => {
+                const match = line.match(/^(\d+)\.\s+(.*)/);
+                if (match) {
+                    const localIndex = parseInt(match[1]) - 1;
+                    const globalIndex = i + localIndex;
+                    if (globalIndex < translatedSegments.length) {
+                        translatedSegments[globalIndex].translation = match[2].trim();
+                    }
+                }
+            });
+
+            console.log(`[Translation] Processed batch ${i / BATCH_SIZE + 1}/${Math.ceil(segments.length / BATCH_SIZE)}`);
+
+        } catch (e) {
+            console.error(`[Translation] Batch failed at index ${i}`, e);
+            // Continue without translation for this batch rather than failing everything
+        }
+    }
+
+    return translatedSegments;
+};
+
+/**
+ * Step 1.2: Refine Segments (Smart Segmentation)
+ * Merges short fragments to form complete sentences.
+ */
+const refineSegments = (segments: TranscriptSegment[]): TranscriptSegment[] => {
+    console.log(`[SegRe] Refining ${segments.length} segments...`);
+    const refined: TranscriptSegment[] = [];
+    let current: TranscriptSegment | null = null;
+
+    for (const seg of segments) {
+        if (!current) {
+            current = { ...seg };
+            continue;
+        }
+
+        // Merge logic
+        const duration = current.end - current.start;
+        const textlen = current.text.length;
+        const endsWithPunctuation = /[.!?。！？]$/.test(current.text);
+
+        // Conditions to merge with next:
+        // 1. Very short duration (< 1.5s)
+        // 2. Very short text (< 10 chars) NOT ending in punctuation
+        // 3. Does not end in punctuation AND duration < 4s (sentence continuation)
+        const shouldMerge =
+            (duration < 1.0) ||
+            (textlen < 15 && !endsWithPunctuation) ||
+            (!endsWithPunctuation && duration < 3.0);
+
+        if (shouldMerge) {
+            // Merge seg into current
+            current.end = seg.end;
+            current.text = `${current.text} ${seg.text}`.trim();
+            if (seg.words) {
+                current.words = [...(current.words || []), ...seg.words];
+            }
+        } else {
+            // Current is good, push and start new
+            refined.push(current);
+            current = { ...seg };
+        }
+    }
+
+    if (current) refined.push(current);
+
+    console.log(`[SegRe] Refined to ${refined.length} segments (Reduced by ${segments.length - refined.length})`);
+    return refined;
+};
+
+/**
  * Step 2: On-Demand Analysis (Called when user clicks "Analyze" button)
  * Provider: OpenAI (GPT-4o-mini)
  */
@@ -294,7 +407,18 @@ export const generateTranscript = async (
     try {
         if (await checkFileExists(cacheKey)) {
             console.log(`[Transcript] Cache hit: ${cacheKey}`);
-            const cached = await downloadJSON(cacheKey);
+            const cached: TranscriptResult = await downloadJSON(cacheKey);
+
+            // Check if we need to backfill translations
+            if (targetLanguage && cached.segments.length > 0 && !cached.segments[0].translation) {
+                console.log(`[Transcript] Cached version missing translations. Backfilling...`);
+                cached.segments = await translateSegments(cached.segments, targetLanguage);
+
+                // Re-save to cache
+                await uploadCachedJson(cacheKey, cached, TRANSCRIPT_CACHE_TTL);
+                return { ...cached, cached: false }; // Mark as fresh since we modified it
+            }
+
             return { ...cached, cached: true };
         }
     } catch (e) { /* ignore */ }
@@ -325,7 +449,15 @@ export const generateTranscript = async (
         }
 
         // 4. Perform ASR (OpenAI Whisper) - Pass Duration for clamping
-        const segments = await transcribeWithWhisper(uploadFile, originalDuration);
+        let segments = await transcribeWithWhisper(uploadFile, originalDuration);
+
+        // 4.2 Refine Segments (Merge short/broken lines)
+        segments = refineSegments(segments);
+
+        // 4.5 Translate Segments (New)
+        if (targetLanguage) {
+            segments = await translateSegments(segments, targetLanguage);
+        }
 
         const transcriptData: TranscriptResult = {
             segments: segments,
@@ -352,7 +484,7 @@ export const getTranscriptFromCache = async (episodeId: string): Promise<Transcr
     const cacheKey = `${TRANSCRIPT_CACHE_PREFIX}${episodeId}.json`;
     try {
         if (await checkFileExists(cacheKey)) {
-            const cached = await downloadJSON(cacheKey);
+            const cached: TranscriptResult = await downloadJSON(cacheKey);
             return { ...cached, cached: true };
         }
     } catch (e) { /* ignore */ }

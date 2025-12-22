@@ -18,7 +18,8 @@ import {
     Volume2,
     Heart,
     Share2,
-    ListMusic
+    ListMusic,
+    RefreshCw
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -272,6 +273,25 @@ const PodcastPlayerPage: React.FC = () => {
         else setAbLoop({ a: null, b: null, active: false });
     };
 
+    const regenerateTranscript = async () => {
+        if (!confirm('重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？')) return;
+
+        const episodeId = getEpisodeId();
+        setTranscriptLoading(true);
+        setTranscriptError(null);
+        setTranscript([]);
+
+        try {
+            await api.deleteTranscript(episodeId);
+            // Force reload from API
+            await loadTranscript();
+        } catch (e) {
+            console.error(e);
+            setTranscriptError('重置失败，请稍后重试');
+            setTranscriptLoading(false);
+        }
+    };
+
     const analyze = async (line: TranscriptLine) => {
         if (audioRef.current) {
             audioRef.current.pause();
@@ -372,6 +392,16 @@ const PodcastPlayerPage: React.FC = () => {
                                         }`} />
                                 </button>
                             </div>
+
+                            {/* Regenerate Button (For fixing broken subtitles) */}
+                            <button
+                                onClick={regenerateTranscript}
+                                disabled={transcriptLoading || isGeneratingTranscript}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-slate-300 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all text-slate-400 font-medium text-sm"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${isGeneratingTranscript ? 'animate-spin' : ''}`} />
+                                {isGeneratingTranscript ? '生成中...' : '重新生成字幕 (修正排版)'}
+                            </button>
 
                             {/* Action Buttons */}
                             <div className="grid grid-cols-2 gap-3">
