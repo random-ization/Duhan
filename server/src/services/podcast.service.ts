@@ -374,29 +374,27 @@ export const getTrending = async (forceRefresh: boolean = false) => {
             console.log('[PodcastService] Cache miss or error, fetching fresh data');
         }
     }
-}
+    // Fetch fresh data
+    const [external, internal] = await Promise.all([
+        getAppleTopCharts(),
+        getInternalTrending()
+    ]);
 
-// Fetch fresh data
-const [external, internal] = await Promise.all([
-    getAppleTopCharts(),
-    getInternalTrending()
-]);
+    const result = { external, internal };
 
-const result = { external, internal };
+    // Save to S3 cache (async, don't block response)
+    try {
+        const cacheData = {
+            ...result,
+            _cachedAt: Date.now()
+        };
+        await uploadCachedJson(TRENDING_CACHE_KEY, cacheData, TRENDING_CACHE_TTL);
+        console.log('[PodcastService] Trending data cached to S3');
+    } catch (err) {
+        console.error('[PodcastService] Failed to cache trending:', err);
+    }
 
-// Save to S3 cache (async, don't block response)
-try {
-    const cacheData = {
-        ...result,
-        _cachedAt: Date.now()
-    };
-    await uploadCachedJson(TRENDING_CACHE_KEY, cacheData, TRENDING_CACHE_TTL);
-    console.log('[PodcastService] Trending data cached to S3');
-} catch (err) {
-    console.error('[PodcastService] Failed to cache trending:', err);
-}
-
-return result;
+    return result;
 };
 
 /**
