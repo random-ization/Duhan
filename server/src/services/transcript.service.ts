@@ -8,6 +8,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
+import ffmpegPath from 'ffmpeg-static';
+
+// Set ffmpeg path for fluent-ffmpeg (using bundled binary)
+if (ffmpegPath) {
+    ffmpeg.setFfmpegPath(ffmpegPath);
+}
 
 // Initialize Gemini
 const getGenAI = () => {
