@@ -72,13 +72,18 @@ const PodcastDashboard: React.FC = () => {
     const [feedEpisodes, setFeedEpisodes] = useState<PodcastEpisode[]>([]);
     const [trending, setTrending] = useState<TrendingData | null>(null);
     const [activeTab, setActiveTab] = useState<'apple' | 'community'>('apple');
-    const [loading, setLoading] = useState(true);
+
+    // Use isDataLoaded instead of loading to prevent flash
+    const [isDataLoaded, setIsDataLoaded] = useState(false);
 
     // Fetch dashboard data on mount
     useEffect(() => {
         const fetchDashboardData = async () => {
-            if (!user) return;
-            setLoading(true);
+            if (!user) {
+                setIsDataLoaded(true);
+                return;
+            }
+
             try {
                 const [feedData, trendingData] = await Promise.all([
                     api.getMyPodcastFeed(),
@@ -92,7 +97,7 @@ const PodcastDashboard: React.FC = () => {
             } catch (error) {
                 console.error('Failed to fetch podcast data:', error);
             } finally {
-                setLoading(false);
+                setIsDataLoaded(true);
             }
         };
 
@@ -189,14 +194,6 @@ const PodcastDashboard: React.FC = () => {
         navigate('/podcasts/player', { state: { episode } });
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-white">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent" />
-            </div>
-        );
-    }
-
     return (
         <div className="pb-24 bg-white min-h-screen">
             {/* Header & Search Bar */}
@@ -292,8 +289,8 @@ const PodcastDashboard: React.FC = () => {
                                                 <button
                                                     onClick={() => toggleSubscribe(channel)}
                                                     className={`p-2.5 rounded-full transition-colors ${isSubscribed
-                                                            ? 'bg-pink-100 text-pink-600'
-                                                            : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                                        ? 'bg-pink-100 text-pink-600'
+                                                        : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
                                                         }`}
                                                 >
                                                     <Heart className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`} />
@@ -420,8 +417,8 @@ const PodcastDashboard: React.FC = () => {
                                                     toggleSubscribe(channel);
                                                 }}
                                                 className={`p-2.5 rounded-full transition-colors ${isSubscribed
-                                                        ? 'text-pink-500 hover:bg-pink-50'
-                                                        : 'text-slate-400 hover:bg-slate-100'
+                                                    ? 'text-pink-500 hover:bg-pink-50'
+                                                    : 'text-slate-400 hover:bg-slate-100'
                                                     }`}
                                             >
                                                 <Heart className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`} />
@@ -451,8 +448,8 @@ const PodcastDashboard: React.FC = () => {
                                 <button
                                     onClick={() => setActiveTab('apple')}
                                     className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${activeTab === 'apple'
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     <span className="flex items-center gap-1">
@@ -463,8 +460,8 @@ const PodcastDashboard: React.FC = () => {
                                 <button
                                     onClick={() => setActiveTab('community')}
                                     className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${activeTab === 'community'
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     <span className="flex items-center gap-1">
