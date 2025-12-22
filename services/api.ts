@@ -454,6 +454,21 @@ export const api = {
       body: JSON.stringify({ sentence, context, language }),
     }),
 
+  // --- AI Transcript Generation ---
+  generateTranscript: async (audioUrl: string, episodeId: string, language?: string) =>
+    request<{
+      success: boolean;
+      data: {
+        segments: { start: number; end: number; text: string; translation: string }[];
+        language?: string;
+        duration?: number;
+        cached?: boolean;
+      };
+    }>('/ai/transcript', {
+      method: 'POST',
+      body: JSON.stringify({ audioUrl, episodeId, language }),
+    }),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 

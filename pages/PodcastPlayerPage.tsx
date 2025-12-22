@@ -100,52 +100,47 @@ const PodcastPlayerPage: React.FC = () => {
         setTranscriptError(null);
 
         try {
-            // Step 1: Try S3/CDN cache first
+            // Step 1: Try S3/CDN cache first (if configured)
             if (CDN_DOMAIN) {
                 const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
                 console.log('[Transcript] Trying S3 cache:', s3Url);
 
-                const s3Res = await fetch(s3Url);
-                if (s3Res.ok) {
-                    const data = await s3Res.json();
-                    console.log('[Transcript] S3 cache hit!');
-                    setTranscript(data.segments || data);
-                    setTranscriptLoading(false);
-                    return;
+                try {
+                    const s3Res = await fetch(s3Url);
+                    if (s3Res.ok) {
+                        const data = await s3Res.json();
+                        console.log('[Transcript] S3 cache hit!');
+                        setTranscript(data.segments || data);
+                        setTranscriptLoading(false);
+                        return;
+                    }
+                } catch (e) {
+                    console.log('[Transcript] S3 fetch failed, trying API...');
                 }
-                console.log('[Transcript] S3 cache miss, status:', s3Res.status);
             }
 
-            // Step 2: Fallback to API (will generate and cache to S3)
-            console.log('[Transcript] Requesting server generation...');
+            // Step 2: Call API with auth (will generate and cache to S3)
+            console.log('[Transcript] Calling API to generate transcript...');
             setIsGeneratingTranscript(true);
 
-            const apiRes = await fetch('/api/ai/transcript', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    episodeId,
-                    audioUrl: episode.audioUrl,
-                    title: episode.title
-                })
-            });
+            const result = await api.generateTranscript(
+                episode.audioUrl,
+                episodeId,
+                'zh' // Chinese translation
+            );
 
-            if (apiRes.ok) {
-                const data = await apiRes.json();
-                if (data.success && data.data?.segments) {
-                    setTranscript(data.data.segments);
-                } else {
-                    throw new Error('Invalid transcript format');
-                }
+            if (result.success && result.data?.segments) {
+                console.log('[Transcript] API success, got', result.data.segments.length, 'segments');
+                setTranscript(result.data.segments);
             } else {
-                throw new Error(`API error: ${apiRes.status}`);
+                throw new Error('Invalid transcript response');
             }
         } catch (err: any) {
             console.error('[Transcript] Failed to load:', err);
             // Use mock transcript as fallback
             console.log('[Transcript] Using mock transcript');
             setTranscript(MOCK_TRANSCRIPT);
-            setTranscriptError('Using demo transcript (AI generation not available)');
+            setTranscriptError('字幕生成失败，使用演示数据');
         } finally {
             setTranscriptLoading(false);
             setIsGeneratingTranscript(false);
