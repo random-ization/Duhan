@@ -177,7 +177,26 @@ export const getEpisodes = async (feedUrl: string): Promise<PodcastFeed> => {
  * @returns true if now subscribed, false if unsubscribed
  */
 export const toggleSubscription = async (userId: string, channel: ChannelInput): Promise<boolean> => {
-    console.log(`[PodcastService] Toggle subscription for user ${userId} to channel ${channel.itunesId}`);
+    // 0. Fallback: If feedUrl is missing, try to fetch it via iTunes Lookup
+    if (!channel.feedUrl) {
+        console.log(`[PodcastService] Missing feedUrl for ${channel.itunesId}, attempting fallback lookup...`);
+        try {
+            const lookupUrl = `https://itunes.apple.com/lookup?id=${channel.itunesId}`;
+            const response = await axios.get(lookupUrl, { timeout: 5000 });
+            if (response.data?.results?.[0]?.feedUrl) {
+                channel.feedUrl = response.data.results[0].feedUrl;
+                console.log(`[PodcastService] Resolved feedUrl: ${channel.feedUrl}`);
+            } else {
+                console.warn(`[PodcastService] Failed to resolve feedUrl for ${channel.itunesId}`);
+            }
+        } catch (e) {
+            console.error(`[PodcastService] Lookup failed:`, e);
+        }
+    }
+
+    if (!channel.feedUrl) {
+        throw new Error('MISSING_FEED_URL');
+    }
 
     // 1. Upsert the channel (create if not exists)
     const podcastChannel = await prisma.podcastChannel.upsert({

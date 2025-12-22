@@ -22,19 +22,8 @@ if (ffprobePath) {
 // 1. Initialization (Hybrid Strategy)
 // ============================================
 
-// Client 1: SiliconFlow for SenseVoice (Fast ASR)
-const getAsrClient = () => {
-    const apiKey = process.env.SILICONFLOW_API_KEY;
-    if (!apiKey) throw new Error('SILICONFLOW_API_KEY is not set');
-
-    return new OpenAI({
-        apiKey: apiKey,
-        baseURL: "https://api.siliconflow.cn/v1"
-    });
-};
-
-// Client 2: OpenAI Official for GPT-4o-mini (Smart Analysis)
-const getLlmClient = () => {
+// Client: OpenAI Official (Used for BOTH Whisper and GPT-4o-mini)
+const getOpenAIClient = () => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
 
@@ -60,7 +49,7 @@ export interface TranscriptResult {
 
 const TRANSCRIPT_CACHE_PREFIX = 'transcripts/';
 const TRANSCRIPT_CACHE_TTL = 86400; // 24 hours
-const MAX_SIZE_FOR_COMPRESSION = 20 * 1024 * 1024; // 20MB
+const MAX_SIZE_FOR_COMPRESSION = 24 * 1024 * 1024; // 24MB (Whisper limit is 25MB)
 
 // ============================================
 // 2. Helpers
@@ -93,7 +82,7 @@ const downloadAudioToFile = async (url: string): Promise<string> => {
 };
 
 /**
- * Compress audio to speed up upload.
+ * Compress audio to speed up upload and meet Whisper size limits.
  * Target: 16k sample rate, 64k bitrate, Mono.
  */
 const compressAudio = async (inputPath: string): Promise<string> => {
@@ -103,7 +92,7 @@ const compressAudio = async (inputPath: string): Promise<string> => {
         ffmpeg(inputPath)
             .audioChannels(1)
             .audioFrequency(16000)
-            .audioBitrate('64k') // Updated to 64k as requested
+            .audioBitrate('64k') // Optimized for Whisper
             .output(outputPath)
             .on('end', () => {
                 console.log('[Transcript] Compression complete');
@@ -135,57 +124,41 @@ const cleanupFiles = (...files: string[]) => {
 };
 
 // ============================================
-// 3. Core Logic (Hybrid IO)
+// 3. Core Logic (OpenAI Whisper)
 // ============================================
 
 /**
  * Step 1: Transcribe Audio (Returns Segments with Timestamps)
- * Provider: SiliconFlow (SenseVoiceSmall)
+ * Provider: OpenAI (Whisper-1)
  */
-const performStrictASR = async (filePath: string, maxDuration?: number): Promise<TranscriptSegment[]> => {
-    const client = getAsrClient();
-    console.log(`[ASR] Transcribing with SiliconFlow...`);
+const transcribeWithWhisper = async (filePath: string, maxDuration?: number): Promise<TranscriptSegment[]> => {
+    const client = getOpenAIClient();
+    console.log(`[ASR] Transcribing with OpenAI Whisper...`);
 
     try {
         const response: any = await client.audio.transcriptions.create({
             file: fs.createReadStream(filePath),
-            model: "FunAudioLLM/SenseVoiceSmall",
+            model: "whisper-1",
 
             // 🔥 CRITICAL SETTINGS 🔥
             response_format: "verbose_json",
             timestamp_granularities: ["segment"],
-            language: "ko" // Force Korean to prevent hallucinations
+            language: "ko", // Force Korean to prevent hallucinations
+            prompt: "This is a Korean podcast about daily life and culture." // Context context
         });
 
         // Debug logging
-        // console.log(`[ASR Debug] Raw Keys:`, Object.keys(response));
+        // console.log(`[ASR Debug] Keys:`, Object.keys(response));
 
         if (!response.segments) {
-            console.warn(`[ASR] No segments returned. Checking fallback...`);
-
-            // Fallback: If text exists, split it
+            console.warn(`[ASR] No segments returned.`);
             if (response.text) {
-                console.warn("[ASR] Fallback: Using text-based splitting.");
-                const text = response.text;
-                // Simple split by . ? ! \n
-                const sentences = text.match(/[^.!?\n]+[.!?\n]*(\s|$)/g) || [text];
-                const totalDuration = response.duration || (text.length * 0.2);
-
-                let currentTime = 0;
-                const totalLength = text.length;
-
-                return sentences.map((s: string) => {
-                    const trimmed = s.trim();
-                    const duration = totalLength > 0 ? (trimmed.length / totalLength) * totalDuration : 2;
-                    const seg = {
-                        start: currentTime,
-                        end: currentTime + duration,
-                        text: trimmed,
-                        translation: ""
-                    };
-                    currentTime += duration;
-                    return seg;
-                }).filter((s: any) => s.text.length > 0);
+                return [{
+                    start: 0,
+                    end: response.duration || maxDuration || 0,
+                    text: response.text.trim(),
+                    translation: ""
+                }];
             }
             throw new Error("ASR output missing segments");
         }
@@ -223,7 +196,7 @@ const performStrictASR = async (filePath: string, maxDuration?: number): Promise
  * Provider: OpenAI (GPT-4o-mini)
  */
 export const analyzeSentence = async (sentence: string, context: string = "", targetLanguage: string = "zh"): Promise<any> => {
-    const client = getLlmClient();
+    const client = getOpenAIClient();
     console.log(`[LLM] Analyzing sentence with OpenAI (GPT-4o-mini)...`);
 
     const languageNames: Record<string, string> = {
@@ -329,8 +302,8 @@ export const generateTranscript = async (
             uploadFile = originalFile;
         }
 
-        // 4. Perform ASR (SiliconFlow) - Pass Duration for clamping
-        const segments = await performStrictASR(uploadFile, originalDuration);
+        // 4. Perform ASR (OpenAI Whisper) - Pass Duration for clamping
+        const segments = await transcribeWithWhisper(uploadFile, originalDuration);
 
         const transcriptData: TranscriptResult = {
             segments: segments,

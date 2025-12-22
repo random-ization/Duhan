@@ -60,8 +60,8 @@ export const toggleSubscription = async (req: Request, res: Response) => {
 
         const { channel } = req.body;
 
-        if (!channel || !channel.itunesId || !channel.feedUrl) {
-            return res.status(400).json({ error: 'Channel data with itunesId and feedUrl is required' });
+        if (!channel || !channel.itunesId) {
+            return res.status(400).json({ error: 'Channel data with itunesId is required' });
         }
 
         const isSubscribed = await podcastService.toggleSubscription(userId, channel);
