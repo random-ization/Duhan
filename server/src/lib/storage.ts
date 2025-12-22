@@ -252,9 +252,19 @@ export const sendToS3WithCache = async (
   contentType: string,
   cacheMaxAge: number = 300
 ): Promise<string> => {
-  const endpoint = process.env.SPACES_ENDPOINT!;
-  const bucket = process.env.SPACES_BUCKET!;
-  const host = `${bucket}.${new URL(endpoint).host}`;
+  const endpoint = process.env.SPACES_ENDPOINT || 'https://s3.us-west-1.amazonaws.com'; // Default to AWS if missing
+  const bucket = process.env.SPACES_BUCKET || 'hangyeol';
+
+  let host = endpoint;
+  try {
+    if (endpoint.startsWith('http')) {
+      host = `${bucket}.${new URL(endpoint).host}`;
+    } else {
+      host = `${bucket}.${endpoint}`;
+    }
+  } catch (e) {
+    console.warn('[Storage] Failed to parse S3 endpoint, using fallback host');
+  }
   const contentLength = body.length;
 
   const headers: Record<string, string> = {
