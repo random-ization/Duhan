@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const parser = new Parser();
 
 // Cache keys for S3
-const TRENDING_CACHE_KEY = 'cache/podcast-trending.json';
+const TRENDING_CACHE_KEY = 'cache/podcast-trending-v2.json';
 const TRENDING_CACHE_TTL = 5 * 60; // 5 minutes
 
 /**
@@ -296,14 +296,14 @@ export const getMyFeed = async (userId: string) => {
     const allEpisodes = (await Promise.all(feedPromises)).flat();
 
     // 3. Sort by pubDate descending
-    allEpisodes.sort((a, b) => {
+    allEpisodes.sort((a: any, b: any) => {
         if (!a.pubDate) return 1;
         if (!b.pubDate) return -1;
         return b.pubDate.getTime() - a.pubDate.getTime();
     });
 
     // 4. Filter episodes with audio and limit to 30
-    const validEpisodes = allEpisodes.filter(ep => ep.audioUrl).slice(0, 30);
+    const validEpisodes = allEpisodes.filter((ep: any) => ep.audioUrl).slice(0, 30);
 
     return {
         channels,
@@ -373,16 +373,44 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
     try {
         // Apple RSS Generator for Top Podcasts in Korea
         // Genre 1304 = Education
-        const url = 'https://rss.applemarketingtools.com/api/v2/kr/podcasts/top/25/podcasts.json';
+        // URL Updated to avoid 301 Redirect
+        const url = 'https://rss.marketingtools.apple.com/api/v2/kr/podcasts/top/25/podcasts.json';
+        console.log('[PodcastService] Fetching Apple Charts from:', url);
         const response = await axios.get(url, { timeout: 10000 });
 
-        if (!response.data?.feed?.results) return [];
+        if (!response.data?.feed?.results) {
+            console.warn('[PodcastService] No results in Apple RSS feed');
+            return [];
+        }
 
-        return response.data.feed.results.slice(0, 10).map((item: any) => ({
+        const topItems = response.data.feed.results.slice(0, 10);
+        const ids = topItems.map((item: any) => item.id).join(',');
+        console.log(`[PodcastService] Found ${topItems.length} top items. IDs: ${ids}`);
+
+        // Batch lookup to get feedUrls (Critical for subscription)
+        let feedUrlMap = new Map<string, string>();
+        if (ids) {
+            try {
+                const lookupUrl = `https://itunes.apple.com/lookup?id=${ids}`;
+                const lookupResponse = await axios.get(lookupUrl, { timeout: 10000 });
+                const lookupResults = lookupResponse.data.results || [];
+
+                lookupResults.forEach((item: any) => {
+                    if (item.collectionId && item.feedUrl) {
+                        feedUrlMap.set(item.collectionId.toString(), item.feedUrl);
+                    }
+                });
+                console.log(`[PodcastService] iTunes Lookup matched ${feedUrlMap.size} feed URLs`);
+            } catch (lookupError) {
+                console.error('[PodcastService] iTunes Lookup Failed:', lookupError);
+            }
+        }
+
+        return topItems.map((item: any) => ({
             id: item.id,
             title: item.name,
             author: item.artistName,
-            feedUrl: '', // Apple RSS doesn't include feedUrl
+            feedUrl: feedUrlMap.get(item.id) || '', // Now populated!
             artwork: item.artworkUrl100?.replace('100x100', '600x600') || '',
             description: item.name
         }));
