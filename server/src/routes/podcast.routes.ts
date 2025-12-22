@@ -30,6 +30,9 @@ router.get('/subscriptions', authenticate, podcastController.getSubscriptions);
 // Get user's personalized feed
 router.get('/my-feed', authenticate, podcastController.getMyFeed);
 
+// Get listening history
+router.get('/history', authenticate, podcastController.getHistory);
+
 // ============================================
 // Tracking Routes
 // ============================================

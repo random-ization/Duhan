@@ -57,6 +57,22 @@ model User {
   // Podcast relations
   subscribedChannels PodcastChannel[]
   likedEpisodes      PodcastEpisode[]
+  listeningHistory   ListeningHistory[]
+}
+
+model ListeningHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  episodeGuid  String
+  episodeTitle String
+  episodeUrl   String
+  channelName  String
+  channelImage String?
+  playedAt     DateTime @default(now())
+
+  @@unique([userId, episodeGuid])
+  @@index([userId])
 }
 
 model Institute {

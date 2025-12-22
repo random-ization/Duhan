@@ -144,6 +144,12 @@ export const trackView = async (req: Request, res: Response) => {
 
         const updatedEpisode = await podcastService.trackView(episode);
 
+        // Add to history if logged in
+        const userId = (req as any).user?.userId || (req as any).user?.id;
+        if (userId) {
+            await podcastService.addToHistory(userId, episode);
+        }
+
         return res.json({
             success: true,
             views: updatedEpisode.views
@@ -182,5 +188,20 @@ export const toggleLike = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('[PodcastController] Toggle like error:', error?.message);
         return res.status(500).json({ error: 'Failed to toggle like' });
+    }
+};
+
+/**
+ * Get listening history
+ * GET /api/podcasts/history
+ */
+export const getHistory = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.userId || (req as any).user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        const history = await podcastService.getHistory(userId);
+        return res.json(history);
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
     }
 };

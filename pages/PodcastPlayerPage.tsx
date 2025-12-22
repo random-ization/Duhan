@@ -28,6 +28,7 @@ interface TranscriptLine {
     end: number;
     text: string;
     translation: string;
+    words?: { word: string; start: number; end: number }[];
 }
 
 interface AnalysisData {
@@ -424,21 +425,43 @@ const PodcastPlayerPage: React.FC = () => {
 
                                         {/* Content */}
                                         <div className="flex-1 space-y-2 cursor-pointer" onClick={() => seekTo(line.start)}>
-                                            <p className={`
-                                                text-lg md:text-xl font-bold leading-relaxed transition-colors
-                                                ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
-                                            `}>
-                                                {line.text}
-                                            </p>
+                                            {/* Text Content with Karaoke Support */}
+                                            <div className={`
+                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
+                                                    ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
+                                                `}>
+                                                {line.words && line.words.length > 0 ? (
+                                                    line.words.map((w, i) => {
+                                                        const isWordActive = currentTime >= w.start && currentTime < w.end;
+                                                        return (
+                                                            <span
+                                                                key={i}
+                                                                className={`
+                                                                        rounded px-0.5 transition-all duration-75
+                                                                        ${isWordActive
+                                                                        ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                                                                        : 'hover:bg-indigo-50'
+                                                                    }
+                                                                    `}
+                                                            >
+                                                                {w.word}
+                                                            </span>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <span>{line.text}</span>
+                                                )}
+                                            </div>
 
+                                            {/* Translation */}
                                             {showTranslation && line.translation && (
                                                 <p className={`
-                                                    text-base leading-relaxed transition-colors border-l-2 pl-3
-                                                    ${isActive
+                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
+                                                        ${isActive
                                                         ? 'text-indigo-600/80 border-indigo-200'
                                                         : 'text-slate-500 border-slate-200'
                                                     }
-                                                `}>
+                                                    `}>
                                                     {line.translation}
                                                 </p>
                                             )}

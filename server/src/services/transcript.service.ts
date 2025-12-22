@@ -33,11 +33,18 @@ const getOpenAIClient = () => {
 };
 
 // Types
+export interface TranscriptWord {
+    word: string;
+    start: number;
+    end: number;
+}
+
 export interface TranscriptSegment {
     start: number;
     end: number;
     text: string;
     translation?: string;
+    words?: TranscriptWord[];
 }
 
 export interface TranscriptResult {
@@ -133,7 +140,7 @@ const cleanupFiles = (...files: string[]) => {
  */
 const transcribeWithWhisper = async (filePath: string, maxDuration?: number): Promise<TranscriptSegment[]> => {
     const client = getOpenAIClient();
-    console.log(`[ASR] Transcribing with OpenAI Whisper...`);
+    console.log(`[ASR] Transcribing with OpenAI Whisper (Word+Segment)...`);
 
     try {
         const response: any = await client.audio.transcriptions.create({
@@ -142,7 +149,7 @@ const transcribeWithWhisper = async (filePath: string, maxDuration?: number): Pr
 
             // 🔥 CRITICAL SETTINGS 🔥
             response_format: "verbose_json",
-            timestamp_granularities: ["segment"],
+            timestamp_granularities: ["segment", "word"], // Request Word Timestamps
             language: "ko", // Force Korean to prevent hallucinations
             prompt: "This is a Korean podcast about daily life and culture." // Context context
         });
@@ -157,18 +164,33 @@ const transcribeWithWhisper = async (filePath: string, maxDuration?: number): Pr
                     start: 0,
                     end: response.duration || maxDuration || 0,
                     text: response.text.trim(),
-                    translation: ""
+                    translation: "",
+                    words: []
                 }];
             }
             throw new Error("ASR output missing segments");
         }
 
-        let segments: TranscriptSegment[] = response.segments.map((seg: any) => ({
-            start: seg.start,
-            end: seg.end,
-            text: seg.text.trim(),
-            translation: ""
-        }));
+        // Map words to segments
+        const allWords = response.words || [];
+        // console.log(`[ASR] Received ${allWords.length} words.`);
+
+        let segments: TranscriptSegment[] = response.segments.map((seg: any) => {
+            // Find words belonging to this segment
+            const segWords = allWords.filter((w: any) => w.start >= seg.start && w.end <= seg.end);
+
+            return {
+                start: seg.start,
+                end: seg.end,
+                text: seg.text.trim(),
+                translation: "",
+                words: segWords.map((w: any) => ({
+                    word: w.word,
+                    start: w.start,
+                    end: w.end
+                }))
+            };
+        });
 
         // 🔥 FILTER: Remove segments beyond actual duration (Hallucination Fix)
         if (maxDuration) {

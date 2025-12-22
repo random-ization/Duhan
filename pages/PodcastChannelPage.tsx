@@ -32,68 +32,38 @@ const PodcastChannelPage: React.FC = () => {
 
     // Get channel from navigation state or query params
     const stateChannel = (location.state as any)?.channel;
-    const feedUrl = stateChannel?.feedUrl || searchParams.get('feedUrl');
-
-    const [data, setData] = useState<FeedData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isDescExpanded, setIsDescExpanded] = useState(false);
-    const [isSubscribed, setIsSubscribed] = useState(false);
-
-    useEffect(() => {
-        if (!feedUrl) {
-            setError('缺少频道 Feed URL');
-            setLoading(false);
-            return;
-        }
-
-        const fetchEpisodes = async () => {
-            try {
-                const result = await api.getPodcastEpisodes(feedUrl);
-                setData(result);
-            } catch (err) {
-                console.error('Failed to fetch episodes:', err);
-                setError('无法加载播客剧集');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchEpisodes();
-    }, [feedUrl]);
-
-    // Check subscription status
-    useEffect(() => {
-        const checkSubscription = async () => {
-            if (!user || !stateChannel) return;
-            try {
-                const subs = await api.getPodcastSubscriptions();
-                const channelId = stateChannel.itunesId || stateChannel.id;
-                setIsSubscribed(subs.some((c: any) => (c.itunesId || c.id) === channelId));
-            } catch (err) {
-                console.error('Failed to check subscription:', err);
-            }
-        };
-        checkSubscription();
-    }, [user, stateChannel]);
+    // 1. Get ID from URL params (Fix for refresh)
+    const channelId = stateChannel?.itunesId || stateChannel?.id || searchParams.get('id');
 
     const handleToggleSubscribe = async () => {
-        if (!stateChannel) return;
+        // 🔥 FIX: Reconstruct channel object if state is missing
+        const targetChannel = stateChannel || (data?.channel && channelId && feedUrl ? {
+            itunesId: channelId,
+            title: data.channel.title || 'Unknown',
+            author: data.channel.author || 'Unknown',
+            feedUrl: feedUrl,
+            artworkUrl: data.channel.image,
+            description: data.channel.description
+        } : null);
+
+        if (!targetChannel) {
+            console.error('Cannot subscribe: Missing Channel Info (ID or FeedURL)');
+            return;
+        }
 
         // Optimistic update
         setIsSubscribed(!isSubscribed);
 
         try {
             await api.togglePodcastSubscription({
-                itunesId: stateChannel.itunesId || stateChannel.id,
-                title: stateChannel.title || data?.channel.title || '',
-                author: stateChannel.author || data?.channel.author || '',
-                feedUrl: feedUrl!,
-                artworkUrl: stateChannel.artworkUrl || stateChannel.artwork || data?.channel.image
+                itunesId: targetChannel.itunesId || targetChannel.id,
+                title: targetChannel.title,
+                author: targetChannel.author,
+                feedUrl: targetChannel.feedUrl,
+                artworkUrl: targetChannel.artworkUrl
             });
         } catch (err) {
-            // Rollback
-            setIsSubscribed(!isSubscribed);
+            setIsSubscribed(!isSubscribed); // Rollback
             console.error('Failed to toggle subscription:', err);
         }
     };
@@ -212,8 +182,8 @@ const PodcastChannelPage: React.FC = () => {
                 <button
                     onClick={handleToggleSubscribe}
                     className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${isSubscribed
-                            ? 'bg-pink-100 text-pink-600'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        ? 'bg-pink-100 text-pink-600'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
                         }`}
                 >
                     <Heart className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`} />

@@ -386,56 +386,54 @@ export const getTrending = async (forceRefresh: boolean = false) => {
 };
 
 /**
- * Fetch Apple Top Charts (Korea / Education category)
+ * Fetch Apple Top Charts with Header & Fallback
  */
 async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
     try {
-        // Apple RSS Generator for Top Podcasts in Korea
-        // Genre 1304 = Education
-        // URL Updated to avoid 301 Redirect
+        // 1. Apple RSS Feed
         const url = 'https://rss.marketingtools.apple.com/api/v2/kr/podcasts/top/25/podcasts.json';
-        console.log('[PodcastService] Fetching Apple Charts from:', url);
-        const response = await axios.get(url, { timeout: 10000 });
+        console.log('[PodcastService] Fetching Apple Charts...');
 
-        if (!response.data?.feed?.results) {
-            console.warn('[PodcastService] No results in Apple RSS feed');
-            return [];
-        }
+        // 🔥 FIX: Add User-Agent to avoid 403 Forbidden
+        const response = await axios.get(url, {
+            timeout: 8000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
+
+        if (!response.data?.feed?.results) throw new Error('Empty RSS feed');
 
         const topItems = response.data.feed.results.slice(0, 10);
         const ids = topItems.map((item: any) => item.id).join(',');
-        console.log(`[PodcastService] Found ${topItems.length} top items. IDs: ${ids}`);
 
-        // Batch lookup to get feedUrls (Critical for subscription)
+        // 2. Lookup Feed URLs (Required for playing)
         let feedUrlMap = new Map<string, string>();
         if (ids) {
             try {
-                const lookupUrl = `https://itunes.apple.com/lookup?id=${ids}`;
-                const lookupResponse = await axios.get(lookupUrl, { timeout: 10000 });
-                const lookupResults = lookupResponse.data.results || [];
-
-                lookupResults.forEach((item: any) => {
-                    if (item.collectionId && item.feedUrl) {
-                        feedUrlMap.set(item.collectionId.toString(), item.feedUrl);
-                    }
+                const lookupResponse = await axios.get(`https://itunes.apple.com/lookup?id=${ids}`, { timeout: 5000 });
+                (lookupResponse.data.results || []).forEach((item: any) => {
+                    if (item.feedUrl) feedUrlMap.set(item.collectionId.toString(), item.feedUrl);
                 });
-                console.log(`[PodcastService] iTunes Lookup matched ${feedUrlMap.size} feed URLs`);
-            } catch (lookupError) {
-                console.error('[PodcastService] iTunes Lookup Failed:', lookupError);
-            }
+            } catch (e) { console.warn('iTunes Lookup failed'); }
         }
 
-        return topItems.map((item: any) => ({
+        const results = topItems.map((item: any) => ({
             id: item.id,
             title: item.name,
             author: item.artistName,
-            feedUrl: feedUrlMap.get(item.id) || '', // Now populated!
+            feedUrl: feedUrlMap.get(item.id) || '',
             artwork: item.artworkUrl100?.replace('100x100', '600x600') || '',
             description: item.name
-        }));
+        })).filter((p: any) => p.feedUrl); // Filter out broken items
+
+        if (results.length === 0) throw new Error('No playable items found');
+        return results;
+
     } catch (error: any) {
-        console.error('[PodcastService] Apple Charts Error:', error?.message);
-        return [];
+        console.error('[PodcastService] Trending failed, using fallback:', error.message);
+        // 🔥 FALLBACK: Ensure the UI is never empty by searching for a keyword
+        return searchPodcasts('Korean Culture');
     }
 }
 
@@ -592,4 +590,44 @@ export const toggleLike = async (userId: string, episode: EpisodeInput): Promise
         ]);
         return true;
     }
+};
+// ============================================
+// Listening History
+// ============================================
+
+/**
+ * Add or update listening history for a user
+ */
+export const addToHistory = async (userId: string, episode: EpisodeInput) => {
+    // console.log(`[PodcastService] Adding history for user ${userId} - ${episode.title}`);
+
+    return prisma.listeningHistory.upsert({
+        where: {
+            userId_episodeGuid: { userId, episodeGuid: episode.guid }
+        },
+        update: {
+            playedAt: new Date(),
+            // progress: episode.progress // future
+        },
+        create: {
+            userId,
+            episodeGuid: episode.guid,
+            episodeTitle: episode.title,
+            episodeUrl: episode.audioUrl,
+            channelName: episode.channel.title || 'Unknown',
+            channelImage: episode.channel.artworkUrl || null,
+            playedAt: new Date()
+        }
+    });
+};
+
+/**
+ * Get user's listening history
+ */
+export const getHistory = async (userId: string) => {
+    return prisma.listeningHistory.findMany({
+        where: { userId },
+        orderBy: { playedAt: 'desc' },
+        take: 50
+    });
 };
