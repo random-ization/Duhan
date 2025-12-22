@@ -85,13 +85,20 @@ const PodcastPlayerPage: React.FC = () => {
     const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
     const [analysisLoading, setAnalysisLoading] = useState(false);
 
-    // Generate episode ID for transcript caching
+    // Generate episode ID for transcript caching (Unicode-safe)
     const getEpisodeId = useCallback(() => {
         if (episode.guid) return encodeURIComponent(episode.guid);
-        // Fallback: hash the title + audio URL
+        // Fallback: create a simple hash from title + audio URL
         const str = `${episode.title}-${episode.audioUrl}`;
-        return btoa(str).replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
-    }, [episode]);
+        // Use a simple hash instead of btoa (which fails with non-Latin1 chars)
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return `ep_${Math.abs(hash).toString(16)}`;
+    }, [episode.guid, episode.title, episode.audioUrl]);
 
     // Load transcript with S3-first, API-fallback strategy
     const loadTranscript = useCallback(async () => {
