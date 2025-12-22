@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { analyzeTopikQuestion, TopikQuestionInput, analyzeSentence, SentenceAnalysisInput } from '../services/ai.service';
-import { generateTranscript, getTranscriptFromCache } from '../services/transcript.service';
+import { analyzeTopikQuestion, TopikQuestionInput, SentenceAnalysisInput } from '../services/ai.service';
+import { generateTranscript, getTranscriptFromCache, analyzeSentence } from '../services/transcript.service';
 
 /**
  * POST /api/ai/analyze-question
@@ -67,13 +67,8 @@ export const analyzeSentenceHandler = async (req: Request, res: Response) => {
             });
         }
 
-        const input: SentenceAnalysisInput = {
-            sentence: sentence.trim(),
-            context: context?.trim(),
-            language: language || 'zh'
-        };
-
-        const result = await analyzeSentence(input);
+        // Call analyzeSentence from transcript.service (SiliconFlow)
+        const result = await analyzeSentence(sentence.trim(), context?.trim(), language || 'zh');
 
         return res.json({
             success: true,

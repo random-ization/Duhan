@@ -1,4 +1,3 @@
-
 import { uploadCachedJson } from '../lib/storage';
 import { checkFileExists, downloadJSON } from './storage.service';
 import OpenAI from "openai";
@@ -32,7 +31,7 @@ export interface TranscriptSegment {
     start: number;
     end: number;
     text: string;
-    translation: string;
+    translation?: string;
 }
 
 export interface TranscriptResult {
@@ -126,149 +125,103 @@ const cleanupFiles = (...files: string[]) => {
 };
 
 /**
- * Step 1: Transcribe using SenseVoice (ASR)
+ * On-Demand Analysis (Called when user clicks "Analyze" button)
  */
-const performASR = async (filePath: string): Promise<any> => {
+export const analyzeSentence = async (sentence: string, context: string = "", targetLanguage: string = "zh"): Promise<any> => {
     const client = getClient();
-    console.log(`[ASR] Transcribing with SenseVoiceSmall...`);
+    console.log(`[LLM] Analyzing sentence: "${sentence.substring(0, 20)}..."`);
+
+    const languageNames: Record<string, string> = {
+        'zh': 'Chinese (Simplified)',
+        'en': 'English',
+        'ko': 'Korean',
+        'vi': 'Vietnamese'
+    };
+    const outputLanguage = languageNames[targetLanguage] || 'Chinese (Simplified)';
+
+    const prompt = `You are a professional Korean language tutor. Analyze the provided Korean sentence.
+    
+    Sentence: "${sentence}"
+    ${context ? `Context: ${context}` : ''}
+    
+    Return a STRICT JSON object with the following structure. All explanations must be in ${outputLanguage}.
+    
+    {
+      "vocabulary": [
+        {
+          "word": "The word as it appears",
+          "root": "Dictionary/Root form",
+          "meaning": "Definition in ${outputLanguage}",
+          "type": "Noun/Verb/Adj/etc"
+        }
+      ],
+      "grammar": [
+        {
+          "structure": "Grammar pattern (e.g., -기가)",
+          "explanation": "Explanation in ${outputLanguage}"
+        }
+      ],
+      "nuance": "Formality, tone, and context in ${outputLanguage}"
+    }
+    
+    Return ONLY valid JSON.`;
 
     try {
-        const response = await client.audio.transcriptions.create({
-            file: fs.createReadStream(filePath),
-            model: "FunAudioLLM/SenseVoiceSmall",
-            response_format: "verbose_json",
-            timestamp_granularities: ["segment"]
+        const completion = await client.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a helpful JSON translator and language expert."
+                },
+                { role: "user", content: prompt }
+            ],
+            model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+            response_format: { type: "json_object" }
         });
-        return response;
-    } catch (e: any) {
-        console.error("[ASR Failed]", e);
-        throw new Error(`ASR_FAILED: ${e.message}`);
+
+        const content = completion.choices[0].message.content;
+        return content ? JSON.parse(content) : null;
+    } catch (e) {
+        console.error(`[Analysis Failed]`, e);
+        throw e;
     }
-}
-
-/**
- * Helper: Split long segments into smaller chunks based on punctuation
- * Linearly interpolates timestamps.
- */
-const refineSegments = (segments: any[]): any[] => {
-    const refined: any[] = [];
-
-    segments.forEach(seg => {
-        const text = seg.text || "";
-        // If segment is short enough, keep it
-        if (text.length < 50 && (seg.end - seg.start) < 10) {
-            refined.push(seg);
-            return;
-        }
-
-        // Split by sentence ending punctuation
-        // Matches: . ? ! (and optionally " or ') followed by space or end of string
-        // Also handles Korean punctuation like 。(though rarely used in informal text, usually just space/newline)
-        const sentences = text.match(/[^.!?\n]+[.!?\n]*(\s|$)/g);
-
-        if (!sentences || sentences.length <= 1) {
-            refined.push(seg);
-            return;
-        }
-
-        const totalDuration = seg.end - seg.start;
-        const totalLength = text.length;
-        let currentTime = seg.start;
-
-        sentences.forEach((sentence: string) => {
-            const trimmed = sentence.trim();
-            if (!trimmed) return;
-
-            const sentenceDuration = (trimmed.length / totalLength) * totalDuration;
-
-            refined.push({
-                start: currentTime,
-                end: currentTime + sentenceDuration,
-                text: trimmed
-            });
-
-            currentTime += sentenceDuration;
-        });
-    });
-
-    return refined;
 };
 
 /**
- * Step 2: Translate and Refine using DeepSeek (LLM)
+ * Perform ASR with strictly formatted segments
  */
-const translateSegments = async (segments: any[], targetLanguage: string = 'zh'): Promise<TranscriptSegment[]> => {
-    // 1. Refine segments first (split long sentences)
-    const refinedSegments = refineSegments(segments);
-
+const performStrictASR = async (filePath: string): Promise<TranscriptSegment[]> => {
     const client = getClient();
-    console.log(`[LLM] Translating ${segments.length} original -> ${refinedSegments.length} refined segments...`);
+    console.log(`[ASR] Starting SenseVoice transcription...`);
 
-    const CHUNK_SIZE = 30;
-    const results: TranscriptSegment[] = [];
+    try {
+        const response: any = await client.audio.transcriptions.create({
+            file: fs.createReadStream(filePath),
+            model: "FunAudioLLM/SenseVoiceSmall",
+            // 🔥 CRITICAL: Request detailed segments
+            response_format: "verbose_json",
+            timestamp_granularities: ["segment"]
+        });
 
-    for (let i = 0; i < refinedSegments.length; i += CHUNK_SIZE) {
-        const chunk = refinedSegments.slice(i, i + CHUNK_SIZE);
-        console.log(`[LLM] Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(refinedSegments.length / CHUNK_SIZE)}`);
-
-        const prompt = `You are a professional translator. 
-        Translate the following Korean podcast transcript segments into ${targetLanguage === 'zh' ? 'Simplified Chinese (zh-CN)' : targetLanguage}.
-        
-        INPUT FORMAT: JSON array of { "id": number, "text": "Korean text" }
-        OUTPUT FORMAT: JSON object with a "translations" key containing an array of { "id": number, "translation": "Translated text" }
-        
-        RULES:
-        1. Maintain the exact same IDs.
-        2. Provide natural, fluent translations.
-        3. Do not include the original text in the output, only ID and translation.
-        4. Return ONLY valid JSON.
-        
-        INPUT DATA:
-        ${JSON.stringify(chunk.map((s, idx) => ({ id: i + idx, text: s.text })))}`;
-
-        try {
-            const completion = await client.chat.completions.create({
-                model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-                messages: [
-                    { role: "system", content: "You are a helpful JSON translator." },
-                    { role: "user", content: prompt }
-                ],
-                response_format: { type: "json_object" },
-                temperature: 0.3
-            });
-
-            const content = completion.choices[0].message.content;
-            if (!content) throw new Error("Empty response from LLM");
-
-            const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
-            const parsed = JSON.parse(cleanJson);
-
-            const translationMap = new Map<number, string>(parsed.translations.map((t: any) => [t.id, t.translation]));
-
-            chunk.forEach((seg, idx) => {
-                const totalIdx = i + idx;
-                results.push({
-                    start: seg.start,
-                    end: seg.end,
-                    text: seg.text,
-                    translation: translationMap.get(totalIdx) || ""
-                });
-            });
-
-        } catch (e) {
-            console.error(`[LLM] Chunk translation failed:`, e);
-            chunk.forEach(seg => {
-                results.push({
-                    start: seg.start,
-                    end: seg.end,
-                    text: seg.text,
-                    translation: ""
-                });
-            });
+        // 2. Format the output for Frontend
+        if (!response.segments) {
+            throw new Error("ASR output missing segments");
         }
-    }
 
-    return results;
+        const segments: TranscriptSegment[] = response.segments.map((seg: any) => ({
+            start: seg.start,
+            end: seg.end,
+            text: seg.text.trim(),
+            translation: "" // Initial translation is empty
+        }));
+
+        console.log(`[ASR] Success! Generated ${segments.length} segments.`);
+        return segments;
+
+    } catch (error: any) {
+        console.error("[ASR Failed]", error);
+        throw new Error(`ASR_FAILED: ${error.message}`);
+    }
 }
 
 /**
@@ -319,33 +272,18 @@ export const generateTranscript = async (
             uploadFile = originalFile;
         }
 
-        // 4. Perform ASR (SenseVoice)
-        const asrResult = await performASR(uploadFile);
-
-        if (!asrResult.segments && !asrResult.text) {
-            throw new Error("ASR returned no content");
-        }
-
-        // SenseVoice typically returns segments with "text", "start", "end"
-        let segments = asrResult.segments || [];
-
-        // Fallback: If segments are empty but text exists, create one large segment
-        if (segments.length === 0 && asrResult.text) {
-            // Create one big segment if all else fails
-            segments = [{ start: 0, end: asrResult.duration || 0, text: asrResult.text }];
-        }
-
-        // 5. Translate Segments (DeepSeek)
-        const translatedSegments = await translateSegments(segments, targetLanguage);
+        // 4. Perform Strict ASR (formatted segments)
+        // No full translation step - we rely on on-demand analysis
+        const segments = await performStrictASR(uploadFile);
 
         const transcriptData: TranscriptResult = {
-            segments: translatedSegments,
+            segments: segments,
             language: 'ko', // Audio is Korean
-            duration: asrResult.duration,
+            duration: segments.length > 0 ? segments[segments.length - 1].end : 0,
             cached: false
         };
 
-        // 6. Save to S3
+        // 5. Save to S3
         try {
             await uploadCachedJson(cacheKey, transcriptData, TRANSCRIPT_CACHE_TTL);
             console.log(`[Transcript] Saved to S3: ${cacheKey}`);
@@ -362,7 +300,6 @@ export const generateTranscript = async (
         cleanupFiles(originalFile, compressedFile);
     }
 };
-
 
 /**
  * Get transcript from cache only (for pre-loading check)
