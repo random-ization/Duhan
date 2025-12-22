@@ -193,7 +193,7 @@ export const generateTranscript = async (
 
         console.log(`[Transcript] Calling Gemini for transcription...`);
         const ai = getGenAI();
-        const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
         const languageNames: Record<string, string> = {
             'zh': 'Chinese (Simplified)',
