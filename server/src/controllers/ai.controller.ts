@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { analyzeTopikQuestion, TopikQuestionInput, analyzeSentence, SentenceAnalysisInput } from '../services/ai.service';
+import { generateTranscript, getTranscriptFromCache } from '../services/transcript.service';
 
 /**
  * POST /api/ai/analyze-question
@@ -84,6 +85,99 @@ export const analyzeSentenceHandler = async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             error: message
+        });
+    }
+};
+
+/**
+ * POST /api/ai/transcript
+ * Generate AI transcript for podcast episode
+ */
+export const generateTranscriptHandler = async (req: Request, res: Response) => {
+    try {
+        const { audioUrl, episodeId, language } = req.body;
+
+        // Validate required fields
+        if (!audioUrl || typeof audioUrl !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: 'audioUrl is required and must be a string'
+            });
+        }
+
+        if (!episodeId || typeof episodeId !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: 'episodeId is required and must be a string'
+            });
+        }
+
+        console.log(`[AI Controller] Generating transcript for: ${episodeId}`);
+
+        const result = await generateTranscript(audioUrl, episodeId, language || 'zh');
+
+        return res.json({
+            success: true,
+            data: result
+        });
+    } catch (error: any) {
+        console.error('[AI Controller] Transcript generation error:', error);
+
+        // Handle specific error types
+        const errorCode = error.message;
+        let statusCode = 500;
+        let userMessage = 'Failed to generate transcript';
+
+        if (errorCode === 'AUDIO_DOWNLOAD_FAILED') {
+            statusCode = 400;
+            userMessage = 'Failed to download audio file';
+        } else if (errorCode === 'TRANSCRIPT_PARSE_FAILED') {
+            statusCode = 500;
+            userMessage = 'Failed to parse AI response';
+        }
+
+        return res.status(statusCode).json({
+            success: false,
+            error: userMessage,
+            code: errorCode
+        });
+    }
+};
+
+/**
+ * GET /api/ai/transcript/:episodeId
+ * Check if transcript exists in cache
+ */
+export const checkTranscriptHandler = async (req: Request, res: Response) => {
+    try {
+        const { episodeId } = req.params;
+
+        if (!episodeId) {
+            return res.status(400).json({
+                success: false,
+                error: 'episodeId is required'
+            });
+        }
+
+        const cached = await getTranscriptFromCache(episodeId);
+
+        if (cached) {
+            return res.json({
+                success: true,
+                exists: true,
+                data: cached
+            });
+        } else {
+            return res.json({
+                success: true,
+                exists: false
+            });
+        }
+    } catch (error) {
+        console.error('[AI Controller] Check transcript error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to check transcript'
         });
     }
 };
