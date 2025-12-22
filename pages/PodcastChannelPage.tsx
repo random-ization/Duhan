@@ -34,6 +34,57 @@ const PodcastChannelPage: React.FC = () => {
     const stateChannel = (location.state as any)?.channel;
     // 1. Get ID from URL params (Fix for refresh)
     const channelId = stateChannel?.itunesId || stateChannel?.id || searchParams.get('id');
+    const feedUrl = stateChannel?.feedUrl || searchParams.get('feedUrl');
+
+    const [data, setData] = useState<FeedData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isDescExpanded, setIsDescExpanded] = useState(false);
+    const [isSubscribed, setIsSubscribed] = useState(false);
+
+    useEffect(() => {
+        if (!feedUrl) {
+            // checking if we have data passed from state
+            if (stateChannel) {
+                // We might have channel info but no episodes if we rely solely on state without fetch? 
+                // Actually previous logic fetched episodes using feedUrl. 
+                // If no feedUrl, we can't fetch episodes.
+                setLoading(false);
+            } else {
+                setError('缺少频道 Feed URL');
+                setLoading(false);
+            }
+            return;
+        }
+
+        const fetchEpisodes = async () => {
+            try {
+                const result = await api.getPodcastEpisodes(feedUrl);
+                setData(result);
+            } catch (err) {
+                console.error('Failed to fetch episodes:', err);
+                setError('无法加载播客剧集');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEpisodes();
+    }, [feedUrl]);
+
+    // Check subscription status
+    useEffect(() => {
+        const checkSubscription = async () => {
+            if (!user || !channelId) return;
+            try {
+                const subs = await api.getPodcastSubscriptions();
+                setIsSubscribed(subs.some((c: any) => (c.itunesId || c.id) === channelId));
+            } catch (err) {
+                console.error('Failed to check subscription:', err);
+            }
+        };
+        checkSubscription();
+    }, [user, channelId]);
 
     const handleToggleSubscribe = async () => {
         // 🔥 FIX: Reconstruct channel object if state is missing
