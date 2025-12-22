@@ -198,25 +198,37 @@ export const toggleSubscription = async (userId: string, channel: ChannelInput):
         throw new Error('MISSING_FEED_URL');
     }
 
-    // 1. Upsert the channel (create if not exists)
-    const podcastChannel = await prisma.podcastChannel.upsert({
-        where: { itunesId: channel.itunesId },
-        update: {
-            title: channel.title,
-            author: channel.author,
-            feedUrl: channel.feedUrl,
-            artworkUrl: channel.artworkUrl,
-            description: channel.description
-        },
-        create: {
-            itunesId: channel.itunesId,
-            title: channel.title,
-            author: channel.author,
-            feedUrl: channel.feedUrl,
-            artworkUrl: channel.artworkUrl,
-            description: channel.description
-        }
-    });
+    // 1. Identify Podcast Channel
+    let podcastChannel;
+
+    // A. Input is a UUID (Internal ID)
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channel.itunesId)) {
+        podcastChannel = await prisma.podcastChannel.findUnique({
+            where: { id: channel.itunesId }
+        });
+        if (!podcastChannel) throw new Error('CHANNEL_NOT_FOUND_BY_UUID');
+    }
+    // B. Input is iTunes ID (Numeric String)
+    else {
+        podcastChannel = await prisma.podcastChannel.upsert({
+            where: { itunesId: channel.itunesId },
+            update: {
+                title: channel.title,
+                author: channel.author,
+                feedUrl: channel.feedUrl,
+                artworkUrl: channel.artworkUrl,
+                description: channel.description
+            },
+            create: {
+                itunesId: channel.itunesId,
+                title: channel.title,
+                author: channel.author,
+                feedUrl: channel.feedUrl,
+                artworkUrl: channel.artworkUrl,
+                description: channel.description
+            }
+        });
+    }
 
     // 2. Check current subscription status
     const user = await prisma.user.findUnique({
@@ -297,6 +309,7 @@ export const getMyFeed = async (userId: string) => {
             // Get latest 3 episodes from each channel
             return feed.items.slice(0, 3).map(item => ({
                 channelId: channel.id,
+                itunesId: channel.itunesId, // Added for correct linking
                 channelTitle: channel.title,
                 channelArtwork: channel.artworkUrl,
                 guid: item.guid || item.link || item.title,
@@ -459,6 +472,7 @@ async function getInternalTrending() {
             likes: ep.likes,
             channel: {
                 id: ep.channel.id,
+                itunesId: ep.channel.itunesId, // Added for correct linking
                 title: ep.channel.title,
                 artwork: ep.channel.artworkUrl
             }
