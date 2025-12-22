@@ -1,3 +1,4 @@
+
 import { uploadCachedJson } from '../lib/storage';
 import { checkFileExists, downloadJSON } from './storage.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -57,7 +58,7 @@ const downloadAudioToFile = async (url: string): Promise<string> => {
             }
 
             if (res.statusCode !== 200) {
-                reject(new Error(`Failed to download audio: ${res.statusCode}`));
+                reject(new Error(`Failed to download audio: ${res.statusCode} `));
                 return;
             }
 
@@ -140,14 +141,14 @@ export const generateTranscript = async (
     episodeId: string,
     targetLanguage: string = 'zh'
 ): Promise<TranscriptResult> => {
-    console.log(`[Transcript] Generating transcript for episode: ${episodeId}`);
+    console.log(`[Transcript] Generating transcript for episode: ${episodeId} `);
 
     // 1. Check S3 cache first
     const cacheKey = `${TRANSCRIPT_CACHE_PREFIX}${episodeId}.json`;
     try {
         const exists = await checkFileExists(cacheKey);
         if (exists) {
-            console.log(`[Transcript] Cache hit: ${cacheKey}`);
+            console.log(`[Transcript] Cache hit: ${cacheKey} `);
             const cached = await downloadJSON(cacheKey);
             return { ...cached, cached: true };
         }
@@ -161,21 +162,21 @@ export const generateTranscript = async (
 
     try {
         // 2. Download audio to temp file
-        console.log(`[Transcript] Downloading audio from: ${audioUrl}`);
+        console.log(`[Transcript] Downloading audio from: ${audioUrl} `);
         originalFile = await downloadAudioToFile(audioUrl);
 
         // 3. Check file size and compress if needed
         const stats = fs.statSync(originalFile);
         const sizeMB = stats.size / (1024 * 1024);
-        console.log(`[Transcript] Downloaded file size: ${sizeMB.toFixed(2)}MB`);
+        console.log(`[Transcript] Downloaded file size: ${sizeMB.toFixed(2)} MB`);
 
         if (stats.size > MAX_SIZE_FOR_COMPRESSION) {
-            console.log(`[Transcript] File too large (${sizeMB.toFixed(2)}MB), compressing...`);
+            console.log(`[Transcript] File too large(${sizeMB.toFixed(2)}MB), compressing...`);
             compressedFile = await compressAudio(originalFile);
             uploadFile = compressedFile;
 
             const compressedStats = fs.statSync(compressedFile);
-            console.log(`[Transcript] Compressed to: ${(compressedStats.size / (1024 * 1024)).toFixed(2)}MB`);
+            console.log(`[Transcript] Compressed to: ${(compressedStats.size / (1024 * 1024)).toFixed(2)} MB`);
         } else {
             uploadFile = originalFile;
         }
@@ -195,28 +196,28 @@ export const generateTranscript = async (
         };
         const translationLang = languageNames[targetLanguage] || 'Chinese (Simplified)';
 
-        const prompt = `You are a professional audio transcription assistant. Transcribe this Korean podcast audio.
+        const prompt = `You are a professional audio transcription assistant.Transcribe this Korean podcast audio.
 
 OUTPUT REQUIREMENTS:
 1. Return a JSON array of segments with TIMESTAMPS
-2. Each segment should be 3-8 seconds long
+2. Each segment should be 3 - 8 seconds long
 3. Include Korean text AND ${translationLang} translation
 4. Be accurate with Korean spelling and grammar
 
-JSON FORMAT (return ONLY valid JSON, no markdown):
+JSON FORMAT(return ONLY valid JSON, no markdown):
 {
-  "segments": [
-    { "start": 0.0, "end": 3.5, "text": "안녕하세요 여러분", "translation": "大家好" },
-    { "start": 3.5, "end": 7.2, "text": "오늘 한국어를 배워봐요", "translation": "今天来学韩语吧" }
-  ],
-  "language": "ko",
-  "duration": 120
+    "segments": [
+        { "start": 0.0, "end": 3.5, "text": "안녕하세요 여러분", "translation": "大家好" },
+        { "start": 3.5, "end": 7.2, "text": "오늘 한국어를 배워봐요", "translation": "今天来学韩语吧" }
+    ],
+        "language": "ko",
+            "duration": 120
 }
 
 IMPORTANT:
-- Timestamps in SECONDS (decimal)
-- Korean in "text", ${translationLang} in "translation"
-- Return ONLY valid JSON, no explanation`;
+- Timestamps in SECONDS(decimal)
+    - Korean in "text", ${translationLang} in "translation"
+        - Return ONLY valid JSON, no explanation`;
 
         try {
             const mimeType = getMimeType(audioUrl);
@@ -235,7 +236,7 @@ IMPORTANT:
             console.log(`[Transcript] Gemini response received, parsing...`);
 
             // Parse JSON response
-            const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
+            const cleanJson = responseText.replace(/```json\n ?|\n ? ```/g, '').trim();
             const transcriptData: TranscriptResult = JSON.parse(cleanJson);
 
             // Validate
@@ -246,15 +247,15 @@ IMPORTANT:
             // 4. Save to S3 cache
             try {
                 await uploadCachedJson(cacheKey, transcriptData, TRANSCRIPT_CACHE_TTL);
-                console.log(`[Transcript] Saved to S3: ${cacheKey}`);
+                console.log(`[Transcript] Saved to S3: ${cacheKey} `);
             } catch (e) {
-                console.warn(`[Transcript] Failed to save to S3:`, e);
+                console.warn(`[Transcript] Failed to save to S3: `, e);
             }
 
             return { ...transcriptData, cached: false };
 
         } catch (e: any) {
-            console.error(`[Transcript] Gemini transcription failed:`, e.message);
+            console.error(`[Transcript] Gemini transcription failed: `, e.message);
 
             // Check if it's a parsing error
             if (e.message.includes('JSON')) {
@@ -264,7 +265,7 @@ IMPORTANT:
             throw new Error('TRANSCRIPT_GENERATION_FAILED');
         }
     } catch (e: any) {
-        console.error(`[Transcript] Failed:`, e.message);
+        console.error(`[Transcript] Failed: `, e.message);
         throw e;
     } finally {
         // Cleanup temp files
@@ -285,7 +286,7 @@ export const getTranscriptFromCache = async (episodeId: string): Promise<Transcr
             return { ...cached, cached: true };
         }
     } catch (e) {
-        console.log(`[Transcript] Cache miss for: ${episodeId}`);
+        console.log(`[Transcript] Cache miss for: ${episodeId} `);
     }
     return null;
 };
