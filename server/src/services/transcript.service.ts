@@ -1,7 +1,7 @@
 
 import { uploadCachedJson } from '../lib/storage';
 import { checkFileExists, downloadJSON } from './storage.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from "openai";
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
@@ -15,13 +15,16 @@ if (ffmpegPath) {
     ffmpeg.setFfmpegPath(ffmpegPath);
 }
 
-// Initialize Gemini
-const getGenAI = () => {
-    const apiKey = process.env.GEMINI_API_KEY;
+// Initialize SiliconFlow Client (OpenAI Compatible)
+const getClient = () => {
+    const apiKey = process.env.SILICONFLOW_API_KEY;
     if (!apiKey) {
-        throw new Error('GEMINI_API_KEY is not set');
+        throw new Error('SILICONFLOW_API_KEY is not set');
     }
-    return new GoogleGenerativeAI(apiKey);
+    return new OpenAI({
+        apiKey: apiKey,
+        baseURL: "https://api.siliconflow.cn/v1"
+    });
 };
 
 // Types
@@ -123,38 +126,116 @@ const cleanupFiles = (...files: string[]) => {
 };
 
 /**
- * Get MIME type from URL
+ * Step 1: Transcribe using SenseVoice (ASR)
  */
-const getMimeType = (url: string): string => {
-    const ext = url.split('.').pop()?.toLowerCase().split('?')[0];
-    const mimeTypes: Record<string, string> = {
-        'mp3': 'audio/mpeg',
-        'mpeg': 'audio/mpeg',
-        'm4a': 'audio/mp4',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'aac': 'audio/aac',
-        'flac': 'audio/flac'
-    };
-    return mimeTypes[ext || ''] || 'audio/mpeg';
-};
+const performASR = async (filePath: string): Promise<any> => {
+    const client = getClient();
+    console.log(`[ASR] Transcribing with SenseVoiceSmall...`);
+
+    try {
+        const response = await client.audio.transcriptions.create({
+            file: fs.createReadStream(filePath),
+            model: "FunAudioLLM/SenseVoiceSmall",
+            response_format: "verbose_json",
+            timestamp_granularities: ["segment"]
+        });
+        return response;
+    } catch (e: any) {
+        console.error("[ASR Failed]", e);
+        throw new Error(`ASR_FAILED: ${e.message}`);
+    }
+}
 
 /**
- * Generate transcript for podcast episode using Gemini
+ * Step 2: Translate and Refine using DeepSeek (LLM)
+ */
+const translateSegments = async (segments: any[], targetLanguage: string = 'zh'): Promise<TranscriptSegment[]> => {
+    const client = getClient();
+    console.log(`[LLM] Translating ${segments.length} segments with DeepSeek...`);
+
+    const CHUNK_SIZE = 50;
+    const results: TranscriptSegment[] = [];
+
+    for (let i = 0; i < segments.length; i += CHUNK_SIZE) {
+        const chunk = segments.slice(i, i + CHUNK_SIZE);
+        console.log(`[LLM] Processing chunk ${i / CHUNK_SIZE + 1}/${Math.ceil(segments.length / CHUNK_SIZE)}`);
+
+        const prompt = `You are a professional translator. 
+        Translate the following Korean podcast transcript segments into ${targetLanguage === 'zh' ? 'Simplified Chinese (zh-CN)' : targetLanguage}.
+        
+        INPUT FORMAT: JSON array of { "id": number, "text": "Korean text" }
+        OUTPUT FORMAT: JSON object with a "translations" key containing an array of { "id": number, "translation": "Translated text" }
+        
+        RULES:
+        1. Maintain the exact same IDs.
+        2. Provide natural, fluent translations.
+        3. Do not include the original text in the output, only ID and translation.
+        4. Return ONLY valid JSON.
+        
+        INPUT DATA:
+        ${JSON.stringify(chunk.map((s, idx) => ({ id: i + idx, text: s.text })))}`;
+
+        try {
+            const completion = await client.chat.completions.create({
+                model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+                messages: [
+                    { role: "system", content: "You are a helpful JSON translator." },
+                    { role: "user", content: prompt }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.3
+            });
+
+            const content = completion.choices[0].message.content;
+            if (!content) throw new Error("Empty response from LLM");
+
+            const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+
+            const translationMap = new Map<number, string>(parsed.translations.map((t: any) => [t.id, t.translation]));
+
+            chunk.forEach((seg, idx) => {
+                const totalIdx = i + idx;
+                results.push({
+                    start: seg.start,
+                    end: seg.end,
+                    text: seg.text,
+                    translation: translationMap.get(totalIdx) || ""
+                });
+            });
+
+        } catch (e) {
+            console.error(`[LLM] Chunk translation failed:`, e);
+            chunk.forEach(seg => {
+                results.push({
+                    start: seg.start,
+                    end: seg.end,
+                    text: seg.text,
+                    translation: ""
+                });
+            });
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Generate transcript for podcast episode using SiliconFlow (ASR + LLM)
  */
 export const generateTranscript = async (
     audioUrl: string,
     episodeId: string,
     targetLanguage: string = 'zh'
 ): Promise<TranscriptResult> => {
-    console.log(`[Transcript] Generating transcript for episode: ${episodeId} `);
+    console.log(`[Transcript] Generating transcript for episode: ${episodeId}`);
 
-    // 1. Check S3 cache first
+    // 1. Check Use Cache
     const cacheKey = `${TRANSCRIPT_CACHE_PREFIX}${episodeId}.json`;
     try {
         const exists = await checkFileExists(cacheKey);
         if (exists) {
-            console.log(`[Transcript] Cache hit: ${cacheKey} `);
+            console.log(`[Transcript] Cache hit: ${cacheKey}`);
             const cached = await downloadJSON(cacheKey);
             return { ...cached, cached: true };
         }
@@ -167,118 +248,70 @@ export const generateTranscript = async (
     let uploadFile: string = '';
 
     try {
-        // 2. Download audio to temp file
-        console.log(`[Transcript] Downloading audio from: ${audioUrl} `);
+        // 2. Download audio
+        console.log(`[Transcript] Downloading audio from: ${audioUrl}`);
         originalFile = await downloadAudioToFile(audioUrl);
 
-        // 3. Check file size and compress if needed
+        // 3. Compress if size > 20MB
         const stats = fs.statSync(originalFile);
         const sizeMB = stats.size / (1024 * 1024);
-        console.log(`[Transcript] Downloaded file size: ${sizeMB.toFixed(2)} MB`);
+        console.log(`[Transcript] Downloaded file size: ${sizeMB.toFixed(2)}MB`);
 
         if (stats.size > MAX_SIZE_FOR_COMPRESSION) {
-            console.log(`[Transcript] File too large(${sizeMB.toFixed(2)}MB), compressing...`);
+            console.log(`[Transcript] File too large (${sizeMB.toFixed(2)}MB), compressing...`);
             compressedFile = await compressAudio(originalFile);
             uploadFile = compressedFile;
 
             const compressedStats = fs.statSync(compressedFile);
-            console.log(`[Transcript] Compressed to: ${(compressedStats.size / (1024 * 1024)).toFixed(2)} MB`);
+            console.log(`[Transcript] Compressed to: ${(compressedStats.size / (1024 * 1024)).toFixed(2)}MB`);
         } else {
             uploadFile = originalFile;
         }
 
-        // 4. Read file as base64 and send to Gemini
-        const audioBuffer = fs.readFileSync(uploadFile);
-        const audioBase64 = audioBuffer.toString('base64');
+        // 4. Perform ASR (SenseVoice)
+        const asrResult = await performASR(uploadFile);
 
-        console.log(`[Transcript] Calling Gemini for transcription...`);
-        const ai = getGenAI();
-        const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-
-        const languageNames: Record<string, string> = {
-            'zh': 'Chinese (Simplified)',
-            'en': 'English',
-            'vi': 'Vietnamese'
-        };
-        const translationLang = languageNames[targetLanguage] || 'Chinese (Simplified)';
-
-        const prompt = `You are a professional audio transcription assistant.Transcribe this Korean podcast audio.
-
-OUTPUT REQUIREMENTS:
-1. Return a JSON array of segments with TIMESTAMPS
-2. Each segment should be 3 - 8 seconds long
-3. Include Korean text AND ${translationLang} translation
-4. Be accurate with Korean spelling and grammar
-
-JSON FORMAT(return ONLY valid JSON, no markdown):
-{
-    "segments": [
-        { "start": 0.0, "end": 3.5, "text": "안녕하세요 여러분", "translation": "大家好" },
-        { "start": 3.5, "end": 7.2, "text": "오늘 한국어를 배워봐요", "translation": "今天来学韩语吧" }
-    ],
-        "language": "ko",
-            "duration": 120
-}
-
-IMPORTANT:
-- Timestamps in SECONDS(decimal)
-    - Korean in "text", ${translationLang} in "translation"
-        - Return ONLY valid JSON, no explanation`;
-
-        try {
-            const mimeType = getMimeType(audioUrl);
-
-            const result = await model.generateContent([
-                {
-                    inlineData: {
-                        mimeType,
-                        data: audioBase64
-                    }
-                },
-                { text: prompt }
-            ]);
-
-            const responseText = result.response.text();
-            console.log(`[Transcript] Gemini response received, parsing...`);
-
-            // Parse JSON response
-            const cleanJson = responseText.replace(/```json\n ?|\n ? ```/g, '').trim();
-            const transcriptData: TranscriptResult = JSON.parse(cleanJson);
-
-            // Validate
-            if (!transcriptData.segments || !Array.isArray(transcriptData.segments)) {
-                throw new Error('Invalid transcript format - missing segments array');
-            }
-
-            // 4. Save to S3 cache
-            try {
-                await uploadCachedJson(cacheKey, transcriptData, TRANSCRIPT_CACHE_TTL);
-                console.log(`[Transcript] Saved to S3: ${cacheKey} `);
-            } catch (e) {
-                console.warn(`[Transcript] Failed to save to S3: `, e);
-            }
-
-            return { ...transcriptData, cached: false };
-
-        } catch (e: any) {
-            console.error(`[Transcript] Gemini transcription failed: `, e.message);
-
-            // Check if it's a parsing error
-            if (e.message.includes('JSON')) {
-                throw new Error('TRANSCRIPT_PARSE_FAILED');
-            }
-
-            throw new Error('TRANSCRIPT_GENERATION_FAILED');
+        if (!asrResult.segments && !asrResult.text) {
+            throw new Error("ASR returned no content");
         }
+
+        // SenseVoice typically returns segments with "text", "start", "end"
+        let segments = asrResult.segments || [];
+
+        // Fallback: If segments are empty but text exists, create one large segment
+        if (segments.length === 0 && asrResult.text) {
+            // Create one big segment if all else fails
+            segments = [{ start: 0, end: asrResult.duration || 0, text: asrResult.text }];
+        }
+
+        // 5. Translate Segments (DeepSeek)
+        const translatedSegments = await translateSegments(segments, targetLanguage);
+
+        const transcriptData: TranscriptResult = {
+            segments: translatedSegments,
+            language: 'ko', // Audio is Korean
+            duration: asrResult.duration,
+            cached: false
+        };
+
+        // 6. Save to S3
+        try {
+            await uploadCachedJson(cacheKey, transcriptData, TRANSCRIPT_CACHE_TTL);
+            console.log(`[Transcript] Saved to S3: ${cacheKey}`);
+        } catch (e) {
+            console.warn(`[Transcript] Failed to save to S3:`, e);
+        }
+
+        return transcriptData;
+
     } catch (e: any) {
-        console.error(`[Transcript] Failed: `, e.message);
+        console.error(`[Transcript] Failed:`, e.message);
         throw e;
     } finally {
-        // Cleanup temp files
         cleanupFiles(originalFile, compressedFile);
-        console.log(`[Transcript] Cleaned up temp files`);
     }
 };
+
 
 /**
  * Get transcript from cache only (for pre-loading check)
