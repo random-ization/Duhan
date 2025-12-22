@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { analyzeTopikQuestion, TopikQuestionInput, SentenceAnalysisInput } from '../services/ai.service';
+import { analyzeTopikQuestion, TopikQuestionInput } from '../services/ai.service';
 import { generateTranscript, getTranscriptFromCache, analyzeSentence, deleteTranscriptCache } from '../services/transcript.service';
 
 /**
