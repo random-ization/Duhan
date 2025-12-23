@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700;900&display=swap');
+
+@import "tailwindcss";
+
+@layer base {
+    body {
+        /* Dot Grid Pattern */
+        background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+        background-size: 24px 24px;
+    }
+}
+
+/* Custom Utilities */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.bouncy {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+
+.bouncy:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}

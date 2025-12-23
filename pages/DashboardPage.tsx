@@ -1,301 +1,181 @@
-import React, { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import Dashboard from '../components/Dashboard';
+import React, { useMemo } from 'react';
+import { Play, Zap, Disc, Trophy } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BentoCard } from '../components/dashboard/BentoCard';
+import { StatBadge } from '../components/dashboard/StatBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
-import { useData } from '../contexts/DataContext';
-import { Institute, LevelConfig } from '../types';
-import { getLabels } from '../utils/i18n';
-import {
-  Library,
-  BookOpen,
-  Star,
-  Clock,
-  Filter,
-  ChevronDown
-} from 'lucide-react';
 
-const parseLevels = (levels: LevelConfig[] | number[]): LevelConfig[] => {
-  if (!levels || levels.length === 0) return [];
-  if (typeof levels[0] === 'number') {
-    return (levels as number[]).map(l => ({ level: l, units: 10 }));
-  }
-  return levels as LevelConfig[];
+// Assets
+const ASSETS = {
+    wave: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Waving%20Hand.png",
+    fire: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Fire.png",
+    gem: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Gem%20Stone.png",
+    tiger: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Tiger%20Face.png",
+    sparkles: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Sparkles.png",
+    book: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Open%20Book.png",
+    trophy: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png",
+    tv: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Television.png",
+    headphone: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Headphone.png",
+    memo: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Memo.png"
 };
 
-// Fallback color scheme if no custom themeColor is provided
-const getFallbackTheme = (name: string, coverUrl?: string) => {
-  const themes = [
-    { bg: '#e0f2fe', spine: '#1e3a8a', text: '#1e3a8a', accent: '#2563eb' }, // Blue
-    { bg: '#e0e7ff', spine: '#312e81', text: '#312e81', accent: '#4f46e5' }, // Indigo
-    { bg: '#d1fae5', spine: '#064e3b', text: '#064e3b', accent: '#059669' }, // Emerald
-    { bg: '#ffe4e6', spine: '#881337', text: '#881337', accent: '#e11d48' }, // Rose
-    { bg: '#fef3c7', spine: '#78350f', text: '#78350f', accent: '#d97706' }, // Amber
-    { bg: '#ede9fe', spine: '#4c1d95', text: '#4c1d95', accent: '#7c3aed' }, // Violet
-  ];
+export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }: any) {
+    const { user } = useAuth();
+    const { selectedInstitute, selectedLevel } = useLearning();
 
-  const seed = coverUrl || name;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return themes[Math.abs(hash) % themes.length];
-};
+    // Calculate stats
+    const streak = user?.statistics?.dayStreak || 0;
+    const xp = (user?.wordsLearned || 0) * 10 + (user?.examsTaken || 0) * 50;
+    const wordsToReview = user?.savedWords?.length || 0;
 
-interface DashboardPageProps {
-  canAccessContent: (content: any) => boolean;
-  onShowUpgradePrompt: () => void;
-}
+    // Calculate Progress (Mock for now, or based on lastUnit)
+    const currentUnit = user?.lastUnit || 1;
+    const totalUnits = 10; // Mock total
+    const progressPercent = Math.min(100, Math.round((currentUnit / totalUnits) * 100));
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { user, language, clearMistakes } = useAuth();
-  const {
-    selectedInstitute,
-    setInstitute,
-    selectedLevel,
-    setLevel,
-  } = useLearning();
-  const { institutes, textbookContexts } = useData();
-  const navigate = useNavigate();
-  const labels = getLabels(language);
+    // Determine top score
+    const topScore = useMemo(() => {
+        if (!user?.examHistory || user.examHistory.length === 0) return 0;
+        return Math.max(...user.examHistory.map(e => e.score));
+    }, [user]);
 
-  const [filterPublisher, setFilterPublisher] = useState<string>('ALL');
-
-  // Get unique publishers from all institutes
-  const uniquePublishers = useMemo(() => {
-    const publishers = institutes
-      .map(inst => inst.publisher)
-      .filter((p): p is string => !!p);
-    return [...new Set(publishers)];
-  }, [institutes]);
-
-  // ✅ 修复：将 useMemo 移到所有条件返回之前，遵守 React Hooks 规则
-  const allTextbooks = useMemo(() => {
-    if (!user) return [];
-
-    const all = institutes.flatMap(inst => {
-      const levels = parseLevels(inst.levels);
-
-      let spineColor, bgColor, textColor, accentColor;
-
-      if (inst.themeColor) {
-        spineColor = inst.themeColor;
-        bgColor = `${inst.themeColor}20`;
-        textColor = inst.themeColor;
-        accentColor = inst.themeColor;
-      } else {
-        const fallback = getFallbackTheme(inst.name, inst.coverUrl);
-        spineColor = fallback.spine;
-        bgColor = fallback.bg;
-        textColor = fallback.text;
-        accentColor = fallback.accent;
-      }
-
-      return levels.map(lvl => ({
-        id: `${inst.id}-${lvl.level}`,
-        institute: inst,
-        level: lvl.level,
-        unitsCount: lvl.units,
-        style: {
-          spine: spineColor,
-          bg: bgColor,
-          text: textColor,
-          accent: accentColor
-        },
-        isLastActive: user.lastInstitute === inst.id && user.lastLevel === lvl.level
-      }));
-    });
-
-    if (filterPublisher === 'ALL') {
-      return all.sort((a, b) => (b.isLastActive ? 1 : 0) - (a.isLastActive ? 1 : 0));
-    } else {
-      return all.filter(book => book.institute.publisher === filterPublisher);
-    }
-  }, [institutes, user, filterPublisher]);
-
-  // 1. 如果未登录，重定向
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  // 2. 如果已经选中了具体课程，渲染详细 Dashboard
-  if (selectedInstitute && selectedLevel) {
     return (
-      <Dashboard
-        user={user}
-        institute={institutes.find(i => i.id === selectedInstitute)}
-        level={selectedLevel}
-        language={language}
-        onChangeCourse={() => { setInstitute(''); setLevel(0); }}
-        onOpenVocabBook={() => navigate('/dashboard/vocabulary?list=saved')}
-        onOpenMistakeBook={() => navigate('/dashboard/vocabulary?list=mistakes')}
-        onClearMistakes={clearMistakes}
-        onStartModule={mod => {
-          const contextKey = `${selectedInstitute}-${selectedLevel}-1`;
-          const content = textbookContexts[contextKey];
-          if (content && !canAccessContent(content)) { onShowUpgradePrompt(); return; }
-          navigate(`/dashboard/${mod.toLowerCase()}`);
-        }}
-      />
+        <div className="space-y-10 pb-20">
+
+            {/* 1. Header */}
+            <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                <div className="relative pl-4">
+                    <img src={ASSETS.wave} className="absolute -top-6 -left-10 w-14 h-14 animate-float" alt="waving hand" />
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                        下午好, {user?.name || 'Friend'}!
+                    </h1>
+                    <p className="text-slate-500 font-bold mt-1">准备好击败今天的 Boss 了吗？</p>
+                </div>
+
+                <div className="flex gap-4">
+                    <StatBadge icon={ASSETS.fire} label="连续打卡" value={`${streak} 天 🔥`} colorClass="bg-orange-100 border-orange-200" borderClass="border-slate-900" />
+                    <StatBadge icon={ASSETS.gem} label="经验值" value={`${xp.toLocaleString()} XP`} colorClass="bg-blue-100 border-blue-200" borderClass="border-slate-900" />
+                </div>
+            </header>
+
+            {/* 2. Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[220px]">
+
+                {/* A. Tiger Coach */}
+                <BentoCard className="md:col-span-1 row-span-2 flex flex-col items-center justify-center text-center" bgClass="bg-[#FFD233]" borderClass="border-white ring-4 ring-slate-900">
+                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(black 1px, transparent 1px)", backgroundSize: "10px 10px" }}></div>
+                    <img src={ASSETS.tiger} className="w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500" alt="tiger coach" />
+                    <div className="relative z-10 mt-4 bg-white border-2 border-slate-900 px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
+                        <p className="font-bold text-slate-900 text-sm">"别放弃！再坚持5分钟！"</p>
+                    </div>
+                    <button className="mt-4 bg-slate-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-black">
+                        开始小测验
+                    </button>
+                </BentoCard>
+
+                {/* B. Daily Phrase */}
+                <BentoCard className="md:col-span-2 row-span-1" borderClass="border-indigo-50">
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <div className="text-xs font-black text-indigo-500 uppercase mb-2 tracking-wider flex items-center gap-2">
+                                <img src={ASSETS.sparkles} className="w-4 h-4" alt="sparkles" /> 每日一句
+                            </div>
+                            <h2 className="text-4xl font-black text-slate-900 leading-tight">"시작이 반이다"</h2>
+                            <p className="text-slate-500 font-bold mt-2 text-lg">千里之行，始于足下。</p>
+                        </div>
+                        <button className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[4px_4px_0px_0px_black] border-2 border-black hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_black] transition-all">
+                            <Play size={28} fill="currentColor" />
+                        </button>
+                    </div>
+                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-50 rounded-full opacity-50 border-2 border-indigo-100"></div>
+                </BentoCard>
+
+                {/* C. Textbook Progress */}
+                <BentoCard onClickPath="/courses" bgClass="bg-blue-50" borderClass="border-slate-900">
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div className="flex justify-between items-start">
+                            <h3 className="font-black text-2xl text-slate-900 leading-tight">
+                                {selectedInstitute || '教材'}<br />
+                                {selectedLevel ? `Level ${selectedLevel}` : 'Select Level'}
+                            </h3>
+                            <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">进行中</div>
+                        </div>
+                        <div className="mt-4">
+                            <div className="flex justify-between text-xs font-bold text-blue-400 mb-1">
+                                <span>第 {currentUnit} 章</span>
+                                <span>{progressPercent}%</span>
+                            </div>
+                            <div className="w-full bg-white h-3 rounded-full border-2 border-blue-100 overflow-hidden">
+                                <div className="bg-blue-500 h-full border-r-2 border-blue-600" style={{ width: `${progressPercent}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+                    <img src={ASSETS.book} className="absolute -right-4 -bottom-4 w-28 h-28 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition duration-300" alt="books" />
+                </BentoCard>
+
+                {/* D. TOPIK Exam */}
+                <BentoCard onClickPath="/topik" bgClass="bg-yellow-50" borderClass="border-slate-900">
+                    <div className="relative z-10">
+                        <h3 className="font-black text-2xl text-slate-900">TOPIK<br />模拟考</h3>
+                        <div className="mt-2 inline-block bg-white px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 shadow-sm border-2 border-yellow-100">
+                            最高分: <span className="text-slate-900">{topScore}</span>
+                        </div>
+                    </div>
+                    <img src={ASSETS.trophy} className="absolute -right-2 -bottom-2 w-28 h-28 group-hover:scale-110 group-hover:-rotate-6 transition duration-300" alt="trophy" />
+                </BentoCard>
+
+                {/* E. Immersion TV */}
+                <BentoCard onClickPath="/youtube" bgClass="bg-red-50" borderClass="border-slate-900">
+                    <div className="relative z-10">
+                        <h3 className="font-black text-2xl text-slate-900">沉浸<br />视频</h3>
+                        <div className="mt-2 inline-block bg-red-500 text-white px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 shadow-sm">
+                            New Updates
+                        </div>
+                    </div>
+                    <img src={ASSETS.tv} className="absolute -right-4 -bottom-4 w-28 h-28 group-hover:scale-110 group-hover:rotate-3 transition duration-300" alt="tv" />
+                </BentoCard>
+
+                {/* F. Podcast Vinyl */}
+                <BentoCard onClickPath="/podcasts" bgClass="bg-slate-900" borderClass="border-slate-900" className="text-white">
+                    <div className="absolute right-[-20px] bottom-[-20px] opacity-20 group-hover:opacity-40 transition duration-700 group-hover:rotate-45">
+                        <Disc size={120} />
+                    </div>
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div>
+                            <div className="inline-block bg-purple-500 text-white border-2 border-purple-300 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">Podcast</div>
+                            <h3 className="font-bold text-lg mt-2 leading-tight">Iyagi Series<br />Real Talk</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex gap-1 h-3 items-end">
+                                <div className="w-1 bg-green-400 h-full animate-pulse"></div>
+                                <div className="w-1 bg-green-400 h-2/3 animate-pulse"></div>
+                                <div className="w-1 bg-green-400 h-full animate-pulse"></div>
+                            </div>
+                            <span className="text-xs font-mono text-green-400">Listen Now</span>
+                        </div>
+                    </div>
+                </BentoCard>
+
+                {/* G. Memory Challenge */}
+                <BentoCard onClickPath="/notebook" className="md:col-span-2 row-span-1 flex items-center justify-between" borderClass="border-slate-900">
+                    <div className="z-10">
+                        <h3 className="font-black text-xl text-slate-900">单词记忆挑战</h3>
+                        <p className="text-slate-500 font-bold text-sm mt-1">Review your saved words!</p>
+                    </div>
+                    <div className="flex items-center gap-4 z-10">
+                        <div className="text-right">
+                            <div className="text-3xl font-black text-slate-900">{wordsToReview}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase">Words Saved</div>
+                        </div>
+                        <button className="bg-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-[4px_4px_0px_0px_black] border-2 border-black hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_black] transition-all">
+                            <Zap size={24} fill="currentColor" />
+                        </button>
+                    </div>
+                    <img src={ASSETS.memo} className="absolute -left-2 -bottom-6 w-24 h-24 opacity-10 rotate-12" alt="memo" />
+                </BentoCard>
+
+            </div>
+        </div>
     );
-  }
-
-  // 3. 渲染书架视图
-  return (
-    <div className="max-w-[1200px] mx-auto pb-20 px-4 sm:px-6">
-
-      <div className="flex flex-col md:flex-row justify-between items-end mb-12 mt-8 gap-6">
-        <div className="text-center md:text-left w-full md:w-auto">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center justify-center md:justify-start gap-3 font-serif">
-            <Library className="w-8 h-8 text-indigo-600" />
-            {labels.selectInstitute || '我的书架'}
-          </h1>
-          <p className="text-slate-500 mt-2 text-lg font-medium">
-            请选择一本教材，开始您的韩语学习之旅
-          </p>
-        </div>
-
-        {/* 筛选按钮区域 */}
-        <div className="relative group w-full md:w-auto z-20">
-          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl z-30">
-            {language === 'zh' ? '按语学院筛选' : 'Filter by Institute'}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
-          </div>
-
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Filter className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-          </div>
-          <select
-            value={filterPublisher}
-            onChange={(e) => setFilterPublisher(e.target.value)}
-            className="appearance-none w-full md:w-[200px] pl-10 pr-10 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
-          >
-            <option value="ALL">{language === 'zh' ? '全部语学院' : 'All Publishers'}</option>
-            {uniquePublishers.map(pub => (
-              <option key={pub} value={pub}>
-                {pub}
-              </option>
-            ))}
-          </select>
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <ChevronDown className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-          </div>
-        </div>
-      </div>
-
-      {allTextbooks.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-            <BookOpen className="w-10 h-10" />
-          </div>
-          <p className="text-slate-500 font-medium text-lg">
-            {filterPublisher !== 'ALL' ? '该语学院暂无教材数据。' : '书架空空如也，请联系管理员添加教材。'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-12 px-4">
-          {allTextbooks.map((book) => (
-            <button
-              key={book.id}
-              onClick={() => {
-                setInstitute(book.institute.id);
-                setLevel(book.level);
-              }}
-              className="group relative flex flex-col items-center perspective-1000 outline-none"
-            >
-              {/* 书籍主体容器 */}
-              <div
-                className={`
-                  relative w-full aspect-[3/4] 
-                  rounded-r-lg rounded-l-sm 
-                  shadow-lg group-hover:shadow-2xl 
-                  transition-all duration-300 ease-out 
-                  transform group-hover:-translate-y-3 group-hover:-translate-x-1 group-hover:rotate-y-[-5deg]
-                  overflow-hidden
-                  border-r-4 border-b-4 border-black/5
-                `}
-                style={{ backgroundColor: book.style.bg }}
-              >
-                {/* 1. 书脊效果 */}
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-4 z-30 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.2)] opacity-90"
-                  style={{ backgroundColor: book.style.spine }}
-                ></div>
-                <div className="absolute left-4 top-0 bottom-0 w-[1px] bg-white/20 z-30"></div>
-
-                {/* 2. 封面图片 (如果有) */}
-                {(book.institute as any).coverUrl ? (
-                  <img
-                    src={(book.institute as any).coverUrl}
-                    alt={book.institute.name}
-                    className="absolute inset-0 w-full h-full object-cover z-20"
-                  />
-                ) : (
-                  /* 3. 默认 CSS 极简封面 */
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none z-10"></div>
-
-                    <div className="relative z-10 h-full flex flex-col justify-center items-center p-6 pl-10 text-center">
-                      <h3
-                        className="text-2xl font-black uppercase tracking-wider leading-snug font-serif break-words w-full drop-shadow-sm"
-                        style={{ color: book.style.text }}
-                      >
-                        {book.institute.name}
-                      </h3>
-                      <div className="mt-4 w-12 h-1 rounded-full opacity-20" style={{ backgroundColor: book.style.text }}></div>
-                    </div>
-                  </>
-                )}
-
-                {/* 上次学习的标签 */}
-                {book.isLastActive && (
-                  <div className="absolute top-4 right-4 z-40 animate-bounce">
-                    <div className="bg-white text-indigo-600 text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-indigo-100 flex items-center gap-1 transform rotate-3">
-                      <Clock className="w-3 h-3" />
-                      继续
-                    </div>
-                  </div>
-                )}
-
-                {/* 新书标签 */}
-                {!(book.institute as any).coverUrl && book.level === 1 && (
-                  <div className="absolute top-0 right-0 z-20">
-                    <div
-                      className="absolute top-[-32px] right-[-32px] rotate-45 w-16 h-16"
-                      style={{ backgroundColor: book.style.accent }}
-                    ></div>
-                    <div className="absolute top-1 right-1 text-white text-[10px] font-bold rotate-45">NEW</div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* 阴影底座 */}
-              <div className="w-[90%] h-4 bg-black/10 blur-md rounded-[100%] mt-[-5px] transition-all duration-300 group-hover:w-[95%] group-hover:bg-black/20 group-hover:blur-lg group-hover:translate-y-2"></div>
-
-              {/* 书籍标题 */}
-              <div className="mt-4 text-center">
-                <h4 className="font-bold text-slate-700 group-hover:text-indigo-600 transition-colors line-clamp-1">
-                  {book.institute.name}
-                </h4>
-                <p className="text-sm text-slate-400 font-medium">
-                  {book.level}级{book.institute.volume ? `（${book.institute.volume}）` : ''}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-20 text-center border-t border-slate-200 pt-8">
-        <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
-          <Star className="w-4 h-4" />
-          <span>找不到想学的教材？</span>
-          <button className="text-indigo-600 font-bold hover:underline">联系我们添加</button>
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export default DashboardPage;
+}

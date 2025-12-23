@@ -20,9 +20,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requireAdmin = f
     return <Navigate to="/" replace />;
   }
 
-  // 3. 如果需要管理员权限但用户不是管理员，重定向到首页 (/home)
+  // 3. 如果需要管理员权限但用户不是管理员，重定向到首页 (/dashboard)
   if (requireAdmin && user.role !== 'ADMIN') {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   // 4. 验证通过，渲染子路由 (Outlet)

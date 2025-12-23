@@ -88,7 +88,7 @@ const ModulePage: React.FC = () => {
   }
 
   const handleBack = () => {
-    navigate('/dashboard');
+    navigate('/dashboard/course');
   };
 
   // Derive List for immediate render (avoid flickering)

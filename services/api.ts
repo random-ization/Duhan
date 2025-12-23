@@ -83,6 +83,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  googleLogin: async (data: { code?: string; redirectUri?: string; idToken?: string }) =>
+    request<{ token: string; user: any }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   getMe: async () => request('/auth/me'),
 
   // --- User Stats ---
@@ -314,7 +320,8 @@ export const api = {
       const errText = await res.text();
       throw new Error(errText || 'Upload failed');
     }
-    return (await res.json()) as { url: string };
+    const data = await res.json();
+    return { url: data.avatarUrl || data.url } as { url: string };
   },
 
   changePassword: async (data: { currentPassword: string; newPassword: string }) =>

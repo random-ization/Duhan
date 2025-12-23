@@ -3,14 +3,89 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import {
     ArrowLeft, BookOpen, GraduationCap,
-    Crown, X as XIcon, CheckCircle2, FileText
+    Crown, X as XIcon, CheckCircle2, FileText, Filter, Clock
 } from 'lucide-react';
 import PricingSection from '../components/PricingSection';
+import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import { useLearning } from '../contexts/LearningContext';
 
 const CoursesOverview: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const { user } = useAuth();
+    const { institutes } = useData();
+    const { setSelectedInstitute, setSelectedLevel } = useLearning();
 
+    // --- Textbook Selection (Logged In) ---
+    if (user) {
+        return (
+            <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+                {/* 1. Header & Filter */}
+                <div className="max-w-7xl mx-auto px-6 py-10">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3 mb-2">
+                                <span className="text-indigo-600">|||\</span> 选择教材系列
+                            </h1>
+                            <p className="text-slate-500 font-medium">请选择一本教材，开始您的韩语学习之旅</p>
+                        </div>
+
+                        {/* Fake Filter Dropdown (Visual Only for now) */}
+                        <div className="bg-white border border-slate-200 rounded-lg shadow-sm px-4 py-2 flex items-center gap-2 text-slate-600 cursor-pointer hover:border-indigo-300 transition">
+                            <Filter size={16} />
+                            <span className="font-bold text-sm">全部语学院</span>
+                        </div>
+                    </div>
+
+                    {/* 2. Books Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        {institutes.map(inst => (
+                            <div
+                                key={inst.id}
+                                className="group relative flex flex-col items-center"
+                            >
+                                {/* Book Cover Card */}
+                                <div
+                                    onClick={() => {
+                                        setSelectedInstitute(inst.id);
+                                        // Default to level 1 for now regarding the UI flow
+                                        setSelectedLevel(1);
+                                        navigate('/dashboard/course');
+                                    }}
+                                    className="bg-white p-4 rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-slate-100 cursor-pointer w-full max-w-[280px] aspect-[3/4] flex items-center justify-center relative overflow-hidden"
+                                >
+                                    {inst.coverUrl ? (
+                                        <img src={inst.coverUrl} className="w-full h-full object-contain drop-shadow-md" alt={inst.name} />
+                                    ) : (
+                                        <div className="text-center p-6">
+                                            <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <BookOpen size={32} />
+                                            </div>
+                                            <h3 className="font-bold text-slate-800">{inst.name}</h3>
+                                        </div>
+                                    )}
+
+                                    {/* Continuing Badge (Mock) */}
+                                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-indigo-600 text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1 border border-indigo-100">
+                                        <Clock size={12} /> 继续
+                                    </div>
+                                </div>
+
+                                {/* Details Below */}
+                                <div className="mt-4 text-center">
+                                    <h3 className="font-black text-slate-800 text-lg mb-1">{inst.name}</h3>
+                                    <p className="text-slate-400 text-xs font-bold">1级 (上册)</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- Marketing Page (Existing Code) ---
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {

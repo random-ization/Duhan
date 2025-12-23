@@ -1,38 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, TrendingUp, Users, Search, History, ChevronRight, Headphones, Heart, X, Clock } from 'lucide-react';
+import { Play, Mic, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { clsx } from 'clsx';
 
-// LocalStorage keys for search history
-const SEARCH_HISTORY_KEY = 'podcast_search_history';
-const CLICKED_PODCASTS_KEY = 'podcast_clicked_history';
-
-// 🚨 前端保底数据
-const FALLBACK_PODCASTS = [
-    {
-        id: "1482869150",
-        title: "TTMIK: Iyagi",
-        author: "Talk To Me In Korean",
-        artwork: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts113/v4/85/3e/16/853e164f-c760-466d-0e42-1262d8544078/mza_6371583091937920700.jpg/600x600bb.jpg",
-        feedUrl: ""
-    },
-    {
-        id: "1553018379",
-        title: "Spongemind Podcast",
-        author: "Jonson Lee",
-        artwork: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts115/v4/64/46/7c/64467c9c-2924-4f04-807d-075253896504/mza_14652230787383926665.jpg/600x600bb.jpg",
-        feedUrl: ""
-    },
-    {
-        id: "1254294029",
-        title: "Core Korean Grammar",
-        author: "TTMIK",
-        artwork: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts116/v4/49/23/79/49237937-5c52-2a9c-072d-11d2db4d9243/mza_10860356614450239632.jpg/600x600bb.jpg",
-        feedUrl: ""
-    }
-];
-
+// Fix: Import types or use any for now to facilitate UI migration
 interface SearchHistoryItem {
     type: 'term' | 'podcast';
     value: string;
@@ -42,70 +15,27 @@ interface SearchHistoryItem {
     timestamp: number;
 }
 
-// Helper functions for localStorage
-const getSearchHistory = (): SearchHistoryItem[] => {
-    try {
-        const data = localStorage.getItem(SEARCH_HISTORY_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch { return []; }
-};
-
-const saveSearchHistory = (history: SearchHistoryItem[]) => {
-    try {
-        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, 20))); // Max 20 items
-    } catch { }
-};
-
-const addToSearchHistory = (item: SearchHistoryItem) => {
-    const history = getSearchHistory();
-    // Remove duplicate
-    const filtered = history.filter(h =>
-        !(h.type === item.type && h.value === item.value)
-    );
-    saveSearchHistory([item, ...filtered]);
-};
-
-const removeFromSearchHistory = (item: SearchHistoryItem) => {
-    const history = getSearchHistory();
-    const filtered = history.filter(h =>
-        !(h.type === item.type && h.value === item.value)
-    );
-    saveSearchHistory(filtered);
-};
-
 export default function PodcastDashboard() {
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    // State
     const [trending, setTrending] = useState<any[]>([]);
-    const [community, setCommunity] = useState<any[]>([]);
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearchMode, setIsSearchMode] = useState(false);
-    const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-    const [searchResults, setSearchResults] = useState<any[]>([]); // 🔥 Search results
-    const [isSearching, setIsSearching] = useState(false); // 🔥 Search loading
-
-    // Load search history on mount
-    useEffect(() => {
-        setSearchHistory(getSearchHistory());
-    }, []);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const res = await api.getPodcastTrending().catch(() => ({ external: [], internal: [] }));
-                const safeExternal = (res.external && res.external.length > 0) ? res.external : FALLBACK_PODCASTS;
-                setTrending(safeExternal);
-                setCommunity((res.internal && res.internal.length > 0) ? res.internal : safeExternal.slice(0, 3));
-
+                const res = await api.getPodcastTrending().catch(() => ({ external: [] }));
+                setTrending(res.external || []);
                 if (user) {
                     const subs = await api.getPodcastSubscriptions().catch(() => []);
                     setSubscriptions(subs || []);
                 }
             } catch (e) {
-                setTrending(FALLBACK_PODCASTS);
-                setCommunity(FALLBACK_PODCASTS);
+                console.error(e);
             } finally {
                 setLoading(false);
             }
@@ -113,329 +43,162 @@ export default function PodcastDashboard() {
         loadData();
     }, [user]);
 
-    // 🔥 Fixed: Inline search instead of navigating to non-existent route
-    const handleSearch = async (e: React.FormEvent) => {
+    const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchTerm.trim()) return;
-
-        // Save to history
-        addToSearchHistory({
-            type: 'term',
-            value: searchTerm.trim(),
-            timestamp: Date.now()
-        });
-        setSearchHistory(getSearchHistory());
-
-        // 🔥 Perform inline search
-        setIsSearching(true);
-        try {
-            const results = await api.searchPodcasts(searchTerm.trim());
-            setSearchResults(results || []);
-        } catch (err) {
-            console.error('Search failed:', err);
-            setSearchResults([]);
-        } finally {
-            setIsSearching(false);
+        if (searchTerm.trim()) {
+            navigate(`/podcasts/search?q=${encodeURIComponent(searchTerm)}`);
         }
     };
 
-    const handleClickPodcast = (podcast: any) => {
-        // Save to history
-        addToSearchHistory({
-            type: 'podcast',
-            value: podcast.id || podcast.itunesId,
-            title: podcast.title,
-            artwork: podcast.artwork || podcast.artworkUrl,
-            feedUrl: podcast.feedUrl || '',
-            timestamp: Date.now()
-        });
-        setSearchHistory(getSearchHistory());
-        navigate(`/podcasts/channel?id=${podcast.id || podcast.itunesId}&feedUrl=${encodeURIComponent(podcast.feedUrl || '')}`);
-    };
-
-    const handleDeleteHistoryItem = (item: SearchHistoryItem, e: React.MouseEvent) => {
-        e.stopPropagation();
-        removeFromSearchHistory(item);
-        setSearchHistory(getSearchHistory());
-    };
-
-    const clearAllHistory = () => {
-        saveSearchHistory([]);
-        setSearchHistory([]);
-    };
-
     return (
-        <div className="min-h-screen bg-slate-50 pb-24">
-            {/* Header */}
-            <div className="bg-white p-6 sticky top-0 z-10 shadow-sm">
-                {!isSearchMode ? (
-                    <>
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-                                    <Headphones className="w-5 h-5 text-white" />
-                                </div>
-                                <h1 className="text-xl font-bold text-slate-900">播客学韩语</h1>
+        <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32" style={{ backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}>
+            <div className="max-w-7xl mx-auto space-y-12">
+
+                {/* 1. Header Section */}
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-6">
+                    <div className="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Headphone.png" className="w-14 h-14 animate-bounce-slow" alt="headphone" />
+                        <div>
+                            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">播客中心</h2>
+                            <p className="text-slate-500 font-bold">听力磨耳朵</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => navigate('/podcasts/subscriptions')}
+                        className="flex items-center gap-2 bg-white border-2 border-slate-900 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 shadow-pop active:shadow-none active:translate-y-1 transition text-slate-900"
+                    >
+                        <Library size={18} /> 我的订阅
+                    </button>
+                </div>
+
+                {/* 2. Search & Filters */}
+                <div className="flex flex-col md:flex-row gap-4 mb-8">
+                    <form onSubmit={handleSearch} className="relative flex-1 group">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="搜索播客频道、单集..."
+                            className="w-full bg-white border-2 border-slate-900 rounded-xl py-3 px-12 shadow-pop focus:outline-none focus:translate-y-1 focus:shadow-none transition font-bold placeholder:text-slate-400 text-slate-900"
+                        />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition" size={20} />
+                    </form>
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
+                        <button className="px-4 py-3 bg-slate-900 text-white rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap shadow-pop hover:translate-y-1 hover:shadow-none transition">全部</button>
+                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">初级</button>
+                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">日常对话</button>
+                    </div>
+                </div>
+
+                {/* 3. Main Grid Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                    {/* Left Column (Featured + History) */}
+                    <div className="lg:col-span-8 space-y-8">
+
+                        {/* Featured Hero Card */}
+                        <div
+                            onClick={() => navigate('/podcasts/player?id=1482869150')} // Example ID
+                            className="bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6"
+                        >
+                            <div className="absolute right-[-20px] bottom-[-40px] opacity-20 group-hover:rotate-12 transition duration-500">
+                                <Disc size={200} />
                             </div>
-                            <button
-                                onClick={() => navigate('/podcasts/history')}
-                                className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition"
-                                title="播放历史"
-                            >
-                                <History size={20} />
-                            </button>
+                            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-indigo-900/50 to-transparent pointer-events-none"></div>
+
+                            <div className="w-28 h-28 rounded-2xl bg-indigo-500 border-2 border-white shadow-lg overflow-hidden shrink-0 z-10">
+                                <img src="https://is1-ssl.mzstatic.com/image/thumb/Podcasts113/v4/85/3e/16/853e164f-c760-466d-0e42-1262d8544078/mza_6371583091937920700.jpg/600x600bb.jpg" className="w-full h-full object-cover" alt="album art" />
+                            </div>
+                            <div className="z-10 flex-1 text-center md:text-left">
+                                <div className="text-xs font-bold text-green-400 mb-1 flex items-center justify-center md:justify-start gap-2 uppercase tracking-wider">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Continue Listening
+                                </div>
+                                <h3 className="text-2xl font-black mb-1 line-clamp-1">Iyagi #142: Coffee Shop</h3>
+                                <p className="text-slate-400 text-sm mb-4">Talk To Me In Korean • 剩余 12:30</p>
+                                <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden max-w-md mx-auto md:mx-0">
+                                    <div className="bg-green-400 h-full w-[45%]"></div>
+                                </div>
+                            </div>
+                            <div className="z-10 hidden md:flex w-12 h-12 bg-white rounded-full items-center justify-center text-black hover:scale-110 transition shadow-lg shrink-0">
+                                <Play fill="currentColor" size={20} />
+                            </div>
                         </div>
 
-                        {/* Search Bar (Click to enter search mode) */}
-                        <div
-                            onClick={() => setIsSearchMode(true)}
-                            className="flex items-center gap-3 bg-slate-100 px-4 py-3 rounded-xl cursor-text"
-                        >
-                            <Search className="text-gray-400" size={20} />
-                            <span className="text-gray-400">搜索韩语播客...</span>
+                        {/* Recent History (Horizontal Scroll) */}
+                        <div>
+                            <h3 className="font-black text-xl mb-4 flex items-center gap-2 text-slate-900"><HistoryIcon size={20} /> 收听历史</h3>
+                            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                {/* History Item 1 */}
+                                <div className="min-w-[220px] bg-white p-3 rounded-[1.5rem] border-2 border-slate-900 shadow-sm hover:shadow-pop transition cursor-pointer">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <img src="https://picsum.photos/100/100?random=1" className="w-10 h-10 rounded-lg border border-slate-200" alt="cover" />
+                                        <div className="overflow-hidden">
+                                            <div className="text-xs font-bold text-slate-400 truncate">SpongeMind</div>
+                                            <div className="text-xs font-bold text-slate-900 truncate">Ep. 42 Bilingual</div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full w-[90%]"></div>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">已听完</div>
+                                </div>
+
+                                {/* History Item 2 */}
+                                <div className="min-w-[220px] bg-white p-3 rounded-[1.5rem] border-2 border-slate-900 shadow-sm hover:shadow-pop transition cursor-pointer">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <img src="https://picsum.photos/100/100?random=2" className="w-10 h-10 rounded-lg border border-slate-200" alt="cover" />
+                                        <div className="overflow-hidden">
+                                            <div className="text-xs font-bold text-slate-400 truncate">TTMIK</div>
+                                            <div className="text-xs font-bold text-slate-900 truncate">Iyagi #141</div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full w-[20%]"></div>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">2天前</div>
+                                </div>
+                            </div>
                         </div>
-                    </>
-                ) : (
-                    /* Search Mode */
-                    <div className="flex items-center gap-3">
-                        <form onSubmit={handleSearch} className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="搜索韩语播客..."
-                                autoFocus
-                                className="w-full bg-slate-100 pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </form>
-                        <button
-                            onClick={() => { setIsSearchMode(false); setSearchTerm(''); }}
-                            className="text-indigo-600 font-medium"
-                        >
-                            取消
+                    </div>
+
+                    {/* Right Column (Community Charts) */}
+                    <div className="lg:col-span-4 bg-white rounded-[2rem] border-2 border-slate-900 p-6 shadow-pop h-fit">
+                        <div className="flex gap-4 mb-6 border-b-2 border-slate-100 pb-2">
+                            <button className="text-lg font-black text-slate-900 border-b-4 border-indigo-500 pb-2 -mb-3.5">社区热播</button>
+                            <button className="text-lg font-black text-slate-400 hover:text-slate-600 transition">本周推荐</button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {trending.slice(0, 5).map((pod, idx) => (
+                                <div key={idx} onClick={() => navigate(`/podcasts/channel?id=${pod.id || pod.itunesId}`)} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
+                                    <div className="font-black text-slate-300 text-xl w-6 text-center">{idx + 1}</div>
+                                    <img src={pod.artwork || pod.artworkUrl} className="w-12 h-12 rounded-lg border border-slate-200" alt={pod.title} />
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-sm text-slate-900 truncate group-hover:text-indigo-600 transition">{pod.title}</h4>
+                                        <p className="text-xs text-slate-500 truncate">{pod.author}</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Mock Data if trending empty */}
+                            {!trending.length && [1, 2, 3].map(i => (
+                                <div key={i} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
+                                    <div className="font-black text-slate-300 text-xl w-6 text-center">{i}</div>
+                                    <div className="w-12 h-12 rounded-lg bg-slate-200 border border-slate-200" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="h-4 w-24 bg-slate-200 rounded mb-1"></div>
+                                        <div className="h-3 w-16 bg-slate-100 rounded"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button className="w-full mt-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-500 hover:border-slate-900 hover:text-slate-900 transition">
+                            查看完整榜单
                         </button>
                     </div>
-                )}
+
+                </div>
             </div>
-
-            {/* Search History & Results (only show in search mode) */}
-            {isSearchMode && (
-                <div className="bg-white border-t min-h-[60vh]">
-                    {/* Show Search Results if we have any */}
-                    {searchResults.length > 0 ? (
-                        <div className="p-4">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm font-medium text-slate-600">
-                                    搜索结果 ({searchResults.length})
-                                </span>
-                                <button
-                                    onClick={() => { setSearchResults([]); setSearchTerm(''); }}
-                                    className="text-xs text-indigo-500"
-                                >
-                                    清除结果
-                                </button>
-                            </div>
-                            <div className="space-y-3">
-                                {searchResults.map((podcast: any) => (
-                                    <div
-                                        key={podcast.id || podcast.collectionId}
-                                        onClick={() => handleClickPodcast(podcast)}
-                                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer"
-                                    >
-                                        <img
-                                            src={podcast.artwork || podcast.artworkUrl}
-                                            className="w-14 h-14 rounded-lg object-cover bg-gray-200"
-                                            alt=""
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-medium text-slate-800 line-clamp-1">{podcast.title}</h3>
-                                            <p className="text-sm text-slate-500 line-clamp-1">{podcast.author}</p>
-                                        </div>
-                                        <ChevronRight className="text-gray-300" size={20} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : isSearching ? (
-                        /* Loading state */
-                        <div className="flex justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
-                        </div>
-                    ) : searchHistory.length > 0 ? (
-                        /* Search History */
-                        <div className="p-4">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm font-medium text-slate-600">搜索历史</span>
-                                <button
-                                    onClick={clearAllHistory}
-                                    className="text-xs text-slate-400 hover:text-red-500"
-                                >
-                                    清空
-                                </button>
-                            </div>
-                            <div className="space-y-2">
-                                {searchHistory.map((item, idx) => (
-                                    <div
-                                        key={`${item.type}-${item.value}-${idx}`}
-                                        onClick={async () => {
-                                            if (item.type === 'term') {
-                                                // 🔥 Fixed: Use inline search instead of navigation
-                                                setSearchTerm(item.value);
-                                                setIsSearching(true);
-                                                try {
-                                                    const results = await api.searchPodcasts(item.value);
-                                                    setSearchResults(results || []);
-                                                } catch { setSearchResults([]); }
-                                                finally { setIsSearching(false); }
-                                            } else {
-                                                navigate(`/podcasts/channel?id=${item.value}&feedUrl=${encodeURIComponent(item.feedUrl || '')}`);
-                                            }
-                                        }}
-                                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer group"
-                                    >
-                                        {item.type === 'term' ? (
-                                            <Clock className="text-slate-400" size={18} />
-                                        ) : (
-                                            <img
-                                                src={item.artwork}
-                                                className="w-10 h-10 rounded-lg object-cover bg-gray-200"
-                                                alt=""
-                                            />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-slate-700 line-clamp-1">
-                                                {item.type === 'term' ? item.value : item.title}
-                                            </p>
-                                            {item.type === 'podcast' && (
-                                                <p className="text-xs text-slate-400">播客频道</p>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={(e) => handleDeleteHistoryItem(item, e)}
-                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-200 rounded-full transition"
-                                        >
-                                            <X size={16} className="text-slate-400" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-8 text-center text-slate-400">
-                            <Search className="w-12 h-12 mx-auto mb-3 text-slate-200" />
-                            <p>输入关键词搜索韩语播客</p>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Main Content (hide when in search mode) */}
-            {!isSearchMode && (
-                <div className="p-6 space-y-8">
-                    {/* 0. 我的订阅 */}
-                    {subscriptions.length > 0 && (
-                        <section>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Heart className="text-red-500" size={20} />
-                                <h2 className="text-xl font-bold">我的订阅</h2>
-                                <span className="text-sm text-slate-400">({subscriptions.length})</span>
-                            </div>
-
-                            <div className="flex gap-4 overflow-x-auto pb-2 -mx-2 px-2">
-                                {subscriptions.map((channel) => (
-                                    <div
-                                        key={channel.id || channel.itunesId}
-                                        onClick={() => handleClickPodcast(channel)}
-                                        className="flex-shrink-0 w-24 cursor-pointer group"
-                                    >
-                                        <img
-                                            src={channel.artworkUrl || channel.artwork}
-                                            className="w-24 h-24 rounded-xl object-cover bg-gray-200 shadow-sm group-hover:shadow-md transition"
-                                            alt={channel.title}
-                                        />
-                                        <p className="text-xs text-slate-700 mt-2 line-clamp-2 text-center font-medium">{channel.title}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* 没有订阅时显示提示 */}
-                    {!loading && subscriptions.length === 0 && user && (
-                        <section className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 text-center">
-                            <Heart className="w-10 h-10 text-indigo-300 mx-auto mb-3" />
-                            <h3 className="font-bold text-slate-700 mb-1">还没有订阅频道</h3>
-                            <p className="text-sm text-slate-500 mb-4">探索下方热门播客，订阅喜欢的频道</p>
-                        </section>
-                    )}
-
-                    {/* 1. 热门推荐 */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <TrendingUp className="text-pink-500" />
-                            <h2 className="text-xl font-bold">热门推荐</h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {loading ? (
-                                <div className="col-span-2 flex justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
-                                </div>
-                            ) : trending.map((pod) => (
-                                <div
-                                    key={pod.id}
-                                    onClick={() => handleClickPodcast(pod)}
-                                    className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition"
-                                >
-                                    <img src={pod.artwork || pod.artworkUrl} className="w-20 h-20 rounded-lg object-cover bg-gray-200" alt={pod.title} />
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 line-clamp-1">{pod.title}</h3>
-                                        <p className="text-sm text-slate-500 line-clamp-1">{pod.author}</p>
-                                    </div>
-                                    <ChevronRight className="text-gray-300" />
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* 2. 社区热播 */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Users className="text-indigo-500" />
-                            <h2 className="text-xl font-bold">社区热听</h2>
-                        </div>
-
-                        <div className="space-y-3">
-                            {loading ? (
-                                <div className="flex justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
-                                </div>
-                            ) : community.map((item, idx) => (
-                                <div
-                                    key={item.id || idx}
-                                    onClick={() => item.audioUrl && navigate('/podcasts/player', { state: { episode: item } })}
-                                    className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm cursor-pointer hover:shadow-md transition"
-                                >
-                                    <div className="text-lg font-bold text-indigo-300 w-6 text-center">{idx + 1}</div>
-                                    <img
-                                        src={item.channel?.artwork || item.artwork || item.artworkUrl}
-                                        className="w-12 h-12 rounded-lg object-cover bg-gray-200"
-                                        alt=""
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 line-clamp-1">{item.title}</h3>
-                                        <p className="text-xs text-slate-500">
-                                            {item.channel?.title || item.author || 'Unknown'} • {item.views || 0} 次播放
-                                        </p>
-                                    </div>
-                                    <Play className="text-indigo-400" size={20} />
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                </div>
-            )}
         </div>
     );
 }

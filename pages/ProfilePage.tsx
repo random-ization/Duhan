@@ -97,7 +97,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
   const examsTaken = user.examHistory?.length || 0;
   const averageScore = examsTaken > 0
-    ? Math.round(user.examHistory.reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) / examsTaken)
+    ? Math.round((user.examHistory || []).reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) / examsTaken)
     : 0;
 
   // Custom Tab Button Component

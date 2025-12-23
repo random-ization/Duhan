@@ -453,3 +453,101 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
+
+// Google OAuth Login
+import { exchangeCodeForUserInfo, verifyIdToken } from '../lib/google-auth';
+
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const { code, redirectUri, idToken } = req.body;
+
+    let googleUser;
+
+    if (idToken) {
+      // Client already has ID token (e.g., from Google Sign-In button SDK)
+      googleUser = await verifyIdToken(idToken);
+    } else if (code && redirectUri) {
+      // Exchange authorization code for tokens
+      googleUser = await exchangeCodeForUserInfo(code, redirectUri);
+    } else {
+      return res.status(400).json({ error: 'Either code+redirectUri or idToken is required' });
+    }
+
+    // Try to find user by Google ID first
+    let user = await prisma.user.findUnique({
+      where: { googleId: googleUser.googleId },
+      include: {
+        savedWords: true,
+        mistakes: true,
+        annotations: true,
+        examHistory: true,
+        learningActivities: {
+          orderBy: { date: 'desc' },
+          take: 365,
+        },
+      },
+    });
+
+    if (!user) {
+      // Try to find by email (for linking existing accounts)
+      const existingUser = await prisma.user.findUnique({
+        where: { email: googleUser.email },
+      });
+
+      if (existingUser) {
+        // Link Google account to existing user
+        user = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            googleId: googleUser.googleId,
+            isVerified: true, // Google email is verified
+            avatar: existingUser.avatar || googleUser.avatar, // Keep existing avatar or use Google's
+          },
+          include: {
+            savedWords: true,
+            mistakes: true,
+            annotations: true,
+            examHistory: true,
+            learningActivities: {
+              orderBy: { date: 'desc' },
+              take: 365,
+            },
+          },
+        });
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            email: googleUser.email,
+            name: googleUser.name,
+            password: '', // No password for OAuth users
+            googleId: googleUser.googleId,
+            avatar: googleUser.avatar,
+            role: 'STUDENT',
+            tier: 'FREE',
+            isVerified: true, // Google accounts are pre-verified
+          },
+          include: {
+            savedWords: true,
+            mistakes: true,
+            annotations: true,
+            examHistory: true,
+            learningActivities: {
+              orderBy: { date: 'desc' },
+              take: 365,
+            },
+          },
+        });
+      }
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({ token, user: formatUser(user) });
+  } catch (error: any) {
+    console.error('Google Login Error:', error);
+    res.status(500).json({ error: error.message || 'Google login failed' });
+  }
+};
+

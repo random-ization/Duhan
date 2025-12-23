@@ -40,6 +40,9 @@ model User {
   // Password reset
   resetToken         String?   @unique
   resetTokenExpiry   DateTime?
+  
+  // OAuth providers
+  googleId   String?   @unique  // Google account ID for OAuth users
 
   // Learning progress tracking
   lastInstitute String?       // Last selected institute

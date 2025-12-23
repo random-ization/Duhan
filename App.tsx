@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Layout from './components/Layout';
+import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
+
 import UpgradePrompt from './components/UpgradePrompt';
 import { AppRoutes } from './routes';
 import { useAuth } from './contexts/AuthContext';
@@ -8,7 +8,7 @@ import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 
 function App() {
-  const { user, loading, logout, language, setLanguage, canAccessContent, updateLearningProgress } =
+  const { user, loading, language, canAccessContent, updateLearningProgress } =
     useAuth();
   const {
     selectedInstitute,
@@ -45,19 +45,14 @@ function App() {
 
   return (
     <>
-      <Layout
-        user={user}
-        onLogout={logout}
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-        language={language}
-        onLanguageChange={setLanguage}
-      >
-        <AppRoutes
-          canAccessContent={canAccessContent}
-          onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-        />
-      </Layout>
+      <Routes>
+        <Route path="/*" element={
+          <AppRoutes
+            canAccessContent={canAccessContent}
+            onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+          />
+        } />
+      </Routes>
 
       <UpgradePrompt
         isOpen={showUpgradePrompt}

@@ -1,148 +1,98 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Mail, Send, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getLabels } from '../utils/i18n';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const ForgotPasswordPage: React.FC = () => {
-    const navigate = useNavigate();
-    const { language } = useAuth();
-    const labels = getLabels(language);
-
+export default function ForgotPasswordPage() {
+    const { resetPassword } = useAuth();
     const [email, setEmail] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [sent, setSent] = useState(false);
+    const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
-
         try {
-            const response = await fetch(`${API_URL}/auth/forgot-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setSent(true);
-            } else {
-                setError(data.error || 'Failed to send reset email. Please try again.');
-            }
-        } catch (error) {
-            setError('Network error. Please check your connection and try again.');
-        } finally {
-            setLoading(false);
+            setMessage('');
+            setError('');
+            setLoading(true);
+            await resetPassword(email);
+            setMessage('重置链接已发送！请检查您的收件箱 (Check your inbox).');
+        } catch (err: any) {
+            setError('无法重置密码，请检查邮箱地址是否正确。');
         }
+        setLoading(false);
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 font-sans">
-            {/* Background Effects */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-indigo-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-                <div className="absolute bottom-0 left-0 w-3/4 h-3/4 bg-violet-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-            </div>
+        <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 flex items-center justify-center font-sans">
+            <div className="max-w-5xl w-full bg-white rounded-[3rem] border-2 border-slate-900 shadow-pop overflow-hidden flex flex-col md:flex-row min-h-[600px]">
 
-            <div className="w-full max-w-md p-6 relative z-10">
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10">
+                {/* Left: Visuals (Consistent with AuthPage) */}
+                <div className="w-full md:w-1/2 bg-slate-900 relative flex flex-col items-center justify-center p-10 text-white overflow-hidden">
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, #4f46e5 0, #4f46e5 2px, transparent 2px, transparent 10px)" }}></div>
 
-                    {!sent ? (
-                        <>
-                            {/* Header */}
-                            <div className="text-center mb-8">
-                                <Mail className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
-                                <h1 className="text-2xl font-bold text-white mb-2">
-                                    {language === 'zh' ? '忘记密码？' : 'Forgot Password?'}
-                                </h1>
-                                <p className="text-indigo-200 text-sm">
-                                    {language === 'zh'
-                                        ? '输入您的邮箱，我们将发送重置链接'
-                                        : "Enter your email and we'll send you a reset link"}
-                                </p>
-                            </div>
+                    <div className="relative z-10 text-center">
+                        <div className="w-20 h-20 bg-indigo-500 rounded-3xl flex items-center justify-center text-4xl font-black border-4 border-white shadow-lg mb-6 mx-auto">?</div>
+                        <h1 className="text-4xl font-black font-display mb-2">Account Recovery</h1>
+                        <p className="text-slate-400 font-bold text-lg tracking-wide">Don't panic, Explorer.</p>
+                    </div>
 
-                            {error && (
-                                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-100 rounded-xl text-sm">
-                                    {error}
-                                </div>
-                            )}
+                    {/* 3D Rocket Decoration (Using the fixed URL) */}
+                    <div className="absolute bottom-10 -left-10 animate-pulse duration-[3000ms]">
+                        <img
+                            src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png"
+                            className="w-32 h-32 drop-shadow-xl opacity-80"
+                            alt="Rocket"
+                        />
+                    </div>
+                </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-                                        {labels.email || 'Email'}
-                                    </label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <Mail className="h-5 w-5 text-indigo-300 group-focus-within:text-white transition-colors" />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            required
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            className="block w-full pl-11 pr-4 py-3.5 bg-slate-800/50 border border-indigo-500/30 rounded-xl text-white placeholder-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all"
-                                            placeholder="you@example.com"
-                                        />
-                                    </div>
-                                </div>
+                {/* Right: Recovery Console */}
+                <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
+                    <div className="mb-8">
+                        <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition mb-4">
+                            <ArrowLeft size={16} /> 返回登录 (Back to Login)
+                        </Link>
+                        <h2 className="text-3xl font-black text-slate-900">找回密码</h2>
+                        <p className="text-slate-500 font-medium mt-2">输入您的注册邮箱，我们将发送救援信号。</p>
+                    </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                                >
-                                    {loading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        language === 'zh' ? '发送重置链接' : 'Send Reset Link'
-                                    )}
-                                </button>
-                            </form>
-
-                            <div className="mt-6 text-center">
-                                <button
-                                    onClick={() => navigate('/login')}
-                                    className="text-sm text-indigo-200 hover:text-white font-medium transition-colors flex items-center justify-center gap-2 mx-auto"
-                                >
-                                    <ArrowLeft className="w-4 h-4" />
-                                    {language === 'zh' ? '返回登录' : 'Back to Login'}
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            {/* Success State */}
-                            <div className="text-center">
-                                <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
-                                <h1 className="text-2xl font-bold text-white mb-2">
-                                    {language === 'zh' ? '邮件已发送！' : 'Email Sent!'}
-                                </h1>
-                                <p className="text-indigo-200 text-sm mb-8">
-                                    {language === 'zh'
-                                        ? '如果该邮箱已注册，您将收到密码重置链接。请检查您的收件箱。'
-                                        : 'If an account with that email exists, you will receive a password reset link. Please check your inbox.'}
-                                </p>
-                                <button
-                                    onClick={() => navigate('/login')}
-                                    className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-                                >
-                                    {language === 'zh' ? '返回登录' : 'Back to Login'}
-                                </button>
-                            </div>
-                        </>
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl border-2 border-red-100 flex items-center gap-2 font-bold text-sm">
+                            <AlertCircle size={18} /> {error}
+                        </div>
                     )}
+
+                    {message && (
+                        <div className="mb-6 p-4 bg-green-50 text-green-600 rounded-xl border-2 border-green-100 flex items-center gap-2 font-bold text-sm">
+                            <CheckCircle size={18} /> {message}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition" size={20} />
+                            <input
+                                type="email"
+                                placeholder="请输入电子邮箱 (Email Address)"
+                                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-4 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <button
+                            disabled={loading}
+                            className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl border-b-4 border-indigo-800 hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:shadow-none active:scale-95"
+                        >
+                            {loading ? "发送中..." : "发送重置链接"}
+                            {!loading && <Send size={18} />}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     );
-};
-
-export default ForgotPasswordPage;
+}

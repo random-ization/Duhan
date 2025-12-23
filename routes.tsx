@@ -4,12 +4,14 @@ import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Lazy load pages for code splitting
+import AppLayout from './components/layout/AppLayout';
 const Landing = lazy(() => import('./pages/Landing'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
+
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const TopikPage = lazy(() => import('./pages/TopikPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
@@ -71,73 +73,77 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/pricing" element={<SubscriptionPage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/profile" element={<ProfilePage language={language} />} />
-          <Route
-            path="/dashboard"
-            element={
-              <DashboardPage
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={onShowUpgradePrompt}
-              />
-            }
-          />
-          <Route path="/dashboard/:moduleParam" element={<ModulePage />} />
-          <Route
-            path="/topik"
-            element={
-              <TopikPage
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={onShowUpgradePrompt}
-              />
-            }
-          />
-          <Route
-            path="/topik/history"
-            element={
-              <TopikPage
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={onShowUpgradePrompt}
-              />
-            }
-          />
-          <Route
-            path="/topik/:examId"
-            element={
-              <TopikPage
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={onShowUpgradePrompt}
-              />
-            }
-          />
-          <Route
-            path="/topik/:examId/:view"
-            element={
-              <TopikPage
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={onShowUpgradePrompt}
-              />
-            }
-          />
-          <Route path="/notebook" element={<NotebookPage />} />
+          <Route element={<AppLayout />}>
+            <Route path="/pricing" element={<SubscriptionPage />} />
+            <Route path="/profile" element={<ProfilePage language={language} />} />
+            <Route
+              path="/dashboard"
+              element={
+                <DashboardPage
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={onShowUpgradePrompt}
+                />
+              }
+            />
+            <Route path="/dashboard/course" element={<CourseDashboard />} />
+            <Route path="/dashboard/:moduleParam" element={<ModulePage />} />
+            <Route
+              path="/topik"
+              element={
+                <TopikPage
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={onShowUpgradePrompt}
+                />
+              }
+            />
+            <Route
+              path="/topik/history"
+              element={
+                <TopikPage
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={onShowUpgradePrompt}
+                />
+              }
+            />
+            <Route
+              path="/topik/:examId"
+              element={
+                <TopikPage
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={onShowUpgradePrompt}
+                />
+              }
+            />
+            <Route
+              path="/topik/:examId/:view"
+              element={
+                <TopikPage
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={onShowUpgradePrompt}
+                />
+              }
+            />
+            <Route path="/notebook" element={<NotebookPage />} />
 
-          {/* YouTube Learning */}
-          <Route path="/youtube" element={<Navigate to="/youtube/search" replace />} />
-          <Route path="/youtube/search" element={<YouTubeSearchPage />} />
-          <Route path="/youtube/learn/:youtubeId" element={<YouTubeLearnPage />} />
+            {/* YouTube Learning */}
+            <Route path="/youtube" element={<Navigate to="/youtube/search" replace />} />
+            <Route path="/youtube/search" element={<YouTubeSearchPage />} />
+            <Route path="/youtube/learn/:youtubeId" element={<YouTubeLearnPage />} />
 
-          {/* Podcast Learning */}
-          <Route path="/podcasts" element={<PodcastDashboard />} />
-          <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
-          <Route path="/podcasts/player" element={<PodcastPlayerPage />} />
-          <Route path="/podcasts/history" element={<HistoryPage />} />
+            {/* Podcast Learning */}
+            <Route path="/podcasts" element={<PodcastDashboard />} />
+            <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
+            <Route path="/podcasts/player" element={<PodcastPlayerPage />} />
+            <Route path="/podcasts/history" element={<HistoryPage />} />
+          </Route>
         </Route>
 
         {/* === 管理员路由 (需要 Admin 权限) === */}
         <Route element={<ProtectedRoute requireAdmin={true} />}>
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/:tab" element={<AdminPage />} />
+          <Route element={<AppLayout />}>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/:tab" element={<AdminPage />} />
+          </Route>
         </Route>
 
         {/* 404 或未知路径重定向 */}
