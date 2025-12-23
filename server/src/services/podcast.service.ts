@@ -9,7 +9,7 @@ const parser = new Parser();
 
 // Cache keys for S3
 const TRENDING_CACHE_KEY = 'cache/podcast-trending-v2.json';
-const TRENDING_CACHE_TTL = 5 * 60; // 5 minutes
+const TRENDING_CACHE_TTL = 30 * 60; // 30 minutes (was 5 minutes, increased for performance)
 const DEFAULT_FALLBACK_SEARCH_TERM = 'Korean Culture'; // Fallback when Apple API fails
 
 /**

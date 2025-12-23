@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import * as podcastService from '../services/podcast.service';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Search podcasts via iTunes API
@@ -130,9 +133,9 @@ export const getTrending = async (req: Request, res: Response) => {
 };
 
 /**
- * Track episode view
+ * Track episode view (creates channel -> episode -> history)
  * POST /api/podcasts/view
- * Body: { episode: { guid, title, audioUrl, duration?, pubDate?, description?, channel: {...} } }
+ * Body: { episode: { guid, title, audioUrl, channel: {...} } }
  */
 export const trackView = async (req: Request, res: Response) => {
     try {
@@ -142,18 +145,51 @@ export const trackView = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Episode data with guid, audioUrl, and channel is required' });
         }
 
-        const updatedEpisode = await podcastService.trackView(episode);
+        // 1. 必须先创建/更新 Channel，否则 Episode 没法存
+        const channel = await prisma.podcastChannel.upsert({
+            where: { itunesId: String(episode.channel.itunesId || episode.channel.id) },
+            update: {},
+            create: {
+                itunesId: String(episode.channel.itunesId || episode.channel.id),
+                title: episode.channel.title || 'Unknown',
+                feedUrl: episode.channel.feedUrl || '',
+                artworkUrl: episode.channel.artworkUrl || episode.channel.image || '',
+                author: episode.channel.author || 'Unknown'
+            }
+        });
 
-        // Add to history if logged in
+        // 2. 再创建/更新 Episode，并增加 Views
+        const updatedEp = await prisma.podcastEpisode.upsert({
+            where: { guid: episode.guid },
+            update: { views: { increment: 1 } },
+            create: {
+                guid: episode.guid,
+                title: episode.title,
+                audioUrl: episode.audioUrl,
+                channelId: channel.id,
+                views: 1
+            }
+        });
+
+        // 3. 最后记录用户历史 (如果已登录)
         const userId = (req as any).user?.userId || (req as any).user?.id;
         if (userId) {
-            await podcastService.addToHistory(userId, episode);
+            await prisma.listeningHistory.upsert({
+                where: { userId_episodeGuid: { userId, episodeGuid: episode.guid } },
+                update: { playedAt: new Date() },
+                create: {
+                    userId,
+                    episodeGuid: episode.guid,
+                    episodeTitle: episode.title,
+                    episodeUrl: episode.audioUrl,
+                    channelName: channel.title,
+                    channelImage: channel.artworkUrl,
+                    playedAt: new Date()
+                }
+            });
         }
 
-        return res.json({
-            success: true,
-            views: updatedEpisode.views
-        });
+        return res.json({ success: true, views: updatedEp.views });
     } catch (error: any) {
         console.error('[PodcastController] Track view error:', error?.message);
         return res.status(500).json({ error: 'Failed to track view' });

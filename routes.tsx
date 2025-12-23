@@ -26,6 +26,7 @@ const YouTubeLearnPage = lazy(() => import('./pages/YouTubeLearnPage'));
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
 const PodcastChannelPage = lazy(() => import('./pages/PodcastChannelPage'));
 const PodcastPlayerPage = lazy(() => import('./pages/PodcastPlayerPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -130,6 +131,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
           <Route path="/podcasts" element={<PodcastDashboard />} />
           <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
           <Route path="/podcasts/player" element={<PodcastPlayerPage />} />
+          <Route path="/podcasts/history" element={<HistoryPage />} />
         </Route>
 
         {/* === 管理员路由 (需要 Admin 权限) === */}
