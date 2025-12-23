@@ -292,7 +292,11 @@ const PodcastPlayerPage: React.FC = () => {
                 // Optimization: In real app, might want a specific endpoint for single episode progress
                 const history = await api.getPodcastHistory().catch(() => []);
                 // Match by guid (or title if guid is unstable/generated)
-                const record = history.find(h => h.episodeGuid === episode.guid || (h.episodeTitle === episode.title && h.episodeUrl === episode.audioUrl));
+                // Match by guid (or title if guid is unstable/generated)
+                const record = history.find(h =>
+                    h.episodeGuid === episode.guid ||
+                    (h.episodeTitle === episode.title && (h.channelName === episode.channel?.title || h.channelName === episode.channelTitle))
+                );
 
                 if (record && record.progress > 0 && record.progress < (record.duration || 3600)) {
                     console.log(`[Resume] Found progress: ${record.progress}s`);

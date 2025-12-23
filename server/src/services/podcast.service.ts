@@ -502,11 +502,21 @@ async function getInternalTrending() {
         // Sort by score descending
         scoredEpisodes.sort((a, b) => b.score - a.score);
 
-        // 🔥 Deduplicate by guid (same episode might have multiple entries)
-        const seenGuids = new Set<string>();
+        // 🔥 Deduplicate by guid AND (Title + Channel) to handle inconsistent GUIDs
+        const seenKeys = new Set<string>();
         const uniqueEpisodes = scoredEpisodes.filter(ep => {
-            if (seenGuids.has(ep.guid)) return false;
-            seenGuids.add(ep.guid);
+            // 1. Check strict GUID
+            if (seenKeys.has(ep.guid)) return false;
+
+            // 2. Check composite key (ChannelID + Title) to catch "same episode, different GUID"
+            // Normalize title to avoid minor diffs
+            const cleanTitle = ep.title.trim().toLowerCase();
+            const compositeKey = `${ep.channel.itunesId}|${cleanTitle}`;
+
+            if (seenKeys.has(compositeKey)) return false;
+
+            seenKeys.add(ep.guid);
+            seenKeys.add(compositeKey);
             return true;
         }).slice(0, 10); // Take top 10 unique
 
@@ -689,9 +699,26 @@ export const addToHistory = async (userId: string, episode: EpisodeInput) => {
  * Get user's listening history
  */
 export const getHistory = async (userId: string) => {
-    return prisma.listeningHistory.findMany({
+    // 1. Fetch more records to allow for deduplication
+    const history = await prisma.listeningHistory.findMany({
         where: { userId },
         orderBy: { playedAt: 'desc' },
-        take: 50
+        take: 100 // Fetch 100 to yield ~50 unique
     });
+
+    // 2. Dedup in memory by (ChannelName + EpisodeTitle)
+    const seenKeys = new Set<string>();
+    const uniqueHistory = history.filter(item => {
+        const cleanTitle = item.episodeTitle.trim().toLowerCase();
+        const cleanChannel = item.channelName.trim().toLowerCase();
+        const compositeKey = `${cleanChannel}|${cleanTitle}`;
+
+        if (seenKeys.has(compositeKey)) return false;
+
+        seenKeys.add(compositeKey);
+        return true;
+    });
+
+    // 3. Return top 50 unique items
+    return uniqueHistory.slice(0, 50);
 };
