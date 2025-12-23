@@ -170,7 +170,24 @@ const PodcastPlayerPage: React.FC = () => {
             setTranscriptError(null);
 
             try {
-                // S3 Cache First
+                // 🔥 Step 0: Check localStorage first (instant load for heard episodes)
+                const localCacheKey = `transcript_${episodeId}`;
+                try {
+                    const cachedData = localStorage.getItem(localCacheKey);
+                    if (cachedData) {
+                        const parsed = JSON.parse(cachedData);
+                        if (parsed.segments && parsed.segments.length > 0) {
+                            console.log('[Transcript] Loaded from localStorage (instant)');
+                            if (isMounted) {
+                                setTranscript(parsed.segments);
+                                setTranscriptLoading(false);
+                            }
+                            return;
+                        }
+                    }
+                } catch (e) { /* localStorage error, continue */ }
+
+                // Step 1: S3 Cache 
                 if (CDN_DOMAIN) {
                     try {
                         const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
@@ -180,19 +197,33 @@ const PodcastPlayerPage: React.FC = () => {
                             if (isMounted) {
                                 setTranscript(data.segments || data);
                                 setTranscriptLoading(false);
+                                // 🔥 Save to localStorage for next time
+                                try {
+                                    localStorage.setItem(localCacheKey, JSON.stringify({
+                                        segments: data.segments || data,
+                                        cachedAt: Date.now()
+                                    }));
+                                } catch { }
                             }
                             return;
                         }
                     } catch (e) { /* Fallback to API */ }
                 }
 
-                // Generate
+                // Step 2: Generate
                 if (isMounted) setIsGeneratingTranscript(true);
                 const result = await api.generateTranscript(episode.audioUrl, episodeId, 'zh');
 
                 if (isMounted) {
                     if (result.success && result.data?.segments) {
                         setTranscript(result.data.segments);
+                        // 🔥 Save to localStorage for next time
+                        try {
+                            localStorage.setItem(localCacheKey, JSON.stringify({
+                                segments: result.data.segments,
+                                cachedAt: Date.now()
+                            }));
+                        } catch { }
                     } else {
                         throw new Error('Invalid transcript response');
                     }

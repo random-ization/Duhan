@@ -95,22 +95,26 @@ const PodcastChannelPage: React.FC = () => {
 
         // 构造完整的频道对象 (哪怕 state 丢了，我们也有 data 和 id)
         const channelToSubscribe = {
-            itunesId: channelId,
+            itunesId: String(channelId), // 🔥 Ensure string
             title: data.channel.title || 'Unknown',
             author: data.channel.author || 'Unknown',
-            feedUrl: feedUrl,
-            artworkUrl: data.channel.image || stateChannel?.artworkUrl,
-            description: data.channel.description
+            feedUrl: feedUrl || '', // 🔥 Allow empty feedUrl
+            artworkUrl: data.channel.image || stateChannel?.artworkUrl || '',
+            description: data.channel.description || ''
         };
+
+        console.log('[Subscribe] Sending:', channelToSubscribe); // 🔥 Debug log
 
         const oldState = isSubscribed;
         setIsSubscribed(!oldState); // Optimistic UI
 
         try {
-            await api.togglePodcastSubscription(channelToSubscribe);
-        } catch (err) {
+            const result = await api.togglePodcastSubscription(channelToSubscribe);
+            console.log('[Subscribe] Result:', result); // 🔥 Debug log
+        } catch (err: any) {
             setIsSubscribed(oldState); // Rollback
             console.error('Failed to toggle subscription:', err);
+            alert('订阅失败: ' + (err?.message || '请稍后重试')); // 🔥 Show error to user
         }
     };
 

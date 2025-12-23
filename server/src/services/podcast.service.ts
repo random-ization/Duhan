@@ -190,15 +190,18 @@ export const toggleSubscription = async (userId: string, channel: ChannelInput):
                 channel.feedUrl = response.data.results[0].feedUrl;
                 console.log(`[PodcastService] Resolved feedUrl: ${channel.feedUrl}`);
             } else {
-                console.warn(`[PodcastService] Failed to resolve feedUrl for ${channel.itunesId}`);
+                console.warn(`[PodcastService] Could not resolve feedUrl for ${channel.itunesId}, continuing anyway`);
             }
         } catch (e) {
             console.error(`[PodcastService] Lookup failed:`, e);
         }
     }
 
+    // 🔥 FIX: Don't throw on missing feedUrl - allow subscription without feedUrl
+    // feedUrl can be fetched later when user opens the channel
     if (!channel.feedUrl) {
-        throw new Error('MISSING_FEED_URL');
+        console.log(`[PodcastService] Proceeding without feedUrl for ${channel.itunesId}`);
+        channel.feedUrl = ''; // Store empty string instead of failing
     }
 
     // 1. Identify Podcast Channel
@@ -433,6 +436,9 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
             } catch (e) { console.warn('iTunes Lookup failed'); }
         }
 
+        // 🔥 Korean character detection regex (Hangul range: \uAC00-\uD7AF)
+        const hasKorean = (text: string) => /[\uAC00-\uD7AF]/.test(text);
+
         const results = topItems.map((item: any) => ({
             id: item.id,
             title: item.name,
@@ -440,9 +446,12 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
             feedUrl: feedUrlMap.get(item.id) || '',
             artwork: item.artworkUrl100?.replace('100x100', '600x600') || '',
             description: item.name
-        })).filter((p: any) => p.feedUrl); // Filter out broken items
+        }))
+            .filter((p: any) => p.feedUrl) // Must have playable feedUrl
+            .filter((p: any) => hasKorean(p.title) || hasKorean(p.author)) // 🔥 Must have Korean content
+            .slice(0, 10); // Take top 10 Korean podcasts
 
-        if (results.length === 0) throw new Error('No playable items found');
+        if (results.length === 0) throw new Error('No Korean podcasts found');
         return results;
 
     } catch (error: any) {
@@ -454,18 +463,28 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
 
 /**
  * Get internally trending episodes based on views
+ * Includes deduplication by guid
  */
 async function getInternalTrending() {
     try {
+        // Fetch more to account for duplicates
         const episodes = await prisma.podcastEpisode.findMany({
             orderBy: { views: 'desc' },
-            take: 10,
+            take: 30, // Fetch more to filter
             include: {
                 channel: true
             }
         });
 
-        return episodes.map(ep => ({
+        // 🔥 Deduplicate by guid (same episode might have multiple entries)
+        const seenGuids = new Set<string>();
+        const uniqueEpisodes = episodes.filter(ep => {
+            if (seenGuids.has(ep.guid)) return false;
+            seenGuids.add(ep.guid);
+            return true;
+        }).slice(0, 10); // Take top 10 unique
+
+        return uniqueEpisodes.map(ep => ({
             id: ep.id,
             guid: ep.guid,
             title: ep.title,
@@ -474,7 +493,7 @@ async function getInternalTrending() {
             likes: ep.likes,
             channel: {
                 id: ep.channel.id,
-                itunesId: ep.channel.itunesId, // Added for correct linking
+                itunesId: ep.channel.itunesId,
                 title: ep.channel.title,
                 artwork: ep.channel.artworkUrl
             }
