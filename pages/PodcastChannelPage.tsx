@@ -88,19 +88,22 @@ const PodcastChannelPage: React.FC = () => {
     }, [user, channelId]);
 
     const handleToggleSubscribe = async () => {
-        if (!channelId || !data?.channel) {
+        // Fallback to stateChannel if data.channel is missing
+        const channelInfo = data?.channel || stateChannel;
+
+        if (!channelId || !channelInfo) {
             console.error('Cannot subscribe: Missing channel info (ID or data)');
             return;
         }
 
-        // 构造完整的频道对象 (哪怕 state 丢了，我们也有 data 和 id)
+        // 构造完整的频道对象
         const channelToSubscribe = {
             itunesId: String(channelId), // 🔥 Ensure string
-            title: data.channel.title || 'Unknown',
-            author: data.channel.author || 'Unknown',
+            title: channelInfo.title || 'Unknown',
+            author: channelInfo.author || 'Unknown',
             feedUrl: feedUrl || '', // 🔥 Allow empty feedUrl
-            artworkUrl: data.channel.image || stateChannel?.artworkUrl || '',
-            description: data.channel.description || ''
+            artworkUrl: channelInfo.image || channelInfo.artworkUrl || channelInfo.artwork || '',
+            description: channelInfo.description || ''
         };
 
         console.log('[Subscribe] Sending:', channelToSubscribe); // 🔥 Debug log
@@ -179,7 +182,10 @@ const PodcastChannelPage: React.FC = () => {
         );
     }
 
-    if (error || !data) {
+    // Allow rendering if we have data OR stateChannel
+    const displayChannel = data?.channel || stateChannel;
+
+    if (error && !displayChannel) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
                 <p className="text-red-500">{error || '加载失败'}</p>
@@ -193,7 +199,16 @@ const PodcastChannelPage: React.FC = () => {
         );
     }
 
-    const channelImage = data.channel.image || stateChannel?.artworkUrl || stateChannel?.artwork;
+    if (!displayChannel) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
+                <p className="text-slate-500">无法找到频道信息</p>
+                <button onClick={() => navigate(-1)} className="text-indigo-600">返回</button>
+            </div>
+        );
+    }
+
+    const channelImage = displayChannel.image || displayChannel.artworkUrl || displayChannel.artwork || 'https://placehold.co/400x400';
 
     return (
         <div className="min-h-screen bg-white pb-24">
@@ -233,9 +248,9 @@ const PodcastChannelPage: React.FC = () => {
                         )}
                         <div className="flex-1 min-w-0">
                             <h1 className="text-2xl font-bold leading-tight mb-1 drop-shadow-lg">
-                                {data.channel.title}
+                                {displayChannel.title}
                             </h1>
-                            <p className="text-sm opacity-80">{data.channel.author}</p>
+                            <p className="text-sm opacity-80">{displayChannel.author}</p>
                         </div>
                     </div>
                 </div>
@@ -256,12 +271,12 @@ const PodcastChannelPage: React.FC = () => {
             </div>
 
             {/* Description */}
-            {data.channel.description && (
+            {displayChannel.description && (
                 <div className="px-4 py-4 bg-slate-50 border-b border-slate-100">
                     <p className={`text-sm text-slate-600 leading-relaxed ${!isDescExpanded ? 'line-clamp-3' : ''}`}>
-                        {data.channel.description}
+                        {displayChannel.description}
                     </p>
-                    {data.channel.description.length > 150 && (
+                    {displayChannel.description.length > 150 && (
                         <button
                             onClick={() => setIsDescExpanded(!isDescExpanded)}
                             className="mt-2 text-xs text-indigo-600 font-medium flex items-center gap-1"
@@ -279,10 +294,16 @@ const PodcastChannelPage: React.FC = () => {
             {/* Episode List */}
             <div className="p-4">
                 <h2 className="font-bold text-lg text-slate-800 mb-4">
-                    剧集 ({data.episodes.length})
+                    剧集 ({data?.episodes?.length || 0})
                 </h2>
+                {(!data?.episodes || data.episodes.length === 0) && (
+                    <div className="text-center py-12 text-slate-400">
+                        <p>暂无剧集信息</p>
+                        {!feedUrl && <p className="text-xs mt-2">Feed URL 未找到，无法加载剧集</p>}
+                    </div>
+                )}
                 <div className="space-y-3">
-                    {data.episodes.map((episode, idx) => (
+                    {data?.episodes?.map((episode, idx) => (
                         <div
                             key={idx}
                             onClick={() => handlePlayEpisode(episode)}
