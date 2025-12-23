@@ -94,11 +94,11 @@ export default function PodcastSearchPage() {
                                 {results.map((channel) => (
                                     <div
                                         key={channel.itunesId || channel.id}
-                                        onClick={() => navigate(`/podcasts/channel?id=${channel.itunesId || channel.id}`)}
+                                        onClick={() => navigate(`/podcasts/channel?id=${channel.itunesId || channel.id}&feedUrl=${encodeURIComponent(channel.feedUrl)}`)}
                                         className="bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-4 group"
                                     >
                                         <img
-                                            src={channel.artworkUrl || channel.image}
+                                            src={channel.artworkUrl || channel.artwork}
                                             alt={channel.title}
                                             className="w-24 h-24 rounded-xl border-2 border-slate-100 object-cover group-hover:border-indigo-200 transition"
                                         />

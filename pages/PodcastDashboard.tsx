@@ -210,7 +210,7 @@ export default function PodcastDashboard() {
 
                         <div className="space-y-4">
                             {trending.slice(0, 5).map((pod, idx) => (
-                                <div key={idx} onClick={() => navigate(`/podcasts/channel?id=${pod.id || pod.itunesId}`)} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
+                                <div key={idx} onClick={() => navigate(`/podcasts/channel?id=${pod.id || pod.itunesId}&feedUrl=${encodeURIComponent(pod.feedUrl)}`)} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
                                     <div className="font-black text-slate-300 text-xl w-6 text-center">{idx + 1}</div>
                                     <img src={pod.artwork || pod.artworkUrl} className="w-12 h-12 rounded-lg border border-slate-200" alt={pod.title} />
                                     <div className="flex-1 min-w-0">
