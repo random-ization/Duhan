@@ -241,3 +241,25 @@ export const getHistory = async (req: Request, res: Response) => {
         return res.status(500).json({ error: e.message });
     }
 };
+
+/**
+ * Update playback progress
+ * POST /api/podcasts/progress
+ * Body: { episodeGuid, progress }
+ */
+export const saveProgress = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.userId || (req as any).user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const { episodeGuid, progress } = req.body;
+        if (!episodeGuid || typeof progress !== 'number') {
+            return res.status(400).json({ error: 'episodeGuid and progress are required' });
+        }
+
+        await podcastService.updateProgress(userId, episodeGuid, progress);
+        return res.json({ success: true });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+};

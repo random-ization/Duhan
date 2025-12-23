@@ -79,11 +79,18 @@ const signV4 = (
 };
 
 /**
+ * Helper to encode key for S3 (URL encode each segment)
+ */
+const encodeKey = (key: string): string => {
+    return key.split('/').map(segment => encodeURIComponent(segment)).join('/');
+};
+
+/**
  * 检查 S3 文件是否存在
  */
 export const checkFileExists = async (key: string): Promise<boolean> => {
     const { host, region, accessKey, secretKey } = getConfig();
-    const uri = `/${key}`;
+    const uri = `/${encodeKey(key)}`; // 🔥 Fix: Encode key
     const headers = signV4('HEAD', uri, host, region, accessKey, secretKey);
 
     return new Promise((resolve) => {
@@ -114,7 +121,7 @@ export const uploadJSON = async (key: string, data: any): Promise<void> => {
  */
 export const downloadJSON = async (key: string): Promise<any> => {
     const { host, region, accessKey, secretKey } = getConfig();
-    const uri = `/${key}`;
+    const uri = `/${encodeKey(key)}`; // 🔥 Fix: Encode key
     const headers = signV4('GET', uri, host, region, accessKey, secretKey);
 
     return new Promise((resolve, reject) => {
@@ -125,7 +132,12 @@ export const downloadJSON = async (key: string): Promise<any> => {
             headers
         }, (res) => {
             if (res.statusCode !== 200) {
-                reject(new Error(`S3 download failed: ${res.statusCode}`));
+                // Try to read body for error details
+                let errBody = '';
+                res.on('data', c => errBody += c);
+                res.on('end', () => {
+                    reject(new Error(`S3 download failed: ${res.statusCode} ${errBody}`));
+                });
                 return;
             }
 
@@ -149,7 +161,7 @@ export const downloadJSON = async (key: string): Promise<any> => {
  */
 export const deleteFile = async (key: string): Promise<void> => {
     const { host, region, accessKey, secretKey } = getConfig();
-    const uri = `/${key}`;
+    const uri = `/${encodeKey(key)}`; // 🔥 Fix: Encode key
     const headers = signV4('DELETE', uri, host, region, accessKey, secretKey);
 
     return new Promise((resolve, reject) => {

@@ -10,7 +10,8 @@ export default function PodcastDashboard() {
     const { user } = useAuth();
 
     // State
-    const [trending, setTrending] = useState<any[]>([]);
+    const [trending, setTrending] = useState<{ external: any[], internal: any[] }>({ external: [], internal: [] });
+    const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [history, setHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -21,11 +22,11 @@ export default function PodcastDashboard() {
             try {
                 // Parallel fetch for better performance
                 const [trendingRes, historyRes] = await Promise.all([
-                    api.getPodcastTrending().catch(() => ({ external: [] })),
+                    api.getPodcastTrending().catch(() => ({ external: [], internal: [] })),
                     user ? api.getPodcastHistory().catch(() => []) : Promise.resolve([])
                 ]);
 
-                setTrending(trendingRes.external || []);
+                setTrending(trendingRes); // Store full object
                 setHistory(historyRes || []);
 
                 if (user) {
@@ -48,9 +49,9 @@ export default function PodcastDashboard() {
         }
     };
 
-    // Determine featured content: Last played episode OR Top Trending
+    // Determine featured content: Last played episode OR Top Trending (Internal)
     const lastPlayed = history.length > 0 ? history[0] : null;
-    const featuredPodcast = !lastPlayed && trending.length > 0 ? trending[0] : null;
+    const featuredPodcast = !lastPlayed && trending.internal.length > 0 ? trending.internal[0] : (trending.external.length > 0 ? trending.external[0] : null);
 
     return (
         <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32" style={{ backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}>
@@ -160,11 +161,11 @@ export default function PodcastDashboard() {
                             </div>
                         )}
 
-                        {/* Recent History (Horizontal Scroll) */}
+                        {/* Listening History (Vertical Grid) */}
                         {history.length > 0 && (
                             <div>
                                 <h3 className="font-black text-xl mb-4 flex items-center gap-2 text-slate-900"><HistoryIcon size={20} /> 收听历史</h3>
-                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                     {history.map((record) => (
                                         <div
                                             key={record.id}
@@ -178,22 +179,30 @@ export default function PodcastDashboard() {
                                                     }
                                                 }
                                             })}
-                                            className="min-w-[220px] max-w-[220px] bg-white p-3 rounded-[1.5rem] border-2 border-slate-900 shadow-sm hover:shadow-pop transition cursor-pointer"
+                                            className="bg-white p-3 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop transition cursor-pointer flex gap-3 items-center group"
                                         >
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <img src={record.channelImage || "https://placehold.co/100x100"} className="w-10 h-10 rounded-lg border border-slate-200 object-cover" alt="cover" />
-                                                <div className="overflow-hidden flex-1">
-                                                    <div className="text-xs font-bold text-slate-900 truncate">{record.episodeTitle}</div>
-                                                    <div className="text-xs font-bold text-slate-400 truncate">{record.channelName}</div>
+                                            <div className="relative w-14 h-14 shrink-0">
+                                                <img src={record.channelImage || "https://placehold.co/100x100"} className="w-full h-full rounded-xl border border-slate-200 object-cover" alt="cover" />
+                                                <div className="absolute inset-0 bg-black/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                                    <Play size={16} className="text-white fill-white" />
                                                 </div>
                                             </div>
-                                            <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                                                {/* Mock progress for now, could be real if backend supported it */}
-                                                <div className="bg-indigo-500 h-full w-[70%]"></div>
+                                            <div className="overflow-hidden flex-1 min-w-0">
+                                                <div className="text-sm font-bold text-slate-900 truncate mb-1">{record.episodeTitle}</div>
+                                                <div className="text-xs font-bold text-slate-400 truncate flex items-center gap-1">
+                                                    {record.channelName}
+                                                    <span className="text-slate-300">•</span>
+                                                    {new Date(record.playedAt).toLocaleDateString()}
+                                                </div>
                                             </div>
-                                            <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">
-                                                {new Date(record.playedAt).toLocaleDateString()}
-                                            </div>
+                                            {record.progress > 0 && (
+                                                <div className="absolute bottom-0 left-3 right-3 h-1 bg-slate-100 rounded-full overflow-hidden mb-[-2px] opacity-0 group-hover:opacity-100 transition">
+                                                    <div
+                                                        className="bg-green-400 h-full"
+                                                        style={{ width: `${Math.min(100, (record.progress / (record.duration || 1800)) * 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -201,27 +210,60 @@ export default function PodcastDashboard() {
                         )}
                     </div>
 
-                    {/* Right Column (Community Charts) */}
-                    <div className="lg:col-span-4 bg-white rounded-[2rem] border-2 border-slate-900 p-6 shadow-pop h-fit">
+                    {/* Right Column (Community Charts & Recommended) */}
+                    <div className="lg:col-span-4 bg-white rounded-[2rem] border-2 border-slate-900 p-6 shadow-pop h-fit sticky top-6">
                         <div className="flex gap-4 mb-6 border-b-2 border-slate-100 pb-2">
-                            <button className="text-lg font-black text-slate-900 border-b-4 border-indigo-500 pb-2 -mb-3.5">社区热播</button>
-                            <button className="text-lg font-black text-slate-400 hover:text-slate-600 transition">本周推荐</button>
+                            <button
+                                onClick={() => setActiveTab('community')}
+                                className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'community' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                社区热播
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('weekly')}
+                                className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'weekly' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                本周推荐
+                            </button>
                         </div>
 
-                        <div className="space-y-4">
-                            {trending.slice(0, 5).map((pod, idx) => (
-                                <div key={idx} onClick={() => navigate(`/podcasts/channel?id=${pod.id || pod.itunesId}&feedUrl=${encodeURIComponent(pod.feedUrl)}`)} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
-                                    <div className="font-black text-slate-300 text-xl w-6 text-center">{idx + 1}</div>
-                                    <img src={pod.artwork || pod.artworkUrl} className="w-12 h-12 rounded-lg border border-slate-200" alt={pod.title} />
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                            {(activeTab === 'community' ? trending.internal : trending.external).slice(0, 10).map((pod, idx) => (
+                                <div key={idx} onClick={() => {
+                                    if (activeTab === 'weekly') {
+                                        // External (Channel) -> Go to Channel Page
+                                        navigate(`/podcasts/channel?id=${pod.id}&feedUrl=${encodeURIComponent(pod.feedUrl)}`);
+                                    } else {
+                                        // Internal (Episode) -> Go to Player directly
+                                        navigate('/podcasts/player', {
+                                            state: {
+                                                episode: {
+                                                    guid: pod.guid,
+                                                    title: pod.title,
+                                                    audioUrl: pod.audioUrl,
+                                                    channel: pod.channel
+                                                }
+                                            }
+                                        });
+                                    }
+                                }} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition">
+                                    <div className={`font-black text-xl w-6 text-center ${idx < 3 ? 'text-indigo-500' : 'text-slate-300'}`}>{idx + 1}</div>
+                                    <img src={pod.artwork || pod.artworkUrl || pod.channel?.artwork || "https://placehold.co/100x100"} className="w-12 h-12 rounded-lg border border-slate-200 object-cover" alt={pod.title} />
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-bold text-sm text-slate-900 truncate group-hover:text-indigo-600 transition">{pod.title}</h4>
-                                        <p className="text-xs text-slate-500 truncate">{pod.author}</p>
+                                        <p className="text-xs text-slate-500 truncate">{pod.author || pod.channel?.title || 'Unknown'}</p>
+                                        {activeTab === 'community' && (
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{pod.views || 0} plays</span>
+                                            </div>
+                                        )}
                                     </div>
+                                    {activeTab === 'community' && <Play size={16} className="text-slate-300 group-hover:text-indigo-500 transition" />}
                                 </div>
                             ))}
 
                             {/* Show skeleton if loading */}
-                            {loading && !trending.length && [1, 2, 3].map(i => (
+                            {loading && !trending.external.length && [1, 2, 3].map(i => (
                                 <div key={i} className="flex items-center gap-4 p-2 rounded-xl animate-pulse">
                                     <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
                                     <div className="w-12 h-12 bg-slate-200 rounded-lg" />
@@ -231,6 +273,12 @@ export default function PodcastDashboard() {
                                     </div>
                                 </div>
                             ))}
+
+                            {!loading && (activeTab === 'community' ? trending.internal : trending.external).length === 0 && (
+                                <div className="text-center py-8 text-slate-400 font-bold text-sm">
+                                    暂无数据
+                                </div>
+                            )}
                         </div>
                         <button className="w-full mt-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-500 hover:border-slate-900 hover:text-slate-900 transition">
                             查看完整榜单

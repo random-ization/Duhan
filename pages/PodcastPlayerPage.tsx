@@ -48,13 +48,13 @@ interface PodcastEpisode {
     itunes?: { image?: string; duration?: string };
     channelTitle?: string;
     channelArtwork?: string;
-    pubDate?: string;
+    pubDate?: string | Date; // Allow Date object
     duration?: number | string;
     description?: string;
 }
 
 // CDN Domain for transcript cache
-const CDN_DOMAIN = import.meta.env.VITE_CDN_URL || '';
+const CDN_DOMAIN = (import.meta as any).env?.VITE_CDN_URL || '';
 
 // Mock transcript for fallback
 const MOCK_TRANSCRIPT: TranscriptLine[] = [
@@ -137,6 +137,7 @@ const PodcastPlayerPage: React.FC = () => {
     // Playlist State
     const [showPlaylist, setShowPlaylist] = useState(false);
     const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
+    const [resumeTime, setResumeTime] = useState<number | null>(null);
 
     // --- Helpers ---
     const formatTime = (seconds: number) => {
@@ -281,6 +282,48 @@ const PodcastPlayerPage: React.FC = () => {
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [episode.audioUrl]);
+
+    // 1.5 Resume Playback Logic
+    useEffect(() => {
+        const checkResume = async () => {
+            if (!episode?.guid) return;
+            try {
+                // Fetch recent history to find progress
+                // Optimization: In real app, might want a specific endpoint for single episode progress
+                const history = await api.getPodcastHistory().catch(() => []);
+                // Match by guid (or title if guid is unstable/generated)
+                const record = history.find(h => h.episodeGuid === episode.guid || (h.episodeTitle === episode.title && h.episodeUrl === episode.audioUrl));
+
+                if (record && record.progress > 0 && record.progress < (record.duration || 3600)) {
+                    console.log(`[Resume] Found progress: ${record.progress}s`);
+                    setResumeTime(record.progress);
+                    setCurrentTime(record.progress); // Update UI immediately
+                }
+            } catch (e) {
+                console.error('[Resume] Failed to check history', e);
+            }
+        };
+        checkResume();
+    }, [episode.guid, episode.audioUrl]);
+
+    // 1.6 Apply Resume Time (Wait for Metadata)
+    useEffect(() => {
+        if (resumeTime !== null && audioRef.current && duration > 0 && !isLoading) {
+            console.log(`[Resume] Seeking to ${resumeTime}s`);
+            audioRef.current.currentTime = resumeTime;
+            setResumeTime(null); // Clear once applied
+        }
+    }, [resumeTime, duration, isLoading]);
+
+    // 1.7 Save Progress Periodically
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (isPlaying && currentTime > 5 && episode.guid) {
+                api.savePodcastProgress(episode.guid, Math.floor(currentTime)).catch(() => { });
+            }
+        }, 10000); // Save every 10 seconds
+        return () => clearInterval(interval);
+    }, [isPlaying, currentTime, episode.guid]);
 
     // 2. Transcript Loading Logic
     const loadTranscript = async () => {

@@ -72,6 +72,7 @@ model ListeningHistory {
   episodeUrl   String
   channelName  String
   channelImage String?
+  progress     Int      @default(0) // Playback progress in seconds
   playedAt     DateTime @default(now())
 
   @@unique([userId, episodeGuid])

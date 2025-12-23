@@ -457,6 +457,12 @@ export const api = {
   getPodcastHistory: async () =>
     request<ListeningHistoryItem[]>('/podcasts/history'),
 
+  savePodcastProgress: async (episodeGuid: string, progress: number) =>
+    request<{ success: boolean }>('/podcasts/progress', {
+      method: 'POST',
+      body: JSON.stringify({ episodeGuid, progress }),
+    }),
+
   // --- AI Sentence Analysis ---
   analyzeSentence: async (sentence: string, context?: string, language?: string) =>
     request<{

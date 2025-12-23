@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface Episode {
     title: string;
     audioUrl?: string;
-    pubDate?: string;
+    pubDate?: string | Date;
     duration?: string | number;
     description?: string;
 }
@@ -119,14 +119,25 @@ const PodcastChannelPage: React.FC = () => {
     };
 
     const handlePlayEpisode = (episode: Episode) => {
-        navigate('/podcasts/player', {
+        const fullEpisode = {
+            ...episode,
+            channelTitle: data?.channel.title,
+            channelArtwork: data?.channel.image,
+            // Fallback for missing GUID (use title or audio hash if needed)
+            guid: (episode as any).guid || (episode as any).link || (episode as any).id || episode.title
+        };
+
+        const params = new URLSearchParams();
+        params.set('audioUrl', fullEpisode.audioUrl || '');
+        params.set('title', fullEpisode.title);
+        if (fullEpisode.guid) params.set('guid', fullEpisode.guid);
+        if (fullEpisode.channelTitle) params.set('channelTitle', fullEpisode.channelTitle);
+        if (fullEpisode.channelArtwork) params.set('channelArtwork', fullEpisode.channelArtwork);
+
+        navigate(`/podcasts/player?${params.toString()}`, {
             state: {
-                episode: {
-                    ...episode,
-                    channelTitle: data?.channel.title,
-                    channelArtwork: data?.channel.image
-                },
-                // 确保传递 channel 信息，包括 ID，以便播放器页也能订阅
+                episode: fullEpisode,
+                // Ensure channel info is passed for subscription check
                 channel: {
                     ...stateChannel,
                     ...data?.channel,
@@ -147,13 +158,13 @@ const PodcastChannelPage: React.FC = () => {
         return duration;
     };
 
-    const formatDate = (dateStr: string | undefined) => {
+    const formatDate = (dateStr: string | Date | undefined) => {
         if (!dateStr) return '';
         try {
-            const date = new Date(dateStr);
+            const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
             return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: 'numeric' });
         } catch {
-            return dateStr;
+            return String(dateStr);
         }
     };
 

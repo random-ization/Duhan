@@ -294,9 +294,13 @@ export const sendToS3WithCache = async (
     } catch (e) { }
   }
 
+  // 🔥 Fix: Encode key
+  const encodedKey = key.split('/').map(segment => encodeURIComponent(segment)).join('/');
+  const uri = `/${encodedKey}`;
+
   const { signature, amzDate, signedHeaders, credentialScope } = signV4(
     'PUT',
-    `/${key}`,
+    uri,
     '',
     headers,
     crypto.createHash('sha256').update(body).digest('hex'),
@@ -309,7 +313,7 @@ export const sendToS3WithCache = async (
   return new Promise((resolve, reject) => {
     const req = https.request({
       host,
-      path: `/${key}`,
+      path: uri,
       method: 'PUT',
       headers: {
         ...headers,
@@ -320,7 +324,7 @@ export const sendToS3WithCache = async (
     }, (res) => {
       if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
         const cdnUrl = getCdnUrl();
-        resolve(`${cdnUrl}/${key}`);
+        resolve(`${cdnUrl}/${encodedKey}`);
       } else {
         let errBody = '';
         res.on('data', c => errBody += c);

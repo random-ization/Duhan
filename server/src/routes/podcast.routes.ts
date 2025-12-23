@@ -43,4 +43,7 @@ router.post('/view', authenticate, podcastController.trackView);
 // Toggle like on episode
 router.post('/like', authenticate, podcastController.toggleLike);
 
+// Save playback progress
+router.post('/progress', authenticate, podcastController.saveProgress);
+
 export default router;
