@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
     Play,
@@ -68,15 +68,38 @@ const MOCK_TRANSCRIPT: TranscriptLine[] = [
 const PodcastPlayerPage: React.FC = () => {
     const { state } = useLocation();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
-    // Episode Data
-    const episode = state?.episode || {
-        title: "Demo Episode",
-        audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        channelTitle: "Demo Channel",
-        channelArtwork: "",
-        guid: "demo-episode"
-    };
+    // 🔥 FIX: Support URL params for page refresh
+    // Priority: state > URL params > fallback
+    const episode: PodcastEpisode = useMemo(() => {
+        if (state?.episode?.audioUrl) return state.episode;
+
+        // Try to reconstruct from URL params
+        const audioUrl = searchParams.get('audioUrl');
+        const title = searchParams.get('title');
+        const guid = searchParams.get('guid');
+
+        if (audioUrl) {
+            return {
+                guid: guid || `ep_${Date.now()}`,
+                title: title || 'Unknown Episode',
+                audioUrl: decodeURIComponent(audioUrl),
+                channelTitle: searchParams.get('channelTitle') || 'Unknown Channel',
+                channelArtwork: searchParams.get('channelArtwork') || ''
+            };
+        }
+
+        // Fallback demo
+        return {
+            title: "Demo Episode",
+            audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            channelTitle: "Demo Channel",
+            channelArtwork: "",
+            guid: "demo-episode"
+        };
+    }, [state, searchParams]);
+
     const channel = state?.channel || {};
 
     // Refs
@@ -138,14 +161,64 @@ const PodcastPlayerPage: React.FC = () => {
 
     // 1. Initial Load & Analytics & Playlist
     useEffect(() => {
-        loadTranscript();
+        let isMounted = true;
+
+        // Load transcript with mount check
+        const loadTranscriptSafe = async () => {
+            const episodeId = getEpisodeId();
+            setTranscriptLoading(true);
+            setTranscriptError(null);
+
+            try {
+                // S3 Cache First
+                if (CDN_DOMAIN) {
+                    try {
+                        const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
+                        const s3Res = await fetch(s3Url);
+                        if (s3Res.ok) {
+                            const data = await s3Res.json();
+                            if (isMounted) {
+                                setTranscript(data.segments || data);
+                                setTranscriptLoading(false);
+                            }
+                            return;
+                        }
+                    } catch (e) { /* Fallback to API */ }
+                }
+
+                // Generate
+                if (isMounted) setIsGeneratingTranscript(true);
+                const result = await api.generateTranscript(episode.audioUrl, episodeId, 'zh');
+
+                if (isMounted) {
+                    if (result.success && result.data?.segments) {
+                        setTranscript(result.data.segments);
+                    } else {
+                        throw new Error('Invalid transcript response');
+                    }
+                }
+            } catch (err) {
+                console.error('Transcript failed:', err);
+                if (isMounted) {
+                    setTranscript(MOCK_TRANSCRIPT);
+                    setTranscriptError('使用演示字幕 (AI 生成失败)');
+                }
+            } finally {
+                if (isMounted) {
+                    setTranscriptLoading(false);
+                    setIsGeneratingTranscript(false);
+                }
+            }
+        };
+
+        loadTranscriptSafe();
 
         // Load Playlist (Episodes from same channel)
         if (channel.feedUrl) {
             const fetchPlaylist = async () => {
                 try {
                     const data = await api.getPodcastEpisodes(channel.feedUrl);
-                    if (data?.episodes) {
+                    if (isMounted && data?.episodes) {
                         setPlaylist(data.episodes);
                     }
                 } catch (e) {
@@ -172,8 +245,11 @@ const PodcastPlayerPage: React.FC = () => {
                 }
             }).catch(console.error);
         }
+
+        // Cleanup: prevent updates after unmount
+        return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [episode.audioUrl]);
 
     // 2. Transcript Loading Logic
     const loadTranscript = async () => {
@@ -313,9 +389,19 @@ const PodcastPlayerPage: React.FC = () => {
     };
 
     const playEpisode = (newEpisode: PodcastEpisode) => {
-        // Logic to switch episode - simplified for now, usually would involve navigation or state reset
-        navigate('/podcasts/player', { state: { episode: newEpisode, channel } });
-        window.location.reload(); // Force reload to reset hooks/state for new episode
+        // 🔥 FIX: Use URL params instead of reload for SPA-friendly navigation
+        const params = new URLSearchParams();
+        params.set('audioUrl', encodeURIComponent(newEpisode.audioUrl));
+        params.set('title', newEpisode.title);
+        if (newEpisode.guid) params.set('guid', newEpisode.guid);
+        if (channel.title) params.set('channelTitle', channel.title);
+        if (channel.artworkUrl) params.set('channelArtwork', channel.artworkUrl);
+
+        // Navigate with both URL params and state (state for immediate use, params for refresh)
+        navigate(`/podcasts/player?${params.toString()}`, {
+            state: { episode: newEpisode, channel },
+            replace: true
+        });
     };
 
     return (

@@ -2,6 +2,14 @@
 // 统一的 request helper + 单一 export const api 对象
 // 替换或合并到你的项目中，确保没有其它文件再 export 同名 api
 
+import type {
+  PodcastChannel,
+  PodcastEpisode,
+  ListeningHistoryItem,
+  TranscriptResult,
+  SentenceAnalysis
+} from '../types';
+
 type Nullable<T> = T | null;
 
 // 本地开发时使用 /api 前缀（配合 Vite 代理），生产环境使用完整 URL
@@ -401,19 +409,19 @@ export const api = {
 
   // --- Podcast API ---
   searchPodcasts: async (term: string) =>
-    request<any[]>(`/podcasts/search?term=${encodeURIComponent(term)}`),
+    request<PodcastChannel[]>(`/podcasts/search?term=${encodeURIComponent(term)}`),
 
   getPodcastEpisodes: async (feedUrl: string) =>
-    request<any>(`/podcasts/episodes?feedUrl=${encodeURIComponent(feedUrl)}`),
+    request<{ channel: PodcastChannel; episodes: PodcastEpisode[] }>(`/podcasts/episodes?feedUrl=${encodeURIComponent(feedUrl)}`),
 
   getMyPodcastFeed: async () =>
-    request<{ channels: any[]; episodes: any[] }>('/podcasts/my-feed'),
+    request<{ channels: PodcastChannel[]; episodes: PodcastEpisode[] }>('/podcasts/my-feed'),
 
   getPodcastTrending: async () =>
-    request<{ external: any[]; internal: any[] }>('/podcasts/trending'),
+    request<{ external: PodcastChannel[]; internal: PodcastEpisode[] }>('/podcasts/trending'),
 
   getPodcastSubscriptions: async () =>
-    request<any[]>('/podcasts/subscriptions'),
+    request<PodcastChannel[]>('/podcasts/subscriptions'),
 
   togglePodcastSubscription: async (channel: {
     itunesId: string;
@@ -427,20 +435,20 @@ export const api = {
       body: JSON.stringify({ channel }),
     }),
 
-  trackPodcastView: async (episode: any) =>
+  trackPodcastView: async (episode: Partial<PodcastEpisode> & { channel?: Partial<PodcastChannel> }) =>
     request<{ success: boolean; views: number }>('/podcasts/view', {
       method: 'POST',
       body: JSON.stringify({ episode }),
     }),
 
-  togglePodcastLike: async (episode: any) =>
+  togglePodcastLike: async (episode: Partial<PodcastEpisode>) =>
     request<{ success: boolean; isLiked: boolean }>('/podcasts/like', {
       method: 'POST',
       body: JSON.stringify({ episode }),
     }),
 
   getPodcastHistory: async () =>
-    request<any[]>('/podcasts/history'),
+    request<ListeningHistoryItem[]>('/podcasts/history'),
 
   // --- AI Sentence Analysis ---
   analyzeSentence: async (sentence: string, context?: string, language?: string) =>

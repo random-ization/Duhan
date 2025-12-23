@@ -2,16 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Play, Calendar, ArrowLeft } from 'lucide-react';
+import { ListeningHistoryItem } from '../types';
+import { PODCAST_MESSAGES } from '../constants/podcast-messages';
 
 export default function HistoryPage() {
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<ListeningHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         api.getPodcastHistory()
             .then(setHistory)
-            .catch(console.error)
+            .catch(err => {
+                console.error('Failed to load history:', err);
+                setError(PODCAST_MESSAGES.ERROR_LOAD_HISTORY);
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -21,7 +27,7 @@ export default function HistoryPage() {
                 <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-100 rounded-full">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h1 className="text-xl font-bold">播放历史</h1>
+                <h1 className="text-xl font-bold">{PODCAST_MESSAGES.HISTORY_TITLE}</h1>
             </div>
 
             <div className="p-4 space-y-3">
@@ -31,8 +37,20 @@ export default function HistoryPage() {
                     </div>
                 )}
 
-                {!loading && history.length === 0 && (
-                    <p className="text-center text-gray-400 mt-10">暂无播放记录</p>
+                {!loading && error && (
+                    <div className="text-center py-10">
+                        <p className="text-red-500 mb-4">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="text-indigo-600 hover:underline"
+                        >
+                            {PODCAST_MESSAGES.ACTION_RETRY}
+                        </button>
+                    </div>
+                )}
+
+                {!loading && !error && history.length === 0 && (
+                    <p className="text-center text-gray-400 mt-10">{PODCAST_MESSAGES.EMPTY_HISTORY}</p>
                 )}
 
                 {history.map((item) => (

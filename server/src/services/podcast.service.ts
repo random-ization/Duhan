@@ -10,6 +10,7 @@ const parser = new Parser();
 // Cache keys for S3
 const TRENDING_CACHE_KEY = 'cache/podcast-trending-v2.json';
 const TRENDING_CACHE_TTL = 5 * 60; // 5 minutes
+const DEFAULT_FALLBACK_SEARCH_TERM = 'Korean Culture'; // Fallback when Apple API fails
 
 /**
  * Parse duration string to seconds (Int)
@@ -447,7 +448,7 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
     } catch (error: any) {
         console.error('[PodcastService] Trending failed, using fallback:', error.message);
         // 🔥 FALLBACK: Ensure the UI is never empty by searching for a keyword
-        return searchPodcasts('Korean Culture');
+        return searchPodcasts(DEFAULT_FALLBACK_SEARCH_TERM);
     }
 }
 

@@ -305,3 +305,78 @@ export const isTextbookContentV2 = (content: any): content is TextbookContentV2 
   return content && content.version === 2;
 };
 
+// ==============================================
+// PODCAST TYPES
+// ==============================================
+
+export interface PodcastChannel {
+  id?: string;
+  itunesId?: string;
+  title: string;
+  author: string;
+  feedUrl: string;
+  artworkUrl?: string;
+  artwork?: string;  // Alias
+  description?: string;
+}
+
+export interface PodcastEpisode {
+  id?: string;
+  guid?: string;
+  title: string;
+  audioUrl: string;
+  image?: string;
+  itunes?: { image?: string; duration?: string };
+  channelTitle?: string;
+  channelArtwork?: string;
+  pubDate?: string | Date;
+  duration?: number | string;
+  description?: string;
+  channel?: {
+    id?: string;
+    itunesId?: string;
+    title?: string;
+    author?: string;
+    feedUrl?: string;
+    artworkUrl?: string;
+    artwork?: string;
+  };
+}
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+  translation?: string;
+  words?: TranscriptWord[];
+}
+
+export interface TranscriptWord {
+  word: string;
+  start: number;
+  end: number;
+}
+
+export interface TranscriptResult {
+  segments: TranscriptSegment[];
+  language: string;
+  duration?: number;
+  cached?: boolean;
+}
+
+export interface ListeningHistoryItem {
+  id: string;
+  episodeGuid: string;
+  episodeTitle: string;
+  episodeUrl: string;
+  channelName: string;
+  channelImage: string | null;
+  playedAt: string;
+}
+
+export interface SentenceAnalysis {
+  vocabulary: { word: string; root: string; meaning: string; type: string }[];
+  grammar: { structure: string; explanation: string }[];
+  nuance: string;
+  cached?: boolean;
+}
