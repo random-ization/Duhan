@@ -513,7 +513,7 @@ const PodcastPlayerPage: React.FC = () => {
                         {/* Cover Art */}
                         <div className="relative group w-48 h-48 md:w-64 md:h-64 rounded-2xl shadow-xl overflow-hidden mb-6 flex-shrink-0">
                             <img
-                                src={episode.image || channel.artworkUrl || episode.channelArtwork || '/api/placeholder/400/400'}
+                                src={episode.image || channel.artworkUrl || episode.channelArtwork || 'https://placehold.co/400x400'}
                                 alt="Cover"
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />

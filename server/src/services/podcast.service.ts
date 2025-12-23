@@ -483,53 +483,52 @@ async function getAppleTopCharts(): Promise<PodcastSearchResult[]> {
 async function getInternalTrending() {
     try {
         // Fetch more to account for duplicates
-        try {
-            // Fetch more candidates to calculate score
-            // We fetch top 50 by views as a heuristic
-            const episodes = await prisma.podcastEpisode.findMany({
-                // orderBy: { views: 'desc' }, // We'll sort manually after scoring
-                take: 100,
-                include: {
-                    channel: true
-                }
-            });
+        // Fetch more candidates to calculate score
+        // We fetch top 50 by views as a heuristic
+        const episodes = await prisma.podcastEpisode.findMany({
+            // orderBy: { views: 'desc' }, // We'll sort manually after scoring
+            take: 100,
+            include: {
+                channel: true
+            }
+        });
 
-            // Calculate score: Views * 1 + Likes * 3
-            const scoredEpisodes = episodes.map(ep => ({
-                ...ep,
-                score: (ep.views || 0) * 1 + (ep.likes || 0) * 3
-            }));
+        // Calculate score: Views * 1 + Likes * 3
+        const scoredEpisodes = episodes.map(ep => ({
+            ...ep,
+            score: (ep.views || 0) * 1 + (ep.likes || 0) * 3
+        }));
 
-            // Sort by score descending
-            scoredEpisodes.sort((a, b) => b.score - a.score);
+        // Sort by score descending
+        scoredEpisodes.sort((a, b) => b.score - a.score);
 
-            // 🔥 Deduplicate by guid (same episode might have multiple entries)
-            const seenGuids = new Set<string>();
-            const uniqueEpisodes = scoredEpisodes.filter(ep => {
-                if (seenGuids.has(ep.guid)) return false;
-                seenGuids.add(ep.guid);
-                return true;
-            }).slice(0, 10); // Take top 10 unique
+        // 🔥 Deduplicate by guid (same episode might have multiple entries)
+        const seenGuids = new Set<string>();
+        const uniqueEpisodes = scoredEpisodes.filter(ep => {
+            if (seenGuids.has(ep.guid)) return false;
+            seenGuids.add(ep.guid);
+            return true;
+        }).slice(0, 10); // Take top 10 unique
 
-            return uniqueEpisodes.map(ep => ({
-                id: ep.id,
-                guid: ep.guid,
-                title: ep.title,
-                audioUrl: ep.audioUrl,
-                views: ep.views,
-                likes: ep.likes,
-                channel: {
-                    id: ep.channel.id,
-                    itunesId: ep.channel.itunesId,
-                    title: ep.channel.title,
-                    artwork: ep.channel.artworkUrl
-                }
-            }));
-        } catch (error: any) {
-            console.error('[PodcastService] Internal Trending Error:', error?.message);
-            return [];
-        }
+        return uniqueEpisodes.map(ep => ({
+            id: ep.id,
+            guid: ep.guid,
+            title: ep.title,
+            audioUrl: ep.audioUrl,
+            views: ep.views,
+            likes: ep.likes,
+            channel: {
+                id: ep.channel.id,
+                itunesId: ep.channel.itunesId,
+                title: ep.channel.title,
+                artwork: ep.channel.artworkUrl
+            }
+        }));
+    } catch (error: any) {
+        console.error('[PodcastService] Internal Trending Error:', error?.message);
+        return [];
     }
+}
 
 // ============================================
 // View & Like Tracking
@@ -539,160 +538,160 @@ async function getInternalTrending() {
  * Track episode view (upsert channel -> upsert episode -> increment views)
  */
 export const trackView = async (episode: EpisodeInput) => {
-        console.log(`[PodcastService] Tracking view for episode: ${episode.title}`);
+    console.log(`[PodcastService] Tracking view for episode: ${episode.title}`);
 
-        // 1. Upsert channel
-        const channel = await prisma.podcastChannel.upsert({
-            where: { itunesId: episode.channel.itunesId },
-            update: {},
-            create: {
-                itunesId: episode.channel.itunesId,
-                title: episode.channel.title,
-                author: episode.channel.author,
-                feedUrl: episode.channel.feedUrl,
-                artworkUrl: episode.channel.artworkUrl
+    // 1. Upsert channel
+    const channel = await prisma.podcastChannel.upsert({
+        where: { itunesId: episode.channel.itunesId },
+        update: {},
+        create: {
+            itunesId: episode.channel.itunesId,
+            title: episode.channel.title,
+            author: episode.channel.author,
+            feedUrl: episode.channel.feedUrl,
+            artworkUrl: episode.channel.artworkUrl
+        }
+    });
+
+    // 2. Upsert episode and increment views
+    const updatedEpisode = await prisma.podcastEpisode.upsert({
+        where: { guid: episode.guid },
+        update: {
+            views: { increment: 1 }
+        },
+        create: {
+            guid: episode.guid,
+            title: episode.title,
+            audioUrl: episode.audioUrl,
+            duration: parseDuration(episode.duration),
+            pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
+            description: episode.description,
+            channelId: channel.id,
+            views: 1
+        }
+    });
+
+    return updatedEpisode;
+};
+
+/**
+ * Toggle like on an episode
+ * @returns true if now liked, false if unliked
+ */
+export const toggleLike = async (userId: string, episode: EpisodeInput): Promise<boolean> => {
+    console.log(`[PodcastService] Toggle like for user ${userId} on episode ${episode.guid}`);
+
+    // 1. Upsert channel
+    const channel = await prisma.podcastChannel.upsert({
+        where: { itunesId: episode.channel.itunesId },
+        update: {},
+        create: {
+            itunesId: episode.channel.itunesId,
+            title: episode.channel.title,
+            author: episode.channel.author,
+            feedUrl: episode.channel.feedUrl,
+            artworkUrl: episode.channel.artworkUrl
+        }
+    });
+
+    // 2. Upsert episode
+    let podcastEpisode = await prisma.podcastEpisode.upsert({
+        where: { guid: episode.guid },
+        update: {},
+        create: {
+            guid: episode.guid,
+            title: episode.title,
+            audioUrl: episode.audioUrl,
+            duration: parseDuration(episode.duration),
+            pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
+            description: episode.description,
+            channelId: channel.id
+        }
+    });
+
+    // 3. Check if already liked
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+            likedEpisodes: {
+                where: { id: podcastEpisode.id }
             }
-        });
+        }
+    });
 
-        // 2. Upsert episode and increment views
-        const updatedEpisode = await prisma.podcastEpisode.upsert({
-            where: { guid: episode.guid },
-            update: {
-                views: { increment: 1 }
+    const isCurrentlyLiked = user?.likedEpisodes && user.likedEpisodes.length > 0;
+
+    // 4. Toggle like
+    if (isCurrentlyLiked) {
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: {
+                    likedEpisodes: { disconnect: { id: podcastEpisode.id } }
+                }
+            }),
+            prisma.podcastEpisode.update({
+                where: { id: podcastEpisode.id },
+                data: { likes: { decrement: 1 } }
+            })
+        ]);
+        return false;
+    } else {
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: {
+                    likedEpisodes: { connect: { id: podcastEpisode.id } }
+                }
+            }),
+            prisma.podcastEpisode.update({
+                where: { id: podcastEpisode.id },
+                data: { likes: { increment: 1 } }
+            })
+        ]);
+        return true;
+    }
+};
+// ============================================
+// Listening History
+// ============================================
+
+/**
+ * Add or update listening history for a user
+ */
+export const addToHistory = async (userId: string, episode: EpisodeInput) => {
+    // Save to History Table
+    try {
+        await prisma.listeningHistory.upsert({
+            where: {
+                userId_episodeGuid: { userId, episodeGuid: episode.guid }
             },
+            update: { playedAt: new Date() },
             create: {
-                guid: episode.guid,
-                title: episode.title,
-                audioUrl: episode.audioUrl,
-                duration: parseDuration(episode.duration),
-                pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
-                description: episode.description,
-                channelId: channel.id,
-                views: 1
+                userId,
+                episodeGuid: episode.guid,
+                episodeTitle: episode.title,
+                episodeUrl: episode.audioUrl,
+                channelName: episode.channel?.title || 'Unknown',
+                channelImage: episode.channel?.artworkUrl || null,
+                playedAt: new Date()
             }
         });
+    } catch (e) {
+        console.error('[PodcastService] History save failed:', e);
+    }
 
-        return updatedEpisode;
-    };
+    // Also track view count
+    return trackView(episode);
+};
 
-    /**
-     * Toggle like on an episode
-     * @returns true if now liked, false if unliked
-     */
-    export const toggleLike = async (userId: string, episode: EpisodeInput): Promise<boolean> => {
-        console.log(`[PodcastService] Toggle like for user ${userId} on episode ${episode.guid}`);
-
-        // 1. Upsert channel
-        const channel = await prisma.podcastChannel.upsert({
-            where: { itunesId: episode.channel.itunesId },
-            update: {},
-            create: {
-                itunesId: episode.channel.itunesId,
-                title: episode.channel.title,
-                author: episode.channel.author,
-                feedUrl: episode.channel.feedUrl,
-                artworkUrl: episode.channel.artworkUrl
-            }
-        });
-
-        // 2. Upsert episode
-        let podcastEpisode = await prisma.podcastEpisode.upsert({
-            where: { guid: episode.guid },
-            update: {},
-            create: {
-                guid: episode.guid,
-                title: episode.title,
-                audioUrl: episode.audioUrl,
-                duration: parseDuration(episode.duration),
-                pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
-                description: episode.description,
-                channelId: channel.id
-            }
-        });
-
-        // 3. Check if already liked
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                likedEpisodes: {
-                    where: { id: podcastEpisode.id }
-                }
-            }
-        });
-
-        const isCurrentlyLiked = user?.likedEpisodes && user.likedEpisodes.length > 0;
-
-        // 4. Toggle like
-        if (isCurrentlyLiked) {
-            await prisma.$transaction([
-                prisma.user.update({
-                    where: { id: userId },
-                    data: {
-                        likedEpisodes: { disconnect: { id: podcastEpisode.id } }
-                    }
-                }),
-                prisma.podcastEpisode.update({
-                    where: { id: podcastEpisode.id },
-                    data: { likes: { decrement: 1 } }
-                })
-            ]);
-            return false;
-        } else {
-            await prisma.$transaction([
-                prisma.user.update({
-                    where: { id: userId },
-                    data: {
-                        likedEpisodes: { connect: { id: podcastEpisode.id } }
-                    }
-                }),
-                prisma.podcastEpisode.update({
-                    where: { id: podcastEpisode.id },
-                    data: { likes: { increment: 1 } }
-                })
-            ]);
-            return true;
-        }
-    };
-    // ============================================
-    // Listening History
-    // ============================================
-
-    /**
-     * Add or update listening history for a user
-     */
-    export const addToHistory = async (userId: string, episode: EpisodeInput) => {
-        // Save to History Table
-        try {
-            await prisma.listeningHistory.upsert({
-                where: {
-                    userId_episodeGuid: { userId, episodeGuid: episode.guid }
-                },
-                update: { playedAt: new Date() },
-                create: {
-                    userId,
-                    episodeGuid: episode.guid,
-                    episodeTitle: episode.title,
-                    episodeUrl: episode.audioUrl,
-                    channelName: episode.channel?.title || 'Unknown',
-                    channelImage: episode.channel?.artworkUrl || null,
-                    playedAt: new Date()
-                }
-            });
-        } catch (e) {
-            console.error('[PodcastService] History save failed:', e);
-        }
-
-        // Also track view count
-        return trackView(episode);
-    };
-
-    /**
-     * Get user's listening history
-     */
-    export const getHistory = async (userId: string) => {
-        return prisma.listeningHistory.findMany({
-            where: { userId },
-            orderBy: { playedAt: 'desc' },
-            take: 50
-        });
-    };
+/**
+ * Get user's listening history
+ */
+export const getHistory = async (userId: string) => {
+    return prisma.listeningHistory.findMany({
+        where: { userId },
+        orderBy: { playedAt: 'desc' },
+        take: 50
+    });
+};
