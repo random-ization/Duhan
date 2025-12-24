@@ -21,6 +21,39 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 // Temp audio directory
 const TEMP_AUDIO_DIR = path.join(process.cwd(), 'temp_audio');
 
+/**
+ * Parse Netscape format cookies.txt file to extract cookie string
+ * Format: domain, flag, path, secure, expiration, name, value (tab-separated)
+ */
+function getCookiesString(): string | undefined {
+    const cookiePaths = [
+        path.join(process.cwd(), 'cookies.txt'),
+        path.join(process.cwd(), 'server', 'cookies.txt')
+    ];
+
+    for (const p of cookiePaths) {
+        if (fs.existsSync(p)) {
+            console.log(`[YouTubeI] Found cookies at ${p}`);
+            const content = fs.readFileSync(p, 'utf-8');
+            return content
+                .split('\n')
+                .filter(line => line.length > 0 && !line.startsWith('#'))
+                .map(line => {
+                    const parts = line.split('\t');
+                    // Netscape format: domain, flag, path, secure, expiration, name, value
+                    if (parts.length >= 7) {
+                        return `${parts[5]}=${parts[6].trim()}`;
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+                .join('; ');
+        }
+    }
+    console.warn('[YouTubeI] No cookies.txt found. Requests may fail for restricted videos.');
+    return undefined;
+}
+
 interface VideoSearchResult {
     id: string;
     title: string;
@@ -305,10 +338,14 @@ If there is no speech or the audio is unclear, return an empty array: []
 async function downloadAudio(videoId: string, outputPath: string): Promise<void> {
     console.log(`[YouTubeI] Starting download for: ${videoId}`);
 
+    // Load cookies from cookies.txt (if available)
+    const cookie = getCookiesString();
+
     // 1. Initialize InnerTube (emulates Android client)
     const yt = await Innertube.create({
         cache: new UniversalCache(false),
-        generate_session_locally: true
+        generate_session_locally: true,
+        cookie  // Pass cookie string for authenticated requests
     });
 
     // 2. Get the stream (audio only, best quality)
