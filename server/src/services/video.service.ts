@@ -299,16 +299,13 @@ If there is no speech or the audio is unclear, return an empty array: []
 }
 
 /**
- * Download audio using Cobalt API
- * 核心原理：借用 Cobalt 的服务器下载，绕过本机 IP 封锁
+ * Download audio using Cobalt API (Updated for v10+)
  */
 async function downloadAudio(videoId: string, outputPath: string): Promise<void> {
     console.log(`[Cobalt] Requesting audio for ${videoId}...`);
 
-    // 1. 使用 Cobalt 公共 API 列表 (轮询机制，防挂)
-    // 官方主节点: https://api.cobalt.tools
-    // 备用节点可以去 cobalt.tools 官网找，或者自己找几个稳定的公共实例
-    const cobaltApiUrl = 'https://api.cobalt.tools/api/json';
+    // [修正点 1] 新版 API 的地址不再包含 /api/json，直接 POST 到根路径
+    const cobaltApiUrl = 'https://api.cobalt.tools';
 
     try {
         // 2. 发送请求给 Cobalt
@@ -317,27 +314,30 @@ async function downloadAudio(videoId: string, outputPath: string): Promise<void>
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                // 加上 User-Agent 这是一个好习惯
                 'User-Agent': 'Mozilla/5.0 (compatible; HangyeolApp/1.0;)'
             },
             body: JSON.stringify({
                 url: `https://www.youtube.com/watch?v=${videoId}`,
-                aFormat: 'mp3', // 或者 'webm'，取决于你后续 AI 处理的需求
-                isAudioOnly: true,
+                // [修正点 2] 参数升级适配新版 API
+                downloadMode: 'audio', // 替代旧版的 isAudioOnly
+                audioFormat: 'mp3',    // 替代旧版的 aFormat
+                filenameStyle: 'basic' // 保持文件名简单
             })
         });
 
-        const data = await response.json() as { url?: string; text?: string };
+        const data = await response.json() as { status?: string; url?: string; error?: { code?: string } };
 
         // 3. 错误处理
-        if (!data || !data.url) {
+        // Cobalt v10 的错误返回结构是 { status: 'error', error: { code: '...' } }
+        if (data?.status === 'error') {
             console.error('[Cobalt] API Error Response:', data);
+            throw new Error(`Cobalt API returned error: ${data?.error?.code || 'Unknown error'}`);
+        }
 
-            // 常见错误处理
-            if (data?.text === 'error.api.rate_limit') {
-                throw new Error('Cobalt API Rate Limit Reached. Please try again later.');
-            }
-            throw new Error(`Cobalt API returned error: ${data?.text || 'Unknown error'}`);
+        // v10 成功时 status 是 'tunnel' 或 'redirect'，链接在 url 字段
+        if (!data?.url) {
+            console.error('[Cobalt] Unexpected response format:', data);
+            throw new Error('Cobalt API did not return a download URL');
         }
 
         const downloadUrl = data.url;
@@ -367,9 +367,9 @@ async function downloadAudio(videoId: string, outputPath: string): Promise<void>
 
         console.log(`[Cobalt] Download complete: ${outputPath}`);
 
-        // 6. 校验文件大小 (防止下载了空文件)
+        // 6. 校验文件大小
         const stats = fs.statSync(outputPath);
-        if (stats.size < 1000) { // 小于 1KB 肯定不对
+        if (stats.size < 1000) {
             throw new Error('Downloaded file is too small, likely an error page.');
         }
 
