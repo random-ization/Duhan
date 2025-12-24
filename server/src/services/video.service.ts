@@ -1,11 +1,11 @@
 import { google } from 'googleapis';
-import { Innertube, UniversalCache } from 'youtubei.js';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
 import * as storageService from './storage.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 
@@ -20,39 +20,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 // Temp audio directory
 const TEMP_AUDIO_DIR = path.join(process.cwd(), 'temp_audio');
-
-/**
- * Parse Netscape format cookies.txt file to extract cookie string
- * Format: domain, flag, path, secure, expiration, name, value (tab-separated)
- */
-function getCookiesString(): string | undefined {
-    const cookiePaths = [
-        path.join(process.cwd(), 'cookies.txt'),
-        path.join(process.cwd(), 'server', 'cookies.txt')
-    ];
-
-    for (const p of cookiePaths) {
-        if (fs.existsSync(p)) {
-            console.log(`[YouTubeI] Found cookies at ${p}`);
-            const content = fs.readFileSync(p, 'utf-8');
-            return content
-                .split('\n')
-                .filter(line => line.length > 0 && !line.startsWith('#'))
-                .map(line => {
-                    const parts = line.split('\t');
-                    // Netscape format: domain, flag, path, secure, expiration, name, value
-                    if (parts.length >= 7) {
-                        return `${parts[5]}=${parts[6].trim()}`;
-                    }
-                    return null;
-                })
-                .filter(Boolean)
-                .join('; ');
-        }
-    }
-    console.warn('[YouTubeI] No cookies.txt found. Requests may fail for restricted videos.');
-    return undefined;
-}
 
 interface VideoSearchResult {
     id: string;
@@ -332,53 +299,84 @@ If there is no speech or the audio is unclear, return an empty array: []
 }
 
 /**
- * Download audio from YouTube using youtubei.js (InnerTube API)
- * More resilient to anti-bot measures than yt-dlp
+ * Download audio using Cobalt API
+ * 核心原理：借用 Cobalt 的服务器下载，绕过本机 IP 封锁
  */
 async function downloadAudio(videoId: string, outputPath: string): Promise<void> {
-    console.log(`[YouTubeI] Starting download for: ${videoId}`);
+    console.log(`[Cobalt] Requesting audio for ${videoId}...`);
 
-    // Load cookies from cookies.txt (if available)
-    const cookie = getCookiesString();
+    // 1. 使用 Cobalt 公共 API 列表 (轮询机制，防挂)
+    // 官方主节点: https://api.cobalt.tools
+    // 备用节点可以去 cobalt.tools 官网找，或者自己找几个稳定的公共实例
+    const cobaltApiUrl = 'https://api.cobalt.tools/api/json';
 
-    // 1. Initialize InnerTube (emulates Android client)
-    const yt = await Innertube.create({
-        cache: new UniversalCache(false),
-        generate_session_locally: true,
-        cookie  // Pass cookie string for authenticated requests
-    });
+    try {
+        // 2. 发送请求给 Cobalt
+        const response = await fetch(cobaltApiUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                // 加上 User-Agent 这是一个好习惯
+                'User-Agent': 'Mozilla/5.0 (compatible; HangyeolApp/1.0;)'
+            },
+            body: JSON.stringify({
+                url: `https://www.youtube.com/watch?v=${videoId}`,
+                aFormat: 'mp3', // 或者 'webm'，取决于你后续 AI 处理的需求
+                isAudioOnly: true,
+            })
+        });
 
-    // 2. Get the stream (audio only, best quality)
-    const stream = await yt.download(videoId, {
-        type: 'audio',
-        quality: 'best',
-        format: 'webm' // Keep webm to match existing logic for Gemini
-    });
+        const data = await response.json() as { url?: string; text?: string };
 
-    // 3. Write stream to file using Web Streams API reader pattern
-    const file = fs.createWriteStream(outputPath);
-    const reader = stream.getReader();
+        // 3. 错误处理
+        if (!data || !data.url) {
+            console.error('[Cobalt] API Error Response:', data);
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) file.write(value);
+            // 常见错误处理
+            if (data?.text === 'error.api.rate_limit') {
+                throw new Error('Cobalt API Rate Limit Reached. Please try again later.');
+            }
+            throw new Error(`Cobalt API returned error: ${data?.text || 'Unknown error'}`);
+        }
+
+        const downloadUrl = data.url;
+        console.log(`[Cobalt] Got download URL, fetching stream...`);
+
+        // 4. 从 Cobalt 返回的链接下载实际文件
+        const audioRes = await fetch(downloadUrl);
+
+        if (!audioRes.ok) throw new Error(`Failed to download from Cobalt URL: ${audioRes.statusText}`);
+        if (!audioRes.body) throw new Error('Response body is empty');
+
+        // 5. 写入本地文件
+        const fileStream = fs.createWriteStream(outputPath);
+
+        // Node.js stream 处理
+        // @ts-ignore: fetch body is a readable stream in Node environment
+        const nodeStream = Readable.fromWeb(audioRes.body as any);
+
+        await new Promise<void>((resolve, reject) => {
+            nodeStream.pipe(fileStream);
+            nodeStream.on('error', (err: any) => {
+                console.error('[Cobalt] Stream write error:', err);
+                reject(err);
+            });
+            fileStream.on('finish', resolve);
+        });
+
+        console.log(`[Cobalt] Download complete: ${outputPath}`);
+
+        // 6. 校验文件大小 (防止下载了空文件)
+        const stats = fs.statSync(outputPath);
+        if (stats.size < 1000) { // 小于 1KB 肯定不对
+            throw new Error('Downloaded file is too small, likely an error page.');
+        }
+
+    } catch (error: any) {
+        console.error('[Cobalt] Critical Error:', error);
+        throw new Error(`Cobalt download failed: ${error.message}`);
     }
-
-    file.end();
-
-    // Wait for file to be fully written
-    await new Promise<void>((resolve, reject) => {
-        file.on('finish', resolve);
-        file.on('error', reject);
-    });
-
-    // 4. Verify file was created
-    if (!fs.existsSync(outputPath)) {
-        throw new Error('Failed to download audio file');
-    }
-
-    console.log(`[YouTubeI] Download complete: ${outputPath}`);
 }
 
 /**
