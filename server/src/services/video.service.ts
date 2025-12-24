@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
-import getYouTubeID from 'get-youtube-id';
-import YTDlpWrap from 'yt-dlp-wrap';
+import { Innertube, UniversalCache } from 'youtubei.js';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
@@ -19,10 +18,8 @@ const youtube = google.youtube({
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
-// yt-dlp paths
-const YT_DLP_BINARY_PATH = path.join(process.cwd(), 'bin', 'yt-dlp');
+// Temp audio directory
 const TEMP_AUDIO_DIR = path.join(process.cwd(), 'temp_audio');
-const COOKIES_PATH = path.join(process.cwd(), 'cookies.txt');
 
 interface VideoSearchResult {
     id: string;
@@ -302,63 +299,49 @@ If there is no speech or the audio is unclear, return an empty array: []
 }
 
 /**
- * Download audio from YouTube using yt-dlp
+ * Download audio from YouTube using youtubei.js (InnerTube API)
+ * More resilient to anti-bot measures than yt-dlp
  */
 async function downloadAudio(videoId: string, outputPath: string): Promise<void> {
-    // Get or create yt-dlp instance
-    const ytDlp = await getYtDlpInstance();
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log(`[YouTubeI] Starting download for: ${videoId}`);
 
-    // Build command arguments - download best audio without conversion (no ffmpeg needed)
-    const args = [
-        url,
-        '-f', 'bestaudio[ext=webm]/bestaudio',  // Prefer webm, fallback to best available
-        '--output', outputPath,
-        '--no-warnings',
-        '--no-playlist'
-    ];
+    // 1. Initialize InnerTube (emulates Android client)
+    const yt = await Innertube.create({
+        cache: new UniversalCache(false),
+        generate_session_locally: true
+    });
 
-    // Add cookies if available (helps bypass "Sign in" errors)
-    if (fs.existsSync(COOKIES_PATH)) {
-        console.log('[yt-dlp] Using cookies.txt for authentication');
-        args.push('--cookies', COOKIES_PATH);
+    // 2. Get the stream (audio only, best quality)
+    const stream = await yt.download(videoId, {
+        type: 'audio',
+        quality: 'best',
+        format: 'webm' // Keep webm to match existing logic for Gemini
+    });
+
+    // 3. Write stream to file using Web Streams API reader pattern
+    const file = fs.createWriteStream(outputPath);
+    const reader = stream.getReader();
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) file.write(value);
     }
 
-    // Add user agent to avoid detection
-    args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    file.end();
 
-    await ytDlp.execPromise(args);
+    // Wait for file to be fully written
+    await new Promise<void>((resolve, reject) => {
+        file.on('finish', resolve);
+        file.on('error', reject);
+    });
 
+    // 4. Verify file was created
     if (!fs.existsSync(outputPath)) {
         throw new Error('Failed to download audio file');
     }
 
-    console.log(`[yt-dlp] Audio downloaded: ${outputPath}`);
-}
-
-/**
- * Get or initialize yt-dlp instance
- */
-let ytDlpInstance: YTDlpWrap | null = null;
-
-async function getYtDlpInstance(): Promise<YTDlpWrap> {
-    if (ytDlpInstance) return ytDlpInstance;
-
-    // Ensure bin directory exists
-    const binDir = path.dirname(YT_DLP_BINARY_PATH);
-    if (!fs.existsSync(binDir)) {
-        fs.mkdirSync(binDir, { recursive: true });
-    }
-
-    // Download yt-dlp binary if not exists
-    if (!fs.existsSync(YT_DLP_BINARY_PATH)) {
-        console.log('[yt-dlp] Binary not found, downloading...');
-        await YTDlpWrap.downloadFromGithub(YT_DLP_BINARY_PATH);
-        console.log('[yt-dlp] Binary downloaded successfully');
-    }
-
-    ytDlpInstance = new YTDlpWrap(YT_DLP_BINARY_PATH);
-    return ytDlpInstance;
+    console.log(`[YouTubeI] Download complete: ${outputPath}`);
 }
 
 /**
