@@ -48,14 +48,8 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                             <span className="font-bold text-xl text-slate-900 tracking-tight">{t('appName')}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                            {/* New Navigation Links */}
+                            {/* New Navigation Links - Removed Courses link */}
                             <div className="hidden md:flex items-center gap-6 mr-6">
-                                <button
-                                    onClick={() => navigate('/courses')}
-                                    className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-                                >
-                                    {t('landing.viewCourses')}
-                                </button>
                             </div>
 
                             {/* Language Selector */}
@@ -141,7 +135,7 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                             <ArrowRight className="w-5 h-5" />
                         </button>
                         <button
-                            onClick={() => navigate('/courses')}
+                            onClick={() => navigate('/pricing')}
                             className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
                         >
                             <PlayCircle className="w-5 h-5 text-indigo-500" />
@@ -260,6 +254,51 @@ const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
                             <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.card4Title')}</h3>
                             <p className="text-sm text-slate-500">
                                 {t('landing.card4Desc')}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* --- Curriculum System Section (New) --- */}
+            <section className="py-24 bg-white border-t border-slate-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
+                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{t('landing.curriculum.title')}</h2>
+                        <p className="text-slate-500 max-w-2xl mx-auto text-lg">{t('landing.curriculum.desc')}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Level 1-2 */}
+                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-100">
+                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center mb-6">
+                                <BookOpen className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.beginner')}</h3>
+                            <p className="text-slate-600 leading-relaxed">
+                                {t('landing.curriculum.beginnerDesc')}
+                            </p>
+                        </div>
+
+                        {/* Level 3-4 */}
+                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-200">
+                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-6">
+                                <Star className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.intermediate')}</h3>
+                            <p className="text-slate-600 leading-relaxed">
+                                {t('landing.curriculum.intermediateDesc')}
+                            </p>
+                        </div>
+
+                        {/* Level 5-6 */}
+                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-300">
+                            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-6">
+                                <GraduationCap className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.advanced')}</h3>
+                            <p className="text-slate-600 leading-relaxed">
+                                {t('landing.curriculum.advancedDesc')}
                             </p>
                         </div>
                     </div>

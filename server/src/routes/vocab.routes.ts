@@ -17,12 +17,14 @@ router.get('/session', async (req, res) => {
         const now = new Date();
         const limitNum = parseInt(limit as string, 10);
 
-        // Build unit filter
-        const unitFilter: any = {};
+        // Build unit filter for VocabularyAppearance
+        const appearanceFilter: any = {
+            courseId: courseId as string,
+        };
         if (unitId && unitId !== 'ALL') {
             const parsedUnit = parseInt(unitId as string, 10);
             if (!isNaN(parsedUnit)) {
-                unitFilter.unitId = parsedUnit;
+                appearanceFilter.unitId = parsedUnit;
             }
         }
 
@@ -31,31 +33,37 @@ router.get('/session', async (req, res) => {
             where: {
                 userId: userId as string,
                 nextReviewAt: { lte: now },
-                vocabulary: {
-                    courseId: courseId as string,
-                    ...unitFilter,
+                word: {
+                    appearances: { some: appearanceFilter },
                 },
             },
-            include: { vocabulary: true },
+            include: {
+                word: {
+                    include: {
+                        appearances: {
+                            where: appearanceFilter,
+                            take: 1,
+                        },
+                    },
+                },
+            },
             orderBy: { nextReviewAt: 'asc' },
             take: limitNum,
         });
 
         type SessionWord = {
             id: string;
-            courseId: string;
-            unitId: string;
             word: string;
             meaning: string;
             pronunciation: string | null;
             audioUrl: string | null;
             hanja: string | null;
-            partOfSpeech: any;
+            partOfSpeech: string;
             tips: any;
             exampleSentence: string | null;
             exampleMeaning: string | null;
-            createdAt: Date;
-            updatedAt: Date;
+            courseId: string;
+            unitId: number;
             progress: {
                 id: string;
                 status: string;
@@ -66,10 +74,21 @@ router.get('/session', async (req, res) => {
         };
 
         let sessionWords: SessionWord[] = dueReviews.map(p => {
-            // Force type cast because Prisma findMany inference with include is tricky here
-            const vocab = (p as any).vocabulary;
+            const w = p.word;
+            const appearance = w.appearances[0];
             return {
-                ...vocab,
+                id: w.id,
+                word: w.word,
+                meaning: w.meaning,
+                pronunciation: w.pronunciation,
+                audioUrl: w.audioUrl,
+                hanja: w.hanja,
+                partOfSpeech: w.partOfSpeech,
+                tips: w.tips,
+                exampleSentence: appearance?.exampleSentence || null,
+                exampleMeaning: appearance?.exampleMeaning || null,
+                courseId: appearance?.courseId || courseId as string,
+                unitId: appearance?.unitId || 0,
                 progress: {
                     id: p.id,
                     status: p.status,
@@ -89,26 +108,49 @@ router.get('/session', async (req, res) => {
                 where: {
                     userId: userId as string,
                     status: 'LEARNING',
-                    vocabularyId: { notIn: existingIds },
-                    vocabulary: {
-                        courseId: courseId as string,
-                        ...unitFilter,
+                    wordId: { notIn: existingIds },
+                    word: {
+                        appearances: { some: appearanceFilter },
                     },
                 },
-                include: { vocabulary: true },
+                include: {
+                    word: {
+                        include: {
+                            appearances: {
+                                where: appearanceFilter,
+                                take: 1,
+                            },
+                        },
+                    },
+                },
                 take: remaining,
             });
 
-            sessionWords.push(...learningWords.map(p => ({
-                ...p.vocabulary,
-                progress: {
-                    id: p.id,
-                    status: p.status,
-                    interval: p.interval,
-                    streak: p.streak,
-                    nextReviewAt: p.nextReviewAt,
-                },
-            } as any)));
+            sessionWords.push(...learningWords.map(p => {
+                const w = p.word;
+                const appearance = w.appearances[0];
+                return {
+                    id: w.id,
+                    word: w.word,
+                    meaning: w.meaning,
+                    pronunciation: w.pronunciation,
+                    audioUrl: w.audioUrl,
+                    hanja: w.hanja,
+                    partOfSpeech: w.partOfSpeech,
+                    tips: w.tips,
+                    exampleSentence: appearance?.exampleSentence || null,
+                    exampleMeaning: appearance?.exampleMeaning || null,
+                    courseId: appearance?.courseId || courseId as string,
+                    unitId: appearance?.unitId || 0,
+                    progress: {
+                        id: p.id,
+                        status: p.status,
+                        interval: p.interval,
+                        streak: p.streak,
+                        nextReviewAt: p.nextReviewAt,
+                    },
+                };
+            }));
         }
 
         // 3. New words (no progress record yet)
@@ -116,32 +158,43 @@ router.get('/session', async (req, res) => {
             const remaining = limitNum - sessionWords.length;
             const existingIds = sessionWords.map(w => w.id);
 
-            // Find vocab IDs that user already has progress for
+            // Find word IDs that user already has progress for
             const existingProgress = await prisma.userWordProgress.findMany({
                 where: {
                     userId: userId as string,
-                    vocabulary: {
-                        courseId: courseId as string,
-                        ...unitFilter,
+                    word: {
+                        appearances: { some: appearanceFilter },
                     },
                 },
-                select: { vocabularyId: true },
+                select: { wordId: true },
             });
-            const progressIds = existingProgress.map(p => p.vocabularyId);
+            const progressIds = existingProgress.map(p => p.wordId);
 
-            const newWords = await prisma.vocabulary.findMany({
+            // Get words via VocabularyAppearance that user hasn't learned yet
+            const newAppearances = await prisma.vocabularyAppearance.findMany({
                 where: {
-                    courseId: courseId as string,
-                    ...unitFilter,
-                    id: { notIn: [...existingIds, ...progressIds] },
+                    ...appearanceFilter,
+                    wordId: { notIn: [...existingIds, ...progressIds] },
                 },
+                include: { word: true },
                 take: remaining,
             });
 
-            sessionWords.push(...newWords.map(v => ({
-                ...v,
+            sessionWords.push(...newAppearances.map(app => ({
+                id: app.word.id,
+                word: app.word.word,
+                meaning: app.word.meaning,
+                pronunciation: app.word.pronunciation,
+                audioUrl: app.word.audioUrl,
+                hanja: app.word.hanja,
+                partOfSpeech: app.word.partOfSpeech,
+                tips: app.word.tips,
+                exampleSentence: app.exampleSentence,
+                exampleMeaning: app.exampleMeaning,
+                courseId: app.courseId,
+                unitId: app.unitId,
                 progress: null, // No progress yet
-            } as any)));
+            })));
         }
 
         res.json({
@@ -161,10 +214,10 @@ router.get('/session', async (req, res) => {
 // POST /api/vocab/progress - Update SRS progress
 router.post('/progress', async (req, res) => {
     try {
-        const { userId, vocabularyId, quality } = req.body;
+        const { userId, wordId, quality } = req.body;
 
-        if (!userId || !vocabularyId || quality === undefined) {
-            return res.status(400).json({ error: 'userId, vocabularyId, and quality are required' });
+        if (!userId || !wordId || quality === undefined) {
+            return res.status(400).json({ error: 'userId, wordId, and quality are required' });
         }
 
         // quality: 0 = Forgot, 5 = Remember/Easy
@@ -174,7 +227,7 @@ router.post('/progress', async (req, res) => {
         // Find or create progress record
         let progress = await prisma.userWordProgress.findUnique({
             where: {
-                userId_vocabularyId: { userId, vocabularyId },
+                userId_wordId: { userId, wordId },
             },
         });
 
@@ -189,7 +242,7 @@ router.post('/progress', async (req, res) => {
             progress = {
                 id: '',
                 userId,
-                vocabularyId,
+                wordId,
                 status: 'NEW',
                 nextReviewAt: null,
                 interval: 0,
@@ -249,7 +302,7 @@ router.post('/progress', async (req, res) => {
         // Upsert progress
         const updated = await prisma.userWordProgress.upsert({
             where: {
-                userId_vocabularyId: { userId, vocabularyId },
+                userId_wordId: { userId, wordId },
             },
             update: {
                 status: newStatus,
@@ -262,7 +315,7 @@ router.post('/progress', async (req, res) => {
             },
             create: {
                 userId,
-                vocabularyId,
+                wordId,
                 status: newStatus,
                 interval: newInterval,
                 easeFactor: newEaseFactor,
@@ -292,21 +345,38 @@ router.get('/words', async (req, res) => {
             return res.status(400).json({ error: 'courseId is required' });
         }
 
-        const unitFilter: any = {};
+        const appearanceFilter: any = {
+            courseId: courseId as string,
+        };
         if (unitId && unitId !== 'ALL') {
             const parsedUnit = parseInt(unitId as string, 10);
             if (!isNaN(parsedUnit)) {
-                unitFilter.unitId = parsedUnit;
+                appearanceFilter.unitId = parsedUnit;
             }
         }
 
-        const words = await prisma.vocabulary.findMany({
-            where: {
-                courseId: courseId as string,
-                ...unitFilter,
-            },
-            orderBy: [{ unitId: 'asc' }, { word: 'asc' }],
+        // Get words via VocabularyAppearance
+        const appearances = await prisma.vocabularyAppearance.findMany({
+            where: appearanceFilter,
+            include: { word: true },
+            orderBy: [{ unitId: 'asc' }, { word: { word: 'asc' } }],
         });
+
+        // Transform to expected shape
+        const words = appearances.map(app => ({
+            id: app.word.id,
+            word: app.word.word,
+            meaning: app.word.meaning,
+            partOfSpeech: app.word.partOfSpeech,
+            hanja: app.word.hanja,
+            pronunciation: app.word.pronunciation,
+            audioUrl: app.word.audioUrl,
+            tips: app.word.tips,
+            exampleSentence: app.exampleSentence,
+            exampleMeaning: app.exampleMeaning,
+            courseId: app.courseId,
+            unitId: app.unitId,
+        }));
 
         res.json({ success: true, words });
     } catch (error) {

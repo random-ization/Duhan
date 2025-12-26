@@ -3,28 +3,29 @@ import { prisma } from '../lib/prisma';
 import { TTSService } from '../services/tts.service';
 
 export class AdminVocabController {
-    // GET /api/admin/vocab
+    // GET /api/admin/vocab - Get vocabulary list via appearances
     static async getList(req: Request, res: Response) {
         try {
             const { courseId, page = 1, limit = 50, search, missingAudio, missingExample } = req.query;
 
             if (!courseId) return res.status(400).json({ error: 'courseId is required' });
 
-            const where: any = { courseId: String(courseId) };
+            const appearanceWhere: any = { courseId: String(courseId) };
+            const wordWhere: any = {};
 
             if (search) {
-                where.OR = [
+                wordWhere.OR = [
                     { word: { contains: String(search), mode: 'insensitive' } },
                     { meaning: { contains: String(search), mode: 'insensitive' } },
                 ];
             }
 
             if (missingAudio === 'true') {
-                where.audioUrl = null;
+                wordWhere.audioUrl = null;
             }
 
             if (missingExample === 'true') {
-                where.OR = [
+                appearanceWhere.OR = [
                     { exampleSentence: null },
                     { exampleSentence: '' }
                 ];
@@ -32,10 +33,19 @@ export class AdminVocabController {
 
             const skip = (Number(page) - 1) * Number(limit);
 
-            const [total, items] = await Promise.all([
-                prisma.vocabulary.count({ where }),
-                prisma.vocabulary.findMany({
-                    where,
+            const [total, appearances] = await Promise.all([
+                prisma.vocabularyAppearance.count({
+                    where: {
+                        ...appearanceWhere,
+                        word: Object.keys(wordWhere).length > 0 ? wordWhere : undefined,
+                    },
+                }),
+                prisma.vocabularyAppearance.findMany({
+                    where: {
+                        ...appearanceWhere,
+                        word: Object.keys(wordWhere).length > 0 ? wordWhere : undefined,
+                    },
+                    include: { word: true },
                     skip,
                     take: Number(limit),
                     orderBy: [
@@ -45,6 +55,25 @@ export class AdminVocabController {
                 }),
             ]);
 
+            // Transform to expected shape (flattened)
+            const items = appearances.map(app => ({
+                id: app.word.id,
+                appearanceId: app.id,
+                word: app.word.word,
+                meaning: app.word.meaning,
+                partOfSpeech: app.word.partOfSpeech,
+                hanja: app.word.hanja,
+                pronunciation: app.word.pronunciation,
+                audioUrl: app.word.audioUrl,
+                tips: app.word.tips,
+                exampleSentence: app.exampleSentence,
+                exampleMeaning: app.exampleMeaning,
+                courseId: app.courseId,
+                unitId: app.unitId,
+                createdAt: app.createdAt,
+                updatedAt: app.updatedAt,
+            }));
+
             res.json({ success: true, total, pages: Math.ceil(total / Number(limit)), items });
         } catch (error) {
             console.error('Get Vocab List Error:', error);
@@ -52,7 +81,7 @@ export class AdminVocabController {
         }
     }
 
-    // POST /api/admin/vocab/bulk
+    // POST /api/admin/vocab/bulk - Bulk import with upsert
     static async bulkImport(req: Request, res: Response) {
         try {
             const { items } = req.body;
@@ -64,41 +93,50 @@ export class AdminVocabController {
 
             for (const item of items) {
                 try {
-                    // Validate required
                     if (!item.courseId || !item.word || !item.meaning || item.unitId === undefined) {
-                        // If courseId is missing in item, maybe use a default or fail?
-                        // The frontend should inject courseId into every item
                         throw new Error(`Missing required fields for ${item.word || 'unknown'}`);
                     }
 
-                    await prisma.vocabulary.upsert({
-                        where: {
-                            courseId_word: {
-                                courseId: item.courseId,
-                                word: item.word
-                            }
-                        },
+                    // Upsert the Word (master dictionary entry)
+                    const word = await prisma.word.upsert({
+                        where: { word: item.word },
                         update: {
-                            unitId: Number(item.unitId),
                             meaning: item.meaning,
                             partOfSpeech: item.partOfSpeech || 'NOUN',
                             hanja: item.hanja,
-                            exampleSentence: item.exampleSentence,
-                            exampleMeaning: item.exampleMeaning,
                             tips: item.tips,
                         },
                         create: {
-                            courseId: item.courseId,
-                            unitId: Number(item.unitId),
                             word: item.word,
                             meaning: item.meaning,
                             partOfSpeech: item.partOfSpeech || 'NOUN',
                             hanja: item.hanja,
+                            tips: item.tips,
+                        },
+                    });
+
+                    // Upsert the appearance (linking word to course/unit)
+                    await prisma.vocabularyAppearance.upsert({
+                        where: {
+                            wordId_courseId_unitId: {
+                                wordId: word.id,
+                                courseId: item.courseId,
+                                unitId: Number(item.unitId),
+                            },
+                        },
+                        update: {
                             exampleSentence: item.exampleSentence,
                             exampleMeaning: item.exampleMeaning,
-                            tips: item.tips,
-                        }
+                        },
+                        create: {
+                            wordId: word.id,
+                            courseId: item.courseId,
+                            unitId: Number(item.unitId),
+                            exampleSentence: item.exampleSentence,
+                            exampleMeaning: item.exampleMeaning,
+                        },
                     });
+
                     results.success++;
                 } catch (e: any) {
                     results.failed++;
@@ -113,15 +151,33 @@ export class AdminVocabController {
         }
     }
 
-    // PATCH /api/admin/vocab/:id
+    // PATCH /api/admin/vocab/:id - Update word (master entry)
     static async updateItem(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const data = req.body;
-            const updated = await prisma.vocabulary.update({
+            const { exampleSentence, exampleMeaning, courseId, unitId, ...wordData } = req.body;
+
+            // Update the Word entry
+            const updated = await prisma.word.update({
                 where: { id },
-                data
+                data: wordData,
             });
+
+            // If appearance-specific data is provided, update it too
+            if (courseId && unitId !== undefined && (exampleSentence !== undefined || exampleMeaning !== undefined)) {
+                await prisma.vocabularyAppearance.updateMany({
+                    where: {
+                        wordId: id,
+                        courseId,
+                        unitId: Number(unitId),
+                    },
+                    data: {
+                        exampleSentence,
+                        exampleMeaning,
+                    },
+                });
+            }
+
             res.json({ success: true, item: updated });
         } catch (error) {
             console.error('Update Item Error:', error);
@@ -129,11 +185,33 @@ export class AdminVocabController {
         }
     }
 
-    // DELETE /api/admin/vocab/:id
+    // DELETE /api/admin/vocab/:id - Delete word appearance (not the word itself)
     static async deleteItem(req: Request, res: Response) {
         try {
-            const { id } = req.params;
-            await prisma.vocabulary.delete({ where: { id } });
+            const { id } = req.params; // This is appearanceId
+            const { deleteWord } = req.query;
+
+            const appearance = await prisma.vocabularyAppearance.findUnique({
+                where: { id },
+                include: { word: true },
+            });
+
+            if (!appearance) {
+                return res.status(404).json({ error: 'Appearance not found' });
+            }
+
+            await prisma.vocabularyAppearance.delete({ where: { id } });
+
+            // Optionally delete the word if no more appearances
+            if (deleteWord === 'true') {
+                const remaining = await prisma.vocabularyAppearance.count({
+                    where: { wordId: appearance.wordId },
+                });
+                if (remaining === 0) {
+                    await prisma.word.delete({ where: { id: appearance.wordId } });
+                }
+            }
+
             res.json({ success: true });
         } catch (error) {
             console.error('Delete Item Error:', error);
@@ -141,18 +219,18 @@ export class AdminVocabController {
         }
     }
 
-    // POST /api/admin/vocab/:id/tts
+    // POST /api/admin/vocab/:id/tts - Generate TTS for a word
     static async generateAudio(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const vocab = await prisma.vocabulary.findUnique({ where: { id } });
-            if (!vocab) return res.status(404).json({ error: 'Vocab not found' });
+            const word = await prisma.word.findUnique({ where: { id } });
+            if (!word) return res.status(404).json({ error: 'Word not found' });
 
-            const url = await TTSService.generate(vocab.word);
+            const url = await TTSService.generate(word.word);
 
-            const updated = await prisma.vocabulary.update({
+            const updated = await prisma.word.update({
                 where: { id },
-                data: { audioUrl: url }
+                data: { audioUrl: url },
             });
 
             res.json({ success: true, audioUrl: url, item: updated });
@@ -162,7 +240,7 @@ export class AdminVocabController {
         }
     }
 
-    // POST /api/admin/vocab/:id/upload
+    // POST /api/admin/vocab/:id/upload - Upload audio file
     static async uploadAudio(req: Request, res: Response) {
         try {
             if (!req.file || !(req.file as any).location) {
@@ -171,9 +249,9 @@ export class AdminVocabController {
             const { id } = req.params;
             const url = (req.file as any).location;
 
-            const updated = await prisma.vocabulary.update({
+            const updated = await prisma.word.update({
                 where: { id },
-                data: { audioUrl: url }
+                data: { audioUrl: url },
             });
 
             res.json({ success: true, audioUrl: url, item: updated });

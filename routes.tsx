@@ -14,6 +14,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const VocabModulePage = lazy(() => import('./pages/VocabModulePage'));
+const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
 const TopikPage = lazy(() => import('./pages/TopikPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const AdminVocabPage = lazy(() => import('./pages/AdminVocabPage'));
@@ -74,10 +75,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
           path="/refund"
           element={<LegalDocumentPage language={language} documentType="refund" />}
         />
+        <Route path="/pricing" element={<SubscriptionPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/pricing" element={<SubscriptionPage />} />
             <Route path="/profile" element={<ProfilePage language={language} />} />
             <Route
               path="/dashboard"
@@ -94,6 +95,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
             <Route path="/courses" element={<CoursesOverview />} />
             <Route path="/course/:instituteId" element={<CourseDashboard />} />
             <Route path="/course/:instituteId/vocab" element={<VocabModulePage />} />
+            <Route path="/course/:instituteId/grammar" element={<GrammarModulePage />} />
             <Route path="/course/:instituteId/:moduleParam" element={<ModulePage />} />
             <Route
               path="/topik"

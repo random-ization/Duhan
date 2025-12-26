@@ -498,6 +498,21 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // --- Grammar Training ---
+  getGrammarPoints: async (courseId: string) =>
+    request<any>(`/courses/${courseId}/grammar`),
+
+  toggleGrammarStatus: async (grammarId: string) =>
+    request<{ id: string; status: string; lastReviewed: string }>(`/grammar/${grammarId}/toggle`, {
+      method: 'POST'
+    }),
+
+  checkGrammar: async (sentence: string, grammarId: string) =>
+    request<any>('/grammar/ai-check', {
+      method: 'POST',
+      body: JSON.stringify({ sentence, grammarId })
+    }),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 

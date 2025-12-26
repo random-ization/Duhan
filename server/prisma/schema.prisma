@@ -371,13 +371,15 @@ enum WordStatus {
   MASTERED
 }
 
-model Vocabulary {
+// ========== Vocabulary System (Refactored) ==========
+// Word is a master dictionary table - each unique word exists once
+// VocabularyAppearance links words to courses/units (many-to-many)
+
+model Word {
   id              String        @id @default(cuid())
-  courseId        String        // Links to Institute.id
-  unitId          Int           // 1, 2, 3... for sorting
   
-  // Core Data
-  word            String        // e.g., "학교"
+  // Core Data (unique per word)
+  word            String        @unique  // e.g., "학교" - globally unique
   meaning         String        // e.g., "学校"
   partOfSpeech    String        // "NOUN", "VERB_T", "VERB_I", "ADJ", "ADV", "PARTICLE"
   
@@ -386,30 +388,45 @@ model Vocabulary {
   pronunciation   String?       // e.g., "hak-gyo"
   audioUrl        String?       // S3 URL, NULL = no audio button
   
-  // Split storage for Examples
-  exampleSentence String?       // Korean sentence
-  exampleMeaning  String?       // Chinese translation
-  
   // Structured Tips (synonyms, antonyms, nuance)
   tips            Json?         // { synonyms: [], antonyms: [], nuance: "" }
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   
+  // Relations
+  appearances     VocabularyAppearance[]
   progress        UserWordProgress[]
   
-  // Indexes for Dashboard filters
-  @@unique([courseId, word])    // Prevent duplicates within a course
+  @@index([audioUrl])           // For "Missing Audio" filter
+}
+
+model VocabularyAppearance {
+  id              String        @id @default(cuid())
+  
+  wordId          String
+  word            Word          @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  
+  courseId        String        // Links to Institute.id (textbook)
+  unitId          Int           // 1, 2, 3... for sorting within course
+  
+  // Unit-specific examples (same word can have different examples per course)
+  exampleSentence String?       // Korean sentence
+  exampleMeaning  String?       // Chinese translation
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@unique([wordId, courseId, unitId])  // Same word can appear once per unit per course
   @@index([courseId, unitId])
   @@index([courseId])
-  @@index([audioUrl])           // For "Missing Audio" filter
 }
 
 model UserWordProgress {
   id              String      @id @default(cuid())
   userId          String
-  vocabularyId    String
-  vocabulary      Vocabulary  @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+  wordId          String
+  word            Word        @relation(fields: [wordId], references: [id], onDelete: Cascade)
   
   // SRS Fields
   status          WordStatus  @default(NEW)
@@ -422,7 +439,43 @@ model UserWordProgress {
   lastReviewedAt  DateTime?
   mistakeCount    Int         @default(0)
   
-  @@unique([userId, vocabularyId])
-  @@index([userId, nextReviewAt])
-  @@index([userId, status])
+  @@unique([userId, wordId])
+}
+
+// ========== Grammar Training System ==========
+
+model GrammarPoint {
+  id          String   @id @default(uuid())
+  courseId    String   // Link to the specific Textbook/Course (Institute ID)
+  unitId      Int      // e.g., 1 (for Unit 1)
+  unitTitle   String   // e.g., "Introduction"
+  
+  title       String   // e.g., "-입니다"
+  summary     String   // Short description for the card
+  type        String   // e.g., "ENDING" (终结词尾), "PARTICLE" (助词)
+  
+  // Rich Content
+  explanation String   // Detailed markdown explanation
+  construction Json    // e.g., { "noun": "Directly add", "verb": "..." }
+  examples    Json     // Array of { kr: string, cn: string, audio?: string }
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userProgress UserGrammarProgress[]
+
+  @@index([courseId, unitId])
+}
+
+model UserGrammarProgress {
+  id             String       @id @default(uuid())
+  userId         String
+  grammarPointId String
+  grammarPoint   GrammarPoint @relation(fields: [grammarPointId], references: [id], onDelete: Cascade)
+  
+  status         String       @default("NEW") // NEW, LEARNING, MASTERED
+  lastReviewed   DateTime?
+  
+  @@unique([userId, grammarPointId])
+  @@index([userId])
 }

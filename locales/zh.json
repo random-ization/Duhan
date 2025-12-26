@@ -505,7 +505,17 @@
     "privacy": "隐私政策",
     "term": "服务条款",
     "refundPolicy": "退款政策",
-    "legal": "法律声明"
+    "legal": "法律声明",
+    "curriculum": {
+      "title": "科学分级的课程体系",
+      "desc": "从零基础到高级精通，为您规划清晰的学习路径。",
+      "beginner": "初级阶段 (Level 1-2)",
+      "beginnerDesc": "掌握韩语四十音与基础语法，能够进行简单的日常对话与自我介绍。对标 TOPIK I 1-2 级。",
+      "intermediate": "中级阶段 (Level 3-4)",
+      "intermediateDesc": "能够讨论社会话题，理解韩国文化背景，熟练运用日常用语。对标 TOPIK II 3-4 级。",
+      "advanced": "高级阶段 (Level 5-6)",
+      "advancedDesc": "能阅读新闻、文学作品，进行专业或学术领域的流利交流。对标 TOPIK II 5-6 级。"
+    }
   },
   "pricing": {
     "limitedOffer": "限时优惠",

@@ -8,11 +8,13 @@ export default function AppLayout() {
     return (
         <div className="flex min-h-screen bg-background overflow-hidden font-sans">
             <Sidebar />
-            <main className="flex-1 h-screen overflow-y-auto relative p-6 md:p-10 scroll-smooth flex flex-col">
-                <div className="flex-1 w-full max-w-[1400px] mx-auto">
-                    <Outlet />
+            <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth">
+                <div className="min-h-full flex flex-col p-6 md:p-10">
+                    <div className="flex-1 w-full max-w-[1400px] mx-auto">
+                        <Outlet />
+                    </div>
+                    <Footer />
                 </div>
-                <Footer />
                 {/* Spacer for mobile nav */}
                 <div className="h-24 md:h-0" />
             </main>

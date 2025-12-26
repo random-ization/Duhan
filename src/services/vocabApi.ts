@@ -74,13 +74,13 @@ export async function fetchVocabSession(
 // Update word progress with SRS algorithm
 export async function updateVocabProgress(
     userId: string,
-    vocabularyId: string,
+    wordId: string,
     quality: 0 | 5 // 0 = Forgot, 5 = Know
 ): Promise<VocabProgressResponse> {
     const response = await fetch(`${API_BASE}/api/vocab/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, vocabularyId, quality }),
+        body: JSON.stringify({ userId, wordId, quality }),
     });
     if (!response.ok) {
         throw new Error('Failed to update vocab progress');
