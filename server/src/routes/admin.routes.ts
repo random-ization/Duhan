@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { getUsers, updateUser, deleteUser } from '../controllers/admin.user.controller';
 import { AdminVocabController } from '../controllers/admin.vocab.controller';
+import { getDashboardData, getAiCostsDetail } from '../controllers/admin.dashboard.controller';
 import { uploadMedia } from '../lib/storage';
 
 const router = Router();
@@ -19,6 +20,10 @@ router.use((req, res, next) => {
     }
 });
 
+// Dashboard Statistics
+router.get('/dashboard/stats', getDashboardData);
+router.get('/dashboard/ai-costs', getAiCostsDetail);
+
 // User Management
 router.get('/users', getUsers);
 router.put('/users/:id', updateUser);
@@ -33,3 +38,4 @@ router.post('/vocab/:id/tts', AdminVocabController.generateAudio);
 router.post('/vocab/:id/upload', uploadMedia.single('file'), AdminVocabController.uploadAudio);
 
 export default router;
+

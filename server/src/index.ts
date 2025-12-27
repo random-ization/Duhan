@@ -1,11 +1,14 @@
 import app from './app';
 import dotenv from 'dotenv';
 import grammarRoutes from './routes/grammar.routes';
+import statsRoutes from './routes/stats.routes';
 
 dotenv.config();
 
-// Register Grammar Routes
-app.use('/api', grammarRoutes);
+// Register Routes
+app.use('/api/grammar', grammarRoutes);
+app.use('/api/stats', statsRoutes);
+console.log('[Server] /api/stats registered');
 
 const PORT = process.env.PORT || 3001;
 

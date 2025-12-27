@@ -681,6 +681,175 @@ export const api = {
       }[];
     }>(`/courses/${courseId}/units`),
 
+  // ========== Grammar Management ==========
+
+  // Search grammar points globally
+  searchGrammar: async (query: string) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        title: string;
+        searchKey?: string;
+        level: string;
+        type: string;
+        summary: string;
+      }[];
+    }>(`/grammar/search?query=${encodeURIComponent(query)}`),
+
+  // Create a new grammar point
+  createGrammar: async (data: {
+    title: string;
+    searchKey?: string;
+    level?: string;
+    type?: string;
+    summary?: string;
+    explanation?: string;
+    conjugationRules?: any;
+    examples?: any;
+  }) =>
+    request<{ success: boolean; data: any }>('/grammar', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  // Update a grammar point
+  updateGrammar: async (id: string, data: {
+    title?: string;
+    searchKey?: string;
+    level?: string;
+    type?: string;
+    summary?: string;
+    explanation?: string;
+    conjugationRules?: any;
+    examples?: any;
+  }) =>
+    request<{ success: boolean; data: any }>(`/grammar/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  // Assign grammar to a unit
+  assignGrammarToUnit: async (courseId: string, unitIndex: number, grammarId: string, displayOrder?: number) =>
+    request<{ success: boolean; data: any }>('/grammar/assign', {
+      method: 'POST',
+      body: JSON.stringify({ courseId, unitIndex, grammarId, displayOrder })
+    }),
+
+  // Remove grammar from a unit
+  removeGrammarFromUnit: async (courseId: string, unitIndex: number, grammarId: string) =>
+    request<{ success: boolean }>(`/grammar/courses/${courseId}/units/${unitIndex}/grammar/${grammarId}`, {
+      method: 'DELETE'
+    }),
+
+  // Get grammar points for a unit
+  getUnitGrammars: async (courseId: string, unitId: number) =>
+    request<{
+      data: {
+        id: string;
+        title: string;
+        type: string;
+        summary: string;
+        explanation: string;
+        examples: any;
+        displayOrder: number;
+      }[];
+    }>(`/grammar/courses/${courseId}/units/${unitId}/grammar`),
+
+  // ========== Stats/Dashboard ==========
+
+  // Get overview statistics
+  getOverviewStats: async () =>
+    request<{
+      success: boolean;
+      data: {
+        users: number;
+        institutes: number;
+        vocabulary: number;
+        grammar: number;
+        units: number;
+        exams: number;
+      };
+    }>('/stats/overview'),
+
+  // Get AI usage statistics
+  getAiUsageStats: async (days = 30) =>
+    request<{
+      success: boolean;
+      data: {
+        period: string;
+        summary: {
+          totalCalls: number;
+          totalTokens: number;
+          totalCost: number;
+        };
+        byFeature: Record<string, { calls: number; tokens: number; cost: number }>;
+        daily: { date: string; calls: number; cost: number }[];
+      };
+    }>(`/stats/ai-usage?days=${days}`),
+
+  // Get recent learning activity
+  getRecentActivity: async (limit = 20) =>
+    request<{
+      success: boolean;
+      data: {
+        recent: any[];
+        summary: Record<string, number>;
+      };
+    }>(`/stats/recent-activity?limit=${limit}`),
+
+  // ========== Admin Dashboard ==========
+
+  // Get comprehensive admin dashboard data
+  getAdminDashboardStats: async () =>
+    request<{
+      success: boolean;
+      data: {
+        stats: {
+          totalUsers: number;
+          totalInstitutes: number;
+          activeLearnersLast7Days: number;
+          paidUsers: number;
+          monthlyAiCost: number;
+          vocabulary: number;
+          grammar: number;
+          units: number;
+          exams: number;
+        };
+        charts: {
+          userTrend: { date: string; count: number }[];
+          activityHeatmap: { date: string; count: number }[];
+        };
+        aiUsage: {
+          byFeature: Record<string, { calls: number; tokens: number; cost: number }>;
+          daily: { date: string; calls: number; cost: number }[];
+        };
+      };
+    }>('/admin/dashboard/stats'),
+
+  // ========== User Personal Stats ==========
+
+  // Get my personal learning stats (for profile dashboard)
+  getMyStats: async () =>
+    request<{
+      success: boolean;
+      data: {
+        streak: number;
+        todayMinutes: number;
+        dailyGoal: number;
+        wordsToReview: number;
+        totalWordsLearned: number;
+        totalGrammarLearned: number;
+        weeklyActivity: { day: string; minutes: number }[];
+        currentProgress: {
+          instituteName: string;
+          level: number;
+          unit: number;
+          module: string;
+        } | null;
+      };
+    }>('/user/me/stats'),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 

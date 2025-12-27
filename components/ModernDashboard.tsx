@@ -12,6 +12,7 @@ import { useData } from '../contexts/DataContext';
 import { useLearning } from '../contexts/LearningContext';
 import { api } from '../services/api';
 import DailyPhrase from './DailyPhrase';
+import LearnerSummaryCard from './dashboard/LearnerSummaryCard';
 
 // TOPIK 考试日期表 (2026年)
 const TOPIK_EXAMS = [
@@ -356,6 +357,9 @@ export default function ModernDashboard() {
 
                 {/* 3. 右侧侧边栏 (1/3 宽度) */}
                 <div className="space-y-6">
+
+                    {/* TODAY'S LEARNING SUMMARY CARD */}
+                    <LearnerSummaryCard />
 
                     {/* D. 每日目标 */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">

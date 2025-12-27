@@ -12,7 +12,8 @@ import {
   updateProfileAvatar,
   updateProfile,
   changePassword,
-  getUserStats
+  getUserStats,
+  getMyStats
 } from '../controllers/user.controller';
 
 const router = Router();
@@ -20,6 +21,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/stats', getUserStats);
+router.get('/me/stats', getMyStats);
 router.post('/word', saveWord);
 router.post('/mistake', saveMistake);
 router.post('/annotation', saveAnnotation);

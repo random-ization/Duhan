@@ -38,7 +38,7 @@ export const getUnitGrammar = async (req: AuthRequest, res: Response) => {
         }
 
         // Query CourseGrammar with related GrammarPoint
-        const courseGrammarLinks = await prisma.courseGrammar.findMany({
+        const courseGrammarLinks = await (prisma as any).courseGrammar.findMany({
             where: {
                 courseId,
                 unitId: unitIdNum,
@@ -56,7 +56,7 @@ export const getUnitGrammar = async (req: AuthRequest, res: Response) => {
         }
 
         // Get grammar point IDs
-        const grammarPointIds = courseGrammarLinks.map(link => link.grammarId);
+        const grammarPointIds = courseGrammarLinks.map((link: any) => link.grammarId);
 
         // Fetch user progress for these grammar points
         const userProgress = await prisma.userGrammarProgress.findMany({
@@ -72,7 +72,7 @@ export const getUnitGrammar = async (req: AuthRequest, res: Response) => {
         );
 
         // Merge grammar with user progress
-        const data = courseGrammarLinks.map(link => {
+        const data = courseGrammarLinks.map((link: any) => {
             const progress = progressMap.get(link.grammarId);
             return {
                 id: link.grammar.id,
@@ -243,5 +243,240 @@ Output JSON: { "isCorrect": boolean, "feedback": "Brief explanation in Chinese",
         console.error('[Grammar Controller] checkSentence error:', error);
         const message = error instanceof Error ? error.message : 'Unknown error';
         return res.status(500).json({ error: `Failed to check sentence: ${message}` });
+    }
+};
+
+// ========== Admin: Grammar CRUD ==========
+
+/**
+ * GET /api/grammar/search?query=xxx
+ * Search grammar points globally by title or searchKey
+ */
+export const searchGrammar = async (req: AuthRequest, res: Response) => {
+    try {
+        const { query } = req.query;
+
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ error: 'query parameter is required' });
+        }
+
+        const grammars = await (prisma as any).grammarPoint.findMany({
+            where: {
+                OR: [
+                    { title: { contains: query, mode: 'insensitive' } },
+                    { searchKey: { contains: query, mode: 'insensitive' } },
+                    { summary: { contains: query, mode: 'insensitive' } },
+                ]
+            },
+            orderBy: { title: 'asc' },
+            take: 20, // Limit results
+        });
+
+        return res.json({
+            success: true,
+            data: grammars.map((g: any) => ({
+                id: g.id,
+                title: g.title,
+                searchKey: g.searchKey,
+                level: g.level,
+                type: g.type,
+                summary: g.summary,
+            }))
+        });
+    } catch (error) {
+        console.error('[Grammar Controller] searchGrammar error:', error);
+        return res.status(500).json({ error: 'Failed to search grammar' });
+    }
+};
+
+/**
+ * POST /api/grammar
+ * Create a new grammar point (Admin only)
+ */
+export const createGrammar = async (req: AuthRequest, res: Response) => {
+    try {
+        const { title, searchKey, level, type, summary, explanation, conjugationRules, examples } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: 'title is required' });
+        }
+
+        // Generate slug from title
+        const slug = title.toLowerCase()
+            .replace(/[^\w\s가-힣]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+
+        const grammar = await (prisma as any).grammarPoint.create({
+            data: {
+                title,
+                slug,
+                searchKey: searchKey || title,
+                level: level || 'INTERMEDIATE',
+                type: type || 'PATTERN',
+                summary: summary || '',
+                explanation: explanation || '',
+                conjugationRules: conjugationRules || {},
+                examples: examples || [],
+            }
+        });
+
+        console.log(`[Grammar Controller] Created grammar: ${grammar.id} - ${title}`);
+
+        return res.json({
+            success: true,
+            data: grammar
+        });
+    } catch (error) {
+        console.error('[Grammar Controller] createGrammar error:', error);
+        return res.status(500).json({ error: 'Failed to create grammar' });
+    }
+};
+
+/**
+ * PUT /api/grammar/:id
+ * Update a grammar point (Admin only)
+ */
+export const updateGrammar = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { title, searchKey, level, type, summary, explanation, conjugationRules, examples } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ error: 'id is required' });
+        }
+
+        const grammar = await (prisma as any).grammarPoint.update({
+            where: { id },
+            data: {
+                ...(title && { title }),
+                ...(searchKey && { searchKey }),
+                ...(level && { level }),
+                ...(type && { type }),
+                ...(summary !== undefined && { summary }),
+                ...(explanation !== undefined && { explanation }),
+                ...(conjugationRules && { conjugationRules }),
+                ...(examples && { examples }),
+            }
+        });
+
+        console.log(`[Grammar Controller] Updated grammar: ${id}`);
+
+        return res.json({
+            success: true,
+            data: grammar
+        });
+    } catch (error) {
+        console.error('[Grammar Controller] updateGrammar error:', error);
+        return res.status(500).json({ error: 'Failed to update grammar' });
+    }
+};
+
+/**
+ * POST /api/grammar/assign
+ * Assign a grammar point to a course unit (Admin only)
+ * Body: { courseId, unitIndex, grammarId, displayOrder? }
+ */
+export const assignGrammarToUnit = async (req: AuthRequest, res: Response) => {
+    try {
+        const { courseId, unitIndex, grammarId, displayOrder } = req.body;
+
+        if (!courseId || unitIndex === undefined || !grammarId) {
+            return res.status(400).json({ error: 'courseId, unitIndex, and grammarId are required' });
+        }
+
+        const unitNum = parseInt(unitIndex, 10);
+
+        // Check if assignment already exists
+        const existing = await (prisma as any).courseGrammar.findFirst({
+            where: {
+                courseId,
+                unitId: unitNum,
+                grammarId,
+            }
+        });
+
+        if (existing) {
+            // Update display order if provided
+            if (displayOrder !== undefined) {
+                await (prisma as any).courseGrammar.update({
+                    where: { id: existing.id },
+                    data: { displayOrder }
+                });
+            }
+            return res.json({
+                success: true,
+                message: 'Grammar already assigned to this unit',
+                data: existing
+            });
+        }
+
+        // Get max display order for this unit
+        const maxOrder = await (prisma as any).courseGrammar.aggregate({
+            where: { courseId, unitId: unitNum },
+            _max: { displayOrder: true }
+        });
+
+        const newDisplayOrder = displayOrder ?? ((maxOrder._max.displayOrder || 0) + 1);
+
+        const courseGrammar = await (prisma as any).courseGrammar.create({
+            data: {
+                courseId,
+                unitId: unitNum,
+                grammarId,
+                displayOrder: newDisplayOrder,
+            },
+            include: {
+                grammar: true
+            }
+        });
+
+        console.log(`[Grammar Controller] Assigned grammar ${grammarId} to ${courseId}/unit${unitNum}`);
+
+        return res.json({
+            success: true,
+            data: courseGrammar
+        });
+    } catch (error) {
+        console.error('[Grammar Controller] assignGrammarToUnit error:', error);
+        return res.status(500).json({ error: 'Failed to assign grammar to unit' });
+    }
+};
+
+/**
+ * DELETE /api/grammar/courses/:courseId/units/:unitIndex/grammar/:grammarId
+ * Remove a grammar point assignment from a course unit (does not delete the grammar itself)
+ */
+export const removeGrammarFromUnit = async (req: AuthRequest, res: Response) => {
+    try {
+        const { courseId, unitIndex, grammarId } = req.params;
+
+        if (!courseId || !unitIndex || !grammarId) {
+            return res.status(400).json({ error: 'courseId, unitIndex, and grammarId are required' });
+        }
+
+        const unitNum = parseInt(unitIndex, 10);
+
+        const deleted = await (prisma as any).courseGrammar.deleteMany({
+            where: {
+                courseId,
+                unitId: unitNum,
+                grammarId,
+            }
+        });
+
+        if (deleted.count === 0) {
+            return res.status(404).json({ error: 'Grammar assignment not found' });
+        }
+
+        console.log(`[Grammar Controller] Removed grammar ${grammarId} from ${courseId}/unit${unitNum}`);
+
+        return res.json({
+            success: true,
+            message: 'Grammar removed from unit'
+        });
+    } catch (error) {
+        console.error('[Grammar Controller] removeGrammarFromUnit error:', error);
+        return res.status(500).json({ error: 'Failed to remove grammar from unit' });
     }
 };

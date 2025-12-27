@@ -535,3 +535,18 @@ model UserGrammarProgress {
   @@unique([userId, grammarPointId])
   @@index([userId])
 }
+
+// 4. AI Usage Logging (For cost monitoring)
+model AiUsageLog {
+  id           String   @id @default(uuid())
+  feature      String   // e.g., "TEXT_ANALYSIS", "GRAMMAR_CHECK", "TTS"
+  model        String   // e.g., "gpt-4o-mini"
+  inputTokens  Int
+  outputTokens Int
+  cost         Float    // Estimated cost in USD
+  userId       String?  // User who triggered the operation (optional)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([feature])
+}

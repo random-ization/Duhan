@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import VocabDashboard from '../../../components/admin/VocabDashboard';
 import VocabImporter from '../../../components/admin/VocabImporter';
 import { ReadingContentManager } from '../../components/admin/ReadingContentManager';
-import { Book, Database, ArrowLeft, LayoutDashboard, FileSpreadsheet } from 'lucide-react';
+import { GrammarManager } from '../../components/admin/GrammarManager';
+import { InstituteManager } from '../../components/admin/InstituteManager';
+import { DashboardView } from '../../components/admin/DashboardView';
+import { Book, Database, ArrowLeft, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdminPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'vocab' | 'reading'>('reading');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'vocab' | 'reading' | 'grammar' | 'institute'>('dashboard');
     const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
     const navigate = useNavigate();
 
@@ -30,6 +33,26 @@ const AdminPage: React.FC = () => {
             {/* Main Tabs */}
             <div className="flex gap-4 mb-6 border-b-2 border-zinc-200 pb-1">
                 <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'dashboard'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <BarChart3 size={20} />
+                    数据看板
+                </button>
+                <button
+                    onClick={() => setActiveTab('institute')}
+                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'institute'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <Library size={20} />
+                    教材管理
+                </button>
+                <button
                     onClick={() => setActiveTab('reading')}
                     className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'reading'
                         ? 'border-zinc-900 text-zinc-900'
@@ -38,6 +61,16 @@ const AdminPage: React.FC = () => {
                 >
                     <Book size={20} />
                     阅读文章管理
+                </button>
+                <button
+                    onClick={() => setActiveTab('grammar')}
+                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'grammar'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <GraduationCap size={20} />
+                    语法管理
                 </button>
                 <button
                     onClick={() => setActiveTab('vocab')}
@@ -53,8 +86,14 @@ const AdminPage: React.FC = () => {
 
             {/* Content Area */}
             <div>
-                {activeTab === 'reading' ? (
+                {activeTab === 'dashboard' ? (
+                    <DashboardView />
+                ) : activeTab === 'institute' ? (
+                    <InstituteManager />
+                ) : activeTab === 'reading' ? (
                     <ReadingContentManager />
+                ) : activeTab === 'grammar' ? (
+                    <GrammarManager />
                 ) : (
                     <div>
                         {/* Vocab Sub-tabs */}
@@ -93,3 +132,4 @@ const AdminPage: React.FC = () => {
 };
 
 export default AdminPage;
+

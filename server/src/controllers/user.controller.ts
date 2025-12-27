@@ -439,3 +439,28 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to get user stats' });
   }
 };
+
+// Get My Stats (for Learner Dashboard - uses user.service.ts)
+import * as userService from '../services/user.service';
+
+export const getMyStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const [dashboardStats, currentProgress] = await Promise.all([
+      userService.getUserDashboardStats(userId),
+      userService.getCurrentProgress(userId)
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        ...dashboardStats,
+        currentProgress
+      }
+    });
+  } catch (e: unknown) {
+    console.error('Get My Stats Error:', e);
+    res.status(500).json({ error: 'Failed to get user stats' });
+  }
+};

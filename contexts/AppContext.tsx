@@ -2,6 +2,7 @@ import React, { ReactNode, useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { LearningProvider, useLearning } from './LearningContext';
 import { DataProvider, useData } from './DataContext';
+import { LayoutProvider, useLayout } from './LayoutContext';
 
 // Combined Provider that wraps all three contexts
 interface AppProviderProps {
@@ -12,7 +13,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   return (
     <AuthProvider>
       <DataProvider>
-        <LearningProvider>{children}</LearningProvider>
+        <LearningProvider>
+          <LayoutProvider>{children}</LayoutProvider>
+        </LearningProvider>
       </DataProvider>
     </AuthProvider>
   );
@@ -66,5 +69,12 @@ export const useApp = () => {
     saveTextbookContext: data.saveTextbookContext,
     saveTopikExam: data.saveTopikExam,
     deleteTopikExam: data.deleteTopikExam,
+
+    // Layout context
+    isEditing: useLayout().isEditing,
+    toggleEditMode: useLayout().toggleEditMode,
+    cardOrder: useLayout().cardOrder,
+    updateCardOrder: useLayout().updateCardOrder,
+    resetLayout: useLayout().resetLayout,
   };
 };

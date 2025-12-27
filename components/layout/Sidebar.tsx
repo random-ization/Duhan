@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Settings, LogOut, ShieldCheck, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import { Settings, LogOut, ShieldCheck, ChevronLeft, ChevronRight, FileSpreadsheet, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useApp } from '../../contexts/AppContext';
 
 // Helper for 3D Icons
 const EmojiIcon = ({ src, grayscale = false }: { src: string, grayscale?: boolean }) => (
@@ -10,6 +11,7 @@ const EmojiIcon = ({ src, grayscale = false }: { src: string, grayscale?: boolea
 
 export default function Sidebar() {
     const { logout, user } = useAuth();
+    const { isEditing, toggleEditMode } = useApp(); // Get layout context
     const location = useLocation();
     const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(true);
@@ -119,11 +121,20 @@ export default function Sidebar() {
             {/* Bottom Actions */}
             <div className={`p-4 border-t-2 border-slate-100 flex ${collapsed ? 'flex-col' : ''} gap-2`}>
                 <button
-                    onClick={() => navigate('/profile')}
-                    title="设置"
-                    className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition border-2 border-transparent hover:border-slate-100`}
+                    onClick={() => {
+                        if (location.pathname === '/dashboard') {
+                            toggleEditMode();
+                        } else {
+                            navigate('/profile');
+                        }
+                    }}
+                    title={location.pathname === '/dashboard' && isEditing ? "完成编辑" : "设置"}
+                    className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${location.pathname === '/dashboard' && isEditing
+                            ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+                            : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
+                        } transition border-2`}
                 >
-                    <Settings size={20} />
+                    {location.pathname === '/dashboard' && isEditing ? <Check size={20} /> : <Settings size={20} />}
                 </button>
                 <button
                     onClick={logout}

@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LRUCache } from 'lru-cache';
 import { checkFileExists, uploadJSON, downloadJSON } from './storage.service';
 import OpenAI from 'openai';
+import { prisma } from '../lib/prisma';
 
 // L1 内存缓存：最大 100 条，1 小时 TTL
 const cache = new LRUCache<string, any>({
@@ -296,6 +297,30 @@ Return a JSON object with a "tokens" key containing an array of:
         if (!content) {
             console.error('[AI] Empty response from OpenAI');
             return null;
+        }
+
+        // 📊 Log AI usage for cost monitoring
+        const usage = completion.usage;
+        if (usage) {
+            const inputCost = (usage.prompt_tokens / 1_000_000) * 0.15;  // $0.15 per 1M input tokens
+            const outputCost = (usage.completion_tokens / 1_000_000) * 0.60;  // $0.60 per 1M output tokens
+            const totalCost = inputCost + outputCost;
+
+            try {
+                await (prisma as any).aiUsageLog.create({
+                    data: {
+                        feature: 'TEXT_ANALYSIS',
+                        model: 'gpt-4o-mini',
+                        inputTokens: usage.prompt_tokens,
+                        outputTokens: usage.completion_tokens,
+                        cost: totalCost
+                    }
+                });
+                console.log(`[AI Usage] TEXT_ANALYSIS | ${usage.prompt_tokens + usage.completion_tokens} tokens | $${totalCost.toFixed(6)}`);
+            } catch (logError) {
+                console.error('[AI Usage] Failed to log:', logError);
+                // Don't fail the main operation if logging fails
+            }
         }
 
         const result = JSON.parse(content);
