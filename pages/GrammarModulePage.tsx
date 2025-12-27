@@ -1,60 +1,74 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
 import UnitSidebar from '../components/grammar/UnitSidebar';
 import GrammarFeed from '../components/grammar/GrammarFeed';
 import GrammarDetailSheet from '../components/grammar/GrammarDetailSheet';
-import { GrammarPointData, UnitGrammarData } from '../types';
+import { GrammarPointData } from '../types';
 
 const GrammarModulePage: React.FC = () => {
     const { instituteId } = useParams<{ instituteId: string }>();
     const navigate = useNavigate();
 
-    const [groupedData, setGroupedData] = useState<UnitGrammarData>({});
+    const [grammarList, setGrammarList] = useState<GrammarPointData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+    const [selectedUnit, setSelectedUnit] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
     const [instituteName, setInstituteName] = useState('');
+    const [totalUnits, setTotalUnits] = useState<number>(10); // Default to 10 units
+
+    // Load grammar for the selected unit
+    useEffect(() => {
+        loadUnitGrammar();
+    }, [instituteId, selectedUnit]);
 
     useEffect(() => {
-        loadGrammarPoints();
         setInstituteName(decodeURIComponent(instituteId || ''));
     }, [instituteId]);
 
-    const loadGrammarPoints = async () => {
+    const loadUnitGrammar = async () => {
         if (!instituteId) return;
         setIsLoading(true);
         try {
-            const data = await api.getGrammarPoints(instituteId);
-            setGroupedData(data);
-            // Auto-select first unit
-            const units = Object.keys(data);
-            if (units.length > 0 && !selectedUnit) {
-                setSelectedUnit(units[0]);
-            }
+            const response = await api.getUnitGrammar(instituteId, selectedUnit);
+            setGrammarList(response.data || []);
         } catch (error) {
             console.error('Failed to load grammar points:', error);
+            setGrammarList([]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Handle proficiency update from the detail sheet
+    const handleProficiencyUpdate = (grammarId: string, proficiency: number, status: string) => {
+        // Update local state (Optimistic UI)
+        setGrammarList(prev =>
+            prev.map(point =>
+                point.id === grammarId
+                    ? { ...point, proficiency, status: status as any }
+                    : point
+            )
+        );
+
+        // Also update the selected grammar if it's the same
+        if (selectedGrammar?.id === grammarId) {
+            setSelectedGrammar(prev =>
+                prev ? { ...prev, proficiency, status: status as any } : null
+            );
         }
     };
 
     const handleToggleStatus = async (grammarId: string) => {
         try {
             const updated = await api.toggleGrammarStatus(grammarId);
-
-            setGroupedData(prev => {
-                const newData = { ...prev };
-                Object.keys(newData).forEach(unitKey => {
-                    newData[unitKey] = newData[unitKey].map(point =>
-                        point.id === grammarId ? { ...point, status: updated.status } : point
-                    );
-                });
-                return newData;
-            });
-
+            setGrammarList(prev =>
+                prev.map(point =>
+                    point.id === grammarId ? { ...point, status: updated.status as any } : point
+                )
+            );
             if (selectedGrammar?.id === grammarId) {
                 setSelectedGrammar(prev => prev ? { ...prev, status: updated.status as any } : null);
             }
@@ -63,34 +77,22 @@ const GrammarModulePage: React.FC = () => {
         }
     };
 
-    // Derived State
+    // Filtered points based on search
     const displayedPoints = useMemo(() => {
-        let points: GrammarPointData[] = [];
+        if (!searchQuery.trim()) return grammarList;
+        const q = searchQuery.toLowerCase();
+        return grammarList.filter(p =>
+            p.title.toLowerCase().includes(q) ||
+            p.summary.toLowerCase().includes(q)
+        );
+    }, [grammarList, searchQuery]);
 
-        if (selectedUnit) {
-            points = groupedData[selectedUnit] || [];
-        } else {
-            Object.values(groupedData).forEach(unitPoints => {
-                points.push(...unitPoints);
-            });
-        }
+    // Generate unit list for sidebar
+    const unitList = useMemo(() => {
+        return Array.from({ length: totalUnits }, (_, i) => `Unit ${i + 1}: 第${i + 1}课`);
+    }, [totalUnits]);
 
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            points = points.filter(p =>
-                p.title.toLowerCase().includes(q) ||
-                p.summary.toLowerCase().includes(q)
-            );
-        }
-
-        return points;
-    }, [groupedData, selectedUnit, searchQuery]);
-
-    const unitList = Object.keys(groupedData).sort((a, b) => {
-        return a.localeCompare(b, undefined, { numeric: true });
-    });
-
-    if (isLoading) {
+    if (isLoading && grammarList.length === 0) {
         return (
             <div className="min-h-screen bg-slate-100 flex items-center justify-center" style={{
                 backgroundImage: 'radial-gradient(#CBD5E1 1.5px, transparent 1.5px)',
@@ -135,25 +137,33 @@ const GrammarModulePage: React.FC = () => {
 
                 {/* Main Content */}
                 <div className="flex-1 flex gap-6 overflow-hidden">
-                    {/* Left Sidebar */}
+                    {/* Left Sidebar - Unit Selector */}
                     <UnitSidebar
                         units={unitList}
-                        selectedUnit={selectedUnit}
-                        onSelectUnit={setSelectedUnit}
+                        selectedUnit={`Unit ${selectedUnit}: 第${selectedUnit}课`}
+                        onSelectUnit={(unitStr) => {
+                            // Parse "Unit X: ..." to get the unit number
+                            const match = unitStr.match(/Unit (\d+)/);
+                            if (match) {
+                                setSelectedUnit(parseInt(match[1], 10));
+                                setSelectedGrammar(null); // Clear selection when changing units
+                            }
+                        }}
                     />
 
                     {/* Center Feed */}
                     <GrammarFeed
                         grammarPoints={displayedPoints}
-                        selectedUnit={selectedUnit}
+                        selectedUnit={`Unit ${selectedUnit}`}
                         onSelect={setSelectedGrammar}
                         onToggleStatus={handleToggleStatus}
                     />
 
-                    {/* Right Detail Panel (Always Visible) */}
+                    {/* Right Detail Panel */}
                     <GrammarDetailSheet
                         grammar={selectedGrammar}
                         onClose={() => setSelectedGrammar(null)}
+                        onProficiencyUpdate={handleProficiencyUpdate}
                     />
                 </div>
             </div>

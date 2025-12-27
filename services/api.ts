@@ -502,15 +502,39 @@ export const api = {
   getGrammarPoints: async (courseId: string) =>
     request<any>(`/courses/${courseId}/grammar`),
 
+  // New: Get grammar for a specific unit (uses new CourseGrammar architecture)
+  getUnitGrammar: async (courseId: string, unitId: number) =>
+    request<{ data: any[] }>(`/grammar/courses/${courseId}/units/${unitId}/grammar`),
+
   toggleGrammarStatus: async (grammarId: string) =>
     request<{ id: string; status: string; lastReviewed: string }>(`/grammar/${grammarId}/toggle`, {
       method: 'POST'
     }),
 
+  // Legacy: Old AI check
   checkGrammar: async (sentence: string, grammarId: string) =>
     request<any>('/grammar/ai-check', {
       method: 'POST',
       body: JSON.stringify({ sentence, grammarId })
+    }),
+
+  // New: AI sentence check with proficiency tracking
+  checkGrammarSentence: async (grammarId: string, userSentence: string) =>
+    request<{
+      success: boolean;
+      data: {
+        isCorrect: boolean;
+        feedback: string;
+        correctedSentence?: string;
+        progress: {
+          proficiency: number;
+          status: string;
+          lastReviewed: string;
+        };
+      };
+    }>(`/grammar/${grammarId}/check`, {
+      method: 'POST',
+      body: JSON.stringify({ userSentence })
     }),
 
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入

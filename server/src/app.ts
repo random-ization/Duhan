@@ -14,6 +14,7 @@ import notebookRoutes from './routes/notebook.routes';
 import videoRoutes from './routes/video.routes';
 import podcastRoutes from './routes/podcast.routes';
 import vocabRoutes from './routes/vocab.routes';
+import grammarRoutes from './routes/grammar.routes';
 
 const app = express();
 
@@ -50,6 +51,8 @@ app.use('/api/podcasts', podcastRoutes);
 console.log('[Server] /api/podcasts registered');
 app.use('/api/vocab', vocabRoutes);
 console.log('[Server] /api/vocab registered');
+app.use('/api/grammar', grammarRoutes);
+console.log('[Server] /api/grammar registered');
 
 // Health Check
 app.get('/health', (req, res) => {

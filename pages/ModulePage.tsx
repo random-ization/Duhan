@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import VocabModule from '../components/vocab';
-import ReadingModule from '../src/features/textbook/LegacyReadingModule';
+import ReadingModule from '../src/features/textbook/ReadingModule';
 import ListeningModule from '../components/ListeningModule';
 import GrammarModule from '../components/GrammarModule';
 import { useAuth } from '../contexts/AuthContext';
@@ -176,14 +176,8 @@ const ModulePage: React.FC = () => {
       )}
       {currentModule === LearningModuleType.READING && (
         <ReadingModule
-          course={currentCourse}
-          instituteName={instituteName}
-          onSaveWord={saveWord}
-          onSaveAnnotation={saveAnnotation}
-          savedWordKeys={(user.savedWords || []).map(w => w.korean)}
-          annotations={user.annotations || []}
-          language={language}
-          levelContexts={currentLevelContexts}
+          unitTitle={`第${effectiveLevel}单元`}
+          onBack={handleBack}
         />
       )}
       {currentModule === LearningModuleType.LISTENING && (

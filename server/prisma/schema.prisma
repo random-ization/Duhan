@@ -443,39 +443,59 @@ model UserWordProgress {
   @@unique([userId, wordId])
 }
 
-// ========== Grammar Training System ==========
+// ========== Grammar Training System (Global Knowledge Graph) ==========
 
+// 1. Global Master Grammar Library (Source of Truth)
 model GrammarPoint {
-  id          String   @id @default(uuid())
-  courseId    String   // Link to the specific Textbook/Course (Institute ID)
-  unitId      Int      // e.g., 1 (for Unit 1)
-  unitTitle   String   // e.g., "Introduction"
+  id               String   @id @default(uuid())
+  title            String   @unique // e.g., "-고 싶다" (Unique Identifier)
+  slug             String?  // e.g., "go-sip-da"
   
-  title       String   // e.g., "-입니다"
-  summary     String   // Short description for the card
-  type        String   // e.g., "ENDING" (终结词尾), "PARTICLE" (助词)
+  level            String   // "TOPIK 1", "TOPIK 2"
+  type             String   // "ENDING", "PARTICLE", "CONNECTIVE"
+  summary          String   // e.g., "表示愿望，想做..."
   
-  // Rich Content
-  explanation String   // Detailed markdown explanation
-  construction Json    // e.g., { "noun": "Directly add", "verb": "..." }
-  examples    Json     // Array of { kr: string, cn: string, audio?: string }
+  explanation      String   // Markdown content
+  conjugationRules Json     // e.g., { "verb": { "hasBatchim": "...", "noBatchim": "..." } }
+  examples         Json     // Array of { kr, cn, audio? }
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   
-  userProgress UserGrammarProgress[]
+  // Relations
+  courseRefs       CourseGrammar[]
+  userProgress     UserGrammarProgress[]
+}
 
+// 2. Course-Grammar Relation (The Connector)
+model CourseGrammar {
+  id           String @id @default(uuid())
+  courseId     String // Foreign Key to Course/Textbook (Institute.id)
+  unitId       Int    // e.g., 1 (Unit 1)
+  
+  grammarId    String
+  grammar      GrammarPoint @relation(fields: [grammarId], references: [id])
+  
+  displayOrder Int       // Order within the unit (1, 2, 3)
+  customNote   String?   // Optional override/note for this specific course
+  
+  @@unique([courseId, unitId, grammarId]) // Prevent duplicates in same unit
   @@index([courseId, unitId])
 }
 
+// 3. User Progress (Bound to Master Grammar)
 model UserGrammarProgress {
   id             String       @id @default(uuid())
   userId         String
-  grammarPointId String
-  grammarPoint   GrammarPoint @relation(fields: [grammarPointId], references: [id], onDelete: Cascade)
   
-  status         String       @default("NEW") // NEW, LEARNING, MASTERED
+  grammarPointId String
+  grammar        GrammarPoint @relation(fields: [grammarPointId], references: [id])
+  
+  status         String   @default("NEW") // NEW, LEARNING, MASTERED
+  proficiency    Int      @default(0)     // 0-100
+  
   lastReviewed   DateTime?
+  mistakeHistory Json?    // Array of error logs
   
   @@unique([userId, grammarPointId])
   @@index([userId])

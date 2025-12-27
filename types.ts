@@ -417,12 +417,20 @@ export interface SentenceAnalysis {
 export interface GrammarPointData {
   id: string;
   title: string;
+  slug?: string;
+  level?: string;  // "TOPIK 1", "TOPIK 2"
   summary: string;
-  type: string; // "ENDING", "PARTICLE", etc.
+  type: string; // "ENDING", "PARTICLE", "CONNECTIVE"
   explanation: string;
-  construction: Record<string, string>; // e.g., { noun: "...", verb: "..." }
+  construction?: Record<string, string>; // Legacy field
+  conjugationRules?: any; // New: flexible rules object
   examples: { kr: string; cn: string; audio?: string }[];
+  displayOrder?: number;
+  customNote?: string;
+  // User progress
   status?: 'NEW' | 'LEARNING' | 'MASTERED';
+  proficiency?: number; // 0-100
+  lastReviewed?: string | null;
 }
 
 export interface UnitGrammarData {
