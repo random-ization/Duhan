@@ -16,8 +16,7 @@ const ModulePage = lazy(() => import('./pages/ModulePage'));
 const VocabModulePage = lazy(() => import('./pages/VocabModulePage'));
 const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
 const TopikPage = lazy(() => import('./pages/TopikPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const AdminVocabPage = lazy(() => import('./pages/AdminVocabPage'));
+const AdminPage = lazy(() => import('./src/features/admin/AdminPage'));
 const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
@@ -153,7 +152,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         <Route element={<ProtectedRoute requireAdmin={true} />}>
           <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/vocab" element={<AdminVocabPage />} />
             <Route path="/admin/:tab" element={<AdminPage />} />
           </Route>
         </Route>

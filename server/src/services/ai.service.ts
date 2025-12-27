@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LRUCache } from 'lru-cache';
 import { checkFileExists, uploadJSON, downloadJSON } from './storage.service';
+import OpenAI from 'openai';
 
 // L1 内存缓存：最大 100 条，1 小时 TTL
 const cache = new LRUCache<string, any>({
@@ -11,6 +12,21 @@ const cache = new LRUCache<string, any>({
 
 // Gemini 客户端
 let genAI: GoogleGenerativeAI | null = null;
+
+// OpenAI 客户端 (Lazy initialization)
+let openaiClient: OpenAI | null = null;
+
+const getOpenAI = (): OpenAI | null => {
+    if (!openaiClient) {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.warn('[AI] OPENAI_API_KEY is not configured');
+            return null;
+        }
+        openaiClient = new OpenAI({ apiKey });
+    }
+    return openaiClient;
+};
 
 const getGenAI = () => {
     if (!genAI) {
@@ -210,4 +226,87 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting. All text values must 
     return { ...analysisResult, cached: false };
 };
 
+// ========== Korean Text Structure Analysis (Lemmatization) ==========
 
+export interface TextToken {
+    surface: string;  // The exact word as it appears in text (e.g., "갔습니다")
+    base: string;     // Dictionary form (e.g., "가다")
+    offset: number;   // Start index in original text
+    length: number;   // Length of the token
+    pos: string;      // Part of speech (e.g., "Verb", "Noun")
+}
+
+/**
+ * Analyze Korean text structure using GPT-4o-mini
+ * Performs morphological analysis (lemmatization) to identify base forms of words
+ * 
+ * @param text - Korean text to analyze
+ * @returns Array of tokens with surface form, base form, offset, length and POS
+ */
+export const analyzeTextStructure = async (text: string): Promise<TextToken[] | null> => {
+    const client = getOpenAI();
+    if (!client) {
+        console.log('[AI] OpenAI client not available, skipping text analysis');
+        return null;
+    }
+
+    // Skip analysis for very short texts
+    if (!text || text.trim().length < 10) {
+        console.log('[AI] Text too short for analysis');
+        return null;
+    }
+
+    console.log(`[AI] Analyzing text structure (${text.length} chars)...`);
+
+    try {
+        const completion = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a Korean linguistics expert. Analyze the provided text for language learners.
+
+Task: Perform morphological analysis (Lemmatization).
+1. Break down the text into meaningful tokens (words, particles, endings).
+2. For verbs/adjectives, identify their dictionary base form (Lemma).
+3. Calculate the precise 'offset' (0-based start index) and 'length' of each token in the original string.
+
+IMPORTANT: 
+- Be precise with offset calculations - count exact character positions
+- Include spaces in your offset calculations
+- Only return tokens that are meaningful for language learning (skip punctuation, spaces)
+
+Return a JSON object with a "tokens" key containing an array of:
+{ 
+  "surface": string (the exact word in text, e.g., "갔습니다"), 
+  "base": string (dictionary form, e.g., "가다"), 
+  "offset": number (0-based index), 
+  "length": number (character length of surface form), 
+  "pos": string (e.g., "Verb", "Noun", "Adjective", "Particle", "Adverb", "Pronoun", "Number", "Determiner") 
+}`
+                },
+                { role: "user", content: text }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0,
+            max_tokens: 4000
+        });
+
+        const content = completion.choices[0].message.content;
+        if (!content) {
+            console.error('[AI] Empty response from OpenAI');
+            return null;
+        }
+
+        const result = JSON.parse(content);
+        const tokens = result.tokens || [];
+
+        console.log(`[AI] Text analysis complete: ${tokens.length} tokens found`);
+        return tokens;
+
+    } catch (error) {
+        console.error('[AI] Text structure analysis failed:', error);
+        // Don't throw - return null to allow save to continue
+        return null;
+    }
+};

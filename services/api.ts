@@ -537,8 +537,151 @@ export const api = {
       body: JSON.stringify({ userSentence })
     }),
 
+  // ========== Reading Module (Unit Learning Data) ==========
+
+  // Get aggregated unit data (article + vocab + grammar + annotations)
+  getUnitLearningData: async (courseId: string, unitIndex: number) =>
+    request<{
+      success: boolean;
+      data: {
+        unit: {
+          id: string;
+          title: string;
+          text: string;
+          translation?: string;
+          audioUrl?: string;
+          analysisData?: {
+            surface: string;  // Conjugated form (e.g., "갔습니다")
+            base: string;     // Dictionary form (e.g., "가다")
+            offset: number;
+            length: number;
+            pos: string;
+          }[];
+        } | null;
+        vocabList: {
+          id: string;
+          korean: string;
+          meaning: string;
+          pronunciation?: string;
+          hanja?: string;
+          pos?: string;
+          audioUrl?: string;
+          exampleSentence?: string;
+          exampleMeaning?: string;
+        }[];
+        grammarList: {
+          id: string;
+          title: string;
+          type: string;
+          summary: string;
+          explanation: string;
+          conjugationRules: any;
+          examples: any;
+        }[];
+        annotations: {
+          id: string;
+          startOffset?: number;
+          endOffset?: number;
+          text: string;
+          color?: string;
+          note?: string;
+          createdAt: string;
+        }[];
+        meta: {
+          courseId: string;
+          unitIndex: number;
+          vocabCount: number;
+          grammarCount: number;
+          annotationCount: number;
+        };
+      };
+    }>(`/courses/${courseId}/units/${unitIndex}`),
+
+  // Save annotation for unit reading
+  saveUnitAnnotation: async (courseId: string, unitIndex: number, annotation: {
+    startOffset?: number;
+    endOffset?: number;
+    text: string;
+    color?: string;
+    note?: string;
+  }) =>
+    request<{ success: boolean; data: any }>(`/courses/${courseId}/units/${unitIndex}/annotation`, {
+      method: 'POST',
+      body: JSON.stringify(annotation)
+    }),
+
+  // Delete annotation
+  deleteUnitAnnotation: async (courseId: string, unitIndex: number, annotationId: string) =>
+    request<{ success: boolean }>(`/courses/${courseId}/units/${unitIndex}/annotation/${annotationId}`, {
+      method: 'DELETE'
+    }),
+
+  // ========== Admin: Unit Content Management ==========
+
+  // Save/Update unit content (triggers AI analysis on backend)
+  saveUnitContent: async (data: {
+    courseId: string;
+    unitIndex: number;
+    title: string;
+    readingText: string;
+    translation?: string;
+    audioUrl?: string;
+  }) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        courseId: string;
+        unitIndex: number;
+        title: string;
+        hasAnalysis: boolean;
+        tokenCount: number;
+      };
+    }>(`/courses/${data.courseId}/units/${data.unitIndex}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: data.title,
+        readingText: data.readingText,
+        translation: data.translation,
+        audioUrl: data.audioUrl,
+      })
+    }),
+
+  // Re-run AI analysis on existing unit
+  reanalyzeUnit: async (courseId: string, unitIndex: number) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        tokenCount: number;
+        tokens: {
+          surface: string;
+          base: string;
+          offset: number;
+          length: number;
+          pos: string;
+        }[];
+      };
+    }>(`/courses/${courseId}/units/${unitIndex}/analyze`, {
+      method: 'POST'
+    }),
+
+  // Get all units for a course (for admin list view)
+  getUnitsForCourse: async (courseId: string) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        unitIndex: number;
+        title: string;
+        hasContent: boolean;
+        hasAnalysis: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }[];
+    }>(`/courses/${courseId}/units`),
+
   // 其余 api 方法按需添加，务必使用上面的 request(...) 以确保 Authorization 被正确注入
 };
 
 export default api; // 如果项目里有使用 default import 的地方，保留 default 导出；否则可删
-

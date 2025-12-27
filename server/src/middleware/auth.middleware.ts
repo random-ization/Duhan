@@ -54,3 +54,33 @@ export const requireAdmin = (
 
   next();
 };
+
+/**
+ * Optional authentication middleware.
+ * Attaches user to request if valid token exists, but doesn't require it.
+ * Useful for endpoints that return different data for authenticated vs anonymous users.
+ */
+export const optionalAuth = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    // No token - proceed without user
+    next();
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    req.user = decoded;
+  } catch (error) {
+    // Invalid token - proceed without user (don't reject)
+  }
+
+  next();
+};

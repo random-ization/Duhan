@@ -12,8 +12,10 @@ import {
     Sparkles,
     Send,
     X,
-    ChevronDown
+    ChevronDown,
+    Loader2
 } from 'lucide-react';
+import api from '../../../services/api';
 
 // =========================================
 // Types
@@ -43,40 +45,54 @@ interface Highlight {
     endOffset: number;
 }
 
-interface Article {
-    id: string;
-    title: string;
-    content: string;
+// API Response Types
+interface TextToken {
+    surface: string;  // Conjugated form (e.g., "갔습니다")
+    base: string;     // Dictionary form (e.g., "가다")
+    offset: number;
+    length: number;
+    pos: string;
 }
 
-// =========================================
-// Mock Data
-// =========================================
-const MOCK_ARTICLES: Article[] = [
-    {
-        id: '1',
-        title: '자기 소개',
-        content: `안녕하세요. 저는 김민수입니다. 저는 한국 사람입니다. 서울에서 왔습니다.
+interface UnitData {
+    id: string;
+    title: string;
+    text: string;
+    translation?: string;
+    audioUrl?: string;
+    analysisData?: TextToken[];
+}
 
-저는 대학생입니다. 서울대학교에서 컴퓨터 공학을 공부합니다. 올해 스물두 살입니다.
+interface VocabItem {
+    id: string;
+    korean: string;
+    meaning: string;
+    pronunciation?: string;
+    hanja?: string;
+    pos?: string;
+    exampleSentence?: string;
+    exampleMeaning?: string;
+}
 
-취미는 음악 듣기와 영화 보기입니다. 특히 한국 영화를 좋아합니다. 주말에는 친구들과 카페에서 만납니다.
+interface GrammarItem {
+    id: string;
+    title: string;
+    type: string;
+    summary: string;
+    explanation: string;
+}
 
-한국어를 배우는 것은 재미있습니다. 매일 열심히 공부합니다. 감사합니다.`
-    },
-    {
-        id: '2',
-        title: '나의 하루',
-        content: `저는 매일 아침 7시에 일어납니다. 먼저 세수를 하고 아침을 먹습니다.
+interface AnnotationItem {
+    id: string;
+    startOffset?: number;
+    endOffset?: number;
+    text: string;
+    color?: string;
+    note?: string;
+    createdAt: string;
+}
 
-8시에 학교에 갑니다. 버스로 30분 정도 걸립니다. 오전에는 수업을 듣습니다.
-
-점심은 학교 식당에서 먹습니다. 오후에는 도서관에서 공부합니다.
-
-저녁에는 집에서 가족과 함께 밥을 먹습니다. 밤에는 텔레비전을 보거나 책을 읽습니다. 보통 11시에 잡니다.`
-    }
-];
-
+// Legacy mock data (fallback)
 const MOCK_VOCAB: Record<string, string> = {
     '안녕하세요': '你好',
     '저는': '我是',
@@ -84,20 +100,23 @@ const MOCK_VOCAB: Record<string, string> = {
     '사람': '人',
     '서울': '首尔',
     '대학생': '大学生',
-    '공부합니다': '学习',
+    '공부하다': '学习',
+    '가다': '去',
+    '오다': '来',
+    '먹다': '吃',
     '취미': '爱好',
     '음악': '音乐',
     '영화': '电影',
-    '좋아합니다': '喜欢',
+    '좋아하다': '喜欢',
     '주말': '周末',
     '친구': '朋友',
     '카페': '咖啡厅',
-    '재미있습니다': '有趣',
+    '재미있다': '有趣',
     '매일': '每天',
     '열심히': '努力地',
-    '감사합니다': '谢谢',
+    '감사하다': '感谢',
     '아침': '早上',
-    '일어납니다': '起床',
+    '일어나다': '起床',
     '학교': '学校',
     '버스': '公交车',
     '수업': '课',
@@ -108,7 +127,7 @@ const MOCK_VOCAB: Record<string, string> = {
     '가족': '家人',
     '밥': '饭',
     '책': '书',
-    '잡니다': '睡觉'
+    '자다': '睡觉'
 };
 
 // =========================================
@@ -346,38 +365,51 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 // Main Component
 // =========================================
 interface ReadingModuleProps {
+    courseId?: string;
+    unitIndex?: number;
     unitTitle?: string;
     onBack?: () => void;
 }
 
 const ReadingModule: React.FC<ReadingModuleProps> = ({
+    courseId = 'snu_1a',
+    unitIndex = 1,
     unitTitle = '第1单元: 自我介绍',
     onBack
 }) => {
-    // State
-    const [activeArticle, setActiveArticle] = useState(0);
+    // Loading state
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // API data state
+    const [unitData, setUnitData] = useState<UnitData | null>(null);
+    const [vocabList, setVocabList] = useState<VocabItem[]>([]);
+    const [grammarList, setGrammarList] = useState<GrammarItem[]>([]);
+    const [annotations, setAnnotations] = useState<AnnotationItem[]>([]);
+
+    // UI State
     const [fontSize, setFontSize] = useState(18);
     const [isSerif, setIsSerif] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
 
-    const [savedWords, setSavedWords] = useState<SavedWord[]>([
-        { id: '1', word: '안녕하세요', meaning: '你好', timestamp: Date.now() - 3600000 },
-        { id: '2', word: '감사합니다', meaning: '谢谢', timestamp: Date.now() - 1800000 }
-    ]);
-    const [notes, setNotes] = useState<Note[]>([
-        { id: '1', text: '저는 대학생입니다', comment: '这是"我是大学生"的意思，저는表示"我"', color: 'yellow', startOffset: 50, endOffset: 62, timestamp: Date.now() - 7200000 }
-    ]);
-    const [highlights, setHighlights] = useState<Highlight[]>([
-        { id: '1', text: '컴퓨터 공학', color: 'green', startOffset: 85, endOffset: 92 }
-    ]);
+    // Local word list (user's saved words for this session)
+    const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [highlights, setHighlights] = useState<Highlight[]>([]);
 
     // Selection & Popover state
-    const [selectedWord, setSelectedWord] = useState<{ word: string; meaning: string; position: { x: number; y: number } } | null>(null);
+    const [selectedWord, setSelectedWord] = useState<{
+        word: string;
+        meaning: string;
+        baseForm?: string;
+        position: { x: number; y: number };
+        isFromVocabList: boolean;
+    } | null>(null);
     const [selectionToolbar, setSelectionToolbar] = useState<{ text: string; position: { x: number; y: number }; range: Range } | null>(null);
     const [noteModal, setNoteModal] = useState<{ text: string; startOffset: number; endOffset: number } | null>(null);
 
     // Right panel tab
-    const [activeTab, setActiveTab] = useState<'notes' | 'vocab' | 'ai'>('notes');
+    const [activeTab, setActiveTab] = useState<'notes' | 'vocab' | 'grammar' | 'ai'>('vocab');
     const [aiInput, setAiInput] = useState('');
     const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
         { role: 'ai', content: '你好！我是你的AI助教。有什么语法问题想问我吗？' }
@@ -385,21 +417,151 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
     const readerRef = useRef<HTMLDivElement>(null);
 
-    // Handle word click
+    // ========================================
+    // Data Fetching
+    // ========================================
+    useEffect(() => {
+        const fetchUnitData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await api.getUnitLearningData(courseId, unitIndex);
+                if (response.success && response.data) {
+                    setUnitData(response.data.unit);
+                    setVocabList(response.data.vocabList || []);
+                    setGrammarList(response.data.grammarList || []);
+
+                    // Convert API annotations to local format
+                    const apiAnnotations = response.data.annotations || [];
+                    setAnnotations(apiAnnotations);
+
+                    // Also populate notes/highlights from annotations
+                    const notesFromApi = apiAnnotations
+                        .filter((a: AnnotationItem) => a.note)
+                        .map((a: AnnotationItem) => ({
+                            id: a.id,
+                            text: a.text,
+                            comment: a.note || '',
+                            color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+                            startOffset: a.startOffset || 0,
+                            endOffset: a.endOffset || 0,
+                            timestamp: new Date(a.createdAt).getTime()
+                        }));
+                    setNotes(notesFromApi);
+
+                    const highlightsFromApi = apiAnnotations
+                        .filter((a: AnnotationItem) => a.color && !a.note)
+                        .map((a: AnnotationItem) => ({
+                            id: a.id,
+                            text: a.text,
+                            color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+                            startOffset: a.startOffset || 0,
+                            endOffset: a.endOffset || 0
+                        }));
+                    setHighlights(highlightsFromApi);
+                }
+            } catch (err) {
+                console.error('[ReadingModule] Failed to fetch unit data:', err);
+                setError('加载失败，请重试');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUnitData();
+    }, [courseId, unitIndex]);
+
+    // ========================================
+    // Smart Word Lookup: Find base form using analysisData
+    // ========================================
+    const findBaseForm = useCallback((clickedWord: string, charIndex?: number): { base: string; surface: string } | null => {
+        if (!unitData?.analysisData) return null;
+
+        const tokens = unitData.analysisData;
+
+        // Strategy 1: Try to find by exact surface match
+        const exactMatch = tokens.find(t => t.surface === clickedWord);
+        if (exactMatch) {
+            return { base: exactMatch.base, surface: exactMatch.surface };
+        }
+
+        // Strategy 2: If we have character index, find token containing that position
+        if (charIndex !== undefined) {
+            const tokenAtPosition = tokens.find(t =>
+                charIndex >= t.offset && charIndex < t.offset + t.length
+            );
+            if (tokenAtPosition) {
+                return { base: tokenAtPosition.base, surface: tokenAtPosition.surface };
+            }
+        }
+
+        // Strategy 3: Find token where surface contains the clicked word
+        const partialMatch = tokens.find(t => t.surface.includes(clickedWord));
+        if (partialMatch) {
+            return { base: partialMatch.base, surface: partialMatch.surface };
+        }
+
+        return null;
+    }, [unitData]);
+
+    // ========================================
+    // Look up word in vocab list (by base form)
+    // ========================================
+    const lookupInVocabList = useCallback((word: string): VocabItem | null => {
+        // Direct match
+        const directMatch = vocabList.find(v => v.korean === word);
+        if (directMatch) return directMatch;
+
+        // Try removing common endings for verb/adj lookup
+        const endings = ['다', '요', '습니다', '습니까', '세요', '어요', '아요'];
+        for (const ending of endings) {
+            if (word.endsWith(ending)) {
+                const stem = word.slice(0, -ending.length);
+                const stemMatch = vocabList.find(v =>
+                    v.korean === stem + '다' || v.korean.startsWith(stem)
+                );
+                if (stemMatch) return stemMatch;
+            }
+        }
+
+        return null;
+    }, [vocabList]);
+
+    // ========================================
+    // Handle word click - Smart lookup logic
+    // ========================================
     const handleWordClick = useCallback((e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
         if (target.dataset.word) {
-            const word = target.dataset.word;
-            const meaning = MOCK_VOCAB[word] || '暂无释义';
+            const clickedWord = target.dataset.word;
+            const charIndex = target.dataset.offset ? parseInt(target.dataset.offset, 10) : undefined;
             const rect = target.getBoundingClientRect();
+
+            // Step 1: Try to find base form using AI analysis
+            const tokenInfo = findBaseForm(clickedWord, charIndex);
+            const baseForm = tokenInfo?.base || clickedWord;
+
+            // Step 2: Look up in vocab list using base form
+            let vocabMatch = lookupInVocabList(baseForm);
+
+            // Fallback: Try original clicked word
+            if (!vocabMatch) {
+                vocabMatch = lookupInVocabList(clickedWord);
+            }
+
+            // Step 3: Fallback to mock dictionary
+            const meaning = vocabMatch?.meaning || MOCK_VOCAB[baseForm] || MOCK_VOCAB[clickedWord] || '暂无释义';
+
             setSelectedWord({
-                word,
+                word: clickedWord,
                 meaning,
-                position: { x: rect.left, y: rect.bottom + 8 }
+                baseForm: tokenInfo?.base,
+                position: { x: rect.left, y: rect.bottom + 8 },
+                isFromVocabList: !!vocabMatch
             });
             setSelectionToolbar(null);
         }
-    }, []);
+    }, [findBaseForm, lookupInVocabList]);
 
     // Handle text selection
     const handleMouseUp = useCallback(() => {
@@ -539,237 +701,336 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 backgroundColor: '#f4f4f5'
             }}
         >
-            {/* Header */}
-            <header className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-3 flex items-center justify-between shrink-0">
-                {/* Left: Back + Title */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onBack}
-                        className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <h1 className="font-black text-lg">{unitTitle}</h1>
+            {/* Loading State */}
+            {loading && (
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-zinc-400" />
+                        <p className="font-bold text-zinc-500">加载中...</p>
+                    </div>
                 </div>
+            )}
 
-                {/* Center: Article Tabs */}
-                <div className="flex gap-2">
-                    {MOCK_ARTICLES.map((article, i) => (
+            {/* Error State */}
+            {error && !loading && (
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="font-bold text-red-500 mb-4">{error}</p>
                         <button
-                            key={article.id}
-                            onClick={() => setActiveArticle(i)}
-                            className={`px-4 py-2 border-2 border-zinc-900 rounded-lg font-bold text-sm transition-all ${activeArticle === i
-                                    ? 'bg-zinc-900 text-white'
-                                    : 'bg-white hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none'
-                                }`}
+                            onClick={onBack}
+                            className="px-4 py-2 bg-zinc-900 text-white rounded-lg font-bold"
                         >
-                            文章 {i + 1}
+                            返回
                         </button>
-                    ))}
-                </div>
-
-                {/* Right: Settings */}
-                <div className="relative">
-                    <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </button>
-                    {showSettings && (
-                        <SettingsPanel
-                            fontSize={fontSize}
-                            isSerif={isSerif}
-                            onFontSizeChange={setFontSize}
-                            onSerifToggle={() => setIsSerif(!isSerif)}
-                            onClose={() => setShowSettings(false)}
-                        />
-                    )}
-                </div>
-            </header>
-
-            {/* Main Content: Split Screen */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left: Reader Panel (65%) */}
-                <div className="w-[65%] border-r-2 border-zinc-900 overflow-y-auto p-8">
-                    <div
-                        ref={readerRef}
-                        onClick={handleWordClick}
-                        onMouseUp={handleMouseUp}
-                        className={`bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
-                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-                    >
-                        <h2 className="text-2xl font-black mb-6 text-zinc-900">
-                            {MOCK_ARTICLES[activeArticle].title}
-                        </h2>
-                        <div className="text-zinc-800 leading-loose">
-                            {renderContent(MOCK_ARTICLES[activeArticle].content)}
-                        </div>
                     </div>
                 </div>
+            )}
 
-                {/* Right: Study Hub (35%) */}
-                <div className="w-[35%] bg-[#FDFBF7] flex flex-col overflow-hidden">
-                    {/* Tabs */}
-                    <div className="flex border-b-2 border-zinc-900 shrink-0">
-                        {[
-                            { key: 'notes', label: '学习笔记', icon: PenLine },
-                            { key: 'vocab', label: '生词本', icon: BookOpen },
-                            { key: 'ai', label: 'AI 助教', icon: Sparkles }
-                        ].map(tab => (
+            {/* Main Content - only show when loaded */}
+            {!loading && !error && (
+                <>
+                    {/* Header */}
+                    <header className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-3 flex items-center justify-between shrink-0">
+                        {/* Left: Back + Title */}
+                        <div className="flex items-center gap-4">
                             <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key as any)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
-                                    }`}
+                                onClick={onBack}
+                                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
                             >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
+                                <ArrowLeft className="w-5 h-5" />
                             </button>
-                        ))}
-                    </div>
+                            <h1 className="font-black text-lg">{unitData?.title || unitTitle}</h1>
+                        </div>
 
-                    {/* Tab Content */}
-                    <div className="flex-1 overflow-y-auto p-4">
-                        {activeTab === 'notes' && (
-                            <div className="space-y-3">
-                                {notes.length === 0 ? (
-                                    <div className="text-center text-zinc-400 py-8">
-                                        <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                        <p className="font-bold">暂无笔记</p>
-                                        <p className="text-xs">选中文本添加笔记</p>
+                        {/* Center: Unit Info Badge */}
+                        <div className="flex gap-2">
+                            <span className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm">
+                                📖 第 {unitIndex} 课
+                            </span>
+                            {vocabList.length > 0 && (
+                                <span className="px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
+                                    {vocabList.length} 个生词
+                                </span>
+                            )}
+                            {grammarList.length > 0 && (
+                                <span className="px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
+                                    {grammarList.length} 个语法点
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Right: Settings */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowSettings(!showSettings)}
+                                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                            {showSettings && (
+                                <SettingsPanel
+                                    fontSize={fontSize}
+                                    isSerif={isSerif}
+                                    onFontSizeChange={setFontSize}
+                                    onSerifToggle={() => setIsSerif(!isSerif)}
+                                    onClose={() => setShowSettings(false)}
+                                />
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Main Content: Split Screen */}
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Left: Reader Panel (65%) */}
+                        <div className="w-[65%] border-r-2 border-zinc-900 overflow-y-auto p-8">
+                            <div
+                                ref={readerRef}
+                                onClick={handleWordClick}
+                                onMouseUp={handleMouseUp}
+                                className={`bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
+                                style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+                            >
+                                <h2 className="text-2xl font-black mb-6 text-zinc-900">
+                                    {unitData?.title || '加载中...'}
+                                </h2>
+                                <div className="text-zinc-800 leading-loose">
+                                    {unitData?.text ? renderContent(unitData.text) : (
+                                        <p className="text-zinc-400">暂无内容</p>
+                                    )}
+                                </div>
+
+                                {/* Translation Toggle */}
+                                {unitData?.translation && (
+                                    <div className="mt-8 pt-6 border-t-2 border-zinc-200">
+                                        <details className="group">
+                                            <summary className="cursor-pointer font-bold text-sm text-zinc-500 hover:text-zinc-700 flex items-center gap-2">
+                                                <Languages className="w-4 h-4" />
+                                                显示中文翻译
+                                                <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                                            </summary>
+                                            <div className="mt-4 p-4 bg-zinc-50 rounded-lg text-sm text-zinc-600 whitespace-pre-wrap">
+                                                {unitData.translation}
+                                            </div>
+                                        </details>
                                     </div>
-                                ) : (
-                                    notes.map(note => (
-                                        <div
-                                            key={note.id}
-                                            className="bg-white border-2 border-zinc-900 rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
-                                            style={{ borderLeftColor: note.color === 'yellow' ? '#FDE047' : note.color === 'green' ? '#86EFAC' : '#F9A8D4', borderLeftWidth: 4 }}
-                                        >
-                                            <p className="font-bold text-sm text-zinc-900 mb-1 underline decoration-wavy decoration-amber-500">{note.text}</p>
-                                            <p className="text-xs text-zinc-600">{note.comment}</p>
-                                        </div>
-                                    ))
                                 )}
                             </div>
-                        )}
+                        </div>
 
-                        {activeTab === 'vocab' && (
-                            <div className="space-y-2">
-                                {savedWords.length === 0 ? (
-                                    <div className="text-center text-zinc-400 py-8">
-                                        <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                        <p className="font-bold">暂无生词</p>
-                                        <p className="text-xs">点击单词添加到生词本</p>
-                                    </div>
-                                ) : (
-                                    savedWords.map(word => (
-                                        <div
-                                            key={word.id}
-                                            className="flex items-center justify-between bg-white border-2 border-zinc-900 rounded-lg p-3 shadow-[2px_2px_0px_0px_#18181B]"
-                                        >
-                                            <div>
-                                                <span className="font-bold text-zinc-900">{word.word}</span>
-                                                <span className="text-sm text-zinc-500 ml-2">{word.meaning}</span>
+                        {/* Right: Study Hub (35%) */}
+                        <div className="w-[35%] bg-[#FDFBF7] flex flex-col overflow-hidden">
+                            {/* Tabs */}
+                            <div className="flex border-b-2 border-zinc-900 shrink-0">
+                                {[
+                                    { key: 'vocab', label: '本课词汇', icon: BookOpen },
+                                    { key: 'grammar', label: '语法点', icon: Sparkles },
+                                    { key: 'notes', label: '笔记', icon: PenLine },
+                                    { key: 'ai', label: 'AI助教', icon: MessageSquare }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key as any)}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
+                                            }`}
+                                    >
+                                        <tab.icon className="w-4 h-4" />
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Tab Content */}
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {activeTab === 'notes' && (
+                                    <div className="space-y-3">
+                                        {notes.length === 0 ? (
+                                            <div className="text-center text-zinc-400 py-8">
+                                                <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="font-bold">暂无笔记</p>
+                                                <p className="text-xs">选中文本添加笔记</p>
                                             </div>
+                                        ) : (
+                                            notes.map(note => (
+                                                <div
+                                                    key={note.id}
+                                                    className="bg-white border-2 border-zinc-900 rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
+                                                    style={{ borderLeftColor: note.color === 'yellow' ? '#FDE047' : note.color === 'green' ? '#86EFAC' : '#F9A8D4', borderLeftWidth: 4 }}
+                                                >
+                                                    <p className="font-bold text-sm text-zinc-900 mb-1 underline decoration-wavy decoration-amber-500">{note.text}</p>
+                                                    <p className="text-xs text-zinc-600">{note.comment}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'vocab' && (
+                                    <div className="space-y-2">
+                                        {vocabList.length === 0 ? (
+                                            <div className="text-center text-zinc-400 py-8">
+                                                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="font-bold">本课暂无词汇</p>
+                                                <p className="text-xs">请先添加课程词汇</p>
+                                            </div>
+                                        ) : (
+                                            vocabList.map(word => (
+                                                <div
+                                                    key={word.id}
+                                                    className="bg-white border-2 border-zinc-900 rounded-lg p-3 shadow-[2px_2px_0px_0px_#18181B]"
+                                                >
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="font-bold text-zinc-900">{word.korean}</span>
+                                                        <button
+                                                            onClick={() => speak(word.korean)}
+                                                            className="w-7 h-7 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-200 transition-colors"
+                                                        >
+                                                            <Volume2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-sm text-zinc-600">{word.meaning}</p>
+                                                    {word.pronunciation && (
+                                                        <p className="text-xs text-zinc-400 mt-1">[{word.pronunciation}]</p>
+                                                    )}
+                                                    {word.exampleSentence && (
+                                                        <div className="mt-2 pt-2 border-t border-zinc-200">
+                                                            <p className="text-xs text-zinc-500">例: {word.exampleSentence}</p>
+                                                            {word.exampleMeaning && (
+                                                                <p className="text-xs text-zinc-400">{word.exampleMeaning}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'grammar' && (
+                                    <div className="space-y-3">
+                                        {grammarList.length === 0 ? (
+                                            <div className="text-center text-zinc-400 py-8">
+                                                <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="font-bold">本课暂无语法点</p>
+                                                <p className="text-xs">请先添加课程语法</p>
+                                            </div>
+                                        ) : (
+                                            grammarList.map(grammar => (
+                                                <div
+                                                    key={grammar.id}
+                                                    className="bg-white border-2 border-zinc-900 rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
+                                                >
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
+                                                            {grammar.type || '语法'}
+                                                        </span>
+                                                        <h4 className="font-bold text-zinc-900">{grammar.title}</h4>
+                                                    </div>
+                                                    <p className="text-sm text-zinc-600">{grammar.summary}</p>
+                                                    {grammar.explanation && (
+                                                        <details className="mt-2">
+                                                            <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-700">
+                                                                查看详细解释
+                                                            </summary>
+                                                            <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 p-2 rounded">
+                                                                {grammar.explanation}
+                                                            </p>
+                                                        </details>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'ai' && (
+                                    <div className="flex flex-col h-full">
+                                        <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
+                                            {aiMessages.map((msg, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`p-3 rounded-lg border-2 border-zinc-900 ${msg.role === 'user'
+                                                        ? 'bg-lime-100 ml-8'
+                                                        : 'bg-white mr-8'
+                                                        }`}
+                                                >
+                                                    <p className="text-sm">{msg.content}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-2 shrink-0">
+                                            <input
+                                                type="text"
+                                                value={aiInput}
+                                                onChange={(e) => setAiInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && sendAiMessage()}
+                                                placeholder="问我语法问题..."
+                                                className="flex-1 px-4 py-2 border-2 border-zinc-900 rounded-lg font-bold text-sm focus:shadow-[2px_2px_0px_0px_#18181B] outline-none"
+                                            />
                                             <button
-                                                onClick={() => speak(word.word)}
-                                                className="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-200 transition-colors"
+                                                onClick={sendAiMessage}
+                                                className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
                                             >
-                                                <Volume2 className="w-4 h-4" />
+                                                <Send className="w-4 h-4" />
                                             </button>
                                         </div>
-                                    ))
+                                    </div>
                                 )}
                             </div>
-                        )}
-
-                        {activeTab === 'ai' && (
-                            <div className="flex flex-col h-full">
-                                <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
-                                    {aiMessages.map((msg, i) => (
-                                        <div
-                                            key={i}
-                                            className={`p-3 rounded-lg border-2 border-zinc-900 ${msg.role === 'user'
-                                                    ? 'bg-lime-100 ml-8'
-                                                    : 'bg-white mr-8'
-                                                }`}
-                                        >
-                                            <p className="text-sm">{msg.content}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex gap-2 shrink-0">
-                                    <input
-                                        type="text"
-                                        value={aiInput}
-                                        onChange={(e) => setAiInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && sendAiMessage()}
-                                        placeholder="问我语法问题..."
-                                        className="flex-1 px-4 py-2 border-2 border-zinc-900 rounded-lg font-bold text-sm focus:shadow-[2px_2px_0px_0px_#18181B] outline-none"
-                                    />
-                                    <button
-                                        onClick={sendAiMessage}
-                                        className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
-                                    >
-                                        <Send className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Popovers */}
-            {selectedWord && (
-                <div data-popover>
-                    <FlashcardPopover
-                        word={selectedWord.word}
-                        meaning={selectedWord.meaning}
-                        position={selectedWord.position}
-                        onClose={() => setSelectedWord(null)}
-                        onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
-                        onSpeak={() => speak(selectedWord.word)}
-                    />
-                </div>
-            )}
+                    {/* Popovers */}
+                    {selectedWord && (
+                        <div data-popover>
+                            <FlashcardPopover
+                                word={selectedWord.word}
+                                meaning={selectedWord.meaning}
+                                position={selectedWord.position}
+                                onClose={() => setSelectedWord(null)}
+                                onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
+                                onSpeak={() => speak(selectedWord.word)}
+                            />
+                        </div>
+                    )}
 
-            {selectionToolbar && (
-                <div data-popover>
-                    <SelectionToolbar
-                        position={selectionToolbar.position}
-                        onTranslate={() => {
-                            // Mock translation
-                            alert(`翻译：${selectionToolbar.text}`);
-                            setSelectionToolbar(null);
-                        }}
-                        onSpeak={() => {
-                            speak(selectionToolbar.text);
-                            setSelectionToolbar(null);
-                        }}
-                        onNote={() => {
-                            setNoteModal({
-                                text: selectionToolbar.text,
-                                startOffset: 0,
-                                endOffset: 0
-                            });
-                            setSelectionToolbar(null);
-                        }}
-                        onHighlight={addHighlight}
-                    />
-                </div>
-            )}
+                    {selectionToolbar && (
+                        <div data-popover>
+                            <SelectionToolbar
+                                position={selectionToolbar.position}
+                                onTranslate={() => {
+                                    alert(`翻译：${selectionToolbar.text}`);
+                                    setSelectionToolbar(null);
+                                }}
+                                onSpeak={() => {
+                                    speak(selectionToolbar.text);
+                                    setSelectionToolbar(null);
+                                }}
+                                onNote={() => {
+                                    setNoteModal({
+                                        text: selectionToolbar.text,
+                                        startOffset: 0,
+                                        endOffset: 0
+                                    });
+                                    setSelectionToolbar(null);
+                                }}
+                                onHighlight={addHighlight}
+                            />
+                        </div>
+                    )}
 
-            {noteModal && (
-                <NoteInputModal
-                    selectedText={noteModal.text}
-                    onSave={saveNote}
-                    onClose={() => setNoteModal(null)}
-                />
+                    {noteModal && (
+                        <NoteInputModal
+                            selectedText={noteModal.text}
+                            onSave={saveNote}
+                            onClose={() => setNoteModal(null)}
+                        />
+                    )}
+                </>
             )}
         </div>
     );
 };
 
 export default ReadingModule;
+
+
