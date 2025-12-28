@@ -20,7 +20,7 @@ export default function AppLayout() {
                     >
                         <Menu size={20} />
                     </button>
-                    <div className="font-black text-xl text-slate-900">HANGYEOL</div>
+                    <div className="font-black text-xl text-slate-900">DuHan</div>
                     <div className="w-10" /> {/* Spacer for centering */}
                 </div>
 

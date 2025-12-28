@@ -68,7 +68,7 @@ export default function Sidebar() {
                 fixed inset-y-0 left-0 h-full w-64 border-r-2 shadow-2xl transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:shadow-pop md:static md:h-[95vh] md:m-5 md:rounded-[2.5rem] md:border-2 md:sticky md:top-5
                 
                 /* Desktop Width Toggle */
-                md:${collapsed ? 'w-24' : 'w-72'}
+                md:${collapsed ? 'w-20' : 'w-72'}
             `}>
 
                 {/* Mobile Close Button */}

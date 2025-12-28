@@ -9,7 +9,7 @@ export default function Footer() {
                 <Link to="/terms" className="hover:text-indigo-600 transition">服务条款</Link>
                 <Link to="/refund" className="hover:text-indigo-600 transition">退款政策</Link>
             </div>
-            <p className="text-[10px] opacity-60">© 2026 Hangyeol Inc. All rights reserved.</p>
+            <p className="text-[10px] opacity-60">© 2026 DuHan Inc. All rights reserved.</p>
         </footer>
     );
 }

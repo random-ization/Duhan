@@ -68,7 +68,7 @@ const AdminLoginPage: React.FC = () => {
                         <ShieldCheck className="w-10 h-10 text-lime-400" />
                     </div>
                     <h1 className="text-2xl font-black text-white">管理员登录</h1>
-                    <p className="text-zinc-500 text-sm mt-1">HangYeol 内容管理系统</p>
+                    <p className="text-zinc-500 text-sm mt-1">DuHan 内容管理系统</p>
                 </div>
 
                 {/* Login Card */}

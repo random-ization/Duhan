@@ -117,8 +117,8 @@ export default function AuthPage() {
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 10px)" }}></div>
 
           <div className="relative z-10 text-center">
-            <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">H</div>
-            <h1 className="text-5xl font-black font-display mb-2">Hangyeol.</h1>
+            <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
+            <h1 className="text-5xl font-black font-display mb-2">DuHan.</h1>
             <p className="text-indigo-200 font-bold text-lg tracking-wide">Level Up Your Korean</p>
           </div>
 
