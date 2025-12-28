@@ -1,13 +1,27 @@
 import { Router } from 'express';
-import * as videoController from '../controllers/video.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, requireAdmin } from '../middleware/auth.middleware';
+import {
+    uploadVideo,
+    updateVideo,
+    deleteVideo,
+    listVideos,
+    getVideo,
+} from '../controllers/video.controller';
 
 const router = Router();
 
-// Public/Protected Search (can be public or protected, making it protected for now to track usage)
-router.get('/search', authenticate, videoController.search);
+/**
+ * Video Learning Routes
+ * Base path: /api/videos
+ */
 
-// Import/Analyze Video
-router.post('/import', authenticate, videoController.importVideo);
+// Public/User routes (require authentication)
+router.get('/', authenticate, listVideos);
+router.get('/:id', authenticate, getVideo);
+
+// Admin-only routes
+router.post('/', authenticate, requireAdmin, uploadVideo);
+router.put('/:id', authenticate, requireAdmin, updateVideo);
+router.delete('/:id', authenticate, requireAdmin, deleteVideo);
 
 export default router;

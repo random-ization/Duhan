@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-import { LayoutDashboard, BookOpen, Trophy, Youtube, Headphones } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Trophy, Headphones, Video } from 'lucide-react';
 
 export default function AppLayout() {
     return (
@@ -30,7 +30,7 @@ function MobileNavBar() {
         { icon: LayoutDashboard, path: '/dashboard' },
         { icon: BookOpen, path: '/courses' },
         { icon: Trophy, path: '/topik' },
-        { icon: Youtube, path: '/youtube' },
+        { icon: Video, path: '/videos' },
         { icon: Headphones, path: '/podcasts' },
     ];
 

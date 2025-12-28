@@ -202,11 +202,17 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                         transcriptData: response.data.transcriptData,
                     });
                 } else {
-                    setError('暂无听力内容');
+                    // No data yet - show empty state (not an error)
+                    setUnitData(null);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error('[ListeningModule] Failed to fetch listening data:', err);
-                setError('加载失败，请重试');
+                // 404 means no content yet - show empty state, not error
+                if (err?.message?.includes('404') || err?.status === 404) {
+                    setUnitData(null);
+                } else {
+                    setError('加载失败，请重试');
+                }
             } finally {
                 setLoading(false);
             }
@@ -295,13 +301,14 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // Render Transcript with Karaoke Highlighting
     // ========================================
     const renderTranscript = () => {
-        if (!unitData?.transcriptData || unitData.transcriptData.length === 0) {
+        // No listening unit exists yet, or no transcript data
+        if (!unitData || !unitData.transcriptData || unitData.transcriptData.length === 0) {
             // No transcript data - show empty state
             return (
                 <div className="text-center py-12 text-zinc-400">
                     <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-bold">暂无听力文稿</p>
-                    <p className="text-sm mt-2">请在管理后台添加时间戳文稿数据</p>
+                    <p className="font-bold">暂无听力内容</p>
+                    <p className="text-sm mt-2">请在管理后台添加听力音频和时间戳文稿</p>
                 </div>
             );
         }

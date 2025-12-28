@@ -24,8 +24,6 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
-const YouTubeSearchPage = lazy(() => import('./pages/YouTubeSearchPage'));
-const YouTubeLearnPage = lazy(() => import('./pages/YouTubeLearnPage'));
 
 // Podcast Pages
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
@@ -33,6 +31,10 @@ const PodcastSearchPage = lazy(() => import('./pages/PodcastSearchPage'));
 const PodcastChannelPage = lazy(() => import('./pages/PodcastChannelPage'));
 const PodcastPlayerPage = lazy(() => import('./pages/PodcastPlayerPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+
+// Video Pages
+const VideoLibraryPage = lazy(() => import('./src/pages/VideoLibraryPage'));
+const VideoPlayerPage = lazy(() => import('./src/pages/VideoPlayerPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -138,17 +140,16 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
             />
             <Route path="/notebook" element={<NotebookPage />} />
 
-            {/* YouTube Learning */}
-            <Route path="/youtube" element={<Navigate to="/youtube/search" replace />} />
-            <Route path="/youtube/search" element={<YouTubeSearchPage />} />
-            <Route path="/youtube/learn/:youtubeId" element={<YouTubeLearnPage />} />
-
             {/* Podcast Learning */}
             <Route path="/podcasts" element={<PodcastDashboard />} />
             <Route path="/podcasts/search" element={<PodcastSearchPage />} />
             <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
             <Route path="/podcasts/player" element={<PodcastPlayerPage />} />
             <Route path="/podcasts/history" element={<HistoryPage />} />
+
+            {/* Video Learning */}
+            <Route path="/videos" element={<VideoLibraryPage />} />
+            <Route path="/video/:id" element={<VideoPlayerPage />} />
           </Route>
         </Route>
 

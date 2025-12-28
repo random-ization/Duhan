@@ -161,6 +161,27 @@ model ListeningUnit {
   @@index([courseId])
 }
 
+// ========== Video Learning (Self-hosted S3 + AI Subtitles) ==========
+model VideoLesson {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?  @db.Text
+  videoUrl     String   // S3 video URL
+  thumbnailUrl String?  // Cover image
+  level        String   // e.g., "Beginner", "Intermediate", "Advanced"
+  duration     Int?     // Duration in seconds
+  
+  // Timestamped transcript for karaoke-style subtitles (reuses listening module structure)
+  // Structure: [{ start: 0, end: 2.5, text: "안녕하세요", translation?: "你好" }]
+  transcriptData Json?  
+
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([level])
+}
+
 model TopikExam {
   id          String   @id
   title       String

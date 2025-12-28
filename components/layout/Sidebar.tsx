@@ -39,8 +39,8 @@ export default function Sidebar() {
             activeClass: 'bg-yellow-100 text-yellow-700 border-yellow-100'
         },
         {
-            path: '/youtube', label: '沉浸视频',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Television.png" grayscale />,
+            path: '/videos', label: '沉浸视频',
+            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Clapper%20Board.png" grayscale />,
             activeClass: 'bg-red-100 text-red-700 border-red-100'
         },
         {

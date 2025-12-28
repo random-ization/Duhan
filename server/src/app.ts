@@ -11,8 +11,8 @@ import annotationRoutes from './routes/annotation.routes';
 import aiRoutes from './routes/ai.routes';
 import notebookRoutes from './routes/notebook.routes';
 
-import videoRoutes from './routes/video.routes';
 import podcastRoutes from './routes/podcast.routes';
+import videoRoutes from './routes/video.routes';
 import vocabRoutes from './routes/vocab.routes';
 import grammarRoutes from './routes/grammar.routes';
 import unitRoutes from './routes/unit.routes';
@@ -47,8 +47,6 @@ app.use('/api/ai', aiRoutes);
 console.log('[Server] /api/ai registered');
 app.use('/api/notebook', notebookRoutes);
 console.log('[Server] /api/notebook registered');
-app.use('/api/video', videoRoutes);
-console.log('[Server] /api/video registered');
 app.use('/api/podcasts', podcastRoutes);
 console.log('[Server] /api/podcasts registered');
 app.use('/api/vocab', vocabRoutes);
@@ -59,6 +57,8 @@ app.use('/api/courses/:courseId/units', unitRoutes);
 console.log('[Server] /api/courses/:courseId/units registered');
 app.use('/api/courses/:courseId/listening', listeningRoutes);
 console.log('[Server] /api/courses/:courseId/listening registered');
+app.use('/api/videos', videoRoutes);
+console.log('[Server] /api/videos registered');
 
 // Health Check
 app.get('/health', (req, res) => {

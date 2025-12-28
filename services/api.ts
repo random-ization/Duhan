@@ -410,14 +410,81 @@ export const api = {
   deleteNotebook: async (id: string): Promise<{ success: boolean }> =>
     request(`/notebook/${id}`, { method: 'DELETE' }),
 
-  // --- YouTube Learning ---
-  searchVideo: async (query: string) => request<{ success: boolean; data: any[] }>(`/video/search?q=${encodeURIComponent(query)}`),
+  // --- Video Learning API ---
+  video: {
+    list: (level?: string, page?: number, limit?: number) =>
+      request<{
+        success: boolean;
+        data: {
+          id: string;
+          title: string;
+          description?: string;
+          thumbnailUrl?: string;
+          level: string;
+          duration?: number;
+          views: number;
+          createdAt: string;
+        }[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>(`/videos${level ? `?level=${level}` : ''}${page ? `&page=${page}` : ''}${limit ? `&limit=${limit}` : ''}`),
 
-  importVideo: async (youtubeId: string) =>
-    request<{ success: boolean; data: { video: any; transcript: any } }>('/video/import', {
-      method: 'POST',
-      body: JSON.stringify({ youtubeId }),
-    }),
+    get: (id: string) =>
+      request<{
+        success: boolean;
+        data: {
+          id: string;
+          title: string;
+          description?: string;
+          videoUrl: string;
+          thumbnailUrl?: string;
+          level: string;
+          duration?: number;
+          transcriptData?: { start: number; end: number; text: string; translation?: string }[];
+          views: number;
+          createdAt: string;
+        };
+      }>(`/videos/${id}`),
+
+    upload: async (formData: FormData) => {
+      const token = getTokenFromStorage();
+      const res = await fetch(`${API_URL}/videos`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Upload failed');
+      }
+      return res.json();
+    },
+
+    update: (id: string, data: {
+      title?: string;
+      description?: string;
+      videoUrl?: string;
+      thumbnailUrl?: string;
+      level?: string;
+      duration?: number;
+      transcriptData?: any;
+    }) =>
+      request<{ success: boolean; data: any }>(`/videos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      request<{ success: boolean; message: string }>(`/videos/${id}`, {
+        method: 'DELETE',
+      }),
+  },
 
   // --- Podcast API ---
   searchPodcasts: async (term: string) =>

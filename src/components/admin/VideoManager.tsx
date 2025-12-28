@@ -1,0 +1,602 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    Plus,
+    Pencil,
+    Trash2,
+    Upload,
+    X,
+    Eye,
+    Clock,
+    CheckCircle,
+    AlertCircle,
+    Loader2,
+    Video,
+    Image,
+    FileText
+} from 'lucide-react';
+import api from '../../../services/api';
+
+interface VideoLesson {
+    id: string;
+    title: string;
+    description?: string;
+    videoUrl?: string;  // Optional in list view, required in edit
+    thumbnailUrl?: string;
+    level: string;
+    duration?: number;
+    transcriptData?: any;
+    views: number;
+    createdAt: string;
+}
+
+interface TranscriptSegment {
+    start: number;
+    end: number;
+    text: string;
+    translation?: string;
+}
+
+const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+
+export default function VideoManager() {
+    const [videos, setVideos] = useState<VideoLesson[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [editingVideo, setEditingVideo] = useState<VideoLesson | null>(null);
+
+    // Form state
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [level, setLevel] = useState('Beginner');
+    const [videoUrl, setVideoUrl] = useState('');
+    const [thumbnailUrl, setThumbnailUrl] = useState('');
+    const [duration, setDuration] = useState(0);
+    const [transcriptJson, setTranscriptJson] = useState('');
+    const [transcriptError, setTranscriptError] = useState<string | null>(null);
+    const [transcriptValid, setTranscriptValid] = useState(false);
+
+    // Upload state
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    const videoInputRef = useRef<HTMLInputElement>(null);
+    const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        fetchVideos();
+    }, []);
+
+    const fetchVideos = async () => {
+        try {
+            setLoading(true);
+            const response = await api.video.list();
+            if (response.success) {
+                setVideos(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch videos:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetForm = () => {
+        setTitle('');
+        setDescription('');
+        setLevel('Beginner');
+        setVideoUrl('');
+        setThumbnailUrl('');
+        setDuration(0);
+        setTranscriptJson('');
+        setTranscriptError(null);
+        setTranscriptValid(false);
+        setEditingVideo(null);
+    };
+
+    const openCreateModal = () => {
+        resetForm();
+        setShowModal(true);
+    };
+
+    const openEditModal = async (video: VideoLesson) => {
+        setEditingVideo(video);
+        setTitle(video.title);
+        setDescription(video.description || '');
+        setLevel(video.level);
+        setVideoUrl(video.videoUrl);
+        setThumbnailUrl(video.thumbnailUrl || '');
+        setDuration(video.duration || 0);
+
+        // Fetch full video to get transcript data
+        try {
+            const response = await api.video.get(video.id);
+            if (response.success && response.data.transcriptData) {
+                setTranscriptJson(JSON.stringify(response.data.transcriptData, null, 2));
+                setTranscriptValid(true);
+            }
+        } catch (error) {
+            console.error('Failed to fetch video details:', error);
+        }
+
+        setShowModal(true);
+    };
+
+    const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingVideo(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.uploadFile(formData);
+            setVideoUrl(response.url);
+
+            // Try to get duration from video
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                setDuration(Math.floor(video.duration));
+                URL.revokeObjectURL(video.src);
+            };
+            video.src = URL.createObjectURL(file);
+        } catch (error) {
+            console.error('Video upload failed:', error);
+            alert('视频上传失败');
+        } finally {
+            setUploadingVideo(false);
+        }
+    };
+
+    const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingThumbnail(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.uploadFile(formData);
+            setThumbnailUrl(response.url);
+        } catch (error) {
+            console.error('Thumbnail upload failed:', error);
+            alert('封面上传失败');
+        } finally {
+            setUploadingThumbnail(false);
+        }
+    };
+
+    const validateTranscript = () => {
+        setTranscriptError(null);
+        setTranscriptValid(false);
+
+        if (!transcriptJson.trim()) {
+            setTranscriptError('请输入字幕 JSON 数据');
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(transcriptJson);
+
+            if (!Array.isArray(parsed)) {
+                setTranscriptError('JSON 必须是数组格式');
+                return;
+            }
+
+            if (parsed.length === 0) {
+                setTranscriptError('字幕数组不能为空');
+                return;
+            }
+
+            // Validate structure
+            for (let i = 0; i < parsed.length; i++) {
+                const segment = parsed[i];
+                if (typeof segment.start !== 'number') {
+                    setTranscriptError(`第 ${i + 1} 条缺少 'start' 字段 (数字)`);
+                    return;
+                }
+                if (typeof segment.end !== 'number') {
+                    setTranscriptError(`第 ${i + 1} 条缺少 'end' 字段 (数字)`);
+                    return;
+                }
+                if (typeof segment.text !== 'string') {
+                    setTranscriptError(`第 ${i + 1} 条缺少 'text' 字段 (字符串)`);
+                    return;
+                }
+            }
+
+            setTranscriptValid(true);
+        } catch (e) {
+            setTranscriptError('JSON 格式错误，请检查语法');
+        }
+    };
+
+    const handleSave = async () => {
+        if (!title.trim() || !videoUrl) {
+            alert('请填写标题并上传视频');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            let transcriptData = null;
+            if (transcriptJson.trim()) {
+                try {
+                    transcriptData = JSON.parse(transcriptJson);
+                } catch {
+                    alert('字幕 JSON 格式错误');
+                    setSaving(false);
+                    return;
+                }
+            }
+
+            if (editingVideo) {
+                await api.video.update(editingVideo.id, {
+                    title,
+                    description,
+                    level,
+                    videoUrl,
+                    thumbnailUrl,
+                    duration,
+                    transcriptData,
+                });
+            } else {
+                // For new video, we need to send as JSON (not FormData) since video is already uploaded
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', description);
+                formData.append('level', level);
+                formData.append('videoUrl', videoUrl);
+                formData.append('thumbnailUrl', thumbnailUrl);
+                formData.append('duration', String(duration));
+
+                await api.video.upload(formData);
+            }
+
+            setShowModal(false);
+            resetForm();
+            fetchVideos();
+        } catch (error) {
+            console.error('Save failed:', error);
+            alert('保存失败');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('确定要删除这个视频吗？此操作不可撤销。')) return;
+
+        try {
+            await api.video.delete(id);
+            fetchVideos();
+        } catch (error) {
+            console.error('Delete failed:', error);
+            alert('删除失败');
+        }
+    };
+
+    const formatDuration = (seconds?: number) => {
+        if (!seconds) return '--:--';
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-2xl font-black text-zinc-900">视频管理</h2>
+                    <p className="text-sm text-zinc-500 mt-1">上传和管理视频课程内容</p>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg"
+                >
+                    <Plus className="w-5 h-5" />
+                    上传视频
+                </button>
+            </div>
+
+            {/* Loading State */}
+            {loading && (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                </div>
+            )}
+
+            {/* Video Grid */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {videos.map((video) => (
+                        <div
+                            key={video.id}
+                            className="bg-white rounded-2xl border-2 border-zinc-200 overflow-hidden hover:border-indigo-300 transition group"
+                        >
+                            {/* Thumbnail */}
+                            <div className="aspect-video bg-zinc-100 relative">
+                                {video.thumbnailUrl ? (
+                                    <img
+                                        src={video.thumbnailUrl}
+                                        alt={video.title}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Video className="w-12 h-12 text-zinc-300" />
+                                    </div>
+                                )}
+                                {/* Duration badge */}
+                                <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs font-mono rounded">
+                                    {formatDuration(video.duration)}
+                                </div>
+                                {/* Level badge */}
+                                <div className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${video.level === 'Beginner' ? 'bg-green-100 text-green-700' :
+                                    video.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-red-100 text-red-700'
+                                    }`}>
+                                    {video.level}
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-4">
+                                <h3 className="font-bold text-zinc-900 line-clamp-2">{video.title}</h3>
+                                <div className="flex items-center gap-4 mt-2 text-sm text-zinc-500">
+                                    <span className="flex items-center gap-1">
+                                        <Eye className="w-4 h-4" />
+                                        {video.views}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="w-4 h-4" />
+                                        {new Date(video.createdAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => openEditModal(video)}
+                                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-zinc-100 text-zinc-700 rounded-lg font-medium hover:bg-zinc-200 transition"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                        编辑
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(video.id)}
+                                        className="px-3 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Empty State */}
+                    {videos.length === 0 && (
+                        <div className="col-span-full text-center py-20 text-zinc-400">
+                            <Video className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                            <p className="font-bold">暂无视频</p>
+                            <p className="text-sm mt-1">点击上方按钮上传第一个视频</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-zinc-200">
+                            <h3 className="text-xl font-black">
+                                {editingVideo ? '编辑视频' : '上传新视频'}
+                            </h3>
+                            <button
+                                onClick={() => { setShowModal(false); resetForm(); }}
+                                className="p-2 hover:bg-zinc-100 rounded-lg transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-6">
+                            {/* Basic Info */}
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                                    视频标题 *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="输入视频标题"
+                                    className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                                    视频简介
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="输入视频简介..."
+                                    rows={3}
+                                    className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                                    难度等级 *
+                                </label>
+                                <select
+                                    value={level}
+                                    onChange={(e) => setLevel(e.target.value)}
+                                    className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition"
+                                >
+                                    {LEVELS.map((l) => (
+                                        <option key={l} value={l}>{l}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Video Upload */}
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                                    视频文件 * (MP4)
+                                </label>
+                                <input
+                                    ref={videoInputRef}
+                                    type="file"
+                                    accept="video/mp4,video/*"
+                                    onChange={handleVideoUpload}
+                                    className="hidden"
+                                />
+                                {videoUrl ? (
+                                    <div className="flex items-center gap-3 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                                        <CheckCircle className="w-5 h-5 text-green-600" />
+                                        <span className="text-green-700 font-medium flex-1 truncate">
+                                            视频已上传
+                                        </span>
+                                        <button
+                                            onClick={() => videoInputRef.current?.click()}
+                                            className="text-sm text-green-600 hover:underline"
+                                        >
+                                            更换
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => videoInputRef.current?.click()}
+                                        disabled={uploadingVideo}
+                                        className="w-full flex items-center justify-center gap-2 p-6 border-2 border-dashed border-zinc-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition"
+                                    >
+                                        {uploadingVideo ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                                                <span className="text-indigo-600 font-medium">上传中...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Upload className="w-5 h-5 text-zinc-400" />
+                                                <span className="text-zinc-500">点击选择视频文件</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Thumbnail Upload */}
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                                    封面图片
+                                </label>
+                                <input
+                                    ref={thumbnailInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleThumbnailUpload}
+                                    className="hidden"
+                                />
+                                <div className="flex gap-4">
+                                    {thumbnailUrl && (
+                                        <img
+                                            src={thumbnailUrl}
+                                            alt="Thumbnail"
+                                            className="w-32 h-20 object-cover rounded-lg border-2 border-zinc-200"
+                                        />
+                                    )}
+                                    <button
+                                        onClick={() => thumbnailInputRef.current?.click()}
+                                        disabled={uploadingThumbnail}
+                                        className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-zinc-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition"
+                                    >
+                                        {uploadingThumbnail ? (
+                                            <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                                        ) : (
+                                            <>
+                                                <Image className="w-5 h-5 text-zinc-400" />
+                                                <span className="text-zinc-500">
+                                                    {thumbnailUrl ? '更换封面' : '上传封面图'}
+                                                </span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Transcript JSON */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+                                        <FileText className="w-4 h-4" />
+                                        字幕数据 (JSON)
+                                    </label>
+                                    <button
+                                        onClick={validateTranscript}
+                                        className="text-sm px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 transition"
+                                    >
+                                        格式校验
+                                    </button>
+                                </div>
+                                <textarea
+                                    value={transcriptJson}
+                                    onChange={(e) => { setTranscriptJson(e.target.value); setTranscriptValid(false); setTranscriptError(null); }}
+                                    placeholder={`请粘贴由 Whisper 生成的 JSON 数据...
+
+格式示例：
+[
+  { "start": 0, "end": 2.5, "text": "안녕하세요", "translation": "你好" },
+  { "start": 2.5, "end": 5.0, "text": "반갑습니다", "translation": "很高兴见到你" }
+]`}
+                                    rows={8}
+                                    className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition font-mono text-sm resize-none"
+                                />
+                                {transcriptError && (
+                                    <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
+                                        <AlertCircle className="w-4 h-4" />
+                                        {transcriptError}
+                                    </div>
+                                )}
+                                {transcriptValid && (
+                                    <div className="flex items-center gap-2 mt-2 text-green-600 text-sm">
+                                        <CheckCircle className="w-4 h-4" />
+                                        JSON 格式正确！
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex gap-3 p-6 border-t border-zinc-200">
+                            <button
+                                onClick={() => { setShowModal(false); resetForm(); }}
+                                className="flex-1 px-4 py-3 bg-zinc-100 text-zinc-700 rounded-xl font-bold hover:bg-zinc-200 transition"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving || !title.trim() || !videoUrl}
+                                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {editingVideo ? '保存修改' : '创建视频'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

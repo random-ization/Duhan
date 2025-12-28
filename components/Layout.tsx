@@ -3,12 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   BookOpen,
-  Youtube,
   NotebookPen,
   Settings,
   Library,
   Home,
-  GraduationCap
+  GraduationCap,
+  Headphones
 } from 'lucide-react';
 import { User as UserType, Language } from '../types';
 import Sidebar from './layout/Sidebar';
@@ -30,7 +30,7 @@ function MobileNavBar() {
   const tabs = [
     { icon: LayoutDashboard, path: '/dashboard' },
     { icon: BookOpen, path: '/courses' },
-    { icon: Youtube, path: '/youtube' },
+    { icon: Headphones, path: '/podcasts' },
     { icon: NotebookPen, path: '/notebook' },
     { icon: Settings, path: '/profile' },
   ];
