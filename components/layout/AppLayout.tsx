@@ -2,13 +2,28 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-import { LayoutDashboard, BookOpen, Trophy, Headphones, Video } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Trophy, Headphones, Video, Menu } from 'lucide-react';
+import { useApp } from '../../contexts/AppContext';
 
 export default function AppLayout() {
+    const { toggleMobileMenu } = useApp();
+
     return (
         <div className="flex min-h-screen bg-background overflow-hidden font-sans">
             <Sidebar />
             <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth">
+                {/* Mobile Header with Hamburger */}
+                <div className="md:hidden flex items-center justify-between p-6 pb-0">
+                    <button
+                        onClick={toggleMobileMenu}
+                        className="w-10 h-10 bg-white border-2 border-slate-900 rounded-xl flex items-center justify-center shadow-pop text-slate-900 active:scale-95 transition"
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <div className="font-black text-xl text-slate-900">HANGYEOL</div>
+                    <div className="w-10" /> {/* Spacer for centering */}
+                </div>
+
                 <div className="min-h-full flex flex-col p-6 md:p-10">
                     <div className="flex-1 w-full max-w-[1400px] mx-auto">
                         <Outlet />

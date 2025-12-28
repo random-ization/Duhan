@@ -292,7 +292,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                     items={cardOrder}
                     strategy={rectSortingStrategy}
                 >
-                    <div className={`grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[220px] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''}`}>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[220px] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''}`}>
                         {cardOrder.map((id) => (
                             <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>
                                 {renderCard(id)}

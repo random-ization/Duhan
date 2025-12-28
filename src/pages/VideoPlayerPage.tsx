@@ -10,9 +10,12 @@ import {
     Volume2,
     Plus,
     X,
-    BookOpen
+    BookOpen,
+    List // Added List icon for mobile toggle
 } from 'lucide-react';
 import api from '../../services/api';
+import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
+import { useAuth } from '../../contexts/AuthContext'; // If needed
 
 interface TranscriptSegment {
     start: number;
@@ -86,9 +89,11 @@ const VideoPlayerPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // Player state
+    // Player state
     const [currentTime, setCurrentTime] = useState(0);
     const [activeSegmentIndex, setActiveSegmentIndex] = useState(-1);
     const [showTranslation, setShowTranslation] = useState(true);
+    const [isTranscriptOpen, setIsTranscriptOpen] = useState(false); // Mobile transcript sheet state
 
     // Word popup state
     const [selectedWord, setSelectedWord] = useState<{
@@ -244,6 +249,15 @@ const VideoPlayerPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Mobile Transcript Toggle */}
+                    <button
+                        onClick={() => setIsTranscriptOpen(true)}
+                        className="lg:hidden px-3 py-2 bg-white border-2 border-zinc-900 rounded-xl flex items-center gap-2 font-bold text-sm shadow-[2px_2px_0px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+                    >
+                        <List className="w-4 h-4" />
+                        <span className="hidden sm:inline">字幕列表</span>
+                    </button>
+
                     <button
                         onClick={() => setShowTranslation(!showTranslation)}
                         className={`px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all ${showTranslation
@@ -272,12 +286,30 @@ const VideoPlayerPage: React.FC = () => {
                 </div>
 
                 {/* Transcript Panel - 30% on desktop */}
+                {/* Transcript Panel - Responsive: Bottom Sheet on Mobile, Sidebar on Desktop */}
                 <div
                     ref={transcriptContainerRef}
-                    className="flex-1 lg:w-[30%] bg-[#FDFBF7] border-l-2 border-zinc-900 overflow-y-auto"
+                    className={`
+                        bg-[#FDFBF7] border-zinc-900 flex-col
+                        
+                        /* Desktop Styles */
+                        lg:flex lg:w-[30%] lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none lg:z-auto lg:translate-y-0
+                        
+                        /* Mobile Styles (Bottom Sheet) */
+                        fixed inset-x-0 bottom-0 z-50 w-full h-[60vh] rounded-t-2xl border-t-2 border-x-0 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out
+                        ${isTranscriptOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+                    `}
                 >
-                    {/* Panel Header */}
-                    <div className="sticky top-0 bg-[#FDFBF7] border-b-2 border-zinc-200 px-4 py-3 z-10">
+                    {/* Mobile Pull Handle / Header */}
+                    <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b-2 border-zinc-100 bg-white rounded-t-2xl">
+                        <span className="font-bold text-lg">字幕列表</span>
+                        <button onClick={() => setIsTranscriptOpen(false)} className="p-1 hover:bg-zinc-100 rounded-full">
+                            <X className="w-5 h-5 text-zinc-500" />
+                        </button>
+                    </div>
+
+                    {/* Panel Header (Desktop only or shared?) kept as is but hidden on mobile if needed, or matched */}
+                    <div className="hidden lg:block sticky top-0 bg-[#FDFBF7] border-b-2 border-zinc-200 px-4 py-3 z-10">
                         <h2 className="font-black text-lg flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-indigo-600" />
                             实时字幕
@@ -286,7 +318,7 @@ const VideoPlayerPage: React.FC = () => {
                     </div>
 
                     {/* Transcript Content */}
-                    <div className="p-4 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
                         {!video.transcriptData || video.transcriptData.length === 0 ? (
                             <div className="text-center py-12 text-zinc-400">
                                 <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
@@ -349,6 +381,15 @@ const VideoPlayerPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+
+            {/* Mobile Backdrop */}
+            {isTranscriptOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-40 lg:hidden animate-in fade-in"
+                    onClick={() => setIsTranscriptOpen(false)}
+                />
+            )}
 
             {/* Word Popup */}
             {selectedWord && (

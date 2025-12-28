@@ -18,12 +18,17 @@ import grammarRoutes from './routes/grammar.routes';
 import unitRoutes from './routes/unit.routes';
 import listeningRoutes from './routes/listening.routes';
 
+import { apiLimiter } from './middleware/rateLimit.middleware';
+
 const app = express();
 
 // Middleware - compression 放在最前面
 app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }) as any);
+
+// Rate limiting - protect all API routes
+app.use('/api', apiLimiter);
 
 // Routes (mount admin AFTER app is created and after middleware)
 console.log('[Server] Registering routes...');
@@ -64,5 +69,9 @@ console.log('[Server] /api/videos registered');
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
+
+// Global Error Handler (MUST be last middleware)
+import { errorHandler } from './middleware/error.middleware';
+app.use(errorHandler);
 
 export default app;

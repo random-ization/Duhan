@@ -95,12 +95,43 @@ export const api = {
   getUserStats: async () => request<{
     streak: number;
     weeklyMinutes: number[];
+    dailyMinutes: number;
+    dailyGoal: number;
+    dailyProgress: number;
     todayActivities: {
       wordsLearned: number;
       readingsCompleted: number;
       listeningsCompleted: number;
     };
+    courseProgress: Array<{
+      courseId: string;
+      courseName: string;
+      completedUnits: number;
+      totalUnits: number;
+      lastAccessAt: string;
+    }>;
   }>('/user/stats'),
+
+  // --- Course Progress ---
+  completeUnit: async (courseId: string, unitIndex: number) =>
+    request('/user/progress/complete-unit', {
+      method: 'POST',
+      body: JSON.stringify({ courseId, unitIndex }),
+    }),
+
+  getCourseProgress: async (courseId: string) =>
+    request<{
+      success: boolean;
+      data: {
+        courseId: string;
+        courseName: string;
+        completedUnits: number[];
+        completedCount: number;
+        totalUnits: number;
+        progressPercent: number;
+      };
+    }>(`/user/progress/${courseId}`),
+
 
   // --- Admin / Users ---
   getUsers: async (page = 1, limit = 10, search = ''): Promise<{

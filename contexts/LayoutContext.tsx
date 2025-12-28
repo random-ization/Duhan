@@ -18,6 +18,8 @@ interface LayoutContextType {
     cardOrder: string[];
     updateCardOrder: (newOrder: string[]) => void;
     resetLayout: () => void;
+    isMobileMenuOpen: boolean;
+    toggleMobileMenu: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -65,8 +67,11 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         localStorage.setItem('dashboard_layout', JSON.stringify(DEFAULT_CARD_ORDER));
     };
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
+
     return (
-        <LayoutContext.Provider value={{ isEditing, toggleEditMode, cardOrder, updateCardOrder, resetLayout }}>
+        <LayoutContext.Provider value={{ isEditing, toggleEditMode, cardOrder, updateCardOrder, resetLayout, isMobileMenuOpen, toggleMobileMenu }}>
             {children}
         </LayoutContext.Provider>
     );

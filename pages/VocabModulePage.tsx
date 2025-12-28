@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    ChevronLeft, ChevronDown, ChevronRight, Volume2, Check, X, Star, Eye, EyeOff, Play, Square
+    ChevronLeft, ChevronDown, ChevronRight, Volume2, Check, X, Star, Eye, EyeOff, Play, Square, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
@@ -10,6 +10,7 @@ import { VocabularyItem } from '../types';
 import VocabQuiz from '../src/features/vocab/components/VocabQuiz';
 import VocabMatch from '../src/features/vocab/components/VocabMatch';
 import { updateVocabProgress } from '../src/services/vocabApi';
+import EmptyState from '../src/components/common/EmptyState';
 
 interface ExtendedVocabItem extends VocabularyItem {
     id: string;
@@ -234,6 +235,21 @@ export default function VocabModulePage() {
                     <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-slate-500 font-medium">加载词汇...</p>
                 </div>
+            </div>
+        );
+    }
+
+    // Empty state when no words loaded
+    if (allWords.length === 0) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
+                <EmptyState
+                    icon={BookOpen}
+                    title="还没有生词？"
+                    description="去阅读中点击单词收藏吧！学习积累，一步一脚印"
+                    actionLabel="去阅读"
+                    onAction={() => navigate('/dashboard')}
+                />
             </div>
         );
     }
@@ -488,10 +504,10 @@ export default function VocabModulePage() {
                                         : 'border-slate-200 hover:border-slate-400 hover:shadow-md'
                                         }`}
                                 >
-                                    <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start justify-between gap-3 md:gap-4">
                                         <div className="flex-1">
                                             {/* Word + Meaning Row */}
-                                            <div className="flex items-center gap-3 mb-3">
+                                            <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-3 md:gap-3">
                                                 <span className={`text-2xl font-black transition-all ${isRevealed ? 'text-green-600' : 'text-slate-900'
                                                     }`}>
                                                     {word.korean}

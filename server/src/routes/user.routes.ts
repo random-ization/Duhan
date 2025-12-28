@@ -13,7 +13,9 @@ import {
   updateProfile,
   changePassword,
   getUserStats,
-  getMyStats
+  getMyStats,
+  completeUnit,
+  getCourseProgress
 } from '../controllers/user.controller';
 
 const router = Router();
@@ -32,5 +34,9 @@ router.post('/progress', updateLearningProgress);
 router.post('/avatar', uploadAvatar.single('avatar'), updateProfileAvatar);
 router.put('/profile', updateProfile);
 router.put('/password', changePassword);
+
+// Course progress
+router.post('/progress/complete-unit', completeUnit);
+router.get('/progress/:courseId', getCourseProgress);
 
 export default router;

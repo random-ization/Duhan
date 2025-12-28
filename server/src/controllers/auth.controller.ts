@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { RegisterSchema, RegisterInput, LoginSchema, LoginInput } from '../schemas/validation';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/email';
+import { AppError } from '../lib/AppError';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 
@@ -167,7 +168,7 @@ const formatUser = (user: UserWithRelations) => {
   };
 };
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate input
     const validatedData: RegisterInput = RegisterSchema.parse(req.body);
@@ -175,7 +176,7 @@ export const register = async (req: Request, res: Response) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      return next(AppError.conflict('该邮箱已被注册'));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -207,11 +208,10 @@ export const register = async (req: Request, res: Response) => {
       message: 'Registration successful. Please check your email to verify your account.',
     });
   } catch (error: any) {
-    console.error('Register Error:', error);
     if (error.name === 'ZodError') {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return next(AppError.badRequest('请检查输入格式'));
     }
-    res.status(500).json({ error: 'Registration failed' });
+    next(error); // Pass to global error handler
   }
 };
 
@@ -382,7 +382,7 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate input
     const validatedData: LoginInput = LoginSchema.parse(req.body);
@@ -403,26 +403,22 @@ export const login = async (req: Request, res: Response) => {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return next(AppError.unauthorized('邮箱或密码错误'));
     }
 
     // Check if email is verified
     if (!user.isVerified) {
-      return res.status(403).json({
-        error: 'Please verify your email before logging in.',
-        code: 'EMAIL_NOT_VERIFIED'
-      });
+      return next(new AppError('请先验证邮箱再登录', 403, true, 'EMAIL_NOT_VERIFIED'));
     }
 
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({ token, user: formatUser(user) });
   } catch (error: any) {
-    console.error('Login Error:', error);
     if (error.name === 'ZodError') {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return next(AppError.badRequest('请检查输入格式'));
     }
-    res.status(500).json({ error: 'Login failed' });
+    next(error); // Pass to global error handler
   }
 };
 

@@ -7,6 +7,7 @@ interface SummaryStats {
     streak: number;
     todayMinutes: number;
     dailyGoal: number;
+    dailyProgress: number;
     wordsToReview: number;
 }
 
@@ -20,15 +21,15 @@ export const LearnerSummaryCard: React.FC = () => {
 
     const loadStats = async () => {
         try {
-            const response = await api.getMyStats();
-            if (response.success) {
-                setStats({
-                    streak: response.data.streak,
-                    todayMinutes: response.data.todayMinutes,
-                    dailyGoal: response.data.dailyGoal,
-                    wordsToReview: response.data.wordsToReview
-                });
-            }
+            // Use getUserStats which returns real calculated data
+            const response = await api.getUserStats();
+            setStats({
+                streak: response.streak,
+                todayMinutes: response.dailyMinutes,
+                dailyGoal: response.dailyGoal,
+                dailyProgress: response.dailyProgress,
+                wordsToReview: response.todayActivities.wordsLearned
+            });
         } catch (e) {
             console.error('LearnerSummaryCard: Failed to load stats', e);
         } finally {
@@ -55,7 +56,7 @@ export const LearnerSummaryCard: React.FC = () => {
         );
     }
 
-    const progressPercent = Math.min(100, (stats.todayMinutes / stats.dailyGoal) * 100);
+    const progressPercent = stats.dailyProgress;
 
     return (
         <BentoCard bgClass="bg-indigo-50" className="flex flex-col justify-between h-full bg-indigo-50" borderClass="border-slate-900" >

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
     ArrowLeft,
     Settings,
@@ -13,9 +13,12 @@ import {
     Send,
     X,
     ChevronDown,
-    Loader2
+    Loader2,
+    Menu
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
+import BottomSheet from '../../components/common/BottomSheet';
 
 // =========================================
 // Types
@@ -377,15 +380,54 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     unitTitle = '第1单元: 自我介绍',
     onBack
 }) => {
-    // Loading state
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // ========================================
+    // React Query: Fetch unit data with caching
+    // ========================================
+    const { data: queryData, isLoading: loading, error: queryError } = useQuery({
+        queryKey: ['unit', courseId, unitIndex],
+        queryFn: async () => {
+            const response = await api.getUnitLearningData(courseId, unitIndex);
+            if (!response.success) {
+                throw new Error('Failed to fetch unit data');
+            }
+            return response.data;
+        },
+        staleTime: Infinity, // Course content rarely changes
+        enabled: !!courseId && unitIndex > 0,
+    });
 
-    // API data state
-    const [unitData, setUnitData] = useState<UnitData | null>(null);
-    const [vocabList, setVocabList] = useState<VocabItem[]>([]);
-    const [grammarList, setGrammarList] = useState<GrammarItem[]>([]);
-    const [annotations, setAnnotations] = useState<AnnotationItem[]>([]);
+    // Extract data from query
+    const unitData = queryData?.unit || null;
+    const vocabList = queryData?.vocabList || [];
+    const grammarList = queryData?.grammarList || [];
+    const apiAnnotations = queryData?.annotations || [];
+
+    // Process annotations from API
+    const { notes: notesFromApi, highlights: highlightsFromApi } = useMemo(() => {
+        const notesFromApi = apiAnnotations
+            .filter((a: AnnotationItem) => a.note)
+            .map((a: AnnotationItem) => ({
+                id: a.id,
+                text: a.text,
+                comment: a.note || '',
+                color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+                startOffset: a.startOffset || 0,
+                endOffset: a.endOffset || 0,
+                timestamp: new Date(a.createdAt).getTime()
+            }));
+
+        const highlightsFromApi = apiAnnotations
+            .filter((a: AnnotationItem) => a.color && !a.note)
+            .map((a: AnnotationItem) => ({
+                id: a.id,
+                text: a.text,
+                color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+                startOffset: a.startOffset || 0,
+                endOffset: a.endOffset || 0
+            }));
+
+        return { notes: notesFromApi, highlights: highlightsFromApi };
+    }, [apiAnnotations]);
 
     // UI State
     const [fontSize, setFontSize] = useState(18);
@@ -396,6 +438,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
     const [notes, setNotes] = useState<Note[]>([]);
     const [highlights, setHighlights] = useState<Highlight[]>([]);
+
+    // Initialize notes/highlights from API data
+    useEffect(() => {
+        if (notesFromApi.length > 0) setNotes(notesFromApi);
+        if (highlightsFromApi.length > 0) setHighlights(highlightsFromApi);
+    }, [notesFromApi, highlightsFromApi]);
 
     // Selection & Popover state
     const [selectedWord, setSelectedWord] = useState<{
@@ -410,66 +458,16 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
     // Right panel tab
     const [activeTab, setActiveTab] = useState<'notes' | 'vocab' | 'grammar' | 'ai'>('vocab');
+
+    // Mobile bottom sheet state
+    const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
     const [aiInput, setAiInput] = useState('');
     const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
         { role: 'ai', content: '你好！我是你的AI助教。有什么语法问题想问我吗？' }
     ]);
 
     const readerRef = useRef<HTMLDivElement>(null);
-
-    // ========================================
-    // Data Fetching
-    // ========================================
-    useEffect(() => {
-        const fetchUnitData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await api.getUnitLearningData(courseId, unitIndex);
-                if (response.success && response.data) {
-                    setUnitData(response.data.unit);
-                    setVocabList(response.data.vocabList || []);
-                    setGrammarList(response.data.grammarList || []);
-
-                    // Convert API annotations to local format
-                    const apiAnnotations = response.data.annotations || [];
-                    setAnnotations(apiAnnotations);
-
-                    // Also populate notes/highlights from annotations
-                    const notesFromApi = apiAnnotations
-                        .filter((a: AnnotationItem) => a.note)
-                        .map((a: AnnotationItem) => ({
-                            id: a.id,
-                            text: a.text,
-                            comment: a.note || '',
-                            color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
-                            startOffset: a.startOffset || 0,
-                            endOffset: a.endOffset || 0,
-                            timestamp: new Date(a.createdAt).getTime()
-                        }));
-                    setNotes(notesFromApi);
-
-                    const highlightsFromApi = apiAnnotations
-                        .filter((a: AnnotationItem) => a.color && !a.note)
-                        .map((a: AnnotationItem) => ({
-                            id: a.id,
-                            text: a.text,
-                            color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
-                            startOffset: a.startOffset || 0,
-                            endOffset: a.endOffset || 0
-                        }));
-                    setHighlights(highlightsFromApi);
-                }
-            } catch (err) {
-                console.error('[ReadingModule] Failed to fetch unit data:', err);
-                setError('加载失败，请重试');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUnitData();
-    }, [courseId, unitIndex]);
+    const error = queryError ? '加载失败，请重试' : null;
 
     // ========================================
     // Smart Word Lookup: Find base form using analysisData
@@ -781,8 +779,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
                     {/* Main Content: Split Screen */}
                     <div className="flex-1 flex overflow-hidden">
-                        {/* Left: Reader Panel (65%) */}
-                        <div className="w-[65%] border-r-2 border-zinc-900 overflow-y-auto p-8">
+                        {/* Left: Reader Panel (65% desktop, full width mobile) */}
+                        <div className="w-full md:w-[65%] md:border-r-2 border-zinc-900 overflow-y-auto p-4 md:p-8">
                             <div
                                 ref={readerRef}
                                 onClick={handleWordClick}
@@ -814,11 +812,29 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                         </details>
                                     </div>
                                 )}
+
+                                {/* Complete Unit Button */}
+                                <div className="mt-8 pt-6 border-t-2 border-zinc-200 flex justify-center">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await api.completeUnit(courseId, unitIndex);
+                                                // Show success feedback
+                                                alert('🎉 本课学习已完成！');
+                                            } catch (e) {
+                                                console.error('Failed to mark unit complete:', e);
+                                            }
+                                        }}
+                                        className="px-8 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                                    >
+                                        ✅ 完成本课学习
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Right: Study Hub (35%) */}
-                        <div className="w-[35%] bg-[#FDFBF7] flex flex-col overflow-hidden">
+                        {/* Right: Study Hub (35% - hidden on mobile) */}
+                        <div className="hidden md:flex w-[35%] bg-[#FDFBF7] flex-col overflow-hidden">
                             {/* Tabs */}
                             <div className="flex border-b-2 border-zinc-900 shrink-0">
                                 {[
@@ -1025,6 +1041,79 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                             onClose={() => setNoteModal(null)}
                         />
                     )}
+
+                    {/* Mobile: Floating Action Button for Study Hub */}
+                    <button
+                        onClick={() => setMobileSheetOpen(true)}
+                        className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-lime-400 border-2 border-zinc-900 rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                    >
+                        <Menu className="w-6 h-6 text-zinc-900" />
+                    </button>
+
+                    {/* Mobile: Bottom Sheet for Study Hub */}
+                    <BottomSheet
+                        isOpen={mobileSheetOpen}
+                        onClose={() => setMobileSheetOpen(false)}
+                        title="学习工具"
+                        height="half"
+                    >
+                        {/* Mobile Tabs */}
+                        <div className="flex border-b border-zinc-200 mb-4 -mx-5 px-5">
+                            {[
+                                { key: 'vocab', label: '词汇', icon: BookOpen },
+                                { key: 'grammar', label: '语法', icon: Sparkles },
+                                { key: 'notes', label: '笔记', icon: PenLine },
+                            ].map(tab => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key as any)}
+                                    className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${activeTab === tab.key
+                                        ? 'border-lime-500 text-lime-600'
+                                        : 'border-transparent text-zinc-400'
+                                        }`}
+                                >
+                                    <tab.icon className="w-4 h-4" />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Mobile Content */}
+                        {activeTab === 'vocab' && (
+                            <div className="space-y-2">
+                                {vocabList.slice(0, 10).map(vocab => (
+                                    <div key={vocab.id} className="p-3 bg-zinc-50 rounded-lg">
+                                        <div className="font-bold text-zinc-900">{vocab.korean}</div>
+                                        <div className="text-sm text-zinc-500">{vocab.meaning}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {activeTab === 'grammar' && (
+                            <div className="space-y-2">
+                                {grammarList.slice(0, 5).map(g => (
+                                    <div key={g.id} className="p-3 bg-zinc-50 rounded-lg">
+                                        <div className="font-bold text-zinc-900">{g.title}</div>
+                                        <div className="text-sm text-zinc-500">{g.explanation}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {activeTab === 'notes' && (
+                            <div className="space-y-2">
+                                {notes.length === 0 ? (
+                                    <p className="text-center text-zinc-400 py-4">选中文本添加笔记</p>
+                                ) : (
+                                    notes.map(note => (
+                                        <div key={note.id} className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                                            <div className="font-bold text-sm">{note.text}</div>
+                                            <div className="text-xs text-zinc-500">{note.comment}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </BottomSheet>
                 </>
             )}
         </div>

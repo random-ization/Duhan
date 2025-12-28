@@ -1,11 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import UpgradePrompt from './components/UpgradePrompt';
 import { AppRoutes } from './routes';
 import { useAuth } from './contexts/AuthContext';
 import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
+
+// Create a client with optimized defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 min, no refetch
+      gcTime: 1000 * 60 * 30, // 30 minutes - keep in cache
+      refetchOnWindowFocus: false, // Disable refetch on tab focus
+      retry: 1, // Only retry once on failure
+    },
+  },
+});
 
 function App() {
   const { user, loading, language, canAccessContent, updateLearningProgress } =
@@ -44,7 +57,7 @@ function App() {
   };
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/*" element={
           <AppRoutes
@@ -60,8 +73,9 @@ function App() {
         language={language}
         contentType="textbook"
       />
-    </>
+    </QueryClientProvider>
   );
 }
 
 export default App;
+

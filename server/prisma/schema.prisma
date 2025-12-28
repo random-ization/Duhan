@@ -55,6 +55,7 @@ model User {
   examHistory        ExamAttempt[]
   learningActivities LearningActivity[]
   notebookEntries    NotebookEntry[]
+  courseProgress     UserCourseProgress[]
 
   // Podcast relations
   subscribedChannels PodcastChannel[]
@@ -93,6 +94,23 @@ model Institute {
   vocabAppearances   VocabularyAppearance[]
   grammarAppearances CourseGrammar[]
   units              TextbookUnit[] // New: relational reading content
+  userProgress       UserCourseProgress[]
+}
+
+// Track user progress per course
+model UserCourseProgress {
+  id             String   @id @default(uuid())
+  userId         String
+  courseId       String
+  completedUnits Int[]    // Array of completed unit indexes, e.g., [1, 2, 5]
+  lastAccessAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Institute @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
 }
 
 model TextbookContent {
@@ -515,6 +533,7 @@ model UserWordProgress {
   mistakeCount   Int       @default(0)
 
   @@unique([userId, wordId])
+  @@index([userId, nextReviewAt]) // Optimize SRS review queries
 }
 
 // ========== Grammar Training System (Global Knowledge Graph) ==========

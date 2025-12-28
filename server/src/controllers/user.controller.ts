@@ -344,6 +344,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 export const getUserStats = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
+    const dailyGoal = 30; // Default 30 minutes daily goal
 
     // Get today's date at midnight
     const today = new Date();
@@ -405,7 +406,7 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
       weeklyMinutes[dayIndex] += activity.duration || 0;
     });
 
-    // 3. Get today's activities
+    // 3. Get today's activities and calculate daily minutes
     const todayActivities = await prisma.learningActivity.findMany({
       where: {
         userId,
@@ -413,6 +414,7 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    let dailyMinutes = 0;
     const todayStats = {
       wordsLearned: 0,
       readingsCompleted: 0,
@@ -420,6 +422,7 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
     };
 
     todayActivities.forEach(activity => {
+      dailyMinutes += activity.duration || 0;
       if (activity.activityType === 'VOCAB') {
         todayStats.wordsLearned += activity.itemsStudied || 0;
       } else if (activity.activityType === 'READING') {
@@ -429,14 +432,156 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // 4. Get course progress data
+    const courseProgress = await prisma.userCourseProgress.findMany({
+      where: { userId },
+      include: {
+        course: {
+          select: { id: true, name: true, totalUnits: true }
+        }
+      }
+    });
+
+    const courseProgressData = courseProgress.map(cp => ({
+      courseId: cp.courseId,
+      courseName: cp.course.name,
+      completedUnits: cp.completedUnits.length,
+      totalUnits: cp.course.totalUnits || 10,
+      lastAccessAt: cp.lastAccessAt,
+    }));
+
     res.json({
       streak,
       weeklyMinutes,
+      dailyMinutes,
+      dailyGoal,
+      dailyProgress: Math.min(100, Math.round((dailyMinutes / dailyGoal) * 100)),
       todayActivities: todayStats,
+      courseProgress: courseProgressData,
     });
   } catch (e: unknown) {
     console.error('Get User Stats Error:', e);
     res.status(500).json({ error: 'Failed to get user stats' });
+  }
+};
+
+// Complete a unit (mark as completed)
+export const completeUnit = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { courseId, unitIndex } = req.body;
+
+    if (!courseId || unitIndex === undefined) {
+      return res.status(400).json({ error: 'courseId and unitIndex are required' });
+    }
+
+    // Find or create progress record
+    let progress = await prisma.userCourseProgress.findUnique({
+      where: { userId_courseId: { userId, courseId } }
+    });
+
+    if (progress) {
+      // Add unit to completedUnits if not already there
+      const currentUnits = progress.completedUnits || [];
+      if (!currentUnits.includes(unitIndex)) {
+        progress = await prisma.userCourseProgress.update({
+          where: { id: progress.id },
+          data: {
+            completedUnits: [...currentUnits, unitIndex],
+            lastAccessAt: new Date()
+          }
+        });
+      } else {
+        // Just update lastAccessAt
+        progress = await prisma.userCourseProgress.update({
+          where: { id: progress.id },
+          data: { lastAccessAt: new Date() }
+        });
+      }
+    } else {
+      // Create new progress record
+      progress = await prisma.userCourseProgress.create({
+        data: {
+          userId,
+          courseId,
+          completedUnits: [unitIndex],
+          lastAccessAt: new Date()
+        }
+      });
+    }
+
+    // Get course for total units
+    const course = await prisma.institute.findUnique({
+      where: { id: courseId },
+      select: { totalUnits: true }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        courseId,
+        completedUnits: progress.completedUnits,
+        completedCount: progress.completedUnits.length,
+        totalUnits: course?.totalUnits || 10
+      }
+    });
+  } catch (e: unknown) {
+    console.error('Complete Unit Error:', e);
+    res.status(500).json({ error: 'Failed to complete unit' });
+  }
+};
+
+// Get course progress for a specific course
+export const getCourseProgress = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { courseId } = req.params;
+
+    const progress = await prisma.userCourseProgress.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+      include: {
+        course: { select: { name: true, totalUnits: true } }
+      }
+    });
+
+    if (!progress) {
+      // No progress yet, return empty
+      const course = await prisma.institute.findUnique({
+        where: { id: courseId },
+        select: { name: true, totalUnits: true }
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          courseId,
+          courseName: course?.name || '',
+          completedUnits: [],
+          completedCount: 0,
+          totalUnits: course?.totalUnits || 10,
+          progressPercent: 0
+        }
+      });
+    }
+
+    const totalUnits = progress.course.totalUnits || 10;
+    const completedCount = progress.completedUnits.length;
+
+    res.json({
+      success: true,
+      data: {
+        courseId,
+        courseName: progress.course.name,
+        completedUnits: progress.completedUnits,
+        completedCount,
+        totalUnits,
+        progressPercent: Math.round((completedCount / totalUnits) * 100),
+        lastAccessAt: progress.lastAccessAt
+      }
+    });
+  } catch (e: unknown) {
+    console.error('Get Course Progress Error:', e);
+    res.status(500).json({ error: 'Failed to get course progress' });
   }
 };
 

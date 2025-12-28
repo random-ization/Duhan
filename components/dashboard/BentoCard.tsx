@@ -16,7 +16,7 @@ export function BentoCard({ children, className, onClickPath, bgClass, borderCla
         <div
             onClick={() => onClickPath && navigate(onClickPath)}
             className={clsx(
-                "relative overflow-hidden shadow-pop rounded-[2.5rem] p-6 transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.01] cursor-pointer group border-2",
+                "relative overflow-hidden shadow-pop rounded-[2.5rem] p-4 md:p-6 transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.01] cursor-pointer group border-2",
                 bgClass || "bg-white",
                 borderClass || "border-slate-900",
                 className

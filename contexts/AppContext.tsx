@@ -76,5 +76,7 @@ export const useApp = () => {
     cardOrder: useLayout().cardOrder,
     updateCardOrder: useLayout().updateCardOrder,
     resetLayout: useLayout().resetLayout,
+    isMobileMenuOpen: useLayout().isMobileMenuOpen,
+    toggleMobileMenu: useLayout().toggleMobileMenu,
   };
 };

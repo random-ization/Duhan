@@ -5,6 +5,7 @@ import { Play, Calendar } from 'lucide-react';
 import { ListeningHistoryItem } from '../types';
 import { PODCAST_MESSAGES } from '../constants/podcast-messages';
 import BackButton from '../components/ui/BackButton';
+import EmptyState from '../src/components/common/EmptyState';
 
 export default function HistoryPage() {
     const [history, setHistory] = useState<ListeningHistoryItem[]>([]);
@@ -49,7 +50,13 @@ export default function HistoryPage() {
                 )}
 
                 {!loading && !error && history.length === 0 && (
-                    <p className="text-center text-gray-400 mt-10">{PODCAST_MESSAGES.EMPTY_HISTORY}</p>
+                    <EmptyState
+                        icon={Play}
+                        title="还没有收听记录"
+                        description="开始你的第一次韩语听力之旅吧！"
+                        actionLabel="探索播客"
+                        onAction={() => navigate('/podcasts')}
+                    />
                 )}
 
                 {history.map((item) => (
