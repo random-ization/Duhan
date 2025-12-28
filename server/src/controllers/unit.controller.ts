@@ -119,9 +119,7 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
                     title: unit.title,
                     text: unit.readingText,
                     translation: unit.translation,
-                    audioUrl: unit.audioUrl,
                     analysisData: (unit as any).analysisData, // AI morphological analysis
-                    transcriptData: (unit as any).transcriptData, // Listening karaoke data
                 } : null,
                 vocabList,
                 grammarList,
