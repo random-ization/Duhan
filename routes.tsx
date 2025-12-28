@@ -17,6 +17,7 @@ const VocabModulePage = lazy(() => import('./pages/VocabModulePage'));
 const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
 const TopikPage = lazy(() => import('./pages/TopikPage'));
 const AdminPage = lazy(() => import('./src/features/admin/AdminPage'));
+const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
 const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
@@ -75,6 +76,9 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
           element={<LegalDocumentPage language={language} documentType="refund" />}
         />
         <Route path="/pricing" element={<SubscriptionPage />} />
+
+        {/* === 管理员登录页 (公开) === */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
@@ -148,12 +152,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
           </Route>
         </Route>
 
-        {/* === 管理员路由 (需要 Admin 权限) === */}
-        <Route element={<ProtectedRoute requireAdmin={true} />}>
-          <Route element={<AppLayout />}>
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/:tab" element={<AdminPage />} />
-          </Route>
+        {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}
+        <Route element={<ProtectedRoute requireAdmin={true} redirectTo="/admin/login" />}>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/:tab" element={<AdminPage />} />
         </Route>
 
         {/* 404 或未知路径重定向 */}

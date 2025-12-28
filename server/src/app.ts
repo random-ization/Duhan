@@ -16,6 +16,7 @@ import podcastRoutes from './routes/podcast.routes';
 import vocabRoutes from './routes/vocab.routes';
 import grammarRoutes from './routes/grammar.routes';
 import unitRoutes from './routes/unit.routes';
+import listeningRoutes from './routes/listening.routes';
 
 const app = express();
 
@@ -56,6 +57,8 @@ app.use('/api/grammar', grammarRoutes);
 console.log('[Server] /api/grammar registered');
 app.use('/api/courses/:courseId/units', unitRoutes);
 console.log('[Server] /api/courses/:courseId/units registered');
+app.use('/api/courses/:courseId/listening', listeningRoutes);
+console.log('[Server] /api/courses/:courseId/listening registered');
 
 // Health Check
 app.get('/health', (req, res) => {

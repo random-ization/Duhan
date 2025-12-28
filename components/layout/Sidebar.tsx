@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Settings, LogOut, ShieldCheck, ChevronLeft, ChevronRight, FileSpreadsheet, Check } from 'lucide-react';
+import { Settings, LogOut, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 
@@ -101,21 +101,6 @@ export default function Sidebar() {
                         </NavLink>
                     );
                 })}
-
-                {/* Admin Link */}
-                {user?.role?.toUpperCase() === 'ADMIN' && (
-                    <>
-                        <div className="h-px bg-slate-100 my-2 mx-2" />
-                        <NavLink
-                            to="/admin"
-                            title={collapsed ? '管理后台' : undefined}
-                            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-3 rounded-[1.5rem] text-slate-900 bg-slate-100 border-2 border-slate-200 hover:bg-slate-200 font-bold transition-all`}
-                        >
-                            <ShieldCheck size={20} className="shrink-0" />
-                            {!collapsed && <span>管理后台</span>}
-                        </NavLink>
-                    </>
-                )}
             </nav>
 
             {/* Bottom Actions */}
@@ -130,8 +115,8 @@ export default function Sidebar() {
                     }}
                     title={location.pathname === '/dashboard' && isEditing ? "完成编辑" : "设置"}
                     className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${location.pathname === '/dashboard' && isEditing
-                            ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
-                            : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
+                        ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+                        : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
                         } transition border-2`}
                 >
                     {location.pathname === '/dashboard' && isEditing ? <Check size={20} /> : <Settings size={20} />}

@@ -56,6 +56,12 @@ export default function VocabModulePage() {
     const [isAudioLooping, setIsAudioLooping] = useState(false);
     const audioLoopRef = useRef<boolean>(false);
 
+    // Use ref to prevent parseWords from depending on textbookContexts object
+    const textbookContextsRef = useRef(textbookContexts);
+    useEffect(() => {
+        textbookContextsRef.current = textbookContexts;
+    }, [textbookContexts]);
+
     // Parse words from API or Legacy
     const parseWords = useCallback(async () => {
         setLoading(true);
@@ -83,16 +89,17 @@ export default function VocabModulePage() {
             console.warn('API fetch failed, falling back to legacy:', err);
         }
 
-        // 2. Fallback to Legacy textbookContexts
+        // 2. Fallback to Legacy textbookContexts (use ref to avoid dependency)
         const combined: ExtendedVocabItem[] = [];
         const level = selectedLevel || 1;
         const prefix = `${instituteId}-${level}-`;
+        const contexts = textbookContextsRef.current;
 
-        Object.keys(textbookContexts).forEach(key => {
+        Object.keys(contexts).forEach(key => {
             if (key.startsWith(prefix)) {
                 const unitStr = key.slice(prefix.length);
                 const unit = parseInt(unitStr, 10);
-                const content = textbookContexts[key];
+                const content = contexts[key];
                 if (content?.vocabularyList && content.vocabularyList.startsWith('[')) {
                     try {
                         const parsed: VocabularyItem[] = JSON.parse(content.vocabularyList);
@@ -112,7 +119,7 @@ export default function VocabModulePage() {
         }
 
         setLoading(false);
-    }, [instituteId, selectedLevel, textbookContexts]);
+    }, [instituteId, selectedLevel]); // Removed textbookContexts to prevent infinite loop
 
     useEffect(() => { parseWords(); }, [parseWords]);
 

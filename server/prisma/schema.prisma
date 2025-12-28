@@ -117,7 +117,7 @@ model TextbookContent {
   grammarList          String? // @deprecated - Use CourseGrammar
 }
 
-// ========== New Relational Reading Content ==========
+// ========== Reading Content ==========
 model TextbookUnit {
   id String @id @default(uuid())
 
@@ -128,7 +128,6 @@ model TextbookUnit {
   title       String // Lesson title (e.g., "자기 소개")
   readingText String  @db.Text // Full reading content (long text)
   translation String? @db.Text // Chinese translation (optional)
-  audioUrl    String? // S3 URL for audio file
   
   // AI Analysis Data: Morphological analysis results
   // Structure: [{ surface: "갔습니다", base: "가다", offset: 0, length: 4, pos: "Verb" }]
@@ -138,6 +137,27 @@ model TextbookUnit {
   updatedAt DateTime @updatedAt
 
   @@unique([courseId, unitIndex]) // Each unit appears once per course
+  @@index([courseId])
+}
+
+// ========== Listening Content (Completely Separate) ==========
+model ListeningUnit {
+  id String @id @default(uuid())
+
+  courseId  String // Foreign key to Institute (no relation to avoid circular ref)
+  unitIndex Int // Unit number (1, 2, 3...)
+
+  title    String // Listening lesson title
+  audioUrl String // S3 URL for audio file
+  
+  // Timestamped transcript for karaoke-style playback
+  // Structure: [{ start: 0, end: 2.5, text: "안녕하세요", translation: "你好" }]
+  transcriptData Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, unitIndex]) // Each listening unit appears once per course
   @@index([courseId])
 }
 

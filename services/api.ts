@@ -103,9 +103,14 @@ export const api = {
   }>('/user/stats'),
 
   // --- Admin / Users ---
-  getUsers: async (): Promise<any[]> => {
-    // 采用绝对路径以兼容部署下的 base
-    return request<any[]>('/admin/users');
+  getUsers: async (page = 1, limit = 10, search = ''): Promise<{
+    users: any[];
+    total: number;
+    pages: number;
+    page: number;
+    limit: number;
+  }> => {
+    return request(`/admin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
   },
 
   updateUser: async (userId: string, updates: Record<string, any>) =>
@@ -626,6 +631,7 @@ export const api = {
     readingText: string;
     translation?: string;
     audioUrl?: string;
+    transcriptData?: any; // Listening karaoke data
   }) =>
     request<{
       success: boolean;
@@ -644,6 +650,7 @@ export const api = {
         readingText: data.readingText,
         translation: data.translation,
         audioUrl: data.audioUrl,
+        transcriptData: data.transcriptData,
       })
     }),
 
@@ -680,6 +687,70 @@ export const api = {
         updatedAt: string;
       }[];
     }>(`/courses/${courseId}/units`),
+
+  // ========== Listening Management (Separate from Reading) ==========
+
+  // Get all listening units for a course
+  getListeningUnitsForCourse: async (courseId: string) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        unitIndex: number;
+        title: string;
+        hasAudio: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }[];
+    }>(`/courses/${courseId}/listening`),
+
+  // Get a single listening unit with transcript data
+  getListeningUnit: async (courseId: string, unitIndex: number) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        courseId: string;
+        unitIndex: number;
+        title: string;
+        audioUrl: string;
+        transcriptData: any;
+      };
+    }>(`/courses/${courseId}/listening/${unitIndex}`),
+
+  // Create or update a listening unit
+  saveListeningUnit: async (data: {
+    courseId: string;
+    unitIndex: number;
+    title: string;
+    audioUrl?: string;
+    transcriptData?: any;
+  }) =>
+    request<{
+      success: boolean;
+      data: {
+        id: string;
+        courseId: string;
+        unitIndex: number;
+        title: string;
+      };
+    }>(`/courses/${data.courseId}/listening/${data.unitIndex}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: data.title,
+        audioUrl: data.audioUrl,
+        transcriptData: data.transcriptData,
+      })
+    }),
+
+  // Delete a listening unit
+  deleteListeningUnit: async (courseId: string, unitIndex: number) =>
+    request<{
+      success: boolean;
+      message: string;
+    }>(`/courses/${courseId}/listening/${unitIndex}`, {
+      method: 'DELETE'
+    }),
 
   // ========== Grammar Management ==========
 

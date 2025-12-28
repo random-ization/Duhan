@@ -121,6 +121,7 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
                     translation: unit.translation,
                     audioUrl: unit.audioUrl,
                     analysisData: (unit as any).analysisData, // AI morphological analysis
+                    transcriptData: (unit as any).transcriptData, // Listening karaoke data
                 } : null,
                 vocabList,
                 grammarList,
@@ -215,7 +216,7 @@ export const getUnitsForCourse = async (req: AuthRequest, res: Response) => {
 export const saveUnit = async (req: AuthRequest, res: Response) => {
     try {
         const { courseId, unitIndex } = req.params;
-        const { title, readingText, translation, audioUrl } = req.body;
+        const { title, readingText, translation, audioUrl, transcriptData } = req.body;
         const unitNum = parseInt(unitIndex, 10);
 
         if (!courseId || isNaN(unitNum)) {
@@ -259,6 +260,7 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
                 translation,
                 audioUrl,
                 analysisData: analysisData || undefined,
+                transcriptData: transcriptData || undefined, // Listening karaoke data
             },
             create: {
                 courseId,
@@ -268,6 +270,7 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
                 translation,
                 audioUrl,
                 analysisData,
+                transcriptData: transcriptData || null,
             }
         });
 
@@ -291,6 +294,78 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
         });
     }
 };
+
+/**
+ * POST /api/courses/:courseId/units/:unitIndex/listening
+ * 
+ * Update only listening-related fields (audioUrl, transcriptData)
+ * Does NOT trigger AI analysis or affect reading content
+ * Requires ADMIN role
+ */
+export const saveListeningContent = async (req: AuthRequest, res: Response) => {
+    try {
+        const { courseId, unitIndex } = req.params;
+        const { audioUrl, transcriptData } = req.body;
+        const unitNum = parseInt(unitIndex, 10);
+
+        if (!courseId || isNaN(unitNum)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid courseId or unitIndex'
+            });
+        }
+
+        console.log(`[Unit Controller] Saving listening content: courseId=${courseId}, unit=${unitNum}`);
+
+        // Check if unit exists
+        const existingUnit = await (prisma as any).textbookUnit.findUnique({
+            where: {
+                courseId_unitIndex: {
+                    courseId,
+                    unitIndex: unitNum
+                }
+            }
+        });
+
+        if (!existingUnit) {
+            return res.status(404).json({
+                success: false,
+                error: 'Unit not found. Please create the unit first in Reading Content Manager.'
+            });
+        }
+
+        // Update only listening fields
+        const unit = await (prisma as any).textbookUnit.update({
+            where: {
+                courseId_unitIndex: {
+                    courseId,
+                    unitIndex: unitNum
+                }
+            },
+            data: {
+                audioUrl: audioUrl || existingUnit.audioUrl,
+                transcriptData: transcriptData !== undefined ? transcriptData : existingUnit.transcriptData,
+            }
+        });
+
+        return res.json({
+            success: true,
+            data: {
+                id: unit.id,
+                courseId: unit.courseId,
+                unitIndex: unit.unitIndex,
+            }
+        });
+
+    } catch (error) {
+        console.error('[Unit Controller] saveListeningContent error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to save listening content'
+        });
+    }
+};
+
 
 /**
  * POST /api/courses/:courseId/units/:unitIndex/analyze

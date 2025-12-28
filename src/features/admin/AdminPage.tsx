@@ -2,85 +2,117 @@ import React, { useState } from 'react';
 import VocabDashboard from '../../../components/admin/VocabDashboard';
 import VocabImporter from '../../../components/admin/VocabImporter';
 import { ReadingContentManager } from '../../components/admin/ReadingContentManager';
+import { ListeningContentManager } from '../../components/admin/ListeningContentManager';
 import { GrammarManager } from '../../components/admin/GrammarManager';
 import { InstituteManager } from '../../components/admin/InstituteManager';
+import { TopikManager } from '../../components/admin/TopikManager';
+import { UserManagement } from '../../components/admin/UserManagement';
 import { DashboardView } from '../../components/admin/DashboardView';
-import { Book, Database, ArrowLeft, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import LegalDocumentEditor from '../../../components/admin/LegalDocumentEditor';
+import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'vocab' | 'reading' | 'grammar' | 'institute'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal'>('dashboard');
     const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
-    const navigate = useNavigate();
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] p-8">
-            <header className="mb-8 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="text-3xl font-black text-zinc-900 mb-1">管理后台</h1>
-                        <p className="text-zinc-500 font-medium">内容生产与数据库管理中心</p>
-                    </div>
-                </div>
+            <header className="mb-8">
+                <h1 className="text-3xl font-black text-zinc-900 mb-1">管理后台</h1>
+                <p className="text-zinc-500 font-medium">内容生产与数据库管理中心</p>
             </header>
 
             {/* Main Tabs */}
-            <div className="flex gap-4 mb-6 border-b-2 border-zinc-200 pb-1">
+            <div className="flex gap-1 mb-6 border-b border-zinc-200 overflow-x-auto">
                 <button
                     onClick={() => setActiveTab('dashboard')}
-                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'dashboard'
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'dashboard'
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    <BarChart3 size={20} />
+                    <BarChart3 size={16} />
                     数据看板
                 </button>
                 <button
-                    onClick={() => setActiveTab('institute')}
-                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'institute'
+                    onClick={() => setActiveTab('users')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'users'
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    <Library size={20} />
-                    教材管理
+                    <Users size={16} />
+                    用户
+                </button>
+                <button
+                    onClick={() => setActiveTab('institute')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'institute'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <Library size={16} />
+                    教材
                 </button>
                 <button
                     onClick={() => setActiveTab('reading')}
-                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'reading'
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'reading'
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    <Book size={20} />
-                    阅读文章管理
+                    <Book size={16} />
+                    阅读
+                </button>
+                <button
+                    onClick={() => setActiveTab('listening')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'listening'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <Headphones size={16} />
+                    听力
                 </button>
                 <button
                     onClick={() => setActiveTab('grammar')}
-                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'grammar'
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'grammar'
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    <GraduationCap size={20} />
-                    语法管理
+                    <GraduationCap size={16} />
+                    语法
                 </button>
                 <button
                     onClick={() => setActiveTab('vocab')}
-                    className={`px-6 py-3 font-black text-lg flex items-center gap-2 border-b-4 transition-all ${activeTab === 'vocab'
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'vocab'
                         ? 'border-zinc-900 text-zinc-900'
                         : 'border-transparent text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    <Database size={20} />
-                    词汇数据库
+                    <Database size={16} />
+                    词汇
+                </button>
+                <button
+                    onClick={() => setActiveTab('topik')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'topik'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <ClipboardCheck size={16} />
+                    TOPIK
+                </button>
+                <button
+                    onClick={() => setActiveTab('legal')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'legal'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <FileText size={16} />
+                    法律
                 </button>
             </div>
 
@@ -88,12 +120,20 @@ const AdminPage: React.FC = () => {
             <div>
                 {activeTab === 'dashboard' ? (
                     <DashboardView />
+                ) : activeTab === 'users' ? (
+                    <UserManagement />
                 ) : activeTab === 'institute' ? (
                     <InstituteManager />
                 ) : activeTab === 'reading' ? (
                     <ReadingContentManager />
+                ) : activeTab === 'listening' ? (
+                    <ListeningContentManager />
                 ) : activeTab === 'grammar' ? (
                     <GrammarManager />
+                ) : activeTab === 'topik' ? (
+                    <TopikManager />
+                ) : activeTab === 'legal' ? (
+                    <LegalDocumentEditor language="zh" />
                 ) : (
                     <div>
                         {/* Vocab Sub-tabs */}

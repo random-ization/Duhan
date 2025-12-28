@@ -18,6 +18,7 @@ interface UnitContent {
     audioUrl: string;
     hasAnalysis?: boolean;
     analysisData?: any;
+    transcriptData?: any; // Listening karaoke data
 }
 
 export const ReadingContentManager: React.FC = () => {
@@ -94,6 +95,7 @@ export const ReadingContentManager: React.FC = () => {
                     audioUrl: unit.audioUrl || '',
                     analysisData: unit.analysisData,
                     hasAnalysis: !!unit.analysisData,
+                    transcriptData: (unit as any).transcriptData || null,
                 });
             }
         } catch (e) {
@@ -112,7 +114,8 @@ export const ReadingContentManager: React.FC = () => {
                 title: editingUnit.title,
                 readingText: editingUnit.readingText,
                 translation: editingUnit.translation,
-                audioUrl: editingUnit.audioUrl
+                audioUrl: editingUnit.audioUrl,
+                transcriptData: editingUnit.transcriptData,
             });
 
             if (response.success) {

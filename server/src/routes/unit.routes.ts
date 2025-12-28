@@ -4,6 +4,7 @@ import {
     getUnitPage,
     getUnitsForCourse,
     saveUnit,
+    saveListeningContent,
     analyzeUnit,
     saveUnitAnnotation,
     deleteUnitAnnotation
@@ -27,6 +28,9 @@ router.get('/:unitIndex', optionalAuth, getUnitPage);
 // Create/update unit content (admin only - triggers AI analysis)
 router.post('/:unitIndex', authenticate, requireAdmin, saveUnit);
 
+// Update listening content only (admin only - no AI analysis)
+router.post('/:unitIndex/listening', authenticate, requireAdmin, saveListeningContent);
+
 // Re-run AI analysis on existing unit (admin only)
 router.post('/:unitIndex/analyze', authenticate, requireAdmin, analyzeUnit);
 
@@ -37,3 +41,4 @@ router.post('/:unitIndex/annotation', authenticate, saveUnitAnnotation);
 router.delete('/:unitIndex/annotation/:annotationId', authenticate, deleteUnitAnnotation);
 
 export default router;
+
