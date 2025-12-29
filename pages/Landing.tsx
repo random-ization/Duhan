@@ -1,453 +1,482 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation, Trans } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { LanguageSwitcher } from '../src/components/common/LanguageSwitcher';
 import {
-    BookOpen, GraduationCap, Headphones, Brain, ArrowRight,
-    CheckCircle2, Globe, PlayCircle, Star, Users, Zap
+    ArrowRight, BookOpen, Film, MousePointerClick, Mic,
+    Lightbulb, Headphones, Mic2, PauseCircle, Rewind, FastForward,
+    GraduationCap, Sparkles, PlayCircle, Library, Rss, ScanText, WifiOff,
+    Menu, X
 } from 'lucide-react';
-import { Language } from '../types';
 
-interface LandingProps {
-    language: Language;
-    onLanguageChange: (lang: Language) => void;
-}
-
-const Landing: React.FC<LandingProps> = ({ language, onLanguageChange }) => {
-    const navigate = useNavigate();
+export default function Landing() {
     const { t } = useTranslation();
-    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-
-    // 滚动显现动画 Hook
-    const useScrollReveal = () => {
-        useEffect(() => {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('opacity-100', 'translate-y-0');
-                        entry.target.classList.remove('opacity-0', 'translate-y-10');
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            document.querySelectorAll('.reveal-on-scroll').forEach((el) => observer.observe(el));
-            return () => observer.disconnect();
-        }, []);
-    };
-
-    useScrollReveal();
+    const navigate = useNavigate();
+    const [isAnnual, setIsAnnual] = useState(true);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (
-        <div className="flex flex-col min-h-screen font-sans bg-slate-50 overflow-x-hidden selection:bg-indigo-500 selection:text-white">
-
-            {/* --- Navbar --- */}
-            <nav className="fixed w-full z-50 top-0 transition-all duration-300 bg-white/80 backdrop-blur-md border-b border-slate-200/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-2">
-                            <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-lg" />
-                            <span className="font-bold text-xl text-slate-900 tracking-tight">{t('appName')}</span>
+        <div className="min-h-screen text-slate-900 font-sans antialiased overflow-x-hidden"
+            style={{
+                backgroundColor: '#F0F4F8',
+                backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+                backgroundSize: '24px 24px'
+            }}
+        >
+            {/* Navigation */}
+            <nav className="fixed top-0 w-full z-50 bg-[#F0F4F8]/90 backdrop-blur-md border-b-2 border-black">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                    <Link to="/" className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 bg-indigo-500 border-2 border-black rounded-lg flex items-center justify-center text-white font-display text-2xl shadow-pop group-hover:translate-y-1 group-hover:shadow-none transition-all">
+                            H
                         </div>
-                        <div className="flex items-center gap-4">
-                            {/* New Navigation Links - Removed Courses link */}
-                            <div className="hidden md:flex items-center gap-6 mr-6">
+                        <span className="font-display text-2xl tracking-wide">{t('appName')}</span>
+                    </Link>
+
+                    {/* Desktop Nav */}
+                    <div className="hidden md:flex items-center gap-8 font-bold text-slate-700">
+                        <a href="#features" className="hover:text-indigo-600 hover:underline decoration-2 underline-offset-4 decoration-black">
+                            {t('landing.features.videoTag')}
+                        </a>
+                        <a href="#pricing" className="hover:text-indigo-600 hover:underline decoration-2 underline-offset-4 decoration-black">
+                            {t('landing.pricing')}
+                        </a>
+                        <LanguageSwitcher />
+                        <button onClick={() => navigate('/login')} className="text-black hover:text-indigo-600">
+                            {t('login')}
+                        </button>
+                        <button
+                            onClick={() => navigate('/register')}
+                            className="bg-black text-white px-6 py-2.5 rounded-xl border-2 border-transparent shadow-pop hover:shadow-pop-hover hover:-translate-y-1 transition-all active:translate-y-0 active:shadow-none"
+                        >
+                            {t('startLearning')}
+                        </button>
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                        {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
+                </div>
+
+                {/* Mobile Menu */}
+                {mobileMenuOpen && (
+                    <div className="md:hidden bg-white border-t-2 border-black p-6 space-y-4">
+                        <LanguageSwitcher />
+                        <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="block w-full text-left font-bold py-2">
+                            {t('login')}
+                        </button>
+                        <button onClick={() => { navigate('/register'); setMobileMenuOpen(false); }} className="block w-full bg-black text-white px-6 py-3 rounded-xl font-bold text-center">
+                            {t('startLearning')}
+                        </button>
+                    </div>
+                )}
+            </nav>
+
+            {/* Hero Section */}
+            <header className="relative pt-40 pb-24 px-6 overflow-hidden">
+                <div className="max-w-5xl mx-auto text-center z-10 relative">
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-300 border-2 border-black shadow-pop mb-8 transform rotate-1 hover:rotate-0 transition-transform cursor-default">
+                        <Sparkles className="w-4 h-4" />
+                        <span className="font-bold text-sm">{t('landing.heroBadge')}</span>
+                    </div>
+
+                    {/* Title */}
+                    <h1 className="font-display text-5xl md:text-7xl leading-[1.1] mb-8 text-slate-900">
+                        {t('landing.heroTitle1')} <br />
+                        Start <span className="text-indigo-500 bg-yellow-200 px-2 underline decoration-wavy decoration-black decoration-2 underline-offset-8">
+                            Living
+                        </span> the Language.
+                    </h1>
+
+                    {/* Description */}
+                    <p className="text-xl md:text-2xl text-slate-600 mb-12 font-medium leading-relaxed max-w-3xl mx-auto">
+                        The only platform that combines <strong>fun immersion</strong> (K-Dramas, Podcasts) with <strong>serious academics</strong> (University Textbooks, TOPIK).
+                    </p>
+
+                    {/* CTA Buttons */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                        <button
+                            onClick={() => navigate('/register')}
+                            className="w-full sm:w-auto px-10 py-5 bg-indigo-600 text-white text-xl font-bold rounded-2xl border-2 border-black shadow-pop hover:shadow-pop-hover hover:-translate-y-1 transition-all flex items-center justify-center gap-3"
+                        >
+                            Start Learning Free <ArrowRight className="w-6 h-6" />
+                        </button>
+                        <button
+                            onClick={() => navigate('/pricing')}
+                            className="w-full sm:w-auto px-10 py-5 bg-white text-black text-xl font-bold rounded-2xl border-2 border-black shadow-pop hover:shadow-pop-hover hover:-translate-y-1 transition-all flex items-center justify-center gap-3"
+                        >
+                            <BookOpen className="w-6 h-6" /> View Curriculum
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Stats Bar */}
+            <div className="border-y-2 border-black bg-white py-12">
+                <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    <div>
+                        <p className="font-display text-4xl text-indigo-600 mb-1">500+</p>
+                        <p className="font-bold text-slate-500 text-sm uppercase tracking-wider">{t('landing.features.videoTag')}</p>
+                    </div>
+                    <div>
+                        <p className="font-display text-4xl text-pink-500 mb-1">Level 1-6</p>
+                        <p className="font-bold text-slate-500 text-sm uppercase tracking-wider">{t('landing.features.textbookTag')}</p>
+                    </div>
+                    <div>
+                        <p className="font-display text-4xl text-yellow-500 mb-1">GPT-4</p>
+                        <p className="font-bold text-slate-500 text-sm uppercase tracking-wider">AI Tutor</p>
+                    </div>
+                    <div>
+                        <p className="font-display text-4xl text-green-500 mb-1">TOPIK II</p>
+                        <p className="font-bold text-slate-500 text-sm uppercase tracking-wider">{t('landing.features.topikTag')}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Feature 1: Video Center */}
+            <section id="features" className="py-24 px-6 border-b-2 border-black bg-indigo-50">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+                    {/* Mockup */}
+                    <div className="md:w-1/2 relative">
+                        <div className="absolute -inset-4 bg-black rounded-[2rem] transform rotate-2"></div>
+                        <div className="relative bg-white border-2 border-black rounded-3xl p-2 shadow-pop-card overflow-hidden">
+                            <div className="bg-slate-800 aspect-video rounded-xl flex items-center justify-center relative overflow-hidden group">
+                                <div className="absolute bottom-8 left-0 right-0 text-center px-4">
+                                    <span className="bg-black/70 text-white px-4 py-2 rounded-lg text-lg font-medium backdrop-blur-md">
+                                        {t('landing.mock.videoSubtitle')}
+                                    </span>
+                                    <div className="mt-4 flex justify-center gap-2">
+                                        <span className="bg-indigo-500 text-white px-2 py-1 rounded text-sm font-bold cursor-pointer hover:bg-indigo-400">
+                                            {t('landing.mock.videoWord1')}
+                                        </span>
+                                        <span className="text-white px-2 py-1 text-sm">{t('landing.mock.videoWord2')}</span>
+                                        <span className="text-white px-2 py-1 text-sm">{t('landing.mock.videoWord3')}</span>
+                                    </div>
+                                </div>
+                                <PlayCircle className="w-20 h-20 text-white opacity-80" />
                             </div>
+                        </div>
+                    </div>
 
-                            {/* Language Selector */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                                    className={`flex items-center gap-1 text-sm font-medium transition-colors p-2 rounded-lg ${isLangMenuOpen ? 'bg-slate-100 text-indigo-600' : 'text-slate-600 hover:text-indigo-600'}`}
-                                >
-                                    <Globe className="w-4 h-4" />
-                                    <span>{language === 'en' ? 'EN' : language === 'zh' ? '中文' : language === 'vi' ? 'VN' : 'MN'}</span>
-                                </button>
+                    {/* Content */}
+                    <div className="md:w-1/2">
+                        <div className="w-16 h-16 bg-indigo-100 border-2 border-black rounded-2xl flex items-center justify-center mb-6 shadow-pop text-indigo-600">
+                            <Film className="w-8 h-8" />
+                        </div>
+                        <h2 className="font-display text-4xl md:text-5xl mb-6 text-slate-900">
+                            {t('landing.features.videoTitle')}
+                        </h2>
+                        <p className="text-lg text-slate-700 mb-6 font-medium leading-relaxed">
+                            {t('landing.features.videoDesc')}
+                        </p>
+                        <ul className="space-y-4 font-bold text-slate-600">
+                            <li className="flex items-start gap-3">
+                                <MousePointerClick className="w-6 h-6 text-indigo-500 mt-0.5" />
+                                <div>
+                                    <span className="text-black">{t('landing.features.videoPoint1')}</span>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <Mic className="w-6 h-6 text-indigo-500 mt-0.5" />
+                                <div>
+                                    <span className="text-black">{t('landing.features.videoPoint2')}</span>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <Mic className="w-6 h-6 text-indigo-500 mt-0.5" />
+                                <div>
+                                    <span className="text-black">{t('landing.features.videoPoint3')}</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
 
-                                {isLangMenuOpen && (
-                                    <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsLangMenuOpen(false)}></div>
-                                        <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
-                                            {[
-                                                { val: 'en', label: 'English' },
-                                                { val: 'zh', label: '中文' },
-                                                { val: 'vi', label: 'Tiếng Việt' },
-                                                { val: 'mn', label: 'Монгол' }
-                                            ].map((opt) => (
-                                                <button
-                                                    key={opt.val}
-                                                    onClick={() => {
-                                                        onLanguageChange(opt.val as Language);
-                                                        setIsLangMenuOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 ${language === opt.val ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
+            {/* Feature 2: University Curriculum */}
+            <section className="py-24 px-6 border-b-2 border-black bg-white">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row-reverse items-center gap-16">
+                    {/* Mockup */}
+                    <div className="md:w-1/2 relative">
+                        <div className="absolute -inset-4 bg-green-200 rounded-[2rem] transform -rotate-2 border-2 border-black"></div>
+                        <div className="relative bg-white border-2 border-black rounded-3xl p-6 shadow-pop-card">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2">
+                                    <span className="font-display text-xl">{t('landing.mock.textbookTitle')}</span>
+                                    <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-200">Level 1</span>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-bold">A</div>
+                                    <div className="flex-1 bg-slate-50 p-3 rounded-xl rounded-tl-none border border-slate-200 text-sm">
+                                        {t('landing.mock.textbookContent')}
+                                    </div>
+                                </div>
+                                <div className="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-200">
+                                    <p className="font-bold text-yellow-800 text-sm mb-1 flex items-center gap-1">
+                                        <Lightbulb className="w-4 h-4" /> {t('landing.mock.grammarTitle')}
+                                    </p>
+                                    <p className="text-xs text-yellow-700">{t('landing.mock.grammarExplanation')}</p>
+                                </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">{t('login')}</button>
-                            <button onClick={() => navigate('/register')} className="text-sm font-bold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-all hover:shadow-lg transform hover:-translate-y-0.5">
-                                {t('startLearning')}
+                    {/* Content */}
+                    <div className="md:w-1/2">
+                        <div className="w-16 h-16 bg-green-100 border-2 border-black rounded-2xl flex items-center justify-center mb-6 shadow-pop text-green-700">
+                            <Library className="w-8 h-8" />
+                        </div>
+                        <h2 className="font-display text-4xl md:text-5xl mb-6 text-slate-900">
+                            {t('landing.features.textbookTitle')}
+                        </h2>
+                        <p className="text-lg text-slate-700 mb-6 font-medium leading-relaxed">
+                            {t('landing.features.textbookDesc')}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200">
+                                <h4 className="font-display font-bold mb-1">{t('landing.curriculum.beginner')}</h4>
+                                <p className="text-sm text-slate-500">{t('landing.curriculum.beginnerDesc')}</p>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200">
+                                <h4 className="font-display font-bold mb-1">{t('landing.curriculum.intermediate')}</h4>
+                                <p className="text-sm text-slate-500">{t('landing.curriculum.intermediateDesc')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Feature 3: Podcast */}
+            <section className="py-24 px-6 border-b-2 border-black bg-yellow-50">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+                    {/* Mockup */}
+                    <div className="md:w-1/2 relative">
+                        <div className="absolute -inset-4 bg-yellow-300 rounded-[2rem] transform rotate-2 border-2 border-black"></div>
+                        <div className="relative bg-white border-2 border-black rounded-3xl p-6 shadow-pop-card overflow-hidden">
+                            <div className="bg-slate-900 rounded-2xl p-6 text-white mb-4">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                                        <Mic2 className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-display font-bold text-lg">{t('landing.mock.podcastTitle')}</h4>
+                                        <p className="text-slate-400 text-sm">{t('landing.mock.podcastHost')}</p>
+                                    </div>
+                                </div>
+                                {/* Waveform */}
+                                <div className="flex items-end justify-between h-8 gap-1 mb-4 opacity-70">
+                                    {[3, 5, 8, 4, 2, 6, 7, 3, 5, 4].map((h, i) => (
+                                        <div key={i} className={`w-1 rounded-full ${i === 2 ? 'bg-yellow-400' : 'bg-white'}`} style={{ height: `${h * 4}px` }} />
+                                    ))}
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-mono">04:20</span>
+                                    <div className="flex gap-4 items-center">
+                                        <Rewind className="w-6 h-6" />
+                                        <PauseCircle className="w-8 h-8 text-yellow-400" />
+                                        <FastForward className="w-6 h-6" />
+                                    </div>
+                                    <span className="text-xs font-mono">12:00</span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 h-24 overflow-hidden relative">
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent z-10 pointer-events-none"></div>
+                                <p className="text-sm text-slate-400 mb-2">...previous sentence.</p>
+                                <p className="text-base font-bold text-slate-900 bg-yellow-100 inline p-1 rounded">
+                                    {t('landing.mock.topikQuestion')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="md:w-1/2">
+                        <div className="w-16 h-16 bg-yellow-300 border-2 border-black rounded-2xl flex items-center justify-center mb-6 shadow-pop text-black">
+                            <Headphones className="w-8 h-8" />
+                        </div>
+                        <h2 className="font-display text-4xl md:text-5xl mb-6 text-slate-900">
+                            {t('landing.features.podcastTitle')}
+                        </h2>
+                        <p className="text-lg text-slate-700 mb-6 font-medium leading-relaxed">
+                            {t('landing.features.podcastDesc')}
+                        </p>
+                        <ul className="space-y-4 font-bold text-slate-600">
+                            <li className="flex items-start gap-3">
+                                <div className="bg-black text-white p-1 rounded"><Rss className="w-4 h-4" /></div>
+                                <span className="text-black">{t('landing.features.podcastPoint1')}</span>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <div className="bg-black text-white p-1 rounded"><ScanText className="w-4 h-4" /></div>
+                                <span className="text-black">{t('landing.features.podcastPoint2')}</span>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <div className="bg-black text-white p-1 rounded"><WifiOff className="w-4 h-4" /></div>
+                                <span className="text-black">{t('landing.features.podcastPoint3')}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            {/* Feature 4: TOPIK */}
+            <section className="py-24 px-6 border-b-2 border-black bg-white">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row-reverse items-center gap-16">
+                    {/* Mockup */}
+                    <div className="md:w-1/2 relative">
+                        <div className="absolute -inset-4 bg-pink-300 rounded-[2rem] transform -rotate-2 border-2 border-black"></div>
+                        <div className="relative bg-white border-2 border-black rounded-3xl p-6 shadow-pop-card">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-display font-bold text-xl">TOPIK II (Writing)</h3>
+                                <div className="bg-slate-100 px-3 py-1 rounded-lg border border-slate-300 font-mono text-red-500 font-bold animate-pulse">
+                                    24:59 left
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 mb-4">
+                                <p className="text-sm font-bold mb-2">{t('landing.mock.topikQuestion')}</p>
+                                <div className="h-20 bg-white border border-slate-200 rounded-lg flex items-end justify-center gap-4 p-2">
+                                    <div className="w-8 bg-blue-400 h-1/2"></div>
+                                    <div className="w-8 bg-blue-600 h-3/4"></div>
+                                    <div className="w-8 bg-blue-800 h-full"></div>
+                                </div>
+                            </div>
+                            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 relative">
+                                <div className="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-lg shadow-sm">
+                                    AI Feedback
+                                </div>
+                                <p className="text-xs text-green-800 font-mono mb-1">Grammar Check:</p>
+                                <p className="text-sm text-slate-700">
+                                    You wrote: <span className="line-through text-red-400">증가하고 있다</span> <br />
+                                    Better: <span className="font-bold text-green-600 bg-green-100 px-1">증가하는 추세이다</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="md:w-1/2">
+                        <div className="w-16 h-16 bg-pink-200 border-2 border-black rounded-2xl flex items-center justify-center mb-6 shadow-pop text-pink-600">
+                            <GraduationCap className="w-8 h-8" />
+                        </div>
+                        <h2 className="font-display text-4xl md:text-5xl mb-6 text-slate-900">
+                            {t('landing.features.topikTitle')}
+                        </h2>
+                        <p className="text-lg text-slate-700 mb-6 font-medium leading-relaxed">
+                            {t('landing.features.topikDesc')}
+                        </p>
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 flex gap-4 hover:border-pink-300 transition-colors">
+                                <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center font-bold text-lg">📝</div>
+                                <div>
+                                    <h4 className="font-display font-bold text-slate-900">{t('landing.features.topikPoint1')}</h4>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 flex gap-4 hover:border-pink-300 transition-colors">
+                                <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center font-bold text-lg">📊</div>
+                                <div>
+                                    <h4 className="font-display font-bold text-slate-900">{t('landing.features.topikPoint2')}</h4>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 flex gap-4 hover:border-pink-300 transition-colors">
+                                <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center font-bold text-lg">🕒</div>
+                                <div>
+                                    <h4 className="font-display font-bold text-slate-900">{t('landing.features.topikPoint3')}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Pricing Section */}
+            <section id="pricing" className="py-24 px-6 relative">
+                <div className="max-w-5xl mx-auto">
+                    <div className="text-center mb-16">
+                        <h2 className="font-display text-4xl md:text-5xl mb-4 text-slate-900">{t('landing.pricingTitle')}</h2>
+                        <div className="inline-flex bg-white p-1 rounded-xl border-2 border-black shadow-pop">
+                            <button
+                                onClick={() => setIsAnnual(false)}
+                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${!isAnnual ? 'bg-indigo-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'text-slate-500 hover:text-black'}`}
+                            >
+                                {t('landing.pricingMonthly')}
+                            </button>
+                            <button
+                                onClick={() => setIsAnnual(true)}
+                                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${isAnnual ? 'bg-indigo-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'text-slate-500 hover:text-black'}`}
+                            >
+                                {t('landing.pricingAnnual')} (Save 40%)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                        {/* Monthly */}
+                        <div className="bg-white p-8 rounded-3xl border-2 border-black shadow-pop hover:-translate-y-1 transition-all">
+                            <h3 className="font-display text-xl mb-4">{t('landing.pricingMonthly')}</h3>
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-4xl font-black text-slate-900">$6.90</span>
+                                <span className="text-slate-500 font-bold">/{t('landing.pricingMonth')}</span>
+                            </div>
+                            <button
+                                onClick={() => navigate('/register')}
+                                className="block w-full py-3 border-2 border-black rounded-xl text-center font-bold hover:bg-slate-50 hover:shadow-pop-sm transition-all"
+                            >
+                                {t('landing.pricingGetStarted')}
+                            </button>
+                        </div>
+
+                        {/* Annual - Featured */}
+                        <div className="bg-indigo-500 p-8 rounded-3xl border-2 border-black shadow-pop-card relative transform md:-translate-y-4 md:scale-105 z-10">
+                            <div className="absolute top-0 right-0 bg-yellow-400 text-black px-4 py-2 border-l-2 border-b-2 border-black rounded-bl-xl font-bold text-xs uppercase tracking-wider">
+                                {t('landing.pricingPopular')}
+                            </div>
+                            <h3 className="font-display text-xl text-white mb-4">{t('landing.pricingAnnual')}</h3>
+                            <div className="flex items-baseline gap-1 mb-1">
+                                <span className="text-5xl font-black text-white">$49.00</span>
+                                <span className="text-indigo-200 font-bold">/yr</span>
+                            </div>
+                            <p className="text-sm text-white/80 font-bold mb-8">Just $4.08/{t('landing.pricingMonth')}</p>
+                            <button
+                                onClick={() => navigate('/register')}
+                                className="block w-full py-4 bg-white text-black border-2 border-black rounded-xl text-center font-bold shadow-pop hover:shadow-pop-hover hover:-translate-y-1 transition-all"
+                            >
+                                {t('landing.pricingStartTrial')}
+                            </button>
+                        </div>
+
+                        {/* Lifetime */}
+                        <div className="bg-white p-8 rounded-3xl border-2 border-black shadow-pop hover:-translate-y-1 transition-all">
+                            <h3 className="font-display text-xl mb-4">Lifetime</h3>
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-4xl font-black text-slate-900">$99.00</span>
+                                <span className="text-slate-500 font-bold">once</span>
+                            </div>
+                            <button
+                                onClick={() => navigate('/register')}
+                                className="block w-full py-3 bg-slate-100 border-2 border-black rounded-xl text-center font-bold hover:bg-white hover:shadow-pop-sm transition-all"
+                            >
+                                Get Lifetime
                             </button>
                         </div>
                     </div>
                 </div>
-            </nav>
-
-            {/* --- Hero Section --- */}
-            <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-                {/* Animated Background Blobs */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-0 pointer-events-none">
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                    <div className="absolute top-20 right-10 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-                    <div className="absolute -bottom-32 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-                </div>
-
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 border border-indigo-100 backdrop-blur-sm mb-8 animate-fade-in-up">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                        </span>
-                        <span className="text-sm font-medium text-indigo-900">{t('landing.heroBadge')}</span>
-                    </div>
-
-                    <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 leading-[1.1] animate-fade-in-up animation-delay-100">
-                        {t('landing.heroTitle1')}<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">
-                            {t('landing.heroTitle2')}
-                        </span>
-                    </h1>
-
-                    <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up animation-delay-200">
-                        {t('landing.heroDesc')}
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
-                        <button
-                            onClick={() => navigate('/register')}
-                            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-1 flex items-center justify-center gap-2"
-                        >
-                            {t('landing.startTrial')}
-                            <ArrowRight className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => navigate('/pricing')}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
-                        >
-                            <PlayCircle className="w-5 h-5 text-indigo-500" />
-                            {t('landing.viewBenefits')}
-                        </button>
-                    </div>
-
-                    {/* Social Proof / Stats */}
-                    <div className="mt-16 pt-8 border-t border-slate-200/60 flex flex-wrap justify-center gap-8 md:gap-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
-                        {[
-                            { label: t('landing.statTextbooks'), value: '20+' },
-                            { label: t('landing.statPassRate'), value: 'High' },
-                            { label: t('landing.statRecommend'), value: '98%' },
-                        ].map((stat, i) => (
-                            <div key={i} className="flex flex-col items-center">
-                                <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
-                                <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">{stat.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* --- Scrolling Marquee (Universities/Methods) --- */}
-            <div className="bg-slate-900 py-6 overflow-hidden">
-                <div className="flex gap-12 animate-scroll whitespace-nowrap text-slate-400 font-bold text-sm tracking-widest uppercase items-center">
-                    {/* Duplicate list for infinite scroll effect */}
-                    {[...Array(2)].map((_, i) => (
-                        <React.Fragment key={i}>
-                            <span>Yonsei University (延世)</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span>Sogang University (西江)</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span>Ewha Womans University (梨花)</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span>Seoul National University (首尔大)</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span>Kyung Hee University (庆熙)</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span>TOPIK I & II</span>
-                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                        </React.Fragment>
-                    ))}
-                </div>
-            </div>
-
-            {/* --- Bento Grid Features --- */}
-            <section className="py-24 bg-white relative">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
-                        <h2 className="text-base font-bold text-indigo-600 uppercase tracking-wide mb-2">{t('landing.featureEyebrow')}</h2>
-                        <p className="text-3xl md:text-4xl font-bold text-slate-900">{t('landing.featureTitle')}</p>
-                        <p className="text-slate-500 mt-4 max-w-2xl mx-auto">{t('landing.featureDesc')}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Big Card - Curriculum */}
-                        <div className="md:col-span-2 bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-indigo-100 transition-all hover:shadow-xl hover:shadow-indigo-100/50 group overflow-hidden relative opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-100">
-                            <div className="relative z-10">
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <BookOpen className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-900 mb-3">{t('landing.card1Title')}</h3>
-                                <p className="text-slate-500 max-w-md">
-                                    {t('landing.card1Desc')}
-                                </p>
-                            </div>
-                            {/* Abstract UI Mockup */}
-                            <div className="absolute right-0 bottom-0 w-1/2 h-4/5 bg-white rounded-tl-3xl border-t border-l border-slate-200 shadow-lg translate-x-4 translate-y-4 group-hover:translate-x-2 group-hover:translate-y-2 transition-transform duration-500">
-                                <div className="p-4 space-y-3">
-                                    <div className="h-2 w-1/3 bg-slate-100 rounded"></div>
-                                    <div className="h-8 w-3/4 bg-indigo-50 rounded-lg"></div>
-                                    <div className="h-8 w-full bg-white border border-slate-100 rounded-lg"></div>
-                                    <div className="h-8 w-5/6 bg-white border border-slate-100 rounded-lg"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tall Card - TOPIK */}
-                        <div className="md:row-span-2 bg-slate-900 text-white rounded-3xl p-8 relative overflow-hidden group opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-200">
-                            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-indigo-600 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                            <div className="relative z-10 h-full flex flex-col">
-                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-6">
-                                    <GraduationCap className="w-6 h-6 text-indigo-300" />
-                                </div>
-                                <h3 className="text-2xl font-bold mb-3">{t('landing.card2Title')}</h3>
-                                <p className="text-slate-400 mb-8">{t('landing.card2Desc')}</p>
-
-                                <div className="mt-auto space-y-3">
-                                    {(t('landing.card2List', { returnObjects: true }) as string[]).map((item: string, i: number) => (
-                                        <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl backdrop-blur-sm border border-white/5">
-                                            <CheckCircle2 className="w-5 h-5 text-green-400" />
-                                            <span className="text-sm font-medium">{item}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Small Card - Listening */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-lg transition-all group opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-300">
-                            <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform">
-                                <Headphones className="w-6 h-6 text-violet-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.card3Title')}</h3>
-                            <p className="text-sm text-slate-500">
-                                {t('landing.card3Desc')}
-                            </p>
-                        </div>
-
-                        {/* Small Card - Vocabulary */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-lg transition-all group opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-400">
-                            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform">
-                                <Brain className="w-6 h-6 text-emerald-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.card4Title')}</h3>
-                            <p className="text-sm text-slate-500">
-                                {t('landing.card4Desc')}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* --- Curriculum System Section (New) --- */}
-            <section className="py-24 bg-white border-t border-slate-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16 opacity-0 translate-y-10 reveal-on-scroll transition-all duration-700">
-                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{t('landing.curriculum.title')}</h2>
-                        <p className="text-slate-500 max-w-2xl mx-auto text-lg">{t('landing.curriculum.desc')}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Level 1-2 */}
-                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-100">
-                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center mb-6">
-                                <BookOpen className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.beginner')}</h3>
-                            <p className="text-slate-600 leading-relaxed">
-                                {t('landing.curriculum.beginnerDesc')}
-                            </p>
-                        </div>
-
-                        {/* Level 3-4 */}
-                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-200">
-                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-6">
-                                <Star className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.intermediate')}</h3>
-                            <p className="text-slate-600 leading-relaxed">
-                                {t('landing.curriculum.intermediateDesc')}
-                            </p>
-                        </div>
-
-                        {/* Level 5-6 */}
-                        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-indigo-200 transition-colors opacity-0 translate-y-10 reveal-on-scroll duration-700 delay-300">
-                            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-6">
-                                <GraduationCap className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('landing.curriculum.advanced')}</h3>
-                            <p className="text-slate-600 leading-relaxed">
-                                {t('landing.curriculum.advancedDesc')}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* --- Steps Section --- */}
-            <section className="py-24 bg-slate-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row gap-12 items-center">
-                        <div className="w-full md:w-1/2 opacity-0 translate-x-[-20px] reveal-on-scroll duration-700">
-                            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">{t('landing.stepTitle')}</h2>
-                            <div className="space-y-8">
-                                {[
-                                    { title: t('landing.step1Title'), desc: t('landing.step1Desc'), icon: Globe },
-                                    { title: t('landing.step2Title'), desc: t('landing.step2Desc'), icon: Zap },
-                                    { title: t('landing.step3Title'), desc: t('landing.step3Desc'), icon: Star },
-                                ].map((step, idx) => (
-                                    <div key={idx} className="flex gap-4">
-                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold relative z-10 ring-4 ring-indigo-50">
-                                            {idx + 1}
-                                        </div>
-                                        <div>
-                                            <h4 className="text-lg font-bold text-slate-900 mb-1">{step.title}</h4>
-                                            <p className="text-slate-500">{step.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="w-full md:w-1/2 relative opacity-0 translate-x-[20px] reveal-on-scroll duration-700 delay-200">
-                            {/* Decorative Mockup */}
-                            <div className="relative bg-white rounded-2xl shadow-2xl p-6 border border-slate-200 transform rotate-2 hover:rotate-0 transition-transform duration-500">
-                                <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-4">
-                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="h-8 bg-slate-100 rounded w-1/3"></div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="h-32 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-center">
-                                            <BookOpen className="text-indigo-200 w-12 h-12" />
-                                        </div>
-                                        <div className="h-32 bg-slate-50 rounded-xl flex items-center justify-center">
-                                            <GraduationCap className="text-slate-300 w-12 h-12" />
-                                        </div>
-                                    </div>
-                                    <div className="h-24 bg-slate-50 rounded-xl"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* --- CTA Section --- */}
-            <section className="py-24 relative overflow-hidden">
-                <div className="absolute inset-0 bg-indigo-900 z-0">
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20"></div>
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20"></div>
-                </div>
-
-                <div className="max-w-4xl mx-auto px-4 relative z-10 text-center reveal-on-scroll">
-                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">{t('landing.ctaTitle')}</h2>
-                    <p className="text-xl text-indigo-200 mb-12 max-w-2xl mx-auto">
-                        {t('landing.ctaDesc')}
-                    </p>
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <button
-                            onClick={() => navigate('/register')}
-                            className="px-10 py-5 bg-white text-indigo-900 rounded-full font-bold text-xl hover:bg-indigo-50 transition-all hover:scale-105 shadow-2xl shadow-indigo-900/50"
-                        >
-                            {t('landing.ctaBtn')}
-                        </button>
-                    </div>
-                    <p className="mt-8 text-sm text-indigo-300">{t('landing.ctaNote')}</p>
-                </div>
             </section>
 
             {/* Footer */}
-            <footer className="bg-white py-12 border-t border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg" />
-                        <span className="font-bold text-slate-900">{t('appName')}</span>
+            <footer className="bg-white border-t-2 border-black py-12 px-6 mt-12">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-display">H</div>
+                        <span className="font-bold text-slate-900">© 2025 {t('appName')}.</span>
                     </div>
-                    <div className="text-slate-500 text-sm">
-                        © {new Date().getFullYear()} DuHan Learning. {t('allRightsReserved')}
-                    </div>
-                    <div className="flex gap-6 text-sm font-medium text-slate-600">
-                        <a href="/privacy" className="hover:text-indigo-600">{t('landing.privacy')}</a>
-                        <a href="/terms" className="hover:text-indigo-600">{t('landing.term')}</a>
-                        {/* {t('landing.legal')} - could handle multiple here if needed */}
-                        <a href="/refund" className="hover:text-indigo-600">{t('landing.refundPolicy')}</a>
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (window.confirm(t('landing.contactConfirm'))) {
-                                    window.location.href = 'mailto:support@koreanstudy.me';
-                                }
-                            }}
-                            className="hover:text-indigo-600"
-                        >
-                            {t('landing.contactUs')}
-                        </button>
+                    <div className="flex gap-8 text-sm font-bold text-slate-500">
+                        <Link to="/privacy" className="hover:text-black">{t('landing.privacy')}</Link>
+                        <Link to="/terms" className="hover:text-black">{t('landing.term')}</Link>
+                        <a href="mailto:support@koreanstudy.me" className="hover:text-black">{t('landing.contactUs')}</a>
                     </div>
                 </div>
             </footer>
-
-            {/* --- Styles for Animations (Same as before) --- */}
-            <style>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-scroll {
-          animation: scroll 20s linear infinite;
-        }
-        .animate-fade-in-up {
-          animation: fadeInUp 0.8s ease-out forwards;
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        @keyframes fadeInUp {
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animation-delay-100 { animation-delay: 0.1s; }
-        .animation-delay-200 { animation-delay: 0.2s; }
-        .animation-delay-300 { animation-delay: 0.3s; }
-      `}</style>
         </div>
     );
-};
-
-export default Landing;
+}

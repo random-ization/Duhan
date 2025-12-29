@@ -14,6 +14,7 @@ export default {
                 'pop': '4px 4px 0px 0px rgba(0,0,0,1)',
                 'pop-hover': '6px 6px 0px 0px rgba(0,0,0,1)',
                 'pop-sm': '2px 2px 0px 0px rgba(0,0,0,1)',
+                'pop-card': '8px 8px 0px 0px rgba(0,0,0,1)',
             },
             animation: {
                 'float': 'float 3s ease-in-out infinite',
