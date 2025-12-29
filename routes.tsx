@@ -24,6 +24,7 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 
 // Podcast Pages
@@ -88,6 +89,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
             element={<LegalDocumentPage language={language} documentType="refund" />}
           />
           <Route path="/pricing" element={<SubscriptionPage />} />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
 
           {/* === 管理员登录页 (公开) === */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

@@ -4,7 +4,12 @@ import { SubscriptionType } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-const PricingSection: React.FC = () => {
+
+interface PricingSectionProps {
+    onSubscribe?: (planId: string) => void;
+}
+
+const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
     const { user } = useAuth();
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
@@ -35,12 +40,18 @@ const PricingSection: React.FC = () => {
     const language = i18n.language;
     const priceConfig = PRICING_MAP[language] || PRICING_MAP['en'];
 
-    const handleSubscribe = (plan: string) => {
+    const handleSubscribe = (planId: string) => {
         if (!user) {
-            navigate('/auth');
+            navigate('/auth?redirect=/pricing');
             return;
         }
-        alert("Payment system upgrading...");
+
+        if (onSubscribe) {
+            onSubscribe(planId);
+        } else {
+            // Fallback default behavior
+            alert("Payment system upgrading...");
+        }
     };
 
     const currentPlan = user?.subscriptionType || SubscriptionType.FREE;
@@ -171,7 +182,7 @@ const PricingSection: React.FC = () => {
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => handleSubscribe(plan.title)}
+                                        onClick={() => handleSubscribe(plan.id)}
                                         className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${plan.highlight
                                             ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/30'
                                             : 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white border border-indigo-200 dark:border-gray-500 hover:bg-indigo-50 dark:hover:bg-gray-500'

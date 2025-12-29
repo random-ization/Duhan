@@ -35,9 +35,10 @@ export default function AuthPage() {
       const response = await api.googleLogin({ code, redirectUri: REDIRECT_URI });
       localStorage.setItem('token', response.token);
       login(response.user);
+      const redirectUrl = searchParams.get('redirect') || '/dashboard';
       // Clean URL and navigate
       window.history.replaceState({}, '', '/auth');
-      navigate('/dashboard');
+      navigate(redirectUrl);
     } catch (err: any) {
       setError(err.message || 'Google 登录失败');
       // Clean URL
@@ -65,7 +66,10 @@ export default function AuthPage() {
     window.location.href = authUrl.toString();
   };
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const redirectUrl = searchParams.get('redirect') || '/dashboard';
+    return <Navigate to={redirectUrl} replace />;
+  }
 
   // Show loading during Google callback
   if (googleLoading) {
@@ -90,7 +94,8 @@ export default function AuthPage() {
         const response = await api.login({ email: formData.email, password: formData.password });
         localStorage.setItem('token', response.token);
         login(response.user); // Pass user object to login
-        navigate('/dashboard');
+        const redirectUrl = searchParams.get('redirect') || '/dashboard';
+        navigate(redirectUrl);
       } else {
         // Registration - use api helper for consistency
         await api.register({ name: formData.name, email: formData.email, password: formData.password });

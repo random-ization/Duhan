@@ -9,10 +9,11 @@ import { TopikManager } from '../../components/admin/TopikManager';
 import { UserManagement } from '../../components/admin/UserManagement';
 import { DashboardView } from '../../components/admin/DashboardView';
 import LegalDocumentEditor from '../../../components/admin/LegalDocumentEditor';
-import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText } from 'lucide-react';
+import VideoManager from '../../components/admin/VideoManager';
+import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText, Video } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal' | 'video'>('dashboard');
     const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
 
     return (
@@ -114,6 +115,16 @@ const AdminPage: React.FC = () => {
                     <FileText size={16} />
                     法律
                 </button>
+                <button
+                    onClick={() => setActiveTab('video')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'video'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <Video size={16} />
+                    视频
+                </button>
             </div>
 
             {/* Content Area */}
@@ -134,6 +145,8 @@ const AdminPage: React.FC = () => {
                     <TopikManager />
                 ) : activeTab === 'legal' ? (
                     <LegalDocumentEditor language="zh" />
+                ) : activeTab === 'video' ? (
+                    <VideoManager />
                 ) : (
                     <div>
                         {/* Vocab Sub-tabs */}

@@ -25,7 +25,14 @@ const app = express();
 // Middleware - compression 放在最前面
 app.use(compression());
 app.use(cors());
-app.use(express.json({ limit: '10mb' }) as any);
+
+// JSON Parsing with Raw Body Verify (Required for Webhook Signature)
+app.use(express.json({
+  limit: '10mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}) as any);
 
 // Rate limiting - protect all API routes
 app.use('/api', apiLimiter);
@@ -64,6 +71,11 @@ app.use('/api/courses/:courseId/listening', listeningRoutes);
 console.log('[Server] /api/courses/:courseId/listening registered');
 app.use('/api/videos', videoRoutes);
 console.log('[Server] /api/videos registered');
+
+// Payment Routes (Registered specifically to handle raw body for webhooks if needed, though here we use a global middleware trick)
+import paymentRoutes from './routes/payment.routes';
+app.use('/api/payment', paymentRoutes);
+console.log('[Server] /api/payment registered');
 
 // Health Check
 app.get('/health', (req, res) => {

@@ -89,6 +89,16 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // --- Payment ---
+  createCheckoutSession: async (plan: 'MONTHLY' | 'ANNUAL' | 'LIFETIME') =>
+    request<{ checkoutUrl: string }>('/payment/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    }),
+
+  verifyPaymentSession: async (sessionId: string) =>
+    request(`/payment/verify?session_id=${sessionId}`),
+
   getMe: async () => request('/auth/me'),
 
   // --- User Stats ---

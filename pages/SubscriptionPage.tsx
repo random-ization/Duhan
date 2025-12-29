@@ -6,6 +6,7 @@ import { Globe, Check } from 'lucide-react';
 import { Language } from '../types';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
+import { api } from '../services/api';
 
 const SubscriptionPage: React.FC = () => {
     const { user, language, setLanguage } = useAuth();
@@ -51,8 +52,8 @@ const SubscriptionPage: React.FC = () => {
                                                 setIsLangMenuOpen(false);
                                             }}
                                             className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${language === lang.code
-                                                    ? 'text-indigo-600 font-bold bg-indigo-50/50 dark:bg-indigo-900/20'
-                                                    : 'text-slate-600 dark:text-slate-300'
+                                                ? 'text-indigo-600 font-bold bg-indigo-50/50 dark:bg-indigo-900/20'
+                                                : 'text-slate-600 dark:text-slate-300'
                                                 }`}
                                         >
                                             {lang.label}
@@ -198,7 +199,16 @@ const SubscriptionPage: React.FC = () => {
                 </div>
 
                 {/* --- 3. Pricing Section --- */}
-                <PricingSection />
+                <PricingSection onSubscribe={async (plan) => {
+                    try {
+                        const { checkoutUrl } = await api.createCheckoutSession(plan as 'MONTHLY' | 'ANNUAL' | 'LIFETIME');
+                        window.location.href = checkoutUrl;
+                    } catch (error: any) {
+                        console.error('Checkout failed:', error);
+                        const msg = error.message || 'Unknown error';
+                        alert(`Failed to start checkout session: ${msg}`);
+                    }
+                }} />
 
             </div>
         </div>

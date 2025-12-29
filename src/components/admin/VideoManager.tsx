@@ -134,13 +134,49 @@ export default function VideoManager() {
             const response = await api.uploadFile(formData);
             setVideoUrl(response.url);
 
-            // Try to get duration from video
+            // Auto-capture thumbnail and get duration
             const video = document.createElement('video');
             video.preload = 'metadata';
+            video.muted = true;
+
             video.onloadedmetadata = () => {
                 setDuration(Math.floor(video.duration));
+                // Seek to 3 seconds or 10% of video, whichever is smaller
+                const seekTime = Math.min(3, video.duration * 0.1);
+                video.currentTime = seekTime;
+            };
+
+            video.onseeked = async () => {
+                // Capture frame as thumbnail
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(async (blob) => {
+                            if (blob) {
+                                setUploadingThumbnail(true);
+                                try {
+                                    const thumbFormData = new FormData();
+                                    thumbFormData.append('file', blob, 'thumbnail.jpg');
+                                    const thumbResponse = await api.uploadFile(thumbFormData);
+                                    setThumbnailUrl(thumbResponse.url);
+                                } catch (err) {
+                                    console.warn('Auto-thumbnail upload failed:', err);
+                                } finally {
+                                    setUploadingThumbnail(false);
+                                }
+                            }
+                        }, 'image/jpeg', 0.8);
+                    }
+                } catch (err) {
+                    console.warn('Failed to capture thumbnail:', err);
+                }
                 URL.revokeObjectURL(video.src);
             };
+
             video.src = URL.createObjectURL(file);
         } catch (error) {
             console.error('Video upload failed:', error);

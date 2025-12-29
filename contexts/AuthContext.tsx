@@ -30,6 +30,7 @@ interface AuthContextType {
   login: (user: User) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
   setLanguage: (lang: Language) => void;
 
   // User Actions
@@ -163,6 +164,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setUser(null);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const data = await api.getMe();
+      setUser(data.user);
+    } catch (e) {
+      console.error('Failed to refresh user:', e);
+    }
   }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
@@ -364,6 +376,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     login,
     logout,
     updateUser,
+    refreshUser,
     setLanguage,
     saveWord,
     recordMistake,

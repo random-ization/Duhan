@@ -61,6 +61,23 @@ model User {
   subscribedChannels PodcastChannel[]
   likedEpisodes      PodcastEpisode[]
   listeningHistory   ListeningHistory[]
+  
+  // Payment
+  creemCustomerId    String? // Creem Customer ID
+  paymentOrders      PaymentOrder[]
+}
+
+model PaymentOrder {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Float
+  currency    String
+  status      String   // PENDING, COMPLETED, FAILED
+  plan        String   // MONTHLY, ANNUAL, LIFETIME
+  externalId  String?  @unique // Creem checkout_id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User     @relation(fields: [userId], references: [id])
 }
 
 model ListeningHistory {
