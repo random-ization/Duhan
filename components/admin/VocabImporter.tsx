@@ -84,13 +84,26 @@ export default function VocabImporter() {
 
     const findCol = (row: any, candidates: string[]): string => {
         const keys = Object.keys(row);
-        for (const candidate of candidates) {
-            // 1. Exact match
-            if (row[candidate] !== undefined) return String(row[candidate]).trim();
+        // Clean keys: remove BOM, trim whitespace, remove invisible chars
+        const cleanKeys = keys.reduce((acc, k) => {
+            const cleanKey = k.replace(/^[\uFEFF\s]+|[\s]+$/g, '').trim();
+            acc[cleanKey.toLowerCase()] = k; // Map clean lower -> original key
+            return acc;
+        }, {} as Record<string, string>);
 
-            // 2. Case-insensitive match
-            const foundKey = keys.find(k => k.toLowerCase() === candidate.toLowerCase());
-            if (foundKey && row[foundKey] !== undefined) return String(row[foundKey]).trim();
+        for (const candidate of candidates) {
+            const cleanCandidate = candidate.trim().toLowerCase();
+
+            // 1. Check exact clean match
+            if (cleanKeys[cleanCandidate]) {
+                const realKey = cleanKeys[cleanCandidate];
+                if (row[realKey] !== undefined) return String(row[realKey]).trim();
+            }
+
+            // 2. Fallback: Includes (fuzzy)
+            // e.g. " 例句(韩) " matching "例句(韩)"
+            const fuzzyKey = keys.find(k => k.toLowerCase().includes(candidate.toLowerCase()));
+            if (fuzzyKey && row[fuzzyKey] !== undefined) return String(row[fuzzyKey]).trim();
         }
         return '';
     };
