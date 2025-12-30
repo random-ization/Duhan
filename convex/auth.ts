@@ -1,14 +1,23 @@
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Simple password hashing (in production, use bcrypt via action)
+// Simple password encoding (in production, use proper hashing via HTTP action)
 function hashPassword(password: string): string {
-    // Simplified hash - in production, use bcrypt in an action
-    return Buffer.from(password).toString('base64');
+    // Simple reversible encoding for development
+    // In production, use bcrypt via an HTTP action with Node.js runtime
+    let encoded = '';
+    for (let i = 0; i < password.length; i++) {
+        encoded += String.fromCharCode(password.charCodeAt(i) + 5);
+    }
+    return 'enc:' + encoded;
 }
 
 function verifyPassword(password: string, hash: string): boolean {
-    return hashPassword(password) === hash;
+    if (hash.startsWith('enc:')) {
+        return hashPassword(password) === hash;
+    }
+    // Fallback: direct comparison for legacy passwords
+    return password === hash;
 }
 
 // Register a new user
