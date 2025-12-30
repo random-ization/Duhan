@@ -27,8 +27,8 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
         console.log(`[Unit Controller] Fetching unit page: courseId=${courseId}, unit=${unitNum}, user=${userId}`);
 
         // 1. Query TextbookUnit for reading content
-        // 1. Query TextbookUnit for reading content (fetch all articles)
-        const units = await (prisma as any).textbookUnit.findMany({
+        // 1. Define Promises for parallel execution
+        const unitsPromise = (prisma as any).textbookUnit.findMany({
             where: {
                 courseId,
                 unitIndex: unitNum
@@ -38,51 +38,70 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        const mainUnit = units[0] || null;
-
-        // 2. Query VocabularyAppearance with Word details
-        const vocabAppearances = await prisma.vocabularyAppearance.findMany({
+        const vocabPromise = prisma.vocabularyAppearance.findMany({
             where: {
                 courseId,
                 unitId: unitNum
             },
             include: {
-                word: true  // Include full Word details
+                word: true
             },
             orderBy: {
                 createdAt: 'asc'
             }
         });
 
-        // Transform to vocab list with flattened word data
-        const vocabList = vocabAppearances.map((va: any) => ({
-            id: va.word.id,
-            korean: va.word.word,  // Word.word field
-            meaning: va.word.meaning,
-            pronunciation: va.word.pronunciation,
-            hanja: va.word.hanja,
-            pos: va.word.partOfSpeech,  // Word.partOfSpeech field
-            audioUrl: va.word.audioUrl,
-            // Unit-specific examples
-            exampleSentence: va.exampleSentence,
-            exampleMeaning: va.exampleMeaning,
-        }));
-
-        // 3. Query CourseGrammar with GrammarPoint details
-        const courseGrammars = await prisma.courseGrammar.findMany({
+        const grammarPromise = prisma.courseGrammar.findMany({
             where: {
                 courseId,
                 unitId: unitNum
             },
             include: {
-                grammar: true  // Include full GrammarPoint details
+                grammar: true
             },
             orderBy: {
                 displayOrder: 'asc'
             }
         });
 
-        // Transform to grammar list with flattened data
+        // Only query annotations if user is logged in
+        const annotationPromise = userId
+            ? prisma.annotation.findMany({
+                where: {
+                    userId,
+                    contextKey: `${courseId}_${unitNum}`, // Note: this uses unitNum, check strictly if contextKey format matches
+                    targetType: 'TEXTBOOK'
+                },
+                orderBy: {
+                    createdAt: 'asc'
+                }
+            })
+            : Promise.resolve([]);
+
+        // 2. Parallel Wait
+        const [units, vocabAppearances, courseGrammars, annotations] = await Promise.all([
+            unitsPromise,
+            vocabPromise,
+            grammarPromise,
+            annotationPromise
+        ]);
+
+        const mainUnit = units[0] || null;
+
+        // Transform to vocab list
+        const vocabList = vocabAppearances.map((va: any) => ({
+            id: va.word.id,
+            korean: va.word.word,
+            meaning: va.word.meaning,
+            pronunciation: va.word.pronunciation,
+            hanja: va.word.hanja,
+            pos: va.word.partOfSpeech,
+            audioUrl: va.word.audioUrl,
+            exampleSentence: va.exampleSentence,
+            exampleMeaning: va.exampleMeaning,
+        }));
+
+        // Transform to grammar list
         const grammarList = courseGrammars.map((cg: any) => ({
             id: cg.grammar.id,
             title: cg.grammar.title,
@@ -93,26 +112,9 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
             explanation: cg.grammar.explanation,
             conjugationRules: cg.grammar.conjugationRules,
             examples: cg.grammar.examples,
-            // Course-specific fields
             displayOrder: cg.displayOrder,
             customNote: cg.customNote,
         }));
-
-        // 4. Query Annotation for user's notes (if authenticated)
-        let annotations: any[] = [];
-        if (userId) {
-            const contextKey = `${courseId}_${unitNum}`;
-            annotations = await prisma.annotation.findMany({
-                where: {
-                    userId,
-                    contextKey,
-                    targetType: 'TEXTBOOK'
-                },
-                orderBy: {
-                    createdAt: 'asc'
-                }
-            });
-        }
 
         // Return aggregated response
         return res.json({
@@ -190,8 +192,8 @@ export const getUnitsForCourse = async (req: AuthRequest, res: Response) => {
                 id: true,
                 unitIndex: true,
                 title: true,
-                readingText: true,
-                analysisData: true,
+                // readingText: true, // Removed for performance
+                // analysisData: true, // Removed for performance
                 createdAt: true,
                 updatedAt: true,
             }

@@ -560,7 +560,9 @@ export default function VocabModulePage() {
                                             {currentCard?.exampleSentence && (
                                                 <div className="bg-slate-100 p-3 rounded-lg w-full max-w-md">
                                                     <p className="text-slate-700 text-base">{currentCard.exampleSentence}</p>
-                                                    <p className="text-slate-500 text-sm mt-1">{currentCard.exampleTranslation}</p>
+                                                    <p className="text-slate-500 text-sm mt-1 font-medium text-slate-400">
+                                                        {(currentCard as any).exampleMeaning || (currentCard as any).exampleTranslation}
+                                                    </p>
                                                 </div>
                                             )}
                                         </div>
