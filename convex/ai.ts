@@ -64,3 +64,97 @@ Return a JSON object with a "tokens" key containing an array of:
         }
     },
 });
+
+// Analyze a Korean sentence for vocabulary and grammar
+export const analyzeSentence = action({
+    args: {
+        sentence: v.string(),
+        context: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.warn("OPENAI_API_KEY not set");
+            return null;
+        }
+
+        const client = new OpenAI({ apiKey });
+
+        try {
+            const completion = await client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a Korean language teacher. Analyze the given sentence for a language learner.
+
+Return a JSON object with:
+{
+  "vocabulary": [{ "word": string, "root": string, "meaning": string, "type": string }],
+  "grammar": [{ "structure": string, "explanation": string }],
+  "nuance": string (cultural or contextual notes)
+}`,
+                    },
+                    { role: "user", content: args.sentence + (args.context ? `\n\nContext: ${args.context}` : "") },
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.3,
+            });
+
+            const content = completion.choices[0].message.content;
+            if (!content) return null;
+
+            const result = JSON.parse(content);
+            return { success: true, data: result };
+        } catch (error) {
+            console.error("Sentence analysis failed:", error);
+            return { success: false, data: null };
+        }
+    },
+});
+
+// Analyze TOPIK question (for study mode)
+export const analyzeQuestion = action({
+    args: {
+        question: v.string(),
+        options: v.array(v.string()),
+        correctAnswer: v.number(),
+        type: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) return null;
+
+        const client = new OpenAI({ apiKey });
+
+        try {
+            const completion = await client.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a TOPIK exam tutor. Analyze the question for a learner.
+
+Return JSON:
+{
+  "translation": string (Chinese translation of question),
+  "keyPoint": string (what this question tests),
+  "analysis": string (detailed explanation),
+  "wrongOptions": { "1": string, "2": string, ... } (why each wrong option is wrong)
+}`,
+                    },
+                    { role: "user", content: `Question: ${args.question}\nOptions: ${args.options.join(', ')}\nCorrect: ${args.correctAnswer + 1}` },
+                ],
+                response_format: { type: "json_object" },
+            });
+
+            const content = completion.choices[0].message.content;
+            if (!content) return null;
+
+            return { success: true, data: JSON.parse(content) };
+        } catch (error) {
+            console.error("Question analysis failed:", error);
+            return { success: false, data: null };
+        }
+    },
+});

@@ -122,3 +122,101 @@ export const recordHistory = mutation({
         }
     }
 });
+
+// Toggle Subscription
+export const toggleSubscription = mutation({
+    args: {
+        userId: v.string(),
+        channel: v.object({
+            itunesId: v.optional(v.string()),
+            title: v.string(),
+            author: v.string(),
+            feedUrl: v.string(),
+            artworkUrl: v.optional(v.string()),
+        }),
+    },
+    handler: async (ctx, args) => {
+        const { userId, channel } = args;
+
+        // First, find or create the channel
+        let existingChannel = await ctx.db.query("podcast_channels")
+            .filter(q => q.eq(q.field("feedUrl"), channel.feedUrl))
+            .first();
+
+        if (!existingChannel) {
+            // Create the channel
+            const channelId = await ctx.db.insert("podcast_channels", {
+                title: channel.title,
+                author: channel.author,
+                feedUrl: channel.feedUrl,
+                artworkUrl: channel.artworkUrl,
+                itunesId: channel.itunesId,
+                isFeatured: false,
+                createdAt: Date.now(),
+            });
+            existingChannel = await ctx.db.get(channelId);
+        }
+
+        if (!existingChannel) {
+            throw new Error("Failed to create channel");
+        }
+
+        // Check if subscription exists
+        const existingSub = await ctx.db.query("podcast_subscriptions")
+            .withIndex("by_user_channel", q => q.eq("userId", userId as any).eq("channelId", existingChannel!._id))
+            .first();
+
+        if (existingSub) {
+            // Unsubscribe
+            await ctx.db.delete(existingSub._id);
+            return { success: true, isSubscribed: false };
+        } else {
+            // Subscribe
+            await ctx.db.insert("podcast_subscriptions", {
+                userId: userId as any,
+                channelId: existingChannel._id,
+                createdAt: Date.now(),
+            });
+            return { success: true, isSubscribed: true };
+        }
+    }
+});
+
+// Track View (increment episode views)
+export const trackView = mutation({
+    args: {
+        episodeId: v.id("podcast_episodes"),
+    },
+    handler: async (ctx, args) => {
+        const episode = await ctx.db.get(args.episodeId);
+        if (episode) {
+            await ctx.db.patch(args.episodeId, {
+                views: (episode.views || 0) + 1,
+            });
+            return { success: true, views: episode.views + 1 };
+        }
+        return { success: false, views: 0 };
+    }
+});
+
+// Save Podcast Progress
+export const saveProgress = mutation({
+    args: {
+        episodeGuid: v.string(),
+        userId: v.string(),
+        progress: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const { userId, episodeGuid, progress } = args;
+
+        const existing = await ctx.db.query("listening_history")
+            .withIndex("by_user_episode", q => q.eq("userId", userId as any).eq("episodeGuid", episodeGuid))
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, { progress, playedAt: Date.now() });
+        }
+
+        return { success: true };
+    }
+});

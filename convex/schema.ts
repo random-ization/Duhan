@@ -242,5 +242,27 @@ export default defineSchema({
         progress: v.number(), // Seconds played
         playedAt: v.number(),
     }).index("by_user", ["userId"])
-        .index("by_user_episode", ["userId", "episodeGuid"])
+        .index("by_user_episode", ["userId", "episodeGuid"]),
+
+    // User Course Progress (Completed Units)
+    user_course_progress: defineTable({
+        userId: v.string(), // User ID (could be Convex ID or legacy)
+        courseId: v.string(), // Institute ID
+        completedUnits: v.array(v.number()), // Array of completed unit indexes
+        lastAccessAt: v.number(),
+        createdAt: v.number(),
+    }).index("by_user_course", ["userId", "courseId"])
+        .index("by_user", ["userId"]),
+
+    // Notebooks (User Notes)
+    notebooks: defineTable({
+        userId: v.string(),
+        type: v.string(), // "WORD", "GRAMMAR", "NOTE", etc.
+        title: v.string(),
+        content: v.any(),
+        preview: v.optional(v.string()),
+        tags: v.array(v.string()),
+        createdAt: v.number(),
+    }).index("by_user", ["userId"])
+        .index("by_user_type", ["userId", "type"]),
 });

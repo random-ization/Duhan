@@ -16,11 +16,11 @@ import {
     Loader2,
     Menu
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import BottomSheet from '../../components/common/BottomSheet';
 
-import legacyApi from '../../../services/api';
+// Legacy API removed - using Convex
 
 // =========================================
 // Types
@@ -391,6 +391,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         unitIndex,
         userId: undefined // TODO: Add Auth integration later
     });
+
+    // Convex Mutation: Complete Unit
+    const completeUnitMutation = useMutation(api.progress.completeUnit);
 
     const loading = queryData === undefined;
     const queryError = null; // Convex throws/nulls usually, simplest check is undefined
@@ -851,7 +854,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await legacyApi.completeUnit(courseId, unitIndex);
+                                                await completeUnitMutation({ userId: 'temp-user', courseId, unitIndex });
                                                 // Show success feedback
                                                 alert('🎉 本课学习已完成！');
                                             } catch (e) {

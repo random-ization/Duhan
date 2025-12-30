@@ -8,12 +8,18 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as ai from "../ai.js";
+import type * as annotations from "../annotations.js";
+import type * as auth from "../auth.js";
 import type * as grammars from "../grammars.js";
 import type * as institutes from "../institutes.js";
 import type * as migrations from "../migrations.js";
+import type * as notebooks from "../notebooks.js";
 import type * as podcasts from "../podcasts.js";
+import type * as progress from "../progress.js";
 import type * as units from "../units.js";
+import type * as userStats from "../userStats.js";
 import type * as videos from "../videos.js";
 import type * as vocab from "../vocab.js";
 
@@ -24,12 +30,18 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   ai: typeof ai;
+  annotations: typeof annotations;
+  auth: typeof auth;
   grammars: typeof grammars;
   institutes: typeof institutes;
   migrations: typeof migrations;
+  notebooks: typeof notebooks;
   podcasts: typeof podcasts;
+  progress: typeof progress;
   units: typeof units;
+  userStats: typeof userStats;
   videos: typeof videos;
   vocab: typeof vocab;
 }>;
