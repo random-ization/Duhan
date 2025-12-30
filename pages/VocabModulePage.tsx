@@ -74,25 +74,23 @@ export default function VocabModulePage() {
     // Parse words from API or Legacy
     const parseWords = useCallback(async () => {
         setLoading(true);
-        const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
 
         try {
-            // 1. Try fetching from Admin/DB API first
-            const res = await fetch(`${API_URL}/api/vocab/words?courseId=${instituteId}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.words.length > 0) {
-                    const apiWords: ExtendedVocabItem[] = data.words.map((w: any) => ({
-                        ...w,
-                        korean: w.word,
-                        english: w.meaning,
-                        unit: w.unitId, // Remap unitId to unit
-                        mastered: false
-                    }));
-                    setAllWords(apiWords);
-                    setLoading(false);
-                    return;
-                }
+            // 1. Try fetching from Admin/DB API first using centralized service
+            // This handles API_URL correctly (e.g. /api proxy)
+            const data = await (await import('../services/api')).api.getCourseVocab(instituteId!);
+
+            if (data.success && data.words.length > 0) {
+                const apiWords: ExtendedVocabItem[] = data.words.map((w: any) => ({
+                    ...w,
+                    korean: w.word,
+                    english: w.meaning,
+                    unit: w.unitId, // Remap unitId to unit
+                    mastered: false
+                }));
+                setAllWords(apiWords);
+                setLoading(false);
+                return;
             }
         } catch (err) {
             console.warn('API fetch failed, falling back to legacy:', err);
