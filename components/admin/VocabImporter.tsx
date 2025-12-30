@@ -73,13 +73,35 @@ export default function VocabImporter() {
 
     const mapPOS = (pos: string): string => {
         if (!pos) return 'NOUN';
-        const p = pos.trim();
-        if (p === '名词' || p === '代词') return 'NOUN';
-        if (p === '动词' || p === '自动词' || p === '他动词') return 'VERB';
-        if (p === '形容词') return 'ADJ';
-        if (p === '副词') return 'ADV';
-        if (p === '助词') return 'PARTICLE';
-        return 'NOUN'; // Default
+        const p = pos.trim().toUpperCase();
+
+        // 1. Direct Enum Match (Robust English support)
+        const validEnums = ['NOUN', 'VERB', 'VERB_T', 'VERB_I', 'ADJ', 'ADV', 'PARTICLE', 'PRONOUN', 'NUMERAL', 'PHRASE', 'AUX_VERB', 'INTERJECTION', 'DETERMINER'];
+        if (validEnums.includes(p)) return p;
+
+        // 2. English Aliases
+        if (p === 'ADJECTIVE') return 'ADJ';
+        if (p === 'ADVERB') return 'ADV';
+        if (p === 'PREPOSITION') return 'PARTICLE';
+
+        // 3. Chinese Mappings
+        if (p.includes('代词')) return 'PRONOUN';
+        if (p.includes('数词')) return 'NUMERAL';
+        if (p.includes('短语') || p.includes('惯用语')) return 'PHRASE';
+        if (p.includes('感叹')) return 'INTERJECTION';
+        if (p.includes('冠词')) return 'DETERMINER';
+
+        if (p.includes('形容词')) return 'ADJ';
+        if (p.includes('副词')) return 'ADV';
+        if (p.includes('助词')) return 'PARTICLE';
+
+        if (p.includes('自动词')) return 'VERB_I';
+        if (p.includes('他动词')) return 'VERB_T';
+        if (p.includes('动词')) return 'VERB';
+
+        if (p.includes('名词') || p.includes('体言')) return 'NOUN';
+
+        return 'NOUN'; // Default Fallback
     };
 
     const findCol = (row: any, candidates: string[]): string => {

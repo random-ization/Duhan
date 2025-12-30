@@ -1035,6 +1035,13 @@ export const api = {
       error?: string;
     }>('/admin/diagnostics'),
 
+  getDbLatency: async () =>
+    request<{
+      ping: number;
+      scan: number;
+      userCount: number;
+    }>('/admin/db-latency'),
+
   // ========== User Personal Stats ==========
 
   // Get my personal learning stats (for profile dashboard)

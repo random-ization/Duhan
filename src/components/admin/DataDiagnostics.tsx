@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../../services/api';
-import { RefreshCw, Database, AlertCircle } from 'lucide-react';
+import { RefreshCw, Database, AlertCircle, Activity, Wifi } from 'lucide-react';
 
 interface DiagnosticData {
     id: string;
@@ -15,6 +15,8 @@ export default function DataDiagnostics() {
     const [data, setData] = useState<DiagnosticData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [latency, setLatency] = useState<{ ping: number; scan: number; userCount: number } | null>(null);
+    const [checkingLatency, setCheckingLatency] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -34,6 +36,18 @@ export default function DataDiagnostics() {
         }
     };
 
+    const checkLatency = async () => {
+        setCheckingLatency(true);
+        try {
+            const res = await api.getDbLatency();
+            setLatency(res);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCheckingLatency(false);
+        }
+    };
+
     useEffect(() => {
         loadData();
     }, []);
@@ -45,14 +59,56 @@ export default function DataDiagnostics() {
                     <Database className="w-8 h-8 text-blue-600" />
                     <h1 className="text-2xl font-black text-slate-900">数据诊断 (Data Diagnostics)</h1>
                 </div>
-                <button
-                    onClick={loadData}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    刷新数据
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={checkLatency}
+                        disabled={checkingLatency}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+                    >
+                        <Activity className={`w-4 h-4 ${checkingLatency ? 'animate-pulse' : ''}`} />
+                        {checkingLatency ? 'Testing...' : 'Test DB Speed'}
+                    </button>
+                    <button
+                        onClick={loadData}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-700 font-bold transition-colors"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        刷新数据
+                    </button>
+                </div>
             </div>
+
+            {latency && (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-xl flex items-center gap-4">
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                            <Wifi className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-emerald-600 font-bold uppercase">Connection Ping</p>
+                            <p className="text-xl font-black text-slate-900">{latency.ping} ms</p>
+                        </div>
+                    </div>
+                    <div className="bg-blue-50 border-2 border-blue-100 p-4 rounded-xl flex items-center gap-4">
+                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-blue-600 font-bold uppercase">Query Scan</p>
+                            <p className="text-xl font-black text-slate-900">{latency.scan} ms</p>
+                        </div>
+                    </div>
+                    <div className="bg-violet-50 border-2 border-violet-100 p-4 rounded-xl flex items-center gap-4">
+                        <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+                            <Activity className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-violet-600 font-bold uppercase">User Count</p>
+                            <p className="text-xl font-black text-slate-900">{latency.userCount}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <div className="bg-red-50 border-2 border-red-500 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { getUsers, updateUser, deleteUser } from '../controllers/admin.user.controller';
 import { AdminVocabController } from '../controllers/admin.vocab.controller';
-import { getDashboardData, getAiCostsDetail, getDataDiagnosticsEndpoint } from '../controllers/admin.dashboard.controller';
+import { getDashboardData, getAiCostsDetail, getDataDiagnosticsEndpoint, getDbLatencyEndpoint } from '../controllers/admin.dashboard.controller';
 import { uploadMedia } from '../lib/storage';
 
 const router = Router();
@@ -24,6 +24,7 @@ router.use((req, res, next) => {
 router.get('/dashboard/stats', getDashboardData);
 router.get('/dashboard/ai-costs', getAiCostsDetail);
 router.get('/diagnostics', getDataDiagnosticsEndpoint);
+router.get('/db-latency', getDbLatencyEndpoint);
 
 // User Management
 router.get('/users', getUsers);

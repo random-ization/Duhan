@@ -1,6 +1,7 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as dashboardService from '../services/dashboard.service';
+import { prisma } from '../lib/prisma';
 
 /**
  * GET /api/admin/dashboard/stats
@@ -62,15 +63,29 @@ export const getAiCostsDetail = async (req: AuthRequest, res: Response) => {
  * GET /api/admin/diagnostics
  * Get detailed data diagnostics
  */
-export const getDataDiagnosticsEndpoint = async (req: AuthRequest, res: Response) => {
+export const getDataDiagnosticsEndpoint = async (req: Request, res: Response) => {
     try {
         const data = await dashboardService.getDataDiagnostics();
-        return res.json({
-            success: true,
-            data
-        });
+        res.json(data);
     } catch (error) {
-        console.error('[Admin Dashboard] getDataDiagnostics error:', error);
-        return res.status(500).json({ error: 'Failed to get diagnostics' });
+        console.error('Data Diagnostics Error:', error);
+        res.status(500).json({ error: 'Failed to fetch diagnostics' });
+    }
+};
+
+export const getDbLatencyEndpoint = async (req: Request, res: Response) => {
+    try {
+        const start = Date.now();
+        await prisma.$queryRaw`SELECT 1`;
+        const ping = Date.now() - start;
+
+        const scanStart = Date.now();
+        const userCount = await prisma.user.count();
+        const scan = Date.now() - scanStart;
+
+        res.json({ ping, scan, userCount });
+    } catch (error) {
+        console.error('DB Latency Error:', error);
+        res.status(500).json({ error: String(error) });
     }
 };

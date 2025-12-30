@@ -469,11 +469,19 @@ model PodcastEpisode {
 
 enum PartOfSpeech {
   NOUN
+  PRONOUN  // 代词
+  NUMERAL  // 数词
+  VERB
   VERB_T // 他动词 (Transitive)
   VERB_I // 自动词 (Intransitive)
   ADJ // 形容词
+  ADJ_DEMONSTRATIVE // 指示形容词 (이, 그, 저)
   ADV // 副词
   PARTICLE // 助词
+  PHRASE // 短语/惯用语
+  AUX_VERB // 辅助动词
+  INTERJECTION // 感叹词
+  DETERMINER // 冠词/限定词
 }
 
 enum WordStatus {
