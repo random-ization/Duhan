@@ -810,6 +810,13 @@ export const api = {
       }[];
     }>(`/courses/${courseId}/units`),
 
+  // Get all vocabulary words for a course
+  getCourseVocab: async (courseId: string) =>
+    request<{
+      success: boolean;
+      words: any[];
+    }>(`/vocab/words?courseId=${courseId}`),
+
   // ========== Listening Management (Separate from Reading) ==========
 
   // Get all listening units for a course

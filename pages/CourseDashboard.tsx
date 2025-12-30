@@ -56,11 +56,9 @@ export default function CourseDashboard() {
             if (!instituteId) return;
             try {
                 setLoadingVocab(true);
-                const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
-                const res = await fetch(`${API_URL}/api/vocab/words?courseId=${instituteId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const words = data.words || [];
+                const response = await api.getCourseVocab(instituteId);
+                if (response.success) {
+                    const words = response.words || [];
                     // TODO: Get mastered count from user progress API when available
                     setVocabStats({ total: words.length, mastered: 0 });
                 }
