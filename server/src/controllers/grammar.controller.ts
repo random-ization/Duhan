@@ -101,6 +101,82 @@ export const getUnitGrammar = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * GET /api/grammar/courses/:courseId/all
+ * Get ALL grammar points for a course (all units), merged with user progress
+ * Used by CourseDashboard to show "本册语法" carousel
+ */
+export const getCourseGrammar = async (req: AuthRequest, res: Response) => {
+    try {
+        const { courseId } = req.params;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!courseId) {
+            return res.status(400).json({ error: 'courseId is required' });
+        }
+
+        // Query ALL CourseGrammar links for this course (all units)
+        const courseGrammarLinks = await (prisma as any).courseGrammar.findMany({
+            where: {
+                courseId,
+            },
+            include: {
+                grammar: true,
+            },
+            orderBy: [
+                { unitId: 'asc' },
+                { displayOrder: 'asc' },
+            ],
+        });
+
+        if (courseGrammarLinks.length === 0) {
+            return res.json({ data: [] });
+        }
+
+        // Get grammar point IDs
+        const grammarPointIds = courseGrammarLinks.map((link: any) => link.grammarId);
+
+        // Fetch user progress for these grammar points
+        const userProgress = await prisma.userGrammarProgress.findMany({
+            where: {
+                userId,
+                grammarPointId: { in: grammarPointIds },
+            },
+        });
+
+        // Create a map for quick lookup
+        const progressMap = new Map(
+            userProgress.map(p => [p.grammarPointId, p])
+        );
+
+        // Merge grammar with user progress
+        const data = courseGrammarLinks.map((link: any) => {
+            const progress = progressMap.get(link.grammarId);
+            return {
+                id: link.grammar.id,
+                title: link.grammar.title,
+                summary: link.grammar.summary,
+                explanation: link.grammar.explanation,
+                examples: link.grammar.examples,
+                unitId: link.unitId,
+                displayOrder: link.displayOrder,
+                // User progress
+                status: progress?.status || 'NEW',
+                proficiency: progress?.proficiency || 0,
+            };
+        });
+
+        return res.json({ data });
+    } catch (error) {
+        console.error('[Grammar Controller] getCourseGrammar error:', error);
+        return res.status(500).json({ error: 'Failed to fetch course grammar' });
+    }
+};
+
+/**
  * POST /api/grammar/:grammarId/check
  * Check a user's sentence with AI grading
  */

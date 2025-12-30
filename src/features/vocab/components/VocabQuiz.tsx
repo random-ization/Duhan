@@ -1,5 +1,6 @@
 import React, { useState, memo, useRef, useEffect } from 'react';
-import { Trophy, RefreshCw, Settings, X, Check } from 'lucide-react';
+import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
+import { updateVocabProgress } from '../../../services/vocabApi';
 
 interface VocabItem {
     id: string;
@@ -11,6 +12,10 @@ interface VocabItem {
 interface VocabQuizProps {
     words: VocabItem[];
     onComplete?: (stats: { correct: number; total: number }) => void;
+    hasNextUnit?: boolean;
+    onNextUnit?: () => void;
+    currentUnitLabel?: string;
+    userId?: string; // For recording progress
 }
 
 interface QuizSettings {
@@ -18,6 +23,8 @@ interface QuizSettings {
     writingMode: boolean;
     mcDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
     writingDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+    autoTTS: boolean;
+    soundEffects: boolean;
 }
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
@@ -34,15 +41,91 @@ type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
 type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
 
-function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
+function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, currentUnitLabel, userId }: VocabQuizProps) {
     // Settings
     const [settings, setSettings] = useState<QuizSettings>({
         multipleChoice: true,
         writingMode: false,
         mcDirection: 'KR_TO_NATIVE',
         writingDirection: 'NATIVE_TO_KR',
+        autoTTS: true,
+        soundEffects: true,
     });
     const [showSettings, setShowSettings] = useState(false);
+
+    // Audio context for sound effects
+    const audioContextRef = useRef<AudioContext | null>(null);
+
+    // Initialize audio context on first interaction
+    const getAudioContext = () => {
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        return audioContextRef.current;
+    };
+
+    // Duolingo-style sound effects
+    const playCorrectSound = () => {
+        if (!settings.soundEffects) return;
+        try {
+            const ctx = getAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            // Pleasant "ding" sound - two notes ascending
+            oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.3);
+        } catch (e) {
+            console.warn('Sound effect failed:', e);
+        }
+    };
+
+    const playWrongSound = () => {
+        if (!settings.soundEffects) return;
+        try {
+            const ctx = getAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            // Low "buzz" sound
+            oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+            oscillator.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
+            oscillator.type = 'sawtooth';
+
+            gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.25);
+        } catch (e) {
+            console.warn('Sound effect failed:', e);
+        }
+    };
+
+    // TTS function (always speaks, setting checked at call site)
+    const speakWord = (text: string, force: boolean = false) => {
+        if (!force && !settings.autoTTS) return;
+        if ('speechSynthesis' in window) {
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ko-KR';
+            u.rate = 0.8;
+            speechSynthesis.speak(u);
+        }
+    };
 
     // Quiz state
     const [gameState, setGameState] = useState<GameState>('PLAYING');
@@ -61,6 +144,7 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
     const [wrongWords, setWrongWords] = useState<VocabItem[]>([]);
     const [masteredWordIds, setMasteredWordIds] = useState<Set<string>>(new Set()); // Words answered correctly
     const [currentBatchNum, setCurrentBatchNum] = useState(1);
+    const [totalQuestionsAnswered, setTotalQuestionsAnswered] = useState(0); // Track total across all rounds
 
     // Timer cleanup
     const timersRef = useRef<NodeJS.Timeout[]>([]);
@@ -70,6 +154,19 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
             timersRef.current = [];
         };
     }, []);
+
+    // Auto-speak Korean word when question changes (if direction is KR_TO_NATIVE)
+    const currentQuestion = questions[questionIndex];
+    const totalQuestions = questions.length;
+
+    useEffect(() => {
+        if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {
+            // Speak Korean word if it's on the question side
+            if (currentQuestion.direction === 'KR_TO_NATIVE') {
+                speakWord(currentQuestion.targetWord.korean);
+            }
+        }
+    }, [questionIndex, questions, settings.autoTTS, gameState]);
 
     // Shuffle helper
     const shuffleArray = <T,>(array: T[]): T[] => {
@@ -170,9 +267,6 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
         setGameState('PLAYING');
     };
 
-    const currentQuestion = questions[questionIndex];
-    const totalQuestions = questions.length;
-
     // Multiple choice handler
     const handleOptionClick = (index: number) => {
         if (isLocked || !currentQuestion || currentQuestion.type !== 'MULTIPLE_CHOICE') return;
@@ -184,6 +278,11 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
             if (isCorrect) {
                 setOptionStates(prev => prev.map((_, i) => i === index ? 'correct' : 'normal'));
                 setCorrectCount(c => c + 1);
+                playCorrectSound();
+                // Record progress (quality 5 = correct)
+                if (userId && currentQuestion.targetWord.id) {
+                    updateVocabProgress(userId, currentQuestion.targetWord.id, 5).catch(console.warn);
+                }
                 // Mark as mastered
                 setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
             } else {
@@ -192,6 +291,11 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
                     if (i === currentQuestion.correctIndex) return 'correct';
                     return 'normal';
                 }));
+                playWrongSound();
+                // Record progress (quality 0 = wrong)
+                if (userId && currentQuestion.targetWord.id) {
+                    updateVocabProgress(userId, currentQuestion.targetWord.id, 0).catch(console.warn);
+                }
                 // Add to wrong words for retry
                 setWrongWords(prev => {
                     if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
@@ -220,10 +324,20 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
         if (isCorrect) {
             setWritingState('CORRECT');
             setCorrectCount(c => c + 1);
+            playCorrectSound();
+            // Record progress (quality 5 = correct)
+            if (userId && currentQuestion.targetWord.id) {
+                updateVocabProgress(userId, currentQuestion.targetWord.id, 5).catch(console.warn);
+            }
             // Mark as mastered
             setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
         } else {
             setWritingState('WRONG');
+            playWrongSound();
+            // Record progress (quality 0 = wrong)
+            if (userId && currentQuestion.targetWord.id) {
+                updateVocabProgress(userId, currentQuestion.targetWord.id, 0).catch(console.warn);
+            }
             // Add to wrong words for retry
             setWrongWords(prev => {
                 if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
@@ -237,6 +351,9 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
     };
 
     const nextQuestion = () => {
+        // Increment total answered count
+        setTotalQuestionsAnswered(t => t + 1);
+
         if (questionIndex >= totalQuestions - 1) {
             // End of current batch - check for wrong words and remaining words
             const remainingNewWords = words.filter(w => !masteredWordIds.has(w.id) && !wrongWords.find(ww => ww.id === w.id));
@@ -266,7 +383,7 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
 
             // All words mastered!
             setGameState('COMPLETE');
-            onComplete?.({ correct: correctCount, total: totalQuestions });
+            onComplete?.({ correct: correctCount, total: totalQuestionsAnswered + 1 });
         } else {
             setQuestionIndex(q => q + 1);
             setOptionStates(['normal', 'normal', 'normal', 'normal']);
@@ -281,6 +398,7 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
         setQuestions(generateQuestions(settings));
         setQuestionIndex(0);
         setCorrectCount(0);
+        setTotalQuestionsAnswered(0);
         setOptionStates(['normal', 'normal', 'normal', 'normal']);
         setIsLocked(false);
         setWritingInput('');
@@ -360,6 +478,27 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
                     </div>
                 )}
 
+                {/* Audio Settings */}
+                <div className="mb-5">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">音频设置</h3>
+                    <div className="space-y-2">
+                        <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
+                            <div>
+                                <span className="font-bold text-slate-700 block">🔊 自动朗读单词</span>
+                                <span className="text-xs text-slate-400">每题自动播放韩语发音</span>
+                            </div>
+                            <input type="checkbox" checked={settings.autoTTS} onChange={e => setSettings(s => ({ ...s, autoTTS: e.target.checked }))} className="w-5 h-5 accent-green-500" />
+                        </label>
+                        <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
+                            <div>
+                                <span className="font-bold text-slate-700 block">🎵 答题音效</span>
+                                <span className="text-xs text-slate-400">正确/错误提示音</span>
+                            </div>
+                            <input type="checkbox" checked={settings.soundEffects} onChange={e => setSettings(s => ({ ...s, soundEffects: e.target.checked }))} className="w-5 h-5 accent-green-500" />
+                        </label>
+                    </div>
+                </div>
+
                 <button onClick={applySettings} disabled={!settings.multipleChoice && !settings.writingMode} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50">
                     应用并重新开始
                 </button>
@@ -369,7 +508,9 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
 
     // Complete Screen
     if (gameState === 'COMPLETE') {
-        const percentage = Math.round((correctCount / totalQuestions) * 100);
+        // Use totalQuestionsAnswered for accurate percentage across all rounds
+        const finalTotal = totalQuestionsAnswered > 0 ? totalQuestionsAnswered : totalQuestions;
+        const percentage = Math.round((correctCount / finalTotal) * 100);
         return (
             <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-green-50" />
@@ -381,7 +522,7 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
                     <p className="text-slate-500 mb-6">你完成了所有问题!</p>
                     <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-                            <div className="text-3xl font-black text-slate-900">{correctCount}/{totalQuestions}</div>
+                            <div className="text-3xl font-black text-slate-900">{correctCount}/{finalTotal}</div>
                             <div className="text-xs text-slate-400 font-bold">正确数</div>
                         </div>
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
@@ -389,9 +530,16 @@ function VocabQuizComponent({ words, onComplete }: VocabQuizProps) {
                             <div className="text-xs text-slate-400 font-bold">正确率</div>
                         </div>
                     </div>
-                    <button onClick={restartGame} className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all">
-                        <RefreshCw className="w-5 h-5" /> 再来一次
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button onClick={restartGame} className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all">
+                            <RefreshCw className="w-5 h-5" /> 再来一次
+                        </button>
+                        {hasNextUnit && onNextUnit && (
+                            <button onClick={onNextUnit} className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all">
+                                下一单元 <ChevronRight className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         );

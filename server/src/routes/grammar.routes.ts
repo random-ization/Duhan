@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
     getUnitGrammar,
+    getCourseGrammar,
     checkSentence,
     searchGrammar,
     createGrammar,
@@ -13,6 +14,10 @@ import { authenticate, requireAdmin } from '../middleware/auth.middleware';
 const router = Router();
 
 // ========== Public/User Routes ==========
+
+// GET /api/grammar/courses/:courseId/all
+// Get ALL grammar points for a course (all units) - used by CourseDashboard
+router.get('/courses/:courseId/all', authenticate, getCourseGrammar);
 
 // GET /api/grammar/courses/:courseId/units/:unitId/grammar
 // Get all grammar points for a course unit with user progress

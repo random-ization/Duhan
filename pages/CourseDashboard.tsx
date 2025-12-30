@@ -1,21 +1,84 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import api from '../services/api';
+
+// Grammar point type from API
+interface GrammarPoint {
+    id: string;
+    title: string;
+    summary: string;
+    unitId: number;
+    status: 'NEW' | 'LEARNING' | 'MASTERED';
+}
 
 export default function CourseDashboard() {
     const navigate = useNavigate();
     const { instituteId } = useParams<{ instituteId: string }>();
     const { institutes } = useData();
 
+    // State for grammar points from API
+    const [grammarPoints, setGrammarPoints] = useState<GrammarPoint[]>([]);
+    const [loadingGrammar, setLoadingGrammar] = useState(true);
+
+    // State for vocabulary stats
+    const [vocabStats, setVocabStats] = useState({ total: 0, mastered: 0 });
+    const [loadingVocab, setLoadingVocab] = useState(true);
+
     // Find current course by ID
     const course = institutes.find(i => i.id === instituteId);
     const courseName = course?.name || '首尔大学韩国语 1A';
     const displayLevel = course?.displayLevel || '第一册';
     const coverUrl = course?.coverUrl;
+    const totalUnits = course?.totalUnits || 10;
 
-    // Mock progress (45%)
-    const progress = 45;
+    // Fetch grammar points from API
+    useEffect(() => {
+        const fetchGrammar = async () => {
+            if (!instituteId) return;
+            try {
+                setLoadingGrammar(true);
+                const response = await api.getCourseGrammar(instituteId);
+                setGrammarPoints(response.data || []);
+            } catch (error) {
+                console.error('Failed to fetch grammar:', error);
+            } finally {
+                setLoadingGrammar(false);
+            }
+        };
+        fetchGrammar();
+    }, [instituteId]);
+
+    // Fetch vocabulary stats
+    useEffect(() => {
+        const fetchVocabStats = async () => {
+            if (!instituteId) return;
+            try {
+                setLoadingVocab(true);
+                const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+                const res = await fetch(`${API_URL}/api/vocab/words?courseId=${instituteId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const words = data.words || [];
+                    // TODO: Get mastered count from user progress API when available
+                    setVocabStats({ total: words.length, mastered: 0 });
+                }
+            } catch (error) {
+                console.error('Failed to fetch vocab stats:', error);
+            } finally {
+                setLoadingVocab(false);
+            }
+        };
+        fetchVocabStats();
+    }, [instituteId]);
+
+    // Calculate overall progress
+    const grammarMastered = grammarPoints.filter(g => g.status === 'MASTERED').length;
+    const grammarTotal = grammarPoints.length;
+    const vocabProgress = vocabStats.total > 0 ? (vocabStats.mastered / vocabStats.total) * 100 : 0;
+    const grammarProgress = grammarTotal > 0 ? (grammarMastered / grammarTotal) * 100 : 0;
+    const overallProgress = Math.round((vocabProgress + grammarProgress) / 2);
 
     // Module definitions with routes and progress data
     const modules = [
@@ -28,10 +91,10 @@ export default function CourseDashboard() {
             iconBg: 'bg-green-50',
             iconBorder: 'border-green-200',
             hoverBg: 'bg-green-400/90',
-            progressLabel: '已掌握',
-            progressValue: '120/450',
+            progressLabel: '总单词',
+            progressValue: loadingVocab ? '...' : `${vocabStats.total}`,
             progressColor: 'bg-green-400',
-            progressWidth: '30%',
+            progressWidth: vocabStats.total > 0 ? `${Math.min((vocabStats.mastered / vocabStats.total) * 100, 100)}%` : '0%',
             hoverText: 'START',
             hoverRotate: 'group-hover:rotate-12',
             path: `/course/${instituteId}/vocab`,
@@ -45,10 +108,10 @@ export default function CourseDashboard() {
             iconBg: 'bg-purple-50',
             iconBorder: 'border-purple-200',
             hoverBg: 'bg-purple-400/90',
-            progressLabel: '已掌握',
-            progressValue: '5/20',
+            progressLabel: '语法点',
+            progressValue: loadingGrammar ? '...' : `${grammarPoints.length}`,
             progressColor: 'bg-purple-400',
-            progressWidth: '25%',
+            progressWidth: grammarPoints.length > 0 ? `${(grammarMastered / grammarPoints.length) * 100}%` : '0%',
             hoverText: 'START',
             hoverRotate: 'group-hover:-rotate-12',
             path: `/course/${instituteId}/grammar`,
@@ -62,10 +125,10 @@ export default function CourseDashboard() {
             iconBg: 'bg-blue-50',
             iconBorder: 'border-blue-200',
             hoverBg: 'bg-blue-400/90',
-            progressLabel: '已读完',
-            progressValue: '3/12 课',
+            progressLabel: '单元数',
+            progressValue: `${totalUnits} 课`,
             progressColor: 'bg-blue-400',
-            progressWidth: '25%',
+            progressWidth: '0%',
             hoverText: 'READ',
             hoverRotate: 'group-hover:scale-110',
             path: `/course/${instituteId}/reading`,
@@ -79,22 +142,14 @@ export default function CourseDashboard() {
             iconBg: 'bg-yellow-50',
             iconBorder: 'border-yellow-200',
             hoverBg: 'bg-[#FEE500]/90',
-            progressLabel: '时长',
-            progressValue: '45 mins',
+            progressLabel: '单元数',
+            progressValue: `${totalUnits} 课`,
             progressColor: 'bg-[#FEE500]',
-            progressWidth: '15%',
+            progressWidth: '0%',
             hoverText: 'LISTEN',
             hoverRotate: 'group-hover:-translate-y-1',
             path: `/course/${instituteId}/listening`,
         },
-    ];
-
-    // Mock grammar points for bottom section
-    const grammarPoints = [
-        { id: 1, pattern: '-입니다', meaning: '是... (陈述句)', desc: '用于正式场合，表示"我是..."，"这是..."等肯定句含义。', unit: 'UNIT 01', status: 'learned' },
-        { id: 2, pattern: '-입니까?', meaning: '是...吗? (疑问句)', desc: '对应 -입니다 的疑问形式，用于正式场合提问。', unit: 'UNIT 01', status: 'learned' },
-        { id: 3, pattern: '-은/는', meaning: '主题助词', desc: '接在名词后，表示该名词是句子的主题。有收音用은，无收音用는。', unit: 'UNIT 02', status: 'unlearned' },
-        { id: 4, pattern: '-이/가', meaning: '主语助词', desc: '表示主语。有收音用이，无收音用가。强调主语本身。', unit: 'UNIT 02', status: 'unlearned' },
     ];
 
     return (
@@ -138,17 +193,17 @@ export default function CourseDashboard() {
                                 {courseName}
                             </h1>
                             <p className="text-slate-500 font-medium mb-4">
-                                {displayLevel} · 第 1-8 课
+                                {displayLevel} · 第 1-{totalUnits} 课
                             </p>
 
                             {/* Progress Bar */}
                             <div className="max-w-md mx-auto md:mx-0">
                                 <div className="flex justify-between text-xs font-bold mb-1">
                                     <span>总进度</span>
-                                    <span>{progress}%</span>
+                                    <span>{overallProgress}%</span>
                                 </div>
                                 <div className="w-full bg-slate-100 h-4 rounded-full border-2 border-slate-900 overflow-hidden relative">
-                                    <div className="bg-[#FEE500] h-full border-r-2 border-slate-900" style={{ width: `${progress}%` }} />
+                                    <div className="bg-[#FEE500] h-full border-r-2 border-slate-900" style={{ width: `${overallProgress}%` }} />
                                 </div>
                             </div>
                         </div>
@@ -217,41 +272,58 @@ export default function CourseDashboard() {
                     </div>
 
                     <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory">
-                        {grammarPoints.map((gp) => (
-                            <div
-                                key={gp.id}
-                                className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 hover:border-purple-500 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer relative overflow-hidden"
-                            >
-                                {/* Unit Label */}
-                                <div className="absolute top-0 right-0 bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-                                    {gp.unit}
+                        {loadingGrammar ? (
+                            // Loading skeleton
+                            [...Array(4)].map((_, i) => (
+                                <div key={i} className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse">
+                                    <div className="h-8 bg-slate-100 rounded mb-2 w-32"></div>
+                                    <div className="h-4 bg-slate-100 rounded mb-1 w-24"></div>
+                                    <div className="h-3 bg-slate-100 rounded w-full"></div>
                                 </div>
+                            ))
+                        ) : grammarPoints.length === 0 ? (
+                            <div className="text-slate-400 text-sm py-4">暂无语法数据</div>
+                        ) : (
+                            grammarPoints.map((gp) => (
+                                <div
+                                    key={gp.id}
+                                    className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 hover:border-purple-500 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer relative overflow-hidden"
+                                >
+                                    {/* Unit Label */}
+                                    <div className="absolute top-0 right-0 bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                                        UNIT {String(gp.unitId).padStart(2, '0')}
+                                    </div>
 
-                                {/* Pattern */}
-                                <div className="text-purple-600 font-black text-2xl mb-2">{gp.pattern}</div>
+                                    {/* Pattern (title) */}
+                                    <div className="text-purple-600 font-black text-2xl mb-2">{gp.title}</div>
 
-                                {/* Meaning */}
-                                <div className="text-slate-800 font-bold text-sm mb-1">{gp.meaning}</div>
+                                    {/* Summary */}
+                                    <div className="text-slate-800 font-bold text-sm mb-1">{gp.summary}</div>
 
-                                {/* Description */}
-                                <p className="text-slate-400 text-xs leading-relaxed line-clamp-2">{gp.desc}</p>
-
-                                {/* Status & Arrow */}
-                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                    {gp.status === 'learned' ? (
-                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">已掌握</span>
-                                    ) : (
-                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">未学习</span>
-                                    )}
-                                    <span className="text-slate-300 group-hover:text-purple-600 transition-colors">→</span>
+                                    {/* Status & Arrow */}
+                                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                        {gp.status === 'MASTERED' ? (
+                                            <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">已掌握</span>
+                                        ) : gp.status === 'LEARNING' ? (
+                                            <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">学习中</span>
+                                        ) : (
+                                            <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">未学习</span>
+                                        )}
+                                        <span className="text-slate-300 group-hover:text-purple-600 transition-colors">→</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
 
                         {/* More Arrow Card */}
-                        <div className="snap-start flex-shrink-0 w-24 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-slate-400">
-                            <span className="text-2xl text-slate-300">➜</span>
-                        </div>
+                        {grammarPoints.length > 0 && (
+                            <div
+                                onClick={() => navigate(`/course/${instituteId}/grammar`)}
+                                className="snap-start flex-shrink-0 w-24 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-slate-400"
+                            >
+                                <span className="text-2xl text-slate-300">➜</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

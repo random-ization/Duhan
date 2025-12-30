@@ -38,12 +38,22 @@ const getUserSubscription = async (req: Request): Promise<string> => {
 export const getInstitutes = async (req: Request, res: Response) => {
   try {
     const institutes = await prisma.institute.findMany();
-    const formatted = institutes.map(i => ({
-      ...i,
-      levels: JSON.parse(i.levels),
-    }));
+    const formatted = institutes.map(i => {
+      let levels = i.levels;
+      // Try to parse JSON, fallback to raw value if it fails
+      try {
+        levels = JSON.parse(i.levels);
+      } catch {
+        // levels is already a plain string, use as-is
+      }
+      return {
+        ...i,
+        levels,
+      };
+    });
     res.json(formatted);
   } catch (e: unknown) {
+    console.error('Failed to fetch institutes:', e);
     res.status(500).json({ error: 'Failed to fetch institutes' });
   }
 };

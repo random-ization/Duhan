@@ -619,6 +619,10 @@ export const api = {
   getUnitGrammar: async (courseId: string, unitId: number) =>
     request<{ data: any[] }>(`/grammar/courses/${courseId}/units/${unitId}/grammar`),
 
+  // Get ALL grammar for a course (all units) - used by CourseDashboard
+  getCourseGrammar: async (courseId: string) =>
+    request<{ data: any[] }>(`/grammar/courses/${courseId}/all`),
+
   toggleGrammarStatus: async (grammarId: string) =>
     request<{ id: string; status: string; lastReviewed: string }>(`/grammar/${grammarId}/toggle`, {
       method: 'POST'
