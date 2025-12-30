@@ -82,6 +82,19 @@ export default function VocabImporter() {
         return 'NOUN'; // Default
     };
 
+    const findCol = (row: any, candidates: string[]): string => {
+        const keys = Object.keys(row);
+        for (const candidate of candidates) {
+            // 1. Exact match
+            if (row[candidate] !== undefined) return String(row[candidate]).trim();
+
+            // 2. Case-insensitive match
+            const foundKey = keys.find(k => k.toLowerCase() === candidate.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return String(row[foundKey]).trim();
+        }
+        return '';
+    };
+
     const parseExcel = async (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -93,9 +106,9 @@ export default function VocabImporter() {
                 const jsonData = XLSX.utils.sheet_to_json(sheet) as any[];
 
                 const parsed: ImportedVocab[] = jsonData.map((row: any) => {
-                    const synonyms = parseCommaList(row['Synonyms'] || row['近义词']);
-                    const antonyms = parseCommaList(row['Antonyms'] || row['反义词']);
-                    const nuance = row['Note'] || row['备注'] || '';
+                    const synonyms = parseCommaList(findCol(row, ['Synonyms', '近义词', 'Synonym']));
+                    const antonyms = parseCommaList(findCol(row, ['Antonyms', '反义词', 'Antonym']));
+                    const nuance = findCol(row, ['Note', '备注', 'Nuance', 'Memo']);
 
                     const tipsObj = {
                         synonyms: synonyms.length ? synonyms : undefined,
@@ -103,15 +116,18 @@ export default function VocabImporter() {
                         nuance: nuance || undefined
                     };
 
+                    const unitVal = findCol(row, ['Unit', '单元', 'Lesson', '课']);
+                    const unitNum = parseInt(unitVal) || 0;
+
                     return {
-                        unit: parseInt(row['Unit'] || row['单元'] || '0'),
-                        word: row['Word'] || row['单词'] || '',
-                        meaning: row['Meaning'] || row['释义'] || '',
+                        unit: unitNum,
+                        word: findCol(row, ['Word', '单词', 'Vocab']),
+                        meaning: findCol(row, ['Meaning', '释义', 'Definition', 'Translation']),
                         description: '',
-                        partOfSpeech: mapPOS(row['POS'] || row['词性']),
-                        hanja: row['Hanja'] || row['汉字'] || '',
-                        exampleSentence: row['Example (Kr)'] || row['例句(韩)'] || '',
-                        exampleMeaning: row['Example (Cn)'] || row['例句(中)'] || '',
+                        partOfSpeech: mapPOS(findCol(row, ['POS', '词性', 'Part of Speech'])),
+                        hanja: findCol(row, ['Hanja', '汉字', 'Chinese']),
+                        exampleSentence: findCol(row, ['Example (Kr)', '例句(韩)', 'Example', '例句', 'Sentence', 'Sentences', 'Korean']),
+                        exampleMeaning: findCol(row, ['Example (Cn)', '例句(中)', 'Meaning (Ex)', '翻译', 'Translation']),
                         synonyms,
                         antonyms,
                         nuance,
