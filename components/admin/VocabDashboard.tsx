@@ -4,11 +4,11 @@ import {
     ChevronLeft, ChevronRight, Mic, Sparkles, Loader2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../services/api';
+import { api, request } from '../../services/api';
 import { Institute } from '../../types';
 import toast from 'react-hot-toast';
 
-const API_Base = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+
 
 interface VocabItem {
     id: string;
@@ -70,12 +70,8 @@ export default function VocabDashboard() {
                 missingAudio: missingAudioOnly ? 'true' : 'false'
             });
 
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_Base}/api/admin/vocab?${params}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const data = await request<{ success: boolean; items: VocabItem[]; pages: number }>(`/admin/vocab?${params}`);
 
-            const data = await res.json();
             if (data.success) {
                 setWords(data.items);
                 setTotalPages(data.pages);
@@ -95,12 +91,7 @@ export default function VocabDashboard() {
         e.stopPropagation();
         setGeneratingId(id);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_Base}/api/admin/vocab/${id}/tts`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
+            const data = await request<any>(`/admin/vocab/${id}/tts`, { method: 'POST' });
 
             if (data.success) {
                 toast.success('Audio generated');
@@ -119,16 +110,10 @@ export default function VocabDashboard() {
         if (!confirm('Permanently delete this word?')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_Base}/api/admin/vocab/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await request(`/admin/vocab/${id}`, { method: 'DELETE' });
 
-            if (res.ok) {
-                toast.success('Deleted');
-                setWords(prev => prev.filter(w => w.id !== id));
-            }
+            toast.success('Deleted');
+            setWords(prev => prev.filter(w => w.id !== id));
         } catch (err) {
             toast.error('Delete failed');
         }

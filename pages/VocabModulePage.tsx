@@ -778,15 +778,6 @@ export default function VocabModulePage() {
                 .backface-hidden { backface-visibility: hidden; }
                 .rotate-y-180 { transform: rotateY(180deg); }
             `}</style>
-            {/* DEBUG UI - TEMPORARY */}
-            <div className="fixed bottom-0 left-0 right-0 bg-black/90 text-white p-2 z-[9999] text-[10px] font-mono flex gap-4 justify-center">
-                <span>ID: {instituteId}</span>
-                <span>Words: {allWords.length}</span>
-                <span>Filtered: {filteredWords.length}</span>
-                <span>Unit: {selectedUnitId}</span>
-                <span>Loading: {loading ? 'yes' : 'no'}</span>
-                <span>EnvAPI: {(import.meta as any).env.VITE_API_URL}</span>
-            </div>
         </div>
     );
 }
