@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileUp, Check, X, AlertTriangle, FileSpreadsheet, Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../services/api';
+import { api, request } from '../../services/api';
 import { Institute } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -24,7 +24,7 @@ interface ImportedVocab {
     errorMsg?: string;
 }
 
-const API_Base = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+
 
 export default function VocabImporter() {
     const { user } = useAuth();
@@ -87,7 +87,7 @@ export default function VocabImporter() {
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary' });
+                const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(sheet) as any[];
@@ -124,10 +124,10 @@ export default function VocabImporter() {
                 toast.success(`解析了 ${parsed.length} 个单词`);
             } catch (err) {
                 console.error('Parse Error', err);
-                toast.error('解析 Excel 失败，请检查格式');
+                toast.error('解析文件失败，请检查格式');
             }
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
     };
 
     const handleDownloadTemplate = () => {
@@ -169,17 +169,10 @@ export default function VocabImporter() {
         };
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_Base}/api/admin/vocab/bulk`, {
+            const data = await request<{ success: boolean; results?: any; error?: string }>('/admin/vocab/bulk', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify(payload)
             });
-
-            const data = await res.json();
             if (data.success) {
                 toast.success(`成功导入 ${data.results.success} 个单词`);
                 if (data.results.failed > 0) {
@@ -246,13 +239,13 @@ export default function VocabImporter() {
                         className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl font-bold transition-colors text-slate-700"
                     >
                         <Upload className="w-5 h-5" />
-                        上传 Excel
+                        上传 Excel / CSV
                     </button>
                     <input
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept=".xlsx, .xls"
+                        accept=".xlsx, .xls, .csv"
                         onChange={handleFileUpload}
                     />
 
