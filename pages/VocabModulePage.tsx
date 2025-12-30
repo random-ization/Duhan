@@ -140,9 +140,9 @@ export default function VocabModulePage() {
     useEffect(() => { setCardIndex(0); setIsFlipped(false); setFlashcardComplete(false); }, [selectedUnitId]);
 
     const availableUnits = useMemo(() => {
-        const units = Array.from(new Set(allWords.map(w => w.unit)));
-        return units.sort((a, b) => a - b);
-    }, [allWords]);
+        const total = course?.totalUnits || 20;
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }, [course]);
 
     const currentCard = filteredWords[cardIndex];
     const masteryCount = useMemo(() => filteredWords.filter(w => masteredIds.has(w.id)).length, [filteredWords, masteredIds]);
@@ -263,20 +263,7 @@ export default function VocabModulePage() {
         );
     }
 
-    // Empty state when no words loaded
-    if (allWords.length === 0) {
-        return (
-            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
-                <EmptyState
-                    icon={BookOpen}
-                    title="还没有生词？"
-                    description="去阅读中点击单词收藏吧！学习积累，一步一脚印"
-                    actionLabel="去阅读"
-                    onAction={() => navigate('/dashboard')}
-                />
-            </div>
-        );
-    }
+    // Removed blocking EmptyState here to allow UI rendering even if empty
 
     return (
         <div className="min-h-screen flex flex-col items-center py-6 px-4" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
@@ -350,6 +337,18 @@ export default function VocabModulePage() {
                     ))}
                 </div>
             </div>
+
+            {filteredWords.length === 0 && (
+                <div className="w-full max-w-4xl py-12">
+                    <EmptyState
+                        icon={BookOpen}
+                        title={selectedUnitId === 'ALL' ? "暂无单词" : `Unit ${selectedUnitId} 暂无单词`}
+                        description="本单元尚未添加词汇内容"
+                        actionLabel={selectedUnitId === 'ALL' ? "返回首页" : "查看其他单元"}
+                        onAction={() => selectedUnitId === 'ALL' ? navigate('/dashboard') : setSelectedUnitId('ALL')}
+                    />
+                </div>
+            )}
 
             {/* Flashcard */}
             {viewMode === 'flashcard' && filteredWords.length > 0 && (
@@ -616,7 +615,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Quick Learn List Mode (速记) */}
-            {viewMode === 'list' && (
+            {viewMode === 'list' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-2xl font-black text-slate-900">
@@ -743,7 +742,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Quiz Mode */}
-            {viewMode === 'quiz' && (
+            {viewMode === 'quiz' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <VocabQuiz
                         key={`quiz-${selectedUnitId}-${gameWords.length}`}
@@ -765,7 +764,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Match Mode */}
-            {viewMode === 'match' && (
+            {viewMode === 'match' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <VocabMatch
                         key={`match-${selectedUnitId}-${gameWords.length}`}

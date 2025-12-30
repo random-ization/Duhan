@@ -187,11 +187,12 @@ export default function CourseDashboard() {
 
                         {/* Course Info */}
                         <div className="flex-1 text-center md:text-left z-10">
-                            <h1 className="text-4xl font-black text-slate-900 mb-2 leading-tight">
-                                {courseName}
+                            <h1 className="font-display text-4xl font-black text-slate-900 mb-2 tracking-tight">
+                                {course?.name || '加载中...'}
+                                <span className="text-xs text-slate-400 font-normal ml-2">ID: {instituteId}</span>
                             </h1>
-                            <p className="text-slate-500 font-medium mb-4">
-                                {displayLevel} · 第 1-{totalUnits} 课
+                            <p className="text-slate-500 font-medium flex items-center gap-2">
+                                <span>{course?.publisher}</span>{displayLevel} · 第 1-{totalUnits} 课
                             </p>
 
                             {/* Progress Bar */}
