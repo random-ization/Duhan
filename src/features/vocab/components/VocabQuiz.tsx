@@ -1,6 +1,7 @@
 import React, { useState, memo, useRef, useEffect } from 'react';
 import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
-import { updateVocabProgress } from '../../../services/vocabApi';
+import { useMutation } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 interface VocabItem {
     id: string;
@@ -245,6 +246,9 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
         return generated;
     };
 
+    // Convex Mutation
+    const updateProgressMutation = useMutation(api.vocab.updateProgress);
+
     // Initial load
     const hasInitRef = useRef(false);
     useEffect(() => {
@@ -281,7 +285,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 playCorrectSound();
                 // Record progress (quality 5 = correct)
                 if (userId && currentQuestion.targetWord.id) {
-                    updateVocabProgress(userId, currentQuestion.targetWord.id, 5).catch(console.warn);
+                    updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
                 }
                 // Mark as mastered
                 setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
@@ -294,7 +298,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 playWrongSound();
                 // Record progress (quality 0 = wrong)
                 if (userId && currentQuestion.targetWord.id) {
-                    updateVocabProgress(userId, currentQuestion.targetWord.id, 0).catch(console.warn);
+                    updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
                 }
                 // Add to wrong words for retry
                 setWrongWords(prev => {
@@ -327,7 +331,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
             playCorrectSound();
             // Record progress (quality 5 = correct)
             if (userId && currentQuestion.targetWord.id) {
-                updateVocabProgress(userId, currentQuestion.targetWord.id, 5).catch(console.warn);
+                updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
             }
             // Mark as mastered
             setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
@@ -336,7 +340,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
             playWrongSound();
             // Record progress (quality 0 = wrong)
             if (userId && currentQuestion.targetWord.id) {
-                updateVocabProgress(userId, currentQuestion.targetWord.id, 0).catch(console.warn);
+                updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
             }
             // Add to wrong words for retry
             setWrongWords(prev => {

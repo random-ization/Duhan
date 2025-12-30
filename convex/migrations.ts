@@ -1,0 +1,237 @@
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+// Generic mutation to import data
+export const importData = mutation({
+    args: {
+        table: v.string(),
+        data: v.any(), // Array of objects
+    },
+    handler: async (ctx, args) => {
+        const { table, data } = args;
+        console.log(`Importing ${data.length} records into ${table} `);
+
+        for (const item of data) {
+            // Basic insert
+            // You might want to strip 'id' if you want Convex to generate IDs,
+            // OR keep it as a custom field (schema defines 'id' for institute/unit?)
+            // My schema defines 'id' for institute, but checks convex ID for others.
+            // For migration, we usually want to preserve relations.
+
+            // Since existing relations use UUIDs (strings), and Convex uses `Id<TableName>`,
+            // we have a mismatch.
+            // Strategy: Store original ID in a field (e.g. `postgresId`)?
+            // OR: For tables with String IDs (User, Institute), we mapped them.
+            // For `vocabulary_appearances`, it refers to `wordId` (Convex ID).
+            // This is Tricky.
+
+            // MIGRATION STRATEGY:
+            // 1. Import Master Words first. Store their `postgresId` -> `convexId` map?
+            //    Or add `postgresId` column to `words` table temporarily to look up.
+
+            // For now, simple insert.
+            await ctx.db.insert(table as any, item);
+        }
+    },
+});
+
+export const getAllWords = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("words").collect();
+    },
+});
+
+export const getAllGrammarPoints = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("grammar_points").collect();
+    },
+});
+
+export const getAllTextbookUnits = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("textbook_units").collect();
+    },
+});
+// Helpers for linking relations
+export const getAllPodcastChannels = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("podcast_channels").collect();
+    },
+});
+
+export const getAllPodcastEpisodes = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("podcast_episodes").collect();
+    },
+});
+
+// Debug helper
+export const getDBStats = query({
+    args: {},
+    handler: async (ctx) => {
+        const users = await ctx.db.query("users").collect();
+        const institutes = await ctx.db.query("institutes").collect();
+        const units = await ctx.db.query("textbook_units").collect();
+        const words = await ctx.db.query("words").collect();
+        const appearances = await ctx.db.query("vocabulary_appearances").collect();
+        const grammarPoints = await ctx.db.query("grammar_points").collect();
+        const courseGrammars = await ctx.db.query("course_grammars").collect();
+        const videos = await ctx.db.query("videos").collect();
+        const channels = await ctx.db.query("podcast_channels").collect();
+        const episodes = await ctx.db.query("podcast_episodes").collect();
+
+        return {
+            users: users.length,
+            institutes: institutes.length,
+            units: units.length,
+            words: words.length,
+            vocabulary_appearances: appearances.length,
+            grammar_points: grammarPoints.length,
+            course_grammars: courseGrammars.length,
+            videos: videos.length,
+            podcast_channels: channels.length,
+            podcast_episodes: episodes.length,
+        };
+    }
+});
+
+// Debug helper: Analyze duplicates
+export const analyzeDuplicates = query({
+    args: {},
+    handler: async (ctx) => {
+        const grammarPoints = await ctx.db.query("grammar_points").collect();
+        const words = await ctx.db.query("words").collect();
+        const channels = await ctx.db.query("podcast_channels").collect();
+        const courseGrammars = await ctx.db.query("course_grammars").collect();
+
+        const countDuplicates = (items: any[], keyFn: (item: any) => string) => {
+            const map = new Map<string, number>();
+            items.forEach(item => {
+                const key = keyFn(item);
+                if (key) map.set(key, (map.get(key) || 0) + 1);
+            });
+            let duplicates = 0;
+            let totalExcess = 0;
+            map.forEach((count) => {
+                if (count > 1) {
+                    duplicates++;
+                    totalExcess += (count - 1);
+                }
+            });
+            return { uniqueItems: map.size, duplicateGroups: duplicates, totalExcessRecords: totalExcess };
+        };
+
+        return {
+            grammarPoints: countDuplicates(grammarPoints, (g) => g.postgresId || g.title),
+            words: countDuplicates(words, (w) => w.postgresId || w.word),
+            podcastChannels: countDuplicates(channels, (c) => c.postgresId || c.title),
+            courseGrammars: countDuplicates(courseGrammars, (cg) => `${cg.courseId}_${cg.unitId}_${cg.grammarId}`),
+            institutes: countDuplicates(await ctx.db.query("institutes").collect(), (i) => i.id),
+            units: countDuplicates(await ctx.db.query("textbook_units").collect(), (u) => u.postgresId || u.title),
+            videos: countDuplicates(await ctx.db.query("videos").collect(), (v) => v.postgresId || v.title),
+            episodes: countDuplicates(await ctx.db.query("podcast_episodes").collect(), (e) => e.postgresId || e.guid),
+            appearances: countDuplicates(await ctx.db.query("vocabulary_appearances").collect(), (a) => `${a.wordId}_${a.courseId}_${a.unitId}`),
+        };
+    }
+});
+
+export const analyzeIntegrity = query({
+    args: {},
+    handler: async (ctx) => {
+        const appearances = await ctx.db.query("vocabulary_appearances").collect();
+        const units = await ctx.db.query("textbook_units").collect();
+        const words = await ctx.db.query("words").collect();
+        const courseGrammars = await ctx.db.query("course_grammars").collect();
+
+        // 1. Check Orphan Appearances (Word not found or Unit not found)
+        let orphanAppearances = 0;
+        for (const a of appearances) {
+            const word = await ctx.db.get(a.wordId);
+            // Verify Unit exists if we had unitId link (schema uses unitId: Id<"textbook_units">)
+            // Wait, schema for 'vocabulary_appearances' has 'unitId: v.id("textbook_units")' ?
+            // Let's check schema.ts. Assuming standard Convex ID.
+
+            // Actually, for efficacy, let's load all IDs into sets.
+            // But 'get' is cheap.
+
+            const unit = await ctx.db.get(a.unitId);
+            if (!word || !unit) {
+                orphanAppearances++;
+            }
+        }
+
+        // 2. Check Orphan CourseGrammars
+        let orphanCG = 0;
+        for (const cg of courseGrammars) {
+            const grammar = await ctx.db.get(cg.grammarId);
+            if (!grammar) orphanCG++;
+        }
+
+        return {
+            orphanAppearances,
+            orphanCourseGrammars: orphanCG,
+            totalAppearances: appearances.length,
+            totalUnits: units.length,
+            totalWords: words.length
+        };
+    }
+});
+
+// Deduplication Helper
+export const deleteDuplicateData = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const deleteDuplicates = async (tableName: any, keyFn: (item: any) => string) => {
+            const items = await ctx.db.query(tableName).collect();
+            const map = new Map<string, any[]>();
+            items.forEach((item) => {
+                const key = keyFn(item);
+                if (!key) return;
+                if (!map.has(key)) map.set(key, []);
+                map.get(key)!.push(item);
+            });
+
+            let deletedCount = 0;
+            for (const [key, group] of map.entries()) {
+                if (group.length > 1) {
+                    // Sort by creation time (keep oldest or newest? Migration usually creates new ones later)
+                    // Let's keep the FIRST one we found (or explicitly Sort) based on ID usually fine if identical
+                    // Ideally keep the one with relationships, but here they are all fresh migrations.
+                    // Let's keep the first one in the list and delete the rest.
+                    const toDelete = group.slice(1);
+                    for (const item of toDelete) {
+                        await ctx.db.delete(item._id);
+                        deletedCount++;
+                    }
+                }
+            }
+            return deletedCount;
+        };
+
+        const deletedGrammar = await deleteDuplicates("grammar_points", (g) => g.postgresId || g.title);
+        const deletedWords = await deleteDuplicates("words", (w) => w.postgresId || w.word);
+        const deletedChannels = await deleteDuplicates("podcast_channels", (c) => c.postgresId || c.title);
+        const deletedAppearances = await deleteDuplicates("vocabulary_appearances", (a) => `${a.wordId}_${a.courseId}_${a.unitId}`);
+
+        // Videos and Episodes might have duplicates too
+        const deletedVideos = await deleteDuplicates("videos", (v) => v.postgresId || v.title);
+        const deletedEpisodes = await deleteDuplicates("podcast_episodes", (e) => e.postgresId || e.guid);
+
+        const deletedInstitutes = await deleteDuplicates("institutes", (i) => i.id);
+
+        return {
+            deletedGrammar,
+            deletedWords,
+            deletedChannels,
+            deletedAppearances,
+            deletedVideos,
+            deletedEpisodes,
+            deletedInstitutes
+        };
+    }
+});

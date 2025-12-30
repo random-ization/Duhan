@@ -5,6 +5,9 @@ import App from './App';
 import { AppProvider } from './contexts/AppContext';
 import './utils/i18next-config'; // Initialize i18n
 import './src/index.css';
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -15,9 +18,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <ConvexProvider client={convex}>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </ConvexProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

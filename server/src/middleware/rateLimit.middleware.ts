@@ -35,9 +35,7 @@ export const aiLimiter = rateLimit({
         error: 'AI 请求次数已达上限，请1小时后再试',
         retryAfter: '1 hour',
     },
-    keyGenerator: (req: any, res: any) => {
-        return req.user?.id || req.ip;
-    },
+
     validate: {
         ip: false
     },

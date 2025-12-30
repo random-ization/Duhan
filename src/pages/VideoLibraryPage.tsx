@@ -9,7 +9,9 @@ import {
     Search,
     Filter
 } from 'lucide-react';
-import api from '../../services/api';
+// import api from '../../services/api';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 interface VideoItem {
     id: string;
@@ -35,10 +37,25 @@ const VideoLibraryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeLevel, setActiveLevel] = useState('');
 
-    useEffect(() => {
-        fetchVideos();
-    }, [activeLevel]);
+    // Convex Integration
+    const convexVideos = useQuery(api.videos.list, activeLevel ? { level: activeLevel } : {});
 
+    useEffect(() => {
+        if (convexVideos) {
+            setVideos(convexVideos.map(v => ({
+                ...v,
+                id: v._id,
+                thumbnailUrl: v.thumbnailUrl || undefined,
+                duration: v.duration || undefined,
+                description: v.description || undefined,
+                createdAt: new Date(v.createdAt).toISOString() // Convert numeric timestamp to ISO string if needed for display
+            })));
+            setLoading(false);
+        }
+    }, [convexVideos]);
+
+    // Legacy fetch removed
+    /*
     const fetchVideos = async () => {
         try {
             setLoading(true);
@@ -52,6 +69,7 @@ const VideoLibraryPage: React.FC = () => {
             setLoading(false);
         }
     };
+    */
 
     const formatDuration = (seconds?: number) => {
         if (!seconds) return '--:--';

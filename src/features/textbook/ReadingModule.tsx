@@ -16,9 +16,11 @@ import {
     Loader2,
     Menu
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import api from '../../../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import BottomSheet from '../../components/common/BottomSheet';
+
+import legacyApi from '../../../services/api';
 
 // =========================================
 // Types
@@ -60,7 +62,7 @@ interface TextToken {
 interface UnitData {
     id: string;
     title: string;
-    text: string;
+    readingText: string;
     translation?: string;
     audioUrl?: string;
     analysisData?: TextToken[];
@@ -382,20 +384,16 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     onBack
 }) => {
     // ========================================
-    // React Query: Fetch unit data with caching
+    // Convex Query: Fetch unit data
     // ========================================
-    const { data: queryData, isLoading: loading, error: queryError } = useQuery({
-        queryKey: ['unit', courseId, unitIndex],
-        queryFn: async () => {
-            const response = await api.getUnitLearningData(courseId, unitIndex);
-            if (!response.success) {
-                throw new Error('Failed to fetch unit data');
-            }
-            return response.data;
-        },
-        staleTime: Infinity, // Course content rarely changes
-        enabled: !!courseId && unitIndex > 0,
+    const queryData = useQuery(api.units.getDetails, {
+        courseId,
+        unitIndex,
+        userId: undefined // TODO: Add Auth integration later
     });
+
+    const loading = queryData === undefined;
+    const queryError = null; // Convex throws/nulls usually, simplest check is undefined
 
     // Extract data from query
     const articles = queryData?.articles || (queryData?.unit ? [{ ...queryData.unit, articleIndex: 1 }] : []);
@@ -827,7 +825,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                     {unitData?.title || '暂无文章'}
                                 </h2>
                                 <div className="text-zinc-800 leading-loose">
-                                    {unitData?.text ? renderContent(unitData.text) : (
+                                    {unitData?.readingText ? renderContent(unitData.readingText) : (
                                         <p className="text-zinc-400">暂无内容</p>
                                     )}
                                 </div>
@@ -853,7 +851,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await api.completeUnit(courseId, unitIndex);
+                                                await legacyApi.completeUnit(courseId, unitIndex);
                                                 // Show success feedback
                                                 alert('🎉 本课学习已完成！');
                                             } catch (e) {

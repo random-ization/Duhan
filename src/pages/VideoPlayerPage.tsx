@@ -13,8 +13,10 @@ import {
     BookOpen,
     List // Added List icon for mobile toggle
 } from 'lucide-react';
-import api from '../../services/api';
-import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
+// import api from '../../services/api';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+// import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
 import { useAuth } from '../../contexts/AuthContext'; // If needed
 
 interface TranscriptSegment {
@@ -101,6 +103,27 @@ const VideoPlayerPage: React.FC = () => {
         position: { x: number; y: number };
     } | null>(null);
 
+    // Convex Integration
+    const convexVideo = useQuery(api.videos.get, id ? { id: id as any } : "skip");
+
+    useEffect(() => {
+        if (convexVideo) {
+            setVideo({
+                ...convexVideo,
+                id: convexVideo._id,
+                thumbnailUrl: convexVideo.thumbnailUrl || undefined,
+                duration: convexVideo.duration || undefined,
+                description: convexVideo.description || undefined,
+                transcriptData: convexVideo.transcriptData || undefined
+            });
+            setLoading(false);
+        } else if (convexVideo === null) {
+            setError('视频不存在');
+            setLoading(false);
+        }
+    }, [convexVideo]);
+
+    /*
     // Fetch video data
     useEffect(() => {
         const fetchVideo = async () => {
@@ -122,6 +145,7 @@ const VideoPlayerPage: React.FC = () => {
         };
         fetchVideo();
     }, [id]);
+    */
 
     // Update active segment based on current time
     useEffect(() => {

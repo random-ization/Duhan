@@ -9,8 +9,10 @@ import { useData } from '../contexts/DataContext';
 import { VocabularyItem } from '../types';
 import VocabQuiz from '../src/features/vocab/components/VocabQuiz';
 import VocabMatch from '../src/features/vocab/components/VocabMatch';
-import { updateVocabProgress } from '../src/services/vocabApi';
+// import { updateVocabProgress } from '../src/services/vocabApi';
 import EmptyState from '../src/components/common/EmptyState';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
 
 interface ExtendedVocabItem extends VocabularyItem {
     id: string;
@@ -71,64 +73,35 @@ export default function VocabModulePage() {
         textbookContextsRef.current = textbookContexts;
     }, [textbookContexts]);
 
-    // Parse words from API or Legacy
-    const parseWords = useCallback(async () => {
-        setLoading(true);
+    // Convex Integration
+    const convexWordsQuery = useQuery(api.vocab.getOfCourse, instituteId ? { courseId: instituteId, userId: user?.id } : "skip");
+    const updateProgressMutation = useMutation(api.vocab.updateProgress);
 
-        try {
-            // 1. Try fetching from Admin/DB API first using centralized service
-            // This handles API_URL correctly (e.g. /api proxy)
-            const data = await (await import('../services/api')).api.getCourseVocab(instituteId!);
+    // Effect: Sync Convex Data to State
+    useEffect(() => {
+        if (convexWordsQuery) {
+            const apiWords: ExtendedVocabItem[] = convexWordsQuery.map((w: any) => ({
+                ...w,
+                id: w._id,
+                korean: w.word,
+                english: w.meaning,
+                unit: w.unitId,
+                mastered: w.mastered || false,
+                progress: w.progress
+            }));
 
-            if (data.success && data.words.length > 0) {
-                const apiWords: ExtendedVocabItem[] = data.words.map((w: any) => ({
-                    ...w,
-                    korean: w.word,
-                    english: w.meaning,
-                    unit: w.unitId, // Remap unitId to unit
-                    mastered: false
-                }));
-                setAllWords(apiWords);
-                setLoading(false);
-                return;
-            }
-        } catch (err) {
-            console.warn('API fetch failed, falling back to legacy:', err);
+            setAllWords(apiWords);
+
+            // Initialize Mastered IDs
+            const mastered = new Set(
+                apiWords.filter(w => w.mastered || w.progress?.status === 'MASTERED').map(w => w.id)
+            );
+            setMasteredIds(mastered);
+
+            setLoading(false);
         }
+    }, [convexWordsQuery]);
 
-        // 2. Fallback to Legacy textbookContexts (use ref to avoid dependency)
-        const combined: ExtendedVocabItem[] = [];
-        const level = selectedLevel || 1;
-        const prefix = `${instituteId}-${level}-`;
-        const contexts = textbookContextsRef.current;
-
-        Object.keys(contexts).forEach(key => {
-            if (key.startsWith(prefix)) {
-                const unitStr = key.slice(prefix.length);
-                const unit = parseInt(unitStr, 10);
-                const content = contexts[key];
-                if (content?.vocabularyList && content.vocabularyList.startsWith('[')) {
-                    try {
-                        const parsed: VocabularyItem[] = JSON.parse(content.vocabularyList);
-                        parsed.forEach((item, idx) => {
-                            combined.push({ ...item, unit, id: `${unit}-${idx}`, mastered: false });
-                        });
-                    } catch (e) {
-                        console.warn(`Failed to parse vocab for ${key}`, e);
-                    }
-                }
-            }
-        });
-
-        // Mock data logic removed (it was only for testing)
-        if (combined.length > 0) {
-            setAllWords(combined);
-        }
-
-        setLoading(false);
-    }, [instituteId, selectedLevel]); // Removed textbookContexts to prevent infinite loop
-
-    useEffect(() => { parseWords(); }, [parseWords]);
 
     const filteredWords = useMemo(() => {
         if (selectedUnitId === 'ALL') return allWords;
@@ -155,10 +128,14 @@ export default function VocabModulePage() {
     const handleKnow = async () => {
         if (currentCard) {
             setMasteredIds(prev => new Set([...prev, currentCard.id]));
-            // Call SRS API if user is logged in and word has database ID
-            if (user?.id && currentCard.id && !currentCard.id.includes('-')) {
+            // Call Convex Mutation
+            if (user?.id && currentCard.id) {
                 try {
-                    await updateVocabProgress(user.id, currentCard.id, 5);
+                    await updateProgressMutation({
+                        userId: user.id,
+                        wordId: currentCard.id as any,
+                        quality: 5
+                    });
                 } catch (err) {
                     console.warn('Failed to update progress:', err);
                 }
@@ -167,9 +144,20 @@ export default function VocabModulePage() {
         goToNext();
     };
     const handleDontKnow = async () => {
-        if (user?.id && currentCard?.id && !currentCard.id.includes('-')) {
+        if (user?.id && currentCard?.id) {
             try {
-                await updateVocabProgress(user.id, currentCard.id, 0);
+                // Remove from mastered locally if forgot
+                setMasteredIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(currentCard.id);
+                    return next;
+                });
+
+                await updateProgressMutation({
+                    userId: user.id,
+                    wordId: currentCard.id as any,
+                    quality: 0
+                });
             } catch (err) {
                 console.warn('Failed to update progress:', err);
             }

@@ -1,9 +1,9 @@
-import app from './app';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import app from './app';
 import grammarRoutes from './routes/grammar.routes';
 import statsRoutes from './routes/stats.routes';
-
-dotenv.config();
 
 // Register Routes
 app.use('/api/grammar', grammarRoutes);

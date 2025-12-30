@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Mic, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
-import { api } from '../services/api';
+// import { api } from '../services/api'; 
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
@@ -18,6 +20,40 @@ export default function PodcastDashboard() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Convex Integration
+    const trendingData = useQuery(api.podcasts.getTrending);
+    const historyData = useQuery(api.podcasts.getHistory, user ? { userId: user.id } : "skip");
+    const subscriptionsData = useQuery(api.podcasts.getSubscriptions, user ? { userId: user.id } : "skip");
+
+    useEffect(() => {
+        if (trendingData) {
+            setTrending({
+                internal: trendingData.internal.map(ep => ({
+                    ...ep,
+                    id: ep._id,
+                    channel: ep.channel ? { ...ep.channel, id: ep.channel._id } : undefined
+                })),
+                external: trendingData.external || []
+            });
+        }
+        if (historyData) {
+            setHistory(historyData.map(h => ({
+                ...h,
+                id: h._id
+            })));
+        }
+        if (subscriptionsData) {
+            setSubscriptions(subscriptionsData.map(s => ({
+                ...s,
+                id: s._id
+            })));
+        }
+
+        // Stop loading once critical data (trending) is ready
+        if (trendingData) setLoading(false);
+    }, [trendingData, historyData, subscriptionsData]);
+
+    /*
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -42,6 +78,7 @@ export default function PodcastDashboard() {
         };
         loadData();
     }, [user]);
+    */
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();

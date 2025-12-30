@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { api } from '../services/api';
+
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
+import { useAuth } from "../contexts/AuthContext";
 import UnitSidebar from '../components/grammar/UnitSidebar';
 import GrammarFeed from '../components/grammar/GrammarFeed';
 import GrammarDetailSheet from '../components/grammar/GrammarDetailSheet';
@@ -19,32 +22,28 @@ const GrammarModulePage: React.FC = () => {
     const [instituteName, setInstituteName] = useState('');
     const [totalUnits, setTotalUnits] = useState<number>(10); // Default to 10 units
 
-    // Load grammar for the selected unit
-    useEffect(() => {
-        loadUnitGrammar();
-    }, [instituteId, selectedUnit]);
+    const { user } = useAuth();
+
+    // Convex Integration
+    const grammarListQuery = useQuery(api.grammars.getUnitGrammar,
+        instituteId ? { courseId: instituteId, unitId: selectedUnit, userId: user?.id } : "skip"
+    );
+    const updateStatusMutation = useMutation(api.grammars.updateStatus);
 
     useEffect(() => {
-        setInstituteName(decodeURIComponent(instituteId || ''));
-    }, [instituteId]);
-
-    const loadUnitGrammar = async () => {
-        if (!instituteId) return;
-        setIsLoading(true);
-        try {
-            const response = await api.getUnitGrammar(instituteId, selectedUnit);
-            setGrammarList(response.data || []);
-        } catch (error) {
-            console.error('Failed to load grammar points:', error);
-            setGrammarList([]);
-        } finally {
+        if (grammarListQuery) {
+            setGrammarList(grammarListQuery.map(g => ({
+                ...g,
+                // Ensure type compatibility with frontend interface if needed
+                status: g.status as any
+            })));
             setIsLoading(false);
         }
-    };
+    }, [grammarListQuery]);
 
-    // Handle proficiency update from the detail sheet
+    // Handle proficiency update (Optimistic UI handled by mutation result if needed, but local state works too)
     const handleProficiencyUpdate = (grammarId: string, proficiency: number, status: string) => {
-        // Update local state (Optimistic UI)
+        // Update local state for immediate feedback
         setGrammarList(prev =>
             prev.map(point =>
                 point.id === grammarId
@@ -52,8 +51,6 @@ const GrammarModulePage: React.FC = () => {
                     : point
             )
         );
-
-        // Also update the selected grammar if it's the same
         if (selectedGrammar?.id === grammarId) {
             setSelectedGrammar(prev =>
                 prev ? { ...prev, proficiency, status: status as any } : null
@@ -62,15 +59,28 @@ const GrammarModulePage: React.FC = () => {
     };
 
     const handleToggleStatus = async (grammarId: string) => {
+        if (!user?.id) return;
+
+        // Determine new status (toggle logic)
+        const current = grammarList.find(g => g.id === grammarId);
+        const newStatus = current?.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
+
         try {
-            const updated = await api.toggleGrammarStatus(grammarId);
+            await updateStatusMutation({
+                userId: user.id,
+                grammarId: grammarId as any,
+                status: newStatus
+            });
+
+            // Update local state
             setGrammarList(prev =>
                 prev.map(point =>
-                    point.id === grammarId ? { ...point, status: updated.status as any } : point
+                    point.id === grammarId ? { ...point, status: newStatus as any } : point
                 )
             );
+
             if (selectedGrammar?.id === grammarId) {
-                setSelectedGrammar(prev => prev ? { ...prev, status: updated.status as any } : null);
+                setSelectedGrammar(prev => prev ? { ...prev, status: newStatus as any } : null);
             }
         } catch (error) {
             console.error('Failed to toggle status:', error);
