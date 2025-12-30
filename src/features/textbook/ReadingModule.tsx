@@ -824,7 +824,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
                             >
                                 <h2 className="text-2xl font-black mb-6 text-zinc-900">
-                                    {unitData?.title || '加载中...'}
+                                    {unitData?.title || '暂无文章'}
                                 </h2>
                                 <div className="text-zinc-800 leading-loose">
                                     {unitData?.text ? renderContent(unitData.text) : (
