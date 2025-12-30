@@ -38,6 +38,9 @@ export const aiLimiter = rateLimit({
     keyGenerator: (req: any, res: any) => {
         return req.user?.id || req.ip;
     },
+    validate: {
+        ip: false
+    },
     skip: () => true,
 });
 
