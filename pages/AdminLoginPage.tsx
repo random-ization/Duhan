@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { useMutation } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { ShieldCheck, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { UserTier } from '../types';
 
 const AdminLoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -13,6 +15,9 @@ const AdminLoginPage: React.FC = () => {
 
     const { login, user } = useAuth();
     const navigate = useNavigate();
+
+    // Convex login mutation
+    const loginMutation = useMutation(api.auth.login);
 
     // If already logged in as admin, redirect to admin panel
     useEffect(() => {
@@ -27,26 +32,47 @@ const AdminLoginPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const result = await api.login({ email, password });
+            const result = await loginMutation({ email, password });
 
-            if (result.token && result.user) {
-                // Save token
-                localStorage.setItem('token', result.token);
+            if (result?.user) {
+                // Save user ID as token (simplified - in production use proper JWT)
+                localStorage.setItem('token', result.user.id);
+                localStorage.setItem('userId', result.user.id);
 
-                if (result.user.role === 'ADMIN') {
+                // Map Convex user to AuthContext User type
+                const fullUser = {
+                    id: result.user.id,
+                    email: result.user.email,
+                    name: result.user.name,
+                    role: result.user.role as 'STUDENT' | 'ADMIN',
+                    // Map tier string to UserTier enum (FREE or PAID)
+                    tier: result.user.tier === 'FREE' ? UserTier.FREE : UserTier.PAID,
+                    avatar: result.user.avatar || '',
+                    joinDate: Date.now(),
+                    lastActive: Date.now(),
+                    savedWords: [],
+                    mistakes: [],
+                    annotations: [],
+                    examAttempts: [],
+                    examHistory: [],
+                };
+
+                if (fullUser.role === 'ADMIN') {
                     // Update context with user
-                    login(result.user);
+                    login(fullUser);
                     navigate('/admin');
                 } else {
                     // Not admin - clear token and show error
                     localStorage.removeItem('token');
+                    localStorage.removeItem('userId');
                     setError('该账号没有管理员权限');
                 }
             } else {
                 setError('登录失败，请检查邮箱和密码');
             }
         } catch (err: any) {
-            setError(err.message || '登录失败，请稍后重试');
+            console.error('Login error:', err);
+            setError(err.message || '服务器内部错误，请稍后再试');
         } finally {
             setLoading(false);
         }
