@@ -76,7 +76,15 @@ export const createInstitute = async (req: Request, res: Response) => {
         totalUnits: totalUnits || null,
       },
     });
-    res.json({ ...institute, levels: JSON.parse(institute.levels) });
+
+    let parsedLevels = levels;
+    try {
+      parsedLevels = JSON.parse(institute.levels);
+    } catch {
+      // Ignore parse error
+    }
+
+    res.json({ ...institute, levels: parsedLevels });
   } catch (e: unknown) {
     if (isZodError(e)) {
       return res.status(400).json({ error: 'Invalid input', details: e.errors });
@@ -108,7 +116,15 @@ export const updateInstitute = async (req: Request, res: Response) => {
       where: { id },
       data: updateData,
     });
-    res.json({ ...institute, levels: JSON.parse(institute.levels) });
+
+    let parsedLevels = levels;
+    try {
+      parsedLevels = JSON.parse(institute.levels);
+    } catch {
+      parsedLevels = institute.levels; // Fallback to raw string
+    }
+
+    res.json({ ...institute, levels: parsedLevels });
   } catch (e: unknown) {
     res.status(500).json({ error: 'Failed to update institute' });
   }

@@ -64,6 +64,7 @@ interface UnitData {
     translation?: string;
     audioUrl?: string;
     analysisData?: TextToken[];
+    articleIndex?: number;
 }
 
 interface VocabItem {
@@ -397,7 +398,20 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     });
 
     // Extract data from query
-    const unitData = queryData?.unit || null;
+    const articles = queryData?.articles || (queryData?.unit ? [{ ...queryData.unit, articleIndex: 1 }] : []);
+    const [activeArticleIndex, setActiveArticleIndex] = useState(1);
+
+    // Update active article index if not in list (e.g. data loaded)
+    useEffect(() => {
+        if (articles.length > 0 && !articles.find((a: any) => a.articleIndex === activeArticleIndex)) {
+            setActiveArticleIndex(articles[0].articleIndex || 1);
+        }
+    }, [articles, activeArticleIndex]);
+
+    const unitData = useMemo(() =>
+        articles.find((a: any) => a.articleIndex === activeArticleIndex) || articles[0] || null
+        , [articles, activeArticleIndex]);
+
     const vocabList = queryData?.vocabList || [];
     const grammarList = queryData?.grammarList || [];
     const apiAnnotations = queryData?.annotations || [];
@@ -740,18 +754,39 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                             <h1 className="font-black text-lg">{unitData?.title || unitTitle}</h1>
                         </div>
 
-                        {/* Center: Unit Info Badge */}
-                        <div className="flex gap-2">
+
+
+                        {/* Center: Unit Info Badge + Article Selector */}
+                        <div className="flex gap-2 items-center">
                             <span className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm">
                                 📖 第 {unitIndex} 课
                             </span>
+
+                            {/* Article Selector */}
+                            {articles.length > 1 && (
+                                <div className="flex bg-white border-2 border-zinc-900 rounded-lg overflow-hidden">
+                                    {articles.map((article: any) => (
+                                        <button
+                                            key={article.articleIndex}
+                                            onClick={() => setActiveArticleIndex(article.articleIndex)}
+                                            className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${activeArticleIndex === article.articleIndex
+                                                ? 'bg-zinc-900 text-white'
+                                                : 'hover:bg-zinc-50'
+                                                }`}
+                                        >
+                                            文章 {article.articleIndex}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
                             {vocabList.length > 0 && (
-                                <span className="px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
+                                <span className="hidden md:inline-block px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
                                     {vocabList.length} 个生词
                                 </span>
                             )}
                             {grammarList.length > 0 && (
-                                <span className="px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
+                                <span className="hidden md:inline-block px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
                                     {grammarList.length} 个语法点
                                 </span>
                             )}
@@ -1115,8 +1150,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         )}
                     </BottomSheet>
                 </>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 

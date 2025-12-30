@@ -159,6 +159,7 @@ model TextbookUnit {
   courseId  String // Foreign key to Institute
   course    Institute @relation(fields: [courseId], references: [id])
   unitIndex Int // Unit number (1, 2, 3...)
+  articleIndex Int @default(1) // Article number within the unit (1, 2, 3...)
 
   title       String // Lesson title (e.g., "자기 소개")
   readingText String  @db.Text // Full reading content (long text)
@@ -171,7 +172,7 @@ model TextbookUnit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([courseId, unitIndex]) // Each unit appears once per course
+  @@unique([courseId, unitIndex, articleIndex]) // Each article appears once per unit per course
   @@index([courseId])
 }
 

@@ -27,14 +27,18 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
         console.log(`[Unit Controller] Fetching unit page: courseId=${courseId}, unit=${unitNum}, user=${userId}`);
 
         // 1. Query TextbookUnit for reading content
-        const unit = await prisma.textbookUnit.findUnique({
+        // 1. Query TextbookUnit for reading content (fetch all articles)
+        const units = await (prisma as any).textbookUnit.findMany({
             where: {
-                courseId_unitIndex: {
-                    courseId,
-                    unitIndex: unitNum
-                }
+                courseId,
+                unitIndex: unitNum
+            },
+            orderBy: {
+                articleIndex: 'asc'
             }
         });
+
+        const mainUnit = units[0] || null;
 
         // 2. Query VocabularyAppearance with Word details
         const vocabAppearances = await prisma.vocabularyAppearance.findMany({
@@ -114,13 +118,23 @@ export const getUnitPage = async (req: AuthRequest, res: Response) => {
         return res.json({
             success: true,
             data: {
-                unit: unit ? {
-                    id: unit.id,
-                    title: unit.title,
-                    text: unit.readingText,
-                    translation: unit.translation,
-                    analysisData: (unit as any).analysisData, // AI morphological analysis
+                unit: mainUnit ? {
+                    id: mainUnit.id,
+                    title: mainUnit.title,
+                    text: mainUnit.readingText,
+                    translation: mainUnit.translation,
+                    analysisData: (mainUnit as any).analysisData, // AI morphological analysis
+                    audioUrl: mainUnit.audioUrl,
                 } : null,
+                articles: units.map((u: any) => ({
+                    id: u.id,
+                    articleIndex: u.articleIndex || 1,
+                    title: u.title,
+                    text: u.readingText,
+                    translation: u.translation,
+                    audioUrl: u.audioUrl,
+                    analysisData: u.analysisData
+                })),
                 vocabList,
                 grammarList,
                 annotations: annotations.map(a => ({
@@ -214,8 +228,9 @@ export const getUnitsForCourse = async (req: AuthRequest, res: Response) => {
 export const saveUnit = async (req: AuthRequest, res: Response) => {
     try {
         const { courseId, unitIndex } = req.params;
-        const { title, readingText, translation, audioUrl, transcriptData } = req.body;
+        const { title, readingText, translation, audioUrl, transcriptData, articleIndex } = req.body;
         const unitNum = parseInt(unitIndex, 10);
+        const articleNum = articleIndex ? parseInt(articleIndex, 10) : 1;
 
         if (!courseId || isNaN(unitNum)) {
             return res.status(400).json({
@@ -231,7 +246,7 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
             });
         }
 
-        console.log(`[Unit Controller] Saving unit: courseId=${courseId}, unit=${unitNum}`);
+        console.log(`[Unit Controller] Saving unit: courseId=${courseId}, unit=${unitNum}, article=${articleNum}`);
 
         // Perform AI text analysis (lemmatization) - wrapped in try-catch to not block save
         let analysisData = null;
@@ -247,9 +262,10 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
         // Upsert the unit
         const unit = await (prisma as any).textbookUnit.upsert({
             where: {
-                courseId_unitIndex: {
+                courseId_unitIndex_articleIndex: {
                     courseId,
-                    unitIndex: unitNum
+                    unitIndex: unitNum,
+                    articleIndex: articleNum
                 }
             },
             update: {
@@ -263,6 +279,7 @@ export const saveUnit = async (req: AuthRequest, res: Response) => {
             create: {
                 courseId,
                 unitIndex: unitNum,
+                articleIndex: articleNum,
                 title,
                 readingText,
                 translation,

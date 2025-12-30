@@ -12,13 +12,14 @@ interface Institute {
 interface UnitContent {
     id?: string;
     unitIndex: number;
+    articleIndex: number; // New field
     title: string;
     readingText: string;
     translation: string;
     audioUrl: string;
     hasAnalysis?: boolean;
     analysisData?: any;
-    transcriptData?: any; // Listening karaoke data
+    transcriptData?: any;
 }
 
 export const ReadingContentManager: React.FC = () => {
@@ -31,6 +32,7 @@ export const ReadingContentManager: React.FC = () => {
 
     // 编辑状态
     const [editingUnit, setEditingUnit] = useState<UnitContent | null>(null);
+    const [availableArticles, setAvailableArticles] = useState<any[]>([]); // Current unit's articles
 
     // 初始化：加载教材列表
     useEffect(() => {
@@ -62,12 +64,20 @@ export const ReadingContentManager: React.FC = () => {
             // 使用新的 getUnitsForCourse API
             const response = await api.getUnitsForCourse(courseId);
             if (response.success && response.data) {
-                // 转换到编辑器格式
-                const formattedUnits = response.data.map((u: any) => ({
+                // Deduplicate units by index for the list view
+                const uniqueUnitsMap = new Map();
+                response.data.forEach((u: any) => {
+                    if (!uniqueUnitsMap.has(u.unitIndex)) {
+                        uniqueUnitsMap.set(u.unitIndex, u);
+                    }
+                });
+
+                const formattedUnits = Array.from(uniqueUnitsMap.values()).map((u: any) => ({
                     id: u.id,
                     unitIndex: u.unitIndex,
+                    articleIndex: 1, // Default for list view
                     title: u.title,
-                    readingText: '', // 列表不加载全文
+                    readingText: '',
                     translation: '',
                     audioUrl: '',
                     hasAnalysis: u.hasAnalysis,
@@ -81,22 +91,41 @@ export const ReadingContentManager: React.FC = () => {
         }
     };
 
-    const loadUnitDetail = async (courseId: string, unitIndex: number) => {
+    const loadUnitDetail = async (courseId: string, unitIndex: number, articleIndex: number = 1) => {
         try {
             const response = await api.getUnitLearningData(courseId, unitIndex);
-            if (response.success && response.data?.unit) {
-                const unit = response.data.unit;
-                setEditingUnit({
-                    id: unit.id,
-                    unitIndex: unitIndex,
-                    title: unit.title,
-                    readingText: unit.text || '',
-                    translation: unit.translation || '',
-                    audioUrl: unit.audioUrl || '',
-                    analysisData: unit.analysisData,
-                    hasAnalysis: !!unit.analysisData,
-                    transcriptData: (unit as any).transcriptData || null,
-                });
+            if (response.success) {
+                const articles = response.data.articles || [];
+                setAvailableArticles(articles);
+
+                // Find specific article or default to first
+                const targetArticle = articles.find((a: any) => a.articleIndex === articleIndex) ||
+                    (articles.length > 0 ? articles[0] : null);
+
+                if (targetArticle) {
+                    setEditingUnit({
+                        id: targetArticle.id,
+                        unitIndex: unitIndex,
+                        articleIndex: targetArticle.articleIndex || 1,
+                        title: targetArticle.title,
+                        readingText: targetArticle.text || '',
+                        translation: targetArticle.translation || '',
+                        audioUrl: targetArticle.audioUrl || '',
+                        analysisData: targetArticle.analysisData,
+                        hasAnalysis: !!targetArticle.analysisData,
+                        transcriptData: null,
+                    });
+                } else {
+                    // New unit or no articles yet
+                    setEditingUnit({
+                        unitIndex: unitIndex,
+                        articleIndex: 1,
+                        title: '',
+                        readingText: '',
+                        translation: '',
+                        audioUrl: '',
+                    });
+                }
             }
         } catch (e) {
             console.error('Failed to load unit detail', e);
@@ -116,12 +145,13 @@ export const ReadingContentManager: React.FC = () => {
                 translation: editingUnit.translation,
                 audioUrl: editingUnit.audioUrl,
                 transcriptData: editingUnit.transcriptData,
-            });
+                articleIndex: editingUnit.articleIndex, // Pass to backend
+            } as any);
 
             if (response.success) {
                 alert(`保存成功！AI 分析已生成 ${response.data.tokenCount} 个词形映射。`);
-                setEditingUnit(null);
-                loadCourseUnits(selectedCourseId); // 刷新列表
+                loadUnitDetail(selectedCourseId, editingUnit.unitIndex, editingUnit.articleIndex); // Refresh to get update ID/state
+                loadCourseUnits(selectedCourseId); // Refresh list
             } else {
                 alert('保存失败，请重试');
             }
@@ -162,16 +192,41 @@ export const ReadingContentManager: React.FC = () => {
         const nextIndex = units.length > 0 ? Math.max(...units.map(u => u.unitIndex)) + 1 : 1;
         setEditingUnit({
             unitIndex: nextIndex,
+            articleIndex: 1,
             title: '',
             readingText: '',
             translation: '',
             audioUrl: ''
         });
+        setAvailableArticles([]);
     };
 
     const handleSelectUnit = (unit: UnitContent) => {
         // 加载详细内容
         loadUnitDetail(selectedCourseId, unit.unitIndex);
+    };
+
+    const addNewArticle = () => {
+        if (!editingUnit) return;
+        const nextArticleIndex = availableArticles.length > 0
+            ? Math.max(...availableArticles.map(a => a.articleIndex || 1)) + 1
+            : 1;
+
+        // Save current work first? Maybe not needed as switching clears state unless saved.
+        // Better to just switch to a blank new article state.
+        setEditingUnit({
+            unitIndex: editingUnit.unitIndex,
+            articleIndex: nextArticleIndex,
+            title: '',
+            readingText: '',
+            translation: '',
+            audioUrl: '',
+        });
+    };
+
+    const switchArticle = (index: number) => {
+        if (!selectedCourseId || !editingUnit) return;
+        loadUnitDetail(selectedCourseId, editingUnit.unitIndex, index);
     };
 
     return (
@@ -234,6 +289,32 @@ export const ReadingContentManager: React.FC = () => {
             <div className="flex-1 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B] overflow-y-auto">
                 {editingUnit ? (
                     <div className="space-y-4 max-w-3xl mx-auto">
+                        <div className="flex items-center justify-between border-b pb-4">
+                            <div className="flex gap-2">
+                                {availableArticles.map((a) => (
+                                    <button
+                                        key={a.id || a.articleIndex}
+                                        onClick={() => switchArticle(a.articleIndex || 1)}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${editingUnit.articleIndex === (a.articleIndex || 1)
+                                                ? 'bg-zinc-900 text-white border-zinc-900'
+                                                : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400'
+                                            }`}
+                                    >
+                                        文章 {a.articleIndex || 1}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={addNewArticle}
+                                    className="px-3 py-1 rounded-full text-xs font-bold border-2 border-dashed border-zinc-300 text-zinc-400 hover:text-zinc-900 hover:border-zinc-900"
+                                >
+                                    + 添加文章
+                                </button>
+                            </div>
+                            <div className="text-xs text-zinc-400">
+                                正在编辑：第 {editingUnit.unitIndex} 课 - 文章 {editingUnit.articleIndex}
+                            </div>
+                        </div>
+
                         <div className="flex gap-4">
                             <div className="w-24">
                                 <label className="block text-xs font-bold mb-1">课号</label>

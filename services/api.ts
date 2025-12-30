@@ -661,6 +661,7 @@ export const api = {
     request<{
       success: boolean;
       data: {
+
         unit: {
           id: string;
           title: string;
@@ -675,6 +676,15 @@ export const api = {
             pos: string;
           }[];
         } | null;
+        articles?: {
+          id: string;
+          articleIndex: number;
+          title: string;
+          text: string;
+          translation?: string;
+          audioUrl?: string;
+          analysisData?: any;
+        }[];
         vocabList: {
           id: string;
           korean: string;
