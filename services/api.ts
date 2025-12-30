@@ -1027,6 +1027,14 @@ export const api = {
       };
     }>('/admin/dashboard/stats'),
 
+  // Get data diagnostics info
+  getDiagnostics: async () =>
+    request<{
+      success: boolean;
+      data: any[];
+      error?: string;
+    }>('/admin/diagnostics'),
+
   // ========== User Personal Stats ==========
 
   // Get my personal learning stats (for profile dashboard)

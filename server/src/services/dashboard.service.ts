@@ -215,3 +215,43 @@ export const getAiUsageBreakdown = async (days: number = 30) => {
             .map(([date, stats]) => ({ date, ...stats }))
     };
 };
+
+/**
+ * Get detailed data diagnostics (Institutes vs Content)
+ */
+export const getDataDiagnostics = async () => {
+    // 1. Get all institutes
+    const institutes = await prisma.institute.findMany({
+        orderBy: { id: 'asc' }
+    });
+
+    // 2. Aggregate Vocab Counts by Course
+    // VocabularyAppearance has courseId
+    const vocabCounts = await prisma.vocabularyAppearance.groupBy({
+        by: ['courseId'],
+        _count: { id: true }
+    });
+
+    // 3. Aggregate Unit Counts by Course
+    // TextbookUnit has courseId
+    const unitCounts = await (prisma as any).textbookUnit.groupBy({
+        by: ['courseId'],
+        _count: { id: true }
+    });
+
+    // 4. Map results
+    const result = institutes.map(inst => {
+        const vocab = vocabCounts.find(v => v.courseId === inst.id)?._count.id || 0;
+        const units = unitCounts.find((u: any) => u.courseId === inst.id)?._count.id || 0;
+        return {
+            id: inst.id,
+            name: inst.name,
+            publisher: inst.publisher,
+            vocabCount: vocab,
+            unitCount: units,
+            totalUnitsSetting: inst.totalUnits
+        };
+    });
+
+    return result;
+};

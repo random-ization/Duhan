@@ -10,10 +10,11 @@ import { UserManagement } from '../../components/admin/UserManagement';
 import { DashboardView } from '../../components/admin/DashboardView';
 import LegalDocumentEditor from '../../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
-import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText, Video } from 'lucide-react';
+import DataDiagnostics from '../../components/admin/DataDiagnostics';
+import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText, Video, Activity } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal' | 'video'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal' | 'video' | 'diagnostics'>('dashboard');
     const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
 
     return (
@@ -125,6 +126,16 @@ const AdminPage: React.FC = () => {
                     <Video size={16} />
                     视频
                 </button>
+                <button
+                    onClick={() => setActiveTab('diagnostics')}
+                    className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${activeTab === 'diagnostics'
+                        ? 'border-zinc-900 text-zinc-900'
+                        : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    <Activity size={16} />
+                    诊断
+                </button>
             </div>
 
             {/* Content Area */}
@@ -147,6 +158,8 @@ const AdminPage: React.FC = () => {
                     <LegalDocumentEditor language="zh" />
                 ) : activeTab === 'video' ? (
                     <VideoManager />
+                ) : activeTab === 'diagnostics' ? (
+                    <DataDiagnostics />
                 ) : (
                     <div>
                         {/* Vocab Sub-tabs */}

@@ -57,3 +57,20 @@ export const getAiCostsDetail = async (req: AuthRequest, res: Response) => {
         return res.status(500).json({ error: 'Failed to get AI costs' });
     }
 };
+
+/**
+ * GET /api/admin/diagnostics
+ * Get detailed data diagnostics
+ */
+export const getDataDiagnosticsEndpoint = async (req: AuthRequest, res: Response) => {
+    try {
+        const data = await dashboardService.getDataDiagnostics();
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[Admin Dashboard] getDataDiagnostics error:', error);
+        return res.status(500).json({ error: 'Failed to get diagnostics' });
+    }
+};
