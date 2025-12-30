@@ -301,42 +301,48 @@ export default function VocabImporter() {
                         <p className="text-sm mt-2 text-slate-500">支持中文表头: 单元, 单词, 词性, 释义, 汉字, 例句(韩), 例句(中), 近义词, 反义词, 备注</p>
                     </div>
                 ) : (
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-slate-50 z-10">
-                            <tr className="text-slate-500 text-sm border-b-2 border-slate-200">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                            <tr className="text-slate-500 text-xs uppercase border-b-2 border-slate-200 bg-slate-50/95 backdrop-blur">
                                 <th className="p-3 font-bold w-12">Unit</th>
-                                <th className="p-3 font-bold w-32">Word</th>
+                                <th className="p-3 font-bold">Word</th>
+                                <th className="p-3 font-bold">Hanja</th>
                                 <th className="p-3 font-bold w-16">POS</th>
                                 <th className="p-3 font-bold">Meaning</th>
-                                <th className="p-3 font-bold">Example</th>
-                                <th className="p-3 font-bold w-32 text-xs">Synonyms</th>
-                                <th className="p-3 font-bold w-32 text-xs">Antonyms</th>
-                                <th className="p-3 font-bold w-32 text-xs">Note</th>
-                                <th className="p-3 font-bold w-12">Status</th>
+                                <th className="p-3 font-bold text-blue-600">Example (Kr)</th>
+                                <th className="p-3 font-bold text-blue-600">Example (Cn)</th>
+                                <th className="p-3 font-bold text-xs">Synonyms</th>
+                                <th className="p-3 font-bold text-xs">Antonyms</th>
+                                <th className="p-3 font-bold text-xs">Note</th>
+                                <th className="p-3 font-bold w-12 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {previewData.map((row, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50 group transition-colors">
-                                    <td className="p-3 font-bold text-slate-400">{row.unit}</td>
+                                <tr key={idx} className="hover:bg-slate-50 group transition-colors text-sm">
+                                    <td className="p-3 font-bold text-slate-400 text-center">{row.unit || '-'}</td>
+                                    <td className="p-3 font-black text-slate-900">{row.word}</td>
+                                    <td className="p-3 text-slate-500">{row.hanja || '-'}</td>
                                     <td className="p-3">
-                                        <div className="font-black text-slate-900">{row.word}</div>
-                                        {row.hanja && <div className="text-xs text-slate-400">{row.hanja}</div>}
-                                    </td>
-                                    <td className="p-3">
-                                        <span className="px-2 py-0.5 rounded bg-slate-100 text-xs font-bold text-slate-600">
+                                        <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600 uppercase">
                                             {row.partOfSpeech}
                                         </span>
                                     </td>
-                                    <td className="p-3 text-slate-700">{row.meaning}</td>
-                                    <td className="p-3 text-slate-500 text-sm truncate max-w-[200px]" title={row.exampleSentence}>
-                                        {row.exampleSentence || '-'}
+                                    <td className="p-3 text-slate-700 font-medium max-w-[150px] truncate" title={row.meaning}>{row.meaning}</td>
+
+                                    {/* Debugging Columns */}
+                                    <td className={`p-3 max-w-[200px] truncate ${!row.exampleSentence ? 'bg-red-50' : ''}`} title={row.exampleSentence}>
+                                        {row.exampleSentence || <span className="text-red-300 italic">Empty</span>}
                                     </td>
-                                    <td className="p-3 text-xs text-slate-500">{row.synonyms?.join(', ')}</td>
-                                    <td className="p-3 text-xs text-slate-500">{row.antonyms?.join(', ')}</td>
-                                    <td className="p-3 text-xs text-slate-500 truncate max-w-[100px]" title={row.nuance}>{row.nuance}</td>
-                                    <td className="p-3">
-                                        <Check className="w-5 h-5 text-slate-200 group-hover:text-green-500" />
+                                    <td className={`p-3 max-w-[200px] truncate ${!row.exampleMeaning ? 'bg-red-50' : ''}`} title={row.exampleMeaning}>
+                                        {row.exampleMeaning || <span className="text-red-300 italic">Empty</span>}
+                                    </td>
+
+                                    <td className="p-3 text-xs text-slate-500 max-w-[100px] truncate">{row.synonyms?.join(', ')}</td>
+                                    <td className="p-3 text-xs text-slate-500 max-w-[100px] truncate">{row.antonyms?.join(', ')}</td>
+                                    <td className="p-3 text-xs text-slate-500 max-w-[100px] truncate" title={row.nuance}>{row.nuance}</td>
+                                    <td className="p-3 text-center">
+                                        <Check className="w-5 h-5 text-slate-200 group-hover:text-green-500 mx-auto" />
                                     </td>
                                 </tr>
                             ))}

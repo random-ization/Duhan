@@ -91,57 +91,62 @@ export class AdminVocabController {
 
             const results = { success: 0, failed: 0, errors: [] as string[] };
 
-            for (const item of items) {
-                try {
-                    if (!item.courseId || !item.word || !item.meaning || item.unitId === undefined) {
-                        throw new Error(`Missing required fields for ${item.word || 'unknown'}`);
-                    }
+            // Process in batches to avoid timeout but prevent DB locking issues
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < items.length; i += BATCH_SIZE) {
+                const batch = items.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(async (item: any) => {
+                    try {
+                        if (!item.courseId || !item.word || !item.meaning || item.unitId === undefined) {
+                            throw new Error(`Missing required fields for ${item.word || 'unknown'}`);
+                        }
 
-                    // Upsert the Word (master dictionary entry)
-                    const word = await prisma.word.upsert({
-                        where: { word: item.word },
-                        update: {
-                            meaning: item.meaning,
-                            partOfSpeech: item.partOfSpeech || 'NOUN',
-                            hanja: item.hanja,
-                            tips: item.tips,
-                        },
-                        create: {
-                            word: item.word,
-                            meaning: item.meaning,
-                            partOfSpeech: item.partOfSpeech || 'NOUN',
-                            hanja: item.hanja,
-                            tips: item.tips,
-                        },
-                    });
+                        // Upsert the Word (master dictionary entry)
+                        const word = await prisma.word.upsert({
+                            where: { word: item.word },
+                            update: {
+                                meaning: item.meaning,
+                                partOfSpeech: item.partOfSpeech || 'NOUN',
+                                hanja: item.hanja,
+                                tips: item.tips,
+                            },
+                            create: {
+                                word: item.word,
+                                meaning: item.meaning,
+                                partOfSpeech: item.partOfSpeech || 'NOUN',
+                                hanja: item.hanja,
+                                tips: item.tips,
+                            },
+                        });
 
-                    // Upsert the appearance (linking word to course/unit)
-                    await prisma.vocabularyAppearance.upsert({
-                        where: {
-                            wordId_courseId_unitId: {
+                        // Upsert the appearance (linking word to course/unit)
+                        await prisma.vocabularyAppearance.upsert({
+                            where: {
+                                wordId_courseId_unitId: {
+                                    wordId: word.id,
+                                    courseId: item.courseId,
+                                    unitId: Number(item.unitId),
+                                },
+                            },
+                            update: {
+                                exampleSentence: item.exampleSentence,
+                                exampleMeaning: item.exampleMeaning,
+                            },
+                            create: {
                                 wordId: word.id,
                                 courseId: item.courseId,
                                 unitId: Number(item.unitId),
+                                exampleSentence: item.exampleSentence,
+                                exampleMeaning: item.exampleMeaning,
                             },
-                        },
-                        update: {
-                            exampleSentence: item.exampleSentence,
-                            exampleMeaning: item.exampleMeaning,
-                        },
-                        create: {
-                            wordId: word.id,
-                            courseId: item.courseId,
-                            unitId: Number(item.unitId),
-                            exampleSentence: item.exampleSentence,
-                            exampleMeaning: item.exampleMeaning,
-                        },
-                    });
+                        });
 
-                    results.success++;
-                } catch (e: any) {
-                    results.failed++;
-                    results.errors.push(`${item.word}: ${e.message}`);
-                }
+                        results.success++;
+                    } catch (e: any) {
+                        results.failed++;
+                        results.errors.push(`${item.word}: ${e.message}`);
+                    }
+                }));
             }
 
             res.json({ success: true, results });
