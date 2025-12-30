@@ -10,6 +10,7 @@ interface Institute {
     name: string;
     displayLevel?: string;
     volume?: string;
+    totalUnits?: number; // Added totalUnits
 }
 
 interface UnitInfo {
@@ -87,16 +88,28 @@ export const GrammarManager: React.FC = () => {
     };
 
     const loadUnits = async (courseId: string) => {
+        // 1. Generate full list based on totalUnits
+        const institute = institutes.find(i => i.id === courseId);
+        const total = institute?.totalUnits || 20; // Default if missing
+
+        const allUnits: UnitInfo[] = Array.from({ length: total }, (_, i) => ({
+            unitIndex: i + 1,
+            title: ''
+        }));
+        setUnits(allUnits);
+
+        // 2. Fetch existing titles to update the list
         try {
             const response = await api.getUnitsForCourse(courseId);
             if (response.success && response.data) {
-                setUnits(response.data.map((u: any) => ({
-                    unitIndex: u.unitIndex,
-                    title: u.title
-                })));
+                const existingUnits = response.data;
+                setUnits(prev => prev.map(u => {
+                    const match = existingUnits.find((e: any) => e.unitIndex === u.unitIndex);
+                    return match ? { ...u, title: match.title } : u;
+                }));
             }
         } catch (e) {
-            console.error('Failed to load units', e);
+            console.error('Failed to load unit titles', e);
         }
     };
 
