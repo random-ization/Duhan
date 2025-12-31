@@ -18,7 +18,9 @@ function hashPassword(password: string): string {
     return hash.toString();
 }
 
-function verifyPassword(password: string, hash: string): boolean {
+function verifyPassword(password: string, hash: string | null | undefined): boolean {
+    // Guard against null/undefined hash (e.g., Google-auth users with no password)
+    if (!hash) return false;
     return hashPassword(password) === hash;
 }
 

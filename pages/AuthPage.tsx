@@ -102,11 +102,23 @@ export default function AuthPage() {
         setError('注册成功！请检查邮箱验证后登录。');
       }
     } catch (err: any) {
-      if (err.code === 'EMAIL_NOT_VERIFIED') {
-        setError(language === 'zh' ? '请先验证您的邮箱后再登录' : 'Please verify your email before logging in.');
-      } else {
-        setError(err.message || 'Failed to authenticate');
-      }
+      // Extract error code from ConvexError (data.code) or regular error (code)
+      const errorCode = err?.data?.code || err?.code;
+
+      // Map error codes to user-friendly messages
+      const errorMessages: Record<string, string> = {
+        INVALID_CREDENTIALS: language === 'zh' ? '邮箱或密码错误' : 'Invalid email or password',
+        EMAIL_ALREADY_EXISTS: language === 'zh' ? '该邮箱已被注册' : 'An account with this email already exists',
+        EMAIL_NOT_VERIFIED: language === 'zh' ? '请先验证您的邮箱后再登录' : 'Please verify your email before logging in',
+        USER_NOT_FOUND: language === 'zh' ? '用户不存在' : 'User not found',
+        USER_CREATION_FAILED: language === 'zh' ? '注册失败，请稍后重试' : 'Registration failed, please try again',
+      };
+
+      const message = errorCode && errorMessages[errorCode]
+        ? errorMessages[errorCode]
+        : (err?.message || (language === 'zh' ? '登录失败，请稍后重试' : 'Authentication failed, please try again'));
+
+      setError(message);
     } finally {
       setLoading(false);
     }

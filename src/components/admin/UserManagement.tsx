@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
+import { usePaginatedQuery, useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import {
     Search, Trash2, Edit2, Shield, User as UserIcon,
     Crown, ChevronLeft, ChevronRight, X, Save, Loader2
@@ -12,20 +13,15 @@ interface User {
     email: string;
     role: 'ADMIN' | 'STUDENT';
     tier: string;
-    subscriptionType: string;
+    subscriptionType?: string;
     subscriptionExpiry?: string;
-    createdAt: string;
+    createdAt: number;
     avatar?: string;
+    isVerified?: boolean;
 }
 
 export const UserManagement: React.FC = () => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // 状态：分页与搜索
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
+    // 状态：搜索
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -39,30 +35,35 @@ export const UserManagement: React.FC = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    // 加载数据
-    useEffect(() => {
-        loadUsers();
-    }, [page, debouncedSearch]);
+    // Convex paginated query for users
+    const {
+        results: users,
+        status,
+        loadMore,
+    } = usePaginatedQuery(
+        api.admin.getUsers,
+        {},
+        { initialNumItems: 20 }
+    );
 
-    const loadUsers = async () => {
-        setLoading(true);
-        try {
-            const res = await api.getUsers(page, 10, debouncedSearch);
-            setUsers(res.users);
-            setTotalPages(res.pages);
-            setTotal(res.total);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Search query (separate, only when searching)
+    const searchResults = useQuery(
+        api.admin.searchUsers,
+        debouncedSearch ? { search: debouncedSearch, limit: 50 } : 'skip'
+    );
+
+    // Mutations
+    const updateUserMutation = useMutation(api.admin.updateUser);
+    const deleteUserMutation = useMutation(api.admin.deleteUser);
+
+    // Determine which users to display
+    const displayUsers = debouncedSearch ? (searchResults || []) : users;
+    const loading = status === 'LoadingFirstPage' || (debouncedSearch && searchResults === undefined);
 
     const handleDelete = async (id: string) => {
         if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
         try {
-            await api.deleteUser(id);
-            loadUsers(); // 刷新
+            await deleteUserMutation({ userId: id as any });
         } catch (e) {
             alert('删除失败');
         }
@@ -72,9 +73,15 @@ export const UserManagement: React.FC = () => {
         if (!editingUser || !editingUser.id) return;
         setSaving(true);
         try {
-            await api.updateUser(editingUser.id, editingUser);
+            await updateUserMutation({
+                userId: editingUser.id as any,
+                updates: {
+                    name: editingUser.name,
+                    role: editingUser.role,
+                    tier: editingUser.tier,
+                },
+            });
             setEditingUser(null);
-            loadUsers();
             alert('用户更新成功');
         } catch (e) {
             alert('更新失败');
@@ -94,11 +101,11 @@ export const UserManagement: React.FC = () => {
                         className="w-full pl-10 pr-4 py-2 border-2 border-zinc-200 rounded-lg font-bold focus:border-zinc-900 outline-none transition-colors"
                         placeholder="搜索用户邮箱或昵称..."
                         value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
                 <div className="text-sm font-bold text-zinc-500">
-                    共 {total} 位用户
+                    {debouncedSearch ? `搜索结果: ${displayUsers.length} 位用户` : `已加载 ${users.length} 位用户`}
                 </div>
             </div>
 
@@ -118,9 +125,9 @@ export const UserManagement: React.FC = () => {
                         <tbody className="divide-y divide-zinc-100">
                             {loading ? (
                                 <tr><td colSpan={5} className="p-10 text-center"><Loader2 className="animate-spin mx-auto" /></td></tr>
-                            ) : users.length === 0 ? (
+                            ) : displayUsers.length === 0 ? (
                                 <tr><td colSpan={5} className="p-10 text-center text-zinc-400">暂无用户</td></tr>
-                            ) : users.map(user => (
+                            ) : displayUsers.map(user => (
                                 <tr key={user.id} className="hover:bg-zinc-50 transition-colors group">
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
@@ -163,7 +170,7 @@ export const UserManagement: React.FC = () => {
                                     <td className="p-4 text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => setEditingUser(user)}
+                                                onClick={() => setEditingUser(user as any)}
                                                 className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="编辑用户"
                                             >
@@ -184,25 +191,25 @@ export const UserManagement: React.FC = () => {
                     </table>
                 </div>
 
-                {/* 分页器 */}
-                <div className="p-4 border-t-2 border-zinc-200 bg-zinc-50 flex justify-between items-center">
-                    <button
-                        disabled={page === 1}
-                        onClick={() => setPage(p => p - 1)}
-                        className="px-4 py-2 bg-white border-2 border-zinc-200 rounded-lg font-bold text-sm disabled:opacity-50 hover:border-zinc-900 flex items-center gap-1"
-                    >
-                        <ChevronLeft size={16} /> 上一页
-                    </button>
-                    <span className="font-mono font-bold text-sm text-zinc-500">
-                        Page {page} of {totalPages}
-                    </span>
-                    <button
-                        disabled={page >= totalPages}
-                        onClick={() => setPage(p => p + 1)}
-                        className="px-4 py-2 bg-white border-2 border-zinc-200 rounded-lg font-bold text-sm disabled:opacity-50 hover:border-zinc-900 flex items-center gap-1"
-                    >
-                        下一页 <ChevronRight size={16} />
-                    </button>
+                {/* Load More / Pagination */}
+                <div className="p-4 border-t-2 border-zinc-200 bg-zinc-50 flex justify-center items-center">
+                    {!debouncedSearch && status === 'CanLoadMore' && (
+                        <button
+                            onClick={() => loadMore(20)}
+                            className="px-6 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-sm hover:bg-zinc-100 flex items-center gap-2 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none"
+                        >
+                            <ChevronRight size={16} /> 加载更多
+                        </button>
+                    )}
+                    {status === 'LoadingMore' && (
+                        <div className="flex items-center gap-2 text-zinc-500">
+                            <Loader2 className="animate-spin" size={16} />
+                            加载中...
+                        </div>
+                    )}
+                    {status === 'Exhausted' && !debouncedSearch && (
+                        <span className="text-sm text-zinc-400">已加载全部用户</span>
+                    )}
                 </div>
             </div>
 

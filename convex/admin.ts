@@ -1,52 +1,65 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
-// Get all users with pagination
+// Get all users with real database pagination
 export const getUsers = query({
     args: {
-        page: v.optional(v.number()),
-        limit: v.optional(v.number()),
-        search: v.optional(v.string()),
+        paginationOpts: paginationOptsValidator,
     },
     handler: async (ctx, args) => {
-        const page = args.page || 1;
-        const limit = args.limit || 10;
-        const search = args.search?.toLowerCase() || "";
-
-        // Fetch all users (ideally would use pagination in production)
-        let allUsers = await ctx.db.query("users").collect();
-
-        // Filter by search if provided
-        if (search) {
-            allUsers = allUsers.filter(u =>
-                u.email.toLowerCase().includes(search) ||
-                u.name.toLowerCase().includes(search)
-            );
-        }
-
-        const total = allUsers.length;
-        const totalPages = Math.ceil(total / limit);
-
-        // Paginate
-        const start = (page - 1) * limit;
-        const users = allUsers.slice(start, start + limit).map(u => ({
-            id: u._id,
-            email: u.email,
-            name: u.name,
-            role: u.role,
-            tier: u.tier,
-            avatar: u.avatar,
-            isVerified: u.isVerified,
-            createdAt: u.createdAt,
-        }));
+        const results = await ctx.db
+            .query("users")
+            .order("desc")
+            .paginate(args.paginationOpts);
 
         return {
-            users,
-            total,
-            pages: totalPages,
-            page,
-            limit,
+            ...results,
+            page: results.page.map(u => ({
+                id: u._id,
+                email: u.email,
+                name: u.name,
+                role: u.role,
+                tier: u.tier,
+                avatar: u.avatar,
+                isVerified: u.isVerified,
+                createdAt: u.createdAt,
+            })),
         };
+    }
+});
+
+// Search users (separate query for search functionality)
+export const searchUsers = query({
+    args: {
+        search: v.string(),
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const limit = args.limit || 20;
+        const searchLower = args.search.toLowerCase();
+
+        // For search, we need to collect and filter (Convex doesn't support LIKE queries)
+        const allUsers = await ctx.db.query("users").collect();
+
+        const filtered = allUsers
+            .filter(u =>
+                u.email.toLowerCase().includes(searchLower) ||
+                u.name.toLowerCase().includes(searchLower)
+            )
+            .slice(0, limit)
+            .map(u => ({
+                id: u._id,
+                email: u.email,
+                name: u.name,
+                role: u.role,
+                tier: u.tier,
+                avatar: u.avatar,
+                isVerified: u.isVerified,
+                createdAt: u.createdAt,
+            }));
+
+        return filtered;
     }
 });
 
@@ -81,12 +94,31 @@ export const deleteUser = mutation({
     }
 });
 
-// Get institutes (admin list) - excludes archived
+// Get institutes with real database pagination - excludes archived
 export const getInstitutes = query({
-    args: {},
-    handler: async (ctx) => {
+    args: {
+        paginationOpts: v.optional(paginationOptsValidator),
+    },
+    handler: async (ctx, args) => {
+        // If pagination is provided, use it
+        if (args.paginationOpts) {
+            const results = await ctx.db
+                .query("institutes")
+                .withIndex("by_archived", q => q.eq("isArchived", false))
+                .paginate(args.paginationOpts);
+
+            return {
+                ...results,
+                page: results.page.map(i => ({
+                    ...i,
+                    _id: undefined,
+                    id: i.id || i._id,
+                })),
+            };
+        }
+
+        // Fallback for non-paginated calls (backwards compatibility)
         const institutes = await ctx.db.query("institutes").collect();
-        // Filter out archived institutes
         return institutes
             .filter(i => !i.isArchived)
             .map(i => ({
