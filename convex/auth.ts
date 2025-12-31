@@ -94,7 +94,7 @@ export const login = mutation({
     }
 });
 
-// Get current user by ID
+// Get current user by ID with full profile data
 export const getMe = query({
     args: {
         userId: v.string(),
@@ -117,6 +117,13 @@ export const getMe = query({
             return null;
         }
 
+        // Fetch related data in parallel
+        const [savedWords, mistakes, examAttempts] = await Promise.all([
+            ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+            ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+            ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+        ]);
+
         return {
             id: user._id,
             email: user.email,
@@ -125,6 +132,34 @@ export const getMe = query({
             tier: user.tier,
             avatar: user.avatar,
             isVerified: user.isVerified,
+            createdAt: user.createdAt,
+
+            // Learning Progress
+            lastInstitute: user.lastInstitute,
+            lastLevel: user.lastLevel,
+            lastUnit: user.lastUnit,
+
+            // Linked Data
+            savedWords: savedWords.map(w => ({
+                id: w._id,
+                korean: w.korean,
+                english: w.english,
+                exampleSentence: w.exampleSentence,
+                exampleTranslation: w.exampleTranslation,
+            })),
+            mistakes: mistakes.map(m => ({
+                id: m._id,
+                korean: m.korean,
+                english: m.english,
+                createdAt: m.createdAt,
+            })),
+            examHistory: examAttempts.map(e => ({
+                id: e._id,
+                examId: e.examId,
+                score: e.score,
+                timestamp: e.createdAt,
+                // ... other fields if needed by frontend
+            })),
         };
     }
 });

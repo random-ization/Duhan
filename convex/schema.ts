@@ -300,4 +300,46 @@ export default defineSchema({
         groupCount: v.optional(v.number()),
     }).index("by_exam", ["examId"])
         .index("by_exam_number", ["examId", "number"]),
+
+    // User Mistakes
+    mistakes: defineTable({
+        userId: v.id("users"),
+        wordId: v.optional(v.string()),
+        korean: v.string(),
+        english: v.string(),
+        context: v.optional(v.string()),
+        reviewCount: v.number(),
+        createdAt: v.number(),
+    }).index("by_user", ["userId"]),
+
+    // Exam Attempts
+    exam_attempts: defineTable({
+        userId: v.id("users"),
+        examId: v.string(),
+        score: v.number(),
+        totalQuestions: v.number(),
+        sectionScores: v.optional(v.any()), // JSON
+        duration: v.optional(v.number()),
+        createdAt: v.number(),
+    }).index("by_user", ["userId"]),
+
+    // User Saved Words
+    saved_words: defineTable({
+        userId: v.id("users"),
+        korean: v.string(),
+        english: v.string(),
+        exampleSentence: v.optional(v.string()),
+        exampleTranslation: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_user", ["userId"]),
+
+    // Activity Logs
+    activity_logs: defineTable({
+        userId: v.id("users"),
+        activityType: v.string(),
+        duration: v.optional(v.number()),
+        itemsStudied: v.optional(v.number()),
+        metadata: v.optional(v.any()),
+        createdAt: v.number(),
+    }).index("by_user", ["userId"]),
 });

@@ -6,6 +6,8 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
+import { useConvex, useMutation, useAction } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import {
   User,
   Language,
@@ -16,7 +18,7 @@ import {
   TextbookContent,
   TopikExam,
 } from '../types';
-import { api } from '../services/api';
+// Remove import { api } from '../services/api';
 import { fetchUserCountry } from '../utils/geo';
 import i18n from '../utils/i18next-config';
 
@@ -61,6 +63,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -77,83 +80,109 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuccess }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  );
 
-  // Initialize language from localStorage synchronously to avoid formatting flash
-  // This satisfies the requirement: Manual selection > Default
+  const convex = useConvex();
+
+  // Mutations
+  const saveSavedWordMutation = useMutation(convexApi.user.saveSavedWord);
+  const saveMistakeMutation = useMutation(convexApi.user.saveMistake);
+  const saveAnnotationMutation = useMutation(convexApi.annotations.save);
+  const saveExamAttemptMutation = useMutation(convexApi.user.saveExamAttempt);
+  const deleteExamAttemptMutation = useMutation(convexApi.user.deleteExamAttempt);
+  const logActivityMutation = useMutation(convexApi.user.logActivity);
+  const updateLearningProgressMutation = useMutation(convexApi.user.updateLearningProgress);
+
+  // Initialize language
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('language');
       if (stored) return stored as Language;
     }
-    return 'zh'; // Default fallback before IP check
+    return 'zh';
   });
 
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
-  // Persistence wrapper for setLanguage
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('language', lang);
     i18n.changeLanguage(lang);
   }, []);
 
-  // Sync i18n on mount/change
   useEffect(() => {
     if (i18n.language !== language) {
       i18n.changeLanguage(language);
     }
   }, [language]);
 
-  // IP Parsing & Initial Language Load
+  // IP Parsing
   useEffect(() => {
     const initLanguage = async () => {
-      // 1. Check LocalStorage - if exists, we already used it in useState initials
       const storedLang = localStorage.getItem('language');
-      if (storedLang) {
-        return; // User has manual preference, skip IP check entirely
-      }
+      if (storedLang) return;
 
-      // 2. Check IP (Only if no manual preference)
       const country = await fetchUserCountry();
       console.log('Detected Country:', country);
 
-      let targetLang: Language = 'en'; // Default fallback for IP detection
+      let targetLang: Language = 'en';
       if (country === 'CN') targetLang = 'zh';
       else if (country === 'VN') targetLang = 'vi';
       else if (country === 'MN') targetLang = 'mn';
 
       setLanguageState(targetLang);
-      // We do NOT save auto-detected language to localStorage automatically
-      // to allow future IP checks if the user travels, unless they manually select.
     };
 
     initLanguage();
   }, []);
 
-  // Initial Session Check
+  // Session Check (Load User)
   useEffect(() => {
-    const checkSession = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
+    const loadUser = async () => {
+      // Prioritize userId (Convex ID or legacy ID)
+      // Fallback to token if userId missing (legacy flow migration)
+      let currentUserId = userId;
+
+      if (!currentUserId) {
+        // If we have a token but no userId, we can't do much with Convex directly without an auth function that takes token.
+        // Assuming user needs to re-login if migrating from Express to Convex completely.
+        const token = localStorage.getItem('token');
+        if (token && !currentUserId) {
+          console.warn("Legacy token found but no userId. User needs to re-login.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (currentUserId) {
         try {
-          const data = await api.getMe();
-          setUser(data.user);
-          if (onLoginSuccess) {
-            onLoginSuccess();
+          const userData = await convex.query(convexApi.auth.getMe, { userId: currentUserId });
+          if (userData) {
+            setUser(userData as unknown as User); // Assert type compatibility
+            if (onLoginSuccess) onLoginSuccess();
+          } else {
+            // UserId invalid
+            localStorage.removeItem('userId');
+            setUserId(null);
           }
         } catch (e) {
-          console.error('Session expired or invalid');
-          localStorage.removeItem('token');
+          console.error('Failed to load user:', e);
         }
       }
       setLoading(false);
     };
-    checkSession();
-  }, [onLoginSuccess]);
+    loadUser();
+  }, [userId, convex, onLoginSuccess]);
 
   const login = useCallback(
     (loggedInUser: User) => {
       setUser(loggedInUser);
+      // Ensure we store the ID for next page load
+      localStorage.setItem('userId', loggedInUser.id);
+      setUserId(loggedInUser.id);
+
       if (onLoginSuccess) {
         onLoginSuccess();
       }
@@ -163,19 +192,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    setUserId(null);
     setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!userId) return;
     try {
-      const data = await api.getMe();
-      setUser(data.user);
+      const userData = await convex.query(convexApi.auth.getMe, { userId });
+      if (userData) {
+        setUser(userData as unknown as User);
+      }
     } catch (e) {
       console.error('Failed to refresh user:', e);
     }
-  }, []);
+  }, [userId, convex]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => (prev ? { ...prev, ...updates } : null));
@@ -186,70 +218,94 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       if (!user) return;
 
       let newItem: VocabularyItem;
+      let korean = '';
+      let english = '';
+
       if (typeof vocabItem === 'string' && meaning) {
+        korean = vocabItem;
+        english = meaning;
         newItem = {
-          korean: vocabItem,
-          english: meaning,
+          korean,
+          english,
           exampleSentence: '',
           exampleTranslation: '',
         };
       } else {
         newItem = vocabItem as VocabularyItem;
+        korean = newItem.korean || newItem.word || '';
+        english = newItem.english || newItem.meaning || '';
       }
 
-      // Use functional update to prevent race conditions
       setUser(prev => {
         if (!prev) return prev;
-        return { ...prev, savedWords: [...prev.savedWords, newItem] };
+        return { ...prev, savedWords: [...(prev.savedWords || []), newItem] };
       });
 
       try {
-        await api.saveWord(newItem);
+        await saveSavedWordMutation({
+          userId: user.id,
+          korean,
+          english,
+          exampleSentence: newItem.exampleSentence,
+          exampleTranslation: newItem.exampleTranslation
+        });
       } catch (e) {
         console.error('Failed to save word', e);
       }
     },
-    []
+    [user, saveSavedWordMutation]
   );
 
   const recordMistake = useCallback(
     async (word: Mistake | VocabularyItem) => {
-      // Convert VocabularyItem to Mistake format if needed
-      const mistake: Mistake = 'id' in word
+      if (!user) return;
+
+      const korean = word.korean || (word as any).word;
+      const english = word.english || (word as any).meaning;
+      const wordId = (word as any).id?.includes('mistake') ? undefined : (word as any).id;
+
+      const mistake: Mistake = 'id' in word && (word as any).id.includes('mistake')
         ? word as Mistake
         : {
           id: `mistake-${Date.now()}`,
-          korean: word.korean,
-          english: word.english,
+          korean,
+          english,
           createdAt: Date.now(),
         };
 
-      // Use functional update to prevent race conditions
       setUser(prev => {
         if (!prev) return prev;
-        return { ...prev, mistakes: [...prev.mistakes, mistake] };
+        return { ...prev, mistakes: [...(prev.mistakes || []), mistake] };
       });
+
       try {
-        await api.saveMistake(word);
+        await saveMistakeMutation({
+          userId: user.id,
+          korean,
+          english,
+          wordId: wordId,
+          context: 'Web App'
+        });
       } catch (e) {
         console.error(e);
       }
     },
-    []
+    [user, saveMistakeMutation]
   );
 
   const clearMistakes = useCallback(() => {
     if (window.confirm('Are you sure?')) {
       setUser(prev => prev ? { ...prev, mistakes: [] } : prev);
+      // Note: No bulk delete mutation created yet, skipping server sync for now or implement clearMistakes later
     }
   }, []);
 
   const saveAnnotation = useCallback(
     async (annotation: Annotation) => {
-      // Use functional update to avoid stale state (race conditions)
+      if (!user) return;
+
       setUser(prevUser => {
         if (!prevUser) return prevUser;
-
         const updatedAnnotations = [...(prevUser.annotations || [])];
         const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
 
@@ -262,58 +318,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         } else {
           updatedAnnotations.push(annotation);
         }
-
         return { ...prevUser, annotations: updatedAnnotations };
       });
 
       try {
-        await api.saveAnnotation(annotation);
+        await saveAnnotationMutation({
+          userId: user.id,
+          contextKey: annotation.contextKey,
+          text: annotation.text,
+          note: annotation.note,
+          color: annotation.color || undefined,
+          startOffset: annotation.startOffset,
+          endOffset: annotation.endOffset
+        });
       } catch (apiError) {
         console.error('Failed to save annotation to server:', apiError);
-        // Ideally rollback here, but for now we prioritized UI responsiveness
       }
     },
-    []
+    [user, saveAnnotationMutation]
   );
 
   const saveExamAttempt = useCallback(
     async (attempt: ExamAttempt) => {
-      // Use functional update to prevent race conditions
+      if (!user) return;
       setUser(prev => {
         if (!prev) return prev;
         return { ...prev, examHistory: [...(prev.examHistory || []), attempt] };
       });
       try {
-        await api.saveExamAttempt(attempt);
-        // Log exam activity
-        await api.logActivity('EXAM', undefined, 1, {
+        await saveExamAttemptMutation({
+          userId: user.id,
           examId: attempt.examId,
           score: attempt.score,
+          totalQuestions: attempt.maxScore, // Mapping maxScore to totalQuestions for now
+          sectionScores: attempt.userAnswers
+        });
+        await logActivityMutation({
+          userId: user.id,
+          activityType: 'EXAM',
+          duration: undefined,
+          itemsStudied: 1,
+          metadata: { examId: attempt.examId, score: attempt.score }
         });
       } catch (e) {
         console.error(e);
       }
     },
-    []
+    [user, saveExamAttemptMutation, logActivityMutation]
   );
 
   const deleteExamAttempt = useCallback(
     async (attemptId: string) => {
-      // Optimistic update
       setUser(prev => {
         if (!prev) return prev;
         const updatedHistory = (prev.examHistory || []).filter(h => h.id !== attemptId);
         return { ...prev, examHistory: updatedHistory };
       });
-
       try {
-        await api.deleteExamAttempt(attemptId);
+        // We need explicit ID logic if attemptId is not Convex ID
+        // For now catch error if ID format mismatch
+        await deleteExamAttemptMutation({ attemptId: attemptId as any });
       } catch (e) {
         console.error('Failed to delete exam attempt', e);
-        // Maybe revert? unlikely to fail if UI up to date
       }
     },
-    []
+    [deleteExamAttemptMutation]
   );
 
   const logActivity = useCallback(
@@ -325,24 +394,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     ) => {
       if (!user) return;
       try {
-        await api.logActivity(activityType, duration, itemsStudied, metadata);
+        await logActivityMutation({
+          userId: user.id,
+          activityType,
+          duration,
+          itemsStudied,
+          metadata
+        });
       } catch (e) {
         console.error('Failed to log activity', e);
       }
     },
-    [user]
+    [user, logActivityMutation]
   );
 
   const updateLearningProgress = useCallback(
     async (institute: string, level: number, unit?: number, module?: string) => {
+      if (!user) return;
       try {
-        await api.updateLearningProgress({
+        await updateLearningProgressMutation({
+          userId: user.id,
           lastInstitute: institute,
           lastLevel: level,
           lastUnit: unit,
-          lastModule: module,
+          lastModule: module
         });
-        // Use functional update to prevent race conditions
         setUser(prev => {
           if (!prev) return prev;
           return {
@@ -357,7 +433,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         console.error('Failed to update learning progress', e);
       }
     },
-    []
+    [user, updateLearningProgressMutation]
   );
 
   const canAccessContent = useCallback(

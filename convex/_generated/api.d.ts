@@ -22,6 +22,7 @@ import type * as progress from "../progress.js";
 import type * as storage from "../storage.js";
 import type * as topik from "../topik.js";
 import type * as units from "../units.js";
+import type * as user from "../user.js";
 import type * as userStats from "../userStats.js";
 import type * as videos from "../videos.js";
 import type * as vocab from "../vocab.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   topik: typeof topik;
   units: typeof units;
+  user: typeof user;
   userStats: typeof userStats;
   videos: typeof videos;
   vocab: typeof vocab;
