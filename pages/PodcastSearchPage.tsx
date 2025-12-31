@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Podcast, Loader2 } from 'lucide-react';
-import { api } from '../services/api';
+import { useAction } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import { PodcastChannel } from '../types';
 import BackButton from '../components/ui/BackButton';
 
@@ -15,6 +16,8 @@ export default function PodcastSearchPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const searchPodcastsAction = useAction(convexApi.podcasts.searchPodcasts);
+
     useEffect(() => {
         if (query) {
             handleSearchRequest(query);
@@ -25,8 +28,8 @@ export default function PodcastSearchPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await api.searchPodcasts(term);
-            setResults(data);
+            const data = await searchPodcastsAction({ term });
+            setResults(data || []);
         } catch (err: any) {
             console.error('Search failed:', err);
             setError('搜索失败，请稍后重试');

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play, Clock, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react';
-import { api } from '../services/api';
+import { useAction, useQuery, useMutation } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/ui/BackButton';
 
@@ -43,13 +44,14 @@ const PodcastChannelPage: React.FC = () => {
     const [isDescExpanded, setIsDescExpanded] = useState(false);
     const [isSubscribed, setIsSubscribed] = useState(false);
 
+    // Convex actions and queries
+    const getEpisodesAction = useAction(convexApi.podcasts.getEpisodes);
+    const subscriptions = useQuery(convexApi.podcasts.getSubscriptions, user ? { userId: user.id } : "skip");
+    const toggleSubscriptionMutation = useMutation(convexApi.podcasts.toggleSubscription);
+
     useEffect(() => {
         if (!feedUrl) {
-            // checking if we have data passed from state
             if (stateChannel) {
-                // We might have channel info but no episodes if we rely solely on state without fetch? 
-                // Actually previous logic fetched episodes using feedUrl. 
-                // If no feedUrl, we can't fetch episodes.
                 setLoading(false);
             } else {
                 setError('缺少频道 Feed URL');
@@ -60,7 +62,7 @@ const PodcastChannelPage: React.FC = () => {
 
         const fetchEpisodes = async () => {
             try {
-                const result = await api.getPodcastEpisodes(feedUrl);
+                const result = await getEpisodesAction({ feedUrl });
                 setData(result);
             } catch (err) {
                 console.error('Failed to fetch episodes:', err);
@@ -73,52 +75,45 @@ const PodcastChannelPage: React.FC = () => {
         fetchEpisodes();
     }, [feedUrl]);
 
-    // Check subscription status
+    // Check subscription status from Convex query
     useEffect(() => {
-        const checkSubscription = async () => {
-            if (!user || !channelId) return;
-            try {
-                const subs = await api.getPodcastSubscriptions();
-                // Compare IDs (handle both string/number types)
-                setIsSubscribed(subs.some((c: any) => String(c.itunesId) === String(channelId) || String(c.id) === String(channelId)));
-            } catch (err) {
-                console.error('Failed to check subscription:', err);
-            }
-        };
-        checkSubscription();
-    }, [user, channelId]);
+        if (!channelId || !subscriptions) return;
+        const isSub = subscriptions.some((c: any) =>
+            String(c.itunesId) === String(channelId) || String(c._id) === String(channelId)
+        );
+        setIsSubscribed(isSub);
+    }, [subscriptions, channelId]);
 
     const handleToggleSubscribe = async () => {
-        // Fallback to stateChannel if data.channel is missing
-        const channelInfo = data?.channel || stateChannel;
-
-        if (!channelId || !channelInfo) {
-            console.error('Cannot subscribe: Missing channel info (ID or data)');
+        if (!user) {
+            alert('请先登录');
             return;
         }
 
-        // 构造完整的频道对象
-        const channelToSubscribe = {
-            itunesId: String(channelId), // 🔥 Ensure string
-            title: channelInfo.title || 'Unknown',
-            author: channelInfo.author || 'Unknown',
-            feedUrl: feedUrl || '', // 🔥 Allow empty feedUrl
-            artworkUrl: channelInfo.image || channelInfo.artworkUrl || channelInfo.artwork || '',
-            description: channelInfo.description || ''
-        };
-
-        console.log('[Subscribe] Sending:', channelToSubscribe); // 🔥 Debug log
+        const channelInfo = data?.channel || stateChannel;
+        if (!channelId || !channelInfo) {
+            console.error('Cannot subscribe: Missing channel info');
+            return;
+        }
 
         const oldState = isSubscribed;
-        setIsSubscribed(!oldState); // Optimistic UI
+        setIsSubscribed(!oldState);
 
         try {
-            const result = await api.togglePodcastSubscription(channelToSubscribe);
-            console.log('[Subscribe] Result:', result); // 🔥 Debug log
+            await toggleSubscriptionMutation({
+                userId: user.id,
+                channel: {
+                    itunesId: String(channelId),
+                    title: channelInfo.title || 'Unknown',
+                    author: channelInfo.author || 'Unknown',
+                    feedUrl: feedUrl || '',
+                    artworkUrl: channelInfo.image || channelInfo.artworkUrl || channelInfo.artwork || '',
+                },
+            });
         } catch (err: any) {
-            setIsSubscribed(oldState); // Rollback
+            setIsSubscribed(oldState);
             console.error('Failed to toggle subscription:', err);
-            alert('订阅失败: ' + (err?.message || '请稍后重试')); // 🔥 Show error to user
+            alert('订阅失败: ' + (err?.message || '请稍后重试'));
         }
     };
 
