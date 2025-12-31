@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
+import { getAuthUserId, getOptionalAuthUserId } from "./utils";
 
 // ============================================
 // Queries
@@ -48,13 +49,14 @@ export const getTrending = query({
 
 // Get Subscriptions
 export const getSubscriptions = query({
-    args: { userId: v.optional(v.string()) }, // Should be v.id("users") ideally
-    handler: async (ctx, args) => {
-        if (!args.userId) return [];
+    args: {},
+    handler: async (ctx) => {
+        const userId = await getOptionalAuthUserId(ctx);
+        if (!userId) return [];
 
         const subs = await ctx.db
             .query("podcast_subscriptions")
-            .withIndex("by_user", q => q.eq("userId", args.userId as any))
+            .withIndex("by_user", q => q.eq("userId", userId as any))
             .collect();
 
         const channels = await Promise.all(subs.map(async (sub) => {
@@ -68,13 +70,14 @@ export const getSubscriptions = query({
 
 // Get History
 export const getHistory = query({
-    args: { userId: v.optional(v.string()) },
-    handler: async (ctx, args) => {
-        if (!args.userId) return [];
+    args: {},
+    handler: async (ctx) => {
+        const userId = await getOptionalAuthUserId(ctx);
+        if (!userId) return [];
 
         const history = await ctx.db
             .query("listening_history")
-            .withIndex("by_user", q => q.eq("userId", args.userId as any))
+            .withIndex("by_user", q => q.eq("userId", userId as any))
             .order("desc") // Most recent first (if index creation supports it, otherwise manual sort)
             .take(20);
 
@@ -91,7 +94,6 @@ export const getHistory = query({
 // Record Listening History (Upsert)
 export const recordHistory = mutation({
     args: {
-        userId: v.string(), // v.id("users")
         episodeGuid: v.string(),
         episodeTitle: v.string(),
         episodeUrl: v.string(),
@@ -102,7 +104,9 @@ export const recordHistory = mutation({
         episodeId: v.optional(v.id("podcast_episodes"))
     },
     handler: async (ctx, args) => {
-        const { userId, episodeGuid, ...rest } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { episodeGuid, ...rest } = args;
         const now = Date.now();
 
         // Check existing
@@ -130,7 +134,6 @@ export const recordHistory = mutation({
 // Toggle Subscription
 export const toggleSubscription = mutation({
     args: {
-        userId: v.string(),
         channel: v.object({
             itunesId: v.optional(v.string()),
             title: v.string(),
@@ -140,11 +143,13 @@ export const toggleSubscription = mutation({
         }),
     },
     handler: async (ctx, args) => {
-        const { userId, channel } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { channel } = args;
 
         // First, find or create the channel
         let existingChannel = await ctx.db.query("podcast_channels")
-            .filter(q => q.eq(q.field("feedUrl"), channel.feedUrl))
+            .withIndex("by_feedUrl", q => q.eq("feedUrl", channel.feedUrl))
             .first();
 
         if (!existingChannel) {
@@ -162,7 +167,7 @@ export const toggleSubscription = mutation({
         }
 
         if (!existingChannel) {
-            throw new Error("Failed to create channel");
+            throw new ConvexError({ code: "CHANNEL_CREATION_FAILED" });
         }
 
         // Check if subscription exists
@@ -207,11 +212,12 @@ export const trackView = mutation({
 export const saveProgress = mutation({
     args: {
         episodeGuid: v.string(),
-        userId: v.string(),
         progress: v.number(),
     },
     handler: async (ctx, args) => {
-        const { userId, episodeGuid, progress } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { episodeGuid, progress } = args;
 
         const existing = await ctx.db.query("listening_history")
             .withIndex("by_user_episode", q => q.eq("userId", userId as any).eq("episodeGuid", episodeGuid))

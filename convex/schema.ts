@@ -13,16 +13,19 @@ export default defineSchema({
 
         // Auth
         googleId: v.optional(v.string()),
+        token: v.optional(v.string()), // Session token
         isVerified: v.boolean(),
 
         // Progress pointers
         lastInstitute: v.optional(v.string()),
         lastLevel: v.optional(v.number()),
         lastUnit: v.optional(v.number()),
+        lastModule: v.optional(v.string()), // Added
         postgresId: v.optional(v.string()),
         createdAt: v.number(),
     }).index("by_email", ["email"])
         .index("by_googleId", ["googleId"])
+        .index("by_token", ["token"]) // Security index
         .index("by_postgresId", ["postgresId"]),
 
     // Institutes (Courses/Textbooks)
@@ -36,7 +39,9 @@ export default defineSchema({
         displayLevel: v.optional(v.string()),
         totalUnits: v.optional(v.number()),
         volume: v.optional(v.string()),
-    }).index("by_legacy_id", ["id"]), // We might want to use Convex ID instead, but keeping `id` for migration compat
+        isArchived: v.optional(v.boolean()), // Soft delete flag
+    }).index("by_legacy_id", ["id"])
+        .index("by_archived", ["isArchived"]),
 
     // Textbook Units (Reading Content)
     textbook_units: defineTable({
@@ -55,9 +60,11 @@ export default defineSchema({
 
         createdAt: v.number(), // timestamp
         postgresId: v.optional(v.string()),
+        isArchived: v.optional(v.boolean()), // Soft delete flag
     }).index("by_course_unit_article", ["courseId", "unitIndex", "articleIndex"])
         .index("by_course", ["courseId"])
-        .index("by_postgresId", ["postgresId"]),
+        .index("by_postgresId", ["postgresId"])
+        .index("by_archived", ["isArchived"]),
 
     // Words (Master Dictionary)
     words: defineTable({
@@ -87,7 +94,8 @@ export default defineSchema({
 
         createdAt: v.number(),
     }).index("by_course_unit", ["courseId", "unitId"])
-        .index("by_word_course_unit", ["wordId", "courseId", "unitId"]),
+        .index("by_word_course_unit", ["wordId", "courseId", "unitId"])
+        .index("by_unit", ["unitId"]),
 
     // User Vocab Progress (SRS)
     user_vocab_progress: defineTable({
@@ -99,7 +107,8 @@ export default defineSchema({
         streak: v.number(),
         lastReviewedAt: v.number(),
     }).index("by_user_word", ["userId", "wordId"])
-        .index("by_user_next_review", ["userId", "nextReviewAt"]),
+        .index("by_user_next_review", ["userId", "nextReviewAt"])
+        .index("by_user", ["userId"]),
 
     // Grammar Points (Master Library)
     grammar_points: defineTable({
@@ -197,7 +206,8 @@ export default defineSchema({
 
         createdAt: v.number(),
         updatedAt: v.optional(v.number()),
-    }).index("by_featured", ["isFeatured"]),
+    }).index("by_featured", ["isFeatured"])
+        .index("by_feedUrl", ["feedUrl"]),
 
     // Podcast Episodes
     podcast_episodes: defineTable({
@@ -342,4 +352,20 @@ export default defineSchema({
         metadata: v.optional(v.any()),
         createdAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    // Exam Sessions (Active timer tracking)
+    exam_sessions: defineTable({
+        userId: v.id("users"),
+        examId: v.id("topik_exams"),
+        status: v.string(), // "IN_PROGRESS" | "COMPLETED" | "AUTO_SUBMITTED"
+        startTime: v.number(), // timestamp
+        endTime: v.number(), // calculated: startTime + exam.timeLimit
+        answers: v.optional(v.any()), // JSON: { [questionNumber]: selectedOption }
+        score: v.optional(v.number()),
+        scheduledJobId: v.optional(v.id("_scheduled_functions")), // For auto-submit scheduler
+        createdAt: v.number(),
+        completedAt: v.optional(v.number()),
+    }).index("by_user", ["userId"])
+        .index("by_user_exam", ["userId", "examId"])
+        .index("by_status", ["status"]),
 });

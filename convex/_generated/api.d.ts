@@ -13,6 +13,7 @@ import type * as ai from "../ai.js";
 import type * as annotations from "../annotations.js";
 import type * as auth from "../auth.js";
 import type * as grammars from "../grammars.js";
+import type * as init from "../init.js";
 import type * as institutes from "../institutes.js";
 import type * as migrations from "../migrations.js";
 import type * as notebooks from "../notebooks.js";
@@ -24,6 +25,7 @@ import type * as topik from "../topik.js";
 import type * as units from "../units.js";
 import type * as user from "../user.js";
 import type * as userStats from "../userStats.js";
+import type * as utils from "../utils.js";
 import type * as videos from "../videos.js";
 import type * as vocab from "../vocab.js";
 
@@ -39,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   annotations: typeof annotations;
   auth: typeof auth;
   grammars: typeof grammars;
+  init: typeof init;
   institutes: typeof institutes;
   migrations: typeof migrations;
   notebooks: typeof notebooks;
@@ -50,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   user: typeof user;
   userStats: typeof userStats;
+  utils: typeof utils;
   videos: typeof videos;
   vocab: typeof vocab;
 }>;

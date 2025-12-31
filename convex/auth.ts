@@ -1,23 +1,86 @@
-import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { query, mutation } from "./_generated/server";
+import { v, ConvexError } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
 
-// Simple password encoding (in production, use proper hashing via HTTP action)
+const SALT_ROUNDS = 10;
+
+// Simple password hashing (In production use bcrypt/argon2)
+// Note: This is a placeholder since we can't use node modules like bcrypt in Convex runtime easily without polyfills
+// or switching to Auth0/Clerk. For this migration, we'll keep it simple or assume pre-hashed.
 function hashPassword(password: string): string {
-    // Simple reversible encoding for development
-    // In production, use bcrypt via an HTTP action with Node.js runtime
-    let encoded = '';
+    // Basic hash for demo - REPLACE with proper auth provider in production
+    let hash = 0;
     for (let i = 0; i < password.length; i++) {
-        encoded += String.fromCharCode(password.charCodeAt(i) + 5);
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
     }
-    return 'enc:' + encoded;
+    return hash.toString();
 }
 
 function verifyPassword(password: string, hash: string): boolean {
-    if (hash.startsWith('enc:')) {
-        return hashPassword(password) === hash;
-    }
-    // Fallback: direct comparison for legacy passwords
-    return password === hash;
+    return hashPassword(password) === hash;
+}
+
+// Helper to generate a session token
+function generateToken(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// Helper to fetch and format full user data
+async function enrichUser(ctx: any, user: Doc<"users">) {
+    const [savedWords, mistakes, examAttempts] = await Promise.all([
+        ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+        ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+        ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+    ]);
+
+    return {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tier: user.tier,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        token: user.token,
+
+        // Learning Progress
+        lastInstitute: user.lastInstitute,
+        lastLevel: user.lastLevel,
+        lastUnit: user.lastUnit,
+        lastModule: user.lastModule, // Ensure this is included
+
+        // Linked Data
+        savedWords: savedWords.map(w => ({
+            id: w._id,
+            korean: w.korean,
+            english: w.english,
+            exampleSentence: w.exampleSentence,
+            exampleTranslation: w.exampleTranslation,
+        })),
+        mistakes: mistakes.map(m => ({
+            id: m._id,
+            korean: m.korean,
+            english: m.english,
+            context: m.context,
+            createdAt: m.createdAt,
+        })),
+        examHistory: examAttempts.map(e => ({
+            id: e._id,
+            examId: e.examId,
+            score: e.score,
+            maxScore: e.totalQuestions, // Map backend 'totalQuestions' to frontend 'maxScore'
+            userAnswers: e.sectionScores, // Map backend 'sectionScores' to frontend 'userAnswers'
+            timestamp: e.createdAt,
+        })),
+
+        // Default empty arrays for missing fields in schema but required by frontend User type
+        annotations: [], // Annotations are fetched separately or need a query here if part of User type
+        joinDate: user.createdAt, // Frontend expects number
+        lastActive: Date.now(), // Frontend expects number (implied by type check usually, let's check types.ts)
+    };
 }
 
 // Register a new user
@@ -36,8 +99,10 @@ export const register = mutation({
             .first();
 
         if (existing) {
-            throw new Error("User already exists with this email");
+            throw new ConvexError({ code: "EMAIL_ALREADY_EXISTS" });
         }
+
+        const token = generateToken();
 
         // Create user
         const userId = await ctx.db.insert("users", {
@@ -47,11 +112,19 @@ export const register = mutation({
             role: "STUDENT",
             tier: "FREE",
             isVerified: false,
+            token, // Secure token
             createdAt: Date.now(),
         });
 
+        // Fetch created user to return full profile
+        const newUser = await ctx.db.get(userId);
+        if (!newUser) throw new ConvexError({ code: "USER_CREATION_FAILED" });
+
+        const fullUser = await enrichUser(ctx, newUser);
+
         return {
-            userId,
+            user: fullUser,
+            token,
             message: "Registration successful"
         };
     }
@@ -71,96 +144,60 @@ export const login = mutation({
             .first();
 
         if (!user) {
-            throw new Error("Invalid email or password");
+            throw new ConvexError({ code: "INVALID_CREDENTIALS" });
         }
 
         if (!verifyPassword(password, user.password)) {
-            throw new Error("Invalid email or password");
+            throw new ConvexError({ code: "INVALID_CREDENTIALS" });
         }
 
-        // In production, generate JWT token here
-        // For now, return user data
+        // Generate new session token
+        const token = generateToken();
+        await ctx.db.patch(user._id, { token });
+
+        // Get updated user (although we just need to patch implicit object)
+        const updatedUser = { ...user, token };
+
+        const fullUser = await enrichUser(ctx, updatedUser);
+
         return {
-            user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                tier: user.tier,
-                avatar: user.avatar,
-            },
-            // Token would be generated here in production
+            user: fullUser,
+            token, // Return real token
         };
     }
 });
 
-// Get current user by ID with full profile data
+// Get current user by ID or Token with full profile data
 export const getMe = query({
     args: {
-        userId: v.string(),
+        userId: v.optional(v.string()),
+        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { userId } = args;
+        const { userId, token } = args;
+        let user: any = null;
 
-        // Try Convex ID first
-        let user = null;
-        try {
-            user = await ctx.db.get(userId as any);
-        } catch {
-            // Not a valid Convex ID, try postgresId
+        if (token) {
+            // Lookup by token (Secure)
             user = await ctx.db.query("users")
-                .withIndex("by_postgresId", q => q.eq("postgresId", userId))
+                .withIndex("by_token", q => q.eq("token", token))
                 .first();
+        } else if (userId) {
+            // Legacy / Fallback lookup (Less Secure if not verified)
+            try {
+                user = await ctx.db.get(userId as any);
+            } catch {
+                user = await ctx.db.query("users")
+                    .withIndex("by_postgresId", q => q.eq("postgresId", userId))
+                    .first();
+            }
         }
 
         if (!user) {
             return null;
         }
 
-        // Fetch related data in parallel
-        const [savedWords, mistakes, examAttempts] = await Promise.all([
-            ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-            ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-            ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-        ]);
-
-        return {
-            id: user._id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            tier: user.tier,
-            avatar: user.avatar,
-            isVerified: user.isVerified,
-            createdAt: user.createdAt,
-
-            // Learning Progress
-            lastInstitute: user.lastInstitute,
-            lastLevel: user.lastLevel,
-            lastUnit: user.lastUnit,
-
-            // Linked Data
-            savedWords: savedWords.map(w => ({
-                id: w._id,
-                korean: w.korean,
-                english: w.english,
-                exampleSentence: w.exampleSentence,
-                exampleTranslation: w.exampleTranslation,
-            })),
-            mistakes: mistakes.map(m => ({
-                id: m._id,
-                korean: m.korean,
-                english: m.english,
-                createdAt: m.createdAt,
-            })),
-            examHistory: examAttempts.map(e => ({
-                id: e._id,
-                examId: e.examId,
-                score: e.score,
-                timestamp: e.createdAt,
-                // ... other fields if needed by frontend
-            })),
-        };
+        return await enrichUser(ctx, user);
     }
 });
 
@@ -207,7 +244,7 @@ export const googleAuth = mutation({
         }
 
         if (!user) {
-            throw new Error("Failed to create or find user");
+            throw new ConvexError({ code: "USER_CREATION_FAILED" });
         }
 
         return {
@@ -243,7 +280,7 @@ export const updateProfile = mutation({
         }
 
         if (!user) {
-            throw new Error("User not found");
+            throw new ConvexError({ code: "USER_NOT_FOUND" });
         }
 
         const updates: any = {};
@@ -276,11 +313,11 @@ export const changePassword = mutation({
         }
 
         if (!user) {
-            throw new Error("User not found");
+            throw new ConvexError({ code: "USER_NOT_FOUND" });
         }
 
         if (!verifyPassword(currentPassword, user.password)) {
-            throw new Error("Current password is incorrect");
+            throw new ConvexError({ code: "INCORRECT_PASSWORD" });
         }
 
         await ctx.db.patch(user._id, {

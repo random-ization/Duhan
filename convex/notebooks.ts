@@ -1,17 +1,19 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId, getOptionalAuthUserId } from "./utils";
 
 // Save notebook entry
 export const save = mutation({
     args: {
-        userId: v.string(),
         type: v.string(),
         title: v.string(),
         content: v.any(),
         tags: v.optional(v.array(v.string())),
     },
     handler: async (ctx, args) => {
-        const { userId, type, title, content, tags } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { type, title, content, tags } = args;
 
         // Generate preview from content
         let preview = "";
@@ -48,11 +50,13 @@ export const save = mutation({
 // Get notebook list
 export const list = query({
     args: {
-        userId: v.string(),
         type: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { userId, type } = args;
+        const userId = await getOptionalAuthUserId(ctx);
+        if (!userId) return { success: true, data: [] };
+
+        const { type } = args;
 
         let notebooks = await ctx.db.query("notebooks")
             .filter(q => q.eq(q.field("userId"), userId))

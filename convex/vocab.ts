@@ -1,13 +1,16 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId, getOptionalAuthUserId } from "./utils";
 
 // Get all vocabulary for a course (Admin List or Module view)
 export const getOfCourse = query({
     args: {
         courseId: v.string(),
-        userId: v.optional(v.string()), // Optional user ID to fetch progress
     },
     handler: async (ctx, args) => {
+        // Get user identity (optional for this query)
+        const userId = await getOptionalAuthUserId(ctx);
+
         // 1. Get appearances
         const appearances = await ctx.db
             .query("vocabulary_appearances")
@@ -17,16 +20,17 @@ export const getOfCourse = query({
         // 2. Fetch linked Words and User Progress
         const wordsWithData = await Promise.all(
             appearances.map(async (app) => {
-                const word = await ctx.db.get(app.wordId);
-                if (!word) return null;
+                const [word, progress] = await Promise.all([
+                    ctx.db.get(app.wordId),
+                    userId
+                        ? ctx.db
+                            .query("user_vocab_progress")
+                            .withIndex("by_user_word", (q) => q.eq("userId", userId).eq("wordId", app.wordId))
+                            .unique()
+                        : Promise.resolve(null),
+                ]);
 
-                let progress = null;
-                if (args.userId) {
-                    progress = await ctx.db
-                        .query("user_vocab_progress")
-                        .withIndex("by_user_word", (q) => q.eq("userId", args.userId!).eq("wordId", app.wordId))
-                        .unique();
-                }
+                if (!word) return null;
 
                 return {
                     ...word,
@@ -123,12 +127,13 @@ export const saveWord = mutation({
 // Update User Progress (SRS)
 export const updateProgress = mutation({
     args: {
-        userId: v.string(),
         wordId: v.id("words"),
         quality: v.number(), // 0-5
     },
     handler: async (ctx, args) => {
-        const { userId, wordId, quality } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { wordId, quality } = args;
         const now = Date.now();
 
         const existingProgress = await ctx.db

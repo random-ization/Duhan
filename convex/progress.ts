@@ -1,14 +1,16 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "./utils";
 
 // Get course progress for a user
 export const getCourseProgress = query({
     args: {
-        userId: v.string(),
         courseId: v.string(),
     },
     handler: async (ctx, args) => {
-        const { userId, courseId } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { courseId } = args;
 
         // Get the institute to find total units
         const institute = await ctx.db.query("institutes")
@@ -41,12 +43,13 @@ export const getCourseProgress = query({
 // Mark a unit as complete
 export const completeUnit = mutation({
     args: {
-        userId: v.string(),
         courseId: v.string(),
         unitIndex: v.number(),
     },
     handler: async (ctx, args) => {
-        const { userId, courseId, unitIndex } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { courseId, unitIndex } = args;
 
         // Check if progress record exists
         const existing = await ctx.db.query("user_course_progress")
@@ -84,11 +87,9 @@ export const completeUnit = mutation({
 
 // Get all course progress for a user (for dashboard)
 export const getAllProgress = query({
-    args: {
-        userId: v.string(),
-    },
-    handler: async (ctx, args) => {
-        const { userId } = args;
+    args: {},
+    handler: async (ctx) => {
+        const userId = await getAuthUserId(ctx);
 
         const progressRecords = await ctx.db.query("user_course_progress")
             .withIndex("by_user", q => q.eq("userId", userId))

@@ -616,5 +616,21 @@
         "futureUpdates": "Future updates included"
       }
     }
+  },
+  "errors": {
+    "UNAUTHORIZED": "You must be logged in to perform this action.",
+    "USER_NOT_FOUND": "User not found.",
+    "EMAIL_ALREADY_EXISTS": "An account with this email already exists.",
+    "USER_CREATION_FAILED": "Failed to create user account.",
+    "INVALID_CREDENTIALS": "Invalid email or password.",
+    "INCORRECT_PASSWORD": "The current password is incorrect.",
+    "INSTITUTE_NOT_FOUND": "Textbook not found.",
+    "CHANNEL_CREATION_FAILED": "Failed to create podcast channel.",
+    "RSS_PARSE_FAILED": "Failed to parse podcast feed.",
+    "STORAGE_CONFIG_MISSING": "Storage configuration is missing.",
+    "EXAM_NOT_FOUND": "Exam not found.",
+    "SESSION_NOT_FOUND": "Exam session not found.",
+    "SESSION_ALREADY_COMPLETED": "This exam has already been submitted.",
+    "SESSION_EXPIRED": "Your exam time has expired."
   }
 }

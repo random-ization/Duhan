@@ -1,19 +1,30 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
+import { getOptionalAuthUserId } from "./utils";
 
 // Get annotations for a specific context (courseId_unitId)
 export const getByContext = query({
     args: {
-        userId: v.string(),
         contextKey: v.string(), // Format: "courseId_unitId"
     },
     handler: async (ctx, args) => {
-        const { userId, contextKey } = args;
+        const identitySubject = await getOptionalAuthUserId(ctx);
+        if (!identitySubject) return [];
 
-        // First, find the user by their ID (could be legacy or Convex ID)
-        const user = await ctx.db.query("users")
-            .withIndex("by_postgresId", q => q.eq("postgresId", userId))
+        const { contextKey } = args;
+
+        // Find the user by their subject (Convex auth ID)
+        // Try to match by token or fall back to postgresId for legacy
+        let user = await ctx.db.query("users")
+            .withIndex("by_token", q => q.eq("token", identitySubject))
             .first();
+
+        if (!user) {
+            // Fall back to finding by postgresId
+            user = await ctx.db.query("users")
+                .withIndex("by_postgresId", q => q.eq("postgresId", identitySubject))
+                .first();
+        }
 
         if (!user) {
             return [];
@@ -38,7 +49,6 @@ export const getByContext = query({
 // Save a new annotation
 export const save = mutation({
     args: {
-        userId: v.string(),
         contextKey: v.string(),
         text: v.string(),
         note: v.optional(v.string()),
@@ -47,15 +57,24 @@ export const save = mutation({
         endOffset: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
-        const { userId, contextKey, text, note, color, startOffset, endOffset } = args;
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new ConvexError({ code: "UNAUTHORIZED" });
 
-        // Find user
-        const user = await ctx.db.query("users")
-            .withIndex("by_postgresId", q => q.eq("postgresId", userId))
+        const { contextKey, text, note, color, startOffset, endOffset } = args;
+
+        // Find user by identity subject
+        let user = await ctx.db.query("users")
+            .withIndex("by_token", q => q.eq("token", identity.subject))
             .first();
 
         if (!user) {
-            throw new Error("User not found");
+            user = await ctx.db.query("users")
+                .withIndex("by_postgresId", q => q.eq("postgresId", identity.subject))
+                .first();
+        }
+
+        if (!user) {
+            throw new ConvexError({ code: "USER_NOT_FOUND" });
         }
 
         const annotationId = await ctx.db.insert("annotations", {

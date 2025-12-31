@@ -1,6 +1,6 @@
 "use node";
 import { action } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import Parser from "rss-parser";
 
 // RSS Parser instance
@@ -65,7 +65,7 @@ export const getEpisodes = action({
             };
         } catch (error) {
             console.error("[RSS Parse Error]", error);
-            throw new Error("FAILED_TO_PARSE_RSS");
+            throw new ConvexError({ code: "RSS_PARSE_FAILED" });
         }
     },
 });

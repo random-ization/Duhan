@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // Get all users with pagination
 export const getUsers = query({
@@ -81,16 +81,19 @@ export const deleteUser = mutation({
     }
 });
 
-// Get institutes (admin list)
+// Get institutes (admin list) - excludes archived
 export const getInstitutes = query({
     args: {},
     handler: async (ctx) => {
         const institutes = await ctx.db.query("institutes").collect();
-        return institutes.map(i => ({
-            ...i,
-            _id: undefined,
-            id: i.id || i._id,
-        }));
+        // Filter out archived institutes
+        return institutes
+            .filter(i => !i.isArchived)
+            .map(i => ({
+                ...i,
+                _id: undefined,
+                id: i.id || i._id,
+            }));
     }
 });
 
@@ -136,7 +139,7 @@ export const updateInstitute = mutation({
             .first();
 
         if (!institute) {
-            throw new Error("Institute not found");
+            throw new ConvexError({ code: "INSTITUTE_NOT_FOUND" });
         }
 
         await ctx.db.patch(institute._id, updates);
@@ -144,7 +147,7 @@ export const updateInstitute = mutation({
     }
 });
 
-// Delete institute
+// Delete institute (soft delete)
 export const deleteInstitute = mutation({
     args: {
         legacyId: v.string(),
@@ -155,7 +158,8 @@ export const deleteInstitute = mutation({
             .first();
 
         if (institute) {
-            await ctx.db.delete(institute._id);
+            // Soft delete - set isArchived to true
+            await ctx.db.patch(institute._id, { isArchived: true });
         }
 
         return { success: true };

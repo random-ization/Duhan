@@ -29,7 +29,7 @@ interface AuthContextType {
   language: Language;
 
   // Auth Actions
-  login: (user: User) => void;
+  login: (user: User, token?: string) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   refreshUser: () => Promise<void>;
@@ -82,6 +82,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(() =>
     typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  );
+  const [token, setToken] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('token') : null
   );
 
   const convex = useConvex();
@@ -141,47 +144,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   // Session Check (Load User)
   useEffect(() => {
     const loadUser = async () => {
-      // Prioritize userId (Convex ID or legacy ID)
-      // Fallback to token if userId missing (legacy flow migration)
-      let currentUserId = userId;
-
-      if (!currentUserId) {
-        // If we have a token but no userId, we can't do much with Convex directly without an auth function that takes token.
-        // Assuming user needs to re-login if migrating from Express to Convex completely.
-        const token = localStorage.getItem('token');
-        if (token && !currentUserId) {
-          console.warn("Legacy token found but no userId. User needs to re-login.");
-          setLoading(false);
-          return;
-        }
+      if (!token && !userId) {
+        setLoading(false);
+        return;
       }
 
-      if (currentUserId) {
-        try {
-          const userData = await convex.query(convexApi.auth.getMe, { userId: currentUserId });
-          if (userData) {
-            setUser(userData as unknown as User); // Assert type compatibility
-            if (onLoginSuccess) onLoginSuccess();
-          } else {
-            // UserId invalid
-            localStorage.removeItem('userId');
-            setUserId(null);
+      try {
+        const userData = await convex.query(convexApi.auth.getMe, {
+          token: token || undefined,
+          userId: userId || undefined
+        });
+
+        if (userData) {
+          setUser(userData as unknown as User);
+          // Sync token if returned (assuming user might have been loaded by ID but backend has generated one?)
+          // Actually getMe returns the existing token if found.
+          if (userData.token && userData.token !== token) {
+            setToken(userData.token);
+            localStorage.setItem('token', userData.token);
           }
-        } catch (e) {
-          console.error('Failed to load user:', e);
+          if (onLoginSuccess) onLoginSuccess();
+        } else {
+          // Both Invalid
+          localStorage.removeItem('userId');
+          localStorage.removeItem('token');
+          setUserId(null);
+          setToken(null);
         }
+      } catch (e) {
+        console.error('Failed to load user:', e);
       }
       setLoading(false);
     };
     loadUser();
-  }, [userId, convex, onLoginSuccess]);
+  }, [token, userId, convex, onLoginSuccess]);
 
   const login = useCallback(
-    (loggedInUser: User) => {
+    (loggedInUser: User, sessionToken?: string) => {
       setUser(loggedInUser);
-      // Ensure we store the ID for next page load
       localStorage.setItem('userId', loggedInUser.id);
       setUserId(loggedInUser.id);
+
+      if (sessionToken) {
+        setToken(sessionToken);
+        localStorage.setItem('token', sessionToken);
+      }
 
       if (onLoginSuccess) {
         onLoginSuccess();
@@ -194,20 +201,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     setUserId(null);
+    setToken(null);
     setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!userId) return;
+    if (!token && !userId) return;
     try {
-      const userData = await convex.query(convexApi.auth.getMe, { userId });
+      const userData = await convex.query(convexApi.auth.getMe, {
+        token: token || undefined,
+        userId: userId || undefined
+      });
       if (userData) {
         setUser(userData as unknown as User);
       }
     } catch (e) {
       console.error('Failed to refresh user:', e);
     }
-  }, [userId, convex]);
+  }, [token, userId, convex]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => (prev ? { ...prev, ...updates } : null));
@@ -215,7 +226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   const saveWord = useCallback(
     async (vocabItem: VocabularyItem | string, meaning?: string) => {
-      if (!user) return;
+      if (!user) return; // Silent fail if no user? Or token check inside
 
       let newItem: VocabularyItem;
       let korean = '';
@@ -241,9 +252,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         return { ...prev, savedWords: [...(prev.savedWords || []), newItem] };
       });
 
+      if (!token) return;
+
       try {
         await saveSavedWordMutation({
-          userId: user.id,
+          token,
           korean,
           english,
           exampleSentence: newItem.exampleSentence,
@@ -253,7 +266,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         console.error('Failed to save word', e);
       }
     },
-    [user, saveSavedWordMutation]
+    [user, token, saveSavedWordMutation]
   );
 
   const recordMistake = useCallback(
@@ -278,9 +291,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         return { ...prev, mistakes: [...(prev.mistakes || []), mistake] };
       });
 
+      if (!token) return;
+
       try {
         await saveMistakeMutation({
-          userId: user.id,
+          token,
           korean,
           english,
           wordId: wordId,
@@ -290,7 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         console.error(e);
       }
     },
-    [user, saveMistakeMutation]
+    [user, token, saveMistakeMutation]
   );
 
   const clearMistakes = useCallback(() => {
@@ -321,6 +336,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         return { ...prevUser, annotations: updatedAnnotations };
       });
 
+      // NOTE: Annotations backend still relies on userId for now, until we update it.
+      // We will pass userId here as it is available on user object.
       try {
         await saveAnnotationMutation({
           userId: user.id,
@@ -345,16 +362,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         if (!prev) return prev;
         return { ...prev, examHistory: [...(prev.examHistory || []), attempt] };
       });
+
+      if (!token) return;
+
       try {
         await saveExamAttemptMutation({
-          userId: user.id,
+          token,
           examId: attempt.examId,
           score: attempt.score,
           totalQuestions: attempt.maxScore, // Mapping maxScore to totalQuestions for now
           sectionScores: attempt.userAnswers
         });
         await logActivityMutation({
-          userId: user.id,
+          token,
           activityType: 'EXAM',
           duration: undefined,
           itemsStudied: 1,
@@ -364,7 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         console.error(e);
       }
     },
-    [user, saveExamAttemptMutation, logActivityMutation]
+    [user, token, saveExamAttemptMutation, logActivityMutation]
   );
 
   const deleteExamAttempt = useCallback(
@@ -392,10 +412,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       itemsStudied?: number,
       metadata?: any
     ) => {
-      if (!user) return;
+      if (!user || !token) return;
       try {
         await logActivityMutation({
-          userId: user.id,
+          token,
           activityType,
           duration,
           itemsStudied,
@@ -405,35 +425,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         console.error('Failed to log activity', e);
       }
     },
-    [user, logActivityMutation]
+    [user, token, logActivityMutation]
   );
 
   const updateLearningProgress = useCallback(
     async (institute: string, level: number, unit?: number, module?: string) => {
       if (!user) return;
+
+      // Optimistic update
+      setUser(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          lastInstitute: institute,
+          lastLevel: level,
+          lastUnit: unit,
+          lastModule: module,
+        };
+      });
+
+      if (!token) return;
+
       try {
         await updateLearningProgressMutation({
-          userId: user.id,
+          token,
           lastInstitute: institute,
           lastLevel: level,
           lastUnit: unit,
           lastModule: module
         });
-        setUser(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            lastInstitute: institute,
-            lastLevel: level,
-            lastUnit: unit,
-            lastModule: module,
-          };
-        });
       } catch (e) {
         console.error('Failed to update learning progress', e);
       }
     },
-    [user, updateLearningProgressMutation]
+    [user, token, updateLearningProgressMutation]
   );
 
   const canAccessContent = useCallback(

@@ -1,26 +1,28 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId, getOptionalAuthUserId } from "./utils";
 
 // Get Grammar stats for sidebar
 export const getStats = query({
     args: {
         courseId: v.string(),
-        userId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
+        const userId = await getOptionalAuthUserId(ctx);
+
         // 1. Get all CourseGrammar links for this course
         const courseGrammars = await ctx.db
             .query("course_grammars")
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
             .collect();
 
-        if (!args.userId) return { total: courseGrammars.length, mastered: 0 };
+        if (!userId) return { total: courseGrammars.length, mastered: 0 };
 
         // 2. Fetch progress
         // Note: Ideally we'd do a join or batch fetch here, but for now we'll do this
         const progress = await ctx.db
             .query("user_grammar_progress")
-            .filter((q) => q.eq(q.field("userId"), args.userId))
+            .filter((q) => q.eq(q.field("userId"), userId))
             .collect();
 
         // Count mastered
@@ -37,9 +39,10 @@ export const getUnitGrammar = query({
     args: {
         courseId: v.string(),
         unitId: v.number(),
-        userId: v.optional(v.string())
     },
     handler: async (ctx, args) => {
+        const userId = await getOptionalAuthUserId(ctx);
+
         // 1. Get links
         const courseGrammars = await ctx.db
             .query("course_grammars")
@@ -57,11 +60,11 @@ export const getUnitGrammar = query({
             if (!grammar) return null;
 
             let userProgress = null;
-            if (args.userId) {
+            if (userId) {
                 userProgress = await ctx.db
                     .query("user_grammar_progress")
                     .withIndex("by_user_grammar", q =>
-                        q.eq("userId", args.userId!).eq("grammarId", link.grammarId)
+                        q.eq("userId", userId).eq("grammarId", link.grammarId)
                     )
                     .unique();
             }
@@ -84,12 +87,13 @@ export const getUnitGrammar = query({
 
 export const updateStatus = mutation({
     args: {
-        userId: v.string(),
         grammarId: v.id("grammar_points"),
         status: v.string(), // "LEARNING", "MASTERED"
     },
     handler: async (ctx, args) => {
-        const { userId, grammarId, status } = args;
+        const userId = await getAuthUserId(ctx);
+
+        const { grammarId, status } = args;
         const now = Date.now();
 
         const existing = await ctx.db

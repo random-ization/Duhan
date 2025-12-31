@@ -1,6 +1,6 @@
 "use node";
 import { action } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import crypto from "crypto";
 
 /**
@@ -20,7 +20,7 @@ export const getUploadUrl = action({
         const secretAccessKey = process.env.SPACES_SECRET;
 
         if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-            throw new Error("Missing Spaces configuration");
+            throw new ConvexError({ code: "STORAGE_CONFIG_MISSING" });
         }
 
         const folder = args.folder || "uploads";

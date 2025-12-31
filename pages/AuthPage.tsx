@@ -33,8 +33,7 @@ export default function AuthPage() {
     setError(null);
     try {
       const response = await api.googleLogin({ code, redirectUri: REDIRECT_URI });
-      localStorage.setItem('token', response.token);
-      login(response.user);
+      login(response.user, response.token);
       const redirectUrl = searchParams.get('redirect') || '/dashboard';
       // Clean URL and navigate
       window.history.replaceState({}, '', '/auth');
@@ -92,8 +91,8 @@ export default function AuthPage() {
       if (isLogin) {
         // Call API to login and get user data
         const response = await api.login({ email: formData.email, password: formData.password });
-        localStorage.setItem('token', response.token);
-        login(response.user); // Pass user object to login
+        // response contains { user, token }
+        login(response.user, response.token);
         const redirectUrl = searchParams.get('redirect') || '/dashboard';
         navigate(redirectUrl);
       } else {

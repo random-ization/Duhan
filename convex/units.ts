@@ -1,14 +1,28 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get aggregated unit details (Reading Page)
+// Get unit list for course (List View - metadata only, no large content)
 export const getByCourse = query({
     args: { courseId: v.string() },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const units = await ctx.db
             .query("textbook_units")
             .withIndex("by_course_unit_article", (q) => q.eq("courseId", args.courseId))
             .collect();
+
+        // Return only metadata needed for list view, exclude large fields and archived
+        return units
+            .filter(u => !u.isArchived)
+            .map((u) => ({
+                _id: u._id,
+                courseId: u.courseId,
+                unitIndex: u.unitIndex,
+                articleIndex: u.articleIndex,
+                title: u.title,
+                audioUrl: u.audioUrl,
+                createdAt: u.createdAt,
+                // Exclude: readingText, translation, transcriptData, analysisData
+            }));
     },
 });
 
@@ -16,27 +30,59 @@ export const getDetails = query({
     args: {
         courseId: v.string(),
         unitIndex: v.number(),
-        userId: v.optional(v.id("users")) // Pass explicitly for now or use ctx.auth later
     },
     handler: async (ctx, args) => {
-        // 1. Get Unit Articles
-        const articles = await ctx.db
-            .query("textbook_units")
-            .withIndex("by_course_unit_article", (q) =>
-                q.eq("courseId", args.courseId).eq("unitIndex", args.unitIndex)
-            )
-            .collect();
+        const identity = await ctx.auth.getUserIdentity();
+        // userId is optional for this query - unauthenticated users can still view content
+        let convexUserId: any = null;
+        if (identity) {
+            // Find user by identity subject
+            const user = await ctx.db.query("users")
+                .withIndex("by_token", q => q.eq("token", identity.subject))
+                .first();
+            convexUserId = user?._id;
+        }
+
+        // Fetch all top-level data concurrently
+        const [articles, vocabAppearances, courseGrammars, annotations] = await Promise.all([
+            // 1. Get Unit Articles
+            ctx.db
+                .query("textbook_units")
+                .withIndex("by_course_unit_article", (q) =>
+                    q.eq("courseId", args.courseId).eq("unitIndex", args.unitIndex)
+                )
+                .collect(),
+
+            // 2. Get Vocabulary Appearances
+            ctx.db
+                .query("vocabulary_appearances")
+                .withIndex("by_course_unit", (q) =>
+                    q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
+                )
+                .collect(),
+
+            // 3. Get Course Grammars
+            ctx.db
+                .query("course_grammars")
+                .withIndex("by_course_unit", (q) =>
+                    q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
+                )
+                .collect(),
+
+            // 4. Annotations
+            convexUserId
+                ? ctx.db
+                    .query("annotations")
+                    .withIndex("by_user_context", (q) =>
+                        q.eq("userId", convexUserId).eq("contextKey", `${args.courseId}_${args.unitIndex}`)
+                    )
+                    .collect()
+                : Promise.resolve([]),
+        ]);
 
         const mainUnit = articles[0] || null;
 
-        // 2. Get Vocabulary (Reuse logic or direct query)
-        const vocabAppearances = await ctx.db
-            .query("vocabulary_appearances")
-            .withIndex("by_course_unit", (q) =>
-                q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
-            )
-            .collect();
-
+        // Process Vocabulary List
         const vocabList = await Promise.all(
             vocabAppearances.map(async (app) => {
                 const word = await ctx.db.get(app.wordId);
@@ -56,14 +102,7 @@ export const getDetails = query({
             })
         );
 
-        // 3. Get Grammar
-        const courseGrammars = await ctx.db
-            .query("course_grammars")
-            .withIndex("by_course_unit", (q) =>
-                q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
-            )
-            .collect();
-
+        // Process Grammar List
         const grammarList = await Promise.all(
             courseGrammars.map(async (cg) => {
                 const grammar = await ctx.db.get(cg.grammarId);
@@ -80,17 +119,6 @@ export const getDetails = query({
                 };
             })
         );
-
-        // 4. Annotations
-        let annotations: any[] = [];
-        if (args.userId) {
-            annotations = await ctx.db
-                .query("annotations")
-                .withIndex("by_user_context", (q) =>
-                    q.eq("userId", args.userId!).eq("contextKey", `${args.courseId}_${args.unitIndex}`)
-                )
-                .collect();
-        }
 
         return {
             unit: mainUnit,
