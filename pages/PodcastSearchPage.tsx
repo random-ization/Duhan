@@ -16,7 +16,7 @@ export default function PodcastSearchPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const searchPodcastsAction = useAction(convexApi.podcasts.searchPodcasts);
+    const searchPodcastsAction = useAction(convexApi.podcastActions.searchPodcasts);
 
     useEffect(() => {
         if (query) {

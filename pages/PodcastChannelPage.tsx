@@ -45,7 +45,7 @@ const PodcastChannelPage: React.FC = () => {
     const [isSubscribed, setIsSubscribed] = useState(false);
 
     // Convex actions and queries
-    const getEpisodesAction = useAction(convexApi.podcasts.getEpisodes);
+    const getEpisodesAction = useAction(convexApi.podcastActions.getEpisodes);
     const subscriptions = useQuery(convexApi.podcasts.getSubscriptions, user ? { userId: user.id } : "skip");
     const toggleSubscriptionMutation = useMutation(convexApi.podcasts.toggleSubscription);
 
