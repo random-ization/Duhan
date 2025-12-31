@@ -18,6 +18,7 @@ import type * as migrations from "../migrations.js";
 import type * as notebooks from "../notebooks.js";
 import type * as podcasts from "../podcasts.js";
 import type * as progress from "../progress.js";
+import type * as topik from "../topik.js";
 import type * as units from "../units.js";
 import type * as userStats from "../userStats.js";
 import type * as videos from "../videos.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   notebooks: typeof notebooks;
   podcasts: typeof podcasts;
   progress: typeof progress;
+  topik: typeof topik;
   units: typeof units;
   userStats: typeof userStats;
   videos: typeof videos;

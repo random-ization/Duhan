@@ -235,3 +235,97 @@ export const deleteDuplicateData = mutation({
         };
     }
 });
+
+// ============================================
+// TOPIK Migration Functions
+// ============================================
+
+// Import TOPIK exams from PostgreSQL data
+export const importTopikExam = mutation({
+    args: {
+        legacyId: v.string(),
+        title: v.string(),
+        round: v.number(),
+        type: v.string(),
+        paperType: v.optional(v.string()),
+        timeLimit: v.number(),
+        audioUrl: v.optional(v.string()),
+        description: v.optional(v.string()),
+        isPaid: v.boolean(),
+        questions: v.array(v.object({
+            number: v.number(),
+            passage: v.optional(v.string()),
+            question: v.string(),
+            contextBox: v.optional(v.string()),
+            options: v.array(v.string()),
+            correctAnswer: v.number(),
+            image: v.optional(v.string()),
+            optionImages: v.optional(v.array(v.string())),
+            explanation: v.optional(v.string()),
+            score: v.number(),
+            instruction: v.optional(v.string()),
+            layout: v.optional(v.string()),
+            groupCount: v.optional(v.number()),
+        })),
+    },
+    handler: async (ctx, args) => {
+        const { legacyId, questions, ...examData } = args;
+
+        // Check if already migrated
+        const existing = await ctx.db.query("topik_exams")
+            .withIndex("by_legacy_id", q => q.eq("legacyId", legacyId))
+            .first();
+
+        if (existing) {
+            console.log(`Exam ${legacyId} already exists, skipping...`);
+            return { success: false, reason: "already_exists" };
+        }
+
+        // Insert exam
+        const examId = await ctx.db.insert("topik_exams", {
+            legacyId,
+            ...examData,
+            createdAt: Date.now(),
+        });
+
+        // Insert questions
+        for (const q of questions) {
+            await ctx.db.insert("topik_questions", {
+                examId,
+                ...q,
+            });
+        }
+
+        console.log(`Migrated exam ${legacyId} with ${questions.length} questions`);
+        return { success: true, examId };
+    }
+});
+
+// Get all TOPIK exams for verification
+export const getAllTopikExams = query({
+    args: {},
+    handler: async (ctx) => {
+        const exams = await ctx.db.query("topik_exams").collect();
+        return exams;
+    }
+});
+
+// Get TOPIK stats for debug
+export const getTopikStats = query({
+    args: {},
+    handler: async (ctx) => {
+        const exams = await ctx.db.query("topik_exams").collect();
+        const questions = await ctx.db.query("topik_questions").collect();
+        return {
+            totalExams: exams.length,
+            totalQuestions: questions.length,
+            exams: exams.map(e => ({
+                legacyId: e.legacyId,
+                title: e.title,
+                round: e.round,
+                type: e.type,
+            })),
+        };
+    }
+});
+

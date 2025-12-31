@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAction } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import {
     ArrowLeft,
     Play,
@@ -21,7 +23,7 @@ import {
     ListMusic,
     RefreshCw
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api } from '../services/api'; // Legacy API for transcript generation
 import BackButton from '../components/ui/BackButton';
 
 // Types
@@ -447,6 +449,9 @@ const PodcastPlayerPage: React.FC = () => {
         }
     };
 
+    // Convex AI action
+    const analyzeSentenceAction = useAction(convexApi.ai.analyzeSentence);
+
     const analyze = async (line: TranscriptLine) => {
         if (audioRef.current) {
             audioRef.current.pause();
@@ -458,8 +463,13 @@ const PodcastPlayerPage: React.FC = () => {
         setAnalysisData(null);
 
         try {
-            const res = await api.analyzeSentence(line.text);
-            if (res.success) setAnalysisData(res.data);
+            const result = await analyzeSentenceAction({
+                sentence: line.text,
+                context: line.translation || undefined,
+            });
+            if (result?.success && result.data) {
+                setAnalysisData(result.data);
+            }
         } catch (e) {
             console.error(e);
         } finally {

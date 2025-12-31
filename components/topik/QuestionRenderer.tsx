@@ -1,8 +1,10 @@
 import React, { useMemo, useCallback, useState } from 'react';
+import { useAction } from 'convex/react';
+import { api as convexApi } from '../../convex/_generated/api';
 import { TopikQuestion, Language, Annotation } from '../../types';
 import { Volume2, Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
-import { api } from '../../services/api';
+import { api } from '../../services/api'; // Legacy API for notebook
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -74,7 +76,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     const [isSaving, setIsSaving] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
 
-    // AI Analysis handler
+    // Convex AI action
+    const analyzeQuestionAction = useAction(convexApi.ai.analyzeQuestion);
+
+    // AI Analysis handler - Using Convex
     const handleAIAnalysis = useCallback(async () => {
       if (aiLoading || aiAnalysis) return;
 
@@ -83,28 +88,16 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
       try {
         const questionText = question.question || question.passage || '';
-        const imageUrl = question.imageUrl || question.image;
 
-        // Map language to API format
-        const langMap: Record<string, string> = {
-          'zh-CN': 'zh',
-          'zh': 'zh',
-          'ko': 'ko',
-          'en': 'en',
-          'vi': 'vi',
-          'mn': 'mn'
-        };
-        const response = await api.analyzeTopikQuestion({
+        const result = await analyzeQuestionAction({
           question: questionText,
           options: question.options,
           correctAnswer: correctAnswer ?? 0,
           type: 'TOPIK_QUESTION',
-          language: langMap[language] || 'zh',
-          imageUrl: imageUrl, // Pass image URL for image-based questions
         });
 
-        if (response.success && response.data) {
-          setAiAnalysis(response.data);
+        if (result?.success && result.data) {
+          setAiAnalysis(result.data);
         } else {
           setAiError('AI 老师正在休息，请稍后再试');
         }
@@ -114,7 +107,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       } finally {
         setAiLoading(false);
       }
-    }, [question, correctAnswer, language, aiLoading, aiAnalysis]);
+    }, [question, correctAnswer, aiLoading, aiAnalysis, analyzeQuestionAction]);
 
     // Save to Notebook handler
     const [showSaveToast, setShowSaveToast] = useState(false);

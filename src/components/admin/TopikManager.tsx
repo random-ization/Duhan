@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import legacyApi from '../../../services/api'; // For file uploads only
 import {
     FileText, Headphones, Save, Trash2, Loader2, Plus,
     ArrowLeft, Upload, CheckSquare, ImageIcon, FileUp, X
@@ -94,8 +96,26 @@ const TOPIK_LISTENING_STRUCTURE: ExamSectionStructure[] = [
 ];
 
 export const TopikManager: React.FC = () => {
-    const [exams, setExams] = useState<TopikExam[]>([]);
-    const [loading, setLoading] = useState(true);
+    // ========================================
+    // Convex Queries (Reactive)
+    // ========================================
+    const convexExams = useQuery(api.topik.getExams);
+    const loading = convexExams === undefined;
+    const exams: TopikExam[] = (convexExams || []).map((e: any) => ({
+        ...e,
+        questions: [], // Questions loaded separately
+    }));
+
+    // ========================================
+    // Convex Mutations
+    // ========================================
+    const saveExamMutation = useMutation(api.topik.saveExam);
+    const deleteExamMutation = useMutation(api.topik.deleteExam);
+
+    // ========================================
+    // Local UI State
+    // ========================================
+    const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
     const [selectedExam, setSelectedExam] = useState<TopikExam | null>(null);
     const [activeQuestionId, setActiveQuestionId] = useState<number>(1);
     const [saving, setSaving] = useState(false);
@@ -107,47 +127,32 @@ export const TopikManager: React.FC = () => {
     const [importText, setImportText] = useState('');
     const [importError, setImportError] = useState('');
 
+    // Query for questions when exam is selected
+    const convexQuestions = useQuery(
+        api.topik.getExamQuestions,
+        selectedExamId ? { examId: selectedExamId } : "skip"
+    );
+
+    // Update selectedExam when questions load
     useEffect(() => {
-        loadExams();
-    }, []);
+        if (!selectedExamId) return;
 
-    useEffect(() => {
-        if (!selectedExam) return;
-        // If exam already has questions, skip fetch
-        if (selectedExam.questions && selectedExam.questions.length > 0) {
-            return;
-        }
-        loadQuestions();
-    }, [selectedExam?.id]);
+        const examMeta = exams.find(e => e.id === selectedExamId);
+        if (!examMeta) return;
 
-    const loadExams = async () => {
-        try {
-            const data = await api.getTopikExams();
-            setExams(data || []);
-        } catch (e) {
-            console.error('Failed to load exams', e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadQuestions = async () => {
-        if (!selectedExam) return;
-        setLoadingQuestions(true);
-        try {
-            const questions = await api.getTopikExamQuestions(selectedExam.id);
-            setSelectedExam(prev => prev ? { ...prev, questions } : null);
-        } catch (e) {
-            console.error("Failed to load exam questions", e);
-            // Initialize empty questions if loading fails
-            if (!selectedExam.questions || selectedExam.questions.length === 0) {
-                const emptyQuestions = createEmptyQuestions();
-                setSelectedExam(prev => prev ? { ...prev, questions: emptyQuestions } : null);
-            }
-        } finally {
+        if (convexQuestions === undefined) {
+            setLoadingQuestions(true);
+        } else {
             setLoadingQuestions(false);
+            const questions = convexQuestions.length > 0
+                ? convexQuestions as TopikQuestion[]
+                : createEmptyQuestions();
+            setSelectedExam({
+                ...examMeta,
+                questions,
+            });
         }
-    };
+    }, [selectedExamId, convexQuestions, exams]);
 
     const createEmptyQuestions = (): TopikQuestion[] => {
         const questions: TopikQuestion[] = [];
@@ -169,7 +174,7 @@ export const TopikManager: React.FC = () => {
     const handleFileUpload = async (file: File, onSuccess: (url: string) => void) => {
         setUploading(true);
         try {
-            const res = await api.uploadMedia(file);
+            const res = await legacyApi.uploadMedia(file);
             onSuccess(res.url);
         } catch (e) {
             console.error(e);
@@ -197,8 +202,9 @@ export const TopikManager: React.FC = () => {
             audioUrl: '',
         };
 
-        setExams(prev => [...prev, newExam]);
+        // Set locally for editing (will be saved to Convex on save)
         setSelectedExam(newExam);
+        setSelectedExamId(newExam.id);
         setActiveQuestionId(1);
     };
 
@@ -238,9 +244,34 @@ export const TopikManager: React.FC = () => {
         if (!selectedExam) return;
         setSaving(true);
         try {
-            await api.saveTopikExam(selectedExam);
-            // Update local list
-            setExams(prev => prev.map(e => e.id === selectedExam.id ? selectedExam : e));
+            await saveExamMutation({
+                id: selectedExam.id,
+                title: selectedExam.title,
+                round: selectedExam.round,
+                type: selectedExam.type,
+                paperType: selectedExam.paperType,
+                timeLimit: selectedExam.timeLimit,
+                audioUrl: selectedExam.audioUrl,
+                description: selectedExam.description,
+                isPaid: selectedExam.isPaid,
+                questions: selectedExam.questions.map(q => ({
+                    id: q.id,
+                    number: q.number,
+                    passage: q.passage,
+                    question: q.question,
+                    contextBox: q.contextBox,
+                    options: q.options,
+                    correctAnswer: q.correctAnswer,
+                    image: q.image,
+                    optionImages: q.optionImages,
+                    explanation: q.explanation,
+                    score: q.score,
+                    instruction: q.instruction,
+                    layout: q.layout,
+                    groupCount: q.groupCount,
+                })),
+            });
+            // Convex queries will auto-refresh
             alert('保存成功！');
         } catch (e) {
             console.error('Save failed', e);
@@ -253,9 +284,10 @@ export const TopikManager: React.FC = () => {
     const handleDelete = async () => {
         if (!selectedExam || !confirm(`删除考试 "${selectedExam.title}"？`)) return;
         try {
-            await api.deleteTopikExam(selectedExam.id);
-            setExams(prev => prev.filter(e => e.id !== selectedExam.id));
+            await deleteExamMutation({ examId: selectedExam.id });
+            // Convex queries will auto-refresh
             setSelectedExam(null);
+            setSelectedExamId(null);
         } catch (e) {
             console.error('Delete failed', e);
             alert('删除失败');
@@ -638,7 +670,7 @@ export const TopikManager: React.FC = () => {
                         exams.map(exam => (
                             <div
                                 key={exam.id}
-                                onClick={() => setSelectedExam(exam)}
+                                onClick={() => setSelectedExamId(exam.id)}
                                 className={`p-4 rounded-xl cursor-pointer mb-2 transition-all border-2 ${selectedExam?.id === exam.id
                                     ? 'bg-lime-100 border-zinc-900 shadow-[2px_2px_0px_0px_#18181B]'
                                     : 'border-zinc-200 hover:border-zinc-400'
@@ -662,7 +694,7 @@ export const TopikManager: React.FC = () => {
                         {/* Top Bar */}
                         <div className="bg-zinc-50 border-b-2 border-zinc-200 px-6 py-3 flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                                <button onClick={() => setSelectedExam(null)} className="hover:text-zinc-900">
+                                <button onClick={() => { setSelectedExam(null); setSelectedExamId(null); }} className="hover:text-zinc-900">
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
                                 <span className="text-zinc-300">/</span>

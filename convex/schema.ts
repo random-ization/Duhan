@@ -265,4 +265,39 @@ export default defineSchema({
         createdAt: v.number(),
     }).index("by_user", ["userId"])
         .index("by_user_type", ["userId", "type"]),
+
+    // TOPIK Exams (Metadata)
+    topik_exams: defineTable({
+        legacyId: v.string(), // Original ID like "exam-1704067200000"
+        title: v.string(),
+        round: v.number(), // e.g., 35
+        type: v.string(), // "READING" | "LISTENING"
+        paperType: v.optional(v.string()), // "A" | "B"
+        timeLimit: v.number(), // Minutes
+        audioUrl: v.optional(v.string()), // S3 URL for listening exams
+        description: v.optional(v.string()),
+        isPaid: v.boolean(),
+        createdAt: v.number(),
+    }).index("by_legacy_id", ["legacyId"])
+        .index("by_round", ["round"])
+        .index("by_type", ["type"]),
+
+    // TOPIK Questions (Separate table for efficiency)
+    topik_questions: defineTable({
+        examId: v.id("topik_exams"),
+        number: v.number(), // 1-50
+        passage: v.optional(v.string()),
+        question: v.string(),
+        contextBox: v.optional(v.string()), // 보기 content
+        options: v.array(v.string()), // 4 options
+        correctAnswer: v.number(), // 0-3
+        image: v.optional(v.string()), // S3 URL for question image
+        optionImages: v.optional(v.array(v.string())), // S3 URLs for image options
+        explanation: v.optional(v.string()),
+        score: v.number(),
+        instruction: v.optional(v.string()),
+        layout: v.optional(v.string()),
+        groupCount: v.optional(v.number()),
+    }).index("by_exam", ["examId"])
+        .index("by_exam_number", ["examId", "number"]),
 });
