@@ -11,14 +11,42 @@ function hashPassword(password: string): string {
     return hashSync(password, SALT_ROUNDS);
 }
 
-function verifyPassword(password: string, hash: string | null | undefined): boolean {
-    // Guard against null/undefined hash (e.g., Google-auth users with no password)
-    if (!hash) return false;
+// Simple fallback hash (from before migration)
+function simpleHash(password: string): string {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return hash.toString();
+}
 
-    // Check if hash matches bcrypt format ($2a$ or $2b$)
-    // If not, it might be legacy placeholder hash from earlier dev versions?
-    // But for this production migration context, we assume all are bcrypt or new.
-    return compareSync(password, hash);
+function verifyPassword(password: string, hash: string | null | undefined): boolean {
+    // Guard against null/undefined hash
+    if (!hash) {
+        console.log("verifyPassword: Hash is null/undefined");
+        return false;
+    }
+
+    try {
+        // 1. Try Bcrypt
+        const isBcrypt = hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$");
+        if (isBcrypt) {
+            return compareSync(password, hash);
+        }
+
+        // 2. Try Simple Hash (Fallback for legacy dev users)
+        const simple = simpleHash(password);
+        if (simple === hash) return true;
+
+        console.log(`verifyPassword: Unknown hash format or mismatch. Hash starts with: ${hash.substring(0, 5)}...`);
+        return false;
+
+    } catch (e: any) {
+        console.error("verifyPassword: Error verifying password:", e.message);
+        return false;
+    }
 }
 
 // Helper to generate a session token
@@ -137,16 +165,20 @@ export const login = mutation({
     },
     handler: async (ctx, args) => {
         const { email, password } = args;
+        console.log(`Login attempt for: ${email}`);
 
         const user = await ctx.db.query("users")
             .withIndex("by_email", q => q.eq("email", email))
             .first();
 
         if (!user) {
+            console.log(`Login failed: User not found for ${email}`);
             throw new ConvexError({ code: "INVALID_CREDENTIALS" });
         }
 
+        console.log(`User found: ${user._id}, checking password...`);
         if (!verifyPassword(password, user.password)) {
+            console.log(`Login failed: Password mismatch for ${email}`);
             throw new ConvexError({ code: "INVALID_CREDENTIALS" });
         }
 
