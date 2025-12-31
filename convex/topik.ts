@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "./utils";
 
@@ -7,13 +8,35 @@ import { getAuthUserId } from "./utils";
 // TOPIK Exam CRUD Functions
 // ============================================
 
-// Get all exams (metadata only, no questions)
+// Get all exams (metadata only, no questions) - supports pagination
 export const getExams = query({
-    args: {},
-    handler: async (ctx) => {
-        const exams = await ctx.db.query("topik_exams")
-            .order("desc")
-            .collect();
+    args: {
+        paginationOpts: v.optional(paginationOptsValidator),
+    },
+    handler: async (ctx, args) => {
+        const query = ctx.db.query("topik_exams").order("desc");
+
+        if (args.paginationOpts) {
+            const results = await query.paginate(args.paginationOpts);
+            return {
+                ...results,
+                page: results.page.map(exam => ({
+                    id: exam.legacyId,
+                    _id: exam._id,
+                    title: exam.title,
+                    round: exam.round,
+                    type: exam.type,
+                    paperType: exam.paperType,
+                    timeLimit: exam.timeLimit,
+                    audioUrl: exam.audioUrl,
+                    description: exam.description,
+                    isPaid: exam.isPaid,
+                    createdAt: exam.createdAt,
+                })),
+            };
+        }
+
+        const exams = await query.collect();
 
         return exams.map(exam => ({
             id: exam.legacyId,

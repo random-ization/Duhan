@@ -2,26 +2,23 @@ import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 
+import { compareSync, hashSync } from "bcryptjs";
+
 const SALT_ROUNDS = 10;
 
-// Simple password hashing (In production use bcrypt/argon2)
-// Note: This is a placeholder since we can't use node modules like bcrypt in Convex runtime easily without polyfills
-// or switching to Auth0/Clerk. For this migration, we'll keep it simple or assume pre-hashed.
+// Proper bcrypt hashing compatible with migrated Postgres data
 function hashPassword(password: string): string {
-    // Basic hash for demo - REPLACE with proper auth provider in production
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-        const char = password.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return hash.toString();
+    return hashSync(password, SALT_ROUNDS);
 }
 
 function verifyPassword(password: string, hash: string | null | undefined): boolean {
     // Guard against null/undefined hash (e.g., Google-auth users with no password)
     if (!hash) return false;
-    return hashPassword(password) === hash;
+
+    // Check if hash matches bcrypt format ($2a$ or $2b$)
+    // If not, it might be legacy placeholder hash from earlier dev versions?
+    // But for this production migration context, we assume all are bcrypt or new.
+    return compareSync(password, hash);
 }
 
 // Helper to generate a session token

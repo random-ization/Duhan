@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import legacyApi from '../../../services/api'; // For file uploads only
 import {
@@ -99,12 +99,21 @@ export const TopikManager: React.FC = () => {
     // ========================================
     // Convex Queries (Reactive)
     // ========================================
-    const convexExams = useQuery(api.topik.getExams);
-    const loading = convexExams === undefined;
-    const exams: TopikExam[] = (convexExams || []).map((e: any) => ({
+    // ========================================
+    // Convex Queries (Reactive)
+    // ========================================
+    const { results, status, loadMore } = usePaginatedQuery(
+        api.topik.getExams as any,
+        {},
+        { initialNumItems: 20 }
+    );
+
+    const exams: TopikExam[] = (results || []).map((e: any) => ({
         ...e,
         questions: [], // Questions loaded separately
     }));
+
+    const loading = status === 'LoadingFirstPage';
 
     // ========================================
     // Convex Mutations
@@ -174,7 +183,7 @@ export const TopikManager: React.FC = () => {
     const handleFileUpload = async (file: File, onSuccess: (url: string) => void) => {
         setUploading(true);
         try {
-            const res = await legacyApi.uploadMedia(file);
+            const res = await legacyApi.uploadFile(file);
             onSuccess(res.url);
         } catch (e) {
             console.error(e);
@@ -683,6 +692,17 @@ export const TopikManager: React.FC = () => {
                                 </div>
                             </div>
                         ))
+                    )}
+                    {status === 'CanLoadMore' && (
+                        <button
+                            onClick={() => loadMore(10)}
+                            className="w-full py-2 text-sm text-zinc-500 hover:bg-zinc-50 rounded-lg mt-2 font-bold"
+                        >
+                            Load More
+                        </button>
+                    )}
+                    {status === 'LoadingMore' && (
+                        <div className="text-center py-2 text-sm text-zinc-400">Loading more...</div>
                     )}
                 </div>
             </div>

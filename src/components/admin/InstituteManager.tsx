@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../../../services/api';
+import { usePaginatedQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { api as legacyApi } from '../../../services/api';
 import {
     BookOpen, Plus, Loader2, Trash2, Edit2, Save, X,
     Image as ImageIcon, Palette, Upload
@@ -17,8 +19,20 @@ interface Institute {
 }
 
 export const InstituteManager: React.FC = () => {
-    const [institutes, setInstitutes] = useState<Institute[]>([]);
-    const [loading, setLoading] = useState(true);
+    // React Query / Convex Pagination
+    const { results, status, loadMore } = usePaginatedQuery(
+        api.admin.getInstitutes as any,
+        {},
+        { initialNumItems: 20 }
+    );
+
+    // Derived state from pagination results
+    const institutes = (results || []).map(i => ({
+        ...i,
+        id: i.id || (i as any)._id // fallback for types
+    })) as Institute[];
+
+    const [loading, setLoading] = useState(false); // Only for mutation actions now
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -40,20 +54,11 @@ export const InstituteManager: React.FC = () => {
         totalUnits: 0
     });
 
-    useEffect(() => {
-        loadInstitutes();
-    }, []);
+    // No need for useEffect -> loadInstitutes anymore since we use reactive usePaginatedQuery
 
-    const loadInstitutes = async () => {
-        try {
-            const data = await api.getInstitutes();
-            setInstitutes(data || []);
-        } catch (e) {
-            console.error('Failed to load institutes', e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const createInstituteMutation = useMutation(api.admin.createInstitute);
+    const updateInstituteMutation = useMutation(api.admin.updateInstitute);
+    const deleteInstituteMutation = useMutation(api.admin.deleteInstitute);
 
     const handleCreate = async () => {
         if (!formData.name?.trim()) {
@@ -70,10 +75,10 @@ export const InstituteManager: React.FC = () => {
                 .replace(/-+/g, '-')
                 + '-' + Date.now().toString(36);
 
-            await api.createInstitute({
+            await createInstituteMutation({
                 id: generatedId,
                 name: formData.name.trim(),
-                levels: [{ level: 1, units: formData.totalUnits || 10 }], // Required by backend schema
+                levels: [{ level: 1, units: formData.totalUnits || 10 }] as any, // Cast to fix type if needed or update schema type
                 publisher: formData.publisher?.trim() || '',
                 displayLevel: formData.displayLevel?.trim() || '',
                 volume: formData.volume?.trim() || '',
@@ -83,7 +88,7 @@ export const InstituteManager: React.FC = () => {
             });
             setShowNewForm(false);
             resetForm();
-            loadInstitutes();
+            // Data updates automatically
         } catch (e) {
             console.error('Create failed', e);
             alert('创建失败');
@@ -96,18 +101,20 @@ export const InstituteManager: React.FC = () => {
         if (!editingId || !formData.name?.trim()) return;
         setSaving(true);
         try {
-            await api.updateInstitute(editingId, {
-                name: formData.name.trim(),
-                publisher: formData.publisher?.trim(),
-                displayLevel: formData.displayLevel?.trim(),
-                volume: formData.volume?.trim(),
-                coverUrl: formData.coverUrl?.trim(),
-                themeColor: formData.themeColor,
-                totalUnits: formData.totalUnits
-            } as any);
+            await updateInstituteMutation({
+                legacyId: editingId,
+                updates: {
+                    name: formData.name.trim(),
+                    publisher: formData.publisher?.trim(),
+                    displayLevel: formData.displayLevel?.trim(),
+                    volume: formData.volume?.trim(),
+                    coverUrl: formData.coverUrl?.trim(),
+                    themeColor: formData.themeColor,
+                    totalUnits: formData.totalUnits
+                }
+            });
             setEditingId(null);
             resetForm();
-            loadInstitutes();
         } catch (e) {
             console.error('Update failed', e);
             alert('更新失败');
@@ -119,8 +126,7 @@ export const InstituteManager: React.FC = () => {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`确定要删除教材 "${name}" 吗？此操作不可恢复。`)) return;
         try {
-            await api.deleteInstitute(id);
-            loadInstitutes();
+            await deleteInstituteMutation({ legacyId: id });
         } catch (e) {
             console.error('Delete failed', e);
             alert('删除失败');
@@ -171,9 +177,8 @@ export const InstituteManager: React.FC = () => {
 
         setUploading(true);
         try {
-            const formDataUpload = new FormData();
-            formDataUpload.append('file', file);
-            const result = await api.uploadFile(formDataUpload);
+            // Use legacy shim for upload (or migrate to separate storage action)
+            const result = await legacyApi.uploadFile(file);
             if (result.url) {
                 setFormData({ ...formData, coverUrl: result.url });
             }
@@ -182,12 +187,18 @@ export const InstituteManager: React.FC = () => {
             alert('上传失败');
         } finally {
             setUploading(false);
-            // Reset file input
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
         }
     };
+    // ... helper for upload ...
+
+    // Re-implement upload using fetch directly or legacy shim if imported
+    // To match original code's behavior:
+    // We need to import { api as legacyApi } from '../../../services/api';
+
+    // ...
 
     const cancelEdit = () => {
         setEditingId(null);
@@ -205,7 +216,7 @@ export const InstituteManager: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2">
-                    {loading ? (
+                    {status === 'LoadingFirstPage' ? (
                         <div className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></div>
                     ) : institutes.length === 0 ? (
                         <div className="text-center text-zinc-400 py-10">
@@ -213,41 +224,55 @@ export const InstituteManager: React.FC = () => {
                             <p className="text-sm">暂无教材</p>
                         </div>
                     ) : (
-                        institutes.map(inst => (
-                            <div
-                                key={inst.id}
-                                className={`p-4 border-2 rounded-xl flex items-center gap-4 transition-all cursor-pointer ${editingId === inst.id
-                                    ? 'border-zinc-900 bg-lime-50 shadow-[2px_2px_0px_0px_#18181B]'
-                                    : 'border-zinc-200 hover:border-zinc-400'
-                                    }`}
-                                onClick={() => startEdit(inst)}
-                            >
-                                {/* Color indicator */}
+                        <>
+                            {institutes.map(inst => (
                                 <div
-                                    className="w-3 h-12 rounded-full shrink-0"
-                                    style={{ backgroundColor: inst.themeColor || '#6366f1' }}
-                                />
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-zinc-900 truncate">
-                                        {inst.name}
-                                        {inst.displayLevel && <span className="text-zinc-500 font-normal ml-1">{inst.displayLevel}</span>}
-                                        {inst.volume && <span className="text-zinc-500 font-normal ml-1">{inst.volume}</span>}
-                                    </div>
-                                    <div className="text-xs text-zinc-500 truncate">
-                                        {inst.publisher || '未设置出版社'}
-                                        {inst.totalUnits ? ` · ${inst.totalUnits}课` : ''}
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(inst.id, inst.name); }}
-                                    className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                    key={inst.id}
+                                    className={`p-4 border-2 rounded-xl flex items-center gap-4 transition-all cursor-pointer ${editingId === inst.id
+                                        ? 'border-zinc-900 bg-lime-50 shadow-[2px_2px_0px_0px_#18181B]'
+                                        : 'border-zinc-200 hover:border-zinc-400'
+                                        }`}
+                                    onClick={() => startEdit(inst)}
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    {/* Color indicator */}
+                                    <div
+                                        className="w-3 h-12 rounded-full shrink-0"
+                                        style={{ backgroundColor: inst.themeColor || '#6366f1' }}
+                                    />
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-zinc-900 truncate">
+                                            {inst.name}
+                                            {inst.displayLevel && <span className="text-zinc-500 font-normal ml-1">{inst.displayLevel}</span>}
+                                            {inst.volume && <span className="text-zinc-500 font-normal ml-1">{inst.volume}</span>}
+                                        </div>
+                                        <div className="text-xs text-zinc-500 truncate">
+                                            {inst.publisher || '未设置出版社'}
+                                            {inst.totalUnits ? ` · ${inst.totalUnits}课` : ''}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(inst.id, inst.name); }}
+                                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {status === 'CanLoadMore' && (
+                                <button
+                                    onClick={() => loadMore(20)}
+                                    className="w-full py-2 text-sm text-zinc-500 hover:bg-zinc-50 rounded-lg mt-2 font-bold"
+                                >
+                                    加载更多
                                 </button>
-                            </div>
-                        ))
+                            )}
+                            {status === 'LoadingMore' && (
+                                <div className="text-center py-2 text-sm text-zinc-400">Loading more...</div>
+                            )}
+                        </>
                     )}
                 </div>
 
