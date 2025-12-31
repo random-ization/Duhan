@@ -29,11 +29,27 @@ export const api = {
   // --- AUTH ---
   login: async (credentials: any): Promise<{ user: any, token: string }> => {
     const { email, password } = credentials;
-    const result = await client.mutation(convexApi.auth.login, { email, password });
-
-    // Result now contains { user, token } from convex/auth.ts
-    // We cast to any to satisfy frontend types that might mismatch slightly with partial backend types
-    return result as any;
+    try {
+      const result = await client.mutation(convexApi.auth.login, { email, password });
+      return result as any;
+    } catch (err: any) {
+      // ConvexHttpClient wraps ConvexError - extract the data
+      // The error message contains JSON: 'Uncaught ConvexError: {"code":"..."}'
+      const errorMessage = err?.message || '';
+      const jsonMatch = errorMessage.match(/ConvexError:\s*(\{.*\})/);
+      if (jsonMatch) {
+        try {
+          const errorData = JSON.parse(jsonMatch[1]);
+          const newError: any = new Error(errorData.message || 'Authentication failed');
+          newError.data = errorData;
+          newError.code = errorData.code;
+          throw newError;
+        } catch (parseErr) {
+          // If parsing fails, throw original error
+        }
+      }
+      throw err;
+    }
   },
 
   register: async (data: any) => {
