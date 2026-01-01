@@ -90,14 +90,21 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         // Call API to login and get user data
-        const response = await api.login({ email: formData.email, password: formData.password });
+        const response = await api.login({
+          email: formData.email.trim(),
+          password: formData.password.trim()
+        });
         // response contains { user, token }
         login(response.user, response.token);
         const redirectUrl = searchParams.get('redirect') || '/dashboard';
         navigate(redirectUrl);
       } else {
         // Registration - use api helper for consistency
-        await api.register({ name: formData.name, email: formData.email, password: formData.password });
+        await api.register({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          password: formData.password.trim()
+        });
         setIsLogin(true);
         setError('注册成功！请检查邮箱验证后登录。');
       }

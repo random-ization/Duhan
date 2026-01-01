@@ -44,7 +44,12 @@ export const api = {
       // 2. Fallback: Parse error message string for JSON
       // The error message might be 'Uncaught ConvexError: {"code":"..."}' or multi-line
       const errorMessage = err?.message || '';
-      console.error("Login Error Raw:", errorMessage); // For debugging locally if needed
+      console.error("Login Error Details:", {
+        message: errorMessage,
+        data: err.data,
+        stack: err.stack,
+        raw: err
+      });
 
       // Regex to capture JSON object after "ConvexError:" or similar markers
       // Matches {"code":...} possibly across newlines
