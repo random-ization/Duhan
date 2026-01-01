@@ -4,7 +4,7 @@ import { Lock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { api } from '../services/api';
 
 const ResetPasswordPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -37,26 +37,18 @@ const ResetPasswordPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch(`${API_URL}/auth/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword }),
-            });
+            await api.resetPassword({ token, newPassword });
 
-            const data = await response.json();
+            // Force logout to clear any existing session
+            logout();
+            setStatus('success');
+        } catch (err: any) {
+            const message = err.message || err.toString();
+            setError(message || 'Failed to reset password. Please try again.');
 
-            if (response.ok) {
-                // Force logout to clear any existing session
-                logout();
-                setStatus('success');
-            } else {
-                setError(data.error || 'Failed to reset password. Please try again.');
-                if (data.error?.includes('expired') || data.error?.includes('Invalid')) {
-                    setStatus('error');
-                }
+            if (message?.includes('expired') || message?.includes('Invalid')) {
+                setStatus('error');
             }
-        } catch (error) {
-            setError('Network error. Please check your connection and try again.');
         } finally {
             setLoading(false);
         }

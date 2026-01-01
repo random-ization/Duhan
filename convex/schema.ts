@@ -22,6 +22,11 @@ export default defineSchema({
         lastUnit: v.optional(v.number()),
         lastModule: v.optional(v.string()), // Added
         postgresId: v.optional(v.string()),
+
+        // Password Reset
+        resetToken: v.optional(v.string()),
+        resetTokenExpires: v.optional(v.number()),
+
         createdAt: v.number(),
     }).index("by_email", ["email"])
         .index("by_googleId", ["googleId"])

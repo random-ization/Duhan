@@ -94,7 +94,55 @@ export const api = {
 
   googleLogin: async (data: any): Promise<any> => {
     // Not fully implemented on backend yet in this shim context.
-    throw new Error("Google Login migration pending - requires backend processing of OAuth code");
+    // However, AuthPage needs it. If we use the new googleAuth mutation:
+    if (data.code) {
+      // Handle code exchange -> not implemented in shim, but AuthPage calls googleLogin with {code, ...}
+      // We need a backend action to exchange code.
+      throw new Error("Google Login requires backend Action (not implemented in shim)");
+    }
+  },
+
+  updateProfile: async (updates: any) => {
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+    if (!userId) throw new Error("Not logged in");
+    return await client.mutation(convexApi.auth.updateProfile, { userId, ...updates });
+  },
+
+  changePassword: async (data: any) => {
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+    if (!userId) throw new Error("Not logged in");
+    return await client.mutation(convexApi.auth.changePassword, {
+      userId,
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword
+    });
+  },
+
+  requestPasswordReset: async (email: string) => {
+    return await client.mutation(convexApi.auth.requestPasswordReset, { email });
+  },
+
+  resetPassword: async (data: any) => {
+    return await client.mutation(convexApi.auth.resetPassword, {
+      token: data.token,
+      newPassword: data.newPassword
+    });
+  },
+
+  uploadAvatar: async (file: File) => {
+    // Reuse uploadFile logic
+    const { uploadUrl, publicUrl } = await client.action(convexApi.storage.getUploadUrl, {
+      filename: file.name,
+      contentType: file.type
+    });
+
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type, "x-amz-acl": "public-read" },
+      body: file,
+    });
+
+    return { url: publicUrl };
   },
 
   // --- USER DATA ---
@@ -146,7 +194,6 @@ export const api = {
     if (!userId) return;
 
     await client.mutation(convexApi.annotations.save, {
-      userId,
       contextKey: annotation.contextKey,
       text: annotation.text,
       note: annotation.note,
@@ -253,7 +300,46 @@ export const api = {
     return await client.action(convexApi.podcastActions.getEpisodes, { feedUrl });
   },
 
+  // --- CONTENT ---
+  getInstitutes: async (params?: any) => {
+    // Shim for getInstitutes. Supports pagination or returns all.
+    // Frontend expects { institutes: [...] } or list?
+    // Let's use getInstitutes query
+    return await client.query(convexApi.admin.getInstitutes, {
+      limit: params?.limit,
+      cursor: params?.cursor,
+      archived: false
+    });
+  },
+
+  getUserStats: async (userId: string) => {
+    // Use real backend stats query
+    return await client.query(convexApi.userStats.getStats, {});
+  },
+
+  getTextbookContent: async (params: any) => {
+    // Params likely: { institute, level, unit } or similar
+    // Map to units.getDetails if possible, or filter.
+    // For now, return empty object to prevent crash while we fix full logic
+    console.log("api.getTextbookContent called with:", params);
+    return {
+      title: "Unit Content",
+      readingText: "",
+      translation: "",
+      audioUrl: "",
+      vocabList: [],
+      grammarList: []
+    };
+  },
+
   // --- LEGACY / DEPRECATED ---
+  getTopikExams: async (params?: any) => {
+    // Shim for getTopikExams, mapping to getExams query
+    return await client.query(convexApi.topik.getExams, {
+      paginationOpts: params?.paginationOpts
+    });
+  },
+
   request: async (endpoint: string, options?: any) => {
     console.warn(`Legacy api.request called for ${endpoint}. Migration required.`);
     return null;

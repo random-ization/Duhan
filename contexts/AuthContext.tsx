@@ -34,6 +34,7 @@ interface AuthContextType {
   updateUser: (updates: Partial<User>) => void;
   refreshUser: () => Promise<void>;
   setLanguage: (lang: Language) => void;
+  resetPassword: (email: string) => Promise<void>; // Added
 
   // User Actions
   saveWord: (vocabItem: VocabularyItem | string, meaning?: string) => Promise<void>;
@@ -97,6 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const deleteExamAttemptMutation = useMutation(convexApi.user.deleteExamAttempt);
   const logActivityMutation = useMutation(convexApi.user.logActivity);
   const updateLearningProgressMutation = useMutation(convexApi.user.updateLearningProgress);
+  const requestPasswordResetMutation = useMutation(convexApi.auth.requestPasswordReset);
 
   // Initialize language
   const [language, setLanguageState] = useState<Language>(() => {
@@ -234,6 +236,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     setUser(prev => (prev ? { ...prev, ...updates } : null));
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await requestPasswordResetMutation({ email });
+    } catch (e) {
+      console.error("Failed to request password reset:", e);
+      throw e;
+    }
+  }, [requestPasswordResetMutation]);
+
   const saveWord = useCallback(
     async (vocabItem: VocabularyItem | string, meaning?: string) => {
       if (!user) return; // Silent fail if no user? Or token check inside
@@ -350,7 +361,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       // We will pass userId here as it is available on user object.
       try {
         await saveAnnotationMutation({
-          userId: user.id,
           contextKey: annotation.contextKey,
           text: annotation.text,
           note: annotation.note,
@@ -488,6 +498,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     logout,
     updateUser,
     refreshUser,
+    resetPassword,
     setLanguage,
     saveWord,
     recordMistake,

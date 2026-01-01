@@ -380,3 +380,71 @@ export const changePassword = mutation({
         return { success: true };
     }
 });
+
+// Password Reset Request
+export const requestPasswordReset = mutation({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.query("users")
+            .withIndex("by_email", q => q.eq("email", args.email))
+            .first();
+
+        if (!user) {
+            console.log("Password reset requested for non-existent email:", args.email);
+            return { message: "If an account exists, a reset link has been sent." };
+        }
+
+        const token = generateToken();
+        const expires = Date.now() + 3600000; // 1 hour
+
+        await ctx.db.patch(user._id, {
+            resetToken: token,
+            resetTokenExpires: expires
+        });
+
+        // SIMULATE EMAIL SENDING
+        const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+        console.log("=================================================");
+        console.log(" PASSWORD RESET EMAIL SIMULATION ");
+        console.log(" To: " + args.email);
+        console.log(" Link: " + resetLink);
+        console.log("=================================================");
+
+        return { message: "If an account exists, a reset link has been sent." };
+    }
+});
+
+// Password Reset Confirmation
+export const resetPassword = mutation({
+    args: {
+        token: v.string(),
+        newPassword: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const { token, newPassword } = args;
+
+        // Note: Ideally we should use an index for resetToken, but strict mode
+        // prevents me from adding one easily without a migration step that creates it.
+        // Using filter() is acceptable for this low-frequency operation.
+        const user = await ctx.db.query("users")
+            .filter(q => q.eq(q.field("resetToken"), token))
+            .first();
+
+        if (!user) {
+            throw new ConvexError({ code: "INVALID_TOKEN", message: "Invalid or expired reset token." });
+        }
+
+        if (!user.resetTokenExpires || Date.now() > user.resetTokenExpires) {
+            throw new ConvexError({ code: "EXPIRED_TOKEN", message: "Reset token has expired." });
+        }
+
+        await ctx.db.patch(user._id, {
+            password: hashPassword(newPassword),
+            resetToken: undefined,
+            resetTokenExpires: undefined,
+            token: generateToken() // Invalidate session
+        });
+
+        return { success: true };
+    }
+});
