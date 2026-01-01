@@ -21,3 +21,53 @@ export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx): Promis
     const identity = await ctx.auth.getUserIdentity();
     return identity?.subject ?? null;
 }
+
+/**
+ * Robust User Resolver: Tries Token -> Auth Identity -> ID -> PostgresID
+ * This bridges the gap between the Shim (Shim Token) and Native Auth
+ */
+export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | undefined): Promise<any | null> {
+    // 1. Try provided token/ID argument first
+    if (tokenOrId) {
+        // Try by token (Secure/Recent)
+        const byToken = await ctx.db.query("users")
+            .withIndex("by_token", q => q.eq("token", tokenOrId))
+            .first();
+        if (byToken) return byToken;
+
+        // Try as ID (Legacy internal)
+        try {
+            const user = await ctx.db.get(tokenOrId as any);
+            if (user) return user;
+        } catch (e) { /* ignore invalid id */ }
+
+        // Try as PostgresID (Migration)
+        const byPostgres = await ctx.db.query("users")
+            .withIndex("by_postgresId", q => q.eq("postgresId", tokenOrId))
+            .first();
+        if (byPostgres) return byPostgres;
+    }
+
+    // 2. Fallback to Context Auth (Native Client)
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity) {
+        // Identity subject might be token, ID, or postgresID depending on how auth was set up
+        // We recurse once with the identity subject
+        // But to avoid infinite loop (unlikely), let's just do a direct lookup or re-use logic
+        // For simple setup: Subject IS the token in Custom Auth often, or user ID.
+
+        // Try to find user matching this subject
+        const userByToken = await ctx.db.query("users").withIndex("by_token", q => q.eq("token", identity.subject)).first();
+        if (userByToken) return userByToken;
+
+        try {
+            const userById = await ctx.db.get(identity.subject as any);
+            if (userById) return userById;
+        } catch (e) { }
+
+        const userByPostgres = await ctx.db.query("users").withIndex("by_postgresId", q => q.eq("postgresId", identity.subject)).first();
+        if (userByPostgres) return userByPostgres;
+    }
+
+    return null;
+}

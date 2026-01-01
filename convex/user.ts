@@ -2,27 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 
-// Helper to resolve user ID safely (via Token or ID)
-async function getUser(ctx: any, tokenOrId: string): Promise<Doc<"users"> | null> {
-    // 1. Try by token (Preferred/Secure)
-    const byToken = await ctx.db.query("users")
-        .withIndex("by_token", q => q.eq("token", tokenOrId))
-        .first();
-    if (byToken) return byToken;
+import { getUserByTokenOrId } from "./utils";
 
-    // 2. Try as proper ID (Legacy/Internal)
-    try {
-        const user = await ctx.db.get(tokenOrId as Id<"users">);
-        if (user) return user;
-    } catch (e) {
-        // invalid id format, ignore
-    }
-
-    // 3. Fallback to postgresId
-    return await ctx.db.query("users")
-        .withIndex("by_postgresId", q => q.eq("postgresId", tokenOrId))
-        .first();
-}
 
 // Save a word to user's personal list
 export const saveSavedWord = mutation({
@@ -35,7 +16,7 @@ export const saveSavedWord = mutation({
     },
     handler: async (ctx, args) => {
         const { token, korean, english, exampleSentence, exampleTranslation } = args;
-        const user = await getUser(ctx, token);
+        const user = await getUserByTokenOrId(ctx, token);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         await ctx.db.insert("saved_words", {
@@ -61,7 +42,7 @@ export const saveMistake = mutation({
     },
     handler: async (ctx, args) => {
         const { token, wordId, korean, english, context } = args;
-        const user = await getUser(ctx, token);
+        const user = await getUserByTokenOrId(ctx, token);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         await ctx.db.insert("mistakes", {
@@ -90,7 +71,7 @@ export const saveExamAttempt = mutation({
     },
     handler: async (ctx, args) => {
         const { token, examId, score, totalQuestions, sectionScores, duration } = args;
-        const user = await getUser(ctx, token);
+        const user = await getUserByTokenOrId(ctx, token);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         await ctx.db.insert("exam_attempts", {
@@ -118,7 +99,7 @@ export const logActivity = mutation({
     },
     handler: async (ctx, args) => {
         const { token, activityType, duration, itemsStudied, metadata } = args;
-        const user = await getUser(ctx, token);
+        const user = await getUserByTokenOrId(ctx, token);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         await ctx.db.insert("activity_logs", {
@@ -145,7 +126,7 @@ export const updateLearningProgress = mutation({
     },
     handler: async (ctx, args) => {
         const { token, lastInstitute, lastLevel, lastUnit, lastModule } = args;
-        const user = await getUser(ctx, token);
+        const user = await getUserByTokenOrId(ctx, token);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const updates: any = {};
@@ -161,12 +142,33 @@ export const updateLearningProgress = mutation({
 });
 
 // Delete Exam Attempt
+// Delete Exam Attempt
 export const deleteExamAttempt = mutation({
     args: {
+        token: v.optional(v.string()), // Require token for auth
         attemptId: v.id("exam_attempts"),
     },
     handler: async (ctx, args) => {
-        // TODO: In production, verify ownership via a token argument here too
+        // 1. Authenticate (Unified)
+        // getUserByTokenOrId handles both explicit token and context auth fallback
+        const user = await getUserByTokenOrId(ctx, args.token);
+
+        if (!user) {
+            throw new ConvexError({ code: "UNAUTHORIZED" });
+        }
+
+        // 2. Fetch Attempt
+        const attempt = await ctx.db.get(args.attemptId);
+        if (!attempt) {
+            return { success: false, error: "Attempt not found" };
+        }
+
+        // 3. Verify Ownership
+        if (attempt.userId !== user._id) {
+            throw new ConvexError({ code: "FORBIDDEN", message: "You can only delete your own attempts" });
+        }
+
+        // 4. Delete
         await ctx.db.delete(args.attemptId);
         return { success: true };
     }

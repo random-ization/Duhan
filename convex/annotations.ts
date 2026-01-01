@@ -5,30 +5,28 @@ import { getOptionalAuthUserId } from "./utils";
 // Get annotations for a specific context (courseId_unitId)
 export const getByContext = query({
     args: {
+        token: v.optional(v.string()), // Added token support
         contextKey: v.string(), // Format: "courseId_unitId"
     },
     handler: async (ctx, args) => {
-        const identitySubject = await getOptionalAuthUserId(ctx);
-        if (!identitySubject) return [];
+        let user;
+
+        // 1. Try via token arg
+        if (args.token) {
+            user = await getUser(ctx, args.token);
+        }
+
+        // 2. Fallback to Auth
+        if (!user) {
+            const identity = await ctx.auth.getUserIdentity();
+            if (identity) {
+                user = await getUser(ctx, identity.subject);
+            }
+        }
+
+        if (!user) return [];
 
         const { contextKey } = args;
-
-        // Find the user by their subject (Convex auth ID)
-        // Try to match by token or fall back to postgresId for legacy
-        let user = await ctx.db.query("users")
-            .withIndex("by_token", q => q.eq("token", identitySubject))
-            .first();
-
-        if (!user) {
-            // Fall back to finding by postgresId
-            user = await ctx.db.query("users")
-                .withIndex("by_postgresId", q => q.eq("postgresId", identitySubject))
-                .first();
-        }
-
-        if (!user) {
-            return [];
-        }
 
         const annotations = await ctx.db.query("annotations")
             .withIndex("by_user_context", q => q.eq("userId", user._id).eq("contextKey", contextKey))
@@ -46,9 +44,34 @@ export const getByContext = query({
     }
 });
 
+// Helper to resolve user ID safely (via Token or ID)
+async function getUser(ctx: any, tokenOrId: string | null): Promise<any | null> {
+    if (!tokenOrId) return null;
+
+    // 1. Try by token (Preferred/Secure)
+    const byToken = await ctx.db.query("users")
+        .withIndex("by_token", q => q.eq("token", tokenOrId))
+        .first();
+    if (byToken) return byToken;
+
+    // 2. Try as proper ID (Legacy/Internal)
+    try {
+        const user = await ctx.db.get(tokenOrId as any);
+        if (user) return user;
+    } catch (e) {
+        // invalid id format, ignore
+    }
+
+    // 3. Fallback to postgresId
+    return await ctx.db.query("users")
+        .withIndex("by_postgresId", q => q.eq("postgresId", tokenOrId))
+        .first();
+}
+
 // Save a new annotation
 export const save = mutation({
     args: {
+        token: v.optional(v.string()), // Added token support
         contextKey: v.string(),
         text: v.string(),
         note: v.optional(v.string()),
@@ -57,25 +80,26 @@ export const save = mutation({
         endOffset: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
-        const identity = await ctx.auth.getUserIdentity();
-        if (!identity) throw new ConvexError({ code: "UNAUTHORIZED" });
+        let user;
+
+        // 1. Try resolving via token arg first (shim client)
+        if (args.token) {
+            user = await getUser(ctx, args.token);
+        }
+
+        // 2. Fallback to Convex Auth (native client)
+        if (!user) {
+            const identity = await ctx.auth.getUserIdentity();
+            if (identity) {
+                user = await getUser(ctx, identity.subject);
+            }
+        }
+
+        if (!user) {
+            throw new ConvexError({ code: "UNAUTHORIZED" });
+        }
 
         const { contextKey, text, note, color, startOffset, endOffset } = args;
-
-        // Find user by identity subject
-        let user = await ctx.db.query("users")
-            .withIndex("by_token", q => q.eq("token", identity.subject))
-            .first();
-
-        if (!user) {
-            user = await ctx.db.query("users")
-                .withIndex("by_postgresId", q => q.eq("postgresId", identity.subject))
-                .first();
-        }
-
-        if (!user) {
-            throw new ConvexError({ code: "USER_NOT_FOUND" });
-        }
 
         const annotationId = await ctx.db.insert("annotations", {
             userId: user._id,

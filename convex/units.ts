@@ -26,22 +26,18 @@ export const getByCourse = query({
     },
 });
 
+import { getUserByTokenOrId } from "./utils";
+
 export const getDetails = query({
     args: {
+        token: v.optional(v.string()), // Added token support for Shim
         courseId: v.string(),
         unitIndex: v.number(),
     },
     handler: async (ctx, args) => {
-        const identity = await ctx.auth.getUserIdentity();
-        // userId is optional for this query - unauthenticated users can still view content
-        let convexUserId: any = null;
-        if (identity) {
-            // Find user by identity subject
-            const user = await ctx.db.query("users")
-                .withIndex("by_token", q => q.eq("token", identity.subject))
-                .first();
-            convexUserId = user?._id;
-        }
+        // Resolve user via Token (Shim) or Auth (Native)
+        const user = await getUserByTokenOrId(ctx, args.token);
+        const convexUserId = user?._id;
 
         // Fetch all top-level data concurrently
         const [articles, vocabAppearances, courseGrammars, annotations] = await Promise.all([
