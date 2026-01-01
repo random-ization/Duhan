@@ -27,6 +27,9 @@ export default defineSchema({
         resetToken: v.optional(v.string()),
         resetTokenExpires: v.optional(v.number()),
 
+        // Email Verification
+        verifyCode: v.optional(v.string()),
+
         createdAt: v.number(),
     }).index("by_email", ["email"])
         .index("by_googleId", ["googleId"])

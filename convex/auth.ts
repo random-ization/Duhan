@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
+import { api, internal } from "./_generated/api";
 
 import { compareSync, hashSync } from "bcryptjs";
 
@@ -130,6 +131,7 @@ export const register = mutation({
         }
 
         const token = generateToken();
+        const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Create user
         const userId = await ctx.db.insert("users", {
@@ -139,8 +141,15 @@ export const register = mutation({
             role: "STUDENT",
             tier: "FREE",
             isVerified: false,
+            verifyCode,
             token, // Secure token
             createdAt: Date.now(),
+        });
+
+        // Send Verification Email
+        await ctx.scheduler.runAfter(0, internal.emails.sendVerification, {
+            email,
+            code: verifyCode
         });
 
         // Fetch created user to return full profile
@@ -152,7 +161,7 @@ export const register = mutation({
         return {
             user: fullUser,
             token,
-            message: "Registration successful"
+            message: "Registration successful. Please check your email for the verification code."
         };
     }
 });
@@ -402,13 +411,30 @@ export const requestPasswordReset = mutation({
             resetTokenExpires: expires
         });
 
-        // SIMULATE EMAIL SENDING
+        // SEND EMAIL
         const resetLink = `http://localhost:5173/reset-password?token=${token}`;
-        console.log("=================================================");
-        console.log(" PASSWORD RESET EMAIL SIMULATION ");
-        console.log(" To: " + args.email);
-        console.log(" Link: " + resetLink);
-        console.log("=================================================");
+
+        // We use ctx.scheduler to call the action asynchronously without blocking common mutation time limits
+        // or just to separate concerns. 
+        // Note: mutations cannot call actions directly and await result synchronously in the same transaction easily 
+        // unless via scheduler.
+
+        await ctx.scheduler.runAfter(0, api.email.sendEmail, {
+            to: args.email,
+            subject: "Reset your Hangyeol Password",
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Reset Password</h2>
+                    <p>You requested a password reset for your Hangyeol account.</p>
+                    <p>Click the button below to set a new password:</p>
+                    <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #000; color: #fff; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">If you didn't request this, you can ignore this email.</p>
+                    <p style="font-size: 12px; color: #aaa;">Link expires in 1 hour.</p>
+                </div>
+            `
+        });
+
+        console.log("Password reset email scheduled for:", args.email);
 
         return { message: "If an account exists, a reset link has been sent." };
     }

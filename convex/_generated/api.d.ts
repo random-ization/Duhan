@@ -15,6 +15,7 @@ import type * as auth from "../auth.js";
 import type * as debug from "../debug.js";
 import type * as debug_login from "../debug_login.js";
 import type * as debug_reset from "../debug_reset.js";
+import type * as emails from "../emails.js";
 import type * as grammars from "../grammars.js";
 import type * as init from "../init.js";
 import type * as institutes from "../institutes.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   debug: typeof debug;
   debug_login: typeof debug_login;
   debug_reset: typeof debug_reset;
+  emails: typeof emails;
   grammars: typeof grammars;
   init: typeof init;
   institutes: typeof institutes;
