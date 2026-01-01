@@ -164,37 +164,59 @@ export const login = mutation({
         password: v.string(),
     },
     handler: async (ctx, args) => {
-        const { email, password } = args;
-        console.log(`Login attempt for: ${email}`);
+        try {
+            const { email, password } = args;
+            console.log(`[DEBUG] Login attempt start for: ${email}`);
 
-        const user = await ctx.db.query("users")
-            .withIndex("by_email", q => q.eq("email", email))
-            .first();
+            const user = await ctx.db.query("users")
+                .withIndex("by_email", q => q.eq("email", email))
+                .first();
 
-        if (!user) {
-            console.log(`Login failed: User not found for ${email}`);
-            throw new ConvexError({ code: "INVALID_CREDENTIALS" });
+            if (!user) {
+                console.log(`[DEBUG] Login failed: User not found for ${email}`);
+                throw new ConvexError({ code: "INVALID_CREDENTIALS" });
+            }
+
+            console.log(`[DEBUG] User found: ${user._id}, checking password...`);
+
+            // Check password
+            const isMatch = verifyPassword(password, user.password);
+            console.log(`[DEBUG] Password check result: ${isMatch}`);
+
+            if (!isMatch) {
+                console.log(`[DEBUG] Login failed: Password mismatch for ${email}`);
+                throw new ConvexError({ code: "INVALID_CREDENTIALS" });
+            }
+
+            // Generate Token
+            console.log("[DEBUG] Generating token...");
+            const token = generateToken();
+
+            // Patch User
+            console.log("[DEBUG] Patching user token...");
+            await ctx.db.patch(user._id, { token });
+            console.log("[DEBUG] User token patched.");
+
+            // Enrich User
+            console.log("[DEBUG] Starting enrichUser...");
+            const updatedUser = { ...user, token };
+
+            // Log before calling enrichUser
+            const fullUser = await enrichUser(ctx, updatedUser);
+            console.log("[DEBUG] enrichUser successful.");
+
+            return {
+                user: fullUser,
+                token,
+            };
+        } catch (e: any) {
+            console.error("[CRITICAL] Login Mutation CRASHED:", e);
+            // Re-throw so frontend sees it, but now we have a log
+            if (e instanceof ConvexError) throw e;
+
+            // Wrap unknown errors
+            throw new ConvexError({ code: "SERVER_ERROR", message: "Internal: " + e.message });
         }
-
-        console.log(`User found: ${user._id}, checking password...`);
-        if (!verifyPassword(password, user.password)) {
-            console.log(`Login failed: Password mismatch for ${email}`);
-            throw new ConvexError({ code: "INVALID_CREDENTIALS" });
-        }
-
-        // Generate new session token
-        const token = generateToken();
-        await ctx.db.patch(user._id, { token });
-
-        // Get updated user (although we just need to patch implicit object)
-        const updatedUser = { ...user, token };
-
-        const fullUser = await enrichUser(ctx, updatedUser);
-
-        return {
-            user: fullUser,
-            token, // Return real token
-        };
     }
 });
 
