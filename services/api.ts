@@ -33,10 +33,23 @@ export const api = {
       const result = await client.mutation(convexApi.auth.login, { email, password });
       return result as any;
     } catch (err: any) {
-      // ConvexHttpClient wraps ConvexError - extract the data
-      // The error message contains JSON: 'Uncaught ConvexError: {"code":"..."}'
+      // 1. Check if ConvexError data is already attached (modern client)
+      if (err.data && err.data.code) {
+        const newError: any = new Error(err.data.message || 'Authentication failed');
+        newError.data = err.data;
+        newError.code = err.data.code;
+        throw newError;
+      }
+
+      // 2. Fallback: Parse error message string for JSON
+      // The error message might be 'Uncaught ConvexError: {"code":"..."}' or multi-line
       const errorMessage = err?.message || '';
-      const jsonMatch = errorMessage.match(/ConvexError:\s*(\{.*\})/);
+      console.error("Login Error Raw:", errorMessage); // For debugging locally if needed
+
+      // Regex to capture JSON object after "ConvexError:" or similar markers
+      // Matches {"code":...} possibly across newlines
+      const jsonMatch = errorMessage.match(/ConvexError:\s*(\{[\s\S]*?\})/);
+
       if (jsonMatch) {
         try {
           const errorData = JSON.parse(jsonMatch[1]);
@@ -45,9 +58,10 @@ export const api = {
           newError.code = errorData.code;
           throw newError;
         } catch (parseErr) {
-          // If parsing fails, throw original error
+          // If parsing fails, fall through
         }
       }
+
       throw err;
     }
   },
