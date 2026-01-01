@@ -23,6 +23,7 @@ interface ExtendedVocabItem extends VocabularyItem {
 type ViewMode = 'flashcard' | 'quiz' | 'match' | 'list';
 
 export default function VocabModulePage() {
+    // Force Rebuild Trigger: 2026-01-02
     const navigate = useNavigate();
     const { instituteId } = useParams<{ instituteId: string }>();
     const { user, saveWord } = useAuth();
