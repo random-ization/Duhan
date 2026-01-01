@@ -179,327 +179,328 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     loadUser();
   }, [token, userId, convex, onLoginSuccess]);
 
-  (loggedInUser: User, sessionToken?: string) => {
-    console.log('AuthContext.login called with:', loggedInUser, sessionToken);
-    try {
-      if (!loggedInUser || !loggedInUser.id) {
-        console.error('Login failed: Invalid user object', loggedInUser);
-        return;
-      }
+  const login = useCallback(
+    (loggedInUser: User, sessionToken?: string) => {
+      console.log('AuthContext.login called with:', loggedInUser, sessionToken);
+      try {
+        if (!loggedInUser || !loggedInUser.id) {
+          console.error('Login failed: Invalid user object', loggedInUser);
+          return;
+        }
 
-      setUser(loggedInUser);
-      localStorage.setItem('userId', loggedInUser.id);
-      setUserId(loggedInUser.id);
+        setUser(loggedInUser);
+        localStorage.setItem('userId', loggedInUser.id);
+        setUserId(loggedInUser.id);
 
-      if (sessionToken) {
-        setToken(sessionToken);
-        localStorage.setItem('token', sessionToken);
-      }
+        if (sessionToken) {
+          setToken(sessionToken);
+          localStorage.setItem('token', sessionToken);
+        }
 
-      if (onLoginSuccess) {
-        onLoginSuccess();
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
+      } catch (e) {
+        console.error('AuthContext.login CRASHED:', e);
       }
-    } catch (e) {
-      console.error('AuthContext.login CRASHED:', e);
-    }
-  },
+    },
     [onLoginSuccess]
   );
 
-const logout = useCallback(() => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('userId');
-  setUserId(null);
-  setToken(null);
-  setUser(null);
-}, []);
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    setUserId(null);
+    setToken(null);
+    setUser(null);
+  }, []);
 
-const refreshUser = useCallback(async () => {
-  if (!token && !userId) return;
-  try {
-    const userData = await convex.query(convexApi.auth.getMe, {
-      token: token || undefined,
-      userId: userId || undefined
-    });
-    if (userData) {
-      setUser(userData as unknown as User);
-    }
-  } catch (e) {
-    console.error('Failed to refresh user:', e);
-  }
-}, [token, userId, convex]);
-
-const updateUser = useCallback((updates: Partial<User>) => {
-  setUser(prev => (prev ? { ...prev, ...updates } : null));
-}, []);
-
-const saveWord = useCallback(
-  async (vocabItem: VocabularyItem | string, meaning?: string) => {
-    if (!user) return; // Silent fail if no user? Or token check inside
-
-    let newItem: VocabularyItem;
-    let korean = '';
-    let english = '';
-
-    if (typeof vocabItem === 'string' && meaning) {
-      korean = vocabItem;
-      english = meaning;
-      newItem = {
-        korean,
-        english,
-        exampleSentence: '',
-        exampleTranslation: '',
-      };
-    } else {
-      newItem = vocabItem as VocabularyItem;
-      korean = newItem.korean || newItem.word || '';
-      english = newItem.english || newItem.meaning || '';
-    }
-
-    setUser(prev => {
-      if (!prev) return prev;
-      return { ...prev, savedWords: [...(prev.savedWords || []), newItem] };
-    });
-
-    if (!token) return;
-
+  const refreshUser = useCallback(async () => {
+    if (!token && !userId) return;
     try {
-      await saveSavedWordMutation({
-        token,
-        korean,
-        english,
-        exampleSentence: newItem.exampleSentence,
-        exampleTranslation: newItem.exampleTranslation
+      const userData = await convex.query(convexApi.auth.getMe, {
+        token: token || undefined,
+        userId: userId || undefined
       });
-    } catch (e) {
-      console.error('Failed to save word', e);
-    }
-  },
-  [user, token, saveSavedWordMutation]
-);
-
-const recordMistake = useCallback(
-  async (word: Mistake | VocabularyItem) => {
-    if (!user) return;
-
-    const korean = word.korean || (word as any).word;
-    const english = word.english || (word as any).meaning;
-    const wordId = (word as any).id?.includes('mistake') ? undefined : (word as any).id;
-
-    const mistake: Mistake = 'id' in word && (word as any).id.includes('mistake')
-      ? word as Mistake
-      : {
-        id: `mistake-${Date.now()}`,
-        korean,
-        english,
-        createdAt: Date.now(),
-      };
-
-    setUser(prev => {
-      if (!prev) return prev;
-      return { ...prev, mistakes: [...(prev.mistakes || []), mistake] };
-    });
-
-    if (!token) return;
-
-    try {
-      await saveMistakeMutation({
-        token,
-        korean,
-        english,
-        wordId: wordId,
-        context: 'Web App'
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  },
-  [user, token, saveMistakeMutation]
-);
-
-const clearMistakes = useCallback(() => {
-  if (window.confirm('Are you sure?')) {
-    setUser(prev => prev ? { ...prev, mistakes: [] } : prev);
-    // Note: No bulk delete mutation created yet, skipping server sync for now or implement clearMistakes later
-  }
-}, []);
-
-const saveAnnotation = useCallback(
-  async (annotation: Annotation) => {
-    if (!user) return;
-
-    setUser(prevUser => {
-      if (!prevUser) return prevUser;
-      const updatedAnnotations = [...(prevUser.annotations || [])];
-      const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
-
-      if (index !== -1) {
-        if (!annotation.color && (!annotation.note || annotation.note.trim() === '')) {
-          updatedAnnotations.splice(index, 1);
-        } else {
-          updatedAnnotations[index] = annotation;
-        }
-      } else {
-        updatedAnnotations.push(annotation);
+      if (userData) {
+        setUser(userData as unknown as User);
       }
-      return { ...prevUser, annotations: updatedAnnotations };
-    });
-
-    // NOTE: Annotations backend still relies on userId for now, until we update it.
-    // We will pass userId here as it is available on user object.
-    try {
-      await saveAnnotationMutation({
-        userId: user.id,
-        contextKey: annotation.contextKey,
-        text: annotation.text,
-        note: annotation.note,
-        color: annotation.color || undefined,
-        startOffset: annotation.startOffset,
-        endOffset: annotation.endOffset
-      });
-    } catch (apiError) {
-      console.error('Failed to save annotation to server:', apiError);
-    }
-  },
-  [user, saveAnnotationMutation]
-);
-
-const saveExamAttempt = useCallback(
-  async (attempt: ExamAttempt) => {
-    if (!user) return;
-    setUser(prev => {
-      if (!prev) return prev;
-      return { ...prev, examHistory: [...(prev.examHistory || []), attempt] };
-    });
-
-    if (!token) return;
-
-    try {
-      await saveExamAttemptMutation({
-        token,
-        examId: attempt.examId,
-        score: attempt.score,
-        totalQuestions: attempt.maxScore, // Mapping maxScore to totalQuestions for now
-        sectionScores: attempt.userAnswers
-      });
-      await logActivityMutation({
-        token,
-        activityType: 'EXAM',
-        duration: undefined,
-        itemsStudied: 1,
-        metadata: { examId: attempt.examId, score: attempt.score }
-      });
     } catch (e) {
-      console.error(e);
+      console.error('Failed to refresh user:', e);
     }
-  },
-  [user, token, saveExamAttemptMutation, logActivityMutation]
-);
+  }, [token, userId, convex]);
 
-const deleteExamAttempt = useCallback(
-  async (attemptId: string) => {
-    setUser(prev => {
-      if (!prev) return prev;
-      const updatedHistory = (prev.examHistory || []).filter(h => h.id !== attemptId);
-      return { ...prev, examHistory: updatedHistory };
-    });
-    try {
-      // We need explicit ID logic if attemptId is not Convex ID
-      // For now catch error if ID format mismatch
-      await deleteExamAttemptMutation({ attemptId: attemptId as any });
-    } catch (e) {
-      console.error('Failed to delete exam attempt', e);
-    }
-  },
-  [deleteExamAttemptMutation]
-);
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser(prev => (prev ? { ...prev, ...updates } : null));
+  }, []);
 
-const logActivity = useCallback(
-  async (
-    activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
-    duration?: number,
-    itemsStudied?: number,
-    metadata?: any
-  ) => {
-    if (!user || !token) return;
-    try {
-      await logActivityMutation({
-        token,
-        activityType,
-        duration,
-        itemsStudied,
-        metadata
+  const saveWord = useCallback(
+    async (vocabItem: VocabularyItem | string, meaning?: string) => {
+      if (!user) return; // Silent fail if no user? Or token check inside
+
+      let newItem: VocabularyItem;
+      let korean = '';
+      let english = '';
+
+      if (typeof vocabItem === 'string' && meaning) {
+        korean = vocabItem;
+        english = meaning;
+        newItem = {
+          korean,
+          english,
+          exampleSentence: '',
+          exampleTranslation: '',
+        };
+      } else {
+        newItem = vocabItem as VocabularyItem;
+        korean = newItem.korean || newItem.word || '';
+        english = newItem.english || newItem.meaning || '';
+      }
+
+      setUser(prev => {
+        if (!prev) return prev;
+        return { ...prev, savedWords: [...(prev.savedWords || []), newItem] };
       });
-    } catch (e) {
-      console.error('Failed to log activity', e);
-    }
-  },
-  [user, token, logActivityMutation]
-);
 
-const updateLearningProgress = useCallback(
-  async (institute: string, level: number, unit?: number, module?: string) => {
-    if (!user) return;
+      if (!token) return;
 
-    // Optimistic update
-    setUser(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        lastInstitute: institute,
-        lastLevel: level,
-        lastUnit: unit,
-        lastModule: module,
-      };
-    });
+      try {
+        await saveSavedWordMutation({
+          token,
+          korean,
+          english,
+          exampleSentence: newItem.exampleSentence,
+          exampleTranslation: newItem.exampleTranslation
+        });
+      } catch (e) {
+        console.error('Failed to save word', e);
+      }
+    },
+    [user, token, saveSavedWordMutation]
+  );
 
-    if (!token) return;
+  const recordMistake = useCallback(
+    async (word: Mistake | VocabularyItem) => {
+      if (!user) return;
 
-    try {
-      await updateLearningProgressMutation({
-        token,
-        lastInstitute: institute,
-        lastLevel: level,
-        lastUnit: unit,
-        lastModule: module
+      const korean = word.korean || (word as any).word;
+      const english = word.english || (word as any).meaning;
+      const wordId = (word as any).id?.includes('mistake') ? undefined : (word as any).id;
+
+      const mistake: Mistake = 'id' in word && (word as any).id.includes('mistake')
+        ? word as Mistake
+        : {
+          id: `mistake-${Date.now()}`,
+          korean,
+          english,
+          createdAt: Date.now(),
+        };
+
+      setUser(prev => {
+        if (!prev) return prev;
+        return { ...prev, mistakes: [...(prev.mistakes || []), mistake] };
       });
-    } catch (e) {
-      console.error('Failed to update learning progress', e);
+
+      if (!token) return;
+
+      try {
+        await saveMistakeMutation({
+          token,
+          korean,
+          english,
+          wordId: wordId,
+          context: 'Web App'
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    [user, token, saveMistakeMutation]
+  );
+
+  const clearMistakes = useCallback(() => {
+    if (window.confirm('Are you sure?')) {
+      setUser(prev => prev ? { ...prev, mistakes: [] } : prev);
+      // Note: No bulk delete mutation created yet, skipping server sync for now or implement clearMistakes later
     }
-  },
-  [user, token, updateLearningProgressMutation]
-);
+  }, []);
 
-const canAccessContent = useCallback(
-  (content: TextbookContent | TopikExam): boolean => {
-    if (!user) return false;
-    if (user.tier === 'PAID') return true;
-    return !content.isPaid;
-  },
-  [user]
-);
+  const saveAnnotation = useCallback(
+    async (annotation: Annotation) => {
+      if (!user) return;
 
-const value: AuthContextType = {
-  user,
-  loading,
-  language,
-  login,
-  logout,
-  updateUser,
-  refreshUser,
-  setLanguage,
-  saveWord,
-  recordMistake,
-  clearMistakes,
-  saveAnnotation,
-  saveExamAttempt,
-  deleteExamAttempt,
-  logActivity,
-  updateLearningProgress,
-  canAccessContent,
-  showUpgradePrompt,
-  setShowUpgradePrompt,
-};
+      setUser(prevUser => {
+        if (!prevUser) return prevUser;
+        const updatedAnnotations = [...(prevUser.annotations || [])];
+        const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
 
-return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+        if (index !== -1) {
+          if (!annotation.color && (!annotation.note || annotation.note.trim() === '')) {
+            updatedAnnotations.splice(index, 1);
+          } else {
+            updatedAnnotations[index] = annotation;
+          }
+        } else {
+          updatedAnnotations.push(annotation);
+        }
+        return { ...prevUser, annotations: updatedAnnotations };
+      });
+
+      // NOTE: Annotations backend still relies on userId for now, until we update it.
+      // We will pass userId here as it is available on user object.
+      try {
+        await saveAnnotationMutation({
+          userId: user.id,
+          contextKey: annotation.contextKey,
+          text: annotation.text,
+          note: annotation.note,
+          color: annotation.color || undefined,
+          startOffset: annotation.startOffset,
+          endOffset: annotation.endOffset
+        });
+      } catch (apiError) {
+        console.error('Failed to save annotation to server:', apiError);
+      }
+    },
+    [user, saveAnnotationMutation]
+  );
+
+  const saveExamAttempt = useCallback(
+    async (attempt: ExamAttempt) => {
+      if (!user) return;
+      setUser(prev => {
+        if (!prev) return prev;
+        return { ...prev, examHistory: [...(prev.examHistory || []), attempt] };
+      });
+
+      if (!token) return;
+
+      try {
+        await saveExamAttemptMutation({
+          token,
+          examId: attempt.examId,
+          score: attempt.score,
+          totalQuestions: attempt.maxScore, // Mapping maxScore to totalQuestions for now
+          sectionScores: attempt.userAnswers
+        });
+        await logActivityMutation({
+          token,
+          activityType: 'EXAM',
+          duration: undefined,
+          itemsStudied: 1,
+          metadata: { examId: attempt.examId, score: attempt.score }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    [user, token, saveExamAttemptMutation, logActivityMutation]
+  );
+
+  const deleteExamAttempt = useCallback(
+    async (attemptId: string) => {
+      setUser(prev => {
+        if (!prev) return prev;
+        const updatedHistory = (prev.examHistory || []).filter(h => h.id !== attemptId);
+        return { ...prev, examHistory: updatedHistory };
+      });
+      try {
+        // We need explicit ID logic if attemptId is not Convex ID
+        // For now catch error if ID format mismatch
+        await deleteExamAttemptMutation({ attemptId: attemptId as any });
+      } catch (e) {
+        console.error('Failed to delete exam attempt', e);
+      }
+    },
+    [deleteExamAttemptMutation]
+  );
+
+  const logActivity = useCallback(
+    async (
+      activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
+      duration?: number,
+      itemsStudied?: number,
+      metadata?: any
+    ) => {
+      if (!user || !token) return;
+      try {
+        await logActivityMutation({
+          token,
+          activityType,
+          duration,
+          itemsStudied,
+          metadata
+        });
+      } catch (e) {
+        console.error('Failed to log activity', e);
+      }
+    },
+    [user, token, logActivityMutation]
+  );
+
+  const updateLearningProgress = useCallback(
+    async (institute: string, level: number, unit?: number, module?: string) => {
+      if (!user) return;
+
+      // Optimistic update
+      setUser(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          lastInstitute: institute,
+          lastLevel: level,
+          lastUnit: unit,
+          lastModule: module,
+        };
+      });
+
+      if (!token) return;
+
+      try {
+        await updateLearningProgressMutation({
+          token,
+          lastInstitute: institute,
+          lastLevel: level,
+          lastUnit: unit,
+          lastModule: module
+        });
+      } catch (e) {
+        console.error('Failed to update learning progress', e);
+      }
+    },
+    [user, token, updateLearningProgressMutation]
+  );
+
+  const canAccessContent = useCallback(
+    (content: TextbookContent | TopikExam): boolean => {
+      if (!user) return false;
+      if (user.tier === 'PAID') return true;
+      return !content.isPaid;
+    },
+    [user]
+  );
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    language,
+    login,
+    logout,
+    updateUser,
+    refreshUser,
+    setLanguage,
+    saveWord,
+    recordMistake,
+    clearMistakes,
+    saveAnnotation,
+    saveExamAttempt,
+    deleteExamAttempt,
+    logActivity,
+    updateLearningProgress,
+    canAccessContent,
+    showUpgradePrompt,
+    setShowUpgradePrompt,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
