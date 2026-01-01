@@ -76,7 +76,7 @@ export default function VocabModulePage() {
     // Convex Integration
     // Pass user ID (token or Convex ID) to ensure progress data is loaded
     const convexWordsQuery = useQuery(api.vocab.getOfCourse,
-        instituteId ? { courseId: instituteId, userId: user?.token || user?.id } : "skip"
+        instituteId ? { courseId: instituteId, userId: (user as any)?.token || user?.id } : "skip"
     );
     const updateProgressMutation = useMutation(api.vocab.updateProgress);
 
