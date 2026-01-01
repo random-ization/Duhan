@@ -74,8 +74,14 @@ export default function VocabModulePage() {
     }, [textbookContexts]);
 
     // Convex Integration
-    const convexWordsQuery = useQuery(api.vocab.getOfCourse, instituteId ? { courseId: instituteId, userId: user?.id } : "skip");
+    // Pass user ID (token or Convex ID) to ensure progress data is loaded
+    const convexWordsQuery = useQuery(api.vocab.getOfCourse,
+        instituteId ? { courseId: instituteId, userId: user?.token || user?.id } : "skip"
+    );
     const updateProgressMutation = useMutation(api.vocab.updateProgress);
+
+    // Derived Loading State: Query is undefined = loading
+    const isQueryLoading = convexWordsQuery === undefined;
 
     // Effect: Sync Convex Data to State
     useEffect(() => {
@@ -98,9 +104,14 @@ export default function VocabModulePage() {
             );
             setMasteredIds(mastered);
 
+            // Explicitly set loading to false when data arrives
             setLoading(false);
         }
     }, [convexWordsQuery]);
+
+    // Safety fallback: If query is done but loading state stuck (rare race condition), force it off
+    // or just rely on isQueryLoading in the render
+
 
 
     const filteredWords = useMemo(() => {
@@ -132,7 +143,7 @@ export default function VocabModulePage() {
             if (user?.id && currentCard.id) {
                 try {
                     await updateProgressMutation({
-                        userId: user.id,
+                        userId: (user as any)?.token || user?.id, // Pass likely token first
                         wordId: currentCard.id as any,
                         quality: 5
                     });
@@ -154,7 +165,7 @@ export default function VocabModulePage() {
                 });
 
                 await updateProgressMutation({
-                    userId: user.id,
+                    userId: (user as any)?.token || user?.id,
                     wordId: currentCard.id as any,
                     quality: 0
                 });
@@ -238,7 +249,7 @@ export default function VocabModulePage() {
         { id: 'list', label: '速记', emoji: '📝' },
     ];
 
-    if (loading) {
+    if (loading && isQueryLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
                 <div className="flex flex-col items-center gap-4">
