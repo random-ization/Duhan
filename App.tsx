@@ -37,6 +37,10 @@ function App() {
   // Track learning progress when user changes institute/level
   useEffect(() => {
     if (user && selectedInstitute && selectedLevel) {
+      // Prevent feedback loop/concurrent updates
+      if (user.lastInstitute === selectedInstitute && user.lastLevel === selectedLevel) {
+        return;
+      }
       updateLearningProgress(selectedInstitute, selectedLevel);
     }
   }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
