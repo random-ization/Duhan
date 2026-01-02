@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
-import { api } from '../services/api';
+import { useQuery } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import { Loading } from '../components/common/Loading';
 import { FileText, Calendar, User } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
@@ -23,26 +24,20 @@ interface LegalDocument {
 const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documentType }) => {
   const labels = getLabels(language);
   const navigate = useNavigate();
-  const [document, setDocument] = useState<LegalDocument | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    const fetchDocument = async () => {
-      try {
-        setLoading(true);
-        const doc = await api.getLegalDocument(documentType);
-        setDocument(doc);
-      } catch (err) {
-        console.error('Failed to fetch legal document:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const doc = useQuery(convexApi.legal.getDocument, { type: documentType });
 
-    fetchDocument();
-  }, [documentType]);
+  const loading = doc === undefined;
+  // Convert Convex doc result to matching frontend interface if needed, or use directly
+  const document = doc ? {
+    id: doc.id,
+    title: doc.title,
+    content: doc.content,
+    updatedAt: doc.updatedAt,
+    updatedBy: "System"
+  } : null;
+  const error = doc === null; // If query returns null (not undefined) -> error
+
 
   const getTitle = () => {
     switch (documentType) {

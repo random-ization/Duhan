@@ -18,6 +18,7 @@ import type * as init from "../init.js";
 import type * as institutes from "../institutes.js";
 import type * as migrations from "../migrations.js";
 import type * as notebooks from "../notebooks.js";
+import type * as payments from "../payments.js";
 import type * as podcastActions from "../podcastActions.js";
 import type * as podcasts from "../podcasts.js";
 import type * as progress from "../progress.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   institutes: typeof institutes;
   migrations: typeof migrations;
   notebooks: typeof notebooks;
+  payments: typeof payments;
   podcastActions: typeof podcastActions;
   podcasts: typeof podcasts;
   progress: typeof progress;

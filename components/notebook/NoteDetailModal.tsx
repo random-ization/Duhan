@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { X, Trash2, BookOpen, GraduationCap, XCircle, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../../services/api';
+import { useQuery, useMutation } from 'convex/react';
+import { api as convexApi } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 
 // Type display config
 const TYPE_CONFIG: Record<string, { icon: React.ComponentType<any>; label: string; color: string }> = {
@@ -18,40 +20,24 @@ interface NoteDetailModalProps {
 }
 
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDelete }) => {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [note, setNote] = useState<any>(null);
     const [deleting, setDeleting] = useState(false);
 
-    const fetchDetail = useCallback(async () => {
-        if (!noteId) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await api.getNotebookDetail(noteId);
-            if (res.success) {
-                setNote(res.data);
-            } else {
-                setError('无法加载笔记详情');
-            }
-        } catch (e) {
-            setError('加载失败');
-        } finally {
-            setLoading(false);
-        }
-    }, [noteId]);
+    // Convex Integration
+    const noteDetail = useQuery(convexApi.notebooks.getDetail,
+        noteId ? { notebookId: noteId as Id<"notebooks"> } : "skip"
+    );
 
-    useEffect(() => {
-        if (noteId) {
-            fetchDetail();
-        }
-    }, [noteId, fetchDetail]);
+    const loading = noteDetail === undefined && !!noteId;
+    const note = noteDetail?.data;
+    const error = noteDetail && !noteDetail.success ? "无法加载笔记详情" : null;
+
+    const deleteNotebook = useMutation(convexApi.notebooks.remove);
 
     const handleDelete = async () => {
         if (!noteId || deleting) return;
         setDeleting(true);
         try {
-            await api.deleteNotebook(noteId);
+            await deleteNotebook({ notebookId: noteId as Id<"notebooks"> });
             onDelete(noteId);
             onClose();
         } catch (e) {

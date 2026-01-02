@@ -10,7 +10,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useLearning } from '../contexts/LearningContext';
-import { api } from '../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import DailyPhrase from './DailyPhrase';
 import LearnerSummaryCard from './dashboard/LearnerSummaryCard';
 
@@ -62,30 +63,20 @@ export default function ModernDashboard() {
     const [showGoalSettings, setShowGoalSettings] = useState(false);
 
     // 学习统计数据
-    const [stats, setStats] = useState<LearningStats>({
+    const userStats = useQuery(api.userStats.getStats);
+
+    // Default stats if loading or not found
+    const stats: LearningStats = userStats ? {
+        streak: userStats.streak || 0,
+        weeklyMinutes: userStats.weeklyMinutes || [0, 0, 0, 0, 0, 0, 0],
+        todayActivities: userStats.todayActivities || { wordsLearned: 0, readingsCompleted: 0, listeningsCompleted: 0 },
+    } : {
         streak: 0,
         weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
         todayActivities: { wordsLearned: 0, readingsCompleted: 0, listeningsCompleted: 0 },
-    });
+    };
 
-    // 获取学习统计
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const response = await api.getUserStats();
-                if (response) {
-                    setStats({
-                        streak: response.streak || 0,
-                        weeklyMinutes: response.weeklyMinutes || [0, 0, 0, 0, 0, 0, 0],
-                        todayActivities: response.todayActivities || { wordsLearned: 0, readingsCompleted: 0, listeningsCompleted: 0 },
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to fetch stats:', error);
-            }
-        };
-        if (user) fetchStats();
-    }, [user]);
+    /* Effect removed as useQuery handles subscriptions automatically */
 
     // 保存目标设置到 localStorage
     const saveGoals = (newGoals: typeof dailyGoals) => {

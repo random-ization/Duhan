@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare } from 'lucide-react';
-import { request } from '../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
 
 interface DailyPhrase {
     id: string;
@@ -11,25 +12,29 @@ interface DailyPhrase {
 }
 
 const DailyPhrase: React.FC = () => {
-    const [phrase, setPhrase] = useState<DailyPhrase | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    //     const [phrase, setPhrase] = useState<DailyPhrase | null>(null);
+    //     const [loading, setLoading] = useState(true);
+    //     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchDailyPhrase = async () => {
-            try {
-                const data = await request<DailyPhrase>('/daily-phrase/today');
-                setPhrase(data);
-            } catch (err) {
-                console.error('Error fetching daily phrase:', err);
-                setError('加载失败');
-            } finally {
-                setLoading(false);
-            }
-        };
+    const phrase = useQuery(api.vocab.getDailyPhrase);
+    const loading = phrase === undefined;
+    const error = phrase === null;
 
-        fetchDailyPhrase();
-    }, []);
+    //     useEffect(() => {
+    //         const fetchDailyPhrase = async () => {
+    //             try {
+    //                 const data = await request<DailyPhrase>('/daily-phrase/today');
+    //                 setPhrase(data);
+    //             } catch (err) {
+    //                 console.error('Error fetching daily phrase:', err);
+    //                 setError('加载失败');
+    //             } finally {
+    //                 setLoading(false);
+    //             }
+    //         };
+    // 
+    //         fetchDailyPhrase();
+    //     }, []);
 
     if (loading) {
         return (

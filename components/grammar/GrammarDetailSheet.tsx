@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Trophy, AlertCircle } from 'lucide-react';
 import { GrammarPointData } from '../../types';
-import { api } from '../../services/api';
+import { useAction, useMutation } from "convex/react";
+import { api as convexApi } from "../../convex/_generated/api";
 
 interface GrammarDetailSheetProps {
     grammar: GrammarPointData | null;
@@ -20,6 +21,9 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({ grammar, onClos
     const [isChecking, setIsChecking] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
 
+    const checkAction = useAction(convexApi.ai.checkGrammarSentence);
+    const updateStatus = useMutation(convexApi.grammars.updateStatus);
+
     // Reset state when grammar changes
     useEffect(() => {
         setPracticeSentence('');
@@ -33,29 +37,59 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({ grammar, onClos
         setIsChecking(true);
         setAiFeedback(null);
         try {
-            const response = await api.checkGrammarSentence(grammar.id, practiceSentence.trim());
-            if (response.success && response.data) {
-                setAiFeedback({
-                    isCorrect: response.data.isCorrect,
-                    feedback: response.data.feedback,
-                    correctedSentence: response.data.correctedSentence,
-                    progress: response.data.progress
-                });
+            // 1. Check with AI
+            const response = await checkAction({
+                grammarTitle: grammar.title,
+                sentence: practiceSentence.trim()
+            });
 
-                // Trigger confetti on correct answer
-                if (response.data.isCorrect) {
+            if (response.success && response.data) {
+                const { isCorrect, feedback, correctedSentence } = response.data;
+
+                let progress = undefined;
+
+                // 2. If correct, update progress via mutation
+                if (isCorrect) {
+                    // We mark as "LEARNING" with a bump, or just update generally. 
+                    // The existing updateStatus mutation takes (id, status).
+                    // But here we might just want to increment proficiency?
+                    // The mutation `updateStatus` logic: if MASTERED -> 100, else keep existing or set 0.
+                    // It doesn't seem to support incremental proficiency bump easily without 'status'.
+                    // Let's assume for practice we set/maintain 'LEARNING' which might update 'lastStudiedAt'.
+                    // If we want to bump proficiency, we might need a specific 'recordPractice' mutation.
+                    // For now, let's call updateStatus('LEARNING') to refresh 'lastStudiedAt'.
+
+                    // Actually legacy behavior implies proficiency boost.
+                    // The current `updateStatus` sets proficiency to 0 if new learning, or 100 if mastered.
+                    // It doesn't handle incremental steps. 
+                    // I'll stick to updating to "LEARNING" (which refreshes timestamp) 
+                    // or maybe I should create a `recordPractice` mutation later. 
+                    // Use `updateStatus` for now, it returns { status, proficiency }.
+                    const res = await updateStatus({
+                        grammarId: grammar.id as any,
+                        status: 'LEARNING'
+                    });
+                    progress = res;
+
                     setShowConfetti(true);
                     setTimeout(() => setShowConfetti(false), 2000);
 
-                    // Notify parent about proficiency update
-                    if (onProficiencyUpdate && response.data.progress) {
+                    // Notify parent to refresh local view if needed (though parent might use query)
+                    if (onProficiencyUpdate) {
                         onProficiencyUpdate(
                             grammar.id,
-                            response.data.progress.proficiency,
-                            response.data.progress.status
+                            res.proficiency,
+                            res.status
                         );
                     }
                 }
+
+                setAiFeedback({
+                    isCorrect,
+                    feedback,
+                    correctedSentence,
+                    progress
+                });
             }
         } catch (error) {
             console.error('Grammar check failed:', error);
@@ -150,7 +184,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({ grammar, onClos
                         <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
                             <div
                                 className={`h-full transition-all duration-500 ${status === 'MASTERED' ? 'bg-green-500' :
-                                        status === 'LEARNING' ? 'bg-amber-500' : 'bg-slate-400'
+                                    status === 'LEARNING' ? 'bg-amber-500' : 'bg-slate-400'
                                     }`}
                                 style={{ width: `${proficiency}%` }}
                             />

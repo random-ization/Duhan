@@ -26,7 +26,7 @@ const GrammarModulePage: React.FC = () => {
 
     // Convex Integration
     const grammarListQuery = useQuery(api.grammars.getUnitGrammar,
-        instituteId ? { courseId: instituteId, unitId: selectedUnit, userId: user?.id } : "skip"
+        instituteId ? { courseId: instituteId, unitId: selectedUnit } : "skip"
     );
     const updateStatusMutation = useMutation(api.grammars.updateStatus);
 
@@ -67,7 +67,6 @@ const GrammarModulePage: React.FC = () => {
 
         try {
             await updateStatusMutation({
-                userId: user.id,
                 grammarId: grammarId as any,
                 status: newStatus
             });

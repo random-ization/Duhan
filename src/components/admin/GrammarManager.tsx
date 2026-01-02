@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import {
     BookOpen, Plus, Loader2, Search, Trash2, Check, X,
     ChevronDown, Sparkles, GraduationCap
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Institute {
     id: string;
@@ -29,7 +31,7 @@ interface GrammarItem {
 }
 
 interface SearchResult {
-    id: string;
+    _id: string; // Changed to _id to match Convex
     title: string;
     searchKey?: string;
     level: string;
@@ -38,178 +40,136 @@ interface SearchResult {
 }
 
 export const GrammarManager: React.FC = () => {
-    const [institutes, setInstitutes] = useState<Institute[]>([]);
+    // 1. Fetch Institutes (Convex)
+    const institutes = useQuery(api.institutes.getAll) || [];
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+
+    // Default select first institute
+    useEffect(() => {
+        if (institutes.length > 0 && !selectedCourseId) {
+            setSelectedCourseId(institutes[0].id);
+        }
+    }, [institutes, selectedCourseId]);
+
     const [selectedUnit, setSelectedUnit] = useState<number>(1);
-    const [units, setUnits] = useState<UnitInfo[]>([]);
-    const [grammars, setGrammars] = useState<GrammarItem[]>([]);
-    const [loading, setLoading] = useState(false);
+
+    // 2. Fetch Unit Titles (Convex)
+    // Using api.units.getByCourse to get metadata including titles
+    const unitList = useQuery(api.units.getByCourse, selectedCourseId ? { courseId: selectedCourseId } : "skip");
+
+    // 3. Generate Full Unit List (combining totalUnits + fetched titles)
+    const units = useMemo(() => {
+        const institute = institutes.find((i: any) => i.id === selectedCourseId);
+        const total = institute?.totalUnits || 20; // Default
+
+        const allUnits: UnitInfo[] = Array.from({ length: total }, (_, i) => ({
+            unitIndex: i + 1,
+            title: ''
+        }));
+
+        if (unitList) {
+            unitList.forEach((u: any) => {
+                const target = allUnits.find(item => item.unitIndex === u.unitIndex);
+                if (target) target.title = u.title;
+            });
+        }
+        return allUnits;
+    }, [institutes, selectedCourseId, unitList]);
+
+    // 4. Fetch Grammars for Unit (Convex)
+    const grammarsData = useQuery(
+        api.grammars.getUnitGrammar,
+        selectedCourseId ? { courseId: selectedCourseId, unitId: selectedUnit } : "skip"
+    );
+    const grammarsLoading = grammarsData === undefined;
+    const grammars = grammarsData || [];
 
     // Search and add state
     const [showAddPanel, setShowAddPanel] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-    const [searching, setSearching] = useState(false);
+
+    // 5. Search Query (Convex)
+    const searchData = useQuery(api.grammars.search, searchQuery ? { query: searchQuery } : "skip");
+    const searchResults = searchData || [];
+    const searching = searchQuery && searchData === undefined;
+
     const [showNewForm, setShowNewForm] = useState(false);
 
     // New grammar form
     const [newTitle, setNewTitle] = useState('');
     const [newSummary, setNewSummary] = useState('');
     const [newExplanation, setNewExplanation] = useState('');
+
+    // Mutations
+    const createGrammar = useMutation(api.grammars.create);
+    const assignToUnit = useMutation(api.grammars.assignToUnit);
+    const removeFromUnit = useMutation(api.grammars.removeFromUnit);
+
     const [creating, setCreating] = useState(false);
-
-    // Load institutes
-    useEffect(() => {
-        loadInstitutes();
-    }, []);
-
-    // Load units when course changes
-    useEffect(() => {
-        if (selectedCourseId) {
-            loadUnits(selectedCourseId);
-        }
-    }, [selectedCourseId]);
-
-    // Load grammars when course/unit changes
-    useEffect(() => {
-        if (selectedCourseId && selectedUnit) {
-            loadGrammars();
-        }
-    }, [selectedCourseId, selectedUnit]);
-
-    const loadInstitutes = async () => {
-        try {
-            const data = await api.getInstitutes();
-            setInstitutes(data);
-            if (data.length > 0) setSelectedCourseId(data[0].id);
-        } catch (e) {
-            console.error('Failed to load institutes', e);
-        }
-    };
-
-    const loadUnits = async (courseId: string) => {
-        // 1. Generate full list based on totalUnits
-        const institute = institutes.find(i => i.id === courseId);
-        const total = institute?.totalUnits || 20; // Default if missing
-
-        const allUnits: UnitInfo[] = Array.from({ length: total }, (_, i) => ({
-            unitIndex: i + 1,
-            title: ''
-        }));
-        setUnits(allUnits);
-
-        // 2. Fetch existing titles to update the list
-        try {
-            const response = await api.getUnitsForCourse(courseId);
-            if (response.success && response.data) {
-                const existingUnits = response.data;
-                setUnits(prev => prev.map(u => {
-                    const match = existingUnits.find((e: any) => e.unitIndex === u.unitIndex);
-                    return match ? { ...u, title: match.title } : u;
-                }));
-            }
-        } catch (e) {
-            console.error('Failed to load unit titles', e);
-        }
-    };
-
-    const loadGrammars = async () => {
-        setLoading(true);
-        try {
-            const response = await api.getUnitGrammars(selectedCourseId, selectedUnit);
-            if (response.data) {
-                setGrammars(response.data);
-            }
-        } catch (e) {
-            console.error('Failed to load grammars', e);
-            setGrammars([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSearch = useCallback(async () => {
-        if (!searchQuery.trim()) {
-            setSearchResults([]);
-            return;
-        }
-        setSearching(true);
-        try {
-            const response = await api.searchGrammar(searchQuery);
-            if (response.success && response.data) {
-                setSearchResults(response.data);
-            }
-        } catch (e) {
-            console.error('Search failed', e);
-        } finally {
-            setSearching(false);
-        }
-    }, [searchQuery]);
-
-    // Debounce search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (searchQuery.trim()) {
-                handleSearch();
-            } else {
-                setSearchResults([]);
-            }
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchQuery, handleSearch]);
 
     const handleAssign = async (grammarId: string) => {
         try {
-            await api.assignGrammarToUnit(selectedCourseId, selectedUnit, grammarId);
+            await assignToUnit({
+                courseId: selectedCourseId,
+                unitId: selectedUnit,
+                grammarId: grammarId as any
+            });
             setShowAddPanel(false);
             setSearchQuery('');
-            setSearchResults([]);
-            loadGrammars();
+            toast.success('已关联语法点');
         } catch (e) {
             console.error('Assign failed', e);
-            alert('关联失败');
+            toast.error('关联失败');
         }
     };
 
     const handleRemove = async (grammarId: string) => {
         if (!confirm('确定要从本单元移除这个语法点吗？')) return;
         try {
-            await api.removeGrammarFromUnit(selectedCourseId, selectedUnit, grammarId);
-            loadGrammars();
+            await removeFromUnit({
+                courseId: selectedCourseId,
+                unitId: selectedUnit,
+                grammarId: grammarId as any
+            });
+            toast.success('已移除');
         } catch (e) {
             console.error('Remove failed', e);
-            alert('移除失败');
+            toast.error('移除失败');
         }
     };
 
     const handleCreateAndAssign = async () => {
         if (!newTitle.trim()) {
-            alert('请输入语法标题');
+            toast.error('请输入语法标题');
             return;
         }
         setCreating(true);
         try {
-            const response = await api.createGrammar({
+            const { id } = await createGrammar({
                 title: newTitle.trim(),
                 summary: newSummary.trim(),
                 explanation: newExplanation.trim(),
                 type: 'PATTERN',
                 level: 'INTERMEDIATE'
             });
-            if (response.success && response.data) {
-                // Auto-assign to current unit
-                await api.assignGrammarToUnit(selectedCourseId, selectedUnit, response.data.id);
-                // Reset form
-                setNewTitle('');
-                setNewSummary('');
-                setNewExplanation('');
-                setShowNewForm(false);
-                setShowAddPanel(false);
-                loadGrammars();
-            }
+
+            // Auto-assign to current unit
+            await assignToUnit({
+                courseId: selectedCourseId,
+                unitId: selectedUnit,
+                grammarId: id
+            });
+
+            // Reset form
+            setNewTitle('');
+            setNewSummary('');
+            setNewExplanation('');
+            setShowNewForm(false);
+            setShowAddPanel(false);
+            toast.success('创建并关联成功');
         } catch (e) {
             console.error('Create failed', e);
-            alert('创建失败');
+            toast.error('创建失败');
         } finally {
             setCreating(false);
         }
@@ -226,7 +186,7 @@ export const GrammarManager: React.FC = () => {
                         value={selectedCourseId}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
                     >
-                        {institutes.map(i => (
+                        {institutes.map((i: any) => (
                             <option key={i.id} value={i.id}>
                                 {i.name}
                                 {i.displayLevel ? ` ${i.displayLevel}` : ''}
@@ -256,8 +216,8 @@ export const GrammarManager: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2 mt-4">
-                    <h3 className="font-black text-sm text-zinc-500 mb-2">本单元语法 ({grammars.length})</h3>
-                    {loading ? (
+                    <h3 className="font-black text-sm text-zinc-500 mb-2">本单元语法 ({grammars?.length || 0})</h3>
+                    {grammarsLoading ? (
                         <div className="text-center py-4"><Loader2 className="animate-spin mx-auto" /></div>
                     ) : grammars.length === 0 ? (
                         <div className="text-center text-zinc-400 py-10">
@@ -265,9 +225,9 @@ export const GrammarManager: React.FC = () => {
                             <p className="text-sm">暂无语法点</p>
                         </div>
                     ) : (
-                        grammars.map(g => (
+                        grammars.map((g: any) => (
                             <div
-                                key={g.id}
+                                key={g.id || g._id}
                                 className="p-3 border-2 border-zinc-200 rounded-lg flex items-start justify-between hover:border-zinc-400 transition-colors"
                             >
                                 <div className="flex-1">
@@ -275,8 +235,9 @@ export const GrammarManager: React.FC = () => {
                                     <div className="text-xs text-zinc-500 truncate">{g.summary}</div>
                                 </div>
                                 <button
-                                    onClick={() => handleRemove(g.id)}
+                                    onClick={() => handleRemove(g.id || g._id)}
                                     className="ml-2 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    title="从单元移除"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -328,11 +289,11 @@ export const GrammarManager: React.FC = () => {
                         ) : searchResults.length > 0 ? (
                             <div className="space-y-2 mb-6">
                                 <h3 className="text-sm font-bold text-zinc-500">搜索结果</h3>
-                                {searchResults.map(r => (
+                                {searchResults.map((r: any) => (
                                     <div
-                                        key={r.id}
+                                        key={r._id}
                                         className="flex items-center justify-between p-3 border-2 border-zinc-200 rounded-lg hover:border-lime-400 cursor-pointer transition-colors"
-                                        onClick={() => handleAssign(r.id)}
+                                        onClick={() => handleAssign(r._id)}
                                     >
                                         <div>
                                             <div className="font-bold">{r.title}</div>

@@ -5,6 +5,8 @@ import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';
 import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
+import { useConvex } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -31,6 +33,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 }) => {
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
   const navigate = useNavigate();
+  const convex = useConvex();
 
   const [view, setViewState] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
@@ -83,15 +86,23 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     }
   }, [examId, urlView, exams]);
 
+  const fetchQuestions = async (examId: string) => {
+    // Use "legacyId" argument as defined in convex/topik.ts
+    const questions = await convex.query(api.topik.getExamQuestions, { examId });
+    // Map Convex questions to frontend TopikQuestion if needed
+    // convex/topik.ts returns array of questions with number, question, etc.
+    // Interface matches decently.
+    return questions;
+  };
+
   const selectExamFromUrl = async (exam: TopikExam, viewParam?: string) => {
     setLoading(true);
     try {
-      const { api } = await import('../../services/api');
-      let fullQuestions = await api.getTopikExamQuestions(exam.id);
+      let fullQuestions: any[] = await fetchQuestions(exam.id);
       if (!fullQuestions) fullQuestions = [];
 
       const fullExam = { ...exam, questions: fullQuestions };
-      setCurrentExam(fullExam);
+      setCurrentExam(fullExam as TopikExam);
       setUserAnswers({});
       setTimeLeft(exam.timeLimit * 60);
 
@@ -135,10 +146,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     setLoading(true); // 开始加载
     try {
-      // 始终从后端代理获取最新数据，避免缓存问题
-      const { api } = await import('../../services/api');
-      console.log('[selectExam] Fetching fresh questions from backend...');
-      let fullQuestions = await api.getTopikExamQuestions(exam.id);
+      console.log('[selectExam] Fetching fresh questions from Convex...');
+      let fullQuestions: any[] = await fetchQuestions(exam.id);
       console.log('[selectExam] Got questions:', fullQuestions?.length || 0, 'items');
 
       // 如果还是空的，给个默认空数组防止白屏
@@ -153,7 +162,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         questions: fullQuestions
       };
 
-      setCurrentExam(fullExam);
+      setCurrentExam(fullExam as TopikExam);
       setUserAnswers({});
       setTimeLeft(exam.timeLimit * 60);
       // Navigate to cover page (sets both URL and internal state)
@@ -226,12 +235,11 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         setLoading(true);
         try {
           // Load full questions from API
-          const { api } = await import('../../services/api');
-          let fullQuestions = await api.getTopikExamQuestions(exam.id);
+          let fullQuestions: any[] = await fetchQuestions(exam.id);
           if (!fullQuestions) fullQuestions = [];
 
           const fullExam = { ...exam, questions: fullQuestions };
-          setCurrentExam(fullExam);
+          setCurrentExam(fullExam as TopikExam);
           setUserAnswers(attempt.userAnswers);
           setView('REVIEW');
         } catch (error) {

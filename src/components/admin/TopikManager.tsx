@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import legacyApi from '../../../services/api'; // For file uploads only
+import { useFileUpload } from '../../hooks/useFileUpload';
 import {
     FileText, Headphones, Save, Trash2, Loader2, Plus,
     ArrowLeft, Upload, CheckSquare, ImageIcon, FileUp, X
@@ -131,6 +131,9 @@ export const TopikManager: React.FC = () => {
     const [uploading, setUploading] = useState(false);
     const [loadingQuestions, setLoadingQuestions] = useState(false);
 
+    // Upload Hook
+    const { uploadFile } = useFileUpload();
+
     // Bulk Import Modal
     const [showImportModal, setShowImportModal] = useState(false);
     const [importText, setImportText] = useState('');
@@ -183,8 +186,8 @@ export const TopikManager: React.FC = () => {
     const handleFileUpload = async (file: File, onSuccess: (url: string) => void) => {
         setUploading(true);
         try {
-            const res = await legacyApi.uploadFile(file);
-            onSuccess(res.url);
+            const { url } = await uploadFile(file);
+            onSuccess(url);
         } catch (e) {
             console.error(e);
             alert('Upload failed. Please try again.');

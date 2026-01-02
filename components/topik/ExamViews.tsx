@@ -10,7 +10,9 @@ import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
 import CanvasLayer, { CanvasData, ToolType, CanvasToolbar } from '../../src/features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../src/features/annotation/hooks/useCanvasAnnotation';
-import api from '../../services/api';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import toast from 'react-hot-toast';
 
 const PAPER_MAX_WIDTH = "max-w-[900px]";
 const FONT_SERIF = "font-serif";
@@ -264,6 +266,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const labels = useMemo(() => getLabels(language), [language]);
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
+    // Convex Mutation
+    const saveNotebook = useMutation(api.notebooks.save);
+
     const structure = exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
 
     // Calculate stats
@@ -461,20 +466,27 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       const context = question?.question || question?.passage?.substring(0, 100) || '';
 
       // Save to notebook
-      await api.saveNotebook({
-        type: 'VOCAB',
-        title: text,
-        content: {
-          word: text,
-          context: context,
-          examId: exam.id,
-          examTitle: exam.title,
-          questionIndex: questionIndex ? parseInt(questionIndex) : undefined,
-          savedAt: new Date().toISOString(),
-        },
-        tags: ['exam-vocab', `topik-${exam.round}`],
-      });
-    }, [exam, selectionContextKey]);
+      try {
+        await saveNotebook({
+          type: 'VOCAB',
+          title: text,
+          content: {
+            text: text, // Normalized field for notebook content
+            word: text,
+            context: context,
+            examId: exam.id,
+            examTitle: exam.title,
+            questionIndex: questionIndex ? parseInt(questionIndex) : undefined,
+            savedAt: new Date().toISOString(),
+          },
+          tags: ['exam-vocab', `topik-${exam.round}`],
+        });
+        toast.success("Saved to Notebook");
+      } catch (e: any) {
+        console.error("Failed to save to notebook", e);
+        toast.error("Failed to save");
+      }
+    }, [exam, selectionContextKey, saveNotebook]);
 
     const tempAnnotation: Annotation | null = showAnnotationMenu && selectionText && selectionContextKey ? {
       id: 'temp',

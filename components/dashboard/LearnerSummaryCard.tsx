@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
 import { BentoCard } from './BentoCard';
 
@@ -12,30 +13,20 @@ interface SummaryStats {
 }
 
 export const LearnerSummaryCard: React.FC = () => {
-    const [stats, setStats] = useState<SummaryStats | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Convex Integration
+    const userStats = useQuery(api.userStats.getStats);
 
-    useEffect(() => {
-        loadStats();
-    }, []);
+    const stats = userStats ? {
+        streak: userStats.streak,
+        todayMinutes: userStats.dailyMinutes,
+        dailyGoal: userStats.dailyGoal,
+        dailyProgress: userStats.dailyProgress,
+        wordsToReview: userStats.todayActivities.wordsLearned
+    } : null;
 
-    const loadStats = async () => {
-        try {
-            // Use getUserStats which returns real calculated data
-            const response = await api.getUserStats();
-            setStats({
-                streak: response.streak,
-                todayMinutes: response.dailyMinutes,
-                dailyGoal: response.dailyGoal,
-                dailyProgress: response.dailyProgress,
-                wordsToReview: response.todayActivities.wordsLearned
-            });
-        } catch (e) {
-            console.error('LearnerSummaryCard: Failed to load stats', e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    /* Legacy fetch removed
+    const loadStats = async () => { ... }
+    */
 
     if (loading) {
         return (

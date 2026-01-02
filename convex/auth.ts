@@ -80,6 +80,8 @@ async function enrichUser(ctx: any, user: Doc<"users">) {
         name: user.name,
         role: user.role,
         tier: user.tier,
+        subscriptionType: user.subscriptionType,
+        subscriptionExpiry: user.subscriptionExpiry,
         avatar: user.avatar,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
@@ -430,7 +432,7 @@ export const requestPasswordReset = mutation({
         // Note: mutations cannot call actions directly and await result synchronously in the same transaction easily 
         // unless via scheduler.
 
-        await ctx.scheduler.runAfter(0, api.email.sendEmail, {
+        await ctx.scheduler.runAfter(0, api.emails.sendEmail, {
             to: args.email,
             subject: "Reset your Hangyeol Password",
             html: `

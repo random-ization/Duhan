@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePaginatedQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { api as legacyApi } from '../../../services/api';
+import { useFileUpload } from '../../hooks/useFileUpload';
 import {
     BookOpen, Plus, Loader2, Trash2, Edit2, Save, X,
     Image as ImageIcon, Palette, Upload
@@ -34,7 +34,9 @@ export const InstituteManager: React.FC = () => {
 
     const [loading, setLoading] = useState(false); // Only for mutation actions now
     const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
+
+    // Upload Hook
+    const { uploadFile, uploading } = useFileUpload();
 
     // Edit mode
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -175,18 +177,13 @@ export const InstituteManager: React.FC = () => {
             return;
         }
 
-        setUploading(true);
         try {
-            // Use legacy shim for upload (or migrate to separate storage action)
-            const result = await legacyApi.uploadFile(file);
-            if (result.url) {
-                setFormData({ ...formData, coverUrl: result.url });
-            }
+            const { url } = await uploadFile(file);
+            setFormData({ ...formData, coverUrl: url });
         } catch (err) {
             console.error('Upload failed', err);
             alert('上传失败');
         } finally {
-            setUploading(false);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
@@ -196,7 +193,6 @@ export const InstituteManager: React.FC = () => {
 
     // Re-implement upload using fetch directly or legacy shim if imported
     // To match original code's behavior:
-    // We need to import { api as legacyApi } from '../../../services/api';
 
     // ...
 

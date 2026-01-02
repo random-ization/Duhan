@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAction } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react'; // Added hooks
 import { api as convexApi } from '../convex/_generated/api';
 import {
     ArrowLeft,
@@ -23,7 +23,6 @@ import {
     ListMusic,
     RefreshCw
 } from 'lucide-react';
-import { api } from '../services/api'; // Legacy API for transcript generation
 import BackButton from '../components/ui/BackButton';
 
 // Types
@@ -141,6 +140,16 @@ const PodcastPlayerPage: React.FC = () => {
     const [showPlaylist, setShowPlaylist] = useState(false);
     const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
     const [resumeTime, setResumeTime] = useState<number | null>(null);
+    const resumeCheckedRef = useRef<string | null>(null); // Track resume check to prevent override
+
+    // Convex Hooks
+    const generateTranscript = useAction(convexApi.ai.generateTranscript);
+    const getEpisodes = useAction(convexApi.podcastActions.getEpisodes);
+    const deleteTranscript = useMutation(convexApi.ai.deleteTranscript);
+
+    const trackView = useMutation(convexApi.podcasts.trackView);
+    const saveProgress = useMutation(convexApi.podcasts.saveProgress);
+    const history = useQuery(convexApi.podcasts.getHistory) || [];
 
     // --- Helpers ---
     const formatTime = (seconds: number) => {
@@ -216,10 +225,14 @@ const PodcastPlayerPage: React.FC = () => {
 
                 // Step 2: Generate
                 if (isMounted) setIsGeneratingTranscript(true);
-                const result = await api.generateTranscript(episode.audioUrl, episodeId, 'zh');
+                const result = await generateTranscript({
+                    audioUrl: episode.audioUrl,
+                    episodeId,
+                    language: 'zh'
+                });
 
                 if (isMounted) {
-                    if (result.success && result.data?.segments) {
+                    if (result?.success && result.data?.segments) {
                         setTranscript(result.data.segments);
                         // 🔥 Save to localStorage for next time
                         try {
@@ -252,7 +265,7 @@ const PodcastPlayerPage: React.FC = () => {
         if (channel.feedUrl) {
             const fetchPlaylist = async () => {
                 try {
-                    const data = await api.getPodcastEpisodes(channel.feedUrl);
+                    const data = await getEpisodes({ feedUrl: channel.feedUrl! });
                     if (isMounted && data?.episodes) {
                         setPlaylist(data.episodes);
                     }
@@ -265,20 +278,23 @@ const PodcastPlayerPage: React.FC = () => {
 
         // Track View
         if (episode?.audioUrl) {
-            api.trackPodcastView({
-                guid: episode.guid || `${episode.title}-${Date.now()}`,
-                title: episode.title,
-                audioUrl: episode.audioUrl,
-                duration: episode.duration,
-                pubDate: episode.pubDate,
-                channel: {
-                    itunesId: channel.itunesId || channel.id || 'unknown',
-                    title: channel.title || episode.channelTitle || 'Unknown',
-                    author: channel.author || '',
-                    feedUrl: channel.feedUrl || '',
-                    artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork
-                }
-            }).catch(console.error);
+            // Track View
+            if (episode?.audioUrl) {
+                trackView({
+                    guid: episode.guid || `${episode.title}-${Date.now()}`,
+                    title: episode.title,
+                    audioUrl: episode.audioUrl,
+                    duration: typeof episode.duration === 'string' ? 0 : episode.duration, // Convert if needed
+                    pubDate: episode.pubDate ? new Date(episode.pubDate).getTime() : Date.now(),
+                    channel: {
+                        itunesId: channel.itunesId || (channel as any).id || 'unknown',
+                        title: channel.title || episode.channelTitle || 'Unknown',
+                        author: channel.author || '',
+                        feedUrl: channel.feedUrl || '',
+                        artworkUrl: channel.artworkUrl || (channel as any).artwork || episode.channelArtwork
+                    }
+                }).catch(console.error);
+            }
         }
 
         // Cleanup: prevent updates after unmount
@@ -287,31 +303,35 @@ const PodcastPlayerPage: React.FC = () => {
     }, [episode.audioUrl]);
 
     // 1.5 Resume Playback Logic
+    // 1.5 Resume Playback Logic
     useEffect(() => {
         const checkResume = async () => {
             if (!episode?.guid) return;
+            if (resumeCheckedRef.current === episode.guid) return; // Already checked for this episode
+
+            // Using history from query which is already loaded (hopefully)
+            // If history isn't loaded yet, this might run again when history updates
+            if (!history) return;
+
             try {
-                // Fetch recent history to find progress
-                // Optimization: In real app, might want a specific endpoint for single episode progress
-                const history = await api.getPodcastHistory().catch(() => []);
-                // Match by guid (or title if guid is unstable/generated)
                 // Match by guid (or title if guid is unstable/generated)
                 const record = history.find(h =>
                     h.episodeGuid === episode.guid ||
-                    (h.episodeTitle === episode.title && (h.channelName === episode.channel?.title || h.channelName === episode.channelTitle))
+                    (h.episodeTitle === episode.title && (h.channelName === (channel.title || episode.channelTitle)))
                 );
 
-                if (record && record.progress > 0 && record.progress < (record.duration || 3600)) {
+                if (record && record.progress > 0 && record.progress < ((record.duration || 3600) - 10)) {
                     console.log(`[Resume] Found progress: ${record.progress}s`);
                     setResumeTime(record.progress);
                     setCurrentTime(record.progress); // Update UI immediately
+                    resumeCheckedRef.current = episode.guid;
                 }
             } catch (e) {
                 console.error('[Resume] Failed to check history', e);
             }
         };
         checkResume();
-    }, [episode.guid, episode.audioUrl]);
+    }, [episode.guid, episode.audioUrl, history, channel.title, episode.channelTitle, episode.title]);
 
     // 1.6 Apply Resume Time (Wait for Metadata)
     useEffect(() => {
@@ -323,14 +343,18 @@ const PodcastPlayerPage: React.FC = () => {
     }, [resumeTime, duration, isLoading]);
 
     // 1.7 Save Progress Periodically
+    // 1.7 Save Progress Periodically
     useEffect(() => {
         const interval = setInterval(() => {
             if (isPlaying && currentTime > 5 && episode.guid) {
-                api.savePodcastProgress(episode.guid, Math.floor(currentTime)).catch(() => { });
+                saveProgress({
+                    episodeGuid: episode.guid,
+                    progress: Math.floor(currentTime)
+                }).catch(() => { });
             }
         }, 10000); // Save every 10 seconds
         return () => clearInterval(interval);
-    }, [isPlaying, currentTime, episode.guid]);
+    }, [isPlaying, currentTime, episode.guid, saveProgress]);
 
     // 2. Transcript Loading Logic
     const loadTranscript = async () => {
@@ -355,9 +379,13 @@ const PodcastPlayerPage: React.FC = () => {
 
             // Generate
             setIsGeneratingTranscript(true);
-            const result = await api.generateTranscript(episode.audioUrl, episodeId, 'zh');
+            const result = await generateTranscript({
+                audioUrl: episode.audioUrl,
+                episodeId,
+                language: 'zh'
+            });
 
-            if (result.success && result.data?.segments) {
+            if (result?.success && result.data?.segments) {
                 setTranscript(result.data.segments);
             } else {
                 throw new Error('Invalid transcript response');
@@ -439,7 +467,7 @@ const PodcastPlayerPage: React.FC = () => {
         setTranscript([]);
 
         try {
-            await api.deleteTranscript(episodeId);
+            await deleteTranscript({ episodeId });
             // Force reload from API
             await loadTranscript();
         } catch (e) {

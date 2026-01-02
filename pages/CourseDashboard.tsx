@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
-import { useData } from '../contexts/DataContext';
-import api from '../services/api';
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+
 
 // Grammar point type from API
 interface GrammarPoint {
@@ -16,63 +17,31 @@ interface GrammarPoint {
 export default function CourseDashboard() {
     const navigate = useNavigate();
     const { instituteId } = useParams<{ instituteId: string }>();
-    const { institutes } = useData();
 
-    // State for grammar points from API
-    const [grammarPoints, setGrammarPoints] = useState<GrammarPoint[]>([]);
-    const [loadingGrammar, setLoadingGrammar] = useState(true);
+    // Use same Convex query as CoursesOverview for consistency
+    const institutes = useQuery(api.institutes.getAll);
 
-    // State for vocabulary stats
-    const [vocabStats, setVocabStats] = useState({ total: 0, mastered: 0 });
-    const [loadingVocab, setLoadingVocab] = useState(true);
+    // Convex Queries for Grammar and Vocab
+    const grammarList = useQuery(api.grammars.getByCourse, instituteId ? { courseId: instituteId } : "skip");
+    const vocabData = useQuery(api.vocab.getStats, instituteId ? { courseId: instituteId } : "skip");
+
+    // Loading states
+    const loadingGrammar = grammarList === undefined;
+    const loadingVocab = vocabData === undefined;
+
+    // Derived Data
+    const grammarPoints = grammarList || [];
+    const vocabStats = vocabData || { total: 0, mastered: 0 };
 
     // Find current course by ID
-    const course = institutes.find(i => i.id === instituteId);
+    const course = institutes?.find((i: any) => i.id === instituteId);
     const courseName = course?.name || '首尔大学韩国语 1A';
     const displayLevel = course?.displayLevel || '第一册';
     const coverUrl = course?.coverUrl;
     const totalUnits = course?.totalUnits || 10;
 
-    // Fetch grammar points from API
-    useEffect(() => {
-        const fetchGrammar = async () => {
-            if (!instituteId) return;
-            try {
-                setLoadingGrammar(true);
-                const response = await api.getCourseGrammar(instituteId);
-                setGrammarPoints(response.data || []);
-            } catch (error) {
-                console.error('Failed to fetch grammar:', error);
-            } finally {
-                setLoadingGrammar(false);
-            }
-        };
-        fetchGrammar();
-    }, [instituteId]);
-
-    // Fetch vocabulary stats
-    useEffect(() => {
-        const fetchVocabStats = async () => {
-            if (!instituteId) return;
-            try {
-                setLoadingVocab(true);
-                const response = await api.getCourseVocab(instituteId);
-                if (response.success) {
-                    const words = response.words || [];
-                    // TODO: Get mastered count from user progress API when available
-                    setVocabStats({ total: words.length, mastered: 0 });
-                }
-            } catch (error) {
-                console.error('Failed to fetch vocab stats:', error);
-            } finally {
-                setLoadingVocab(false);
-            }
-        };
-        fetchVocabStats();
-    }, [instituteId]);
-
     // Calculate overall progress
-    const grammarMastered = grammarPoints.filter(g => g.status === 'MASTERED').length;
+    const grammarMastered = grammarPoints.filter((g: any) => g.status === 'MASTERED').length;
     const grammarTotal = grammarPoints.length;
     const vocabProgress = vocabStats.total > 0 ? (vocabStats.mastered / vocabStats.total) * 100 : 0;
     const grammarProgress = grammarTotal > 0 ? (grammarMastered / grammarTotal) * 100 : 0;

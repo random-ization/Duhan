@@ -2,17 +2,20 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
+import { useAction } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { Globe, Check } from 'lucide-react';
 import { Language } from '../types';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
-import { api } from '../services/api';
 
 const SubscriptionPage: React.FC = () => {
     const { user, language, setLanguage } = useAuth();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+
+    const createCheckoutSession = useAction(api.payments.createCheckoutSession);
 
     const languages: { code: Language; label: string }[] = [
         { code: 'en', label: 'English' },
@@ -201,7 +204,7 @@ const SubscriptionPage: React.FC = () => {
                 {/* --- 3. Pricing Section --- */}
                 <PricingSection onSubscribe={async (plan) => {
                     try {
-                        const { checkoutUrl } = await api.createCheckoutSession(plan as 'MONTHLY' | 'ANNUAL' | 'LIFETIME');
+                        const { checkoutUrl } = await createCheckoutSession({ plan: plan as any });
                         window.location.href = checkoutUrl;
                     } catch (error: any) {
                         console.error('Checkout failed:', error);

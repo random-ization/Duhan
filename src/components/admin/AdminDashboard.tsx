@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
+import { useQuery } from 'convex/react';
+import { api as convexApi } from '../../../convex/_generated/api';
 import {
     Users, BookOpen, GraduationCap, FileText,
     Loader2, TrendingUp, DollarSign, Zap, Activity,
@@ -9,7 +10,8 @@ import {
 interface OverviewStats {
     users: number;
     institutes: number;
-    vocabulary: number;
+    // overview stats could return string for vocab limit indicator
+    vocabulary: number | string;
     grammar: number;
     units: number;
     exams: number;
@@ -32,12 +34,14 @@ interface ActivitySummary {
 }
 
 export const AdminDashboard: React.FC = () => {
-    const [overview, setOverview] = useState<OverviewStats | null>(null);
-    const [aiUsage, setAiUsage] = useState<AiUsageStats | null>(null);
-    const [activity, setActivity] = useState<ActivitySummary | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+    const overview = useQuery(convexApi.admin.getOverviewStats);
+    const aiUsage = useQuery(convexApi.admin.getAiUsageStats, { days: 30 });
+    const activity = useQuery(convexApi.admin.getRecentActivity, { limit: 50 });
 
+    const loading = overview === undefined || aiUsage === undefined || activity === undefined;
+    const refreshing = false; // Realtime updates via Convex
+
+    /* Legacy fetch removed
     useEffect(() => {
         loadAllStats();
     }, []);
@@ -66,6 +70,8 @@ export const AdminDashboard: React.FC = () => {
         await loadAllStats();
         setRefreshing(false);
     };
+    */
+    const handleRefresh = () => { }; // No-op since it's realtime
 
     if (loading) {
         return (
@@ -109,7 +115,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
                             <stat.icon className="w-5 h-5" />
                         </div>
-                        <div className="text-2xl font-black">{stat.value.toLocaleString()}</div>
+                        <div className="text-2xl font-black">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</div>
                         <div className="text-xs text-zinc-500 font-medium">{stat.label}</div>
                     </div>
                 ))}
@@ -151,7 +157,7 @@ export const AdminDashboard: React.FC = () => {
                             <div>
                                 <div className="text-xs font-bold text-zinc-500 mb-2">按功能分布</div>
                                 <div className="space-y-2">
-                                    {Object.entries(aiUsage.byFeature).map(([feature, stats]) => (
+                                    {Object.entries(aiUsage.byFeature).map(([feature, stats]: [string, any]) => (
                                         <div key={feature} className="flex items-center justify-between text-sm">
                                             <span className="font-medium">{feature}</span>
                                             <div className="flex items-center gap-3">

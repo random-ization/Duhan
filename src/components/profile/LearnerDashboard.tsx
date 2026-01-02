@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import {
     Flame, BookOpen, GraduationCap, Clock, Target,
     Loader2, ChevronRight, RefreshCw
@@ -28,22 +29,14 @@ export const LearnerDashboard: React.FC = () => {
     const [stats, setStats] = useState<LearnerStats | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadStats();
-    }, []);
+    const statsData = useQuery(api.userStats.getStats);
 
-    const loadStats = async () => {
-        try {
-            const response = await api.getMyStats();
-            if (response.success) {
-                setStats(response.data);
-            }
-        } catch (e) {
-            console.error('Failed to load stats', e);
-        } finally {
+    useEffect(() => {
+        if (statsData) {
+            setStats(statsData as any);
             setLoading(false);
         }
-    };
+    }, [statsData]);
 
     if (loading) {
         return (

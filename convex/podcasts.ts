@@ -191,20 +191,102 @@ export const toggleSubscription = mutation({
     }
 });
 
-// Track View (increment episode views)
+// Track View (Find or Create Episode and increment views)
 export const trackView = mutation({
     args: {
-        episodeId: v.id("podcast_episodes"),
+        guid: v.string(),
+        title: v.string(),
+        audioUrl: v.string(),
+        duration: v.optional(v.any()), // number or string
+        pubDate: v.optional(v.any()), // string or number
+        channel: v.object({
+            itunesId: v.optional(v.string()),
+            title: v.string(),
+            author: v.optional(v.string()),
+            feedUrl: v.optional(v.string()),
+            artworkUrl: v.optional(v.string()),
+        }),
     },
     handler: async (ctx, args) => {
-        const episode = await ctx.db.get(args.episodeId);
+        const { guid, title, audioUrl, duration, pubDate, channel: channelInfo } = args;
+
+        // 1. Find or Create Channel
+        let channelId;
+        if (channelInfo.feedUrl) {
+            const existingChannel = await ctx.db.query("podcast_channels")
+                .withIndex("by_feedUrl", q => q.eq("feedUrl", channelInfo.feedUrl!))
+                .first();
+
+            if (existingChannel) {
+                channelId = existingChannel._id;
+            } else {
+                channelId = await ctx.db.insert("podcast_channels", {
+                    title: channelInfo.title,
+                    author: channelInfo.author || "Unknown",
+                    feedUrl: channelInfo.feedUrl,
+                    artworkUrl: channelInfo.artworkUrl,
+                    itunesId: channelInfo.itunesId,
+                    isFeatured: false,
+                    createdAt: Date.now(),
+                });
+            }
+        } else {
+            // Fallback: Try to find by title if no feedUrl
+            const existingChannel = await ctx.db.query("podcast_channels")
+                .filter(q => q.eq(q.field("title"), channelInfo.title))
+                .first();
+            if (existingChannel) channelId = existingChannel._id;
+        }
+
+        if (!channelId) {
+            // Create dummy channel if needed or just skip channel linkage strictly? 
+            // For now, let's allow episode without strict channel check if we can't find it easily?
+            // Actually, listening_history stores channelName string.
+            // But podcast_episodes needs channelId.
+            // Let's create a placeholder channel if we really have to.
+            channelId = await ctx.db.insert("podcast_channels", {
+                title: channelInfo.title,
+                author: channelInfo.author || "Unknown",
+                feedUrl: channelInfo.feedUrl || "",
+                artworkUrl: channelInfo.artworkUrl,
+                createdAt: Date.now(),
+                isFeatured: false
+            });
+        }
+
+        // 2. Find or Create Episode
+        let episode = await ctx.db.query("podcast_episodes")
+            .withIndex("by_channel", q => q.eq("channelId", channelId))
+            .filter(q => q.eq(q.field("guid"), guid))
+            .first();
+
+        if (!episode) {
+            // Try match by audioUrl just in case
+            episode = await ctx.db.query("podcast_episodes")
+                .filter(q => q.eq(q.field("audioUrl"), audioUrl))
+                .first();
+        }
+
         if (episode) {
-            await ctx.db.patch(args.episodeId, {
+            await ctx.db.patch(episode._id, {
                 views: (episode.views || 0) + 1,
             });
             return { success: true, views: episode.views + 1 };
+        } else {
+            // Create new episode
+            const newId = await ctx.db.insert("podcast_episodes", {
+                channelId,
+                guid,
+                title,
+                audioUrl,
+                duration: typeof duration === 'number' ? duration : 0,
+                pubDate: pubDate ? new Date(pubDate).getTime() : Date.now(),
+                views: 1,
+                likes: 0,
+                createdAt: Date.now(),
+            });
+            return { success: true, views: 1 };
         }
-        return { success: false, views: 0 };
     }
 });
 

@@ -4,7 +4,8 @@ import { Lock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 
-import { api } from '../services/api';
+import { useMutation } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 
 const ResetPasswordPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -19,6 +20,8 @@ const ResetPasswordPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'form' | 'success' | 'error'>('form');
     const [error, setError] = useState('');
+
+    const resetPassword = useMutation(convexApi.auth.resetPassword);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,7 +40,7 @@ const ResetPasswordPage: React.FC = () => {
         setLoading(true);
 
         try {
-            await api.resetPassword({ token, newPassword });
+            await resetPassword({ token, newPassword });
 
             // Force logout to clear any existing session
             logout();

@@ -1,10 +1,9 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { useAction } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import { api as convexApi } from '../../convex/_generated/api';
 import { TopikQuestion, Language, Annotation } from '../../types';
 import { Volume2, Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
-import { api } from '../../services/api'; // Legacy API for notebook
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -113,6 +112,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     const [showSaveToast, setShowSaveToast] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
 
+    const saveNotebook = useMutation(convexApi.notebooks.save);
+
     const handleSaveToNotebook = useCallback(async () => {
       if (!aiAnalysis || isSaving || isSaved) return;
 
@@ -127,7 +128,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
         console.log('[Save to Notebook] Saving...', { title, type: 'MISTAKE' });
 
-        const result = await api.saveNotebook({
+        const result = await saveNotebook({
           type: 'MISTAKE',
           title,
           content: {
@@ -147,13 +148,13 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
 
         console.log('[Save to Notebook] Result:', result);
 
-        if (result?.success) {
+        if (result) {
           setIsSaved(true);
           setShowSaveToast(true);
           // Auto hide toast after 4 seconds
           setTimeout(() => setShowSaveToast(false), 4000);
         } else {
-          throw new Error('Save failed: ' + JSON.stringify(result));
+          throw new Error('Save failed');
         }
       } catch (err: any) {
         console.error('[Save to Notebook] Error:', err);
@@ -163,7 +164,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       } finally {
         setIsSaving(false);
       }
-    }, [aiAnalysis, isSaving, isSaved, question, questionIndex, correctAnswer]);
+    }, [aiAnalysis, isSaving, isSaved, question, questionIndex, correctAnswer, saveNotebook]);
 
     // Helper for highlight styles
     // 高亮默认用色块背景，有笔记的用下划线区分

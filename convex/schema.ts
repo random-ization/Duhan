@@ -9,6 +9,8 @@ export default defineSchema({
         name: v.string(),
         role: v.string(), // "STUDENT" | "ADMIN"
         tier: v.string(),
+        subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
+        subscriptionExpiry: v.optional(v.string()), // ISO Date or timestamp string
         avatar: v.optional(v.string()),
 
         // Auth
@@ -136,7 +138,8 @@ export default defineSchema({
         createdAt: v.optional(v.number()),
         updatedAt: v.optional(v.number()),
     }).index("by_title", ["title"])
-        .index("by_postgresId", ["postgresId"]),
+        .index("by_postgresId", ["postgresId"])
+        .searchIndex("search_title", { searchField: "title" }),
 
     // Course Grammar (Linking Grammar to Courses)
     course_grammars: defineTable({
@@ -258,6 +261,7 @@ export default defineSchema({
         channelImage: v.optional(v.string()),
 
         progress: v.number(), // Seconds played
+        duration: v.optional(v.number()), // Total seconds
         playedAt: v.number(),
     }).index("by_user", ["userId"])
         .index("by_user_episode", ["userId", "episodeGuid"]),
@@ -376,4 +380,30 @@ export default defineSchema({
     }).index("by_user", ["userId"])
         .index("by_user_exam", ["userId", "examId"])
         .index("by_status", ["status"]),
+
+    // Canvas Layers (Drawings/Handwriting)
+    canvas_layers: defineTable({
+        // userId: v.string(), // Removed duplicate
+        // userStats uses Query to get ID. best to use v.string() for flexibility or v.id("users") if confident.
+        // annotations uses v.id("users"). Let's use v.string() to match user_vocab_progress flexibility
+        // or v.id("users") if we enforce auth. annotations.ts resolves user and uses user._id.
+        // Let's use v.id("users") for consistency with annotations.
+        userId: v.id("users"),
+        targetId: v.string(), // e.g., unitId or examId
+        targetType: v.string(), // "TEXTBOOK", "EXAM"
+        pageIndex: v.number(),
+
+        data: v.any(), // Canvas paths/strokes JSON
+
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_user_target", ["userId", "targetId", "pageIndex"]),
+
+    // Legal Documents
+    legal_documents: defineTable({
+        identifier: v.string(), // "terms", "privacy", "refund"
+        title: v.string(),
+        content: v.string(),
+        updatedAt: v.number(),
+    }).index("by_id", ["identifier"]),
 });

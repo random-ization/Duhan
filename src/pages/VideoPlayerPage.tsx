@@ -13,7 +13,6 @@ import {
     BookOpen,
     List // Added List icon for mobile toggle
 } from 'lucide-react';
-// import api from '../../services/api';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 // import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom

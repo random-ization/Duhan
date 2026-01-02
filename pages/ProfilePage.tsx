@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useMutation, useAction } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { Language, SubscriptionType } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
-import { api } from '../services/api';
+
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/common/Toast';
 import { Button } from '../components/common/Button';
@@ -37,6 +39,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Convex Mutations & Actions
+  const updateProfileMutation = useMutation(api.auth.updateProfile);
+  const changePasswordMutation = useMutation(api.auth.changePassword);
+  const getUploadUrlAction = useAction(api.storage.getUploadUrl);
+
   if (!user) return <Loading fullScreen size="lg" />;
 
   const handleNameUpdate = async () => {
@@ -45,11 +52,13 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       return;
     }
     try {
-      await api.updateProfile({ name: newName });
+      // await api.updateProfile({ name: newName });
+      await updateProfileMutation({ userId: user.id, name: newName });
       updateUser({ name: newName });
       success(labels.profileUpdated);
       setIsEditingName(false);
     } catch (err) {
+      console.error(err);
       error('Failed to update name');
     }
   };
@@ -67,10 +76,30 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
     setIsUploadingAvatar(true);
     try {
-      const result = await api.uploadAvatar(file);
-      updateUser({ avatar: result.url });
+      // 1. Get Upload URL
+      const { uploadUrl, publicUrl } = await getUploadUrlAction({
+        filename: file.name,
+        contentType: file.type
+      });
+
+      // 2. Upload to S3
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+          'x-amz-acl': 'public-read'
+        },
+        body: file,
+      });
+
+      // 3. Update Profile with new Avatar URL (Fixes persistence bug)
+      await updateProfileMutation({ userId: user.id, avatar: publicUrl });
+
+      // 4. Update local state
+      updateUser({ avatar: publicUrl });
       success(labels.avatarUpdated);
     } catch (err) {
+      console.error("Avatar upload failed:", err);
       error('Failed to upload avatar');
     } finally {
       setIsUploadingAvatar(false);
@@ -83,11 +112,17 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     if (newPassword !== confirmPassword) { error(labels.passwordMismatch); return; }
     setIsChangingPassword(true);
     try {
-      await api.changePassword({ currentPassword, newPassword });
+      // await api.changePassword({ currentPassword, newPassword });
+      await changePasswordMutation({
+        userId: user.id,
+        currentPassword,
+        newPassword
+      });
       success(labels.passwordUpdated);
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
     } catch (err: any) {
-      if (err.message.includes('incorrect') || err.message.includes('wrong')) {
+      const msg = err.message || '';
+      if (msg.includes('incorrect') || msg.includes('wrong') || msg.includes('INCORRECT_PASSWORD')) {
         error(labels.wrongPassword);
       } else {
         error('Failed to change password');

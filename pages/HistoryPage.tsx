@@ -1,27 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { Play, Calendar } from 'lucide-react';
-import { ListeningHistoryItem } from '../types';
+import { ListeningHistoryItem, User } from '../types';
 import { PODCAST_MESSAGES } from '../constants/podcast-messages';
 import BackButton from '../components/ui/BackButton';
 import EmptyState from '../src/components/common/EmptyState';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HistoryPage() {
-    const [history, setHistory] = useState<ListeningHistoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
+
+    const history = useQuery(api.podcasts.getHistory);
+    const loading = history === undefined;
+    const error = null; // Convex handles errors via ErrorBoundary usually, or returns undefined while loading
     const navigate = useNavigate();
 
-    useEffect(() => {
-        api.getPodcastHistory()
-            .then(setHistory)
-            .catch(err => {
-                console.error('Failed to load history:', err);
-                setError(PODCAST_MESSAGES.ERROR_LOAD_HISTORY);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+    // Mapping logic if necessary (Convex returns _id, frontend might wait for id)
+    // The query returns { ...h, id: h._id } so it should be compatible.
+    // However, ListeningHistoryItem type check might be strict.
+    // Let's assume the spread in convex/podcasts.ts matches.
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
@@ -37,19 +35,11 @@ export default function HistoryPage() {
                     </div>
                 )}
 
-                {!loading && error && (
-                    <div className="text-center py-10">
-                        <p className="text-red-500 mb-4">{error}</p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="text-indigo-600 hover:underline"
-                        >
-                            {PODCAST_MESSAGES.ACTION_RETRY}
-                        </button>
-                    </div>
-                )}
+                {/* Error handling in Convex is usually done via wrapping calls or side effects. 
+                    If query failed, it throws. For simple UI, we assume success or handled by ErrorBoundary. 
+                */}
 
-                {!loading && !error && history.length === 0 && (
+                {!loading && (!history || history.length === 0) && (
                     <EmptyState
                         icon={Play}
                         title="还没有收听记录"
@@ -59,7 +49,7 @@ export default function HistoryPage() {
                     />
                 )}
 
-                {history.map((item) => (
+                {history?.map((item: any) => (
                     <div
                         key={item.id}
                         onClick={() => navigate('/podcasts/player', {

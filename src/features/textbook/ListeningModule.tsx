@@ -9,7 +9,8 @@ import {
     Loader2,
     X
 } from 'lucide-react';
-import api from '../../../services/api';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
 
 // =========================================
@@ -188,38 +189,33 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // ========================================
     // Data Fetching - Use dedicated listening API
     // ========================================
-    useEffect(() => {
-        const fetchUnitData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await api.getListeningUnit(courseId, unitIndex);
-                if (response.success && response.data) {
-                    setUnitData({
-                        id: response.data.id,
-                        title: response.data.title,
-                        audioUrl: response.data.audioUrl,
-                        transcriptData: response.data.transcriptData,
-                    });
-                } else {
-                    // No data yet - show empty state (not an error)
-                    setUnitData(null);
-                }
-            } catch (err: any) {
-                console.error('[ListeningModule] Failed to fetch listening data:', err);
-                // 404 means no content yet - show empty state, not error
-                if (err?.message?.includes('404') || err?.status === 404) {
-                    setUnitData(null);
-                } else {
-                    setError('加载失败，请重试');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
+    // ========================================
+    // Data Fetching - Use dedicated listening API
+    // ========================================
+    const unitDetails = useQuery(api.units.getDetails, { courseId, unitIndex });
 
-        fetchUnitData();
-    }, [courseId, unitIndex]);
+    useEffect(() => {
+        if (unitDetails === undefined) {
+            setLoading(true);
+            return;
+        }
+
+        if (unitDetails && unitDetails.unit) {
+            setUnitData({
+                id: unitDetails.unit._id,
+                title: unitDetails.unit.title,
+                audioUrl: unitDetails.unit.audioUrl || '',
+                transcriptData: unitDetails.unit.transcriptData,
+            });
+            setLoading(false);
+        } else {
+            // Not found or empty
+            setUnitData(null);
+            setLoading(false);
+        }
+    }, [unitDetails]);
+
+    // Cleanup error state logic as useQuery handles it differently (returns undefined on loading)
 
     // ========================================
     // Karaoke Logic: Update active segment based on current time

@@ -136,7 +136,8 @@ export const save = mutation({
         readingText: v.string(),
         translation: v.optional(v.string()),
         audioUrl: v.optional(v.string()),
-        analysisData: v.optional(v.any()), // Can be more specific: v.array(v.object({...}))
+        analysisData: v.optional(v.any()),
+        transcriptData: v.optional(v.any()), // JSON transcript
     },
     handler: async (ctx, args) => {
         const existing = await ctx.db
@@ -153,6 +154,7 @@ export const save = mutation({
                 translation: args.translation,
                 audioUrl: args.audioUrl,
                 analysisData: args.analysisData,
+                transcriptData: args.transcriptData,
             });
             return existing._id;
         } else {
@@ -165,6 +167,7 @@ export const save = mutation({
                 translation: args.translation,
                 audioUrl: args.audioUrl,
                 analysisData: args.analysisData,
+                transcriptData: args.transcriptData,
                 createdAt: Date.now(),
             });
         }

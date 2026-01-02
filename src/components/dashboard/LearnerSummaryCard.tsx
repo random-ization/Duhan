@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
 
 interface SummaryStats {
@@ -10,9 +11,20 @@ interface SummaryStats {
 }
 
 export const LearnerSummaryCard: React.FC = () => {
-    const [stats, setStats] = useState<SummaryStats | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Convex Integration
+    const userStats = useQuery(api.userStats.getStats);
 
+    // Derived values
+    const loading = userStats === undefined;
+    const stats = userStats ? {
+        streak: userStats.streak,
+        todayMinutes: userStats.todayMinutes,
+        dailyGoal: userStats.dailyGoal,
+        wordsToReview: userStats.wordsToReview
+    } : null;
+
+    // Legacy fetch removed
+    /*
     useEffect(() => {
         loadStats();
     }, []);
@@ -34,6 +46,7 @@ export const LearnerSummaryCard: React.FC = () => {
             setLoading(false);
         }
     };
+    */
 
     if (loading) {
         return (

@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { api } from '../services/api';
+import { useAction } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const PaymentSuccessPage: React.FC = () => {
@@ -11,6 +12,8 @@ const PaymentSuccessPage: React.FC = () => {
     const { refreshUser } = useAuth();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('Verifying payment...');
+
+    const verifyPaymentSession = useAction(convexApi.payments.verifyPaymentSession);
 
     useEffect(() => {
         const verifyPayment = async () => {
@@ -23,7 +26,7 @@ const PaymentSuccessPage: React.FC = () => {
 
             try {
                 // Call backend to verify the session
-                await api.verifyPaymentSession(sessionId);
+                await verifyPaymentSession({ sessionId });
                 setStatus('success');
                 // Refresh user profile to get new subscription status
                 await refreshUser();
@@ -43,7 +46,7 @@ const PaymentSuccessPage: React.FC = () => {
         };
 
         verifyPayment();
-    }, [searchParams, navigate, refreshUser]);
+    }, [searchParams, navigate, refreshUser, verifyPaymentSession]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

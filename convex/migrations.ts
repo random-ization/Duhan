@@ -1,6 +1,24 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+// Fix institutes missing isArchived field (migration fix)
+export const fixInstitutesIsArchived = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const institutes = await ctx.db.query("institutes").collect();
+        let updatedCount = 0;
+
+        for (const inst of institutes) {
+            if (inst.isArchived === undefined) {
+                await ctx.db.patch(inst._id, { isArchived: false });
+                updatedCount++;
+            }
+        }
+
+        return { updated: updatedCount, total: institutes.length };
+    }
+});
+
 // Generic mutation to import data
 export const importData = mutation({
     args: {

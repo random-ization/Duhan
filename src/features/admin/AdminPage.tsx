@@ -7,7 +7,7 @@ import { GrammarManager } from '../../components/admin/GrammarManager';
 import { InstituteManager } from '../../components/admin/InstituteManager';
 import { TopikManager } from '../../components/admin/TopikManager';
 import { UserManagement } from '../../components/admin/UserManagement';
-import { DashboardView } from '../../components/admin/DashboardView';
+import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import LegalDocumentEditor from '../../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
 import DataDiagnostics from '../../components/admin/DataDiagnostics';
@@ -141,7 +141,7 @@ const AdminPage: React.FC = () => {
             {/* Content Area */}
             <div>
                 {activeTab === 'dashboard' ? (
-                    <DashboardView />
+                    <AdminDashboard />
                 ) : activeTab === 'users' ? (
                     <UserManagement />
                 ) : activeTab === 'institute' ? (

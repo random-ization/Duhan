@@ -71,3 +71,33 @@ export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | un
 
     return null;
 }
+
+/**
+ * Require Admin Role
+ * Throws ConvexError if user is not authenticated or not an admin.
+ */
+export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+        throw new ConvexError({ code: "UNAUTHORIZED", message: "Login required" });
+    }
+
+    const user = await ctx.db.query("users")
+        .withIndex("by_token", q => q.eq("token", identity.subject))
+        .first();
+
+    // Also check legacy ID lookup or direct ID if needed, similar to getOptionalAuthUserId logic
+    // But for strict admin, let's look up by the subject if it's the token or ID
+    let finalUser: any = user;
+    if (!finalUser) {
+        try {
+            finalUser = await ctx.db.get(identity.subject as any);
+        } catch (e) { }
+    }
+
+    if (!finalUser || finalUser.role !== 'ADMIN') {
+        throw new ConvexError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
+
+    return finalUser;
+}

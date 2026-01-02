@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Mic, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
-// import { api } from '../services/api'; 
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useAuth } from '../contexts/AuthContext';
