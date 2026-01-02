@@ -5,7 +5,7 @@ import { FileText, Loader2, Save } from "lucide-react";
 
 type DocType = "terms" | "privacy" | "refund";
 
-const LegalDocumentEditor: React.FC<{ language?: string }> = () => {
+const LegalDocumentEditor: React.FC = () => {
   const [docType, setDocType] = useState<DocType>("terms");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");

@@ -27,10 +27,28 @@ const DEFAULT_FORM: FormState = {
   exampleSentence: "",
 };
 
+type BulkImportItem = Pick<
+  FormState,
+  "word" | "meaning" | "partOfSpeech" | "hanja" | "courseId" | "unitId"
+> & {
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  tips?: unknown;
+};
+
+type BulkImportResult = {
+  success: boolean;
+  results?: {
+    success: number;
+    failed: number;
+    errors: string[];
+  };
+};
+
 const VocabImporter: React.FC = () => {
   const institutes = useQuery(api.institutes.getAll, {});
   const saveWord = useMutation(api.vocab.saveWord);
-  const bulkImport = useMutation(api.vocab.bulkImport);
+  const bulkImportMutation = useMutation(api.vocab.bulkImport);
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [bulkText, setBulkText] = useState("");
@@ -99,7 +117,7 @@ const VocabImporter: React.FC = () => {
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
-      const items = lines
+      const items: BulkImportItem[] = lines
         .map((line) => {
           const [word, meaning, partOfSpeech, unit] = line.split(",");
           if (!word || !meaning) return null;
@@ -112,7 +130,7 @@ const VocabImporter: React.FC = () => {
             unitId: Number(unit) || form.unitId || 1,
           };
         })
-        .filter(Boolean) as any[];
+        .filter((item): item is BulkImportItem => Boolean(item));
 
       if (items.length === 0) {
         setStatus("未解析到有效的词条");
@@ -120,9 +138,9 @@ const VocabImporter: React.FC = () => {
         return;
       }
 
-      const result = await bulkImport({ items });
-      if ((result as any)?.results?.errors?.length) {
-        setStatus(`部分导入失败：${(result as any).results.errors.join("; ")}`);
+      const result: BulkImportResult = await bulkImportMutation({ items });
+      if (result?.results?.errors?.length) {
+        setStatus(`部分导入失败：${result.results.errors.join("; ")}`);
       } else {
         setStatus(`成功导入 ${items.length} 条词汇`);
       }

@@ -13,8 +13,16 @@ interface WordRow {
   partOfSpeech?: string;
 }
 
+interface InstituteRow {
+  id?: string;
+  _id?: string;
+  name?: string;
+}
+
 const VocabDashboard: React.FC = () => {
-  const institutes = useQuery(api.institutes.getAll, {});
+  const institutes = useQuery(api.institutes.getAll, {}) as
+    | InstituteRow[]
+    | undefined;
   const [selectedCourse, setSelectedCourse] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
@@ -75,7 +83,7 @@ const VocabDashboard: React.FC = () => {
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
             <option value="ALL">全部教材</option>
-            {(institutes || []).map((inst: any) => (
+            {(institutes || []).map((inst) => (
               <option key={inst.id || inst._id} value={inst.id || inst._id}>
                 {inst.name}
               </option>
@@ -120,7 +128,7 @@ const VocabDashboard: React.FC = () => {
             <p className="text-sm font-black text-zinc-900">
               {selectedCourse === "ALL"
                 ? "全部"
-                : institutes?.find((i: any) => (i.id || i._id) === selectedCourse)
+                : institutes?.find((i) => (i.id || i._id) === selectedCourse)
                     ?.name || "未选择"}
             </p>
           </div>
