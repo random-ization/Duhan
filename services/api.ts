@@ -1,5 +1,5 @@
 // services/api.ts
-// SHIM LAYER: Redirects legacy Express API calls to Convex Backend
+// API LAYER: Client-side interface to Convex Backend with caching
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../convex/_generated/api";
 import { User, VocabularyItem, Mistake, Annotation, ExamAttempt, TextbookContent } from "../types";
@@ -14,8 +14,12 @@ const client = new ConvexHttpClient(CONVEX_URL!);
 // ============================================
 // CACHE CONFIGURATION
 // ============================================
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const DEFAULT_PAGE_SIZE = 50; // Default page size for pagination
+// To reduce Convex query volume and prevent explosions (>3M calls),
+// we implement an in-memory cache with TTL and in-flight deduplication.
+// 
+// Configuration constants:
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes - adjust if needed
+const DEFAULT_PAGE_SIZE = 50; // Default page size - prevents full-table scans
 
 // ============================================
 // IN-MEMORY CACHE WITH TTL AND IN-FLIGHT DEDUPLICATION
