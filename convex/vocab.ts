@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId, getOptionalAuthUserId, getUserByTokenOrId } from "./utils";
+import { DEFAULT_VOCAB_LIMIT } from "./queryLimits";
 
 // Get all vocabulary for a course (Admin List or Module view)
 // OPTIMIZATION: Added limit to prevent excessive queries
@@ -16,7 +17,7 @@ export const getOfCourse = query({
         const userId = user ? user._id : null;
 
         // 1. Get appearances with optional limit
-        const limit = args.limit || 500; // Default reasonable limit
+        const limit = args.limit || DEFAULT_VOCAB_LIMIT;
         const appearances = await ctx.db
             .query("vocabulary_appearances")
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))

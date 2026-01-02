@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from "./queryLimits";
 
 // Get all users with real database pagination
 export const getUsers = query({
@@ -41,12 +42,10 @@ export const searchUsers = query({
 
         // OPTIMIZATION: Limit collection to prevent full table scan
         // Collect with a reasonable maximum to prevent query explosion
-        const MAX_SCAN = 1000; // Maximum users to scan for search
-        
         const allUsers = await ctx.db
             .query("users")
             .order("desc") // Get most recent users first
-            .take(MAX_SCAN);
+            .take(MAX_USER_SEARCH_SCAN);
 
         const filtered = allUsers
             .filter(u =>
@@ -128,7 +127,7 @@ export const getInstitutes = query({
         const results = await ctx.db
             .query("institutes")
             .withIndex("by_archived", q => q.eq("isArchived", false))
-            .paginate({ numItems: 100, cursor: null }); // Reasonable limit
+            .paginate({ numItems: MAX_INSTITUTES_FALLBACK, cursor: null });
             
         // Return just the page array for backwards compatibility
         return results.page.map(i => ({
