@@ -39,14 +39,14 @@ function evictLRUIfNeeded() {
   if (queryCache.size >= MAX_CACHE_SIZE) {
     let oldestKey: string | null = null;
     let oldestTime = Infinity;
-    
+
     queryCache.forEach((entry, key) => {
       if (entry.lastAccessed < oldestTime) {
         oldestTime = entry.lastAccessed;
         oldestKey = key;
       }
     });
-    
+
     if (oldestKey) {
       queryCache.delete(oldestKey);
     }
@@ -81,7 +81,7 @@ async function cachedQuery(
 ): Promise<any> {
   const cacheKey = serializeCacheKey(method, params);
   const now = Date.now();
-  
+
   // Check if we have a valid cached entry
   const cached = queryCache.get(cacheKey);
   if (cached) {
@@ -89,17 +89,17 @@ async function cachedQuery(
     if (cached.promise) {
       return cached.promise;
     }
-    
+
     // If cache is still fresh, return cached data
     if (now - cached.timestamp < CACHE_TTL_MS) {
       cached.lastAccessed = now; // Update LRU timestamp
       return cached.data;
     }
-    
+
     // Cache expired, remove it
     queryCache.delete(cacheKey);
   }
-  
+
   // Execute the query and cache the promise for in-flight de-duplication
   const promise = queryFn().then(
     (data) => {
@@ -118,7 +118,7 @@ async function cachedQuery(
       throw error;
     }
   );
-  
+
   // Store the in-flight promise
   evictLRUIfNeeded(); // Ensure cache doesn't grow unbounded
   queryCache.set(cacheKey, {
@@ -127,7 +127,7 @@ async function cachedQuery(
     lastAccessed: now,
     promise,
   });
-  
+
   return promise;
 }
 
@@ -404,10 +404,10 @@ export const api = {
   // --- CONTENT ---
   getInstitutes: async (params?: any) => {
     // Shim for getInstitutes with caching and default pagination
-    
+
     // Determine if caller is using explicit pagination
     const hasExplicitPagination = params?.paginationOpts || params?.limit;
-    
+
     // Apply default pagination when no explicit params
     const queryArgs: any = {};
     if (hasExplicitPagination) {
@@ -427,21 +427,21 @@ export const api = {
         cursor: null
       };
     }
-    
+
     // Execute with caching
     const result = await cachedQuery(
       'getInstitutes',
       () => client.query(convexApi.admin.getInstitutes, queryArgs),
       params
     );
-    
+
     // Backwards compatibility: when no explicit pagination, return array
     // When explicit pagination is used, return full paginated response
     if (!hasExplicitPagination) {
       // Legacy callers expect an array
       return result.page || result;
     }
-    
+
     // Return full paginated response for pagination UIs
     return result;
   },
@@ -464,10 +464,10 @@ export const api = {
   // --- LEGACY / DEPRECATED ---
   getTopikExams: async (params?: any) => {
     // Shim for getTopikExams with caching and default pagination
-    
+
     // Determine if caller is using explicit pagination
     const hasExplicitPagination = params?.paginationOpts;
-    
+
     // Apply default pagination when no explicit params
     const queryArgs: any = {};
     if (hasExplicitPagination) {
@@ -480,21 +480,21 @@ export const api = {
         cursor: null
       };
     }
-    
+
     // Execute with caching
     const result = await cachedQuery(
       'getTopikExams',
       () => client.query(convexApi.topik.getExams, queryArgs),
       params
     );
-    
+
     // Backwards compatibility: when no explicit pagination, return array
     // When explicit pagination is used, return full paginated response
     if (!hasExplicitPagination) {
       // Legacy callers expect an array
       return result.page || result;
     }
-    
+
     // Return full paginated response for pagination UIs
     return result;
   },
@@ -525,4 +525,41 @@ export const api = {
   }
 };
 
+// ============================================
+// LEGACY REQUEST SHIM
+// ============================================
+// This is a shim for legacy admin components (VocabDashboard, VocabImporter)
+// that still use the old Express backend API pattern.
+// TODO: Migrate these components to use Convex directly.
+const API_BASE = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001/api';
+
+export async function request<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(error.error || error.message || 'Request failed');
+  }
+
+  return response.json();
+}
+
 export default api;
+
