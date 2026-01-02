@@ -11,6 +11,84 @@ if (!CONVEX_URL) {
 
 const client = new ConvexHttpClient(CONVEX_URL!);
 
+// ============================================
+// CACHE CONFIGURATION
+// ============================================
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_PAGE_SIZE = 50; // Default page size for pagination
+
+// ============================================
+// IN-MEMORY CACHE WITH TTL AND IN-FLIGHT DEDUPLICATION
+// ============================================
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  promise?: Promise<any>; // For in-flight de-duplication
+}
+
+const queryCache = new Map<string, CacheEntry>();
+
+// Serialize params to create cache key
+function serializeCacheKey(method: string, params?: any): string {
+  if (!params || Object.keys(params).length === 0) {
+    return method;
+  }
+  return `${method}:${JSON.stringify(params)}`;
+}
+
+// Get from cache or execute query with in-flight de-duplication
+async function cachedQuery(
+  method: string,
+  queryFn: () => Promise<any>,
+  params?: any
+): Promise<any> {
+  const cacheKey = serializeCacheKey(method, params);
+  const now = Date.now();
+  
+  // Check if we have a valid cached entry
+  const cached = queryCache.get(cacheKey);
+  if (cached) {
+    // If there's an in-flight promise, return it
+    if (cached.promise) {
+      return cached.promise;
+    }
+    
+    // If cache is still fresh, return cached data
+    if (now - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    
+    // Cache expired, remove it
+    queryCache.delete(cacheKey);
+  }
+  
+  // Execute the query and cache the promise for in-flight de-duplication
+  const promise = queryFn().then(
+    (data) => {
+      // Store the result in cache
+      queryCache.set(cacheKey, {
+        data,
+        timestamp: Date.now(),
+      });
+      return data;
+    },
+    (error) => {
+      // On error, remove the cache entry
+      queryCache.delete(cacheKey);
+      throw error;
+    }
+  );
+  
+  // Store the in-flight promise
+  queryCache.set(cacheKey, {
+    data: null,
+    timestamp: now,
+    promise,
+  });
+  
+  return promise;
+}
+
 // Helper to get token from storage
 const getToken = () => {
   if (typeof window !== 'undefined') {
@@ -307,15 +385,47 @@ export const api = {
 
   // --- CONTENT ---
   getInstitutes: async (params?: any) => {
-    // Shim for getInstitutes. Supports pagination or returns all.
-    const args: any = {};
-    if (params?.limit) {
-      args.paginationOpts = {
-        numItems: params.limit,
-        cursor: params.cursor || null
+    // Shim for getInstitutes with caching and default pagination
+    
+    // Determine if caller is using explicit pagination
+    const hasExplicitPagination = params?.paginationOpts || params?.limit;
+    
+    // Apply default pagination when no explicit params
+    const queryArgs: any = {};
+    if (hasExplicitPagination) {
+      // Caller wants explicit pagination - pass through
+      if (params?.limit) {
+        queryArgs.paginationOpts = {
+          numItems: params.limit,
+          cursor: params.cursor || null
+        };
+      } else if (params?.paginationOpts) {
+        queryArgs.paginationOpts = params.paginationOpts;
+      }
+    } else {
+      // Apply sensible default pagination to avoid full-table scans
+      queryArgs.paginationOpts = {
+        numItems: DEFAULT_PAGE_SIZE,
+        cursor: null
       };
     }
-    return await client.query(convexApi.admin.getInstitutes, args);
+    
+    // Execute with caching
+    const result = await cachedQuery(
+      'getInstitutes',
+      () => client.query(convexApi.admin.getInstitutes, queryArgs),
+      params
+    );
+    
+    // Backwards compatibility: when no explicit pagination, return array
+    // When explicit pagination is used, return full paginated response
+    if (!hasExplicitPagination) {
+      // Legacy callers expect an array
+      return result.page || result;
+    }
+    
+    // Return full paginated response for pagination UIs
+    return result;
   },
 
   getUserStats: async (userId: string) => {
@@ -340,10 +450,40 @@ export const api = {
 
   // --- LEGACY / DEPRECATED ---
   getTopikExams: async (params?: any) => {
-    // Shim for getTopikExams, mapping to getExams query
-    return await client.query(convexApi.topik.getExams, {
-      paginationOpts: params?.paginationOpts
-    });
+    // Shim for getTopikExams with caching and default pagination
+    
+    // Determine if caller is using explicit pagination
+    const hasExplicitPagination = params?.paginationOpts;
+    
+    // Apply default pagination when no explicit params
+    const queryArgs: any = {};
+    if (hasExplicitPagination) {
+      // Caller wants explicit pagination - pass through
+      queryArgs.paginationOpts = params.paginationOpts;
+    } else {
+      // Apply sensible default pagination to avoid full-table scans
+      queryArgs.paginationOpts = {
+        numItems: DEFAULT_PAGE_SIZE,
+        cursor: null
+      };
+    }
+    
+    // Execute with caching
+    const result = await cachedQuery(
+      'getTopikExams',
+      () => client.query(convexApi.topik.getExams, queryArgs),
+      params
+    );
+    
+    // Backwards compatibility: when no explicit pagination, return array
+    // When explicit pagination is used, return full paginated response
+    if (!hasExplicitPagination) {
+      // Legacy callers expect an array
+      return result.page || result;
+    }
+    
+    // Return full paginated response for pagination UIs
+    return result;
   },
 
   // Added missing methods
