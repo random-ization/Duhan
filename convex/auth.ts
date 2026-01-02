@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
+import { MAX_ITEMS_PER_USER_COLLECTION } from "./queryLimits";
 
 import { compareSync, hashSync } from "bcryptjs";
 
@@ -56,11 +57,21 @@ function generateToken(): string {
 }
 
 // Helper to fetch and format full user data
+// OPTIMIZATION: Limit collections to prevent query explosions
 async function enrichUser(ctx: any, user: Doc<"users">) {
     const [savedWords, mistakes, examAttempts] = await Promise.all([
-        ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-        ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-        ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+        ctx.db.query("saved_words")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_USER_COLLECTION),
+        ctx.db.query("mistakes")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_USER_COLLECTION),
+        ctx.db.query("exam_attempts")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_USER_COLLECTION),
     ]);
 
     return {

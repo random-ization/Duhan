@@ -1,5 +1,5 @@
 // services/api.ts
-// SHIM LAYER: Redirects legacy Express API calls to Convex Backend
+// API LAYER: Client-side interface to Convex Backend with caching
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../convex/_generated/api";
 import { User, VocabularyItem, Mistake, Annotation, ExamAttempt, TextbookContent } from "../types";
@@ -10,6 +10,126 @@ if (!CONVEX_URL) {
 }
 
 const client = new ConvexHttpClient(CONVEX_URL!);
+
+// ============================================
+// CACHE CONFIGURATION
+// ============================================
+// To reduce Convex query volume and prevent explosions (>3M calls),
+// we implement an in-memory cache with TTL and in-flight deduplication.
+// 
+// Configuration constants:
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes - adjust if needed
+const DEFAULT_PAGE_SIZE = 50; // Default page size - prevents full-table scans
+const MAX_CACHE_SIZE = 100; // Maximum cache entries to prevent memory leaks
+
+// ============================================
+// IN-MEMORY CACHE WITH TTL AND IN-FLIGHT DEDUPLICATION
+// ============================================
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  promise?: Promise<any>; // For in-flight de-duplication
+  lastAccessed: number; // For LRU eviction
+}
+
+const queryCache = new Map<string, CacheEntry>();
+
+// LRU cache eviction - removes oldest accessed entry when cache is full
+function evictLRUIfNeeded() {
+  if (queryCache.size >= MAX_CACHE_SIZE) {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    
+    queryCache.forEach((entry, key) => {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = key;
+      }
+    });
+    
+    if (oldestKey) {
+      queryCache.delete(oldestKey);
+    }
+  }
+}
+
+// Serialize params to create cache key (with deterministic object key ordering)
+function serializeCacheKey(method: string, params?: any): string {
+  if (!params || Object.keys(params).length === 0) {
+    return method;
+  }
+  // Sort keys recursively to ensure consistent serialization regardless of property order
+  const sortedParams = JSON.stringify(params, (key, value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.keys(value)
+        .sort()
+        .reduce((sorted, k) => {
+          sorted[k] = value[k];
+          return sorted;
+        }, {} as any);
+    }
+    return value;
+  });
+  return `${method}:${sortedParams}`;
+}
+
+// Get from cache or execute query with in-flight de-duplication
+async function cachedQuery(
+  method: string,
+  queryFn: () => Promise<any>,
+  params?: any
+): Promise<any> {
+  const cacheKey = serializeCacheKey(method, params);
+  const now = Date.now();
+  
+  // Check if we have a valid cached entry
+  const cached = queryCache.get(cacheKey);
+  if (cached) {
+    // If there's an in-flight promise, return it
+    if (cached.promise) {
+      return cached.promise;
+    }
+    
+    // If cache is still fresh, return cached data
+    if (now - cached.timestamp < CACHE_TTL_MS) {
+      cached.lastAccessed = now; // Update LRU timestamp
+      return cached.data;
+    }
+    
+    // Cache expired, remove it
+    queryCache.delete(cacheKey);
+  }
+  
+  // Execute the query and cache the promise for in-flight de-duplication
+  const promise = queryFn().then(
+    (data) => {
+      // Store the result in cache
+      evictLRUIfNeeded(); // Ensure cache doesn't grow unbounded
+      queryCache.set(cacheKey, {
+        data,
+        timestamp: Date.now(),
+        lastAccessed: Date.now(),
+      });
+      return data;
+    },
+    (error) => {
+      // On error, remove the cache entry
+      queryCache.delete(cacheKey);
+      throw error;
+    }
+  );
+  
+  // Store the in-flight promise
+  evictLRUIfNeeded(); // Ensure cache doesn't grow unbounded
+  queryCache.set(cacheKey, {
+    data: null,
+    timestamp: now,
+    lastAccessed: now,
+    promise,
+  });
+  
+  return promise;
+}
 
 // Helper to get token from storage
 const getToken = () => {
@@ -92,16 +212,6 @@ export const api = {
     return { user };
   },
 
-  googleLogin: async (data: any): Promise<any> => {
-    // Not fully implemented on backend yet in this shim context.
-    // However, AuthPage needs it. If we use the new googleAuth mutation:
-    if (data.code) {
-      // Handle code exchange -> not implemented in shim, but AuthPage calls googleLogin with {code, ...}
-      // We need a backend action to exchange code.
-      throw new Error("Google Login requires backend Action (not implemented in shim)");
-    }
-  },
-
   updateProfile: async (updates: any) => {
     const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
     if (!userId) throw new Error("Not logged in");
@@ -176,21 +286,7 @@ export const api = {
     const token = getToken();
     const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
-    // Annotations still use userId in schema? 
-    // Let's check schema/annotations.ts. 
-    // Wait, I didn't update annotations.save in backend to use token yet.
-    // I missed updating `convex/annotations.ts`.
-    // I only updated `convex/user.ts`.
-    // I should stop and update `convex/annotations.ts` too or fallback to userId here?
-    // The implementation plan said "Update all mutations... in convex/user.ts".
-    // It didn't explicitly mention `annotations.ts` or `podcasts.ts` mutations.
-    // For consistency, I should update them too.
-    // But for now, let's use userId for annotations if the mutation requires usage of userId.
-    // Actually, `convex/annotations.ts` uses `mutation`.
-
-    // If I didn't update backend, I must pass `userId`. 
-    // But this shim needs to be secure eventually.
-    // Current valid logic: Pass userId because backend requires it.
+    // Note: Annotations backend currently requires userId
     if (!userId) return;
 
     await client.mutation(convexApi.annotations.save, {
@@ -307,43 +403,100 @@ export const api = {
 
   // --- CONTENT ---
   getInstitutes: async (params?: any) => {
-    // Shim for getInstitutes. Supports pagination or returns all.
-    const args: any = {};
-    if (params?.limit) {
-      args.paginationOpts = {
-        numItems: params.limit,
-        cursor: params.cursor || null
+    // Shim for getInstitutes with caching and default pagination
+    
+    // Determine if caller is using explicit pagination
+    const hasExplicitPagination = params?.paginationOpts || params?.limit;
+    
+    // Apply default pagination when no explicit params
+    const queryArgs: any = {};
+    if (hasExplicitPagination) {
+      // Caller wants explicit pagination - pass through
+      if (params?.limit) {
+        queryArgs.paginationOpts = {
+          numItems: params.limit,
+          cursor: params.cursor || null
+        };
+      } else if (params?.paginationOpts) {
+        queryArgs.paginationOpts = params.paginationOpts;
+      }
+    } else {
+      // Apply sensible default pagination to avoid full-table scans
+      queryArgs.paginationOpts = {
+        numItems: DEFAULT_PAGE_SIZE,
+        cursor: null
       };
     }
-    return await client.query(convexApi.admin.getInstitutes, args);
+    
+    // Execute with caching
+    const result = await cachedQuery(
+      'getInstitutes',
+      () => client.query(convexApi.admin.getInstitutes, queryArgs),
+      params
+    );
+    
+    // Backwards compatibility: when no explicit pagination, return array
+    // When explicit pagination is used, return full paginated response
+    if (!hasExplicitPagination) {
+      // Legacy callers expect an array
+      return result.page || result;
+    }
+    
+    // Return full paginated response for pagination UIs
+    return result;
   },
 
   getUserStats: async (userId: string) => {
-    // Use real backend stats query
-    return await client.query(convexApi.userStats.getStats, {});
+    // Use real backend stats query with caching
+    return await cachedQuery(
+      'getUserStats',
+      () => client.query(convexApi.userStats.getStats, {}),
+      { userId } // Cache per user
+    );
   },
 
-  getTextbookContent: async (params: any) => {
-    // Params likely: { institute, level, unit } or similar
-    // Map to units.getDetails if possible, or filter.
-    // For now, return empty object to prevent crash while we fix full logic
-    console.log("api.getTextbookContent called with:", params);
-    return {
-      title: "Unit Content",
-      readingText: "",
-      translation: "",
-      audioUrl: "",
-      vocabList: [],
-      grammarList: []
-    };
+  // DEPRECATED: Returns empty data - should not be used
+  getTextbookContent: async (params?: any) => {
+    console.warn("api.getTextbookContent is deprecated and returns empty data");
+    return {};
   },
 
   // --- LEGACY / DEPRECATED ---
   getTopikExams: async (params?: any) => {
-    // Shim for getTopikExams, mapping to getExams query
-    return await client.query(convexApi.topik.getExams, {
-      paginationOpts: params?.paginationOpts
-    });
+    // Shim for getTopikExams with caching and default pagination
+    
+    // Determine if caller is using explicit pagination
+    const hasExplicitPagination = params?.paginationOpts;
+    
+    // Apply default pagination when no explicit params
+    const queryArgs: any = {};
+    if (hasExplicitPagination) {
+      // Caller wants explicit pagination - pass through
+      queryArgs.paginationOpts = params.paginationOpts;
+    } else {
+      // Apply sensible default pagination to avoid full-table scans
+      queryArgs.paginationOpts = {
+        numItems: DEFAULT_PAGE_SIZE,
+        cursor: null
+      };
+    }
+    
+    // Execute with caching
+    const result = await cachedQuery(
+      'getTopikExams',
+      () => client.query(convexApi.topik.getExams, queryArgs),
+      params
+    );
+    
+    // Backwards compatibility: when no explicit pagination, return array
+    // When explicit pagination is used, return full paginated response
+    if (!hasExplicitPagination) {
+      // Legacy callers expect an array
+      return result.page || result;
+    }
+    
+    // Return full paginated response for pagination UIs
+    return result;
   },
 
   // Added missing methods
@@ -356,23 +509,6 @@ export const api = {
   },
 
   saveTextbookContent: async (key: string, content: TextbookContent) => {
-    // key is "courseId_unitId", content has data
-    // Need to parse key or expect content to have courseId/unitIndex
-    // For now assuming content has enough data or we pass it
-    // Actually convex/units.ts:save needs courseId, unitIndex, articleIndex, etc.
-    // The Shim needs to adapt 'TextbookContent' to the mutation args.
-
-    // Parse key: "course_yonsei_1a_appendix_0" or similar?
-    // Let's assume content (TextbookContent) matches schema or we can adapt.
-    // NOTE: This shim is approximate.
-
-    // Workaround: We'll assume the arguments match what the backend expects if the frontend 
-    // constructs them correctly, or we spread the content.
-    // But convex/units.ts:save args are specific.
-
-    // Check if content has unitIndex/courseId
-    // If not, we might be stuck. 
-    // Assuming backend refactor aligned with this, or we just pass content as any.
     return await client.mutation(convexApi.units.save, content as any);
   },
 
@@ -386,13 +522,7 @@ export const api = {
       courseId,
       unitIndex
     });
-  },
-
-  request: async (endpoint: string, options?: any) => {
-    console.warn(`Legacy api.request called for ${endpoint}. Migration required.`);
-    return null;
   }
 };
 
-export const request = api.request;
 export default api;

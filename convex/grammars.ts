@@ -11,19 +11,22 @@ export const getStats = query({
         const userId = await getOptionalAuthUserId(ctx);
 
         // 1. Get all CourseGrammar links for this course
+        // OPTIMIZATION: Limit to prevent excessive queries
+        const MAX_GRAMMAR_POINTS = 500;
         const courseGrammars = await ctx.db
             .query("course_grammars")
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
-            .collect();
+            .take(MAX_GRAMMAR_POINTS);
 
         if (!userId) return { total: courseGrammars.length, mastered: 0 };
 
         // 2. Fetch progress
-        // Note: Ideally we'd do a join or batch fetch here, but for now we'll do this
+        // OPTIMIZATION: Limit to prevent excessive queries
+        const MAX_PROGRESS_ITEMS = 500;
         const progress = await ctx.db
             .query("user_grammar_progress")
             .filter((q) => q.eq(q.field("userId"), userId))
-            .collect();
+            .take(MAX_PROGRESS_ITEMS);
 
         // Count mastered
         const mastered = progress.filter(p => p.status === 'MASTERED').length;
@@ -44,12 +47,14 @@ export const getUnitGrammar = query({
         const userId = await getOptionalAuthUserId(ctx);
 
         // 1. Get links
+        // OPTIMIZATION: Limit to prevent excessive queries
+        const MAX_UNIT_GRAMMAR = 100;
         const courseGrammars = await ctx.db
             .query("course_grammars")
             .withIndex("by_course_unit", (q) =>
                 q.eq("courseId", args.courseId).eq("unitId", args.unitId)
             )
-            .collect();
+            .take(MAX_UNIT_GRAMMAR);
 
         // 2. Sort by displayOrder
         courseGrammars.sort((a, b) => a.displayOrder - b.displayOrder);

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from "./queryLimits";
 
 // Get all users with real database pagination
 export const getUsers = query({
@@ -39,8 +40,12 @@ export const searchUsers = query({
         const limit = args.limit || 20;
         const searchLower = args.search.toLowerCase();
 
-        // For search, we need to collect and filter (Convex doesn't support LIKE queries)
-        const allUsers = await ctx.db.query("users").collect();
+        // OPTIMIZATION: Limit collection to prevent full table scan
+        // Collect with a reasonable maximum to prevent query explosion
+        const allUsers = await ctx.db
+            .query("users")
+            .order("desc") // Get most recent users first
+            .take(MAX_USER_SEARCH_SCAN);
 
         const filtered = allUsers
             .filter(u =>
@@ -117,15 +122,19 @@ export const getInstitutes = query({
             };
         }
 
-        // Fallback for non-paginated calls (backwards compatibility)
-        const institutes = await ctx.db.query("institutes").collect();
-        return institutes
-            .filter(i => !i.isArchived)
-            .map(i => ({
-                ...i,
-                _id: undefined,
-                id: i.id || i._id,
-            }));
+        // OPTIMIZATION: Always use pagination, even for backwards compatibility
+        // This prevents full table scans
+        const results = await ctx.db
+            .query("institutes")
+            .withIndex("by_archived", q => q.eq("isArchived", false))
+            .paginate({ numItems: MAX_INSTITUTES_FALLBACK, cursor: null });
+            
+        // Return just the page array for backwards compatibility
+        return results.page.map(i => ({
+            ...i,
+            _id: undefined,
+            id: i.id || i._id,
+        }));
     }
 });
 

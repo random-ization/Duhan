@@ -28,9 +28,11 @@ export const getByContext = query({
 
         const { contextKey } = args;
 
+        // OPTIMIZATION: Limit annotations per context to prevent excessive queries
+        const MAX_ANNOTATIONS_PER_CONTEXT = 500;
         const annotations = await ctx.db.query("annotations")
             .withIndex("by_user_context", q => q.eq("userId", user._id).eq("contextKey", contextKey))
-            .collect();
+            .take(MAX_ANNOTATIONS_PER_CONTEXT);
 
         return annotations.map(a => ({
             id: a._id,

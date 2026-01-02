@@ -1,23 +1,27 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId, getOptionalAuthUserId, getUserByTokenOrId } from "./utils";
+import { DEFAULT_VOCAB_LIMIT } from "./queryLimits";
 
 // Get all vocabulary for a course (Admin List or Module view)
+// OPTIMIZATION: Added limit to prevent excessive queries
 export const getOfCourse = query({
     args: {
         courseId: v.string(),
         userId: v.optional(v.string()), // Accept token or ID
+        limit: v.optional(v.number()), // Optional limit
     },
     handler: async (ctx, args) => {
         // Get user identity (try explicit arg first, then native auth)
         const user = await getUserByTokenOrId(ctx, args.userId);
         const userId = user ? user._id : null;
 
-        // 1. Get appearances
+        // 1. Get appearances with optional limit
+        const limit = args.limit || DEFAULT_VOCAB_LIMIT;
         const appearances = await ctx.db
             .query("vocabulary_appearances")
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
-            .collect();
+            .take(limit);
 
         // 2. Fetch linked Words and User Progress
         const wordsWithData = await Promise.all(

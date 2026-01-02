@@ -8,6 +8,89 @@ if (!CONVEX_URL) {
 }
 const client = new ConvexHttpClient(CONVEX_URL!);
 
+// ============================================
+// CACHE CONFIGURATION FOR VOCAB QUERIES
+// ============================================
+const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_VOCAB_CACHE_SIZE = 50; // Maximum cache entries
+
+interface VocabCacheEntry {
+    data: any;
+    timestamp: number;
+    promise?: Promise<any>;
+    lastAccessed: number;
+}
+
+const vocabCache = new Map<string, VocabCacheEntry>();
+
+// LRU eviction for vocab cache
+function evictVocabLRUIfNeeded() {
+    if (vocabCache.size >= MAX_VOCAB_CACHE_SIZE) {
+        let oldestKey: string | null = null;
+        let oldestTime = Infinity;
+        
+        vocabCache.forEach((entry, key) => {
+            if (entry.lastAccessed < oldestTime) {
+                oldestTime = entry.lastAccessed;
+                oldestKey = key;
+            }
+        });
+        
+        if (oldestKey) {
+            vocabCache.delete(oldestKey);
+        }
+    }
+}
+
+function serializeVocabCacheKey(method: string, params: any): string {
+    // Sort keys recursively to ensure consistent serialization regardless of property order
+    const sortedParams = JSON.stringify(params, (key, value) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            return Object.keys(value)
+                .sort()
+                .reduce((sorted, k) => {
+                    sorted[k] = value[k];
+                    return sorted;
+                }, {} as any);
+        }
+        return value;
+    });
+    return `${method}:${sortedParams}`;
+}
+
+async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, params: any): Promise<any> {
+    const cacheKey = serializeVocabCacheKey(method, params);
+    const now = Date.now();
+    
+    const cached = vocabCache.get(cacheKey);
+    if (cached) {
+        if (cached.promise) {
+            return cached.promise;
+        }
+        if (now - cached.timestamp < VOCAB_CACHE_TTL_MS) {
+            cached.lastAccessed = now; // Update LRU
+            return cached.data;
+        }
+        vocabCache.delete(cacheKey);
+    }
+    
+    const promise = queryFn().then(
+        (data) => {
+            evictVocabLRUIfNeeded();
+            vocabCache.set(cacheKey, { data, timestamp: Date.now(), lastAccessed: Date.now() });
+            return data;
+        },
+        (error) => {
+            vocabCache.delete(cacheKey);
+            throw error;
+        }
+    );
+    
+    evictVocabLRUIfNeeded();
+    vocabCache.set(cacheKey, { data: null, timestamp: now, lastAccessed: now, promise });
+    return promise;
+}
+
 export interface VocabWord {
     id: string;
     courseId: string;
@@ -61,12 +144,14 @@ export async function fetchVocabSession(
     unitId?: string,
     limit: number = 20
 ): Promise<VocabSessionResponse> {
-    // Fetch all words with progress
-    // Note: In a large production app, this should be a dedicated Convex query that filters on backend.
-    const allWords = await client.query(convexApi.vocab.getOfCourse, {
-        courseId,
-        userId
-    });
+    // OPTIMIZATION: Use caching to reduce query volume
+    const cacheKey = { userId, courseId, unitId: unitId || 'ALL' };
+    
+    const allWords = await cachedVocabQuery(
+        'getOfCourse',
+        () => client.query(convexApi.vocab.getOfCourse, { courseId, userId }),
+        cacheKey
+    );
 
     let candidates = allWords;
 
@@ -136,9 +221,14 @@ export async function fetchAllVocab(
     courseId: string,
     unitId?: string
 ): Promise<{ success: boolean; words: VocabWord[] }> {
-    // Reuse getOfCourse - userId is redundant for "Just Words" but required by some logic?
-    // Actually getOfCourse takes optional userId. If we don't pass it, we don't get progress.
-    const words = await client.query(convexApi.vocab.getOfCourse, { courseId });
+    // OPTIMIZATION: Use caching to reduce query volume
+    const cacheKey = { courseId, unitId: unitId || 'ALL', allVocab: true };
+    
+    const words = await cachedVocabQuery(
+        'getAllVocab',
+        () => client.query(convexApi.vocab.getOfCourse, { courseId }),
+        cacheKey
+    );
 
     let filtered = words;
     if (unitId && unitId !== 'ALL') {
