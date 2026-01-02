@@ -237,12 +237,9 @@ export const updateProgress = mutation({
     args: {
         wordId: v.id("words"),
         quality: v.number(), // 0-5
-        userId: v.optional(v.string()), // Token or ID
     },
     handler: async (ctx, args) => {
-        const user = await getUserByTokenOrId(ctx, args.userId);
-        if (!user) throw new ConvexError({ code: "UNAUTHORIZED" });
-        const userId = user._id;
+        const userId = await getAuthUserId(ctx);
 
         const { wordId, quality } = args;
         const now = Date.now();

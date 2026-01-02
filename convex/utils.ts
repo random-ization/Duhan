@@ -10,7 +10,12 @@ export async function getAuthUserId(ctx: QueryCtx | MutationCtx): Promise<string
     if (!identity) {
         throw new ConvexError({ code: "UNAUTHORIZED" });
     }
-    return identity.subject;
+
+    const user = await getUserByTokenOrId(ctx, identity.subject);
+    if (!user) {
+        throw new ConvexError({ code: "UNAUTHORIZED" });
+    }
+    return user._id;
 }
 
 /**
@@ -19,7 +24,9 @@ export async function getAuthUserId(ctx: QueryCtx | MutationCtx): Promise<string
  */
 export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx): Promise<string | null> {
     const identity = await ctx.auth.getUserIdentity();
-    return identity?.subject ?? null;
+    if (!identity) return null;
+    const user = await getUserByTokenOrId(ctx, identity.subject);
+    return user?._id ?? null;
 }
 
 /**
@@ -51,12 +58,6 @@ export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | un
     // 2. Fallback to Context Auth (Native Client)
     const identity = await ctx.auth.getUserIdentity();
     if (identity) {
-        // Identity subject might be token, ID, or postgresID depending on how auth was set up
-        // We recurse once with the identity subject
-        // But to avoid infinite loop (unlikely), let's just do a direct lookup or re-use logic
-        // For simple setup: Subject IS the token in Custom Auth often, or user ID.
-
-        // Try to find user matching this subject
         const userByToken = await ctx.db.query("users").withIndex("by_token", q => q.eq("token", identity.subject)).first();
         if (userByToken) return userByToken;
 
@@ -79,25 +80,8 @@ export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | un
  * Throws ConvexError if user is not authenticated or not an admin.
  */
 export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-        throw new ConvexError({ code: "UNAUTHORIZED", message: "Login required" });
-    }
-
-    const user = await ctx.db.query("users")
-        .withIndex("by_token", q => q.eq("token", identity.subject))
-        .first();
-
-    // Also check legacy ID lookup or direct ID if needed, similar to getOptionalAuthUserId logic
-    // But for strict admin, let's look up by the subject if it's the token or ID
-    let finalUser: any = user;
-    if (!finalUser) {
-        try {
-            finalUser = await ctx.db.get(identity.subject as any);
-        } catch (e) {
-            // ignore malformed id lookup
-        }
-    }
+    const userId = await getAuthUserId(ctx);
+    const finalUser = await ctx.db.get(userId as any);
 
     if (!finalUser || finalUser.role !== 'ADMIN') {
         throw new ConvexError({ code: "FORBIDDEN", message: "Admin access required" });
