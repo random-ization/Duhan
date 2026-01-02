@@ -6,7 +6,21 @@ import { getAuthUserId } from "./utils";
 export const getStats = query({
     args: {},
     handler: async (ctx) => {
-        const userId = await getAuthUserId(ctx);
+        const userId = await getAuthUserId(ctx).catch(() => null);
+        if (!userId) {
+            // Return empty stats if not logged in
+            return {
+                streak: 0,
+                weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+                dailyMinutes: 0,
+                dailyGoal: 30,
+                dailyProgress: 0,
+                todayActivities: { wordsLearned: 0, readingsCompleted: 0, listeningsCompleted: 0 },
+                courseProgress: [],
+                vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+                grammarStats: { total: 0, mastered: 0 },
+            };
+        }
 
         // Fetch all progress stats concurrently
         const [courseProgress, vocabProgress, grammarProgress] = await Promise.all([
@@ -37,7 +51,7 @@ export const getStats = query({
 
         // Calculate streak (simplified - could be more complex)
         const lastAccess = courseProgress.length > 0
-            ? Math.max(...courseProgress.map(p => p.lastAccessAt))
+            ? Math.max(...courseProgress.map(p => p.lastAccessAt || 0))
             : 0;
 
         const oneDayMs = 24 * 60 * 60 * 1000;
@@ -53,9 +67,9 @@ export const getStats = query({
             return {
                 courseId: p.courseId,
                 courseName: institute?.name || p.courseId,
-                completedUnits: p.completedUnits.length,
+                completedUnits: (p.completedUnits || []).length,
                 totalUnits: institute?.totalUnits || 0,
-                lastAccessAt: new Date(p.lastAccessAt).toISOString(),
+                lastAccessAt: new Date(p.lastAccessAt || now).toISOString(),
             };
         }));
 
@@ -67,7 +81,7 @@ export const getStats = query({
             dailyProgress: 0,
             todayActivities: {
                 wordsLearned: masteredWords,
-                readingsCompleted: courseProgress.reduce((sum, p) => sum + p.completedUnits.length, 0),
+                readingsCompleted: courseProgress.reduce((sum, p) => sum + (p.completedUnits || []).length, 0),
                 listeningsCompleted: 0,
             },
             courseProgress: courseDetails,

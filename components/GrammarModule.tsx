@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateGrammarLesson } from '../services/geminiService';
+// import { generateGrammarLesson } from '../services/geminiService';
 import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../types';
 import { BookOpen, Search, X } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
+
+// Stub for deleted service
+const generateGrammarLesson = async (
+  institute: string,
+  level: number,
+  unit: number,
+  lang: Language,
+  content: TextbookContent
+): Promise<GrammarPoint[]> => {
+  console.warn("AI Generation unavailable: geminiService deleted");
+  return [];
+};
 
 interface GrammarModuleProps {
   course: CourseSelection;

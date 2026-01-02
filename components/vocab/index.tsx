@@ -10,10 +10,13 @@ import {
 import { CourseSelection, VocabularyItem, Language, TextbookContent } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import { useApp } from '../../contexts/AppContext';
-import { getMockVocabulary } from '../../services/geminiService';
+// import { getMockVocabulary } from '../../services/geminiService';
 import FlashcardView from './FlashcardView';
 import LearnModeView from './LearnModeView';
 import ListView from './ListView';
+
+// Stub
+const getMockVocabulary = async () => [];
 import VocabSettingsModal from './VocabSettingsModal';
 import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from './types';

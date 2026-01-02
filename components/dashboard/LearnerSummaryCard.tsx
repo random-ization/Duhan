@@ -16,6 +16,9 @@ export const LearnerSummaryCard: React.FC = () => {
     // Convex Integration
     const userStats = useQuery(api.userStats.getStats);
 
+    // Derived values
+    const loading = userStats === undefined;
+
     const stats = userStats ? {
         streak: userStats.streak,
         todayMinutes: userStats.dailyMinutes,

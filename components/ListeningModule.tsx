@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { generateReadingPassage } from '../services/geminiService';
+// import { generateReadingPassage } from '../services/geminiService';
 import { CourseSelection, ReadingContent, Language, TextbookContent, Annotation } from '../types';
 import {
   Play, Pause, RotateCcw, Volume2, ChevronRight, Music,
@@ -12,6 +12,24 @@ import { useAnnotation } from '../hooks/useAnnotation';
 import AnnotationMenu from './AnnotationMenu';
 import { getHighlightClasses } from '../src/utils/highlightUtils';
 import AnnotationSidebar from '../src/components/annotation/AnnotationSidebar';
+
+// Stub for deleted service
+const generateReadingPassage = async (
+  institute: string,
+  level: number,
+  unit: number,
+  lang: Language,
+  content: TextbookContent
+): Promise<ReadingContent | null> => {
+  console.warn("AI Generation unavailable: geminiService deleted");
+  // Return basic content if available
+  return {
+    koreanText: content.readingText || content.listeningScript || '',
+    englishTranslation: content.readingTranslation || content.listeningTranslation || '',
+    title: content.readingTitle || content.listeningTitle || `Unit ${unit}`,
+    keyVocabulary: [] // Added missing property
+  };
+};
 
 interface ListeningModuleProps {
   course: CourseSelection;
