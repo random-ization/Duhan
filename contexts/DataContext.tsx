@@ -86,11 +86,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, [textbookContexts]);
 
   // Fetch data when user logs in
+  // IMPORTANT: Only depend on user.id to prevent infinite loops
+  // (user object reference changes on every render, but user.id is stable)
+  const userId = user?.id;
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchInitialData();
     }
-  }, [user, fetchInitialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);  // Only re-fetch when user ID changes, not on every render
 
   const addInstitute = useCallback(
     async (name: string, levels?: LevelConfig[], options?: { coverUrl?: string; themeColor?: string; publisher?: string; displayLevel?: string; volume?: string }) => {
