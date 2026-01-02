@@ -39,8 +39,14 @@ export const searchUsers = query({
         const limit = args.limit || 20;
         const searchLower = args.search.toLowerCase();
 
-        // For search, we need to collect and filter (Convex doesn't support LIKE queries)
-        const allUsers = await ctx.db.query("users").collect();
+        // OPTIMIZATION: Limit collection to prevent full table scan
+        // Collect with a reasonable maximum to prevent query explosion
+        const MAX_SCAN = 1000; // Maximum users to scan for search
+        
+        const allUsers = await ctx.db
+            .query("users")
+            .order("desc") // Get most recent users first
+            .take(MAX_SCAN);
 
         const filtered = allUsers
             .filter(u =>
@@ -117,15 +123,19 @@ export const getInstitutes = query({
             };
         }
 
-        // Fallback for non-paginated calls (backwards compatibility)
-        const institutes = await ctx.db.query("institutes").collect();
-        return institutes
-            .filter(i => !i.isArchived)
-            .map(i => ({
-                ...i,
-                _id: undefined,
-                id: i.id || i._id,
-            }));
+        // OPTIMIZATION: Always use pagination, even for backwards compatibility
+        // This prevents full table scans
+        const results = await ctx.db
+            .query("institutes")
+            .withIndex("by_archived", q => q.eq("isArchived", false))
+            .paginate({ numItems: 100, cursor: null }); // Reasonable limit
+            
+        // Return just the page array for backwards compatibility
+        return results.page.map(i => ({
+            ...i,
+            _id: undefined,
+            id: i.id || i._id,
+        }));
     }
 });
 

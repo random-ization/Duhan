@@ -56,11 +56,23 @@ function generateToken(): string {
 }
 
 // Helper to fetch and format full user data
+// OPTIMIZATION: Limit collections to prevent query explosions
 async function enrichUser(ctx: any, user: Doc<"users">) {
+    const MAX_ITEMS_PER_COLLECTION = 100; // Reasonable limit per user
+    
     const [savedWords, mistakes, examAttempts] = await Promise.all([
-        ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-        ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-        ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+        ctx.db.query("saved_words")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_COLLECTION),
+        ctx.db.query("mistakes")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_COLLECTION),
+        ctx.db.query("exam_attempts")
+            .withIndex("by_user", q => q.eq("userId", user._id))
+            .order("desc")
+            .take(MAX_ITEMS_PER_COLLECTION),
     ]);
 
     return {

@@ -32,12 +32,14 @@ interface CacheEntry {
 
 const queryCache = new Map<string, CacheEntry>();
 
-// Serialize params to create cache key
+// Serialize params to create cache key (with deterministic object key ordering)
 function serializeCacheKey(method: string, params?: any): string {
   if (!params || Object.keys(params).length === 0) {
     return method;
   }
-  return `${method}:${JSON.stringify(params)}`;
+  // Sort keys to ensure consistent serialization regardless of property order
+  const sortedParams = JSON.stringify(params, Object.keys(params).sort());
+  return `${method}:${sortedParams}`;
 }
 
 // Get from cache or execute query with in-flight de-duplication
@@ -433,8 +435,12 @@ export const api = {
   },
 
   getUserStats: async (userId: string) => {
-    // Use real backend stats query
-    return await client.query(convexApi.userStats.getStats, {});
+    // Use real backend stats query with caching
+    return await cachedQuery(
+      'getUserStats',
+      () => client.query(convexApi.userStats.getStats, {}),
+      { userId } // Cache per user
+    );
   },
 
   getTextbookContent: async (params: any) => {

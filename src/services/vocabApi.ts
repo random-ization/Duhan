@@ -8,6 +8,47 @@ if (!CONVEX_URL) {
 }
 const client = new ConvexHttpClient(CONVEX_URL!);
 
+// ============================================
+// CACHE CONFIGURATION FOR VOCAB QUERIES
+// ============================================
+const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const vocabCache = new Map<string, { data: any; timestamp: number; promise?: Promise<any> }>();
+
+function serializeVocabCacheKey(method: string, params: any): string {
+    const sortedParams = JSON.stringify(params, Object.keys(params || {}).sort());
+    return `${method}:${sortedParams}`;
+}
+
+async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, params: any): Promise<any> {
+    const cacheKey = serializeVocabCacheKey(method, params);
+    const now = Date.now();
+    
+    const cached = vocabCache.get(cacheKey);
+    if (cached) {
+        if (cached.promise) {
+            return cached.promise;
+        }
+        if (now - cached.timestamp < VOCAB_CACHE_TTL_MS) {
+            return cached.data;
+        }
+        vocabCache.delete(cacheKey);
+    }
+    
+    const promise = queryFn().then(
+        (data) => {
+            vocabCache.set(cacheKey, { data, timestamp: Date.now() });
+            return data;
+        },
+        (error) => {
+            vocabCache.delete(cacheKey);
+            throw error;
+        }
+    );
+    
+    vocabCache.set(cacheKey, { data: null, timestamp: now, promise });
+    return promise;
+}
+
 export interface VocabWord {
     id: string;
     courseId: string;
@@ -61,12 +102,14 @@ export async function fetchVocabSession(
     unitId?: string,
     limit: number = 20
 ): Promise<VocabSessionResponse> {
-    // Fetch all words with progress
-    // Note: In a large production app, this should be a dedicated Convex query that filters on backend.
-    const allWords = await client.query(convexApi.vocab.getOfCourse, {
-        courseId,
-        userId
-    });
+    // OPTIMIZATION: Use caching to reduce query volume
+    const cacheKey = { userId, courseId, unitId: unitId || 'ALL' };
+    
+    const allWords = await cachedVocabQuery(
+        'getOfCourse',
+        () => client.query(convexApi.vocab.getOfCourse, { courseId, userId }),
+        cacheKey
+    );
 
     let candidates = allWords;
 
@@ -136,9 +179,14 @@ export async function fetchAllVocab(
     courseId: string,
     unitId?: string
 ): Promise<{ success: boolean; words: VocabWord[] }> {
-    // Reuse getOfCourse - userId is redundant for "Just Words" but required by some logic?
-    // Actually getOfCourse takes optional userId. If we don't pass it, we don't get progress.
-    const words = await client.query(convexApi.vocab.getOfCourse, { courseId });
+    // OPTIMIZATION: Use caching to reduce query volume
+    const cacheKey = { courseId, unitId: unitId || 'ALL', allVocab: true };
+    
+    const words = await cachedVocabQuery(
+        'getAllVocab',
+        () => client.query(convexApi.vocab.getOfCourse, { courseId }),
+        cacheKey
+    );
 
     let filtered = words;
     if (unitId && unitId !== 'ALL') {
