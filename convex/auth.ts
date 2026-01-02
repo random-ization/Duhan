@@ -242,35 +242,15 @@ export const login = mutation({
     }
 });
 
-// Get current user by ID or Token with full profile data
+// Get current user (auth context only) with full profile data
 export const getMe = query({
-    args: {
-        userId: v.optional(v.string()),
-        token: v.optional(v.string()),
-    },
-    handler: async (ctx, args) => {
-        const { userId, token } = args;
-        let user: any = null;
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
 
-        if (token) {
-            // Lookup by token (Secure)
-            user = await ctx.db.query("users")
-                .withIndex("by_token", q => q.eq("token", token))
-                .first();
-        } else if (userId) {
-            // Legacy / Fallback lookup (Less Secure if not verified)
-            try {
-                user = await ctx.db.get(userId as any);
-            } catch {
-                user = await ctx.db.query("users")
-                    .withIndex("by_postgresId", q => q.eq("postgresId", userId))
-                    .first();
-            }
-        }
-
-        if (!user) {
-            return null;
-        }
+        const user = await getUserByTokenOrId(ctx, identity.subject);
+        if (!user) return null;
 
         return await enrichUser(ctx, user);
     }
