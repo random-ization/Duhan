@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { getAuthUserId, getOptionalAuthUserId, getUserByTokenOrId, requireAdmin } from "./utils";
+import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from "./utils";
 import { DEFAULT_VOCAB_LIMIT } from "./queryLimits";
 
 // Get Vocabulary Stats (Dashboard)
@@ -108,13 +108,10 @@ export const getAll = query({
 export const getOfCourse = query({
     args: {
         courseId: v.string(),
-        userId: v.optional(v.string()), // Accept token or ID
         limit: v.optional(v.number()), // Optional limit
     },
     handler: async (ctx, args) => {
-        // Get user identity (try explicit arg first, then native auth)
-        const user = await getUserByTokenOrId(ctx, args.userId);
-        const userId = user ? user._id : null;
+        const userId = await getOptionalAuthUserId(ctx);
 
         // 1. Get appearances with optional limit
         const limit = args.limit || DEFAULT_VOCAB_LIMIT;

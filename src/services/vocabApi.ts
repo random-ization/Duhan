@@ -139,17 +139,16 @@ export interface VocabProgressResponse {
 
 // Fetch study session (prioritized by SRS algorithm)
 export async function fetchVocabSession(
-    userId: string,
     courseId: string,
     unitId?: string,
     limit: number = 20
 ): Promise<VocabSessionResponse> {
     // OPTIMIZATION: Use caching to reduce query volume
-    const cacheKey = { userId, courseId, unitId: unitId || 'ALL' };
+    const cacheKey = { courseId, unitId: unitId || 'ALL' };
     
     const allWords = await cachedVocabQuery(
         'getOfCourse',
-        () => client.query(convexApi.vocab.getOfCourse, { courseId, userId }),
+        () => client.query(convexApi.vocab.getOfCourse, { courseId }),
         cacheKey
     );
 
@@ -186,14 +185,10 @@ export async function fetchVocabSession(
 
 // Update word progress with SRS algorithm
 export async function updateVocabProgress(
-    userId: string,
     wordId: string,
     quality: 0 | 5 // 0 = Forgot, 5 = Know
 ): Promise<VocabProgressResponse> {
-
-    // Convex Mutation
     await client.mutation(convexApi.vocab.updateProgress, {
-        userId,
         wordId: wordId as any,
         quality
     });
