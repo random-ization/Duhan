@@ -16,7 +16,9 @@ async function getUser(ctx: any, tokenOrId: string | null): Promise<any | null> 
     try {
         const user = await ctx.db.get(tokenOrId as any);
         if (user) return user;
-    } catch (e) { }
+    } catch (e) {
+        // ignore invalid id formats
+    }
 
     // 3. Fallback
     return await ctx.db.query("users")

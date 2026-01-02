@@ -63,7 +63,9 @@ export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | un
         try {
             const userById = await ctx.db.get(identity.subject as any);
             if (userById) return userById;
-        } catch (e) { }
+        } catch (e) {
+            // subject was not a Convex document id
+        }
 
         const userByPostgres = await ctx.db.query("users").withIndex("by_postgresId", q => q.eq("postgresId", identity.subject)).first();
         if (userByPostgres) return userByPostgres;
@@ -92,7 +94,9 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
     if (!finalUser) {
         try {
             finalUser = await ctx.db.get(identity.subject as any);
-        } catch (e) { }
+        } catch (e) {
+            // ignore malformed id lookup
+        }
     }
 
     if (!finalUser || finalUser.role !== 'ADMIN') {
