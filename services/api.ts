@@ -20,6 +20,7 @@ const client = new ConvexHttpClient(CONVEX_URL!);
 // Configuration constants:
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes - adjust if needed
 const DEFAULT_PAGE_SIZE = 50; // Default page size - prevents full-table scans
+const MAX_CACHE_SIZE = 100; // Maximum cache entries to prevent memory leaks
 
 // ============================================
 // IN-MEMORY CACHE WITH TTL AND IN-FLIGHT DEDUPLICATION
@@ -28,9 +29,29 @@ interface CacheEntry {
   data: any;
   timestamp: number;
   promise?: Promise<any>; // For in-flight de-duplication
+  lastAccessed: number; // For LRU eviction
 }
 
 const queryCache = new Map<string, CacheEntry>();
+
+// LRU cache eviction - removes oldest accessed entry when cache is full
+function evictLRUIfNeeded() {
+  if (queryCache.size >= MAX_CACHE_SIZE) {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    
+    queryCache.forEach((entry, key) => {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = key;
+      }
+    });
+    
+    if (oldestKey) {
+      queryCache.delete(oldestKey);
+    }
+  }
+}
 
 // Serialize params to create cache key (with deterministic object key ordering)
 function serializeCacheKey(method: string, params?: any): string {
@@ -71,6 +92,7 @@ async function cachedQuery(
     
     // If cache is still fresh, return cached data
     if (now - cached.timestamp < CACHE_TTL_MS) {
+      cached.lastAccessed = now; // Update LRU timestamp
       return cached.data;
     }
     
@@ -82,9 +104,11 @@ async function cachedQuery(
   const promise = queryFn().then(
     (data) => {
       // Store the result in cache
+      evictLRUIfNeeded(); // Ensure cache doesn't grow unbounded
       queryCache.set(cacheKey, {
         data,
         timestamp: Date.now(),
+        lastAccessed: Date.now(),
       });
       return data;
     },
@@ -96,9 +120,11 @@ async function cachedQuery(
   );
   
   // Store the in-flight promise
+  evictLRUIfNeeded(); // Ensure cache doesn't grow unbounded
   queryCache.set(cacheKey, {
     data: null,
     timestamp: now,
+    lastAccessed: now,
     promise,
   });
   
@@ -186,16 +212,6 @@ export const api = {
     return { user };
   },
 
-  googleLogin: async (data: any): Promise<any> => {
-    // Not fully implemented on backend yet in this shim context.
-    // However, AuthPage needs it. If we use the new googleAuth mutation:
-    if (data.code) {
-      // Handle code exchange -> not implemented in shim, but AuthPage calls googleLogin with {code, ...}
-      // We need a backend action to exchange code.
-      throw new Error("Google Login requires backend Action (not implemented in shim)");
-    }
-  },
-
   updateProfile: async (updates: any) => {
     const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
     if (!userId) throw new Error("Not logged in");
@@ -270,21 +286,7 @@ export const api = {
     const token = getToken();
     const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
-    // Annotations still use userId in schema? 
-    // Let's check schema/annotations.ts. 
-    // Wait, I didn't update annotations.save in backend to use token yet.
-    // I missed updating `convex/annotations.ts`.
-    // I only updated `convex/user.ts`.
-    // I should stop and update `convex/annotations.ts` too or fallback to userId here?
-    // The implementation plan said "Update all mutations... in convex/user.ts".
-    // It didn't explicitly mention `annotations.ts` or `podcasts.ts` mutations.
-    // For consistency, I should update them too.
-    // But for now, let's use userId for annotations if the mutation requires usage of userId.
-    // Actually, `convex/annotations.ts` uses `mutation`.
-
-    // If I didn't update backend, I must pass `userId`. 
-    // But this shim needs to be secure eventually.
-    // Current valid logic: Pass userId because backend requires it.
+    // Note: Annotations backend currently requires userId
     if (!userId) return;
 
     await client.mutation(convexApi.annotations.save, {
@@ -453,19 +455,10 @@ export const api = {
     );
   },
 
-  getTextbookContent: async (params: any) => {
-    // Params likely: { institute, level, unit } or similar
-    // Map to units.getDetails if possible, or filter.
-    // For now, return empty object to prevent crash while we fix full logic
-    console.log("api.getTextbookContent called with:", params);
-    return {
-      title: "Unit Content",
-      readingText: "",
-      translation: "",
-      audioUrl: "",
-      vocabList: [],
-      grammarList: []
-    };
+  // DEPRECATED: Returns empty data - should not be used
+  getTextbookContent: async (params?: any) => {
+    console.warn("api.getTextbookContent is deprecated and returns empty data");
+    return {};
   },
 
   // --- LEGACY / DEPRECATED ---
@@ -516,23 +509,6 @@ export const api = {
   },
 
   saveTextbookContent: async (key: string, content: TextbookContent) => {
-    // key is "courseId_unitId", content has data
-    // Need to parse key or expect content to have courseId/unitIndex
-    // For now assuming content has enough data or we pass it
-    // Actually convex/units.ts:save needs courseId, unitIndex, articleIndex, etc.
-    // The Shim needs to adapt 'TextbookContent' to the mutation args.
-
-    // Parse key: "course_yonsei_1a_appendix_0" or similar?
-    // Let's assume content (TextbookContent) matches schema or we can adapt.
-    // NOTE: This shim is approximate.
-
-    // Workaround: We'll assume the arguments match what the backend expects if the frontend 
-    // constructs them correctly, or we spread the content.
-    // But convex/units.ts:save args are specific.
-
-    // Check if content has unitIndex/courseId
-    // If not, we might be stuck. 
-    // Assuming backend refactor aligned with this, or we just pass content as any.
     return await client.mutation(convexApi.units.save, content as any);
   },
 
@@ -546,13 +522,7 @@ export const api = {
       courseId,
       unitIndex
     });
-  },
-
-  request: async (endpoint: string, options?: any) => {
-    console.warn(`Legacy api.request called for ${endpoint}. Migration required.`);
-    return null;
   }
 };
 
-export const request = api.request;
 export default api;

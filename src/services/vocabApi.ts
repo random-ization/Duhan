@@ -12,7 +12,35 @@ const client = new ConvexHttpClient(CONVEX_URL!);
 // CACHE CONFIGURATION FOR VOCAB QUERIES
 // ============================================
 const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const vocabCache = new Map<string, { data: any; timestamp: number; promise?: Promise<any> }>();
+const MAX_VOCAB_CACHE_SIZE = 50; // Maximum cache entries
+
+interface VocabCacheEntry {
+    data: any;
+    timestamp: number;
+    promise?: Promise<any>;
+    lastAccessed: number;
+}
+
+const vocabCache = new Map<string, VocabCacheEntry>();
+
+// LRU eviction for vocab cache
+function evictVocabLRUIfNeeded() {
+    if (vocabCache.size >= MAX_VOCAB_CACHE_SIZE) {
+        let oldestKey: string | null = null;
+        let oldestTime = Infinity;
+        
+        vocabCache.forEach((entry, key) => {
+            if (entry.lastAccessed < oldestTime) {
+                oldestTime = entry.lastAccessed;
+                oldestKey = key;
+            }
+        });
+        
+        if (oldestKey) {
+            vocabCache.delete(oldestKey);
+        }
+    }
+}
 
 function serializeVocabCacheKey(method: string, params: any): string {
     // Sort keys recursively to ensure consistent serialization regardless of property order
@@ -40,6 +68,7 @@ async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, par
             return cached.promise;
         }
         if (now - cached.timestamp < VOCAB_CACHE_TTL_MS) {
+            cached.lastAccessed = now; // Update LRU
             return cached.data;
         }
         vocabCache.delete(cacheKey);
@@ -47,7 +76,8 @@ async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, par
     
     const promise = queryFn().then(
         (data) => {
-            vocabCache.set(cacheKey, { data, timestamp: Date.now() });
+            evictVocabLRUIfNeeded();
+            vocabCache.set(cacheKey, { data, timestamp: Date.now(), lastAccessed: Date.now() });
             return data;
         },
         (error) => {
@@ -56,7 +86,8 @@ async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, par
         }
     );
     
-    vocabCache.set(cacheKey, { data: null, timestamp: now, promise });
+    evictVocabLRUIfNeeded();
+    vocabCache.set(cacheKey, { data: null, timestamp: now, lastAccessed: now, promise });
     return promise;
 }
 
