@@ -30,10 +30,12 @@ export const tryLogin = internalMutation({
             console.log("Testing enrichUser queries...");
 
             // Replicate enrichUser logic exactly
+            // OPTIMIZATION: Limit to prevent excessive queries even in debug mode
+            const MAX_DEBUG_ITEMS = 100;
             const [savedWords, mistakes, examAttempts] = await Promise.all([
-                ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-                ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
-                ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).collect(),
+                ctx.db.query("saved_words").withIndex("by_user", q => q.eq("userId", user._id)).take(MAX_DEBUG_ITEMS),
+                ctx.db.query("mistakes").withIndex("by_user", q => q.eq("userId", user._id)).take(MAX_DEBUG_ITEMS),
+                ctx.db.query("exam_attempts").withIndex("by_user", q => q.eq("userId", user._id)).take(MAX_DEBUG_ITEMS),
             ]);
 
             console.log(`Fetched: ${savedWords.length} words, ${mistakes.length} mistakes, ${examAttempts.length} attempts`);

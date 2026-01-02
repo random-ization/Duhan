@@ -37,8 +37,18 @@ function serializeCacheKey(method: string, params?: any): string {
   if (!params || Object.keys(params).length === 0) {
     return method;
   }
-  // Sort keys to ensure consistent serialization regardless of property order
-  const sortedParams = JSON.stringify(params, Object.keys(params).sort());
+  // Sort keys recursively to ensure consistent serialization regardless of property order
+  const sortedParams = JSON.stringify(params, (key, value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.keys(value)
+        .sort()
+        .reduce((sorted, k) => {
+          sorted[k] = value[k];
+          return sorted;
+        }, {} as any);
+    }
+    return value;
+  });
   return `${method}:${sortedParams}`;
 }
 

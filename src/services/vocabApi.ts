@@ -15,7 +15,18 @@ const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const vocabCache = new Map<string, { data: any; timestamp: number; promise?: Promise<any> }>();
 
 function serializeVocabCacheKey(method: string, params: any): string {
-    const sortedParams = JSON.stringify(params, Object.keys(params || {}).sort());
+    // Sort keys recursively to ensure consistent serialization regardless of property order
+    const sortedParams = JSON.stringify(params, (key, value) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            return Object.keys(value)
+                .sort()
+                .reduce((sorted, k) => {
+                    sorted[k] = value[k];
+                    return sorted;
+                }, {} as any);
+        }
+        return value;
+    });
     return `${method}:${sortedParams}`;
 }
 

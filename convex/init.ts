@@ -37,31 +37,33 @@ export const getBootstrapData = query({
         }
 
         // Fetch all user data in parallel
+        // OPTIMIZATION: Limit collections to prevent excessive queries
+        const MAX_BOOTSTRAP_ITEMS = 200;
         const [courseProgress, vocabProgress, grammarProgress, savedWords, mistakes] = await Promise.all([
             // Course progress
             ctx.db.query("user_course_progress")
                 .withIndex("by_user", q => q.eq("userId", user!._id as any))
-                .collect(),
+                .take(MAX_BOOTSTRAP_ITEMS),
 
             // Vocab progress stats
             ctx.db.query("user_vocab_progress")
                 .withIndex("by_user", q => q.eq("userId", user!._id as any))
-                .collect(),
+                .take(MAX_BOOTSTRAP_ITEMS),
 
             // Grammar progress
             ctx.db.query("user_grammar_progress")
                 .withIndex("by_user_grammar", q => q.eq("userId", user!._id as any))
-                .collect(),
+                .take(MAX_BOOTSTRAP_ITEMS),
 
             // Saved words
             ctx.db.query("saved_words")
                 .withIndex("by_user", q => q.eq("userId", user!._id))
-                .collect(),
+                .take(MAX_BOOTSTRAP_ITEMS),
 
             // Mistakes
             ctx.db.query("mistakes")
                 .withIndex("by_user", q => q.eq("userId", user!._id))
-                .collect(),
+                .take(MAX_BOOTSTRAP_ITEMS),
         ]);
 
         const now = Date.now();
