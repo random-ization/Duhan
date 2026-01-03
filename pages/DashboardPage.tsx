@@ -6,6 +6,7 @@ import { StatBadge } from '../components/dashboard/StatBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useApp } from '../contexts/AppContext'; // Import Layout Context
+import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 
 // DnD Kit
@@ -77,6 +78,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
     const { user } = useAuth();
     const { selectedInstitute, selectedLevel } = useLearning();
     const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
+    const { institutes } = useData(); // Get institutes data
     const navigate = useNavigate();
 
     // Sensors
@@ -104,6 +106,13 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
         if (!user?.examHistory || user.examHistory.length === 0) return 0;
         return Math.max(...user.examHistory.map(e => e.score));
     }, [user]);
+
+    // Lookup institute name
+    const instituteName = useMemo(() => {
+        if (!selectedInstitute) return '教材';
+        const inst = institutes.find(i => i.id === selectedInstitute);
+        return inst ? inst.name : selectedInstitute;
+    }, [selectedInstitute, institutes]);
 
     // Render Card Content based on ID
     const renderCard = (id: string) => {
@@ -147,7 +156,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div className="flex justify-between items-start">
                                 <h3 className="font-black text-2xl text-slate-900 leading-tight">
-                                    {selectedInstitute || '教材'}<br />
+                                    {instituteName}<br />
                                     {selectedLevel ? `Level ${selectedLevel}` : 'Select Level'}
                                 </h3>
                                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">进行中</div>

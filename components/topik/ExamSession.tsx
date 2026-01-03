@@ -275,8 +275,8 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
         </div>
 
 
-        {/* 左侧导航栏 */}
-        <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
+        {/* 右侧导航栏 - 移到右侧避免被侧边栏遮挡 */}
+        <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200 p-3 flex flex-col items-center gap-3 max-h-[85vh] overflow-y-auto">
             {/* 计时器 */}
             <div className={`text-xl font-mono font-bold flex items-center ${timeLeft < 300 ? 'text-red-500' : 'text-emerald-600'}`}>

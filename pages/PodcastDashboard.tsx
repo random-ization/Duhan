@@ -21,8 +21,9 @@ export default function PodcastDashboard() {
 
     // Convex Integration
     const trendingData = useQuery(api.podcasts.getTrending);
-    const historyData = useQuery(api.podcasts.getHistory, user ? { userId: user.id } : "skip");
-    const subscriptionsData = useQuery(api.podcasts.getSubscriptions, user ? { userId: user.id } : "skip");
+    // Note: getHistory and getSubscriptions use authentication internally, no userId arg needed
+    const historyData = useQuery(api.podcasts.getHistory, user ? {} : "skip");
+    const subscriptionsData = useQuery(api.podcasts.getSubscriptions, user ? {} : "skip");
 
     useEffect(() => {
         if (trendingData) {

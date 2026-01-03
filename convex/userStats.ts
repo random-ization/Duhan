@@ -73,6 +73,22 @@ export const getStats = query({
             };
         }));
 
+        // Determine currentProgress (most recently accessed course)
+        let currentProgress = null;
+        if (courseDetails.length > 0) {
+            // Sort by lastAccessAt descending
+            const sortedCourses = [...courseDetails].sort((a, b) =>
+                new Date(b.lastAccessAt).getTime() - new Date(a.lastAccessAt).getTime()
+            );
+            const recent = sortedCourses[0];
+            currentProgress = {
+                instituteName: recent.courseName, // Use the actual name, not ID
+                level: 1, // Default level
+                unit: recent.completedUnits + 1, // Current unit = completed + 1
+                module: 'vocab', // Default to vocab
+            };
+        }
+
         return {
             streak,
             weeklyMinutes: [0, 0, 0, 0, 0, 0, 0], // Placeholder - would need activity tracking
@@ -85,6 +101,7 @@ export const getStats = query({
                 listeningsCompleted: 0,
             },
             courseProgress: courseDetails,
+            currentProgress, // Add this for LearnerDashboard
             vocabStats: {
                 total: vocabProgress.length,
                 dueReviews,

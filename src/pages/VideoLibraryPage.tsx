@@ -39,14 +39,6 @@ const VideoLibraryPage: React.FC = () => {
     // Convex Integration
     const convexVideos = useQuery(api.videos.list, activeLevel ? { level: activeLevel } : {});
 
-    if (convexVideos === undefined) {
-        return (
-            <div className="flex items-center justify-center h-80">
-                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
-            </div>
-        );
-    }
-
     useEffect(() => {
         if (convexVideos) {
             setVideos(convexVideos.map(v => ({
@@ -60,6 +52,15 @@ const VideoLibraryPage: React.FC = () => {
             setLoading(false);
         }
     }, [convexVideos]);
+
+    // Early return for loading state - MUST be after all hooks
+    if (convexVideos === undefined) {
+        return (
+            <div className="flex items-center justify-center h-80">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
 
     // Legacy fetch removed
     /*

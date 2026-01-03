@@ -46,7 +46,7 @@ const PodcastChannelPage: React.FC = () => {
 
     // Convex actions and queries
     const getEpisodesAction = useAction(convexApi.podcastActions.getEpisodes);
-    const subscriptions = useQuery(convexApi.podcasts.getSubscriptions, user ? { userId: user.id } : "skip");
+    const subscriptions = useQuery(convexApi.podcasts.getSubscriptions, user ? {} : "skip");
     const toggleSubscriptionMutation = useMutation(convexApi.podcasts.toggleSubscription);
 
     useEffect(() => {
@@ -101,7 +101,6 @@ const PodcastChannelPage: React.FC = () => {
 
         try {
             await toggleSubscriptionMutation({
-                userId: user.id,
                 channel: {
                     itunesId: String(channelId),
                     title: channelInfo.title || 'Unknown',
