@@ -2,9 +2,17 @@ const DEFAULT_CONVEX_DEV_URL = 'http://localhost:3001';
 
 const resolvedConvexUrl = (() => {
   if (import.meta.env.VITE_CONVEX_URL) return import.meta.env.VITE_CONVEX_URL;
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const isValidOrigin = origin.startsWith('http://') || origin.startsWith('https://');
-  return isValidOrigin ? origin : DEFAULT_CONVEX_DEV_URL;
+  if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+    try {
+      const url = new URL(window.location.origin);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return url.origin;
+      }
+    } catch {
+      // fall through to default
+    }
+  }
+  return DEFAULT_CONVEX_DEV_URL;
 })();
 
 /**
