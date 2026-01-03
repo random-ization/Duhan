@@ -102,7 +102,7 @@ export default function PodcastDashboard() {
                             <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">播客中心</h2>
                             <p className="text-slate-500 font-bold">听力磨耳朵</p>
                         </div>
-                        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Headphone.png" className="w-14 h-14 animate-bounce-slow" alt="headphone" />
+                        <img src="/emojis/Headphone.png" className="w-14 h-14 animate-bounce-slow" alt="headphone" />
                     </div>
                     <button
                         onClick={() => navigate('/podcasts/subscriptions')}

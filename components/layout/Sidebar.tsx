@@ -25,27 +25,27 @@ export default function Sidebar() {
     const navItems = [
         {
             path: '/dashboard', label: '学习主页',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Spiral%20Calendar.png" />,
+            icon: <EmojiIcon src="/emojis/Spiral_Calendar.png" />,
             activeClass: 'bg-indigo-100 text-indigo-700 border-indigo-100'
         },
         {
             path: '/courses', label: '教材学习',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Books.png" grayscale />,
+            icon: <EmojiIcon src="/emojis/Books.png" grayscale />,
             activeClass: 'bg-blue-100 text-blue-700 border-blue-100'
         },
         {
             path: '/topik', label: '模拟考试',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png" grayscale />,
+            icon: <EmojiIcon src="/emojis/Trophy.png" grayscale />,
             activeClass: 'bg-yellow-100 text-yellow-700 border-yellow-100'
         },
         {
             path: '/videos', label: '沉浸视频',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Clapper%20Board.png" grayscale />,
+            icon: <EmojiIcon src="/emojis/Clapper_Board.png" grayscale />,
             activeClass: 'bg-red-100 text-red-700 border-red-100'
         },
         {
             path: '/podcasts', label: '韩语播客',
-            icon: <EmojiIcon src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Headphone.png" grayscale />,
+            icon: <EmojiIcon src="/emojis/Headphone.png" grayscale />,
             activeClass: 'bg-purple-100 text-purple-700 border-purple-100'
         },
     ];

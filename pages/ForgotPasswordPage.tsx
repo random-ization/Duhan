@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
                     {/* 3D Rocket Decoration (Using the fixed URL) */}
                     <div className="absolute bottom-10 -left-10 animate-pulse duration-[3000ms]">
                         <img
-                            src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png"
+                            src="/emojis/Rocket.png"
                             className="w-32 h-32 drop-shadow-xl opacity-80"
                             alt="Rocket"
                         />

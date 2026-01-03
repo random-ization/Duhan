@@ -65,7 +65,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
             <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">考试中心</h2>
             <p className="text-slate-500 font-bold">真题实战模拟</p>
           </div>
-          <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
+          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -164,7 +164,7 @@ export default function AuthPage() {
           {/* 3D Rocket Decoration */}
           <div className="absolute bottom-10 -left-10 animate-bounce duration-[2000ms]">
             <img
-              src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png"
+              src="/emojis/Rocket.png"
               className="w-32 h-32 drop-shadow-xl"
               alt="Rocket"
             />

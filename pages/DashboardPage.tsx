@@ -27,18 +27,18 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Assets
+// Assets - Locally hosted emoji images
 const ASSETS = {
-    wave: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Waving%20Hand.png",
-    fire: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Fire.png",
-    gem: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Gem%20Stone.png",
-    tiger: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Tiger%20Face.png",
-    sparkles: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Sparkles.png",
-    book: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Open%20Book.png",
-    trophy: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png",
-    tv: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Television.png",
-    headphone: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Headphone.png",
-    memo: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Memo.png"
+    wave: "/emojis/Waving_Hand.png",
+    fire: "/emojis/Fire.png",
+    gem: "/emojis/Gem_Stone.png",
+    tiger: "/emojis/Tiger_Face.png",
+    sparkles: "/emojis/Sparkles.png",
+    book: "/emojis/Open_Book.png",
+    trophy: "/emojis/Trophy.png",
+    tv: "/emojis/Television.png",
+    headphone: "/emojis/Headphone.png",
+    memo: "/emojis/Memo.png"
 };
 
 // Sortable Item Wrapper

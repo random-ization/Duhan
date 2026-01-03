@@ -27,7 +27,7 @@ export default function NotebookPage() {
         <div className="space-y-10 pb-20 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
                 <BackButton onClick={() => navigate('/dashboard')} />
-                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Memo.png" className="w-14 h-14" alt="memo" />
+                <img src="/emojis/Memo.png" className="w-14 h-14" alt="memo" />
                 <div>
                     <h1 className="text-4xl font-black font-display text-slate-900">单词仓库</h1>
                     <p className="text-slate-500 font-bold">你的知识储备库</p>
