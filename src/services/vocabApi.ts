@@ -1,12 +1,10 @@
 // Vocabulary API Service - SRS Learning System
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../../convex/_generated/api";
+import { getConvexUrl } from "../../utils/convexConfig";
 
-const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL;
-if (!CONVEX_URL) {
-    console.error("VITE_CONVEX_URL is not defined!");
-}
-const client = new ConvexHttpClient(CONVEX_URL!);
+const CONVEX_URL = getConvexUrl();
+const client = new ConvexHttpClient(CONVEX_URL);
 
 // ============================================
 // CACHE CONFIGURATION FOR VOCAB QUERIES

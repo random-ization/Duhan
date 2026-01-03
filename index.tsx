@@ -6,8 +6,10 @@ import { AppProvider } from './contexts/AppContext';
 import './utils/i18next-config'; // Initialize i18n
 import './src/index.css';
 import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { getConvexUrl } from "./utils/convexConfig";
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = getConvexUrl();
+const convex = new ConvexReactClient(convexUrl);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
