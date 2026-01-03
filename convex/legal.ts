@@ -45,7 +45,7 @@ export const saveDocument = mutation({
 
         const existing = await ctx.db
             .query("legal_documents")
-            .withIndex("by_id", (q) => q.eq("identifier", args.type))
+            .withIndex("by_identifier", (q) => q.eq("identifier", args.type))
             .unique();
 
         if (existing) {

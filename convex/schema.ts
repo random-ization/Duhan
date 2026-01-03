@@ -405,5 +405,5 @@ export default defineSchema({
         title: v.string(),
         content: v.string(),
         updatedAt: v.number(),
-    }).index("by_id", ["identifier"]),
+    }).index("by_identifier", ["identifier"]),
 });

@@ -82,12 +82,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                             {moduleName}加载时遇到了问题。别担心，这不会影响其他功能。
                         </p>
 
-                        {/* Dev Mode Error Details */}
-                        {isDev && this.state.error && (
+                        {/* Dev Mode Error Details - Temporarily enabled for debugging */}
+                        {this.state.error && (
                             <div className="mb-6 p-4 bg-zinc-100 rounded-xl text-left overflow-auto max-h-40">
                                 <p className="text-xs font-mono text-red-600 break-all">
                                     {this.state.error.toString()}
                                 </p>
+                                {this.state.errorInfo?.componentStack && (
+                                    <pre className="text-xs text-zinc-500 mt-2 whitespace-pre-wrap">
+                                        {this.state.errorInfo.componentStack}
+                                    </pre>
+                                )}
                             </div>
                         )}
 

@@ -1,24 +1,14 @@
 "use node";
-import { action, mutation } from "./_generated/server";
+import { action } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import OpenAI from "openai";
 
-// Helper: Delete transcript
-export const deleteTranscript = mutation({
+// Helper: Delete transcript (action since "use node" requires actions only)
+export const deleteTranscript = action({
     args: { episodeId: v.string() },
     handler: async (ctx, args) => {
-        // 1. Find existing transcript in DB (if stored in DB)
-        // Currently relying on frontend logic/cache, but if we stored it in 'transcripts' table:
-        /*
-        const transcript = await ctx.db.query("transcripts")
-          .withIndex("by_episode", q => q.eq("episodeId", args.episodeId))
-          .first();
-        if (transcript) await ctx.db.delete(transcript._id);
-        */
-
-        // If not stored in DB and only S3/Local, this might be a no-op for backend
-        // BUT, let's assume we want to clear any server-side cache if exists.
-        // For now, return success.
+        // Currently a no-op as transcripts are cached on frontend/S3
+        // If stored in DB, would need to call an internal mutation
         return { success: true };
     }
 });
