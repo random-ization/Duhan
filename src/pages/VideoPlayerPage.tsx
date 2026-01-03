@@ -105,6 +105,14 @@ const VideoPlayerPage: React.FC = () => {
     // Convex Integration
     const convexVideo = useQuery(api.videos.get, id ? { id: id as any } : "skip");
 
+    if (convexVideo === undefined) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
     useEffect(() => {
         if (convexVideo) {
             setVideo({
