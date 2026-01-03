@@ -2,8 +2,9 @@ const DEFAULT_CONVEX_DEV_URL = 'http://localhost:3001';
 
 const resolvedConvexUrl = (() => {
   if (import.meta.env.VITE_CONVEX_URL) return import.meta.env.VITE_CONVEX_URL;
-  if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+  if (typeof window !== 'undefined') {
     const origin = window.location.origin;
+    // Guard against non-http(s) schemes in custom embeds/tests.
     if (origin.startsWith('http://') || origin.startsWith('https://')) {
       return origin;
     }
