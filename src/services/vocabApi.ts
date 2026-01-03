@@ -1,8 +1,9 @@
 // Vocabulary API Service - SRS Learning System
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../../convex/_generated/api";
+import { getConvexUrl } from "../../utils/convexConfig";
 
-const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL || 'http://localhost:3001';
+const CONVEX_URL = getConvexUrl();
 const client = new ConvexHttpClient(CONVEX_URL);
 
 // ============================================
