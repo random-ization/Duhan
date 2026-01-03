@@ -2,11 +2,8 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../../convex/_generated/api";
 
-const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL;
-if (!CONVEX_URL) {
-    console.error("VITE_CONVEX_URL is not defined!");
-}
-const client = new ConvexHttpClient(CONVEX_URL!);
+const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL || 'http://localhost:3001';
+const client = new ConvexHttpClient(CONVEX_URL);
 
 // ============================================
 // CACHE CONFIGURATION FOR VOCAB QUERIES

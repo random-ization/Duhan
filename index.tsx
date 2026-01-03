@@ -7,7 +7,8 @@ import './utils/i18next-config'; // Initialize i18n
 import './src/index.css';
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = import.meta.env.VITE_CONVEX_URL || 'http://localhost:3001';
+const convex = new ConvexReactClient(convexUrl);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
