@@ -5,4 +5,4 @@
  */
 export const getConvexUrl = () =>
   import.meta.env.VITE_CONVEX_URL ||
-  (typeof window !== 'undefined' ? window.location.origin : '');
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
