@@ -7,6 +7,7 @@ import { AppRoutes } from './routes';
 import { useAuth } from './contexts/AuthContext';
 import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
+import ErrorBoundary from './src/components/common/ErrorBoundary';
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -62,24 +63,25 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Routes>
-        <Route path="/*" element={
-          <AppRoutes
-            canAccessContent={canAccessContent}
-            onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-          />
-        } />
-      </Routes>
+      <ErrorBoundary moduleName="应用">
+        <Routes>
+          <Route path="/*" element={
+            <AppRoutes
+              canAccessContent={canAccessContent}
+              onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+            />
+          } />
+        </Routes>
 
-      <UpgradePrompt
-        isOpen={showUpgradePrompt}
-        onClose={() => setShowUpgradePrompt(false)}
-        language={language}
-        contentType="textbook"
-      />
+        <UpgradePrompt
+          isOpen={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          language={language}
+          contentType="textbook"
+        />
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }
 
 export default App;
-

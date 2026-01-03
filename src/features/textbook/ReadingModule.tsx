@@ -392,10 +392,18 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         userId: undefined // TODO: Add Auth integration later
     });
 
+    if (queryData === undefined) {
+        return (
+            <div className="flex items-center justify-center h-80">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
     // Convex Mutation: Complete Unit
     const completeUnitMutation = useMutation(api.progress.completeUnit);
 
-    const loading = queryData === undefined;
+    const loading = false;
     const queryError = null; // Convex throws/nulls usually, simplest check is undefined
 
     // Extract data from query
@@ -1158,5 +1166,4 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 };
 
 export default ReadingModule;
-
 

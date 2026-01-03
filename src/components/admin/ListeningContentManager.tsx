@@ -29,7 +29,7 @@ interface UnitListeningData {
 
 export const ListeningContentManager: React.FC = () => {
     // Convex hooks
-    // @ts-ignore
+    // @ts-expect-error Convex auto types missing for institutes namespace
     const institutes = useQuery(convexApi.institutes.getAll) || [];
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 

@@ -14,7 +14,7 @@ interface DiagnosticData {
 
 export default function DataDiagnostics() {
     // Convex Query
-    // @ts-ignore
+    // @ts-expect-error Convex types not generated for diagnostics namespace yet
     const healthStats = useQuery(convexApi.diagnostics.getHealthStats);
 
     // Derived state

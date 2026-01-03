@@ -19,8 +19,6 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
     const [activeTab, setActiveTab] = useState<'FLASHCARD' | 'LEARN'>(initialTab);
     const [localSettings, setLocalSettings] = useState<VocabSettings>(settings);
 
-    if (!isOpen) return null;
-
     const handleSave = useCallback(() => {
       onUpdate(localSettings);
       onClose();
@@ -69,6 +67,8 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
         </button>
       </div>
     );
+
+    if (!isOpen) return null;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">

@@ -59,10 +59,10 @@ export function useExamSession(examId: string) {
         return () => clearInterval(interval);
     }, [session?.endTime, session?.status]);
 
-    // Sync answers from server when session loads
+    // Sync answers from server when session loads; avoid re-sync if unchanged
     useEffect(() => {
         if (session?.answers) {
-            setLocalAnswers(session.answers);
+            setLocalAnswers(prev => (prev === session.answers ? prev : session.answers));
         }
     }, [session?.answers]);
 

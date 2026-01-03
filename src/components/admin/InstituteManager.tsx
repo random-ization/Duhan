@@ -202,6 +202,14 @@ export const InstituteManager: React.FC = () => {
         resetForm();
     };
 
+    if (status === 'LoadingFirstPage' || !results) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
     return (
         <div className="flex h-[calc(100vh-100px)] gap-6">
             {/* Left: Institute List */}

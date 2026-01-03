@@ -194,6 +194,14 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // ========================================
     const unitDetails = useQuery(api.units.getDetails, { courseId, unitIndex });
 
+    if (unitDetails === undefined) {
+        return (
+            <div className="flex items-center justify-center h-80">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
     useEffect(() => {
         if (unitDetails === undefined) {
             setLoading(true);

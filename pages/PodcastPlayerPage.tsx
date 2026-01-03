@@ -216,7 +216,9 @@ const PodcastPlayerPage: React.FC = () => {
                                         segments: data.segments || data,
                                         cachedAt: Date.now()
                                     }));
-                                } catch { }
+                                } catch (storageError) {
+                                    console.warn("Failed to cache transcript locally", storageError);
+                                }
                             }
                             return;
                         }
@@ -240,7 +242,9 @@ const PodcastPlayerPage: React.FC = () => {
                                 segments: result.data.segments,
                                 cachedAt: Date.now()
                             }));
-                        } catch { }
+                        } catch (storageError) {
+                            console.warn("Failed to cache generated transcript", storageError);
+                        }
                     } else {
                         throw new Error('Invalid transcript response');
                     }

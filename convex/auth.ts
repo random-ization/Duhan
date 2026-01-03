@@ -242,35 +242,15 @@ export const login = mutation({
     }
 });
 
-// Get current user by ID or Token with full profile data
+// Get current user (auth context only) with full profile data
 export const getMe = query({
-    args: {
-        userId: v.optional(v.string()),
-        token: v.optional(v.string()),
-    },
-    handler: async (ctx, args) => {
-        const { userId, token } = args;
-        let user: any = null;
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
 
-        if (token) {
-            // Lookup by token (Secure)
-            user = await ctx.db.query("users")
-                .withIndex("by_token", q => q.eq("token", token))
-                .first();
-        } else if (userId) {
-            // Legacy / Fallback lookup (Less Secure if not verified)
-            try {
-                user = await ctx.db.get(userId as any);
-            } catch {
-                user = await ctx.db.query("users")
-                    .withIndex("by_postgresId", q => q.eq("postgresId", userId))
-                    .first();
-            }
-        }
-
-        if (!user) {
-            return null;
-        }
+        const user = await getUserByTokenOrId(ctx, identity.subject);
+        if (!user) return null;
 
         return await enrichUser(ctx, user);
     }
@@ -338,21 +318,13 @@ export const googleAuth = mutation({
 // Update user profile
 export const updateProfile = mutation({
     args: {
-        userId: v.string(),
         name: v.optional(v.string()),
         avatar: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { userId, name, avatar } = args;
-
-        let user = null;
-        try {
-            user = await ctx.db.get(userId as any);
-        } catch {
-            user = await ctx.db.query("users")
-                .withIndex("by_postgresId", q => q.eq("postgresId", userId))
-                .first();
-        }
+        const { name, avatar } = args;
+        const userId = await getAuthUserId(ctx);
+        const user = await ctx.db.get(userId as any);
 
         if (!user) {
             throw new ConvexError({ code: "USER_NOT_FOUND" });
@@ -371,21 +343,14 @@ export const updateProfile = mutation({
 // Change password
 export const changePassword = mutation({
     args: {
-        userId: v.string(),
         currentPassword: v.string(),
         newPassword: v.string(),
     },
     handler: async (ctx, args) => {
-        const { userId, currentPassword, newPassword } = args;
+        const { currentPassword, newPassword } = args;
 
-        let user = null;
-        try {
-            user = await ctx.db.get(userId as any);
-        } catch {
-            user = await ctx.db.query("users")
-                .withIndex("by_postgresId", q => q.eq("postgresId", userId))
-                .first();
-        }
+        const userId = await getAuthUserId(ctx);
+        const user = await ctx.db.get(userId as any);
 
         if (!user) {
             throw new ConvexError({ code: "USER_NOT_FOUND" });

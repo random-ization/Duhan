@@ -35,7 +35,7 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function VideoManager() {
     // Convex hooks
-    // @ts-ignore - Assuming getVideos/list is correct in convex/videos.ts
+    // @ts-expect-error Convex types not generated for videos namespace yet
     const videos = useQuery(convexApi.videos.list, {}) || [];
     const createVideo = useMutation(convexApi.videos.create);
     const updateVideo = useMutation(convexApi.videos.update);

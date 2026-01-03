@@ -42,7 +42,7 @@ export default defineSchema({
     institutes: defineTable({
         id: v.string(), // Manual ID like "yonsei-1"
         name: v.string(),
-        levels: v.string(),
+        levels: v.any(),
         coverUrl: v.optional(v.string()),
         themeColor: v.optional(v.string()),
         publisher: v.optional(v.string()),
@@ -109,7 +109,7 @@ export default defineSchema({
 
     // User Vocab Progress (SRS)
     user_vocab_progress: defineTable({
-        userId: v.string(), // or v.id("users") if we migrate users fully
+        userId: v.id("users"),
         wordId: v.id("words"),
         status: v.string(), // "NEW", "LEARNING", "REVIEW", "MASTERED"
         nextReviewAt: v.optional(v.number()),
@@ -153,7 +153,7 @@ export default defineSchema({
 
     // User Grammar Progress
     user_grammar_progress: defineTable({
-        userId: v.string(),
+        userId: v.id("users"),
         grammarId: v.id("grammar_points"),
 
         status: v.string(), // "NOT_STARTED", "LEARNING", "MASTERED"
@@ -268,7 +268,7 @@ export default defineSchema({
 
     // User Course Progress (Completed Units)
     user_course_progress: defineTable({
-        userId: v.string(), // User ID (could be Convex ID or legacy)
+        userId: v.id("users"),
         courseId: v.string(), // Institute ID
         completedUnits: v.array(v.number()), // Array of completed unit indexes
         lastAccessAt: v.number(),
@@ -278,7 +278,7 @@ export default defineSchema({
 
     // Notebooks (User Notes)
     notebooks: defineTable({
-        userId: v.string(),
+        userId: v.id("users"),
         type: v.string(), // "WORD", "GRAMMAR", "NOTE", etc.
         title: v.string(),
         content: v.any(),
@@ -326,7 +326,7 @@ export default defineSchema({
     // User Mistakes
     mistakes: defineTable({
         userId: v.id("users"),
-        wordId: v.optional(v.string()),
+        wordId: v.optional(v.id("words")),
         korean: v.string(),
         english: v.string(),
         context: v.optional(v.string()),
@@ -337,7 +337,7 @@ export default defineSchema({
     // Exam Attempts
     exam_attempts: defineTable({
         userId: v.id("users"),
-        examId: v.string(),
+        examId: v.id("topik_exams"),
         score: v.number(),
         totalQuestions: v.number(),
         sectionScores: v.optional(v.any()), // JSON

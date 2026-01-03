@@ -77,7 +77,7 @@ export default function VocabModulePage() {
     // Convex Integration
     // Pass user ID (token or Convex ID) to ensure progress data is loaded
     const convexWordsQuery = useQuery(api.vocab.getOfCourse,
-        instituteId ? { courseId: instituteId, userId: (user as any)?.token || user?.id } : "skip"
+        instituteId ? { courseId: instituteId } : "skip"
     );
     const updateProgressMutation = useMutation(api.vocab.updateProgress);
 
@@ -144,7 +144,6 @@ export default function VocabModulePage() {
             if (user?.id && currentCard.id) {
                 try {
                     await updateProgressMutation({
-                        userId: (user as any)?.token || user?.id, // Pass likely token first
                         wordId: currentCard.id as any,
                         quality: 5
                     });
@@ -166,7 +165,6 @@ export default function VocabModulePage() {
                 });
 
                 await updateProgressMutation({
-                    userId: (user as any)?.token || user?.id,
                     wordId: currentCard.id as any,
                     quality: 0
                 });

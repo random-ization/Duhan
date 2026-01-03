@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from "./queryLimits";
+import { requireAdmin } from "./utils";
 
 // Get all users with real database pagination
 export const getUsers = query({
@@ -80,6 +81,7 @@ export const updateUser = mutation({
         }),
     },
     handler: async (ctx, args) => {
+        await requireAdmin(ctx);
         const { userId, updates } = args;
 
         await ctx.db.patch(userId, updates);
@@ -94,6 +96,7 @@ export const deleteUser = mutation({
         userId: v.id("users"),
     },
     handler: async (ctx, args) => {
+        await requireAdmin(ctx);
         await ctx.db.delete(args.userId);
         return { success: true };
     }
@@ -152,6 +155,7 @@ export const createInstitute = mutation({
         volume: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
+        await requireAdmin(ctx);
         const instituteId = await ctx.db.insert("institutes", args);
         return { id: instituteId, success: true };
     }
@@ -173,6 +177,7 @@ export const updateInstitute = mutation({
         }),
     },
     handler: async (ctx, args) => {
+        await requireAdmin(ctx);
         const { legacyId, updates } = args;
 
         const institute = await ctx.db.query("institutes")
@@ -194,6 +199,7 @@ export const deleteInstitute = mutation({
         legacyId: v.string(),
     },
     handler: async (ctx, args) => {
+        await requireAdmin(ctx);
         const institute = await ctx.db.query("institutes")
             .withIndex("by_legacy_id", q => q.eq("id", args.legacyId))
             .first();
