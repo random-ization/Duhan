@@ -194,13 +194,8 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // ========================================
     const unitDetails = useQuery(api.units.getDetails, { courseId, unitIndex });
 
-    if (unitDetails === undefined) {
-        return (
-            <div className="flex items-center justify-center h-80">
-                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
-            </div>
-        );
-    }
+    // Use state variable instead of early return to avoid hooks order issues
+    const isQueryLoading = unitDetails === undefined;
 
     useEffect(() => {
         if (unitDetails === undefined) {
