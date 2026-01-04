@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Play, Zap, Disc, Trophy, GripVertical } from 'lucide-react';
+import { Play, Zap, Disc, Trophy, GripVertical, BookMarked, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { StatBadge } from '../components/dashboard/StatBadge';
@@ -237,6 +237,43 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                             </button>
                         </div>
                         <img src={ASSETS.memo} className="absolute -left-2 -bottom-6 w-24 h-24 opacity-10 rotate-12" alt="memo" />
+                    </BentoCard>
+                );
+            case 'vocab':
+                return (
+                    <BentoCard onClickPath="/vocab-book" bgClass="bg-indigo-50" borderClass="border-slate-900" className="h-full">
+                        <div className="absolute -right-4 -bottom-4 opacity-10">
+                            <BookMarked size={80} className="text-indigo-600 rotate-12" />
+                        </div>
+                        <div className="relative z-10 h-full flex flex-col justify-between">
+                            <div>
+                                <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">生词本</div>
+                                <h3 className="font-black text-xl text-slate-900 leading-tight">我的生词</h3>
+                                <p className="text-slate-500 font-bold text-sm mt-1">收藏的单词和释义</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
+                                {wordsToReview} 个生词
+                            </div>
+                        </div>
+                    </BentoCard>
+                );
+            case 'notes':
+                return (
+                    <BentoCard onClickPath="/notebook" bgClass="bg-amber-50" borderClass="border-slate-900" className="h-full">
+                        <div className="absolute -right-4 -bottom-4 opacity-10">
+                            <FileText size={80} className="text-amber-600 rotate-12" />
+                        </div>
+                        <div className="relative z-10 h-full flex flex-col justify-between">
+                            <div>
+                                <div className="inline-block bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">笔记本</div>
+                                <h3 className="font-black text-xl text-slate-900 leading-tight">学习笔记</h3>
+                                <p className="text-slate-500 font-bold text-sm mt-1">错题记录和学习心得</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[9px] font-bold text-red-600">错</div>
+                                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600">记</div>
+                            </div>
+                        </div>
                     </BentoCard>
                 );
             default:

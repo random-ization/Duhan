@@ -26,6 +26,7 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
+const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
 
 // Podcast Pages
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
@@ -151,6 +152,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
                 }
               />
               <Route path="/notebook" element={<NotebookPage />} />
+              <Route path="/vocab-book" element={<VocabBookPage />} />
 
               {/* Podcast Learning */}
               <Route path="/podcasts" element={<PodcastDashboard />} />

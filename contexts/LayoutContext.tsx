@@ -9,7 +9,8 @@ export const DEFAULT_CARD_ORDER = [
     'topik',
     'youtube',
     'podcast',
-    'memory'
+    'vocab',   // 生词本
+    'notes'    // 笔记本
 ];
 
 interface LayoutContextType {

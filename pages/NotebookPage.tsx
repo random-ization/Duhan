@@ -1,118 +1,184 @@
-import React, { useState } from 'react';
-import { Bell, FolderHeart, Plus, PlusCircle, Folder, ArrowRight, BookMarked } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useMemo } from 'react';
+import { Search, BookOpen, GraduationCap, Target, FileText, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api as convexApi } from '../convex/_generated/api';
 import NoteCard from '../components/notebook/NoteCard';
-import { AnimatePresence, motion } from 'framer-motion';
-import BackButton from '../components/ui/BackButton';
-import EmptyState from '../src/components/common/EmptyState';
+import NoteDetailModal from '../components/notebook/NoteDetailModal';
 
-export default function NotebookPage() {
-    const { user } = useAuth();
+// Tab configuration
+const TABS = [
+    { key: 'ALL', label: '全部', icon: FileText },
+    { key: 'GRAMMAR', label: '语法', icon: GraduationCap },
+    { key: 'MISTAKE', label: 'TOPIK', icon: Target },
+];
+
+interface Note {
+    id: string;
+    type: string;
+    title: string;
+    preview: string | null;
+    tags: string[];
+    createdAt: string;
+}
+
+const NotebookPage: React.FC = () => {
     const navigate = useNavigate();
-    const [activeFolder, setActiveFolder] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('ALL');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-    // Dynamic Data
-    const totalWords = user?.savedWords?.length || 0;
-    // Mock logic for demo purposes (can be replaced with real spaced-repetition logic later)
-    const masteredCount = Math.floor(totalWords * 0.3);
-    const dueToday = Math.min(12, totalWords);
+    // 使用Convex获取笔记列表
+    const type = activeTab === 'ALL' ? undefined : activeTab;
+    const notebooksResult = useQuery(convexApi.notebooks.list, type ? { type } : {});
+    const loading = notebooksResult === undefined;
+    const notes: Note[] = useMemo(() => {
+        if (!notebooksResult?.data) return [];
+        return notebooksResult.data.map(n => ({
+            id: String(n.id),
+            type: n.type,
+            title: n.title,
+            preview: n.preview,
+            tags: n.tags,
+            createdAt: n.createdAt,
+        }));
+    }, [notebooksResult]);
 
-    // If a folder is selected, show the list (Note: reusing the previous list logic/components could be good here, 
-    // but for now I'll just keep the Lobby as requested. 
-    // If the user wants to see the words, we can implement a "Folder Detail" view later or conditionally render here.)
-    // For this step, I focus on the "Lobby" design requested.
+    // Filter notes by search query
+    const filteredNotes = useMemo(() => {
+        if (!searchQuery.trim()) return notes;
+        const q = searchQuery.toLowerCase();
+        return notes.filter(
+            n => n.title.toLowerCase().includes(q) ||
+                n.preview?.toLowerCase().includes(q) ||
+                n.tags.some(t => t.toLowerCase().includes(q))
+        );
+    }, [notes, searchQuery]);
+
+    // Handle delete (Convex will auto-refresh the list)
+    const handleDelete = (id: string) => {
+        // List will auto-refresh via Convex subscription
+    };
 
     return (
-        <div className="space-y-10 pb-20 animate-in fade-in duration-500">
-            <div className="flex items-center gap-4">
-                <BackButton onClick={() => navigate('/dashboard')} />
-                <img src="/emojis/Memo.png" className="w-14 h-14" alt="memo" />
-                <div>
-                    <h1 className="text-4xl font-black font-display text-slate-900">单词仓库</h1>
-                    <p className="text-slate-500 font-bold">你的知识储备库</p>
+        <div className="min-h-screen bg-slate-50">
+            {/* Header */}
+            <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-slate-200">
+                <div className="max-w-6xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-800">智能笔记本</h1>
+                            <p className="text-sm text-slate-500">你的学习笔记和生词收藏</p>
+                        </div>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                        >
+                            返回
+                        </button>
+                    </div>
+
+                    {/* Tabs & Search */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        {/* Tabs */}
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                            {TABS.map(tab => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.key;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Search */}
+                        <div className="flex-1 sm:max-w-xs">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="搜索笔记..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:bg-white transition-all"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Empty State when no words */}
-            {totalWords === 0 && (
-                <EmptyState
-                    icon={BookMarked}
-                    title="还没有收藏的单词"
-                    description="在阅读模块中点击单词就可以收藏啦！"
-                    actionLabel="去阅读"
-                    onAction={() => navigate('/dashboard')}
+            {/* Content */}
+            <div className="max-w-6xl mx-auto px-4 py-8">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                    </div>
+                ) : filteredNotes.length === 0 ? (
+                    <EmptyState hasFilter={searchQuery.trim().length > 0 || activeTab !== 'ALL'} />
+                ) : (
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+                    >
+                        <AnimatePresence mode="popLayout">
+                            {filteredNotes.map((note) => (
+                                <NoteCard
+                                    key={note.id}
+                                    {...note}
+                                    onClick={() => setSelectedNoteId(note.id)}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </div>
+
+            {/* Detail Modal */}
+            {selectedNoteId && (
+                <NoteDetailModal
+                    noteId={selectedNoteId}
+                    onClose={() => setSelectedNoteId(null)}
+                    onDelete={handleDelete}
                 />
-            )}
-
-            {totalWords > 0 && (
-                <>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-green-100 p-4 rounded-2xl border-2 border-green-200 text-center">
-                            <div className="text-3xl font-black text-green-700">{masteredCount}</div>
-                            <div className="text-xs font-bold text-green-600 uppercase">已掌握</div>
-                        </div>
-                        <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-yellow-200 text-center shadow-pop hover:-translate-y-1 transition">
-                            <div className="text-3xl font-black text-yellow-700 flex items-center justify-center gap-2">
-                                {dueToday} <Bell size={16} className="animate-bounce" />
-                            </div>
-                            <div className="text-xs font-bold text-yellow-600 uppercase">今日待复习</div>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200 text-center">
-                            <div className="text-3xl font-black text-slate-700">{totalWords}</div>
-                            <div className="text-xs font-bold text-slate-400 uppercase">总词汇量</div>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200 text-center flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 hover:text-indigo-600 transition group">
-                            <PlusCircle size={24} className="mb-1 text-slate-300 group-hover:text-indigo-500" />
-                            <div className="text-xs font-bold text-slate-400 uppercase group-hover:text-indigo-600">添加生词</div>
-                        </div>
-                    </div>
-
-                    {/* Folders */}
-                    <div>
-                        <h3 className="font-black text-xl mb-4 text-slate-800">单词本分类</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {/* Default Folder: My Words */}
-                            <div className="bg-white p-5 rounded-[1.5rem] border-2 border-slate-900 shadow-pop cursor-pointer hover:-translate-y-2 transition group relative overflow-hidden">
-                                <FolderHeart size={64} className="absolute -right-4 -bottom-4 text-slate-100 group-hover:text-indigo-50 transition transform rotate-12" />
-                                <div className="relative z-10 h-full flex flex-col justify-between">
-                                    <div>
-                                        <h4 className="font-black text-xl text-slate-900">我的生词本</h4>
-                                        <p className="text-slate-500 text-xs font-bold mt-1">{totalWords} 个单词</p>
-                                    </div>
-                                    <div className="mt-4 flex gap-1">
-                                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* TOPIK I Folder */}
-                            <div className="bg-white p-5 rounded-[1.5rem] border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-2 transition cursor-pointer group relative overflow-hidden">
-                                <Folder size={64} className="absolute -right-4 -bottom-4 text-slate-100 group-hover:text-indigo-50 transition transform rotate-12" />
-                                <div className="relative z-10 h-full flex flex-col justify-between">
-                                    <div>
-                                        <h4 className="font-black text-xl text-slate-900">TOPIK I 核心词</h4>
-                                        <p className="text-slate-500 text-xs font-bold mt-1">800 个单词</p>
-                                    </div>
-                                    <div className="mt-4 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                        <div className="bg-indigo-500 w-[30%] h-full"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Create New */}
-                            <div className="bg-slate-50 border-2 border-slate-200 border-dashed rounded-[1.5rem] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-white hover:border-indigo-400 transition min-h-[140px]">
-                                <Plus className="text-slate-400 mb-2 group-hover:text-indigo-400" />
-                                <span className="font-bold text-slate-400 text-sm group-hover:text-indigo-500">新建分类</span>
-                            </div>
-                        </div>
-                    </div>
-                </>
             )}
         </div>
     );
-}
+};
+
+// Empty state component
+const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center py-20 text-center"
+    >
+        <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
+            <BookOpen className="w-12 h-12 text-indigo-400" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-700 mb-2">
+            {hasFilter ? '没有找到匹配的笔记' : '笔记本是空的'}
+        </h3>
+        <p className="text-slate-500 max-w-sm">
+            {hasFilter
+                ? '尝试调整搜索条件或切换分类'
+                : '在复习模式中选中文字，点击「存入生词本」即可保存'}
+        </p>
+    </motion.div>
+);
+
+export default NotebookPage;

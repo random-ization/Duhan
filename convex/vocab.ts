@@ -376,3 +376,114 @@ export const bulkImport = mutation({
         return { success: true, results: { success: successCount, failed: failedCount, errors } };
     }
 });
+
+// Get words due for review (Vocab Book - SRS)
+export const getDueForReview = query({
+    args: {},
+    handler: async (ctx) => {
+        const userId = await getOptionalAuthUserId(ctx);
+        if (!userId) return [];
+
+        // Get all user progress that is not MASTERED
+        const progressItems = await ctx.db
+            .query("user_vocab_progress")
+            .withIndex("by_user_word", q => q.eq("userId", userId))
+            .collect();
+
+        // Filter: not mastered
+        const notMastered = progressItems.filter(p => p.status !== 'MASTERED');
+
+        // Fetch word details for each progress item
+        const wordsWithProgress = await Promise.all(
+            notMastered.map(async (progress) => {
+                const word = await ctx.db.get(progress.wordId);
+                if (!word) return null;
+
+                return {
+                    id: word._id,
+                    word: word.word,
+                    meaning: word.meaning,
+                    partOfSpeech: word.partOfSpeech,
+                    hanja: word.hanja,
+                    pronunciation: word.pronunciation,
+                    audioUrl: word.audioUrl,
+                    progress: {
+                        id: progress._id,
+                        status: progress.status,
+                        interval: progress.interval,
+                        streak: progress.streak,
+                        nextReviewAt: progress.nextReviewAt,
+                        lastReviewedAt: progress.lastReviewedAt,
+                    },
+                };
+            })
+        );
+
+        return wordsWithProgress.filter(w => w !== null);
+    },
+});
+
+// Add word to review list (Manual add to SRS)
+export const addToReview = mutation({
+    args: {
+        word: v.string(),
+        meaning: v.string(),
+        partOfSpeech: v.optional(v.string()),
+        context: v.optional(v.string()),
+        source: v.optional(v.string()), // e.g., "TOPIK", "READING", "MANUAL"
+    },
+    handler: async (ctx, args) => {
+        const userId = await getAuthUserId(ctx);
+        const now = Date.now();
+
+        // 1. Check if word exists in master dictionary
+        let existingWord = await ctx.db
+            .query("words")
+            .withIndex("by_word", q => q.eq("word", args.word))
+            .unique();
+
+        let wordId;
+        if (existingWord) {
+            wordId = existingWord._id;
+        } else {
+            // Create new word in dictionary
+            wordId = await ctx.db.insert("words", {
+                word: args.word,
+                meaning: args.meaning,
+                partOfSpeech: args.partOfSpeech || "NOUN",
+            });
+        }
+
+        // 2. Check if user already has progress for this word
+        const existingProgress = await ctx.db
+            .query("user_vocab_progress")
+            .withIndex("by_user_word", q => q.eq("userId", userId).eq("wordId", wordId))
+            .unique();
+
+        if (existingProgress) {
+            // Already in review list - optionally reset to LEARNING
+            if (existingProgress.status === 'MASTERED') {
+                await ctx.db.patch(existingProgress._id, {
+                    status: 'LEARNING',
+                    interval: 1,
+                    streak: 0,
+                    nextReviewAt: now + (24 * 60 * 60 * 1000),
+                });
+            }
+            return { success: true, wordId, action: 'updated' };
+        }
+
+        // 3. Create new progress entry
+        await ctx.db.insert("user_vocab_progress", {
+            userId,
+            wordId,
+            status: 'NEW',
+            interval: 0.5,
+            streak: 0,
+            lastReviewedAt: now,
+            nextReviewAt: now + (12 * 60 * 60 * 1000), // 12 hours
+        });
+
+        return { success: true, wordId, action: 'created' };
+    },
+});
