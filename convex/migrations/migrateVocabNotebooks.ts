@@ -1,5 +1,5 @@
-import { mutation } from "./_generated/server";
-import { getAuthUserId } from "./utils";
+import { mutation } from "../_generated/server";
+import { getAuthUserId } from "../utils";
 
 /**
  * 一次性迁移脚本：将notebooks表中的VOCAB类型数据迁移到user_vocab_progress
