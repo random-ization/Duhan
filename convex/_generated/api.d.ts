@@ -20,6 +20,7 @@ import type * as init from "../init.js";
 import type * as institutes from "../institutes.js";
 import type * as legal from "../legal.js";
 import type * as migrations from "../migrations.js";
+import type * as migrations_migrateVocabNotebooks from "../migrations/migrateVocabNotebooks.js";
 import type * as notebooks from "../notebooks.js";
 import type * as payments from "../payments.js";
 import type * as podcastActions from "../podcastActions.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   institutes: typeof institutes;
   legal: typeof legal;
   migrations: typeof migrations;
+  "migrations/migrateVocabNotebooks": typeof migrations_migrateVocabNotebooks;
   notebooks: typeof notebooks;
   payments: typeof payments;
   podcastActions: typeof podcastActions;

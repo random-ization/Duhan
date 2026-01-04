@@ -220,25 +220,6 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         </div>
                     </BentoCard>
                 );
-            case 'memory':
-                return (
-                    <BentoCard onClickPath="/notebook" className="flex items-center justify-between h-full" borderClass="border-slate-900">
-                        <div className="z-10">
-                            <h3 className="font-black text-xl text-slate-900">单词记忆挑战</h3>
-                            <p className="text-slate-500 font-bold text-sm mt-1">Review your saved words!</p>
-                        </div>
-                        <div className="flex items-center gap-4 z-10">
-                            <div className="text-right">
-                                <div className="text-3xl font-black text-slate-900">{wordsToReview}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase">Words Saved</div>
-                            </div>
-                            <button className="bg-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-[4px_4px_0px_0px_black] border-2 border-black hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_black] transition-all">
-                                <Zap size={24} fill="currentColor" />
-                            </button>
-                        </div>
-                        <img src={ASSETS.memo} className="absolute -left-2 -bottom-6 w-24 h-24 opacity-10 rotate-12" alt="memo" />
-                    </BentoCard>
-                );
             case 'vocab':
                 return (
                     <BentoCard onClickPath="/vocab-book" bgClass="bg-indigo-50" borderClass="border-slate-900" className="h-full">
@@ -289,9 +270,6 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 return 'md:col-span-1 md:row-span-2';
             case 'daily-phrase':
                 // Orig: md:col-span-2 row-span-1
-                return 'md:col-span-2';
-            case 'memory':
-                // Orig: md:col-span-2
                 return 'md:col-span-2';
             default:
                 // Default 1x1
