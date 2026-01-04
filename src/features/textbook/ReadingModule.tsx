@@ -395,15 +395,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     // Convex Mutation: Complete Unit - must be before any conditional returns
     const completeUnitMutation = useMutation(api.progress.completeUnit);
 
-    if (queryData === undefined) {
-        return (
-            <div className="flex items-center justify-center h-80">
-                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
-            </div>
-        );
-    }
+    // Use loading state instead of early return to avoid hooks order issues
+    const isLoading = queryData === undefined;
 
-    const loading = false;
     const queryError = null; // Convex throws/nulls usually, simplest check is undefined
 
     // Extract data from query
@@ -723,7 +717,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             }}
         >
             {/* Loading State */}
-            {loading && (
+            {isLoading && (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-zinc-400" />
@@ -733,7 +727,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             )}
 
             {/* Error State */}
-            {error && !loading && (
+            {error && !isLoading && (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <p className="font-bold text-red-500 mb-4">{error}</p>
@@ -748,7 +742,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             )}
 
             {/* Main Content - only show when loaded */}
-            {!loading && !error && (
+            {!isLoading && !error && (
                 <>
                     {/* Header */}
                     <header className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-3 flex items-center justify-between shrink-0">
