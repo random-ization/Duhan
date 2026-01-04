@@ -105,13 +105,8 @@ const VideoPlayerPage: React.FC = () => {
     // Convex Integration
     const convexVideo = useQuery(api.videos.get, id ? { id: id as any } : "skip");
 
-    if (convexVideo === undefined) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
-            </div>
-        );
-    }
+    // Use state variable instead of early return to avoid hooks order issues
+    const isQueryLoading = convexVideo === undefined;
 
     useEffect(() => {
         if (convexVideo) {
@@ -228,7 +223,7 @@ const VideoPlayerPage: React.FC = () => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    if (loading) {
+    if (loading || isQueryLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-zinc-100">
                 <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
