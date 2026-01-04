@@ -392,6 +392,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         userId: undefined // TODO: Add Auth integration later
     });
 
+    // Convex Mutation: Complete Unit - must be before any conditional returns
+    const completeUnitMutation = useMutation(api.progress.completeUnit);
+
     if (queryData === undefined) {
         return (
             <div className="flex items-center justify-center h-80">
@@ -399,9 +402,6 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             </div>
         );
     }
-
-    // Convex Mutation: Complete Unit
-    const completeUnitMutation = useMutation(api.progress.completeUnit);
 
     const loading = false;
     const queryError = null; // Convex throws/nulls usually, simplest check is undefined
