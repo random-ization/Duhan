@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Upload, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface FormState {
   word: string;
@@ -33,6 +34,14 @@ type BulkImportItem = Pick<
 > & {
   exampleSentence?: string;
   exampleMeaning?: string;
+  // Multi-language meanings
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
+  // Multi-language example translations
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
   tips?: unknown;
 };
 
@@ -44,6 +53,43 @@ type BulkImportResult = {
     errors: string[];
   };
 };
+
+/**
+ * Parse a CSV line correctly, handling quoted fields that may contain commas.
+ * Supports both double quotes (") and handles escaped quotes ("").
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote ("")
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote mode
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator - push current field and reset
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Push the last field
+  result.push(current.trim());
+
+  return result;
+}
 
 const VocabImporter: React.FC = () => {
   const institutes = useQuery(api.institutes.getAll, {});
@@ -98,7 +144,7 @@ const VocabImporter: React.FC = () => {
       setForm((prev) => ({ ...DEFAULT_FORM, courseId: prev.courseId }));
     } catch (error: any) {
       console.error(error);
-      setStatus(error?.message || "保存失败，请重试");
+      setStatus(error?.message || "保存失败");
     } finally {
       setSubmitting(false);
     }
@@ -118,19 +164,50 @@ const VocabImporter: React.FC = () => {
         .map((l) => l.trim())
         .filter(Boolean);
       const items: BulkImportItem[] = lines
-        .map((line) => {
-          const [word, meaning, partOfSpeech, unit] = line.split(",");
+        .map((line, index) => {
+          // 新格式: 单元,韩语,词性,释义(MN),释义(VN),释义(EN),释义(CH),例句,例句翻译(CH),例句翻译(MN),例句翻译(VN),例句翻译(EN)
+          // 自动检测分隔符：如果包含 Tab，则是 Excel 粘贴格式；否则按 CSV 解析
+          let parts = line.includes("\t")
+            ? line.split("\t").map(p => p.trim())
+            : parseCSVLine(line);
+
+          // 用户Excel格式: 单元, 韩语, 词性, 释义(CH), 释义(EN), 释义(MN), 释义(VN), 例句(KR), 例句翻译(CH), 例句翻译(EN), 例句翻译(MN), 例句翻译(VN)
+          const [
+            unit,           // 单元
+            word,           // 韩语
+            partOfSpeech,   // 词性
+            meaning,        // 释义(CH) - 中文 (primary)
+            meaningEn,      // 释义(EN) - 英语
+            meaningMn,      // 释义(MN) - 蒙古语
+            meaningVi,      // 释义(VN) - 越南语
+            exampleSentence,     // 例句(KR)
+            exampleMeaning,      // 例句翻译(CH)
+            exampleMeaningEn,    // 例句翻译(EN)
+            exampleMeaningMn,    // 例句翻译(MN)
+            exampleMeaningVi,    // 例句翻译(VN)
+          ] = parts;
+
+          // 跳过表头行
+          if (index === 0 && (unit === "单元" || word === "韩语")) return null;
+
           if (!word || !meaning) return null;
           return {
-            word: word.trim(),
-            meaning: meaning.trim(),
-            partOfSpeech: (partOfSpeech || "NOUN").trim(),
-            hanja: undefined,
+            word: word,
+            meaning: meaning,
+            partOfSpeech: partOfSpeech || "NOUN",
+            meaningEn: meaningEn || undefined,
+            meaningVi: meaningVi || undefined,
+            meaningMn: meaningMn || undefined,
             courseId: form.courseId,
             unitId: Number(unit) || form.unitId || 1,
+            exampleSentence: exampleSentence || undefined,
+            exampleMeaning: exampleMeaning || undefined,
+            exampleMeaningEn: exampleMeaningEn || undefined,
+            exampleMeaningVi: exampleMeaningVi || undefined,
+            exampleMeaningMn: exampleMeaningMn || undefined,
           };
         })
-        .filter((item): item is BulkImportItem => Boolean(item));
+        .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
       if (items.length === 0) {
         setStatus("未解析到有效的词条");
@@ -138,7 +215,7 @@ const VocabImporter: React.FC = () => {
         return;
       }
 
-      const result: BulkImportResult = await bulkImportMutation({ items });
+      const result: BulkImportResult = await bulkImportMutation({ items, token: localStorage.getItem("token") || undefined });
       if (result?.results?.errors?.length) {
         setStatus(`部分导入失败：${result.results.errors.join("; ")}`);
       } else {
@@ -171,11 +248,17 @@ const VocabImporter: React.FC = () => {
             }
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
-            {(institutes || []).map((inst: any) => (
-              <option key={inst.id || inst._id} value={inst.id || inst._id}>
-                {inst.name}
-              </option>
-            ))}
+            {(institutes || []).map((inst: any) => {
+              // Build display name with level and volume
+              let displayName = inst.name || '';
+              if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
+              if (inst.volume) displayName += ` ${inst.volume}`;
+              return (
+                <option key={inst.id || inst._id} value={inst.id || inst._id}>
+                  {displayName}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
@@ -315,20 +398,90 @@ const VocabImporter: React.FC = () => {
         <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] p-5 space-y-4">
           <div className="flex items-center gap-2 font-bold text-zinc-800">
             <Upload className="w-4 h-4" />
-            批量导入（CSV 每行：word,meaning,partOfSpeech,unit）
+            批量导入
           </div>
+
+          {/* File Upload Area */}
+          {/* File Upload Area */}
+          <div className="relative">
+            <input
+              type="file"
+              accept=".csv,.txt,.xlsx,.xls"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+                if (isExcel) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const data = new Uint8Array(event.target?.result as ArrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // Convert to TSV (Tab Separated Values) - naturally avoids comma issues
+                    const text = XLSX.utils.sheet_to_csv(worksheet, { FS: "\t" });
+                    setBulkText(text);
+                    setStatus(`已加载 Excel 文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`);
+                  };
+                  reader.readAsArrayBuffer(file);
+                } else {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const text = event.target?.result as string;
+                    setBulkText(text);
+                    setStatus(`已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`);
+                  };
+                  reader.readAsText(file, 'UTF-8');
+                }
+                e.target.value = ''; // Reset for re-upload
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="border-2 border-dashed border-zinc-300 rounded-xl p-6 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
+              <FileSpreadsheet className="w-10 h-10 mx-auto text-zinc-400 mb-2 group-hover:text-indigo-500 transition-colors" />
+              <p className="text-sm font-bold text-zinc-700">点击上传表格文件</p>
+              <p className="text-xs text-zinc-400 mt-1">支持 Excel (.xlsx, .xls) 或 CSV (.csv)</p>
+            </div>
+          </div>
+
+          <div className="text-xs text-zinc-500 text-center">— 或手动从表格中复制并粘贴 —</div>
+
+          {/* Format Guide */}
+          <div className="bg-zinc-50 rounded-lg p-3 text-xs space-y-2 border border-zinc-100">
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-zinc-700">列格式说明（按顺序）：</div>
+              <span className="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded text-[10px]">共 12 列</span>
+            </div>
+            <div className="text-zinc-500 font-mono leading-relaxed break-all">
+              单元, 韩语, 词性, 释义(蒙), 释义(越), 释义(英), 释义(中), 例句, 例句中翻, 例句蒙翻, 例句越翻, 例句英翻
+            </div>
+            <div className="text-zinc-400 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              <span>智能识别 CSV 或 Excel 粘贴格式，自动跳过表头</span>
+            </div>
+          </div>
+
           <textarea
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
-            rows={10}
-            className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900 font-mono text-sm"
-            placeholder="示例：학교,学校,NOUN,1"
+            rows={8}
+            className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900 font-mono text-xs bg-zinc-50/50"
+            placeholder="粘贴区域：&#10;1	가수	NOUN	Дуучин	Ca sĩ	Singer	歌手	저는 노래를 잘하는 가수가 되고 싶어요.	我想成为唱歌好的歌手...&#10;..."
           />
+
+          {bulkText && (
+            <div className="text-xs text-zinc-500">
+              已解析 {bulkText.split('\n').filter(l => l.trim()).length} 行数据
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleBulkImport}
-            disabled={submitting}
-            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+            disabled={submitting || !bulkText.trim()}
+            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             提交批量导入

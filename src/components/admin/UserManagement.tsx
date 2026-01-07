@@ -62,8 +62,9 @@ export const UserManagement: React.FC = () => {
 
     const handleDelete = async (id: string) => {
         if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
+        const token = localStorage.getItem('token');
         try {
-            await deleteUserMutation({ userId: id as any });
+            await deleteUserMutation({ userId: id as any, token: token || undefined });
         } catch (e) {
             alert('删除失败');
         }
@@ -72,13 +73,17 @@ export const UserManagement: React.FC = () => {
     const handleSave = async () => {
         if (!editingUser || !editingUser.id) return;
         setSaving(true);
+        const token = localStorage.getItem('token');
         try {
             await updateUserMutation({
                 userId: editingUser.id as any,
+                token: token || undefined,
                 updates: {
                     name: editingUser.name,
                     role: editingUser.role,
                     tier: editingUser.tier,
+                    subscriptionType: editingUser.subscriptionType,
+                    subscriptionExpiry: editingUser.subscriptionExpiry,
                 },
             });
             setEditingUser(null);
@@ -255,7 +260,7 @@ export const UserManagement: React.FC = () => {
                                         onChange={e => setEditingUser({ ...editingUser, tier: e.target.value })}
                                     >
                                         <option value="FREE">免费版 (Free)</option>
-                                        <option value="PRO">高级版 (Pro)</option>
+                                        <option value="PREMIUM">高级版 (Premium)</option>
                                         <option value="LIFETIME">终身版 (Lifetime)</option>
                                     </select>
                                 </div>

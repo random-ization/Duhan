@@ -79,8 +79,13 @@ export default defineSchema({
     // Words (Master Dictionary)
     words: defineTable({
         word: v.string(),
-        meaning: v.string(),
+        meaning: v.string(), // Chinese meaning (primary)
         partOfSpeech: v.string(),
+
+        // Multi-language meanings
+        meaningEn: v.optional(v.string()), // English
+        meaningVi: v.optional(v.string()), // Vietnamese
+        meaningMn: v.optional(v.string()), // Mongolian
 
         hanja: v.optional(v.string()),
         pronunciation: v.optional(v.string()),
@@ -100,7 +105,12 @@ export default defineSchema({
         unitId: v.number(),
 
         exampleSentence: v.optional(v.string()),
-        exampleMeaning: v.optional(v.string()),
+        exampleMeaning: v.optional(v.string()), // Chinese (primary)
+
+        // Multi-language example translations
+        exampleMeaningEn: v.optional(v.string()), // English
+        exampleMeaningVi: v.optional(v.string()), // Vietnamese
+        exampleMeaningMn: v.optional(v.string()), // Mongolian
 
         createdAt: v.number(),
     }).index("by_course_unit", ["courseId", "unitId"])

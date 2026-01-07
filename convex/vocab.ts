@@ -25,7 +25,7 @@ export const getStats = query({
         if (userId) {
             const progress = await ctx.db
                 .query("user_vocab_progress")
-                .withIndex("by_user_word", q => q.eq("userId", userId)) // This might be inefficient if user has many words across courses
+                .withIndex("by_user_word", q => q.eq("userId", userId as any)) // This might be inefficient if user has many words across courses
                 // Ideally we filter by course, but progress doesn't have courseId directly.
                 // We rely on matching wordIds from appearances.
                 .collect();
@@ -48,20 +48,63 @@ export const getAll = query({
     handler: async (ctx, args) => {
         const limit = args.limit || 1000;
 
-        // 1. Get all words first (master dictionary)
-        const words = await ctx.db.query("words").take(limit);
-
-        // 2. Get all appearances to find course associations
-        const appearances = await ctx.db.query("vocabulary_appearances").collect();
-
-        // 3. Get all institutes for course name lookup
+        // 1. Get all institutes for course name lookup
         const institutes = await ctx.db.query("institutes").collect();
         const courseNameMap = new Map(institutes.map(i => [i.id, i.name]));
 
-        // 4. Build word -> courses map
+        // 2. If courseId is provided, filter via appearances FIRST (before limit)
+        if (args.courseId) {
+            const appearances = await ctx.db
+                .query("vocabulary_appearances")
+                .withIndex("by_course_unit", q => q.eq("courseId", args.courseId))
+                .take(limit);
+
+            // Fetch unique words for these appearances
+            const wordIds = [...new Set(appearances.map(a => a.wordId))];
+            const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+            const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
+
+            // Return one entry PER APPEARANCE (not per unique word)
+            return appearances.map(app => {
+                const word = wordsMap.get(app.wordId.toString());
+                if (!word) return null;
+                return {
+                    _id: word._id,
+                    id: word._id,
+                    word: word.word,
+                    meaning: word.meaning,
+                    meaningEn: word.meaningEn,
+                    meaningVi: word.meaningVi,
+                    meaningMn: word.meaningMn,
+                    partOfSpeech: word.partOfSpeech,
+                    hanja: word.hanja,
+                    pronunciation: word.pronunciation,
+                    audioUrl: word.audioUrl,
+                    courseId: args.courseId,
+                    courseName: courseNameMap.get(args.courseId!) || args.courseId,
+                    unitId: app.unitId || 0,
+                    exampleSentence: app.exampleSentence,
+                    exampleMeaning: app.exampleMeaning,
+                    exampleMeaningEn: app.exampleMeaningEn,
+                    exampleMeaningVi: app.exampleMeaningVi,
+                    exampleMeaningMn: app.exampleMeaningMn,
+                    appearanceId: app._id,
+                };
+            }).filter(Boolean);
+        }
+
+        // 3. No courseId filter: get all words with course associations
+        const words = await ctx.db.query("words").take(limit);
+        const appearances = await ctx.db.query("vocabulary_appearances").collect();
+
+        // Build word -> appearance data map (use first appearance for display)
+        const wordAppMap = new Map<string, typeof appearances[0]>();
         const wordCourseMap = new Map<string, { courseId: string; courseName: string; unitId: number }[]>();
         for (const app of appearances) {
             const wordId = app.wordId.toString();
+            if (!wordAppMap.has(wordId)) {
+                wordAppMap.set(wordId, app);
+            }
             if (!wordCourseMap.has(wordId)) {
                 wordCourseMap.set(wordId, []);
             }
@@ -72,34 +115,32 @@ export const getAll = query({
             });
         }
 
-        // 5. Filter by courseId if provided
-        let filteredWords = words;
-        if (args.courseId) {
-            const courseWordIds = new Set(
-                appearances
-                    .filter(a => a.courseId === args.courseId)
-                    .map(a => a.wordId.toString())
-            );
-            filteredWords = words.filter(w => courseWordIds.has(w._id.toString()));
-        }
-
-        // 6. Return words with course info
-        return filteredWords.map(word => ({
-            _id: word._id,
-            id: word._id,
-            word: word.word,
-            meaning: word.meaning,
-            partOfSpeech: word.partOfSpeech,
-            hanja: word.hanja,
-            pronunciation: word.pronunciation,
-            audioUrl: word.audioUrl,
-            // Course associations
-            courses: wordCourseMap.get(word._id.toString()) || [],
-            // Primary course (first one)
-            courseId: wordCourseMap.get(word._id.toString())?.[0]?.courseId || '',
-            courseName: wordCourseMap.get(word._id.toString())?.[0]?.courseName || '未分类',
-            unitId: wordCourseMap.get(word._id.toString())?.[0]?.unitId || 0,
-        }));
+        return words.map(word => {
+            const app = wordAppMap.get(word._id.toString());
+            return {
+                _id: word._id,
+                id: word._id,
+                word: word.word,
+                meaning: word.meaning,
+                meaningEn: word.meaningEn,
+                meaningVi: word.meaningVi,
+                meaningMn: word.meaningMn,
+                partOfSpeech: word.partOfSpeech,
+                hanja: word.hanja,
+                pronunciation: word.pronunciation,
+                audioUrl: word.audioUrl,
+                courses: wordCourseMap.get(word._id.toString()) || [],
+                courseId: wordCourseMap.get(word._id.toString())?.[0]?.courseId || '',
+                courseName: wordCourseMap.get(word._id.toString())?.[0]?.courseName || '未分类',
+                unitId: wordCourseMap.get(word._id.toString())?.[0]?.unitId || 0,
+                exampleSentence: app?.exampleSentence,
+                exampleMeaning: app?.exampleMeaning,
+                exampleMeaningEn: app?.exampleMeaningEn,
+                exampleMeaningVi: app?.exampleMeaningVi,
+                exampleMeaningMn: app?.exampleMeaningMn,
+                appearanceId: app?._id,
+            };
+        });
     },
 });
 
@@ -128,7 +169,7 @@ export const getOfCourse = query({
                     userId
                         ? ctx.db
                             .query("user_vocab_progress")
-                            .withIndex("by_user_word", (q) => q.eq("userId", userId).eq("wordId", app.wordId))
+                            .withIndex("by_user_word", (q) => q.eq("userId", userId as any).eq("wordId", app.wordId))
                             .unique()
                         : Promise.resolve(null),
                 ]);
@@ -285,7 +326,7 @@ export const updateProgress = mutation({
             }
 
             await ctx.db.insert("user_vocab_progress", {
-                userId,
+                userId: userId as any,
                 wordId,
                 status,
                 interval,
@@ -306,15 +347,27 @@ export const bulkImport = mutation({
             partOfSpeech: v.string(),
             hanja: v.optional(v.string()),
 
+            // Multi-language meanings
+            meaningEn: v.optional(v.string()),
+            meaningVi: v.optional(v.string()),
+            meaningMn: v.optional(v.string()),
+
             courseId: v.string(),
             unitId: v.number(),
             exampleSentence: v.optional(v.string()),
             exampleMeaning: v.optional(v.string()),
+
+            // Multi-language example translations
+            exampleMeaningEn: v.optional(v.string()),
+            exampleMeaningVi: v.optional(v.string()),
+            exampleMeaningMn: v.optional(v.string()),
+
             tips: v.optional(v.any()), // JSON
         })),
+        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
+        await requireAdmin(ctx, args.token);
 
         let successCount = 0;
         let failedCount = 0;
@@ -331,12 +384,23 @@ export const bulkImport = mutation({
                 let wordId;
                 if (existingWord) {
                     wordId = existingWord._id;
+                    // Update existing word with new multi-language meanings if provided
+                    const updates: Record<string, string> = {};
+                    if (item.meaningEn) updates.meaningEn = item.meaningEn;
+                    if (item.meaningVi) updates.meaningVi = item.meaningVi;
+                    if (item.meaningMn) updates.meaningMn = item.meaningMn;
+                    if (Object.keys(updates).length > 0) {
+                        await ctx.db.patch(existingWord._id, updates);
+                    }
                 } else {
                     wordId = await ctx.db.insert("words", {
                         word: item.word,
                         meaning: item.meaning,
                         partOfSpeech: item.partOfSpeech,
                         hanja: item.hanja,
+                        meaningEn: item.meaningEn,
+                        meaningVi: item.meaningVi,
+                        meaningMn: item.meaningMn,
                         tips: item.tips,
                     });
                 }
@@ -356,14 +420,21 @@ export const bulkImport = mutation({
                         unitId: item.unitId,
                         exampleSentence: item.exampleSentence,
                         exampleMeaning: item.exampleMeaning,
+                        exampleMeaningEn: item.exampleMeaningEn,
+                        exampleMeaningVi: item.exampleMeaningVi,
+                        exampleMeaningMn: item.exampleMeaningMn,
                         createdAt: Date.now(),
                     });
                 } else {
-                    if (item.exampleSentence) {
-                        await ctx.db.patch(existingApp._id, {
-                            exampleSentence: item.exampleSentence,
-                            exampleMeaning: item.exampleMeaning,
-                        });
+                    // Update existing appearance with new data
+                    const appUpdates: Record<string, string | undefined> = {};
+                    if (item.exampleSentence) appUpdates.exampleSentence = item.exampleSentence;
+                    if (item.exampleMeaning) appUpdates.exampleMeaning = item.exampleMeaning;
+                    if (item.exampleMeaningEn) appUpdates.exampleMeaningEn = item.exampleMeaningEn;
+                    if (item.exampleMeaningVi) appUpdates.exampleMeaningVi = item.exampleMeaningVi;
+                    if (item.exampleMeaningMn) appUpdates.exampleMeaningMn = item.exampleMeaningMn;
+                    if (Object.keys(appUpdates).length > 0) {
+                        await ctx.db.patch(existingApp._id, appUpdates);
                     }
                 }
                 successCount++;
@@ -387,7 +458,7 @@ export const getDueForReview = query({
         // Get all user progress that is not MASTERED
         const progressItems = await ctx.db
             .query("user_vocab_progress")
-            .withIndex("by_user_word", q => q.eq("userId", userId))
+            .withIndex("by_user_word", q => q.eq("userId", userId as any))
             .collect();
 
         // Filter: not mastered
@@ -457,7 +528,7 @@ export const addToReview = mutation({
         // 2. Check if user already has progress for this word
         const existingProgress = await ctx.db
             .query("user_vocab_progress")
-            .withIndex("by_user_word", q => q.eq("userId", userId).eq("wordId", wordId))
+            .withIndex("by_user_word", q => q.eq("userId", userId as any).eq("wordId", wordId))
             .unique();
 
         if (existingProgress) {
@@ -475,7 +546,7 @@ export const addToReview = mutation({
 
         // 3. Create new progress entry
         await ctx.db.insert("user_vocab_progress", {
-            userId,
+            userId: userId as any,
             wordId,
             status: 'NEW',
             interval: 0.5,
@@ -485,5 +556,66 @@ export const addToReview = mutation({
         });
 
         return { success: true, wordId, action: 'created' };
+    },
+});
+
+// Update vocabulary word and its appearance (Admin only)
+export const updateVocab = mutation({
+    args: {
+        token: v.optional(v.string()),
+        wordId: v.id("words"),
+        appearanceId: v.optional(v.id("vocabulary_appearances")),
+        // Word fields
+        word: v.optional(v.string()),
+        meaning: v.optional(v.string()),
+        meaningEn: v.optional(v.string()),
+        meaningVi: v.optional(v.string()),
+        meaningMn: v.optional(v.string()),
+        partOfSpeech: v.optional(v.string()),
+        // Appearance fields
+        unitId: v.optional(v.number()),
+        exampleSentence: v.optional(v.string()),
+        exampleMeaning: v.optional(v.string()),
+        exampleMeaningEn: v.optional(v.string()),
+        exampleMeaningVi: v.optional(v.string()),
+        exampleMeaningMn: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        await requireAdmin(ctx, args.token);
+
+        const { wordId, appearanceId, token, ...fields } = args;
+
+        // 1. Update word fields
+        const wordFields: Record<string, string | undefined> = {};
+        if (fields.word !== undefined) wordFields.word = fields.word;
+        if (fields.meaning !== undefined) wordFields.meaning = fields.meaning;
+        if (fields.meaningEn !== undefined) wordFields.meaningEn = fields.meaningEn;
+        if (fields.meaningVi !== undefined) wordFields.meaningVi = fields.meaningVi;
+        if (fields.meaningMn !== undefined) wordFields.meaningMn = fields.meaningMn;
+        if (fields.partOfSpeech !== undefined) wordFields.partOfSpeech = fields.partOfSpeech;
+
+        if (Object.keys(wordFields).length > 0) {
+            await ctx.db.patch(wordId, {
+                ...wordFields,
+                updatedAt: Date.now(),
+            });
+        }
+
+        // 2. Update appearance fields if appearanceId provided
+        if (appearanceId) {
+            const appFields: Record<string, string | number | undefined> = {};
+            if (fields.unitId !== undefined) appFields.unitId = fields.unitId;
+            if (fields.exampleSentence !== undefined) appFields.exampleSentence = fields.exampleSentence;
+            if (fields.exampleMeaning !== undefined) appFields.exampleMeaning = fields.exampleMeaning;
+            if (fields.exampleMeaningEn !== undefined) appFields.exampleMeaningEn = fields.exampleMeaningEn;
+            if (fields.exampleMeaningVi !== undefined) appFields.exampleMeaningVi = fields.exampleMeaningVi;
+            if (fields.exampleMeaningMn !== undefined) appFields.exampleMeaningMn = fields.exampleMeaningMn;
+
+            if (Object.keys(appFields).length > 0) {
+                await ctx.db.patch(appearanceId, appFields);
+            }
+        }
+
+        return { success: true, wordId };
     },
 });

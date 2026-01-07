@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
+import { getOptionalAuthUserId } from "./utils";
 import { MAX_ITEMS_PER_USER_COLLECTION } from "./queryLimits";
 
 import { compareSync, hashSync } from "bcryptjs";
@@ -244,12 +245,15 @@ export const login = mutation({
 
 // Get current user (auth context only) with full profile data
 export const getMe = query({
-    args: {},
-    handler: async (ctx) => {
-        const identity = await ctx.auth.getUserIdentity();
-        if (!identity) return null;
+    args: {
+        token: v.optional(v.string()),
+        userId: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const userId = await getOptionalAuthUserId(ctx, args.token);
+        if (!userId) return null;
 
-        const user = await getUserByTokenOrId(ctx, identity.subject);
+        const user = await ctx.db.get(userId as any);
         if (!user) return null;
 
         return await enrichUser(ctx, user);

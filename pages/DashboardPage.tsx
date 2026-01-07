@@ -302,7 +302,35 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
 
                 <div className="flex gap-4">
                     <StatBadge icon={ASSETS.fire} label="连续打卡" value={`${streak} 天 🔥`} colorClass="bg-orange-100 border-orange-200" borderClass="border-slate-900" />
-                    <StatBadge icon={ASSETS.gem} label="经验值" value={`${xp.toLocaleString()} XP`} colorClass="bg-blue-100 border-blue-200" borderClass="border-slate-900" />
+
+                    {/* Subscription Badge */}
+                    {user?.tier === 'PAID' || user?.subscriptionType ? (
+                        <div
+                            onClick={() => navigate('/pricing')}
+                            className="bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-2 pr-6 rounded-full flex items-center gap-3 shadow-pop border-2 border-amber-600 hover:scale-105 transition cursor-pointer"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center border-2 border-white/50">
+                                <span className="text-xl">👑</span>
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-black text-amber-900 uppercase">Premium</div>
+                                <div className="font-black text-white">{user?.subscriptionType || '会员'}</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div
+                            onClick={() => navigate('/pricing')}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 pr-6 rounded-full flex items-center gap-3 shadow-pop border-2 border-indigo-700 hover:scale-105 transition cursor-pointer group"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30 group-hover:bg-white/30 transition">
+                                <span className="text-xl">⭐</span>
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-black text-indigo-200 uppercase">升级</div>
+                                <div className="font-black text-white">Premium →</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </header>
 

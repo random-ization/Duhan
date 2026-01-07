@@ -204,7 +204,11 @@ const SubscriptionPage: React.FC = () => {
                 {/* --- 3. Pricing Section --- */}
                 <PricingSection onSubscribe={async (plan) => {
                     try {
-                        const { checkoutUrl } = await createCheckoutSession({ plan: plan as any });
+                        const { checkoutUrl } = await createCheckoutSession({
+                            plan: plan as any,
+                            userId: user?.id?.toString() || "",
+                            userEmail: user?.email || "",
+                        });
                         window.location.href = checkoutUrl;
                     } catch (error: any) {
                         console.error('Checkout failed:', error);

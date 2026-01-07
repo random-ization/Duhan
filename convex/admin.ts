@@ -26,6 +26,8 @@ export const getUsers = query({
                 avatar: u.avatar,
                 isVerified: u.isVerified,
                 createdAt: u.createdAt,
+                subscriptionType: u.subscriptionType,
+                subscriptionExpiry: u.subscriptionExpiry,
             })),
         };
     }
@@ -63,6 +65,8 @@ export const searchUsers = query({
                 avatar: u.avatar,
                 isVerified: u.isVerified,
                 createdAt: u.createdAt,
+                subscriptionType: u.subscriptionType,
+                subscriptionExpiry: u.subscriptionExpiry,
             }));
 
         return filtered;
@@ -78,10 +82,13 @@ export const updateUser = mutation({
             role: v.optional(v.string()),
             tier: v.optional(v.string()),
             isVerified: v.optional(v.boolean()),
+            subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
+            subscriptionExpiry: v.optional(v.string()), // ISO Date string
         }),
+        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
+        await requireAdmin(ctx, args.token);
         const { userId, updates } = args;
 
         await ctx.db.patch(userId, updates);
@@ -94,9 +101,10 @@ export const updateUser = mutation({
 export const deleteUser = mutation({
     args: {
         userId: v.id("users"),
+        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
+        await requireAdmin(ctx, args.token);
         await ctx.db.delete(args.userId);
         return { success: true };
     }
@@ -112,16 +120,18 @@ export const getInstitutes = query({
         if (args.paginationOpts) {
             const results = await ctx.db
                 .query("institutes")
-                .withIndex("by_archived", q => q.eq("isArchived", false))
                 .paginate(args.paginationOpts);
 
             return {
                 ...results,
-                page: results.page.map(i => ({
-                    ...i,
-                    _id: undefined,
-                    id: i.id || i._id,
-                })),
+                // Filter out archived items (but include undefined/null isArchived)
+                page: results.page
+                    .filter(i => i.isArchived !== true)
+                    .map(i => ({
+                        ...i,
+                        _id: undefined,
+                        id: i.id || i._id,
+                    })),
             };
         }
 
@@ -129,24 +139,27 @@ export const getInstitutes = query({
         // This prevents full table scans
         const results = await ctx.db
             .query("institutes")
-            .withIndex("by_archived", q => q.eq("isArchived", false))
             .paginate({ numItems: MAX_INSTITUTES_FALLBACK, cursor: null });
-            
+
         // Return just the page array for backwards compatibility
-        return results.page.map(i => ({
-            ...i,
-            _id: undefined,
-            id: i.id || i._id,
-        }));
+        // Filter out archived items (but include undefined/null isArchived)
+        return results.page
+            .filter(i => i.isArchived !== true)
+            .map(i => ({
+                ...i,
+                _id: undefined,
+                id: i.id || i._id,
+            }));
     }
 });
 
 // Create institute
 export const createInstitute = mutation({
     args: {
+        token: v.optional(v.string()),
         id: v.string(),
         name: v.string(),
-        levels: v.string(),
+        levels: v.any(), // Array of level objects
         coverUrl: v.optional(v.string()),
         themeColor: v.optional(v.string()),
         publisher: v.optional(v.string()),
@@ -155,8 +168,9 @@ export const createInstitute = mutation({
         volume: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
-        const instituteId = await ctx.db.insert("institutes", args);
+        await requireAdmin(ctx, args.token);
+        const { token, ...instituteData } = args;
+        const instituteId = await ctx.db.insert("institutes", instituteData);
         return { id: instituteId, success: true };
     }
 });
@@ -164,6 +178,7 @@ export const createInstitute = mutation({
 // Update institute
 export const updateInstitute = mutation({
     args: {
+        token: v.optional(v.string()),
         legacyId: v.string(),
         updates: v.object({
             name: v.optional(v.string()),
@@ -177,7 +192,7 @@ export const updateInstitute = mutation({
         }),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
+        await requireAdmin(ctx, args.token);
         const { legacyId, updates } = args;
 
         const institute = await ctx.db.query("institutes")
@@ -196,10 +211,11 @@ export const updateInstitute = mutation({
 // Delete institute (soft delete)
 export const deleteInstitute = mutation({
     args: {
+        token: v.optional(v.string()),
         legacyId: v.string(),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
+        await requireAdmin(ctx, args.token);
         const institute = await ctx.db.query("institutes")
             .withIndex("by_legacy_id", q => q.eq("id", args.legacyId))
             .first();
@@ -210,5 +226,94 @@ export const deleteInstitute = mutation({
         }
 
         return { success: true };
+    }
+});
+
+// Get overview stats for admin dashboard
+export const getOverviewStats = query({
+    args: {},
+    handler: async (ctx) => {
+        // Count users
+        const users = await ctx.db.query("users").collect();
+        const userCount = users.length;
+
+        // Count institutes (not archived)
+        const institutes = await ctx.db.query("institutes")
+            .withIndex("by_archived", q => q.eq("isArchived", false))
+            .collect();
+        const instituteCount = institutes.length;
+
+        // Count vocabulary words (master dictionary)
+        const vocabWords = await ctx.db.query("words").take(10000);
+        const vocabCount = vocabWords.length >= 10000 ? "10000+" : vocabWords.length;
+
+        // Count grammar points
+        const grammarPoints = await ctx.db.query("grammar_points").take(1000);
+        const grammarCount = grammarPoints.length;
+
+        // Count textbook units
+        const units = await ctx.db.query("textbook_units")
+            .withIndex("by_archived", q => q.eq("isArchived", false))
+            .take(1000);
+        const unitCount = units.length;
+
+        // Count TOPIK exams
+        const exams = await ctx.db.query("topik_exams").collect();
+        const examCount = exams.length;
+
+        return {
+            users: userCount,
+            institutes: instituteCount,
+            vocabulary: vocabCount,
+            grammar: grammarCount,
+            units: unitCount,
+            exams: examCount,
+        };
+    }
+});
+
+// Get AI usage stats (placeholder - can be enhanced with actual AI logging)
+export const getAiUsageStats = query({
+    args: {
+        days: v.number(),
+    },
+    handler: async (ctx, args) => {
+        // This is a placeholder implementation
+        // In a real implementation, you would have an ai_usage_logs table
+        return {
+            period: `${args.days} days`,
+            summary: {
+                totalCalls: 0,
+                totalTokens: 0,
+                totalCost: 0,
+            },
+            byFeature: {},
+            daily: [],
+        };
+    }
+});
+
+// Get recent activity for admin dashboard
+export const getRecentActivity = query({
+    args: {
+        limit: v.number(),
+    },
+    handler: async (ctx, args) => {
+        // Get recent activity logs
+        const activityLogs = await ctx.db.query("activity_logs")
+            .order("desc")
+            .take(args.limit);
+
+        // Summarize by activity type
+        const summary: Record<string, number> = {};
+        for (const log of activityLogs) {
+            const type = log.activityType || "unknown";
+            summary[type] = (summary[type] || 0) + 1;
+        }
+
+        return {
+            recent: activityLogs,
+            summary,
+        };
     }
 });

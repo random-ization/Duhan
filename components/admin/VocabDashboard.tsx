@@ -1,23 +1,48 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { BarChart3, BookOpen, Database, Loader2, Search } from "lucide-react";
+import { Id } from "../../convex/_generated/dataModel";
+import {
+  BarChart3,
+  BookOpen,
+  Database,
+  Loader2,
+  Search,
+  Edit2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Save,
+} from "lucide-react";
 
 interface WordRow {
   _id: string;
   word: string;
   meaning: string;
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
   courseId?: string;
   courseName?: string;
   unitId?: number;
   partOfSpeech?: string;
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+  appearanceId?: string;
 }
 
 interface InstituteRow {
   id?: string;
   _id?: string;
   name?: string;
+  displayLevel?: string;
+  volume?: string;
 }
+
+const ITEMS_PER_PAGE = 20;
 
 const VocabDashboard: React.FC = () => {
   const institutes = useQuery(api.institutes.getAll, {}) as
@@ -25,6 +50,12 @@ const VocabDashboard: React.FC = () => {
     | undefined;
   const [selectedCourse, setSelectedCourse] = useState<string>("ALL");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingWord, setEditingWord] = useState<WordRow | null>(null);
+  const [editForm, setEditForm] = useState<Partial<WordRow>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const updateVocab = useMutation(api.vocab.updateVocab);
 
   const resolvedCourse =
     selectedCourse === "ALL"
@@ -34,8 +65,8 @@ const VocabDashboard: React.FC = () => {
   const vocabArgs = useMemo(
     () =>
       selectedCourse === "ALL"
-        ? { limit: 200 }
-        : { limit: 200, courseId: selectedCourse },
+        ? { limit: 2000 }
+        : { limit: 2000, courseId: selectedCourse },
     [selectedCourse]
   );
 
@@ -52,11 +83,78 @@ const VocabDashboard: React.FC = () => {
     return (words as WordRow[]).filter(
       (w) =>
         w.word.toLowerCase().includes(term) ||
-        w.meaning.toLowerCase().includes(term)
+        w.meaning.toLowerCase().includes(term) ||
+        (w.meaningEn && w.meaningEn.toLowerCase().includes(term))
     );
   }, [words, search]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredWords.length / ITEMS_PER_PAGE);
+  const paginatedWords = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredWords.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredWords, currentPage]);
+
+  // Reset to page 1 when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCourse]);
+
   const totalWords = words?.length ?? 0;
+
+  const openEditModal = (word: WordRow) => {
+    setEditingWord(word);
+    setEditForm({
+      word: word.word,
+      meaning: word.meaning,
+      meaningEn: word.meaningEn || "",
+      meaningVi: word.meaningVi || "",
+      meaningMn: word.meaningMn || "",
+      partOfSpeech: word.partOfSpeech || "",
+      unitId: word.unitId,
+      exampleSentence: word.exampleSentence || "",
+      exampleMeaning: word.exampleMeaning || "",
+      exampleMeaningEn: word.exampleMeaningEn || "",
+      exampleMeaningVi: word.exampleMeaningVi || "",
+      exampleMeaningMn: word.exampleMeaningMn || "",
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingWord(null);
+    setEditForm({});
+  };
+
+  const handleSave = async () => {
+    if (!editingWord) return;
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem("token") || undefined;
+      await updateVocab({
+        token,
+        wordId: editingWord._id as Id<"words">,
+        appearanceId: editingWord.appearanceId as Id<"vocabulary_appearances"> | undefined,
+        word: editForm.word,
+        meaning: editForm.meaning,
+        meaningEn: editForm.meaningEn,
+        meaningVi: editForm.meaningVi,
+        meaningMn: editForm.meaningMn,
+        partOfSpeech: editForm.partOfSpeech,
+        unitId: editForm.unitId,
+        exampleSentence: editForm.exampleSentence,
+        exampleMeaning: editForm.exampleMeaning,
+        exampleMeaningEn: editForm.exampleMeaningEn,
+        exampleMeaningVi: editForm.exampleMeaningVi,
+        exampleMeaningMn: editForm.exampleMeaningMn,
+      });
+      closeEditModal();
+    } catch (error) {
+      console.error("Failed to update:", error);
+      alert("保存失败: " + (error as Error).message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -83,11 +181,17 @@ const VocabDashboard: React.FC = () => {
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
             <option value="ALL">全部教材</option>
-            {(institutes || []).map((inst) => (
-              <option key={inst.id || inst._id} value={inst.id || inst._id}>
-                {inst.name}
-              </option>
-            ))}
+            {(institutes || []).map((inst) => {
+              // Build display name with level and volume
+              let displayName = inst.name || '';
+              if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
+              if (inst.volume) displayName += ` ${inst.volume}`;
+              return (
+                <option key={inst.id || inst._id} value={inst.id || inst._id}>
+                  {displayName}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
@@ -129,7 +233,7 @@ const VocabDashboard: React.FC = () => {
               {selectedCourse === "ALL"
                 ? "全部"
                 : institutes?.find((i) => (i.id || i._id) === selectedCourse)
-                    ?.name || "未选择"}
+                  ?.name || "未选择"}
             </p>
           </div>
         </div>
@@ -141,9 +245,27 @@ const VocabDashboard: React.FC = () => {
             <Database className="w-4 h-4" />
             词汇列表
           </div>
-          <span className="text-xs text-zinc-500">
-            显示前 {Math.min(filteredWords.length, 200)} 条
-          </span>
+          <div className="flex items-center gap-4 text-xs text-zinc-500">
+            <span>
+              第 {currentPage} / {totalPages || 1} 页 · 共 {filteredWords.length} 条
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded hover:bg-zinc-200 disabled:opacity-30"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-1 rounded hover:bg-zinc-200 disabled:opacity-30"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
         {!words ? (
@@ -156,39 +278,63 @@ const VocabDashboard: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-zinc-100 text-zinc-600 uppercase text-xs">
                 <tr>
-                  <th className="px-4 py-3 text-left">单词</th>
-                  <th className="px-4 py-3 text-left">释义</th>
-                  <th className="px-4 py-3 text-left">词性</th>
-                  <th className="px-4 py-3 text-left">教材</th>
-                  <th className="px-4 py-3 text-left">课次</th>
+                  <th className="px-3 py-3 text-left">单元</th>
+                  <th className="px-3 py-3 text-left">韩语</th>
+                  <th className="px-3 py-3 text-left">词性</th>
+                  <th className="px-3 py-3 text-left">释义(MN)</th>
+                  <th className="px-3 py-3 text-left">释义(VN)</th>
+                  <th className="px-3 py-3 text-left">释义(EN)</th>
+                  <th className="px-3 py-3 text-left">释义(CH)</th>
+                  <th className="px-3 py-3 text-left">例句</th>
+                  <th className="px-3 py-3 text-left">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredWords.map((word) => (
+                {paginatedWords.map((word) => (
                   <tr
                     key={word._id}
                     className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors"
                   >
-                    <td className="px-4 py-2 font-bold text-zinc-900">
+                    <td className="px-3 py-2 text-zinc-600">
+                      {word.unitId ?? "-"}
+                    </td>
+                    <td className="px-3 py-2 font-bold text-zinc-900">
                       {word.word}
                     </td>
-                    <td className="px-4 py-2 text-zinc-600">{word.meaning}</td>
-                    <td className="px-4 py-2 text-zinc-600">
+                    <td className="px-3 py-2 text-zinc-500 text-xs">
                       {word.partOfSpeech || "-"}
                     </td>
-                    <td className="px-4 py-2 text-zinc-600">
-                      {word.courseName || word.courseId || "未分类"}
+                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningMn}>
+                      {word.meaningMn || "-"}
                     </td>
-                    <td className="px-4 py-2 text-zinc-600">
-                      {word.unitId ?? "-"}
+                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningVi}>
+                      {word.meaningVi || "-"}
+                    </td>
+                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningEn}>
+                      {word.meaningEn || "-"}
+                    </td>
+                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaning}>
+                      {word.meaning}
+                    </td>
+                    <td className="px-3 py-2 text-zinc-500 text-xs max-w-[150px] truncate" title={word.exampleSentence}>
+                      {word.exampleSentence || "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <button
+                        onClick={() => openEditModal(word)}
+                        className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors"
+                        title="编辑"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
-                {filteredWords.length === 0 && (
+                {paginatedWords.length === 0 && (
                   <tr>
                     <td
                       className="px-4 py-6 text-center text-zinc-500"
-                      colSpan={5}
+                      colSpan={9}
                     >
                       未找到匹配的词条
                     </td>
@@ -198,7 +344,223 @@ const VocabDashboard: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 py-3 border-t border-zinc-200 bg-zinc-50">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
+            >
+              首页
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
+            >
+              上一页
+            </button>
+            <span className="px-3 py-1 text-sm font-medium">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
+            >
+              下一页
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
+            >
+              末页
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Edit Modal */}
+      {editingWord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+              <h3 className="text-lg font-bold text-zinc-900">
+                编辑词汇: {editingWord.word}
+              </h3>
+              <button
+                onClick={closeEditModal}
+                className="p-2 rounded-lg hover:bg-zinc-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">
+                    韩语
+                  </label>
+                  <input
+                    value={editForm.word || ""}
+                    onChange={(e) => setEditForm({ ...editForm, word: e.target.value })}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">
+                    词性
+                  </label>
+                  <input
+                    value={editForm.partOfSpeech || ""}
+                    onChange={(e) => setEditForm({ ...editForm, partOfSpeech: e.target.value })}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">
+                    单元
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.unitId ?? ""}
+                    onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value ? Number(e.target.value) : undefined })}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-zinc-200 pt-4">
+                <h4 className="text-sm font-bold text-zinc-800 mb-3">多语言释义</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                      释义(CH) 中文
+                    </label>
+                    <input
+                      value={editForm.meaning || ""}
+                      onChange={(e) => setEditForm({ ...editForm, meaning: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                      释义(EN) English
+                    </label>
+                    <input
+                      value={editForm.meaningEn || ""}
+                      onChange={(e) => setEditForm({ ...editForm, meaningEn: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                      释义(VN) Tiếng Việt
+                    </label>
+                    <input
+                      value={editForm.meaningVi || ""}
+                      onChange={(e) => setEditForm({ ...editForm, meaningVi: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                      释义(MN) Монгол
+                    </label>
+                    <input
+                      value={editForm.meaningMn || ""}
+                      onChange={(e) => setEditForm({ ...editForm, meaningMn: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-zinc-200 pt-4">
+                <h4 className="text-sm font-bold text-zinc-800 mb-3">例句</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                      韩语例句
+                    </label>
+                    <textarea
+                      value={editForm.exampleSentence || ""}
+                      onChange={(e) => setEditForm({ ...editForm, exampleSentence: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">
+                        例句翻译(CH)
+                      </label>
+                      <input
+                        value={editForm.exampleMeaning || ""}
+                        onChange={(e) => setEditForm({ ...editForm, exampleMeaning: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">
+                        例句翻译(EN)
+                      </label>
+                      <input
+                        value={editForm.exampleMeaningEn || ""}
+                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningEn: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">
+                        例句翻译(VN)
+                      </label>
+                      <input
+                        value={editForm.exampleMeaningVi || ""}
+                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningVi: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">
+                        例句翻译(MN)
+                      </label>
+                      <input
+                        value={editForm.exampleMeaningMn || ""}
+                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningMn: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-200 bg-zinc-50">
+              <button
+                onClick={closeEditModal}
+                className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
