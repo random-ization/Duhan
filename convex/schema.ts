@@ -104,6 +104,12 @@ export default defineSchema({
         courseId: v.string(),
         unitId: v.number(),
 
+        // Per-course meanings (allows same word to have different meanings in different courses)
+        meaning: v.optional(v.string()), // Chinese meaning (primary)
+        meaningEn: v.optional(v.string()), // English
+        meaningVi: v.optional(v.string()), // Vietnamese
+        meaningMn: v.optional(v.string()), // Mongolian
+
         exampleSentence: v.optional(v.string()),
         exampleMeaning: v.optional(v.string()), // Chinese (primary)
 

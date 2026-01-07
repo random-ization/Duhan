@@ -72,10 +72,11 @@ export const getAll = query({
                     _id: word._id,
                     id: word._id,
                     word: word.word,
-                    meaning: word.meaning,
-                    meaningEn: word.meaningEn,
-                    meaningVi: word.meaningVi,
-                    meaningMn: word.meaningMn,
+                    // Per-course meanings (fallback to word if appearance doesn't have it)
+                    meaning: app.meaning || word.meaning,
+                    meaningEn: app.meaningEn || word.meaningEn,
+                    meaningVi: app.meaningVi || word.meaningVi,
+                    meaningMn: app.meaningMn || word.meaningMn,
                     partOfSpeech: word.partOfSpeech,
                     hanja: word.hanja,
                     pronunciation: word.pronunciation,
@@ -372,40 +373,81 @@ export const bulkImport = mutation({
         let successCount = 0;
         let failedCount = 0;
         const errors: string[] = [];
+        let smartFilledCount = 0;
+        let newWordCount = 0;
 
         for (const item of args.items) {
             try {
-                // 1. Upsert Word
+                // 1. Check if word exists
                 const existingWord = await ctx.db
                     .query("words")
                     .withIndex("by_word", (q) => q.eq("word", item.word))
                     .unique();
 
                 let wordId;
+                let smartFillData: {
+                    meaning?: string;
+                    meaningEn?: string;
+                    meaningVi?: string;
+                    meaningMn?: string;
+                    exampleSentence?: string;
+                    exampleMeaning?: string;
+                    exampleMeaningEn?: string;
+                    exampleMeaningVi?: string;
+                    exampleMeaningMn?: string;
+                } = {};
+
                 if (existingWord) {
                     wordId = existingWord._id;
-                    // Update existing word with new multi-language meanings if provided
-                    const updates: Record<string, string> = {};
-                    if (item.meaningEn) updates.meaningEn = item.meaningEn;
-                    if (item.meaningVi) updates.meaningVi = item.meaningVi;
-                    if (item.meaningMn) updates.meaningMn = item.meaningMn;
-                    if (Object.keys(updates).length > 0) {
-                        await ctx.db.patch(existingWord._id, updates);
+
+                    // Smart Fill: Get the most recent appearance for this word to copy data
+                    const existingAppearances = await ctx.db
+                        .query("vocabulary_appearances")
+                        .filter((q) => q.eq(q.field("wordId"), wordId))
+                        .order("desc")
+                        .take(1);
+
+                    const sourceApp = existingAppearances[0];
+
+                    // Build smart fill data from existing appearance or word
+                    smartFillData = {
+                        meaning: sourceApp?.meaning || existingWord.meaning,
+                        meaningEn: sourceApp?.meaningEn || existingWord.meaningEn,
+                        meaningVi: sourceApp?.meaningVi || existingWord.meaningVi,
+                        meaningMn: sourceApp?.meaningMn || existingWord.meaningMn,
+                        exampleSentence: sourceApp?.exampleSentence,
+                        exampleMeaning: sourceApp?.exampleMeaning,
+                        exampleMeaningEn: sourceApp?.exampleMeaningEn,
+                        exampleMeaningVi: sourceApp?.exampleMeaningVi,
+                        exampleMeaningMn: sourceApp?.exampleMeaningMn,
+                    };
+
+                    smartFilledCount++;
+
+                    // Update word only if user provided new translations
+                    const wordUpdates: Record<string, string> = {};
+                    if (item.meaningEn && !existingWord.meaningEn) wordUpdates.meaningEn = item.meaningEn;
+                    if (item.meaningVi && !existingWord.meaningVi) wordUpdates.meaningVi = item.meaningVi;
+                    if (item.meaningMn && !existingWord.meaningMn) wordUpdates.meaningMn = item.meaningMn;
+                    if (Object.keys(wordUpdates).length > 0) {
+                        await ctx.db.patch(existingWord._id, wordUpdates);
                     }
                 } else {
+                    // New word - create it
                     wordId = await ctx.db.insert("words", {
                         word: item.word,
-                        meaning: item.meaning,
-                        partOfSpeech: item.partOfSpeech,
+                        meaning: item.meaning || "",
+                        partOfSpeech: item.partOfSpeech || "NOUN",
                         hanja: item.hanja,
                         meaningEn: item.meaningEn,
                         meaningVi: item.meaningVi,
                         meaningMn: item.meaningMn,
                         tips: item.tips,
                     });
+                    newWordCount++;
                 }
 
-                // 2. Upsert Appearance
+                // 2. Upsert Appearance with smart fill (user data takes priority)
                 const existingApp = await ctx.db
                     .query("vocabulary_appearances")
                     .withIndex("by_word_course_unit", (q) =>
@@ -413,26 +455,39 @@ export const bulkImport = mutation({
                     )
                     .unique();
 
+                // Final data: user-provided > smart fill
+                const finalData = {
+                    meaning: item.meaning || smartFillData.meaning,
+                    meaningEn: item.meaningEn || smartFillData.meaningEn,
+                    meaningVi: item.meaningVi || smartFillData.meaningVi,
+                    meaningMn: item.meaningMn || smartFillData.meaningMn,
+                    exampleSentence: item.exampleSentence || smartFillData.exampleSentence,
+                    exampleMeaning: item.exampleMeaning || smartFillData.exampleMeaning,
+                    exampleMeaningEn: item.exampleMeaningEn || smartFillData.exampleMeaningEn,
+                    exampleMeaningVi: item.exampleMeaningVi || smartFillData.exampleMeaningVi,
+                    exampleMeaningMn: item.exampleMeaningMn || smartFillData.exampleMeaningMn,
+                };
+
                 if (!existingApp) {
                     await ctx.db.insert("vocabulary_appearances", {
                         wordId,
                         courseId: item.courseId,
                         unitId: item.unitId,
-                        exampleSentence: item.exampleSentence,
-                        exampleMeaning: item.exampleMeaning,
-                        exampleMeaningEn: item.exampleMeaningEn,
-                        exampleMeaningVi: item.exampleMeaningVi,
-                        exampleMeaningMn: item.exampleMeaningMn,
+                        ...finalData,
                         createdAt: Date.now(),
                     });
                 } else {
-                    // Update existing appearance with new data
+                    // Update existing appearance
                     const appUpdates: Record<string, string | undefined> = {};
-                    if (item.exampleSentence) appUpdates.exampleSentence = item.exampleSentence;
-                    if (item.exampleMeaning) appUpdates.exampleMeaning = item.exampleMeaning;
-                    if (item.exampleMeaningEn) appUpdates.exampleMeaningEn = item.exampleMeaningEn;
-                    if (item.exampleMeaningVi) appUpdates.exampleMeaningVi = item.exampleMeaningVi;
-                    if (item.exampleMeaningMn) appUpdates.exampleMeaningMn = item.exampleMeaningMn;
+                    if (finalData.meaning) appUpdates.meaning = finalData.meaning;
+                    if (finalData.meaningEn) appUpdates.meaningEn = finalData.meaningEn;
+                    if (finalData.meaningVi) appUpdates.meaningVi = finalData.meaningVi;
+                    if (finalData.meaningMn) appUpdates.meaningMn = finalData.meaningMn;
+                    if (finalData.exampleSentence) appUpdates.exampleSentence = finalData.exampleSentence;
+                    if (finalData.exampleMeaning) appUpdates.exampleMeaning = finalData.exampleMeaning;
+                    if (finalData.exampleMeaningEn) appUpdates.exampleMeaningEn = finalData.exampleMeaningEn;
+                    if (finalData.exampleMeaningVi) appUpdates.exampleMeaningVi = finalData.exampleMeaningVi;
+                    if (finalData.exampleMeaningMn) appUpdates.exampleMeaningMn = finalData.exampleMeaningMn;
                     if (Object.keys(appUpdates).length > 0) {
                         await ctx.db.patch(existingApp._id, appUpdates);
                     }
@@ -444,7 +499,16 @@ export const bulkImport = mutation({
             }
         }
 
-        return { success: true, results: { success: successCount, failed: failedCount, errors } };
+        return {
+            success: true,
+            results: {
+                success: successCount,
+                failed: failedCount,
+                smartFilled: smartFilledCount,
+                newWords: newWordCount,
+                errors
+            }
+        };
     }
 });
 
