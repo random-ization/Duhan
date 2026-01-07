@@ -28,6 +28,7 @@ import type * as paymentsMutations from "../paymentsMutations.js";
 import type * as podcastActions from "../podcastActions.js";
 import type * as podcasts from "../podcasts.js";
 import type * as progress from "../progress.js";
+import type * as publishers from "../publishers.js";
 import type * as queryLimits from "../queryLimits.js";
 import type * as storage from "../storage.js";
 import type * as topik from "../topik.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   podcastActions: typeof podcastActions;
   podcasts: typeof podcasts;
   progress: typeof progress;
+  publishers: typeof publishers;
   queryLimits: typeof queryLimits;
   storage: typeof storage;
   topik: typeof topik;

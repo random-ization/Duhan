@@ -53,6 +53,12 @@ export default defineSchema({
     }).index("by_legacy_id", ["id"])
         .index("by_archived", ["isArchived"]),
 
+    // Publishers Metadata
+    publishers: defineTable({
+        name: v.string(),
+        imageUrl: v.optional(v.string()),
+    }).index("by_name", ["name"]),
+
     // Textbook Units (Reading Content)
     textbook_units: defineTable({
         courseId: v.string(),

@@ -7,6 +7,11 @@ import { useApp } from '../../contexts/AppContext';
 
 export default function AppLayout() {
     const { toggleMobileMenu } = useApp();
+    const location = useLocation();
+
+    // Hide footer on these pages and their sub-pages
+    const hideFooterPaths = ['/courses', '/podcasts', '/videos', '/topik', '/dashboard/', '/notebook', '/vocabbook'];
+    const shouldHideFooter = hideFooterPaths.some(path => location.pathname.startsWith(path));
 
     return (
         <div className="flex min-h-screen bg-background overflow-hidden font-sans">
@@ -28,7 +33,7 @@ export default function AppLayout() {
                     <div className="flex-1 w-full max-w-[1400px] mx-auto">
                         <Outlet />
                     </div>
-                    <Footer />
+                    {!shouldHideFooter && <Footer />}
                 </div>
                 {/* Spacer for mobile nav */}
                 <div className="h-24 md:h-0" />

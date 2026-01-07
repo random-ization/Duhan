@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import * as XLSX from "xlsx";
 import {
   BarChart3,
   BookOpen,
@@ -13,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
+  Download,
 } from "lucide-react";
 
 interface WordRow {
@@ -55,6 +57,12 @@ const VocabDashboard: React.FC = () => {
   const [editForm, setEditForm] = useState<Partial<WordRow>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Field filters
+  const [meaningFilter, setMeaningFilter] = useState<"all" | "filled" | "empty">("all");
+  const [posFilter, setPosFilter] = useState<string>("ALL");
+  const [unitFrom, setUnitFrom] = useState<string>("");
+  const [unitTo, setUnitTo] = useState<string>("");
+
   const updateVocab = useMutation(api.vocab.updateVocab);
 
   const resolvedCourse =
@@ -76,17 +84,54 @@ const VocabDashboard: React.FC = () => {
     courseId: resolvedCourse || "",
   });
 
+  // Get unique POS values for filter dropdown
+  const posOptions = useMemo(() => {
+    if (!words) return [];
+    const posSet = new Set((words as WordRow[]).map(w => w.partOfSpeech || "").filter(Boolean));
+    return Array.from(posSet).sort();
+  }, [words]);
+
   const filteredWords = useMemo(() => {
     if (!words) return [];
-    if (!search.trim()) return words as WordRow[];
-    const term = search.toLowerCase();
-    return (words as WordRow[]).filter(
-      (w) =>
-        w.word.toLowerCase().includes(term) ||
-        w.meaning.toLowerCase().includes(term) ||
-        (w.meaningEn && w.meaningEn.toLowerCase().includes(term))
-    );
-  }, [words, search]);
+    let result = words as WordRow[];
+
+    // Search filter
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      result = result.filter(
+        (w) =>
+          w.word.toLowerCase().includes(term) ||
+          w.meaning.toLowerCase().includes(term) ||
+          (w.meaningEn && w.meaningEn.toLowerCase().includes(term))
+      );
+    }
+
+    // Meaning status filter
+    if (meaningFilter === "filled") {
+      result = result.filter(w => w.meaning && w.meaning.trim() !== "");
+    } else if (meaningFilter === "empty") {
+      result = result.filter(w => !w.meaning || w.meaning.trim() === "");
+    }
+
+    // POS filter
+    if (posFilter !== "ALL") {
+      result = result.filter(w => w.partOfSpeech === posFilter);
+    }
+
+    // Unit range filter
+    const fromUnit = unitFrom ? parseInt(unitFrom) : null;
+    const toUnit = unitTo ? parseInt(unitTo) : null;
+    if (fromUnit !== null || toUnit !== null) {
+      result = result.filter(w => {
+        const unit = w.unitId || 0;
+        if (fromUnit !== null && unit < fromUnit) return false;
+        if (toUnit !== null && unit > toUnit) return false;
+        return true;
+      });
+    }
+
+    return result;
+  }, [words, search, meaningFilter, posFilter, unitFrom, unitTo]);
 
   // Pagination
   const totalPages = Math.ceil(filteredWords.length / ITEMS_PER_PAGE);
@@ -98,7 +143,7 @@ const VocabDashboard: React.FC = () => {
   // Reset to page 1 when filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCourse]);
+  }, [search, selectedCourse, meaningFilter, posFilter, unitFrom, unitTo]);
 
   const totalWords = words?.length ?? 0;
 
@@ -156,6 +201,39 @@ const VocabDashboard: React.FC = () => {
     }
   };
 
+  const handleExport = () => {
+    if (!filteredWords.length) {
+      alert("没有可导出的数据");
+      return;
+    }
+
+    // Prepare data with headers
+    const exportData = filteredWords.map((w) => ({
+      "单元": w.unitId || "",
+      "韩语": w.word,
+      "词性": w.partOfSpeech || "",
+      "释义(中)": w.meaning || "",
+      "释义(英)": w.meaningEn || "",
+      "释义(蒙)": w.meaningMn || "",
+      "释义(越)": w.meaningVi || "",
+      "例句": w.exampleSentence || "",
+      "例句翻译(中)": w.exampleMeaning || "",
+      "例句翻译(英)": w.exampleMeaningEn || "",
+      "例句翻译(蒙)": w.exampleMeaningMn || "",
+      "例句翻译(越)": w.exampleMeaningVi || "",
+      "教材": w.courseName || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "词汇");
+
+    // Generate filename with date
+    const date = new Date().toISOString().slice(0, 10);
+    const courseName = selectedCourse === "ALL" ? "全部" : (institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || selectedCourse);
+    XLSX.writeFile(wb, `词汇导出_${courseName}_${date}.xlsx`);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -193,7 +271,78 @@ const VocabDashboard: React.FC = () => {
               );
             })}
           </select>
+          <button
+            onClick={handleExport}
+            className="px-3 py-2 rounded-lg bg-zinc-900 text-white text-sm font-bold flex items-center gap-2 hover:bg-zinc-800 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            导出 Excel
+          </button>
         </div>
+      </div>
+
+      {/* Filter Row */}
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+        <span className="text-xs font-bold text-zinc-500 uppercase">筛选：</span>
+
+        {/* Meaning Status */}
+        <div className="flex items-center gap-1 bg-white rounded-lg border border-zinc-200 p-0.5">
+          <button
+            onClick={() => setMeaningFilter("all")}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "all" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+          >
+            全部
+          </button>
+          <button
+            onClick={() => setMeaningFilter("filled")}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "filled" ? "bg-emerald-600 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+          >
+            已填充
+          </button>
+          <button
+            onClick={() => setMeaningFilter("empty")}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "empty" ? "bg-amber-500 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+          >
+            未填充
+          </button>
+        </div>
+
+        {/* POS Filter */}
+        <select
+          value={posFilter}
+          onChange={(e) => setPosFilter(e.target.value)}
+          className="px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium"
+        >
+          <option value="ALL">全部词性</option>
+          {posOptions.map(pos => (
+            <option key={pos} value={pos}>{pos}</option>
+          ))}
+        </select>
+
+        {/* Unit Range */}
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-zinc-500">课数：</span>
+          <input
+            type="number"
+            value={unitFrom}
+            onChange={(e) => setUnitFrom(e.target.value)}
+            placeholder="从"
+            className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
+          />
+          <span className="text-zinc-400">-</span>
+          <input
+            type="number"
+            value={unitTo}
+            onChange={(e) => setUnitTo(e.target.value)}
+            placeholder="到"
+            className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
+          />
+        </div>
+
+        {/* Result count */}
+        <span className="ml-auto text-xs text-zinc-500">
+          筛选结果：<span className="font-bold text-zinc-900">{filteredWords.length}</span> 条
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

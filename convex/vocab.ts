@@ -6,17 +6,24 @@ import { DEFAULT_VOCAB_LIMIT } from "./queryLimits";
 // Get Vocabulary Stats (Dashboard)
 export const getStats = query({
     args: {
-        courseId: v.string(),
+        courseId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const userId = await getOptionalAuthUserId(ctx);
 
-        // 1. Get total words for course
-        const MAX_STATS_LIMIT = 2000;
-        const appearances = await ctx.db
-            .query("vocabulary_appearances")
-            .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
-            .take(MAX_STATS_LIMIT);
+        // 1. Get total words (all courses if courseId is empty, otherwise specific course)
+        let appearances;
+        if (args.courseId) {
+            appearances = await ctx.db
+                .query("vocabulary_appearances")
+                .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
+                .collect();
+        } else {
+            // Count ALL vocabulary appearances across all courses
+            appearances = await ctx.db
+                .query("vocabulary_appearances")
+                .collect();
+        }
 
         const total = appearances.length;
 
@@ -25,12 +32,9 @@ export const getStats = query({
         if (userId) {
             const progress = await ctx.db
                 .query("user_vocab_progress")
-                .withIndex("by_user_word", q => q.eq("userId", userId as any)) // This might be inefficient if user has many words across courses
-                // Ideally we filter by course, but progress doesn't have courseId directly.
-                // We rely on matching wordIds from appearances.
+                .withIndex("by_user_word", q => q.eq("userId", userId as any))
                 .collect();
 
-            // OPTIMIZATION: Use a Set for faster lookup
             const courseWordIds = new Set(appearances.map(a => a.wordId));
             mastered = progress.filter(p => courseWordIds.has(p.wordId) && p.status === 'MASTERED').length;
         }
@@ -400,29 +404,32 @@ export const bulkImport = mutation({
                 if (existingWord) {
                     wordId = existingWord._id;
 
-                    // Smart Fill: Get the most recent appearance for this word to copy data
-                    const existingAppearances = await ctx.db
-                        .query("vocabulary_appearances")
-                        .filter((q) => q.eq(q.field("wordId"), wordId))
-                        .order("desc")
-                        .take(1);
+                    // Smart Fill: ONLY query if user didn't provide meaning
+                    // This avoids expensive queries when user uploads complete data
+                    if (!item.meaning) {
+                        const existingAppearances = await ctx.db
+                            .query("vocabulary_appearances")
+                            .withIndex("by_word_course_unit", q => q.eq("wordId", wordId))
+                            .order("desc")
+                            .take(1);
 
-                    const sourceApp = existingAppearances[0];
+                        const sourceApp = existingAppearances[0];
 
-                    // Build smart fill data from existing appearance or word
-                    smartFillData = {
-                        meaning: sourceApp?.meaning || existingWord.meaning,
-                        meaningEn: sourceApp?.meaningEn || existingWord.meaningEn,
-                        meaningVi: sourceApp?.meaningVi || existingWord.meaningVi,
-                        meaningMn: sourceApp?.meaningMn || existingWord.meaningMn,
-                        exampleSentence: sourceApp?.exampleSentence,
-                        exampleMeaning: sourceApp?.exampleMeaning,
-                        exampleMeaningEn: sourceApp?.exampleMeaningEn,
-                        exampleMeaningVi: sourceApp?.exampleMeaningVi,
-                        exampleMeaningMn: sourceApp?.exampleMeaningMn,
-                    };
+                        // Build smart fill data from existing appearance or word
+                        smartFillData = {
+                            meaning: sourceApp?.meaning || existingWord.meaning,
+                            meaningEn: sourceApp?.meaningEn || existingWord.meaningEn,
+                            meaningVi: sourceApp?.meaningVi || existingWord.meaningVi,
+                            meaningMn: sourceApp?.meaningMn || existingWord.meaningMn,
+                            exampleSentence: sourceApp?.exampleSentence,
+                            exampleMeaning: sourceApp?.exampleMeaning,
+                            exampleMeaningEn: sourceApp?.exampleMeaningEn,
+                            exampleMeaningVi: sourceApp?.exampleMeaningVi,
+                            exampleMeaningMn: sourceApp?.exampleMeaningMn,
+                        };
 
-                    smartFilledCount++;
+                        smartFilledCount++;
+                    }
 
                     // Update word only if user provided new translations
                     const wordUpdates: Record<string, string> = {};
@@ -477,20 +484,18 @@ export const bulkImport = mutation({
                         createdAt: Date.now(),
                     });
                 } else {
-                    // Update existing appearance
-                    const appUpdates: Record<string, string | undefined> = {};
-                    if (finalData.meaning) appUpdates.meaning = finalData.meaning;
-                    if (finalData.meaningEn) appUpdates.meaningEn = finalData.meaningEn;
-                    if (finalData.meaningVi) appUpdates.meaningVi = finalData.meaningVi;
-                    if (finalData.meaningMn) appUpdates.meaningMn = finalData.meaningMn;
-                    if (finalData.exampleSentence) appUpdates.exampleSentence = finalData.exampleSentence;
-                    if (finalData.exampleMeaning) appUpdates.exampleMeaning = finalData.exampleMeaning;
-                    if (finalData.exampleMeaningEn) appUpdates.exampleMeaningEn = finalData.exampleMeaningEn;
-                    if (finalData.exampleMeaningVi) appUpdates.exampleMeaningVi = finalData.exampleMeaningVi;
-                    if (finalData.exampleMeaningMn) appUpdates.exampleMeaningMn = finalData.exampleMeaningMn;
-                    if (Object.keys(appUpdates).length > 0) {
-                        await ctx.db.patch(existingApp._id, appUpdates);
-                    }
+                    // Update existing appearance - ALWAYS overwrite with new data
+                    await ctx.db.patch(existingApp._id, {
+                        meaning: finalData.meaning,
+                        meaningEn: finalData.meaningEn,
+                        meaningVi: finalData.meaningVi,
+                        meaningMn: finalData.meaningMn,
+                        exampleSentence: finalData.exampleSentence,
+                        exampleMeaning: finalData.exampleMeaning,
+                        exampleMeaningEn: finalData.exampleMeaningEn,
+                        exampleMeaningVi: finalData.exampleMeaningVi,
+                        exampleMeaningMn: finalData.exampleMeaningMn,
+                    });
                 }
                 successCount++;
             } catch (e: any) {

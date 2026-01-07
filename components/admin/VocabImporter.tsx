@@ -50,6 +50,8 @@ type BulkImportResult = {
   results?: {
     success: number;
     failed: number;
+    smartFilled: number;
+    newWords: number;
     errors: string[];
   };
 };
@@ -163,48 +165,74 @@ const VocabImporter: React.FC = () => {
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
+
+      // === Dynamic Header Parsing ===
+      // Step 1: Parse headers from first row
+      const headerLine = lines[0];
+      const headers = headerLine.includes("\t")
+        ? headerLine.split("\t").map(h => h.trim().toLowerCase())
+        : parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+      // Step 2: Map header keywords to column indices
+      const findColumn = (keywords: string[]): number => {
+        return headers.findIndex(h => keywords.some(k => h.includes(k)));
+      };
+
+      const colMap = {
+        unit: findColumn(['单元', 'unit', 'lesson', '课']),
+        word: findColumn(['韩语', 'word', '单词', 'korean']),
+        pos: findColumn(['词性', 'pos', 'part']),
+        meaningCh: findColumn(['释义(中)', '释义(ch)', '中文', 'chinese', 'meaning']),
+        meaningEn: findColumn(['释义(英)', '释义(en)', '英文', 'english']),
+        meaningMn: findColumn(['释义(蒙)', '释义(mn)', '蒙古', 'mongolian']),
+        meaningVi: findColumn(['释义(越)', '释义(vn)', '越南', 'vietnamese']),
+        example: findColumn(['例句', 'example', '韩语例句']),
+        exampleCh: findColumn(['例句翻译(ch)', '例句中翻', '例句翻译']),
+        exampleEn: findColumn(['例句翻译(en)', '例句英翻']),
+        exampleMn: findColumn(['例句翻译(mn)', '例句蒙翻']),
+        exampleVi: findColumn(['例句翻译(vn)', '例句越翻']),
+      };
+
+      // Validate required columns
+      if (colMap.word === -1) {
+        setStatus(`错误：未找到"韩语"或"Word"列，请检查表头`);
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 3: Parse data rows (skip header)
       const items: BulkImportItem[] = lines
-        .map((line, index) => {
-          // 新格式: 单元,韩语,词性,释义(MN),释义(VN),释义(EN),释义(CH),例句,例句翻译(CH),例句翻译(MN),例句翻译(VN),例句翻译(EN)
-          // 自动检测分隔符：如果包含 Tab，则是 Excel 粘贴格式；否则按 CSV 解析
-          let parts = line.includes("\t")
+        .slice(1) // Skip header row
+        .map((line) => {
+          const parts = line.includes("\t")
             ? line.split("\t").map(p => p.trim())
             : parseCSVLine(line);
 
-          // 用户Excel格式: 单元, 韩语, 词性, 释义(CH), 释义(EN), 释义(MN), 释义(VN), 例句(KR), 例句翻译(CH), 例句翻译(EN), 例句翻译(MN), 例句翻译(VN)
-          const [
-            unit,           // 单元
-            word,           // 韩语
-            partOfSpeech,   // 词性
-            meaning,        // 释义(CH) - 中文 (primary)
-            meaningEn,      // 释义(EN) - 英语
-            meaningMn,      // 释义(MN) - 蒙古语
-            meaningVi,      // 释义(VN) - 越南语
-            exampleSentence,     // 例句(KR)
-            exampleMeaning,      // 例句翻译(CH)
-            exampleMeaningEn,    // 例句翻译(EN)
-            exampleMeaningMn,    // 例句翻译(MN)
-            exampleMeaningVi,    // 例句翻译(VN)
-          ] = parts;
+          const getValue = (idx: number) => (idx >= 0 && idx < parts.length) ? parts[idx] : undefined;
 
-          // 跳过表头行
-          if (index === 0 && (unit === "单元" || word === "韩语")) return null;
+          const word = getValue(colMap.word);
+          if (!word) return null;
 
-          if (!word || !meaning) return null;
+          // Get meaning - use CH first, fallback to first available
+          let meaning = getValue(colMap.meaningCh);
+          if (!meaning) {
+            meaning = getValue(colMap.meaningEn) || getValue(colMap.meaningMn) || getValue(colMap.meaningVi) || "";
+          }
+
           return {
-            word: word,
-            meaning: meaning,
-            partOfSpeech: partOfSpeech || "NOUN",
-            meaningEn: meaningEn || undefined,
-            meaningVi: meaningVi || undefined,
-            meaningMn: meaningMn || undefined,
+            word,
+            meaning,
+            partOfSpeech: getValue(colMap.pos) || "NOUN",
+            meaningEn: getValue(colMap.meaningEn) || undefined,
+            meaningVi: getValue(colMap.meaningVi) || undefined,
+            meaningMn: getValue(colMap.meaningMn) || undefined,
             courseId: form.courseId,
-            unitId: Number(unit) || form.unitId || 1,
-            exampleSentence: exampleSentence || undefined,
-            exampleMeaning: exampleMeaning || undefined,
-            exampleMeaningEn: exampleMeaningEn || undefined,
-            exampleMeaningVi: exampleMeaningVi || undefined,
-            exampleMeaningMn: exampleMeaningMn || undefined,
+            unitId: Number(getValue(colMap.unit)) || form.unitId || 1,
+            exampleSentence: getValue(colMap.example) || undefined,
+            exampleMeaning: getValue(colMap.exampleCh) || undefined,
+            exampleMeaningEn: getValue(colMap.exampleEn) || undefined,
+            exampleMeaningVi: getValue(colMap.exampleVi) || undefined,
+            exampleMeaningMn: getValue(colMap.exampleMn) || undefined,
           };
         })
         .filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -216,8 +244,22 @@ const VocabImporter: React.FC = () => {
       }
 
       const result: BulkImportResult = await bulkImportMutation({ items, token: localStorage.getItem("token") || undefined });
-      if (result?.results?.errors?.length) {
-        setStatus(`部分导入失败：${result.results.errors.join("; ")}`);
+      const r = result?.results;
+      if (r?.errors?.length) {
+        setStatus(`部分导入失败：${r.errors.join("; ")}`);
+      } else if (r) {
+        const parts: string[] = [`成功导入 ${r.success} 条词汇`];
+        if (r.smartFilled > 0) {
+          parts.push(`智能填充 ${r.smartFilled} 条`);
+        }
+        if (r.newWords > 0) {
+          parts.push(`新增词汇 ${r.newWords} 条`);
+        }
+        const notFilled = items.filter(i => !i.meaning).length - (r.smartFilled || 0);
+        if (notFilled > 0) {
+          parts.push(`${notFilled} 条未填充释义`);
+        }
+        setStatus(parts.join('，'));
       } else {
         setStatus(`成功导入 ${items.length} 条词汇`);
       }
