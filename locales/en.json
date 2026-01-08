@@ -539,8 +539,8 @@
         "point3": "AI Explanation"
       },
       "institute": {
-        "title": "University Curriculum",
-        "desc": "Standard curriculum from top Korean universities (Yonsei/SNU style).",
+        "title": "Structured Curriculum",
+        "desc": "Classroom-style syllabus without naming specific schools.",
         "beginner": "Beginner (1-2)",
         "beginnerDesc": "Hangul, Greetings, Survival Phrases.",
         "intermediate": "Intermediate (3-4)",
@@ -554,8 +554,8 @@
         "point3": "Offline Mode"
       },
       "topik": {
-        "title": "Ace the TOPIK",
-        "desc": "Real exam simulation with instant AI grading and feedback.",
+        "title": "TOPIK Mock Exams",
+        "desc": "Mock exam simulation with instant AI grading and feedback.",
         "point1": "Writing Correction",
         "point2": "Weakness Analysis",
         "point3": "Real Timer"
