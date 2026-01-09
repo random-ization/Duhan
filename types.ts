@@ -419,12 +419,36 @@ export interface GrammarPointData {
   title: string;
   slug?: string;
   level?: string;  // "TOPIK 1", "TOPIK 2"
+
+  // Chinese summary (default)
   summary: string;
+  // Multi-language summaries
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
+
   type: string; // "ENDING", "PARTICLE", "CONNECTIVE"
+
+  // Chinese explanation (default)
   explanation: string;
+  // Multi-language explanations
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
+
   construction?: Record<string, string>; // Legacy field
   conjugationRules?: any; // New: flexible rules object
-  examples: { kr: string; cn: string; audio?: string }[];
+
+  // Examples with multi-language support
+  examples: {
+    kr: string;
+    cn: string;
+    en?: string;
+    vi?: string;
+    mn?: string;
+    audio?: string
+  }[];
+
   displayOrder?: number;
   customNote?: string;
   // User progress

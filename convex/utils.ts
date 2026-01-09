@@ -10,7 +10,7 @@ import { Id } from "./_generated/dataModel";
  * Get authenticated user ID from context or token.
  * Throws ConvexError with code 'UNAUTHORIZED' if not authenticated.
  */
-export async function getAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<string> {
+export async function getAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<Id<"users">> {
     // 1. Try explicit token first (shim auth)
     if (token) {
         const user = await getUserByTokenOrId(ctx, token);
@@ -34,7 +34,7 @@ export async function getAuthUserId(ctx: QueryCtx | MutationCtx, token?: string)
  * Get authenticated user ID if available, returns null if not authenticated.
  * Use this for queries that should work for both authenticated and unauthenticated users.
  */
-export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<string | null> {
+export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<Id<"users"> | null> {
     if (token) {
         const user = await getUserByTokenOrId(ctx, token);
         if (user) return user._id;
@@ -98,7 +98,7 @@ export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | un
  */
 export async function requireAdmin(ctx: QueryCtx | MutationCtx, token?: string) {
     const userId = await getAuthUserId(ctx, token);
-    const finalUser = await ctx.db.get(userId as Id<"users">);
+    const finalUser = await ctx.db.get(userId);
 
     if (!finalUser || finalUser.role !== 'ADMIN') {
         throw new ConvexError({ code: "FORBIDDEN", message: "Admin access required" });

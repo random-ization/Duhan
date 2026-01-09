@@ -32,7 +32,7 @@ export const getStats = query({
         if (userId) {
             const progress = await ctx.db
                 .query("user_vocab_progress")
-                .withIndex("by_user_word", q => q.eq("userId", userId as any))
+                .withIndex("by_user_word", q => q.eq("userId", userId))
                 .collect();
 
             const courseWordIds = new Set(appearances.map(a => a.wordId));
@@ -174,7 +174,7 @@ export const getOfCourse = query({
                     userId
                         ? ctx.db
                             .query("user_vocab_progress")
-                            .withIndex("by_user_word", (q) => q.eq("userId", userId as any).eq("wordId", app.wordId))
+                            .withIndex("by_user_word", (q) => q.eq("userId", userId).eq("wordId", app.wordId))
                             .unique()
                         : Promise.resolve(null),
                 ]);
@@ -183,11 +183,19 @@ export const getOfCourse = query({
 
                 return {
                     ...word,
-                    // Merge appearance data
+                    // Merge appearance data - appearance meanings take priority over word meanings
+                    meaning: app.meaning || word.meaning,
+                    meaningEn: app.meaningEn || word.meaningEn,
+                    meaningVi: app.meaningVi || word.meaningVi,
+                    meaningMn: app.meaningMn || word.meaningMn,
                     exampleSentence: app.exampleSentence,
                     exampleMeaning: app.exampleMeaning,
+                    exampleMeaningEn: app.exampleMeaningEn,
+                    exampleMeaningVi: app.exampleMeaningVi,
+                    exampleMeaningMn: app.exampleMeaningMn,
                     unitId: app.unitId,
                     courseId: app.courseId,
+                    appearanceId: app._id,
                     // Merge progress data (normalized structure for frontend)
                     progress: progress ? {
                         id: progress._id,
@@ -331,7 +339,7 @@ export const updateProgress = mutation({
             }
 
             await ctx.db.insert("user_vocab_progress", {
-                userId: userId as any,
+                userId: userId,
                 wordId,
                 status,
                 interval,
@@ -431,13 +439,19 @@ export const bulkImport = mutation({
                         smartFilledCount++;
                     }
 
-                    // Update word only if user provided new translations
-                    const wordUpdates: Record<string, string> = {};
-                    if (item.meaningEn && !existingWord.meaningEn) wordUpdates.meaningEn = item.meaningEn;
-                    if (item.meaningVi && !existingWord.meaningVi) wordUpdates.meaningVi = item.meaningVi;
-                    if (item.meaningMn && !existingWord.meaningMn) wordUpdates.meaningMn = item.meaningMn;
+                    // Update word fields - ALWAYS overwrite with user-provided data
+                    const wordUpdates: Record<string, string | undefined> = {};
+                    if (item.meaning) wordUpdates.meaning = item.meaning;
+                    if (item.partOfSpeech) wordUpdates.partOfSpeech = item.partOfSpeech;
+                    if (item.hanja !== undefined) wordUpdates.hanja = item.hanja;
+                    if (item.meaningEn !== undefined) wordUpdates.meaningEn = item.meaningEn;
+                    if (item.meaningVi !== undefined) wordUpdates.meaningVi = item.meaningVi;
+                    if (item.meaningMn !== undefined) wordUpdates.meaningMn = item.meaningMn;
                     if (Object.keys(wordUpdates).length > 0) {
-                        await ctx.db.patch(existingWord._id, wordUpdates);
+                        await ctx.db.patch(existingWord._id, {
+                            ...wordUpdates,
+                            updatedAt: Date.now(),
+                        });
                     }
                 } else {
                     // New word - create it
@@ -462,17 +476,17 @@ export const bulkImport = mutation({
                     )
                     .unique();
 
-                // Final data: user-provided > smart fill
+                // Final data: user-provided > smart fill (use !== undefined to allow empty strings)
                 const finalData = {
-                    meaning: item.meaning || smartFillData.meaning,
-                    meaningEn: item.meaningEn || smartFillData.meaningEn,
-                    meaningVi: item.meaningVi || smartFillData.meaningVi,
-                    meaningMn: item.meaningMn || smartFillData.meaningMn,
-                    exampleSentence: item.exampleSentence || smartFillData.exampleSentence,
-                    exampleMeaning: item.exampleMeaning || smartFillData.exampleMeaning,
-                    exampleMeaningEn: item.exampleMeaningEn || smartFillData.exampleMeaningEn,
-                    exampleMeaningVi: item.exampleMeaningVi || smartFillData.exampleMeaningVi,
-                    exampleMeaningMn: item.exampleMeaningMn || smartFillData.exampleMeaningMn,
+                    meaning: item.meaning !== undefined ? item.meaning : smartFillData.meaning,
+                    meaningEn: item.meaningEn !== undefined ? item.meaningEn : smartFillData.meaningEn,
+                    meaningVi: item.meaningVi !== undefined ? item.meaningVi : smartFillData.meaningVi,
+                    meaningMn: item.meaningMn !== undefined ? item.meaningMn : smartFillData.meaningMn,
+                    exampleSentence: item.exampleSentence !== undefined ? item.exampleSentence : smartFillData.exampleSentence,
+                    exampleMeaning: item.exampleMeaning !== undefined ? item.exampleMeaning : smartFillData.exampleMeaning,
+                    exampleMeaningEn: item.exampleMeaningEn !== undefined ? item.exampleMeaningEn : smartFillData.exampleMeaningEn,
+                    exampleMeaningVi: item.exampleMeaningVi !== undefined ? item.exampleMeaningVi : smartFillData.exampleMeaningVi,
+                    exampleMeaningMn: item.exampleMeaningMn !== undefined ? item.exampleMeaningMn : smartFillData.exampleMeaningMn,
                 };
 
                 if (!existingApp) {
@@ -527,7 +541,7 @@ export const getDueForReview = query({
         // Get all user progress that is not MASTERED
         const progressItems = await ctx.db
             .query("user_vocab_progress")
-            .withIndex("by_user_word", q => q.eq("userId", userId as any))
+            .withIndex("by_user_word", q => q.eq("userId", userId))
             .collect();
 
         // Filter: not mastered
@@ -597,7 +611,7 @@ export const addToReview = mutation({
         // 2. Check if user already has progress for this word
         const existingProgress = await ctx.db
             .query("user_vocab_progress")
-            .withIndex("by_user_word", q => q.eq("userId", userId as any).eq("wordId", wordId))
+            .withIndex("by_user_word", q => q.eq("userId", userId).eq("wordId", wordId))
             .unique();
 
         if (existingProgress) {
@@ -615,7 +629,7 @@ export const addToReview = mutation({
 
         // 3. Create new progress entry
         await ctx.db.insert("user_vocab_progress", {
-            userId: userId as any,
+            userId: userId,
             wordId,
             status: 'NEW',
             interval: 0.5,

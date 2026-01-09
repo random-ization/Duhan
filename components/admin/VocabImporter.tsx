@@ -182,15 +182,16 @@ const VocabImporter: React.FC = () => {
         unit: findColumn(['单元', 'unit', 'lesson', '课']),
         word: findColumn(['韩语', 'word', '单词', 'korean']),
         pos: findColumn(['词性', 'pos', 'part']),
-        meaningCh: findColumn(['释义(中)', '释义(ch)', '中文', 'chinese', 'meaning']),
-        meaningEn: findColumn(['释义(英)', '释义(en)', '英文', 'english']),
-        meaningMn: findColumn(['释义(蒙)', '释义(mn)', '蒙古', 'mongolian']),
-        meaningVi: findColumn(['释义(越)', '释义(vn)', '越南', 'vietnamese']),
-        example: findColumn(['例句', 'example', '韩语例句']),
-        exampleCh: findColumn(['例句翻译(ch)', '例句中翻', '例句翻译']),
-        exampleEn: findColumn(['例句翻译(en)', '例句英翻']),
-        exampleMn: findColumn(['例句翻译(mn)', '例句蒙翻']),
-        exampleVi: findColumn(['例句翻译(vn)', '例句越翻']),
+        // Support both "释义(CH)" and "释义 (CH)" formats
+        meaningCh: findColumn(['释义 (ch)', '释义(中)', '释义(ch)', '中文', 'chinese', 'meaning']),
+        meaningEn: findColumn(['释义 (en)', '释义(英)', '释义(en)', '英文', 'english']),
+        meaningMn: findColumn(['释义 (mn)', '释义(蒙)', '释义(mn)', '蒙古', 'mongolian']),
+        meaningVi: findColumn(['释义 (vn)', '释义(越)', '释义(vn)', '越南', 'vietnamese']),
+        example: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example', '韩语例句']),
+        exampleCh: findColumn(['例句翻译 (c', '例句翻译(ch)', '例句中翻', '例句翻译']),
+        exampleEn: findColumn(['例句翻译 (e', '例句翻译(en)', '例句英翻']),
+        exampleMn: findColumn(['例句翻译 (n', '例句翻译 (m', '例句翻译(mn)', '例句蒙翻']),
+        exampleVi: findColumn(['例句翻译 (v', '例句翻译(vn)', '例句越翻']),
       };
 
       // Validate required columns
@@ -219,20 +220,21 @@ const VocabImporter: React.FC = () => {
             meaning = getValue(colMap.meaningEn) || getValue(colMap.meaningMn) || getValue(colMap.meaningVi) || "";
           }
 
+          // Pass actual values - let backend handle empty strings vs undefined
           return {
             word,
             meaning,
             partOfSpeech: getValue(colMap.pos) || "NOUN",
-            meaningEn: getValue(colMap.meaningEn) || undefined,
-            meaningVi: getValue(colMap.meaningVi) || undefined,
-            meaningMn: getValue(colMap.meaningMn) || undefined,
+            meaningEn: getValue(colMap.meaningEn),  // Keep value as-is (string or undefined)
+            meaningVi: getValue(colMap.meaningVi),
+            meaningMn: getValue(colMap.meaningMn),
             courseId: form.courseId,
             unitId: Number(getValue(colMap.unit)) || form.unitId || 1,
-            exampleSentence: getValue(colMap.example) || undefined,
-            exampleMeaning: getValue(colMap.exampleCh) || undefined,
-            exampleMeaningEn: getValue(colMap.exampleEn) || undefined,
-            exampleMeaningVi: getValue(colMap.exampleVi) || undefined,
-            exampleMeaningMn: getValue(colMap.exampleMn) || undefined,
+            exampleSentence: getValue(colMap.example),
+            exampleMeaning: getValue(colMap.exampleCh),
+            exampleMeaningEn: getValue(colMap.exampleEn),
+            exampleMeaningVi: getValue(colMap.exampleVi),
+            exampleMeaningMn: getValue(colMap.exampleMn),
           };
         })
         .filter((item): item is NonNullable<typeof item> => Boolean(item));

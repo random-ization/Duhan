@@ -56,7 +56,7 @@ export const getSubscriptions = query({
 
         const subs = await ctx.db
             .query("podcast_subscriptions")
-            .withIndex("by_user", q => q.eq("userId", userId as any))
+            .withIndex("by_user", q => q.eq("userId", userId))
             .collect();
 
         const channels = await Promise.all(subs.map(async (sub) => {
@@ -77,7 +77,7 @@ export const getHistory = query({
 
         const history = await ctx.db
             .query("listening_history")
-            .withIndex("by_user", q => q.eq("userId", userId as any))
+            .withIndex("by_user", q => q.eq("userId", userId))
             .order("desc") // Most recent first (if index creation supports it, otherwise manual sort)
             .take(20);
 
@@ -112,7 +112,7 @@ export const recordHistory = mutation({
         // Check existing
         const existing = await ctx.db
             .query("listening_history")
-            .withIndex("by_user_episode", q => q.eq("userId", userId as any).eq("episodeGuid", episodeGuid))
+            .withIndex("by_user_episode", q => q.eq("userId", userId).eq("episodeGuid", episodeGuid))
             .unique();
 
         if (existing) {
@@ -122,7 +122,7 @@ export const recordHistory = mutation({
             });
         } else {
             await ctx.db.insert("listening_history", {
-                userId: userId as any,
+                userId: userId,
                 episodeGuid,
                 ...rest,
                 playedAt: now
@@ -172,7 +172,7 @@ export const toggleSubscription = mutation({
 
         // Check if subscription exists
         const existingSub = await ctx.db.query("podcast_subscriptions")
-            .withIndex("by_user_channel", q => q.eq("userId", userId as any).eq("channelId", existingChannel!._id))
+            .withIndex("by_user_channel", q => q.eq("userId", userId).eq("channelId", existingChannel!._id))
             .first();
 
         if (existingSub) {
@@ -182,7 +182,7 @@ export const toggleSubscription = mutation({
         } else {
             // Subscribe
             await ctx.db.insert("podcast_subscriptions", {
-                userId: userId as any,
+                userId: userId,
                 channelId: existingChannel._id,
                 createdAt: Date.now(),
             });
@@ -302,7 +302,7 @@ export const saveProgress = mutation({
         const { episodeGuid, progress } = args;
 
         const existing = await ctx.db.query("listening_history")
-            .withIndex("by_user_episode", q => q.eq("userId", userId as any).eq("episodeGuid", episodeGuid))
+            .withIndex("by_user_episode", q => q.eq("userId", userId).eq("episodeGuid", episodeGuid))
             .first();
 
         if (existing) {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import VocabDashboard from '../../../components/admin/VocabDashboard';
 import VocabImporter from '../../../components/admin/VocabImporter';
+import GrammarImporter from '../../../components/admin/GrammarImporter';
 import { ReadingContentManager } from '../../components/admin/ReadingContentManager';
 import { ListeningContentManager } from '../../components/admin/ListeningContentManager';
 import { GrammarManager } from '../../components/admin/GrammarManager';
@@ -11,11 +12,12 @@ import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import LegalDocumentEditor from '../../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
 import DataDiagnostics from '../../components/admin/DataDiagnostics';
-import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText, Video, Activity } from 'lucide-react';
+import { Book, Database, LayoutDashboard, FileSpreadsheet, GraduationCap, Library, BarChart3, ClipboardCheck, Users, Headphones, FileText, Video, Activity, BookOpen } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'vocab' | 'reading' | 'listening' | 'grammar' | 'institute' | 'topik' | 'legal' | 'video' | 'diagnostics'>('dashboard');
     const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
+    const [grammarSubTab, setGrammarSubTab] = useState<'manage' | 'import'>('manage');
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] p-8">
@@ -151,7 +153,36 @@ const AdminPage: React.FC = () => {
                 ) : activeTab === 'listening' ? (
                     <ListeningContentManager />
                 ) : activeTab === 'grammar' ? (
-                    <GrammarManager />
+                    <div>
+                        {/* Grammar Sub-tabs */}
+                        <div className="flex gap-4 mb-6">
+                            <button
+                                onClick={() => setGrammarSubTab('manage')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 transition-all ${grammarSubTab === 'manage'
+                                    ? 'bg-zinc-900 border-zinc-900 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,0.3)]'
+                                    : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900'
+                                    }`}
+                            >
+                                <BookOpen className="w-5 h-5" />
+                                语法管理
+                            </button>
+                            <button
+                                onClick={() => setGrammarSubTab('import')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 transition-all ${grammarSubTab === 'import'
+                                    ? 'bg-zinc-900 border-zinc-900 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,0.3)]'
+                                    : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900'
+                                    }`}
+                            >
+                                <FileSpreadsheet className="w-5 h-5" />
+                                批量导入
+                            </button>
+                        </div>
+
+                        {/* Grammar Content */}
+                        <div className="bg-white rounded-2xl border-2 border-zinc-900 shadow-[6px_6px_0px_0px_#18181B] overflow-hidden min-h-[600px]">
+                            {grammarSubTab === 'manage' ? <GrammarManager /> : <GrammarImporter />}
+                        </div>
+                    </div>
                 ) : activeTab === 'topik' ? (
                     <TopikManager />
                 ) : activeTab === 'legal' ? (

@@ -150,10 +150,23 @@ export default defineSchema({
 
         level: v.string(),
         type: v.string(),
+
+        // Chinese summary (default)
         summary: v.string(),
+        // Multi-language summaries
+        summaryEn: v.optional(v.string()),
+        summaryVi: v.optional(v.string()),
+        summaryMn: v.optional(v.string()),
+
+        // Chinese explanation (default)
         explanation: v.string(),
+        // Multi-language explanations
+        explanationEn: v.optional(v.string()),
+        explanationVi: v.optional(v.string()),
+        explanationMn: v.optional(v.string()),
 
         conjugationRules: v.any(), // JSON
+        // Examples format: [{ kr: string, cn: string, en?: string, vi?: string, mn?: string }]
         examples: v.any(), // JSON
         postgresId: v.optional(v.string()),
 

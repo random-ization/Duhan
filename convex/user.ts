@@ -14,7 +14,7 @@ export const saveSavedWord = mutation({
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const { korean, english, exampleSentence, exampleTranslation } = args;
@@ -41,7 +41,7 @@ export const saveMistake = mutation({
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const { wordId, korean, english, context } = args;
@@ -71,7 +71,7 @@ export const saveExamAttempt = mutation({
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const { examId, score, totalQuestions, sectionScores, duration } = args;
@@ -100,7 +100,7 @@ export const logActivity = mutation({
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const { activityType, duration, itemsStudied, metadata } = args;
@@ -128,7 +128,7 @@ export const updateLearningProgress = mutation({
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
         const { lastInstitute, lastLevel, lastUnit, lastModule } = args;

@@ -2,7 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
-import { getOptionalAuthUserId } from "./utils";
+import { getOptionalAuthUserId, getAuthUserId } from "./utils";
 import { MAX_ITEMS_PER_USER_COLLECTION } from "./queryLimits";
 
 import { compareSync, hashSync } from "bcryptjs";
@@ -253,7 +253,7 @@ export const getMe = query({
         const userId = await getOptionalAuthUserId(ctx, args.token);
         if (!userId) return null;
 
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
         if (!user) return null;
 
         return await enrichUser(ctx, user);
@@ -328,7 +328,7 @@ export const updateProfile = mutation({
     handler: async (ctx, args) => {
         const { name, avatar } = args;
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
 
         if (!user) {
             throw new ConvexError({ code: "USER_NOT_FOUND" });
@@ -354,7 +354,7 @@ export const changePassword = mutation({
         const { currentPassword, newPassword } = args;
 
         const userId = await getAuthUserId(ctx);
-        const user = await ctx.db.get(userId as any);
+        const user = await ctx.db.get(userId);
 
         if (!user) {
             throw new ConvexError({ code: "USER_NOT_FOUND" });
