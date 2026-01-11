@@ -379,17 +379,38 @@ interface ReadingModuleProps {
 
 const ReadingModule: React.FC<ReadingModuleProps> = ({
     courseId = 'snu_1a',
-    unitIndex = 1,
+    unitIndex: initialUnitIndex = 1,
     unitTitle = '第1单元: 自我介绍',
     onBack
 }) => {
+    // State for selected unit (allows changing within the component)
+    const [selectedUnitIndex, setSelectedUnitIndex] = useState(initialUnitIndex);
+
+    // Fetch available units for course (for unit selector)
+    const availableUnits = useQuery(api.units.getByCourse, { courseId });
+    const uniqueUnitIndices = useMemo(() => {
+        if (!availableUnits) return [];
+        const indices = [...new Set(availableUnits.map((u: any) => u.unitIndex))];
+        return indices.sort((a, b) => a - b);
+    }, [availableUnits]);
+
+    // Auto-select first available unit when units load (handles courses that don't start at unit 1)
+    useEffect(() => {
+        if (uniqueUnitIndices.length > 0) {
+            const firstAvailableUnit = uniqueUnitIndices[0];
+            // Only auto-select if current selection doesn't exist in available units
+            if (!uniqueUnitIndices.includes(selectedUnitIndex)) {
+                setSelectedUnitIndex(firstAvailableUnit);
+            }
+        }
+    }, [uniqueUnitIndices, selectedUnitIndex]);
+
     // ========================================
     // Convex Query: Fetch unit data
     // ========================================
     const queryData = useQuery(api.units.getDetails, {
         courseId,
-        unitIndex,
-        userId: undefined // TODO: Add Auth integration later
+        unitIndex: selectedUnitIndex,
     });
 
     // Convex Mutation: Complete Unit - must be before any conditional returns
@@ -404,16 +425,22 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const articles = queryData?.articles || (queryData?.unit ? [{ ...queryData.unit, articleIndex: 1 }] : []);
     const [activeArticleIndex, setActiveArticleIndex] = useState(1);
 
-    // Update active article index if not in list (e.g. data loaded)
+    // Reset active article index when unit changes OR when articles load
     useEffect(() => {
-        if (articles.length > 0 && !articles.find((a: any) => a.articleIndex === activeArticleIndex)) {
-            setActiveArticleIndex(articles[0].articleIndex || 1);
+        if (articles.length > 0) {
+            const firstArticleIndex = articles[0].articleIndex || 1;
+            setActiveArticleIndex(firstArticleIndex);
         }
-    }, [articles, activeArticleIndex]);
+    }, [selectedUnitIndex, articles]);
 
-    const unitData = useMemo(() =>
-        articles.find((a: any) => a.articleIndex === activeArticleIndex) || articles[0] || null
-        , [articles, activeArticleIndex]);
+    // Select the active article - ensure we always have a valid selection
+    const unitData = useMemo(() => {
+        if (articles.length === 0) return null;
+        // Try to find article by activeArticleIndex
+        const found = articles.find((a: any) => a.articleIndex === activeArticleIndex);
+        // If not found, use first article
+        return found || articles[0];
+    }, [articles, activeArticleIndex]);
 
     const vocabList = queryData?.vocabList || [];
     const grammarList = queryData?.grammarList || [];
@@ -474,7 +501,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const [noteModal, setNoteModal] = useState<{ text: string; startOffset: number; endOffset: number } | null>(null);
 
     // Right panel tab
-    const [activeTab, setActiveTab] = useState<'notes' | 'vocab' | 'grammar' | 'ai'>('vocab');
+    const [activeTab, setActiveTab] = useState<'notes' | 'grammar' | 'ai'>('grammar');
 
     // Mobile bottom sheet state
     const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -653,10 +680,19 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         }
     };
 
-    // Render content with clickable words
+    // Render content with clickable words and auto line breaks at sentence endings
     const renderContent = (content: string) => {
+        // First, add line breaks after Korean sentence endings (다. 요. 까? 습니다. etc.)
+        // Match Korean sentence-ending patterns followed by space
+        const formattedContent = content
+            .replace(/([다요까]\.)\s+/g, '$1\n')  // 다. 요. 까.
+            .replace(/(습니다\.)\s+/g, '$1\n')    // 습니다.
+            .replace(/(습니까\?)\s+/g, '$1\n')    // 습니까?
+            .replace(/(\?)\s+/g, '$1\n')          // Any question mark
+            .replace(/(!)\s+/g, '$1\n');          // Any exclamation mark
+
         // Split by spaces and newlines while preserving them
-        const parts = content.split(/(\s+)/);
+        const parts = formattedContent.split(/(\s+)/);
 
         return parts.map((part, i) => {
             if (/^\s+$/.test(part)) {
@@ -761,9 +797,21 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
                         {/* Center: Unit Info Badge + Article Selector */}
                         <div className="flex gap-2 items-center">
-                            <span className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm">
-                                📖 第 {unitIndex} 课
-                            </span>
+                            {/* Unit Selector - Green styled dropdown with arrow */}
+                            <div className="relative">
+                                <select
+                                    value={selectedUnitIndex}
+                                    onChange={(e) => setSelectedUnitIndex(Number(e.target.value))}
+                                    className="px-4 py-2 pr-8 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm cursor-pointer hover:bg-lime-400 transition-colors appearance-none"
+                                >
+                                    {(uniqueUnitIndices.length > 0 ? uniqueUnitIndices : [selectedUnitIndex]).map((idx: number) => (
+                                        <option key={idx} value={idx}>
+                                            📖 第 {idx} 课
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                            </div>
 
                             {/* Article Selector */}
                             {articles.length > 1 && (
@@ -783,11 +831,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                 </div>
                             )}
 
-                            {vocabList.length > 0 && (
-                                <span className="hidden md:inline-block px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
-                                    {vocabList.length} 个生词
-                                </span>
-                            )}
+
                             {grammarList.length > 0 && (
                                 <span className="hidden md:inline-block px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
                                     {grammarList.length} 个语法点
@@ -856,7 +900,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await completeUnitMutation({ userId: 'temp-user', courseId, unitIndex });
+                                                await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
                                                 // Show success feedback
                                                 alert('🎉 本课学习已完成！');
                                             } catch (e) {
@@ -876,7 +920,6 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                             {/* Tabs */}
                             <div className="flex border-b-2 border-zinc-900 shrink-0">
                                 {[
-                                    { key: 'vocab', label: '本课词汇', icon: BookOpen },
                                     { key: 'grammar', label: '语法点', icon: Sparkles },
                                     { key: 'notes', label: '笔记', icon: PenLine },
                                     { key: 'ai', label: 'AI助教', icon: MessageSquare }
@@ -918,46 +961,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                     </div>
                                 )}
 
-                                {activeTab === 'vocab' && (
-                                    <div className="space-y-2">
-                                        {vocabList.length === 0 ? (
-                                            <div className="text-center text-zinc-400 py-8">
-                                                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                <p className="font-bold">本课暂无词汇</p>
-                                                <p className="text-xs">请先添加课程词汇</p>
-                                            </div>
-                                        ) : (
-                                            vocabList.map(word => (
-                                                <div
-                                                    key={word.id}
-                                                    className="bg-white border-2 border-zinc-900 rounded-lg p-3 shadow-[2px_2px_0px_0px_#18181B]"
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="font-bold text-zinc-900">{word.korean}</span>
-                                                        <button
-                                                            onClick={() => speak(word.korean)}
-                                                            className="w-7 h-7 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-200 transition-colors"
-                                                        >
-                                                            <Volume2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-sm text-zinc-600">{word.meaning}</p>
-                                                    {word.pronunciation && (
-                                                        <p className="text-xs text-zinc-400 mt-1">[{word.pronunciation}]</p>
-                                                    )}
-                                                    {word.exampleSentence && (
-                                                        <div className="mt-2 pt-2 border-t border-zinc-200">
-                                                            <p className="text-xs text-zinc-500">例: {word.exampleSentence}</p>
-                                                            {word.exampleMeaning && (
-                                                                <p className="text-xs text-zinc-400">{word.exampleMeaning}</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                )}
+
 
                                 {activeTab === 'grammar' && (
                                     <div className="space-y-3">
@@ -1098,7 +1102,6 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         {/* Mobile Tabs */}
                         <div className="flex border-b border-zinc-200 mb-4 -mx-5 px-5">
                             {[
-                                { key: 'vocab', label: '词汇', icon: BookOpen },
                                 { key: 'grammar', label: '语法', icon: Sparkles },
                                 { key: 'notes', label: '笔记', icon: PenLine },
                             ].map(tab => (
@@ -1117,16 +1120,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         </div>
 
                         {/* Mobile Content */}
-                        {activeTab === 'vocab' && (
-                            <div className="space-y-2">
-                                {vocabList.slice(0, 10).map(vocab => (
-                                    <div key={vocab.id} className="p-3 bg-zinc-50 rounded-lg">
-                                        <div className="font-bold text-zinc-900">{vocab.korean}</div>
-                                        <div className="text-sm text-zinc-500">{vocab.meaning}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+
                         {activeTab === 'grammar' && (
                             <div className="space-y-2">
                                 {grammarList.slice(0, 5).map(g => (

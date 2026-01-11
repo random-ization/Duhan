@@ -67,7 +67,13 @@ export default defineSchema({
 
         title: v.string(),
         readingText: v.string(),
-        translation: v.optional(v.string()),
+
+        // Multi-language translations
+        translation: v.optional(v.string()),      // Chinese (default)
+        translationEn: v.optional(v.string()),    // English
+        translationVi: v.optional(v.string()),    // Vietnamese
+        translationMn: v.optional(v.string()),    // Mongolian
+
         audioUrl: v.optional(v.string()),
 
         // JSON data

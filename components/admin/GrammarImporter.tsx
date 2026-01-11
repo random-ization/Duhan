@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { CheckCircle2, Loader2, Upload, FileSpreadsheet, BookOpen } from "lucide-react";
+import { CheckCircle2, Loader2, Upload, FileSpreadsheet, BookOpen, AlertCircle, X, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
 
 interface FormState {
@@ -52,6 +52,25 @@ type BulkImportResult = {
     };
 };
 
+// Multi-sheet types
+type SheetData = {
+    sheetName: string;
+    rows: Record<string, unknown>[];
+    matchedCourseId: string | null;
+    manualCourseId?: string;
+    confidence: 'auto' | 'manual' | 'none';
+    skip?: boolean;
+};
+
+type Institute = {
+    _id: string;
+    id: string;
+    name: string;
+    displayLevel?: string;
+    volume?: string;
+    publisher?: string;
+};
+
 /**
  * Parse a CSV line correctly, handling quoted fields that may contain commas.
  */
@@ -83,6 +102,69 @@ function parseCSVLine(line: string): string[] {
     return result;
 }
 
+/**
+ * Auto-match sheet name to an institute/textbook
+ */
+function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute | null {
+    const normalized = sheetName.trim().toLowerCase();
+
+    // Skip common non-content sheet names
+    const skipPatterns = ['说明', 'readme', 'info', 'sheet', '目录', 'index', 'template'];
+    if (skipPatterns.some(p => normalized.includes(p))) {
+        return null;
+    }
+
+    // 1. Exact match with display name
+    for (const inst of institutes) {
+        const displayName = `${inst.name || ''} ${inst.displayLevel || ''} ${inst.volume || ''}`.trim().toLowerCase();
+        if (normalized === displayName || normalized === inst.name?.toLowerCase()) {
+            return inst;
+        }
+    }
+
+    // 2. Extract level and volume numbers (e.g., "延世1-1" → level=1, volume=1)
+    const numMatch = normalized.match(/(\d+)[^\d]*(\d+)?/);
+    if (numMatch) {
+        const level = numMatch[1];
+        const volume = numMatch[2] || '1';
+
+        for (const inst of institutes) {
+            const isYonsei = inst.name?.includes('延世') || inst.publisher?.includes('延世') ||
+                inst.name?.toLowerCase().includes('yonsei');
+            if (isYonsei) {
+                const levelMatch = inst.displayLevel?.includes(level) ||
+                    inst.displayLevel?.includes(`${level}급`);
+                const volumeMatch = inst.volume?.includes(volume) ||
+                    inst.volume === `${volume}` ||
+                    (!inst.volume && volume === '1');
+                if (levelMatch && volumeMatch) {
+                    return inst;
+                }
+            }
+        }
+    }
+
+    // 3. Partial match - sheet name contains institute name or vice versa
+    for (const inst of institutes) {
+        const instName = inst.name?.toLowerCase() || '';
+        if (instName && (normalized.includes(instName) || instName.includes(normalized))) {
+            return inst;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Get display name for an institute
+ */
+function getInstituteDisplayName(inst: Institute): string {
+    let displayName = inst.name || '';
+    if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
+    if (inst.volume) displayName += ` ${inst.volume}`;
+    return displayName;
+}
+
 const GrammarImporter: React.FC = () => {
     const institutes = useQuery(api.institutes.getAll, {});
     const bulkImportMutation = useMutation(api.grammars.bulkImport);
@@ -91,6 +173,11 @@ const GrammarImporter: React.FC = () => {
     const [bulkText, setBulkText] = useState("");
     const [status, setStatus] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+
+    // Multi-sheet states
+    const [sheetDataList, setSheetDataList] = useState<SheetData[]>([]);
+    const [showSheetMapping, setShowSheetMapping] = useState(false);
+    const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
 
     useEffect(() => {
         if (!form.courseId && institutes && institutes.length > 0) {
@@ -117,6 +204,204 @@ const GrammarImporter: React.FC = () => {
         ],
         []
     );
+
+    /**
+     * Parse rows from a sheet into BulkImportItems
+     */
+    const parseSheetRows = (rows: Record<string, unknown>[], courseId: string, defaultUnitId: number): BulkImportItem[] => {
+        if (rows.length === 0) return [];
+
+        // Get headers from first row keys
+        const headers = Object.keys(rows[0]).map(h => h.toLowerCase());
+
+        const findColumn = (keywords: string[]): string | null => {
+            const headerKey = Object.keys(rows[0]).find(h =>
+                keywords.some(k => h.toLowerCase().includes(k))
+            );
+            return headerKey || null;
+        };
+
+        const colMap = {
+            title: findColumn(['标题', 'title', '语法', 'grammar']),
+            summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
+            explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
+            summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
+            summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
+            summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
+            explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
+            explanationVi: findColumn(['解释 (vn)', '解释(vn)', '解释 (vi)', 'explanation (vn)', 'explanation_vn']),
+            explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
+            exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
+            exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
+            exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
+            exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
+            exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
+            unit: findColumn(['单元', 'unit', '课']),
+        };
+
+        if (!colMap.title) return [];
+
+        return rows
+            .map((row) => {
+                const getValue = (key: string | null) => key ? String(row[key] || '') : undefined;
+
+                const title = getValue(colMap.title);
+                if (!title) return null;
+
+                const exampleKr = getValue(colMap.exampleKr);
+                const examples = exampleKr ? [{
+                    kr: exampleKr,
+                    cn: getValue(colMap.exampleCn) || '',
+                    en: getValue(colMap.exampleEn) || undefined,
+                    vi: getValue(colMap.exampleVi) || undefined,
+                    mn: getValue(colMap.exampleMn) || undefined,
+                }] : undefined;
+
+                const unitValue = getValue(colMap.unit);
+                const unitId = unitValue ? Number(unitValue) : defaultUnitId;
+
+                return {
+                    title,
+                    summary: getValue(colMap.summary),
+                    explanation: getValue(colMap.explanation),
+                    summaryEn: getValue(colMap.summaryEn),
+                    summaryVi: getValue(colMap.summaryVi),
+                    summaryMn: getValue(colMap.summaryMn),
+                    explanationEn: getValue(colMap.explanationEn),
+                    explanationVi: getValue(colMap.explanationVi),
+                    explanationMn: getValue(colMap.explanationMn),
+                    examples,
+                    courseId,
+                    unitId: isNaN(unitId) ? defaultUnitId : unitId,
+                };
+            })
+            .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    };
+
+    /**
+     * Handle Excel file with multiple sheets
+     */
+    const handleExcelFile = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = new Uint8Array(event.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // If only one sheet, use existing single-sheet flow
+            if (workbook.SheetNames.length === 1) {
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                if (jsonData.length > 0) {
+                    const headers = Object.keys(jsonData[0] as Record<string, unknown>);
+                    const headerLine = headers.join('\t');
+                    const dataLines = jsonData.map((row: any) =>
+                        headers.map(h => String(row[h] || '').replace(/\n/g, ' ')).join('\t')
+                    );
+                    setBulkText([headerLine, ...dataLines].join('\n'));
+                    setStatus(`已加载 Excel 文件: ${file.name} (${jsonData.length} 条数据)`);
+                }
+                return;
+            }
+
+            // Multiple sheets - parse all and attempt auto-matching
+            const sheets: SheetData[] = workbook.SheetNames.map(sheetName => {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
+
+                const matchedCourse = institutes ? autoMatchCourse(sheetName, institutes as Institute[]) : null;
+
+                return {
+                    sheetName,
+                    rows: jsonData,
+                    matchedCourseId: matchedCourse?.id || matchedCourse?._id || null,
+                    confidence: matchedCourse ? 'auto' : 'none',
+                    skip: jsonData.length === 0,
+                };
+            });
+
+            setSheetDataList(sheets);
+            setShowSheetMapping(true);
+
+            const autoMatched = sheets.filter(s => s.confidence === 'auto').length;
+            const needsAction = sheets.filter(s => s.confidence === 'none' && !s.skip).length;
+            setStatus(`检测到 ${sheets.length} 个工作表：${autoMatched} 个自动匹配，${needsAction} 个待选择`);
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    /**
+     * Handle multi-sheet import
+     */
+    const handleMultiSheetImport = async () => {
+        const validSheets = sheetDataList.filter(s =>
+            !s.skip && (s.matchedCourseId || s.manualCourseId)
+        );
+
+        if (validSheets.length === 0) {
+            setStatus("请至少为一个工作表选择教材");
+            return;
+        }
+
+        setSubmitting(true);
+        setImportProgress({ current: 0, total: validSheets.length });
+
+        let totalSuccess = 0;
+        let totalFailed = 0;
+        let totalNew = 0;
+        const errors: string[] = [];
+
+        for (let i = 0; i < validSheets.length; i++) {
+            const sheet = validSheets[i];
+            const courseId = sheet.manualCourseId || sheet.matchedCourseId!;
+            const items = parseSheetRows(sheet.rows, courseId, form.unitId);
+
+            setImportProgress({ current: i + 1, total: validSheets.length });
+
+            if (items.length === 0) {
+                errors.push(`${sheet.sheetName}: 未找到有效数据`);
+                continue;
+            }
+
+            try {
+                const result: BulkImportResult = await bulkImportMutation({
+                    items,
+                    token: localStorage.getItem("token") || undefined
+                });
+
+                totalSuccess += result.results?.success || 0;
+                totalFailed += result.results?.failed || 0;
+                totalNew += result.results?.newGrammars || 0;
+
+                if (result.results?.errors?.length) {
+                    errors.push(`${sheet.sheetName}: ${result.results.errors.join("; ")}`);
+                }
+            } catch (e: any) {
+                errors.push(`${sheet.sheetName}: ${e.message || '导入失败'}`);
+            }
+        }
+
+        // Show summary
+        let statusMsg = `批量导入完成：成功 ${totalSuccess} 条`;
+        if (totalNew > 0) statusMsg += `，新增 ${totalNew} 条`;
+        if (totalFailed > 0) statusMsg += `，失败 ${totalFailed} 条`;
+        if (errors.length > 0) statusMsg += `\n错误: ${errors.slice(0, 3).join("; ")}`;
+
+        setStatus(statusMsg);
+        setSubmitting(false);
+        setImportProgress(null);
+        setShowSheetMapping(false);
+        setSheetDataList([]);
+    };
+
+    /**
+     * Update sheet mapping
+     */
+    const updateSheetMapping = (index: number, updates: Partial<SheetData>) => {
+        setSheetDataList(prev => prev.map((sheet, i) =>
+            i === index ? { ...sheet, ...updates } : sheet
+        ));
+    };
 
     const handleBulkImport = async () => {
         if (!bulkText.trim()) return;
@@ -254,6 +539,175 @@ const GrammarImporter: React.FC = () => {
         }
     };
 
+    // Sheet Mapping Modal
+    const SheetMappingModal = () => {
+        if (!showSheetMapping) return null;
+
+        const autoMatched = sheetDataList.filter(s => s.confidence === 'auto' && !s.skip).length;
+        const manualSet = sheetDataList.filter(s => s.confidence === 'manual' && !s.skip).length;
+        const needsAction = sheetDataList.filter(s => s.confidence === 'none' && !s.skip).length;
+        const skipped = sheetDataList.filter(s => s.skip).length;
+
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-black text-zinc-900">工作表映射</h3>
+                            <p className="text-sm text-zinc-500">
+                                检测到 {sheetDataList.length} 个工作表，请确认教材对应关系
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setShowSheetMapping(false);
+                                setSheetDataList([]);
+                            }}
+                            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Sheet List */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {sheetDataList.map((sheet, index) => (
+                            <div
+                                key={sheet.sheetName}
+                                className={`p-3 rounded-xl border-2 transition-all ${sheet.skip
+                                        ? 'border-zinc-200 bg-zinc-50 opacity-60'
+                                        : sheet.confidence === 'auto' || sheet.confidence === 'manual'
+                                            ? 'border-emerald-200 bg-emerald-50'
+                                            : 'border-amber-200 bg-amber-50'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    {/* Status Icon */}
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${sheet.skip
+                                            ? 'bg-zinc-200 text-zinc-500'
+                                            : sheet.confidence === 'auto' || sheet.confidence === 'manual'
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-amber-500 text-white'
+                                        }`}>
+                                        {sheet.skip ? (
+                                            <X className="w-4 h-4" />
+                                        ) : sheet.confidence === 'auto' || sheet.confidence === 'manual' ? (
+                                            <CheckCircle2 className="w-4 h-4" />
+                                        ) : (
+                                            <AlertCircle className="w-4 h-4" />
+                                        )}
+                                    </div>
+
+                                    {/* Sheet Name */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-zinc-900 truncate">
+                                            {sheet.sheetName}
+                                        </div>
+                                        <div className="text-xs text-zinc-500">
+                                            {sheet.rows.length} 条数据
+                                            {sheet.confidence === 'auto' && ' · 自动匹配'}
+                                            {sheet.confidence === 'manual' && ' · 手动选择'}
+                                        </div>
+                                    </div>
+
+                                    {/* Course Selector or Skip */}
+                                    <div className="flex items-center gap-2">
+                                        {!sheet.skip ? (
+                                            <div className="relative">
+                                                <select
+                                                    value={sheet.manualCourseId || sheet.matchedCourseId || ''}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        updateSheetMapping(index, {
+                                                            manualCourseId: value || undefined,
+                                                            confidence: value ? 'manual' : 'none',
+                                                        });
+                                                    }}
+                                                    className="appearance-none pl-3 pr-8 py-2 rounded-lg border border-zinc-300 bg-white text-sm font-medium min-w-[180px] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                                >
+                                                    <option value="">请选择教材</option>
+                                                    {(institutes || []).map((inst: any) => (
+                                                        <option key={inst.id || inst._id} value={inst.id || inst._id}>
+                                                            {getInstituteDisplayName(inst)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-zinc-500">已跳过</span>
+                                        )}
+
+                                        <button
+                                            onClick={() => updateSheetMapping(index, { skip: !sheet.skip })}
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${sheet.skip
+                                                    ? 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'
+                                                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                                }`}
+                                        >
+                                            {sheet.skip ? '恢复' : '跳过'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-zinc-200 bg-zinc-50">
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm text-zinc-600">
+                                <span className="inline-flex items-center gap-1 mr-3">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    {autoMatched + manualSet} 已匹配
+                                </span>
+                                {needsAction > 0 && (
+                                    <span className="inline-flex items-center gap-1 mr-3">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                        {needsAction} 待选择
+                                    </span>
+                                )}
+                                {skipped > 0 && (
+                                    <span className="inline-flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
+                                        {skipped} 跳过
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowSheetMapping(false);
+                                        setSheetDataList([]);
+                                    }}
+                                    className="px-4 py-2 rounded-lg border border-zinc-300 text-zinc-700 font-medium hover:bg-zinc-100 transition-colors"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={handleMultiSheetImport}
+                                    disabled={submitting || (autoMatched + manualSet) === 0}
+                                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            导入中 {importProgress?.current}/{importProgress?.total}
+                                        </>
+                                    ) : (
+                                        <>确认导入 ({autoMatched + manualSet} 个工作表)</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -322,36 +776,7 @@ const GrammarImporter: React.FC = () => {
                                 const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
                                 if (isExcel) {
-                                    const reader = new FileReader();
-                                    reader.onload = (event) => {
-                                        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-                                        const workbook = XLSX.read(data, { type: 'array' });
-                                        const firstSheetName = workbook.SheetNames[0];
-                                        const worksheet = workbook.Sheets[firstSheetName];
-
-                                        // Use sheet_to_json to properly handle cells with line breaks
-                                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-                                        // Convert JSON to TSV format for the textarea preview
-                                        // Get headers from first row keys
-                                        if (jsonData.length > 0) {
-                                            const headers = Object.keys(jsonData[0] as Record<string, unknown>);
-                                            const headerLine = headers.join('\t');
-                                            const dataLines = jsonData.map((row: any) =>
-                                                headers.map(h => {
-                                                    // Replace newlines with space for display, but keep original in data
-                                                    const val = String(row[h] || '');
-                                                    return val.replace(/\n/g, ' ');
-                                                }).join('\t')
-                                            );
-                                            const text = [headerLine, ...dataLines].join('\n');
-                                            setBulkText(text);
-                                            setStatus(`已加载 Excel 文件: ${file.name} (${jsonData.length} 条数据)`);
-                                        } else {
-                                            setStatus(`Excel 文件为空: ${file.name}`);
-                                        }
-                                    };
-                                    reader.readAsArrayBuffer(file);
+                                    handleExcelFile(file);
                                 } else {
                                     const reader = new FileReader();
                                     reader.onload = (event) => {
@@ -369,6 +794,7 @@ const GrammarImporter: React.FC = () => {
                             <FileSpreadsheet className="w-10 h-10 mx-auto text-zinc-400 mb-2 group-hover:text-emerald-500 transition-colors" />
                             <p className="text-sm font-bold text-zinc-700">点击上传表格文件</p>
                             <p className="text-xs text-zinc-400 mt-1">支持 Excel (.xlsx, .xls) 或 CSV (.csv)</p>
+                            <p className="text-xs text-emerald-600 mt-1 font-medium">✨ 支持多工作表批量导入</p>
                         </div>
                     </div>
 
@@ -416,10 +842,13 @@ const GrammarImporter: React.FC = () => {
             </div>
 
             {status && (
-                <div className="px-4 py-3 rounded-xl border-2 border-zinc-900 bg-amber-50 text-sm text-zinc-800">
+                <div className="px-4 py-3 rounded-xl border-2 border-zinc-900 bg-amber-50 text-sm text-zinc-800 whitespace-pre-wrap">
                     {status}
                 </div>
             )}
+
+            {/* Multi-sheet Mapping Modal */}
+            <SheetMappingModal />
         </div>
     );
 };

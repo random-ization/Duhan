@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { BookOpen, Save, Plus, Loader2, FileText, Mic, RefreshCw, CheckCircle, Trash2 } from 'lucide-react';
+import { BookOpen, Save, Plus, Loader2, FileText, Mic, RefreshCw, CheckCircle, Trash2, Upload } from 'lucide-react';
 
 interface Institute {
     _id: string; // Convex ID
@@ -18,7 +18,10 @@ interface UnitContent {
     articleIndex: number;
     title: string;
     readingText: string;
-    translation: string;
+    translation: string;      // Chinese
+    translationEn: string;    // English
+    translationVi: string;    // Vietnamese
+    translationMn: string;    // Mongolian
     audioUrl: string;
     hasAnalysis?: boolean;
     analysisData?: any;
@@ -34,6 +37,11 @@ export const ReadingContentManager: React.FC = () => {
     // In Convex, IDs are consistent. We'll use the first institute as default.
     // We need to manage selectedCourseId state.
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+
+    // Audio upload
+    const [audioUploading, setAudioUploading] = useState(false);
+    const getUploadUrl = useAction(api.storage.getUploadUrl);
+
 
     // Update selectedCourseId when institutes load
     useEffect(() => {
@@ -107,8 +115,11 @@ export const ReadingContentManager: React.FC = () => {
                 unitIndex: target.unitIndex,
                 articleIndex: target.articleIndex || 1,
                 title: target.title,
-                readingText: target.readingText || (target as any).text || '', // Handle legacy 'text' field if present
+                readingText: target.readingText || '',
                 translation: target.translation || '',
+                translationEn: target.translationEn || '',
+                translationVi: target.translationVi || '',
+                translationMn: target.translationMn || '',
                 audioUrl: target.audioUrl || '',
                 analysisData: target.analysisData,
                 hasAnalysis: !!target.analysisData,
@@ -122,6 +133,9 @@ export const ReadingContentManager: React.FC = () => {
                 title: '',
                 readingText: '',
                 translation: '',
+                translationEn: '',
+                translationVi: '',
+                translationMn: '',
                 audioUrl: '',
             });
         }
@@ -158,10 +172,11 @@ export const ReadingContentManager: React.FC = () => {
                 title: editingUnit.title,
                 readingText: editingUnit.readingText,
                 translation: editingUnit.translation,
+                translationEn: editingUnit.translationEn,
+                translationVi: editingUnit.translationVi,
+                translationMn: editingUnit.translationMn,
                 audioUrl: editingUnit.audioUrl,
-                // We need to update the schema/mutation to accept analysisData if we want to save it!
-                // Wait, the current 'api.units.save' args does NOT include analysisData.
-                // I need to update 'convex/units.ts' save mutation to accept 'analysisData'.
+                analysisData: analysisData,
             } as any);
 
             // TODO: Update save mutation to accept analysisData.
@@ -217,6 +232,9 @@ export const ReadingContentManager: React.FC = () => {
             title: '',
             readingText: '',
             translation: '',
+            translationEn: '',
+            translationVi: '',
+            translationMn: '',
             audioUrl: ''
         });
         setAvailableArticles([]);
@@ -234,6 +252,9 @@ export const ReadingContentManager: React.FC = () => {
             title: '',
             readingText: '',
             translation: '',
+            translationEn: '',
+            translationVi: '',
+            translationMn: '',
             audioUrl: '',
         });
     };
@@ -364,24 +385,100 @@ export const ReadingContentManager: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold mb-1">中文翻译 (可选)</label>
+                                <label className="block text-xs font-bold mb-1">中文翻译</label>
                                 <textarea
-                                    className="w-full h-32 p-3 border-2 border-zinc-900 rounded-lg resize-none"
+                                    className="w-full h-28 p-3 border-2 border-zinc-900 rounded-lg resize-none text-sm"
                                     value={editingUnit.translation}
                                     onChange={e => setEditingUnit({ ...editingUnit, translation: e.target.value })}
                                     placeholder="输入中文翻译..."
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold mb-1 flex items-center gap-2">
-                                    <Mic size={14} /> 音频链接 (S3 URL，可选)
-                                </label>
+                                <label className="block text-xs font-bold mb-1">English Translation</label>
                                 <textarea
-                                    className="w-full h-32 p-3 border-2 border-zinc-900 rounded-lg resize-none font-mono text-xs"
+                                    className="w-full h-28 p-3 border-2 border-zinc-900 rounded-lg resize-none text-sm"
+                                    value={editingUnit.translationEn}
+                                    onChange={e => setEditingUnit({ ...editingUnit, translationEn: e.target.value })}
+                                    placeholder="Enter English translation..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold mb-1">Bản dịch tiếng Việt</label>
+                                <textarea
+                                    className="w-full h-28 p-3 border-2 border-zinc-900 rounded-lg resize-none text-sm"
+                                    value={editingUnit.translationVi}
+                                    onChange={e => setEditingUnit({ ...editingUnit, translationVi: e.target.value })}
+                                    placeholder="Nhập bản dịch tiếng Việt..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold mb-1">Монгол орчуулга</label>
+                                <textarea
+                                    className="w-full h-28 p-3 border-2 border-zinc-900 rounded-lg resize-none text-sm"
+                                    value={editingUnit.translationMn}
+                                    onChange={e => setEditingUnit({ ...editingUnit, translationMn: e.target.value })}
+                                    placeholder="Монгол орчуулга оруулна уу..."
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold mb-1 flex items-center gap-2">
+                                <Mic size={14} /> 音频文件
+                            </label>
+                            <div className="flex gap-2 items-center">
+                                <input
+                                    type="text"
+                                    className="flex-1 p-3 border-2 border-zinc-900 rounded-lg font-mono text-xs bg-zinc-50"
                                     value={editingUnit.audioUrl}
                                     onChange={e => setEditingUnit({ ...editingUnit, audioUrl: e.target.value })}
-                                    placeholder="https://..."
+                                    placeholder="音频URL（可直接输入或上传文件）"
+                                    readOnly={audioUploading}
                                 />
+                                <label className="relative">
+                                    <input
+                                        type="file"
+                                        accept=".mp3,.wav,.m4a,.ogg"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        disabled={audioUploading}
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+
+                                            setAudioUploading(true);
+                                            try {
+                                                const { uploadUrl, publicUrl } = await getUploadUrl({
+                                                    filename: file.name,
+                                                    contentType: file.type || 'audio/mpeg',
+                                                    folder: `reading-audio/${selectedCourseId}`
+                                                });
+
+                                                const uploadRes = await fetch(uploadUrl, {
+                                                    method: 'PUT',
+                                                    body: file,
+                                                    headers: {
+                                                        'Content-Type': file.type || 'audio/mpeg',
+                                                        'x-amz-acl': 'public-read'
+                                                    }
+                                                });
+
+                                                if (!uploadRes.ok) throw new Error('上传失败');
+
+                                                setEditingUnit({ ...editingUnit, audioUrl: publicUrl });
+                                            } catch (err) {
+                                                console.error('Audio upload error:', err);
+                                                alert('音频上传失败');
+                                            } finally {
+                                                setAudioUploading(false);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                    <span className={`px-4 py-3 rounded-lg font-bold text-sm flex items-center gap-2 border-2 border-zinc-900 transition-colors ${audioUploading ? 'bg-zinc-200 cursor-wait' : 'bg-lime-300 hover:bg-lime-400 cursor-pointer'}`}>
+                                        {audioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload size={14} />}
+                                        上传
+                                    </span>
+                                </label>
                             </div>
                         </div>
 

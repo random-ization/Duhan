@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get unit list for course (List View - metadata only, no large content)
+// Get unit list for course (includes all content for admin editing)
 export const getByCourse = query({
     args: { courseId: v.string() },
     handler: async (ctx, args) => {
@@ -10,7 +10,7 @@ export const getByCourse = query({
             .withIndex("by_course_unit_article", (q) => q.eq("courseId", args.courseId))
             .collect();
 
-        // Return only metadata needed for list view, exclude large fields and archived
+        // Return all fields for admin editing, exclude archived
         return units
             .filter(u => !u.isArchived)
             .map((u) => ({
@@ -19,9 +19,15 @@ export const getByCourse = query({
                 unitIndex: u.unitIndex,
                 articleIndex: u.articleIndex,
                 title: u.title,
+                readingText: u.readingText,
+                translation: u.translation,
+                translationEn: u.translationEn,
+                translationVi: u.translationVi,
+                translationMn: u.translationMn,
                 audioUrl: u.audioUrl,
+                transcriptData: u.transcriptData,
+                analysisData: u.analysisData,
                 createdAt: u.createdAt,
-                // Exclude: readingText, translation, transcriptData, analysisData
             }));
     },
 });
@@ -135,6 +141,9 @@ export const save = mutation({
         title: v.string(),
         readingText: v.string(),
         translation: v.optional(v.string()),
+        translationEn: v.optional(v.string()),
+        translationVi: v.optional(v.string()),
+        translationMn: v.optional(v.string()),
         audioUrl: v.optional(v.string()),
         analysisData: v.optional(v.any()),
         transcriptData: v.optional(v.any()), // JSON transcript
@@ -152,6 +161,9 @@ export const save = mutation({
                 title: args.title,
                 readingText: args.readingText,
                 translation: args.translation,
+                translationEn: args.translationEn,
+                translationVi: args.translationVi,
+                translationMn: args.translationMn,
                 audioUrl: args.audioUrl,
                 analysisData: args.analysisData,
                 transcriptData: args.transcriptData,
@@ -165,6 +177,9 @@ export const save = mutation({
                 title: args.title,
                 readingText: args.readingText,
                 translation: args.translation,
+                translationEn: args.translationEn,
+                translationVi: args.translationVi,
+                translationMn: args.translationMn,
                 audioUrl: args.audioUrl,
                 analysisData: args.analysisData,
                 transcriptData: args.transcriptData,
@@ -173,3 +188,100 @@ export const save = mutation({
         }
     },
 });
+
+// Bulk Import Reading Articles (Admin)
+export const bulkImport = mutation({
+    args: {
+        items: v.array(v.object({
+            unitIndex: v.number(),
+            articleIndex: v.number(),
+            title: v.string(),
+            readingText: v.string(),
+            translation: v.optional(v.string()),
+            translationEn: v.optional(v.string()),
+            translationVi: v.optional(v.string()),
+            translationMn: v.optional(v.string()),
+            audioUrl: v.optional(v.string()),
+        })),
+        courseId: v.string(),
+        token: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        // Verify admin via token if provided
+        if (args.token) {
+            const user = await ctx.db
+                .query("users")
+                .withIndex("by_token", (q) => q.eq("token", args.token))
+                .unique();
+            if (!user || user.role !== "ADMIN") {
+                throw new Error("Unauthorized");
+            }
+        }
+
+        let success = 0;
+        let failed = 0;
+        let created = 0;
+        let updated = 0;
+        const errors: string[] = [];
+
+        for (const item of args.items) {
+            try {
+                // Check if article already exists (use first() to handle duplicates)
+                const existing = await ctx.db
+                    .query("textbook_units")
+                    .withIndex("by_course_unit_article", (q) =>
+                        q.eq("courseId", args.courseId)
+                            .eq("unitIndex", item.unitIndex)
+                            .eq("articleIndex", item.articleIndex)
+                    )
+                    .first();
+
+                if (existing) {
+                    // Update existing
+                    await ctx.db.patch(existing._id, {
+                        title: item.title,
+                        readingText: item.readingText,
+                        translation: item.translation,
+                        translationEn: item.translationEn,
+                        translationVi: item.translationVi,
+                        translationMn: item.translationMn,
+                        audioUrl: item.audioUrl,
+                    });
+                    updated++;
+                } else {
+                    // Create new
+                    await ctx.db.insert("textbook_units", {
+                        courseId: args.courseId,
+                        unitIndex: item.unitIndex,
+                        articleIndex: item.articleIndex,
+                        title: item.title,
+                        readingText: item.readingText,
+                        translation: item.translation,
+                        translationEn: item.translationEn,
+                        translationVi: item.translationVi,
+                        translationMn: item.translationMn,
+                        audioUrl: item.audioUrl,
+                        createdAt: Date.now(),
+                    });
+                    created++;
+                }
+                success++;
+            } catch (e: any) {
+                failed++;
+                errors.push(`Unit ${item.unitIndex}-${item.articleIndex}: ${e.message}`);
+            }
+        }
+
+        return {
+            success: true,
+            results: {
+                success,
+                failed,
+                created,
+                updated,
+                errors: errors.slice(0, 5), // Limit error messages
+            },
+        };
+    },
+});
+
