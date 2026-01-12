@@ -21,6 +21,8 @@ interface LayoutContextType {
     resetLayout: () => void;
     isMobileMenuOpen: boolean;
     toggleMobileMenu: () => void;
+    sidebarHidden: boolean;
+    setSidebarHidden: (hidden: boolean) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -71,8 +73,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
+    const [sidebarHidden, setSidebarHidden] = useState(false);
+
     return (
-        <LayoutContext.Provider value={{ isEditing, toggleEditMode, cardOrder, updateCardOrder, resetLayout, isMobileMenuOpen, toggleMobileMenu }}>
+        <LayoutContext.Provider value={{ isEditing, toggleEditMode, cardOrder, updateCardOrder, resetLayout, isMobileMenuOpen, toggleMobileMenu, sidebarHidden, setSidebarHidden }}>
             {children}
         </LayoutContext.Provider>
     );

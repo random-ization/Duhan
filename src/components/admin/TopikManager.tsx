@@ -49,13 +49,114 @@ interface ExamSectionStructure {
     hasBox?: boolean;
 }
 
+// Question types for UI display
+type QuestionUIType =
+    | 'FILL_QUESTION'    // 1-4: 问题即文段，可编辑question
+    | 'IMAGE_REQUIRED'   // 5-8: 仅图片+选项
+    | 'IMAGE_OR_PASSAGE' // 9-12: 图片或文段
+    | 'ORDERING'         // 13-15: 排序题
+    | 'PASSAGE_ONLY'     // 16-18, 25-38: 仅文段+选项
+    | 'GROUPED'          // 19-24, 42-50: 分组阅读
+    | 'INSERT_SENTENCE'; // 39-41: 句子插入
+
+// Per-question configuration
+interface QuestionConfig {
+    instruction: string;
+    question: string;        // Fixed question text (empty if variable)
+    score: number;
+    uiType: QuestionUIType;
+    needsQuestionInput?: boolean;  // 是否需要手动输入问题
+    needsPassage?: boolean;        // 是否需要阅读文段
+    needsImage?: boolean;          // 是否需要图片
+    needsContextBox?: boolean;     // 是否需要보기框
+    grouped?: boolean;             // 是否为分组题
+    groupStart?: number;           // 分组起始题号
+    fixedOptions?: string[];       // 固定选项 (如 ㉠㉡㉢㉣)
+}
+
+// Reading Section (읽기) - Questions 1-50
+const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
+    // 1-4: 填空/近义词 - 问题即文段，可编辑
+    1: { instruction: "※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'FILL_QUESTION' },
+    2: { instruction: "※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'FILL_QUESTION' },
+    3: { instruction: "※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'FILL_QUESTION' },
+    4: { instruction: "※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'FILL_QUESTION' },
+    // 5-8: 图片题 - 仅图片+选项
+    5: { instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_REQUIRED', needsImage: true },
+    6: { instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_REQUIRED', needsImage: true },
+    7: { instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_REQUIRED', needsImage: true },
+    8: { instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_REQUIRED', needsImage: true },
+    // 9-12: 图片或文段
+    9: { instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_OR_PASSAGE', needsPassage: true, needsImage: true },
+    10: { instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'IMAGE_OR_PASSAGE', needsPassage: true, needsImage: true },
+    11: { instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    12: { instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 13-15: 排序题 - 보기框
+    13: { instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'ORDERING', needsContextBox: true },
+    14: { instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'ORDERING', needsContextBox: true },
+    15: { instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'ORDERING', needsContextBox: true },
+    // 16-18: 填空 - 仅文段
+    16: { instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    17: { instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    18: { instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 19-20: 分组阅读 - 问题可编辑
+    19: { instruction: "※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "글쓴이가 말하는 방식으로 가장 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 19, needsPassage: true, needsQuestionInput: true },
+    20: { instruction: "※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 19, needsQuestionInput: true },
+    // 21-22: 分组阅读 - 问题可编辑
+    21: { instruction: "※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 '나'의 심정으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 21, needsPassage: true, needsQuestionInput: true },
+    22: { instruction: "※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 21, needsQuestionInput: true },
+    // 23-24: 分组阅读 - 问题可编辑
+    23: { instruction: "※ [23～24] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글을 쓴 목적을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 23, needsPassage: true, needsQuestionInput: true },
+    24: { instruction: "※ [23～24] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 23, needsQuestionInput: true },
+    // 25-27: 新闻标题
+    25: { instruction: "※ [25～27] 다음 신문 기사의 제목을 가장 잘 설명한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    26: { instruction: "※ [25～27] 다음 신문 기사의 제목을 가장 잘 설명한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    27: { instruction: "※ [25～27] 다음 신문 기사의 제목을 가장 잘 설명한 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 28-31: 高级填空
+    28: { instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    29: { instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    30: { instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    31: { instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 32-34: 内容匹配
+    32: { instruction: "※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    33: { instruction: "※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    34: { instruction: "※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 35-38: 主题
+    35: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    36: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    37: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    38: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
+    // 39-41: 句子插入 - 固定选项㉠㉡㉢㉣，无问题字段
+    39: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
+    40: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
+    41: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
+    // 42-43: 分组阅读
+    42: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 사람들의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42, needsPassage: true },
+    43: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42 },
+    // 44-45: 分组阅读
+    44: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 주제로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44, needsPassage: true },
+    45: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44 },
+    // 46-47: 句子插入分组 - 46题固定选项㉠㉡㉢㉣，47题问题可编辑
+    46: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글에서 <보기>의 글이 들어가기에 가장 알맞은 곳을 고르십시오.", score: 2, uiType: 'INSERT_SENTENCE', grouped: true, groupStart: 46, needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
+    47: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 46, needsQuestionInput: true },
+    // 48-50: 分组阅读
+    48: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "필자가 이 글을 쓴 목적을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48, needsPassage: true },
+    49: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48 },
+    50: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 필자의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48 },
+};
+
+// Helper to get question config
+function getQuestionConfig(num: number, type: 'READING' | 'LISTENING'): QuestionConfig | null {
+    return type === 'READING' ? TOPIK_READING_QUESTIONS[num] : null;
+}
+
 const TOPIK_READING_STRUCTURE: ExamSectionStructure[] = [
     { range: [1, 2], instruction: "※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)" },
     { range: [3, 4], instruction: "※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)" },
-    { range: [5, 8], instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", type: "IMAGE_OPTIONAL" },
-    { range: [9, 10], instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", type: "IMAGE_OPTIONAL" },
+    { range: [5, 8], instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)", type: "IMAGE_REQUIRED" },
+    { range: [9, 10], instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)", type: "IMAGE_OR_PASSAGE" },
     { range: [11, 12], instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)" },
-    { range: [13, 15], instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)" },
+    { range: [13, 15], instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)", hasBox: true },
     { range: [16, 18], instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)" },
     { range: [19, 20], instruction: "※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
     { range: [21, 22], instruction: "※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
@@ -67,8 +168,7 @@ const TOPIK_READING_STRUCTURE: ExamSectionStructure[] = [
     { range: [39, 41], instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", hasBox: true },
     { range: [42, 43], instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
     { range: [44, 45], instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
-    { range: [46, 46], instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true, hasBox: true },
-    { range: [47, 47], instruction: "" },
+    { range: [46, 47], instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true, hasBox: true },
     { range: [48, 50], instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", grouped: true },
 ];
 
@@ -145,9 +245,20 @@ export const TopikManager: React.FC = () => {
         selectedExamId ? { examId: selectedExamId } : "skip"
     );
 
-    // Update selectedExam when questions load
+    // Track if we've loaded questions for current exam
+    const loadedExamIdRef = React.useRef<string | null>(null);
+
+    // Update selectedExam when questions load - only on initial load
     useEffect(() => {
-        if (!selectedExamId) return;
+        if (!selectedExamId) {
+            loadedExamIdRef.current = null;
+            return;
+        }
+
+        // Skip if we already loaded this exam
+        if (loadedExamIdRef.current === selectedExamId) {
+            return;
+        }
 
         const examMeta = exams.find(e => e.id === selectedExamId);
         if (!examMeta) return;
@@ -156,28 +267,32 @@ export const TopikManager: React.FC = () => {
             setLoadingQuestions(true);
         } else {
             setLoadingQuestions(false);
+            // Deep clone to make it mutable
             const questions = convexQuestions.length > 0
-                ? convexQuestions as TopikQuestion[]
+                ? JSON.parse(JSON.stringify(convexQuestions)) as TopikQuestion[]
                 : createEmptyQuestions();
             setSelectedExam({
                 ...examMeta,
                 questions,
             });
+            loadedExamIdRef.current = selectedExamId;
         }
     }, [selectedExamId, convexQuestions, exams]);
 
-    const createEmptyQuestions = (): TopikQuestion[] => {
+    const createEmptyQuestions = (examType: 'READING' | 'LISTENING' = 'READING'): TopikQuestion[] => {
         const questions: TopikQuestion[] = [];
         for (let i = 1; i <= 50; i++) {
+            const config = getQuestionConfig(i, examType);
             questions.push({
                 id: i,
                 number: i,
                 passage: '',
-                question: `Question ${i}`,
+                question: config?.question || '',
                 options: ['', '', '', ''],
                 correctAnswer: 0,
                 image: '',
-                score: 2
+                score: config?.score || 2,
+                instruction: config?.instruction || ''
             });
         }
         return questions;
@@ -197,7 +312,7 @@ export const TopikManager: React.FC = () => {
     };
 
     const createNewExam = (type: 'READING' | 'LISTENING') => {
-        const questions = createEmptyQuestions().map(q => ({
+        const questions = createEmptyQuestions(type).map(q => ({
             ...q,
             optionImages: type === 'LISTENING' ? ['', '', '', ''] : undefined,
         }));
@@ -495,156 +610,255 @@ export const TopikManager: React.FC = () => {
 
                                     {/* Questions */}
                                     <div className={isGrouped ? "pl-2" : ""}>
-                                        {questionsInRange.map((q) => (
-                                            <div key={q.id} className="mb-8 p-4 rounded-xl hover:bg-zinc-50 transition-colors border-2 border-transparent hover:border-zinc-200">
-                                                <div className="flex gap-4">
-                                                    <span className="text-xl font-bold font-serif pt-1">{q.id}.</span>
-                                                    <div className="flex-1 space-y-4">
-                                                        {/* Single Question Passage/Image */}
-                                                        {!isGrouped && (
-                                                            <div className="mb-2">
-                                                                {(section.type === 'IMAGE_OPTIONAL' || q.image) && (
-                                                                    <div className="mb-2">
+                                        {questionsInRange.map((q) => {
+                                            // Get config for this specific question
+                                            const qConfig = getQuestionConfig(q.id, currentExam?.type || 'READING');
+                                            const isGroupStart = qConfig?.groupStart === q.id;
+
+                                            return (
+                                                <div key={q.id} className="mb-8 p-4 rounded-xl hover:bg-zinc-50 transition-colors border-2 border-transparent hover:border-zinc-200">
+                                                    <div className="flex gap-4">
+                                                        <span className="text-xl font-bold font-serif pt-1">{q.id}.</span>
+                                                        <div className="flex-1 space-y-4">
+
+                                                            {/* 1-4题: 问题即文段（可编辑） */}
+                                                            {qConfig?.uiType === 'FILL_QUESTION' && (
+                                                                <textarea
+                                                                    className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-20"
+                                                                    placeholder="输入句子（含填空或下划线）..."
+                                                                    value={q.question || ''}
+                                                                    onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
+                                                                />
+                                                            )}
+
+                                                            {/* 5-8题: 仅图片 */}
+                                                            {qConfig?.uiType === 'IMAGE_REQUIRED' && (
+                                                                <div className="mb-2">
+                                                                    {q.image ? (
+                                                                        <div className="relative inline-block group/img">
+                                                                            <img src={q.image} className="max-h-48 border-2 border-zinc-200 rounded-lg" alt="Q" />
+                                                                            <button onClick={() => updateQuestion(q.id, 'image', '')} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover/img:opacity-100">
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <label className="cursor-pointer inline-flex items-center px-4 py-3 bg-blue-50 text-blue-600 text-sm rounded-lg border-2 border-blue-200 hover:border-blue-400">
+                                                                            {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />}
+                                                                            上传图片 (必须)
+                                                                            <input type="file" hidden accept="image/*" onChange={(e) => {
+                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateQuestion(q.id, 'image', url));
+                                                                            }} />
+                                                                        </label>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* 9-12题: 图片或文段 */}
+                                                            {qConfig?.uiType === 'IMAGE_OR_PASSAGE' && (
+                                                                <div className="space-y-3">
+                                                                    <div className="flex gap-3">
                                                                         {q.image ? (
                                                                             <div className="relative inline-block group/img">
-                                                                                <img src={q.image} className="max-h-40 border-2 border-zinc-200" alt="Q" />
+                                                                                <img src={q.image} className="max-h-40 border-2 border-zinc-200 rounded-lg" alt="Q" />
                                                                                 <button onClick={() => updateQuestion(q.id, 'image', '')} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover/img:opacity-100">
                                                                                     <Trash2 className="w-3 h-3" />
                                                                                 </button>
                                                                             </div>
                                                                         ) : (
-                                                                            <label className="cursor-pointer inline-flex items-center px-3 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg border-2 border-zinc-200 hover:border-zinc-400">
-                                                                                <ImageIcon className="w-3 h-3 mr-1" /> Add Image
+                                                                            <label className="cursor-pointer inline-flex items-center px-3 py-2 bg-zinc-100 text-zinc-600 text-xs rounded-lg border-2 border-zinc-200 hover:border-zinc-400">
+                                                                                <ImageIcon className="w-3 h-3 mr-1" /> 上传图表
                                                                                 <input type="file" hidden accept="image/*" onChange={(e) => {
                                                                                     e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateQuestion(q.id, 'image', url));
                                                                                 }} />
                                                                             </label>
                                                                         )}
                                                                     </div>
-                                                                )}
+                                                                    <textarea
+                                                                        className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-32"
+                                                                        placeholder="或输入文段..."
+                                                                        value={q.passage || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            )}
 
-                                                                {section.hasBox && (
-                                                                    <div className="space-y-4">
+                                                            {/* 13-15题: 排序题 - 보기框 */}
+                                                            {qConfig?.uiType === 'ORDERING' && (
+                                                                <div className="border-2 border-zinc-800 p-4 relative rounded-lg">
+                                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-xs font-bold border border-zinc-300 rounded">보기</span>
+                                                                    <textarea
+                                                                        className="w-full bg-white p-2 text-[15px] resize-none outline-none h-24"
+                                                                        placeholder="输入排序内容 (가), (나), (다), (라)..."
+                                                                        value={q.contextBox || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            )}
+
+                                                            {/* 16-18, 25-38题: 仅文段 (非分组) */}
+                                                            {qConfig?.uiType === 'PASSAGE_ONLY' && (
+                                                                <textarea
+                                                                    className={`w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 ${section.style === 'HEADLINE' ? 'font-bold border-zinc-800 shadow-[3px_3px_0px_#000] h-24' : 'h-32'}`}
+                                                                    placeholder={section.style === 'HEADLINE' ? "输入新闻标题..." : "输入阅读文段..."}
+                                                                    value={q.passage || ''}
+                                                                    onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                />
+                                                            )}
+
+                                                            {/* 39-41题: 句子插入 (非分组) */}
+                                                            {qConfig?.uiType === 'INSERT_SENTENCE' && !qConfig?.grouped && (
+                                                                <div className="space-y-4">
+                                                                    <textarea
+                                                                        className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-40"
+                                                                        placeholder="输入主文段 (含 ㉠ ㉡ ㉢ ㉣ 标记)..."
+                                                                        value={q.passage || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                    />
+                                                                    <div className="border-2 border-zinc-800 p-4 relative rounded-lg">
+                                                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border border-zinc-300 rounded">&lt;보 기&gt;</span>
                                                                         <textarea
-                                                                            className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-40"
-                                                                            placeholder="Enter main passage..."
-                                                                            value={q.passage || ''}
-                                                                            onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                            className="w-full bg-white p-2 text-[15px] resize-none outline-none h-16"
+                                                                            placeholder="输入要插入的句子..."
+                                                                            value={q.contextBox || ''}
+                                                                            onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
                                                                         />
-                                                                        <div className="border-2 border-zinc-800 p-4 relative">
-                                                                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border-2 border-zinc-200">&lt;보 기&gt;</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* 46题: 分组的句子插入 - 只显示보기框 */}
+                                                            {qConfig?.uiType === 'INSERT_SENTENCE' && qConfig?.grouped && (
+                                                                <div className="border-2 border-zinc-800 p-4 relative rounded-lg">
+                                                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border border-zinc-300 rounded">&lt;보 기&gt;</span>
+                                                                    <textarea
+                                                                        className="w-full bg-white p-2 text-[15px] resize-none outline-none h-16"
+                                                                        placeholder="输入要插入的句子..."
+                                                                        value={q.contextBox || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            )}
+
+                                                            {/* 分组题 - 只有第一题显示文段输入 */}
+                                                            {qConfig?.uiType === 'GROUPED' && isGroupStart && !isGrouped && (
+                                                                <div className="space-y-4">
+                                                                    <textarea
+                                                                        className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-48"
+                                                                        placeholder="输入共享阅读文段..."
+                                                                        value={q.passage || ''}
+                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
+                                                                    />
+                                                                    {qConfig?.needsContextBox && (
+                                                                        <div className="border-2 border-zinc-800 p-4 relative rounded-lg">
+                                                                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-bold border border-zinc-300 rounded">&lt;보 기&gt;</span>
                                                                             <textarea
-                                                                                className="w-full bg-white p-2 text-[15px] resize-none outline-none border-b-2 border-dashed border-zinc-300 focus:border-zinc-900 h-16"
-                                                                                placeholder="보기 content..."
+                                                                                className="w-full bg-white p-2 text-[15px] resize-none outline-none h-16"
+                                                                                placeholder="输入要插入的句子..."
                                                                                 value={q.contextBox || ''}
                                                                                 onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
                                                                             />
                                                                         </div>
-                                                                    </div>
-                                                                )}
+                                                                    )}
+                                                                </div>
+                                                            )}
 
-                                                                {section.style === 'HEADLINE' && (
-                                                                    <textarea
-                                                                        className="w-full bg-white font-bold border-2 border-zinc-800 p-4 shadow-[3px_3px_0px_#000] text-[17px] leading-8 font-serif resize-none outline-none h-24"
-                                                                        placeholder="Enter Headline..."
-                                                                        value={q.passage || ''}
-                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
-                                                                    />
-                                                                )}
-
-                                                                {!section.type && !section.hasBox && !section.style && (
-                                                                    <textarea
-                                                                        className="w-full bg-white border-2 border-zinc-200 rounded-lg p-3 text-[16px] leading-7 font-serif resize-none outline-none focus:border-zinc-900 h-32"
-                                                                        placeholder="Enter Passage (optional)..."
-                                                                        value={q.passage || ''}
-                                                                        onChange={(e) => updateQuestion(q.id, 'passage', e.target.value)}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {/* Prompt */}
-                                                        <input
-                                                            className="w-full font-bold text-[18px] bg-white border-b-2 border-transparent hover:border-zinc-300 focus:border-zinc-900 outline-none"
-                                                            placeholder="Enter question prompt..."
-                                                            value={q.question}
-                                                            onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
-                                                        />
-
-                                                        {/* Context Box for grouped hasBox sections */}
-                                                        {section.hasBox && section.grouped && (
-                                                            <div className="mb-4 border-2 border-black p-4 bg-white">
-                                                                <textarea
-                                                                    className="w-full bg-transparent text-lg leading-loose resize-none outline-none border-none font-serif"
-                                                                    placeholder="输入要插入的句子..."
-                                                                    value={q.contextBox || ''}
-                                                                    onChange={(e) => updateQuestion(q.id, 'contextBox', e.target.value)}
-                                                                    rows={2}
+                                                            {/* 可编辑问题输入框 (19-24, 47等) */}
+                                                            {qConfig?.needsQuestionInput && (
+                                                                <input
+                                                                    className="w-full font-bold text-[17px] bg-white border-b-2 border-zinc-200 hover:border-zinc-400 focus:border-zinc-900 outline-none py-2"
+                                                                    placeholder="输入问题..."
+                                                                    value={q.question || ''}
+                                                                    onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
                                                                 />
-                                                            </div>
-                                                        )}
+                                                            )}
 
-                                                        {/* Options */}
-                                                        {section.type === 'IMAGE_CHOICE' ? (
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                {[0, 1, 2, 3].map((optIdx) => {
-                                                                    const img = q.optionImages?.[optIdx];
-                                                                    return (
-                                                                        <div key={optIdx} className="flex flex-col items-center gap-2">
-                                                                            <button
-                                                                                onClick={() => updateQuestion(q.id, 'correctAnswer', optIdx)}
-                                                                                className={`w-full aspect-[4/3] border-2 rounded-lg flex flex-col items-center justify-center relative overflow-hidden group/optImg ${q.correctAnswer === optIdx ? 'border-zinc-900 ring-2 ring-lime-300' : 'border-zinc-200 hover:border-zinc-400'}`}
-                                                                            >
-                                                                                {img ? (
-                                                                                    <>
-                                                                                        <img src={img} className="w-full h-full object-contain" alt={`Opt ${optIdx}`} />
-                                                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/optImg:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                                                            <div className="p-2 bg-white rounded-full text-red-500 hover:bg-red-50 cursor-pointer" onClick={(e) => { e.stopPropagation(); updateOptionImage(q.id, optIdx, '') }}>
-                                                                                                <Trash2 className="w-4 h-4" />
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </>
-                                                                                ) : (
-                                                                                    <label className="cursor-pointer flex flex-col items-center text-zinc-400 hover:text-zinc-600 p-4 w-full h-full justify-center">
-                                                                                        {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-8 h-8 mb-2" />}
-                                                                                        <span className="text-xs font-bold">Upload Option {optIdx + 1}</span>
-                                                                                        <input type="file" hidden accept="image/*" onChange={(e) => {
-                                                                                            e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateOptionImage(q.id, optIdx, url));
-                                                                                        }} />
-                                                                                    </label>
-                                                                                )}
-                                                                                <div className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${q.correctAnswer === optIdx ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-600'}`}>
-                                                                                    {optIdx + 1}
-                                                                                </div>
-                                                                            </button>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        ) : (
-                                                            <div className={`grid ${q.options.some(o => o.length > 25) ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-2`}>
-                                                                {q.options.map((opt, oIdx) => (
-                                                                    <div key={oIdx} className="flex items-center gap-2">
+                                                            {/* 固定问题文字显示 (非可编辑) */}
+                                                            {qConfig?.question && !qConfig?.needsQuestionInput && (
+                                                                <div className="font-bold text-[17px] text-zinc-700 py-2 border-b border-zinc-200">
+                                                                    {qConfig.question}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Options - 固定选项 (39-41, 46题: ㉠㉡㉢㉣) */}
+                                                            {qConfig?.fixedOptions && section.type !== 'IMAGE_CHOICE' && (
+                                                                <div className="grid grid-cols-4 gap-3">
+                                                                    {qConfig.fixedOptions.map((opt, oIdx) => (
                                                                         <button
+                                                                            key={oIdx}
                                                                             onClick={() => updateQuestion(q.id, 'correctAnswer', oIdx)}
-                                                                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-sans transition-colors ${q.correctAnswer === oIdx ? 'bg-zinc-900 text-white border-zinc-900' : 'border-zinc-300 text-zinc-400 hover:border-zinc-600'}`}
+                                                                            className={`py-3 px-4 rounded-lg border-2 text-lg font-bold transition-colors ${q.correctAnswer === oIdx ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 text-zinc-600 hover:border-zinc-600'}`}
                                                                         >
-                                                                            {oIdx + 1}
+                                                                            {oIdx + 1} {opt}
                                                                         </button>
-                                                                        <input
-                                                                            className="flex-1 bg-white border-b-2 border-transparent hover:border-zinc-200 focus:border-zinc-900 outline-none text-[16px] py-1"
-                                                                            value={opt}
-                                                                            onChange={(e) => updateOption(q.id, oIdx, e.target.value)}
-                                                                            placeholder={`Option ${oIdx + 1}`}
-                                                                        />
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Options - 可编辑文本选项 */}
+                                                            {!qConfig?.fixedOptions && section.type !== 'IMAGE_CHOICE' && (
+                                                                <div className={`grid ${q.options.some(o => o.length > 25) ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-2`}>
+                                                                    {q.options.map((opt, oIdx) => (
+                                                                        <div key={oIdx} className="flex items-center gap-2">
+                                                                            <button
+                                                                                onClick={() => updateQuestion(q.id, 'correctAnswer', oIdx)}
+                                                                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-sans transition-colors ${q.correctAnswer === oIdx ? 'bg-zinc-900 text-white border-zinc-900' : 'border-zinc-300 text-zinc-400 hover:border-zinc-600'}`}
+                                                                            >
+                                                                                {oIdx + 1}
+                                                                            </button>
+                                                                            <input
+                                                                                className="flex-1 bg-white border-b-2 border-transparent hover:border-zinc-200 focus:border-zinc-900 outline-none text-[16px] py-1"
+                                                                                value={opt}
+                                                                                onChange={(e) => updateOption(q.id, oIdx, e.target.value)}
+                                                                                placeholder={`选项 ${oIdx + 1}`}
+                                                                            />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Options - 图片选项 (听力1-3题) */}
+                                                            {section.type === 'IMAGE_CHOICE' && (
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    {[0, 1, 2, 3].map((optIdx) => {
+                                                                        const img = q.optionImages?.[optIdx];
+                                                                        return (
+                                                                            <div key={optIdx} className="flex flex-col items-center gap-2">
+                                                                                <button
+                                                                                    onClick={() => updateQuestion(q.id, 'correctAnswer', optIdx)}
+                                                                                    className={`w-full aspect-[4/3] border-2 rounded-lg flex flex-col items-center justify-center relative overflow-hidden group/optImg ${q.correctAnswer === optIdx ? 'border-zinc-900 ring-2 ring-lime-300' : 'border-zinc-200 hover:border-zinc-400'}`}
+                                                                                >
+                                                                                    {img ? (
+                                                                                        <>
+                                                                                            <img src={img} className="w-full h-full object-contain" alt={`Opt ${optIdx}`} />
+                                                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/optImg:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                                                                <div className="p-2 bg-white rounded-full text-red-500 hover:bg-red-50 cursor-pointer" onClick={(e) => { e.stopPropagation(); updateOptionImage(q.id, optIdx, '') }}>
+                                                                                                    <Trash2 className="w-4 h-4" />
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <label className="cursor-pointer flex flex-col items-center text-zinc-400 hover:text-zinc-600 p-4 w-full h-full justify-center">
+                                                                                            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-8 h-8 mb-2" />}
+                                                                                            <span className="text-xs font-bold">上传选项 {optIdx + 1}</span>
+                                                                                            <input type="file" hidden accept="image/*" onChange={(e) => {
+                                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateOptionImage(q.id, optIdx, url));
+                                                                                            }} />
+                                                                                        </label>
+                                                                                    )}
+                                                                                    <div className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${q.correctAnswer === optIdx ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-600'}`}>
+                                                                                        {optIdx + 1}
+                                                                                    </div>
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                     </div>
                                 </div>
                             );

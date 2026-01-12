@@ -14,6 +14,7 @@ interface ExamSessionProps {
   annotations: Annotation[];
   onAnswerChange: (questionIndex: number, optionIndex: number) => void;
   onSubmit: () => void;
+  onExit?: () => void;
   onSaveAnnotation: (annotation: Annotation) => void;
   onDeleteAnnotation: (contextKey: string) => void;
   onPauseTimer: () => void;
@@ -79,6 +80,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
     annotations,
     onAnswerChange,
     onSubmit,
+    onExit,
     onSaveAnnotation,
     onDeleteAnnotation,
     onPauseTimer,
@@ -159,13 +161,22 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
       <div className="min-h-screen bg-slate-200 flex flex-col">
         {/* 顶部工具栏 */}
         <div className="sticky top-0 z-30 bg-slate-800 text-white shadow-lg shrink-0">
-          <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-center">
+          <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="font-bold text-lg tracking-wide">{exam.title}</span>
               <span className="text-xs bg-slate-700 px-2 py-1 rounded">
                 제 {exam.round || '?'} 회
               </span>
             </div>
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                结束考试
+              </button>
+            )}
           </div>
         </div>
 

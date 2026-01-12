@@ -7,6 +7,7 @@ import { ExamSession } from './ExamSession';
 import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
 import { useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useApp } from '../../contexts/AppContext';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -34,6 +35,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
   const navigate = useNavigate();
   const convex = useConvex();
+  const { setSidebarHidden } = useApp();
 
   const [view, setViewState] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
@@ -178,6 +180,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   };
 
   const startExam = () => {
+    setSidebarHidden(true); // Hide sidebar when exam starts
     setTimerActive(true);
     setView('EXAM');
   };
@@ -225,6 +228,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     onSaveHistory(attempt);
 
     setView('RESULT');
+    setSidebarHidden(false); // Restore sidebar after exam ends
   };
 
   const reviewExam = async (attempt?: ExamAttempt) => {
@@ -255,6 +259,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   };
 
   const resetExam = () => {
+    setSidebarHidden(false); // Restore sidebar
     setCurrentExam(null);
     setUserAnswers({});
     setTimeLeft(0);
@@ -363,6 +368,12 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         annotations={annotations}
         onAnswerChange={handleAnswerChange}
         onSubmit={submitExam}
+        onExit={() => {
+          // Show confirmation dialog
+          if (window.confirm('确定要结束考试吗？\n当前答题进度将被保存为考试记录。')) {
+            submitExam(); // Save and submit
+          }
+        }}
         onSaveAnnotation={handleSaveAnnotation}
         onDeleteAnnotation={handleDeleteAnnotation}
         onPauseTimer={pauseTimer}

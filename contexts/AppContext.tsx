@@ -78,5 +78,7 @@ export const useApp = () => {
     resetLayout: useLayout().resetLayout,
     isMobileMenuOpen: useLayout().isMobileMenuOpen,
     toggleMobileMenu: useLayout().toggleMobileMenu,
+    sidebarHidden: useLayout().sidebarHidden,
+    setSidebarHidden: useLayout().setSidebarHidden,
   };
 };

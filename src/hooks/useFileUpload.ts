@@ -1,29 +1,27 @@
 import { useState } from 'react';
-import { useAction } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 interface UploadResult {
     url: string;
-    key: string;
+    storageId?: string;
 }
 
 export const useFileUpload = () => {
     const [uploading, setUploading] = useState(false);
-    const getUploadUrl = useAction(api.storage.getUploadUrl);
+    const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+    const saveUploadedFile = useMutation(api.files.saveUploadedFile);
 
     const uploadFile = async (file: File): Promise<UploadResult> => {
         setUploading(true);
         try {
-            // 1. Get presigned URL from Convex (DigitalOcean Spaces / S3)
-            const { uploadUrl, publicUrl, key, headers } = await getUploadUrl({
-                filename: file.name,
-                contentType: file.type,
-            });
+            // 1. Get presigned URL from Convex built-in storage
+            const uploadUrl = await generateUploadUrl();
 
-            // 2. Upload directly to S3/Storage
+            // 2. Upload file to Convex storage
             const result = await fetch(uploadUrl, {
-                method: "PUT",
-                headers: headers as any, // Headers from server (x-amz-acl, etc)
+                method: "POST",
+                headers: { "Content-Type": file.type },
                 body: file,
             });
 
@@ -31,8 +29,17 @@ export const useFileUpload = () => {
                 throw new Error(`Upload failed: ${result.statusText}`);
             }
 
-            // 3. Return the public CDN URL
-            return { url: publicUrl, key };
+            // 3. Get the storage ID from the response
+            const { storageId } = await result.json();
+
+            // 4. Get the public URL for the stored file
+            const { url } = await saveUploadedFile({ storageId });
+
+            if (!url) {
+                throw new Error("Failed to get file URL");
+            }
+
+            return { url, storageId };
         } finally {
             setUploading(false);
         }

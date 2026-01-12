@@ -520,3 +520,27 @@ export const deleteExam = mutation({
     }
 });
 
+// Migration: Update Q46 question text for all exams
+export const updateQ46QuestionText = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const newQuestionText = "위 글에서 <보기>의 글이 들어가기에 가장 알맞은 곳을 고르십시오.";
+
+        // Get all Q46 questions across all exams
+        const allQuestions = await ctx.db.query("topik_questions").collect();
+        const q46Questions = allQuestions.filter(q => q.number === 46);
+
+        console.log(`Found ${q46Questions.length} Q46 questions to update`);
+
+        let updatedCount = 0;
+        for (const q of q46Questions) {
+            await ctx.db.patch(q._id, { question: newQuestionText });
+            updatedCount++;
+        }
+
+        return {
+            success: true,
+            message: `Updated ${updatedCount} Q46 questions to: "${newQuestionText}"`
+        };
+    }
+});

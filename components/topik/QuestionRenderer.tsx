@@ -263,7 +263,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               {/* Passage */}
               {!hidePassage && question.passage && !(question.imageUrl || question.image) && (
                 <div
-                  className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
+                  className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`}
                   onMouseUp={onTextSelect}
                   dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
                 />
@@ -280,14 +280,25 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 />
               )}
 
-              {/* Context Box */}
-              {question.contextBox && (
-                <div className="mb-4 border border-black p-4 bg-white">
-                  <div
-                    className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
-                    onMouseUp={onTextSelect}
-                    dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                  />
+              {/* Context Box with 보기 header */}
+              {question.contextBox && !(question.imageUrl || question.image) && (
+                <div className="mb-4 bg-white">
+                  {/* 보기 Header */}
+                  <div className="flex items-center justify-center gap-2 mb-0">
+                    <div className="flex-1 h-px bg-black"></div>
+                    <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
+                      &lt;보 &nbsp; 기&gt;
+                    </span>
+                    <div className="flex-1 h-px bg-black"></div>
+                  </div>
+                  {/* Content Box */}
+                  <div className="border border-black border-t-0 p-4">
+                    <div
+                      className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+                      onMouseUp={onTextSelect}
+                      dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -400,7 +411,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
             {/* Passage - shown first, only if not hidden (for first question in group) */}
             {!hidePassage && question.passage && (
               <div
-                className={`mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black`}
+                className={`mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`}
                 onMouseUp={onTextSelect}
                 dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
               />
@@ -422,14 +433,25 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               </div>
             )}
 
-            {/* Context Box */}
-            {question.contextBox && (
-              <div className="mb-4 border border-black p-4 bg-white ml-8">
-                <div
-                  className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
-                  onMouseUp={onTextSelect}
-                  dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                />
+            {/* Context Box with 보기 header */}
+            {question.contextBox && !(question.imageUrl || question.image) && (
+              <div className="mb-4 bg-white ml-8">
+                {/* 보기 Header */}
+                <div className="flex items-center justify-center gap-2 mb-0">
+                  <div className="flex-1 h-px bg-black"></div>
+                  <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
+                    &lt;보 &nbsp; 기&gt;
+                  </span>
+                  <div className="flex-1 h-px bg-black"></div>
+                </div>
+                {/* Content Box */}
+                <div className="border border-black border-t-0 p-4">
+                  <div
+                    className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+                    onMouseUp={onTextSelect}
+                    dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                  />
+                </div>
               </div>
             )}
 

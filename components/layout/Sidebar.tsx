@@ -11,10 +11,15 @@ const EmojiIcon = ({ src, grayscale = false }: { src: string, grayscale?: boolea
 
 export default function Sidebar() {
     const { logout, user } = useAuth();
-    const { isEditing, toggleEditMode, isMobileMenuOpen, toggleMobileMenu } = useApp(); // Get layout context
+    const { isEditing, toggleEditMode, isMobileMenuOpen, toggleMobileMenu, sidebarHidden } = useApp(); // Get layout context
     const location = useLocation();
     const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(true);
+
+    // If sidebar is hidden (e.g., during exam), return null
+    if (sidebarHidden) {
+        return null;
+    }
 
     // Get user initials for avatar fallback
     const getInitials = (name?: string) => {

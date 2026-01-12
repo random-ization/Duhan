@@ -15,6 +15,7 @@ import type * as auth from "../auth.js";
 import type * as canvas from "../canvas.js";
 import type * as diagnostics from "../diagnostics.js";
 import type * as emails from "../emails.js";
+import type * as files from "../files.js";
 import type * as grammars from "../grammars.js";
 import type * as http from "../http.js";
 import type * as init from "../init.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   canvas: typeof canvas;
   diagnostics: typeof diagnostics;
   emails: typeof emails;
+  files: typeof files;
   grammars: typeof grammars;
   http: typeof http;
   init: typeof init;
