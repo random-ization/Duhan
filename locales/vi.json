@@ -1,6 +1,5 @@
 {
   "home": "Trang chủ",
-  "dashboard": "Giáo Trình",
   "textbookLearning": "Học Giáo Trình",
   "topik": "Luyện thi TOPIK",
   "profile": "Hồ sơ",
@@ -28,23 +27,6 @@
   "dayStreak": "Chuỗi ngày",
   "totalWords": "Từ đã học",
   "learningHours": "Giờ học",
-  "pricing": {
-    "title": "Đầu tư cho sự thành thạo tiếng Hàn của bạn",
-    "subtitle": "Chọn gói phù hợp với tốc độ của bạn."
-  },
-  "plan": {
-    "monthly": "Hàng tháng",
-    "annual": "Hàng năm",
-    "lifetime": "Trọn đời"
-  },
-  "period": {
-    "per_month": "/ tháng",
-    "per_year": "/ năm",
-    "once": "một lần"
-  },
-  "button": {
-    "upgrade": "Nâng cấp ngay"
-  },
   "feature": {
     "topik_access": "Không giới hạn bài thi TOPIK",
     "textbook_access": "Truy cập toàn bộ giáo trình",
@@ -435,6 +417,51 @@
       "listening_desc": "Anytime Anywhere",
       "mistakes": "Mistake Book",
       "mistakes_desc": "Review Weakness"
+    },
+    "welcome": "Chào buổi chiều, {name}!",
+    "subtitle": "Sẵn sàng để đánh bại Boss hôm nay chưa?",
+    "streak": "Chuỗi ngày",
+    "days": "{count} Ngày",
+    "premium": "Premium",
+    "upgrade": "Nâng cấp",
+    "member": "Thành viên",
+    "tiger": {
+      "quote": "Đừng bỏ cuộc! Chỉ 5 phút nữa thôi!",
+      "action": "Bắt đầu Quiz"
+    },
+    "daily": {
+      "label": "Câu mỗi ngày"
+    },
+    "textbook": {
+      "default": "Giáo trình",
+      "selectLevel": "Chọn cấp độ",
+      "inProgress": "Đang học",
+      "chapter": "Bài {unit}"
+    },
+    "topik": {
+      "title": "Thi thử\nTOPIK",
+      "maxScore": "Điểm cao"
+    },
+    "video": {
+      "title": "Video\nThực tế",
+      "new": "Mới cập nhật"
+    },
+    "podcast": {
+      "label": "Podcast",
+      "listen": "Nghe ngay"
+    },
+    "vocab": {
+      "label": "Sổ từ vựng",
+      "title": "Từ vựng của tôi",
+      "subtitle": "Từ đã lưu và định nghĩa",
+      "count": "{count} từ"
+    },
+    "notes": {
+      "label": "Sổ tay",
+      "title": "Ghi chú học tập",
+      "subtitle": "Lỗi sai và ghi chú",
+      "mistake": "Lỗi",
+      "memo": "Ghi"
     }
   },
   "plan": {
@@ -446,10 +473,6 @@
     "per_month": "/ tháng",
     "per_year": "/ năm",
     "once": "một lần"
-  },
-  "feature": {
-    "textbook_access": "Truy cập đầy đủ giáo trình",
-    "topik_access": "Thi thử TOPIK không giới hạn"
   },
   "button": {
     "upgrade": "Nâng cấp ngay"
@@ -525,5 +548,42 @@
         "futureUpdates": "Bao gồm các bản cập nhật trong tương lai"
       }
     }
+  },
+  "generalSettings": "Cài đặt chung",
+  "language": "Ngôn ngữ hiển thị",
+  "languageDescription": "Chọn ngôn ngữ cho giao diện và tài liệu học tập.",
+  "sidebar": {
+    "dashboard": "Trang chủ",
+    "textbooks": "Giáo trình",
+    "topik": "Thi thử TOPIK",
+    "videos": "Video",
+    "podcasts": "Podcast",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "auth": {
+    "loginFailed": "Đăng nhập thất bại",
+    "invalidCredentials": "Email hoặc mật khẩu không đúng",
+    "emailExists": "Email đã được đăng ký",
+    "emailNotVerified": "Vui lòng xác minh email trước khi đăng nhập",
+    "userNotFound": "Người dùng không tồn tại",
+    "googleLoginFailed": "Đăng nhập Google thất bại",
+    "googleConfigMissing": "Chưa cấu hình đăng nhập Google",
+    "registerSuccess": "Đăng ký thành công! Vui lòng kiểm tra email.",
+    "slogan": "Nâng tầm tiếng Hàn của bạn",
+    "welcomeBack": "Chào mừng trở lại, Nhà thám hiểm!",
+    "createCharacter": "Tạo nhân vật mới",
+    "placeholderName": "Tên nhân vật",
+    "placeholderEmail": "Email",
+    "placeholderPassword": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginButton": "Vào game (LOGIN)",
+    "signupButton": "Đăng ký (SIGN UP)",
+    "orContinue": "Hoặc tiếp tục với",
+    "noAccount": "Chưa có tài khoản? ",
+    "hasAccount": "Đã có tài khoản? ",
+    "registerAction": "Tạo nhân vật",
+    "loginAction": "Đăng nhập ngay"
   }
 }

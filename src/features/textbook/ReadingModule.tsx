@@ -19,6 +19,8 @@ import {
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import BottomSheet from '../../components/common/BottomSheet';
+import { Language } from '../../../types';
+import { getLocalizedContent } from '../../../utils/languageUtils';
 
 // Legacy API removed - using Convex
 
@@ -64,6 +66,9 @@ interface UnitData {
     title: string;
     readingText: string;
     translation?: string;
+    translationEn?: string;
+    translationVi?: string;
+    translationMn?: string;
     audioUrl?: string;
     analysisData?: TextToken[];
     articleIndex?: number;
@@ -374,6 +379,7 @@ interface ReadingModuleProps {
     courseId?: string;
     unitIndex?: number;
     unitTitle?: string;
+    language?: Language;
     onBack?: () => void;
 }
 
@@ -381,6 +387,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     courseId = 'snu_1a',
     unitIndex: initialUnitIndex = 1,
     unitTitle = '第1单元: 自我介绍',
+    language = 'zh',
     onBack
 }) => {
     // State for selected unit (allows changing within the component)
@@ -889,7 +896,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                                 <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                                             </summary>
                                             <div className="mt-4 p-4 bg-zinc-50 rounded-lg text-sm text-zinc-600 whitespace-pre-wrap">
-                                                {unitData.translation}
+                                                {getLocalizedContent(unitData, 'translation', language)}
                                             </div>
                                         </details>
                                     </div>

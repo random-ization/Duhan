@@ -6,6 +6,7 @@ import {
     FileText, Headphones, Save, Trash2, Loader2, Plus,
     ArrowLeft, Upload, CheckSquare, ImageIcon, FileUp, X
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 // --- Types ---
 interface TopikQuestion {
@@ -590,6 +591,109 @@ export const TopikManager: React.FC = () => {
         }
     };
 
+    // Excel/CSV Partial Import
+    const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedExam) return;
+
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!jsonData || jsonData.length === 0) {
+                alert('表格为空或格式错误');
+                return;
+            }
+
+            // Merge logic (Partial Update)
+            const existingQuestions = [...(selectedExam.questions || [])];
+            let updatedCount = 0;
+
+            console.log("Excel Import: Processing", jsonData.length, "rows");
+
+            jsonData.forEach((row: any) => {
+                // Support both English and Chinese headers
+                const qId = row.id || row.ID || row.Id || row.number || row.Number || row['题号'];
+                if (!qId) return;
+
+                const idNum = parseInt(qId);
+                const existingIdx = existingQuestions.findIndex(q => q.id === idNum);
+
+                if (existingIdx >= 0) {
+                    const existing = existingQuestions[existingIdx];
+                    const updated = { ...existing };
+                    let changed = false;
+
+                    // Helper to update if present
+                    const updateIfPresent = (field: keyof TopikQuestion, value: any) => {
+                        if (value !== undefined) {
+                            (updated as any)[field] = String(value);
+                            changed = true;
+                        }
+                    };
+
+                    // Map Chinese headers to fields
+                    updateIfPresent('question', row.question ?? row['问题']);
+                    updateIfPresent('passage', row.passage ?? row['文章']);
+                    updateIfPresent('instruction', row.instruction ?? row['指令']);
+                    updateIfPresent('contextBox', row.contextBox ?? row['보기']);
+                    updateIfPresent('explanation', row.explanation ?? row['解释'] ?? row['解析']);
+
+                    // Options (support option1..4 and Chinese 选项1..4)
+                    const opt1 = row.option1 ?? row['选项1'];
+                    const opt2 = row.option2 ?? row['选项2'];
+                    const opt3 = row.option3 ?? row['选项3'];
+                    const opt4 = row.option4 ?? row['选项4'];
+
+                    if (opt1 !== undefined || opt2 !== undefined || opt3 !== undefined || opt4 !== undefined) {
+                        const newOpts = [...updated.options];
+                        if (opt1 !== undefined) newOpts[0] = String(opt1);
+                        if (opt2 !== undefined) newOpts[1] = String(opt2);
+                        if (opt3 !== undefined) newOpts[2] = String(opt3);
+                        if (opt4 !== undefined) newOpts[3] = String(opt4);
+                        updated.options = newOpts;
+                        changed = true;
+                    }
+
+                    // Correct Answer (1-based)
+                    const ans = row.correctAnswer ?? row['答案'];
+                    if (ans !== undefined) {
+                        const ca = parseInt(ans);
+                        if (!isNaN(ca)) {
+                            updated.correctAnswer = ca - 1;
+                            changed = true;
+                        }
+                    }
+
+                    // Score
+                    const score = row.score ?? row['分数'];
+                    if (score !== undefined) {
+                        updated.score = parseInt(score);
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        existingQuestions[existingIdx] = updated;
+                        updatedCount++;
+                    }
+                }
+            });
+
+            setSelectedExam({ ...selectedExam, questions: existingQuestions });
+            alert(`✅ 成功更新 ${updatedCount} 道题目数据！\n（只更新了表格中存在的字段，原有图片/音频未受影响）`);
+
+            // Reset input
+            e.target.value = '';
+
+        } catch (error) {
+            console.error(error);
+            alert('解析表格失败，请确保格式正确');
+        }
+    };
+
     const currentExam = selectedExam;
     const STRUCTURE = currentExam?.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
     const getQ = (id: number) => currentExam?.questions?.find(q => q.id === id);
@@ -698,8 +802,18 @@ export const TopikManager: React.FC = () => {
 
                             return (
                                 <div key={sIdx} className="mb-12 relative" id={`q-anchor-${start}`}>
-                                    <div className="bg-zinc-100 border-l-4 border-zinc-800 p-2 mb-6 font-bold text-zinc-800 text-[17px] font-serif select-none">
-                                        {section.instruction}
+                                    {/* Instruction Bar - 可编辑 (听力) / 静态显示 (阅读) */}
+                                    <div className="bg-zinc-100 border-l-4 border-zinc-800 p-2 mb-6 font-bold text-zinc-800 text-[17px] font-serif">
+                                        {currentExam?.type === 'LISTENING' ? (
+                                            <input
+                                                className="w-full bg-transparent outline-none font-bold text-zinc-800 text-[17px] font-serif"
+                                                value={questionsInRange[0].instruction || section.instruction}
+                                                onChange={(e) => updateQuestion(questionsInRange[0].id, 'instruction', e.target.value)}
+                                                placeholder={section.instruction}
+                                            />
+                                        ) : (
+                                            <span>{section.instruction}</span>
+                                        )}
                                     </div>
 
                                     {/* Shared Passage */}
@@ -885,6 +999,16 @@ export const TopikManager: React.FC = () => {
                                                                 </div>
                                                             )}
 
+                                                            {/* 听力题目 - 允许编辑问题文本（当没有特定配置时） */}
+                                                            {!qConfig && (currentExam?.type === 'LISTENING') && (
+                                                                <input
+                                                                    className="w-full font-bold text-[17px] bg-white border-b-2 border-zinc-200 hover:border-zinc-400 focus:border-zinc-900 outline-none py-2"
+                                                                    placeholder="输入问题..."
+                                                                    value={q.question || ''}
+                                                                    onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
+                                                                />
+                                                            )}
+
                                                             {/* Options - 固定选项 (39-41, 46题: ㉠㉡㉢㉣) */}
                                                             {qConfig?.fixedOptions && section.type !== 'IMAGE_CHOICE' && (
                                                                 <div className="grid grid-cols-4 gap-3">
@@ -1047,6 +1171,16 @@ export const TopikManager: React.FC = () => {
                                 <span className="font-bold text-zinc-700">{selectedExam.title}</span>
                             </div>
                             <div className="flex items-center gap-3">
+                                <label className="px-4 py-2 bg-emerald-100 border-2 border-emerald-300 text-emerald-700 rounded-lg hover:border-emerald-500 transition-colors font-bold flex items-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#064e3b] active:translate-y-0.5 active:shadow-none">
+                                    <FileText className="w-4 h-4" />
+                                    Excel/CSV 更新
+                                    <input
+                                        type="file"
+                                        hidden
+                                        accept=".xlsx, .xls, .csv"
+                                        onChange={handleExcelImport}
+                                    />
+                                </label>
                                 <button
                                     onClick={() => setShowImportModal(true)}
                                     className="px-4 py-2 bg-zinc-100 border-2 border-zinc-300 text-zinc-700 rounded-lg hover:border-zinc-900 transition-colors font-bold flex items-center gap-2"

@@ -45,13 +45,26 @@ export const getDetails = query({
         const user = await getUserByTokenOrId(ctx, args.token);
         const convexUserId = user?._id;
 
+        // RESOLVE COURSE ID: Support both Convex ID and Legacy ID
+        // The frontend might pass a Convex ID, but data (units, grammars) might be linked via Legacy ID.
+        let effectiveCourseId = args.courseId;
+        const instituteId = ctx.db.normalizeId("institutes", args.courseId);
+        if (instituteId) {
+            const institute = await ctx.db.get(instituteId);
+            if (institute) {
+                // If institute has a legacy ID, use it for lookups
+                // If not, use the Convex ID (assuming data is linked via Convex ID)
+                effectiveCourseId = institute.id || institute._id;
+            }
+        }
+
         // Fetch all top-level data concurrently
         const [articles, vocabAppearances, courseGrammars, annotations] = await Promise.all([
             // 1. Get Unit Articles
             ctx.db
                 .query("textbook_units")
                 .withIndex("by_course_unit_article", (q) =>
-                    q.eq("courseId", args.courseId).eq("unitIndex", args.unitIndex)
+                    q.eq("courseId", effectiveCourseId).eq("unitIndex", args.unitIndex)
                 )
                 .collect(),
 
@@ -59,7 +72,7 @@ export const getDetails = query({
             ctx.db
                 .query("vocabulary_appearances")
                 .withIndex("by_course_unit", (q) =>
-                    q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
+                    q.eq("courseId", effectiveCourseId).eq("unitId", args.unitIndex)
                 )
                 .collect(),
 
@@ -67,7 +80,7 @@ export const getDetails = query({
             ctx.db
                 .query("course_grammars")
                 .withIndex("by_course_unit", (q) =>
-                    q.eq("courseId", args.courseId).eq("unitId", args.unitIndex)
+                    q.eq("courseId", effectiveCourseId).eq("unitId", args.unitIndex)
                 )
                 .collect(),
 
@@ -76,7 +89,7 @@ export const getDetails = query({
                 ? ctx.db
                     .query("annotations")
                     .withIndex("by_user_context", (q) =>
-                        q.eq("userId", convexUserId).eq("contextKey", `${args.courseId}_${args.unitIndex}`)
+                        q.eq("userId", convexUserId).eq("contextKey", `${effectiveCourseId}_${args.unitIndex}`)
                     )
                     .collect()
                 : Promise.resolve([]),

@@ -12,6 +12,8 @@ import {
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
+import { Language } from '../../../types';
+import { getLocalizedContent } from '../../../utils/languageUtils';
 
 // =========================================
 // Types
@@ -22,6 +24,9 @@ interface TranscriptSegment {
     end: number;    // End time in seconds
     text: string;   // Korean text
     translation?: string; // Chinese translation
+    translationEn?: string;
+    translationVi?: string;
+    translationMn?: string;
     tokens?: { surface: string; base: string; pos: string }[];
 }
 
@@ -151,6 +156,7 @@ interface ListeningModuleProps {
     courseId?: string;
     unitIndex?: number;
     unitTitle?: string;
+    language?: Language;
     onBack?: () => void;
 }
 
@@ -158,6 +164,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     courseId = 'snu_1a',
     unitIndex = 1,
     unitTitle = '第1单元: 听力练习',
+    language = 'zh',
     onBack
 }) => {
     // Loading state
@@ -353,11 +360,13 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                             </div>
 
                             {/* Translation - show if toggled on or if this is active segment */}
-                            {(showTranslation || isActive) && segment.translation && (
-                                <div className="mt-2 text-sm text-zinc-500">
-                                    {segment.translation}
-                                </div>
-                            )}
+                            {(showTranslation || isActive) && (
+                                getLocalizedContent(segment, 'translation', language) || segment.translation
+                            ) && (
+                                    <div className="mt-2 text-sm text-zinc-500">
+                                        {getLocalizedContent(segment, 'translation', language)}
+                                    </div>
+                                )}
                         </div>
                     );
                 })}

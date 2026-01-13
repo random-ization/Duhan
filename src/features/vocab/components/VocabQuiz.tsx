@@ -1,7 +1,10 @@
-import React, { useState, memo, useRef, useEffect } from 'react';
+import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
+import { useTTS } from '../../../hooks/useTTS';
+import { getLabels } from '../../../../utils/i18n';
+import { Language } from '../../../../types';
 
 interface VocabItem {
     id: string;
@@ -17,6 +20,7 @@ interface VocabQuizProps {
     onNextUnit?: () => void;
     currentUnitLabel?: string;
     userId?: string; // For recording progress
+    language?: Language;
 }
 
 interface QuizSettings {
@@ -42,7 +46,8 @@ type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
 type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
 
-function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, currentUnitLabel, userId }: VocabQuizProps) {
+function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, currentUnitLabel, userId, language = 'zh' }: VocabQuizProps) {
+    const labels = getLabels(language);
     // Settings
     const [settings, setSettings] = useState<QuizSettings>({
         multipleChoice: true,
@@ -53,6 +58,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
         soundEffects: true,
     });
     const [showSettings, setShowSettings] = useState(false);
+    const { speak: speakTTS } = useTTS();
 
     // Audio context for sound effects
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -117,16 +123,10 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
     };
 
     // TTS function (always speaks, setting checked at call site)
-    const speakWord = (text: string, force: boolean = false) => {
+    const speakWord = useCallback((text: string, force: boolean = false) => {
         if (!force && !settings.autoTTS) return;
-        if ('speechSynthesis' in window) {
-            speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'ko-KR';
-            u.rate = 0.8;
-            speechSynthesis.speak(u);
-        }
-    };
+        speakTTS(text);
+    }, [settings.autoTTS, speakTTS]);
 
     // Quiz state
     const [gameState, setGameState] = useState<GameState>('PLAYING');
@@ -285,7 +285,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 playCorrectSound();
                 // Record progress (quality 5 = correct)
                 if (userId && currentQuestion.targetWord.id) {
-                    updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
+                    updateProgressMutation({ wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
                 }
                 // Mark as mastered
                 setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
@@ -298,7 +298,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 playWrongSound();
                 // Record progress (quality 0 = wrong)
                 if (userId && currentQuestion.targetWord.id) {
-                    updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
+                    updateProgressMutation({ wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
                 }
                 // Add to wrong words for retry
                 setWrongWords(prev => {
@@ -331,7 +331,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
             playCorrectSound();
             // Record progress (quality 5 = correct)
             if (userId && currentQuestion.targetWord.id) {
-                updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
+                updateProgressMutation({ wordId: currentQuestion.targetWord.id as any, quality: 5 }).catch(console.warn);
             }
             // Mark as mastered
             setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
@@ -340,7 +340,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
             playWrongSound();
             // Record progress (quality 0 = wrong)
             if (userId && currentQuestion.targetWord.id) {
-                updateProgressMutation({ userId, wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
+                updateProgressMutation({ wordId: currentQuestion.targetWord.id as any, quality: 0 }).catch(console.warn);
             }
             // Add to wrong words for retry
             setWrongWords(prev => {
@@ -417,7 +417,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
     if (words.length < 4) {
         return (
             <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
-                <p className="text-slate-500 font-medium">需要至少 4 个单词才能开始测验</p>
+                <p className="text-slate-500 font-medium">{labels.dashboard?.quiz?.minWords || 'Need at least 4 words to start quiz'}</p>
             </div>
         );
     }
@@ -427,7 +427,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black text-slate-900">🎯 测试设置</h2>
+                    <h2 className="text-xl font-black text-slate-900">🎯 {labels.dashboard?.quiz?.quizSettings || 'Quiz Settings'}</h2>
                     <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                         <X className="w-5 h-5" />
                     </button>
@@ -435,14 +435,14 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
 
                 {/* Question Type */}
                 <div className="mb-5">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">问题类型</h3>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">{labels.dashboard?.quiz?.questionType || 'Question Type'}</h3>
                     <div className="space-y-2">
                         <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-                            <span className="font-bold text-slate-700">📝 多项选择</span>
+                            <span className="font-bold text-slate-700">{labels.dashboard?.quiz?.multipleChoice || '📝 Multiple Choice'}</span>
                             <input type="checkbox" checked={settings.multipleChoice} onChange={e => setSettings(s => ({ ...s, multipleChoice: e.target.checked }))} className="w-5 h-5 accent-blue-500" />
                         </label>
                         <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-                            <span className="font-bold text-slate-700">✏️ 书写填空</span>
+                            <span className="font-bold text-slate-700">{labels.dashboard?.quiz?.writingFill || '✏️ Writing Fill'}</span>
                             <input type="checkbox" checked={settings.writingMode} onChange={e => setSettings(s => ({ ...s, writingMode: e.target.checked }))} className="w-5 h-5 accent-blue-500" />
                         </label>
                     </div>
@@ -451,15 +451,15 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 {/* MC Direction */}
                 {settings.multipleChoice && (
                     <div className="mb-5">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">选择题方向</h3>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">{labels.dashboard?.quiz?.mcDirection || 'MC Direction'}</h3>
                         <div className="space-y-2">
                             <label className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'KR_TO_NATIVE' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}>
                                 <input type="radio" name="mc-dir" checked={settings.mcDirection === 'KR_TO_NATIVE'} onChange={() => setSettings(s => ({ ...s, mcDirection: 'KR_TO_NATIVE' }))} className="mr-3" />
-                                <span className="font-medium">韩语 → 中文</span>
+                                <span className="font-medium">{labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}</span>
                             </label>
                             <label className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'NATIVE_TO_KR' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}>
                                 <input type="radio" name="mc-dir" checked={settings.mcDirection === 'NATIVE_TO_KR'} onChange={() => setSettings(s => ({ ...s, mcDirection: 'NATIVE_TO_KR' }))} className="mr-3" />
-                                <span className="font-medium">中文 → 韩语</span>
+                                <span className="font-medium">{labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}</span>
                             </label>
                         </div>
                     </div>
@@ -468,15 +468,15 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 {/* Writing Direction */}
                 {settings.writingMode && (
                     <div className="mb-5">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">书写题方向</h3>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">{labels.dashboard?.quiz?.writingDirection || 'Writing Direction'}</h3>
                         <div className="space-y-2">
                             <label className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'KR_TO_NATIVE' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}>
                                 <input type="radio" name="writing-dir" checked={settings.writingDirection === 'KR_TO_NATIVE'} onChange={() => setSettings(s => ({ ...s, writingDirection: 'KR_TO_NATIVE' }))} className="mr-3" />
-                                <span className="font-medium">韩语 → 中文</span>
+                                <span className="font-medium">{labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}</span>
                             </label>
                             <label className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'NATIVE_TO_KR' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}>
                                 <input type="radio" name="writing-dir" checked={settings.writingDirection === 'NATIVE_TO_KR'} onChange={() => setSettings(s => ({ ...s, writingDirection: 'NATIVE_TO_KR' }))} className="mr-3" />
-                                <span className="font-medium">中文 → 韩语</span>
+                                <span className="font-medium">{labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}</span>
                             </label>
                         </div>
                     </div>
@@ -484,19 +484,19 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
 
                 {/* Audio Settings */}
                 <div className="mb-5">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">音频设置</h3>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">{labels.dashboard?.quiz?.audioSettings || 'Audio Settings'}</h3>
                     <div className="space-y-2">
                         <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
                             <div>
-                                <span className="font-bold text-slate-700 block">🔊 自动朗读单词</span>
-                                <span className="text-xs text-slate-400">每题自动播放韩语发音</span>
+                                <span className="font-bold text-slate-700 block">{labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}</span>
+                                <span className="text-xs text-slate-400">{labels.dashboard?.quiz?.autoReadDesc || 'Auto play Korean pronunciation each question'}</span>
                             </div>
                             <input type="checkbox" checked={settings.autoTTS} onChange={e => setSettings(s => ({ ...s, autoTTS: e.target.checked }))} className="w-5 h-5 accent-green-500" />
                         </label>
                         <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
                             <div>
-                                <span className="font-bold text-slate-700 block">🎵 答题音效</span>
-                                <span className="text-xs text-slate-400">正确/错误提示音</span>
+                                <span className="font-bold text-slate-700 block">{labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}</span>
+                                <span className="text-xs text-slate-400">{labels.dashboard?.quiz?.soundEffectsDesc || 'Correct/incorrect feedback sounds'}</span>
                             </div>
                             <input type="checkbox" checked={settings.soundEffects} onChange={e => setSettings(s => ({ ...s, soundEffects: e.target.checked }))} className="w-5 h-5 accent-green-500" />
                         </label>
@@ -504,7 +504,7 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 </div>
 
                 <button onClick={applySettings} disabled={!settings.multipleChoice && !settings.writingMode} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50">
-                    应用并重新开始
+                    {labels.dashboard?.quiz?.applyRestart || 'Apply & Restart'}
                 </button>
             </div>
         </div>
@@ -522,25 +522,25 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                     <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
                         <Trophy className="w-12 h-12 text-green-600" />
                     </div>
-                    <h2 className="text-4xl font-black text-slate-900 mb-2">🎉 测验完成!</h2>
-                    <p className="text-slate-500 mb-6">你完成了所有问题!</p>
+                    <h2 className="text-4xl font-black text-slate-900 mb-2">{labels.dashboard?.quiz?.complete || '🎉 Quiz Complete!'}</h2>
+                    <p className="text-slate-500 mb-6">{labels.dashboard?.quiz?.youFinished || 'You finished all questions!'}</p>
                     <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
                             <div className="text-3xl font-black text-slate-900">{correctCount}/{finalTotal}</div>
-                            <div className="text-xs text-slate-400 font-bold">正确数</div>
+                            <div className="text-xs text-slate-400 font-bold">{labels.dashboard?.quiz?.correctCount || 'Correct'}</div>
                         </div>
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
                             <div className="text-3xl font-black text-slate-900">{percentage}%</div>
-                            <div className="text-xs text-slate-400 font-bold">正确率</div>
+                            <div className="text-xs text-slate-400 font-bold">{labels.dashboard?.quiz?.accuracy || 'Accuracy'}</div>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                         <button onClick={restartGame} className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all">
-                            <RefreshCw className="w-5 h-5" /> 再来一次
+                            <RefreshCw className="w-5 h-5" /> {labels.dashboard?.quiz?.again || 'Try Again'}
                         </button>
                         {hasNextUnit && onNextUnit && (
                             <button onClick={onNextUnit} className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all">
-                                下一单元 <ChevronRight className="w-5 h-5" />
+                                {labels.dashboard?.quiz?.nextUnit || 'Next Unit'} <ChevronRight className="w-5 h-5" />
                             </button>
                         )}
                     </div>
@@ -555,8 +555,8 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
     const isWriting = currentQuestion.type === 'WRITING';
     const questionText = currentQuestion.direction === 'KR_TO_NATIVE' ? currentQuestion.targetWord.korean : currentQuestion.targetWord.english;
     const promptText = isWriting
-        ? (currentQuestion.direction === 'KR_TO_NATIVE' ? '写出中文意思' : '写出韩语单词')
-        : (currentQuestion.direction === 'KR_TO_NATIVE' ? '这个单词是什么意思?' : '哪个是正确的韩语?');
+        ? (currentQuestion.direction === 'KR_TO_NATIVE' ? (labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...') : (labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'))
+        : (currentQuestion.direction === 'KR_TO_NATIVE' ? (labels.dashboard?.quiz?.questionMeaning || 'What does this word mean?') : (labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?'));
 
     return (
         <>
@@ -566,10 +566,10 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                 <div className="mb-8">
                     <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-1">
                         <div className="flex items-center gap-2">
-                            <span>进度</span>
+                            <span>{labels.dashboard?.quiz?.progress || 'Progress'}</span>
                             {currentBatchNum > 1 && (
                                 <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-[10px]">
-                                    第 {currentBatchNum} 轮
+                                    {labels.dashboard?.quiz?.round?.replace('{n}', currentBatchNum.toString()) || `Round ${currentBatchNum}`}
                                 </span>
                             )}
                         </div>
@@ -587,9 +587,9 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
 
                 {/* Score Badge */}
                 <div className="text-center mb-4 flex items-center justify-center gap-3">
-                    <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">✓ {correctCount} 正确</span>
+                    <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}</span>
                     <span className={`px-3 py-1 rounded-full font-bold text-xs ${isWriting ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {isWriting ? '✏️ 书写' : '📝 选择'}
+                        {isWriting ? `✏️ ${labels.dashboard?.quiz?.writing || 'Writing'}` : `📝 ${labels.dashboard?.quiz?.select || 'Select'}`}
                     </span>
                 </div>
 
@@ -635,22 +635,22 @@ function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, curren
                                 value={writingInput}
                                 onChange={e => setWritingInput(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
-                                placeholder={currentQuestion.direction === 'KR_TO_NATIVE' ? '请输入中文...' : '请输入韩语...'}
+                                placeholder={currentQuestion.direction === 'KR_TO_NATIVE' ? (labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...') : (labels.dashboard?.quiz?.enterKorean || 'Enter Korean...')}
                                 disabled={writingState !== 'INPUT'}
                                 className="w-full text-2xl font-bold text-center bg-transparent outline-none"
                                 autoFocus
                             />
-                            {writingState === 'CORRECT' && <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2"><Check className="w-6 h-6" /> 正确!</div>}
+                            {writingState === 'CORRECT' && <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2"><Check className="w-6 h-6" /> {labels.dashboard?.quiz?.correct || 'Correct'}!</div>}
                             {writingState === 'WRONG' && (
                                 <div className="mt-4 text-center">
-                                    <p className="text-red-600 font-bold mb-2">✕ 错误</p>
-                                    <p className="text-slate-600">正确答案: <strong className="text-green-600">{currentQuestion.direction === 'KR_TO_NATIVE' ? currentQuestion.targetWord.english : currentQuestion.targetWord.korean}</strong></p>
+                                    <p className="text-red-600 font-bold mb-2">✕ {labels.dashboard?.quiz?.wrong || 'Wrong'}</p>
+                                    <p className="text-slate-600">{labels.dashboard?.quiz?.correctAnswer || 'Correct Answer'}: <strong className="text-green-600">{currentQuestion.direction === 'KR_TO_NATIVE' ? currentQuestion.targetWord.english : currentQuestion.targetWord.korean}</strong></p>
                                 </div>
                             )}
                         </div>
                         {writingState === 'INPUT' && (
                             <button onClick={handleWritingSubmit} disabled={!writingInput.trim()} className="w-full mt-4 py-4 bg-slate-900 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50">
-                                确认
+                                {labels.dashboard?.quiz?.confirm || 'Confirm'}
                             </button>
                         )}
                     </div>

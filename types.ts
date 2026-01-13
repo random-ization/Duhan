@@ -159,6 +159,9 @@ export interface VocabularyItem {
   english: string;      // Legacy field alias for 'meaning'
   word?: string;        // Database field
   meaning?: string;     // Database field
+  meaningEn?: string;   // Localized meaning
+  meaningVi?: string;
+  meaningMn?: string;
   pronunciation?: string;
   audioUrl?: string;
   pos?: string;         // Legacy field
@@ -167,6 +170,9 @@ export interface VocabularyItem {
   tips?: VocabTips;
   exampleSentence?: string;
   exampleTranslation?: string; // Legacy alias
+  exampleTranslationEn?: string;
+  exampleTranslationVi?: string;
+  exampleTranslationMn?: string;
   exampleMeaning?: string;     // Database field
   unit?: number;
   courseId?: string;
@@ -184,7 +190,17 @@ export interface ReadingContent {
 export interface GrammarPoint {
   pattern: string;
   explanation: string;
-  usages: { situation: string; example: string; translation: string }[];
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
+  usages: {
+    situation: string;
+    example: string;
+    translation: string;
+    translationEn?: string;
+    translationVi?: string;
+    translationMn?: string;
+  }[];
 }
 
 export interface CourseSelection {
@@ -252,6 +268,9 @@ export interface TopikQuestion {
   correctAnswer: number; // 0-3 index
   score: number;
   explanation?: string; // Explanation for the correct answer
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
 }
 
 export interface TopikExam {

@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Settings, LogOut, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
+import { getLabels } from '../../utils/i18n';
 
 // Helper for 3D Icons
 const EmojiIcon = ({ src, grayscale = false }: { src: string, grayscale?: boolean }) => (
@@ -10,7 +11,8 @@ const EmojiIcon = ({ src, grayscale = false }: { src: string, grayscale?: boolea
 );
 
 export default function Sidebar() {
-    const { logout, user } = useAuth();
+    const { logout, user, language } = useAuth();
+    const labels = getLabels(language);
     const { isEditing, toggleEditMode, isMobileMenuOpen, toggleMobileMenu, sidebarHidden } = useApp(); // Get layout context
     const location = useLocation();
     const navigate = useNavigate();
@@ -29,27 +31,27 @@ export default function Sidebar() {
 
     const navItems = [
         {
-            path: '/dashboard', label: '学习主页',
+            path: '/dashboard', label: labels.sidebar?.dashboard || 'Dashboard',
             icon: <EmojiIcon src="/emojis/Spiral_Calendar.png" />,
             activeClass: 'bg-indigo-100 text-indigo-700 border-indigo-100'
         },
         {
-            path: '/courses', label: '教材学习',
+            path: '/courses', label: labels.sidebar?.textbooks || 'Textbooks',
             icon: <EmojiIcon src="/emojis/Books.png" grayscale />,
             activeClass: 'bg-blue-100 text-blue-700 border-blue-100'
         },
         {
-            path: '/topik', label: '模拟考试',
+            path: '/topik', label: labels.sidebar?.topik || 'TOPIK',
             icon: <EmojiIcon src="/emojis/Trophy.png" grayscale />,
             activeClass: 'bg-yellow-100 text-yellow-700 border-yellow-100'
         },
         {
-            path: '/videos', label: '沉浸视频',
+            path: '/videos', label: labels.sidebar?.videos || 'Videos',
             icon: <EmojiIcon src="/emojis/Clapper_Board.png" grayscale />,
             activeClass: 'bg-red-100 text-red-700 border-red-100'
         },
         {
-            path: '/podcasts', label: '韩语播客',
+            path: '/podcasts', label: labels.sidebar?.podcasts || 'Podcasts',
             icon: <EmojiIcon src="/emojis/Headphone.png" grayscale />,
             activeClass: 'bg-purple-100 text-purple-700 border-purple-100'
         },
@@ -88,7 +90,7 @@ export default function Sidebar() {
                 <div
                     className={`p-6 flex items-center cursor-pointer hover:bg-slate-50 rounded-t-[2.3rem] transition ${collapsed ? 'justify-center' : 'gap-4'}`}
                     onClick={() => navigate('/profile')}
-                    title="个人资料"
+                    title={labels.sidebar?.profile || "Profile"}
                 >
                     {/* Avatar */}
                     <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-lg border-2 border-slate-900 shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
@@ -100,8 +102,8 @@ export default function Sidebar() {
                     </div>
                     {!collapsed && (
                         <div className="overflow-hidden">
-                            <p className="font-black text-slate-900 truncate">{user?.name || '探险家'}</p>
-                            <p className="text-xs text-slate-400 truncate">{user?.email || '点击查看资料'}</p>
+                            <p className="font-black text-slate-900 truncate">{user?.name || labels.guest || 'Guest'}</p>
+                            <p className="text-xs text-slate-400 truncate">{user?.email || labels.sidebar?.profile || 'View Profile'}</p>
                         </div>
                     )}
                 </div>
@@ -145,7 +147,7 @@ export default function Sidebar() {
                                 navigate('/profile');
                             }
                         }}
-                        title={location.pathname === '/dashboard' && isEditing ? "完成编辑" : "设置"}
+                        title={location.pathname === '/dashboard' && isEditing ? (labels.done || "Done") : (labels.sidebar?.settings || "Settings")}
                         className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${location.pathname === '/dashboard' && isEditing
                             ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
                             : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
@@ -155,13 +157,13 @@ export default function Sidebar() {
                     </button>
                     <button
                         onClick={logout}
-                        title="退出"
+                        title={labels.sidebar?.logout || "Log Out"}
                         className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-50 transition border-2 border-transparent hover:border-red-100`}
                     >
                         <LogOut size={20} />
                     </button>
                 </div>
-            </aside>
+            </aside >
         </>
     );
 }

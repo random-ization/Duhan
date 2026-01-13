@@ -118,6 +118,22 @@ export const getDBStats = query({
     }
 });
 
+export const listInstitutes = query({
+    args: {},
+    handler: async (ctx) => {
+        const institutes = await ctx.db.query("institutes").collect();
+        return institutes.map(i => ({
+            id: i._id,
+            legacyId: i.id,
+            name: i.name,
+            volume: i.volume,
+            displayLevel: i.displayLevel,
+            totalUnits: i.totalUnits,
+            levels: i.levels,
+        }));
+    }
+});
+
 // Debug helper: Analyze duplicates
 export const analyzeDuplicates = query({
     args: {},
@@ -343,6 +359,73 @@ export const getTopikStats = query({
                 round: e.round,
                 type: e.type,
             })),
+        };
+    }
+});
+
+// Migration: Copy question instruction and question text from 91st Listening to 83rd Listening
+export const copyListeningQuestions91To83 = mutation({
+    args: {},
+    handler: async (ctx) => {
+        // 1. Get Source Exam (91 Listening)
+        const sourceExam = await ctx.db.query("topik_exams")
+            .filter(q => q.eq(q.field("round"), 91))
+            .filter(q => q.eq(q.field("type"), "LISTENING"))
+            .first();
+
+        if (!sourceExam) {
+            return { success: false, error: "Source exam (Round 91 Listening) not found" };
+        }
+
+        // 2. Get Target Exam (83 Listening)
+        const targetExam = await ctx.db.query("topik_exams")
+            .filter(q => q.eq(q.field("round"), 83))
+            .filter(q => q.eq(q.field("type"), "LISTENING"))
+            .first();
+
+        if (!targetExam) {
+            return { success: false, error: "Target exam (Round 83 Listening) not found" };
+        }
+
+        console.log(`Copying from ${sourceExam.title} (${sourceExam.round}) to ${targetExam.title} (${targetExam.round})`);
+
+        // 3. Get Questions for both
+        const sourceQuestions = await ctx.db.query("topik_questions")
+            .withIndex("by_exam", q => q.eq("examId", sourceExam._id))
+            .collect();
+
+        const targetQuestions = await ctx.db.query("topik_questions")
+            .withIndex("by_exam", q => q.eq("examId", targetExam._id))
+            .collect();
+
+        // 4. Map Source Questions by Number
+        const sourceMap = new Map<number, any>();
+        sourceQuestions.forEach(q => sourceMap.set(q.number, q));
+
+        // 5. Update Target Questions
+        let updatedCount = 0;
+        for (const targetQ of targetQuestions) {
+            const sourceQ = sourceMap.get(targetQ.number);
+            if (sourceQ) {
+                // Determine if we need to update (simple check if content is different?? or just overwrite)
+                // User asked to "copy", so we overwrite.
+
+                // Fields to copy: instruction, question
+                await ctx.db.patch(targetQ._id, {
+                    instruction: sourceQ.instruction,
+                    question: sourceQ.question,
+                });
+                updatedCount++;
+            }
+        }
+
+        return {
+            success: true,
+            sourceExamId: sourceExam.legacyId,
+            targetExamId: targetExam.legacyId,
+            totalSourceQuestions: sourceQuestions.length,
+            totalTargetQuestions: targetQuestions.length,
+            updatedQuestions: updatedCount,
         };
     }
 });

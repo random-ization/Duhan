@@ -179,6 +179,7 @@ const ModulePage: React.FC = () => {
           courseId={effectiveInstitute || 'snu_1a'}
           unitIndex={effectiveLevel}
           unitTitle={`第${effectiveLevel}单元`}
+          language={language}
           onBack={handleBack}
         />
       )}
@@ -187,6 +188,7 @@ const ModulePage: React.FC = () => {
           courseId={effectiveInstitute || 'snu_1a'}
           unitIndex={effectiveLevel}
           unitTitle={`第${effectiveLevel}单元 · 听力`}
+          language={language}
           onBack={handleBack}
         />
       )}

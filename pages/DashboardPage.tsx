@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
+import { getLabels } from '../utils/i18n';
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 
 // DnD Kit
@@ -75,7 +76,8 @@ const SortableItem = ({ id, children, isEditing, className }: { id: string, chil
 };
 
 export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }: any) {
-    const { user } = useAuth();
+    const { user, language } = useAuth();
+    const labels = getLabels(language);
     const { selectedInstitute, selectedLevel } = useLearning();
     const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
     const { institutes } = useData(); // Get institutes data
@@ -125,10 +127,10 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(black 1px, transparent 1px)", backgroundSize: "10px 10px" }}></div>
                         <img src={ASSETS.tiger} className="w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500" alt="tiger coach" />
                         <div className="relative z-10 mt-4 bg-white border-2 border-slate-900 px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
-                            <p className="font-bold text-slate-900 text-sm">"别放弃！再坚持5分钟！"</p>
+                            <p className="font-bold text-slate-900 text-sm">"{labels.dashboard?.tiger?.quote || "Don't give up! Just 5 more minutes!"}"</p>
                         </div>
                         <button className="mt-4 bg-slate-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-black">
-                            开始小测验
+                            {labels.dashboard?.tiger?.action || "Start Quiz"}
                         </button>
                     </BentoCard>
                 );
@@ -138,7 +140,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         <div className="flex justify-between items-start relative z-10 h-full">
                             <div>
                                 <div className="text-xs font-black text-indigo-500 uppercase mb-2 tracking-wider flex items-center gap-2">
-                                    <img src={ASSETS.sparkles} className="w-4 h-4" alt="sparkles" /> 每日一句
+                                    <img src={ASSETS.sparkles} className="w-4 h-4" alt="sparkles" /> {labels.dashboard?.daily?.label || "Daily Phrase"}
                                 </div>
                                 <h2 className="text-4xl font-black text-slate-900 leading-tight">"시작이 반이다"</h2>
                                 <p className="text-slate-500 font-bold mt-2 text-lg">千里之行，始于足下。</p>
@@ -157,13 +159,13 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                             <div className="flex justify-between items-start">
                                 <h3 className="font-black text-2xl text-slate-900 leading-tight">
                                     {instituteName}<br />
-                                    {selectedLevel ? `Level ${selectedLevel}` : 'Select Level'}
+                                    {selectedLevel ? `Level ${selectedLevel}` : (labels.dashboard?.textbook?.selectLevel || 'Select Level')}
                                 </h3>
-                                <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">进行中</div>
+                                <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">{labels.dashboard?.textbook?.inProgress || "In Progress"}</div>
                             </div>
                             <div className="mt-4">
                                 <div className="flex justify-between text-xs font-bold text-blue-400 mb-1">
-                                    <span>第 {currentUnit} 章</span>
+                                    <span>{(labels.dashboard?.textbook?.chapter || "Chapter {unit}").replace('{unit}', String(currentUnit))}</span>
                                     <span>{progressPercent}%</span>
                                 </div>
                                 <div className="w-full bg-white h-3 rounded-full border-2 border-blue-100 overflow-hidden">
@@ -178,9 +180,9 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 return (
                     <BentoCard onClickPath="/topik" bgClass="bg-yellow-50" borderClass="border-slate-900" className="h-full">
                         <div className="relative z-10">
-                            <h3 className="font-black text-2xl text-slate-900">TOPIK<br />模拟考</h3>
+                            <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">{labels.dashboard?.topik?.title || "TOPIK\nMock Exam"}</h3>
                             <div className="mt-2 inline-block bg-white px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 shadow-sm border-2 border-yellow-100">
-                                最高分: <span className="text-slate-900">{topScore}</span>
+                                {labels.dashboard?.topik?.maxScore || "Best"}: <span className="text-slate-900">{topScore}</span>
                             </div>
                         </div>
                         <img src={ASSETS.trophy} className="absolute -right-2 -bottom-2 w-28 h-28 group-hover:scale-110 group-hover:-rotate-6 transition duration-300" alt="trophy" />
@@ -190,9 +192,9 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 return (
                     <BentoCard onClickPath="/youtube" bgClass="bg-red-50" borderClass="border-slate-900" className="h-full">
                         <div className="relative z-10">
-                            <h3 className="font-black text-2xl text-slate-900">沉浸<br />视频</h3>
+                            <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">{labels.dashboard?.video?.title || "Immersion\nVideo"}</h3>
                             <div className="mt-2 inline-block bg-red-500 text-white px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 shadow-sm">
-                                New Updates
+                                {labels.dashboard?.video?.new || "New Updates"}
                             </div>
                         </div>
                         <img src={ASSETS.tv} className="absolute -right-4 -bottom-4 w-28 h-28 group-hover:scale-110 group-hover:rotate-3 transition duration-300" alt="tv" />
@@ -206,7 +208,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         </div>
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div>
-                                <div className="inline-block bg-purple-500 text-white border-2 border-purple-300 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">Podcast</div>
+                                <div className="inline-block bg-purple-500 text-white border-2 border-purple-300 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">{labels.dashboard?.podcast?.label || "Podcast"}</div>
                                 <h3 className="font-bold text-lg mt-2 leading-tight">Iyagi Series<br />Real Talk</h3>
                             </div>
                             <div className="flex items-center gap-2">
@@ -215,7 +217,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                                     <div className="w-1 bg-green-400 h-2/3 animate-pulse"></div>
                                     <div className="w-1 bg-green-400 h-full animate-pulse"></div>
                                 </div>
-                                <span className="text-xs font-mono text-green-400">Listen Now</span>
+                                <span className="text-xs font-mono text-green-400">{labels.dashboard?.podcast?.listen || "Listen Now"}</span>
                             </div>
                         </div>
                     </BentoCard>
@@ -228,12 +230,12 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         </div>
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div>
-                                <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">生词本</div>
-                                <h3 className="font-black text-xl text-slate-900 leading-tight">我的生词</h3>
-                                <p className="text-slate-500 font-bold text-sm mt-1">收藏的单词和释义</p>
+                                <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">{labels.dashboard?.vocab?.label || "Vocab Book"}</div>
+                                <h3 className="font-black text-xl text-slate-900 leading-tight">{labels.dashboard?.vocab?.title || "My Vocab"}</h3>
+                                <p className="text-slate-500 font-bold text-sm mt-1">{labels.dashboard?.vocab?.subtitle || "Saved words and definitions"}</p>
                             </div>
                             <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
-                                {wordsToReview} 个生词
+                                {(labels.dashboard?.vocab?.count || "{count} Words").replace('{count}', String(wordsToReview))}
                             </div>
                         </div>
                     </BentoCard>
@@ -246,13 +248,13 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         </div>
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div>
-                                <div className="inline-block bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">笔记本</div>
-                                <h3 className="font-black text-xl text-slate-900 leading-tight">学习笔记</h3>
-                                <p className="text-slate-500 font-bold text-sm mt-1">错题记录和学习心得</p>
+                                <div className="inline-block bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">{labels.dashboard?.notes?.label || "Notebook"}</div>
+                                <h3 className="font-black text-xl text-slate-900 leading-tight">{labels.dashboard?.notes?.title || "Study Notes"}</h3>
+                                <p className="text-slate-500 font-bold text-sm mt-1">{labels.dashboard?.notes?.subtitle || "Mistakes and memos"}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[9px] font-bold text-red-600">错</div>
-                                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600">记</div>
+                                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[9px] font-bold text-red-600">{labels.dashboard?.notes?.mistake || "Err"}</div>
+                                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600">{labels.dashboard?.notes?.memo || "Mem"}</div>
                             </div>
                         </div>
                     </BentoCard>
@@ -295,13 +297,13 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 <div className="relative pl-4">
                     <img src={ASSETS.wave} className="absolute -top-6 -left-10 w-14 h-14 animate-float" alt="waving hand" />
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-                        下午好, {user?.name || 'Friend'}!
+                        {(labels.dashboard?.welcome || "Good afternoon, {name}!").replace('{name}', user?.name || 'Friend')}
                     </h1>
-                    <p className="text-slate-500 font-bold mt-1">准备好击败今天的 Boss 了吗？</p>
+                    <p className="text-slate-500 font-bold mt-1">{labels.dashboard?.subtitle || "Ready to beat today's boss?"}</p>
                 </div>
 
                 <div className="flex gap-4">
-                    <StatBadge icon={ASSETS.fire} label="连续打卡" value={`${streak} 天 🔥`} colorClass="bg-orange-100 border-orange-200" borderClass="border-slate-900" />
+                    <StatBadge icon={ASSETS.fire} label={labels.dashboard?.streak || "Streak"} value={(labels.dashboard?.days || "{count} Days").replace('{count}', String(streak)) + " 🔥"} colorClass="bg-orange-100 border-orange-200" borderClass="border-slate-900" />
 
                     {/* Subscription Badge */}
                     {user?.tier === 'PAID' || user?.subscriptionType ? (
@@ -313,8 +315,8 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                                 <span className="text-xl">👑</span>
                             </div>
                             <div>
-                                <div className="text-[10px] font-black text-amber-900 uppercase">Premium</div>
-                                <div className="font-black text-white">{user?.subscriptionType || '会员'}</div>
+                                <div className="text-[10px] font-black text-amber-900 uppercase">{labels.dashboard?.premium || "Premium"}</div>
+                                <div className="font-black text-white">{user?.subscriptionType || (labels.dashboard?.member || 'Member')}</div>
                             </div>
                         </div>
                     ) : (
@@ -326,7 +328,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                                 <span className="text-xl">⭐</span>
                             </div>
                             <div>
-                                <div className="text-[10px] font-black text-indigo-200 uppercase">升级</div>
+                                <div className="text-[10px] font-black text-indigo-200 uppercase">{labels.dashboard?.upgrade || "Upgrade"}</div>
                                 <div className="font-black text-white">Premium →</div>
                             </div>
                         </div>

@@ -89,13 +89,31 @@ export const getUnitGrammar = query({
         try {
             const userId = await getOptionalAuthUserId(ctx);
 
+            // RESOLVE COURSE ID: Support both Convex ID and Legacy ID
+            let effectiveCourseId = args.courseId;
+            let effectiveUnitId = args.unitId;
+
+            const instituteId = ctx.db.normalizeId("institutes", args.courseId);
+            if (instituteId) {
+                const institute = await ctx.db.get(instituteId);
+                if (institute) {
+                    effectiveCourseId = institute.id || institute._id;
+                }
+            }
+
+            // SPECIAL HANDLING: Legacy Yonsei 1-2
+            // The grammar data is stored as Unit 11-20, but frontend requests Unit 1-10
+            if (effectiveCourseId === 'course_yonsei_1b_appendix' && args.unitId <= 10) {
+                effectiveUnitId = args.unitId + 10;
+            }
+
             // 1. Get links
             // OPTIMIZATION: Limit to prevent excessive queries
             const MAX_UNIT_GRAMMAR = 100;
             const courseGrammars = await ctx.db
                 .query("course_grammars")
                 .withIndex("by_course_unit", (q) =>
-                    q.eq("courseId", args.courseId).eq("unitId", args.unitId)
+                    q.eq("courseId", effectiveCourseId).eq("unitId", effectiveUnitId)
                 )
                 .take(MAX_UNIT_GRAMMAR);
 

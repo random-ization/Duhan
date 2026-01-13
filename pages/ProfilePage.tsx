@@ -12,9 +12,10 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import {
   User as UserIcon, Camera, Lock, BarChart3, Calendar,
-  Trophy, TrendingUp, Activity, CheckCircle, XCircle, Crown, Clock, Mail
+  Trophy, TrendingUp, Activity, CheckCircle, XCircle, Crown, Clock, Mail, Settings
 } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
+import { LanguageSelector } from '../components/common/LanguageSelector';
 
 interface ProfileProps {
   language: Language;
@@ -26,7 +27,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const labels = getLabels(language);
   const { toasts, success, error, removeToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'info' | 'security' | 'stats'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'security' | 'stats' | 'settings'>('info');
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -53,7 +54,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
     try {
       // await api.updateProfile({ name: newName });
-      await updateProfileMutation({ userId: user.id, name: newName });
+      await updateProfileMutation({ name: newName });
       updateUser({ name: newName });
       success(labels.profileUpdated);
       setIsEditingName(false);
@@ -93,7 +94,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       });
 
       // 3. Update Profile with new Avatar URL (Fixes persistence bug)
-      await updateProfileMutation({ userId: user.id, avatar: publicUrl });
+      await updateProfileMutation({ avatar: publicUrl });
 
       // 4. Update local state
       updateUser({ avatar: publicUrl });
@@ -114,7 +115,6 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     try {
       // await api.changePassword({ currentPassword, newPassword });
       await changePasswordMutation({
-        userId: user.id,
         currentPassword,
         newPassword
       });
@@ -212,6 +212,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         <TabButton id="info" icon={UserIcon} label={labels.personalInfo} />
         <TabButton id="stats" icon={BarChart3} label={labels.learningStats} />
         <TabButton id="security" icon={Lock} label={labels.securitySettings} />
+        <TabButton id="settings" icon={Settings} label={labels.generalSettings || "General"} />
       </div>
 
       {/* Content Area */}
@@ -328,6 +329,27 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="max-w-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">{labels.generalSettings || "General Settings"}</h3>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{labels.language || "Display Language"}</label>
+                <div className="p-1">
+                  {/* Using LanguageSelector but styled slightly differently via props if needed, or just container */}
+                  <div className="max-w-xs">
+                    <LanguageSelector upwards={false} />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {labels.languageDescription || "Choose the language for the interface and learning materials."}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

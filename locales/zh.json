@@ -1,6 +1,5 @@
 {
   "home": "首页",
-  "dashboard": "教材学习",
   "textbookLearning": "教材学习",
   "topik": "TOPIK 备考",
   "notebook": "我的笔记",
@@ -29,27 +28,6 @@
   "dayStreak": "连续打卡",
   "totalWords": "积累单词",
   "learningHours": "学习时长",
-  "pricing": {
-    "title": "投资您的韩语流利度",
-    "subtitle": "选择适合您节奏的计划。",
-    "limitedOffer": "限时优惠",
-    "paymentMethods": "支持微信支付、支付宝及国际信用卡。",
-    "notSure": "不确定是否适合您？",
-    "trial": "先注册免费试用"
-  },
-  "plan": {
-    "monthly": "月度会员",
-    "annual": "年度会员",
-    "lifetime": "终身会员"
-  },
-  "period": {
-    "per_month": "/ 月",
-    "per_year": "/ 年",
-    "once": "一次性"
-  },
-  "button": {
-    "upgrade": "立即升级"
-  },
   "feature": {
     "topik_access": "无限 TOPIK 模考",
     "textbook_access": "解锁所有教科书",
@@ -168,6 +146,17 @@
   "native": "母语",
   "batchSize": "每组数量",
   "questionTypes": "题目类型",
+  "grammarTraining": "语法专项训练",
+  "searchGrammar": "搜索语法点...",
+  "status": "状态",
+  "proficiency": "熟练度",
+  "explanation": "语法详解",
+  "summary": "摘要",
+  "examples": "例句",
+  "mastered": "已掌握",
+  "learning": "学习中",
+  "notStarted": "未开始",
+  "toggleStatus": "切换状态",
   "multipleChoice": "选择题",
   "writtenQuestion": "拼写题",
   "answers": "回答语言",
@@ -209,6 +198,20 @@
   "editingNote": "编辑笔记",
   "clickToAddNote": "点击添加笔记...",
   "readingPassage": "阅读练习",
+  "fontSize": "字体大小",
+  "serif": "衬线字体",
+  "analysis": "语法分析",
+  "translate": "翻译",
+  "speak": "朗读",
+  "note": "笔记",
+  "highlight": "高亮",
+  "colors": "颜色",
+  "wordLookup": "查词",
+  "addToVocab": "加入生词本",
+  "copy": "复制",
+  "settingsPanel": "阅读设置",
+  "aiAssistant": "AI 助教",
+  "askAi": "询问 AI 关于语法的...",
   "noListening": "暂无听力音频。",
   "preparingListening": "准备音频中...",
   "listeningExercise": "听力练习",
@@ -440,6 +443,141 @@
       "listening_desc": "随时随地",
       "mistakes": "错题本",
       "mistakes_desc": "查漏补缺"
+    },
+    "welcome": "下午好, {name}!",
+    "subtitle": "准备好击败今天的 Boss 了吗？",
+    "streak": "连续打卡",
+    "days": "{count} 天",
+    "premium": "Premium",
+    "upgrade": "升级",
+    "member": "会员",
+    "tiger": {
+      "quote": "别放弃！再坚持5分钟！",
+      "action": "开始小测验"
+    },
+    "daily": {
+      "label": "每日一句"
+    },
+    "textbook": {
+      "default": "教材",
+      "selectLevel": "选择等级",
+      "inProgress": "进行中",
+      "chapter": "第 {unit} 章"
+    },
+    "topik": {
+      "title": "TOPIK\n模拟考",
+      "maxScore": "最高分"
+    },
+    "video": {
+      "title": "沉浸\n视频",
+      "new": "最新更新"
+    },
+    "podcast": {
+      "label": "Podcast",
+      "listen": "立即收听"
+    },
+    "vocab": {
+      "label": "生词本",
+      "title": "我的生词",
+      "subtitle": "收藏的单词和释义",
+      "count": "{count} 个生词",
+      "currentScope": "当前范围",
+      "allUnits": "全册单词",
+      "mastery": "掌握程度",
+      "flashcard": "单词卡",
+      "quiz": "测试",
+      "match": "配对",
+      "quickStudy": "速记",
+      "forgot": "忘了",
+      "remembered": "记住",
+      "settings": "设置",
+      "autoPlay": "自动播放发音",
+      "cardFront": "卡片正面显示",
+      "koreanFront": "韩语在正面",
+      "meaningFront": "中文在正面",
+      "reval": "点击揭示答案",
+      "redSheet": "红膜",
+      "loop": "连播",
+      "stop": "停止",
+      "noWords": "暂无单词",
+      "noWordsDesc": "本单元尚未添加词汇内容",
+      "unit": "单元"
+    },
+    "pos": {
+      "noun": "n. 名词",
+      "verb_t": "v.t. 他动词",
+      "verb_i": "v.i. 自动词",
+      "adj": "adj. 形容词",
+      "adv": "adv. 副词",
+      "particle": "助词"
+    },
+    "quiz": {
+      "progress": "进度",
+      "correct": "正确",
+      "select": "选择",
+      "writing": "书写",
+      "questionMeaning": "这个单词是什么意思？",
+      "questionKorean": "哪个是正确的韩语？",
+      "minWords": "需要至少 4 个单词才能开始测验",
+      "quizSettings": "🎯 测试设置",
+      "questionType": "问题类型",
+      "multipleChoice": "📝 多项选择",
+      "writingFill": "✏️ 书写填空",
+      "mcDirection": "选择题方向",
+      "writingDirection": "书写题方向",
+      "krToNative": "韩语 → 中文",
+      "nativeToKr": "中文 → 韩语",
+      "audioSettings": "音频设置",
+      "autoRead": "🔊 自动朗读单词",
+      "autoReadDesc": "每题自动播放韩语发音",
+      "soundEffects": "🎵 答题音效",
+      "soundEffectsDesc": "正确/错误提示音",
+      "applyRestart": "应用并重新开始",
+      "round": "第 {n} 轮",
+      "complete": "🎉 测验完成!",
+      "youFinished": "你完成了所有问题!",
+      "correctCount": "正确数",
+      "accuracy": "正确率",
+      "again": "再来一次",
+      "nextUnit": "下一单元",
+      "enterMeaning": "请输入中文...",
+      "enterKorean": "请输入韩语...",
+      "confirm": "确认",
+      "correctAnswer": "正确答案",
+      "wrong": "错误"
+    },
+    "topik": {
+      "examCenter": "考试中心",
+      "realExam": "真题实战模拟",
+      "all": "全部",
+      "reading": "阅读",
+      "listening": "听力",
+      "recommended": "推荐实战",
+      "examHistory": "考试记录",
+      "noHistory": "暂无考试记录",
+      "round": "第 {n} 届",
+      "realExamLabel": "TOPIK II 真题",
+      "minutes": "分钟",
+      "clickStart": "点击开始考试",
+      "startNow": "立即开考",
+      "confirmEnd": "确定要结束考试吗？\n当前答题进度将被保存为考试记录。",
+      "timeRemaining": "剩余时间",
+      "submit": "提交试卷"
+    },
+    "library": {
+      "title": "选择教材",
+      "subtitle": "共收录 {count} 本教材，按出版社分组",
+      "search": "搜索教材...",
+      "publisher": "出版社",
+      "books": "本书",
+      "back": "返回"
+    },
+    "notes": {
+      "label": "笔记本",
+      "title": "学习笔记",
+      "subtitle": "错题记录和学习心得",
+      "mistake": "错",
+      "memo": "记"
     }
   },
   "plan": {
@@ -451,10 +589,6 @@
     "per_month": "/ 月",
     "per_year": "/ 年",
     "once": "一次性"
-  },
-  "feature": {
-    "textbook_access": "解锁所有教科书",
-    "topik_access": "无限 TOPIK 模考"
   },
   "button": {
     "upgrade": "立即升级"
@@ -573,5 +707,42 @@
         "futureUpdates": "包含未来更新"
       }
     }
+  },
+  "generalSettings": "通用设置",
+  "language": "显示语言",
+  "languageDescription": "选择界面和学习材料的语言。",
+  "sidebar": {
+    "dashboard": "学习主页",
+    "textbooks": "教材学习",
+    "topik": "模拟考试",
+    "videos": "沉浸视频",
+    "podcasts": "韩语播客",
+    "profile": "个人资料",
+    "settings": "设置",
+    "logout": "退出"
+  },
+  "auth": {
+    "loginFailed": "登录失败",
+    "invalidCredentials": "邮箱或密码错误",
+    "emailExists": "该邮箱已被注册",
+    "emailNotVerified": "请先验证您的邮箱后再登录",
+    "userNotFound": "用户不存在",
+    "googleLoginFailed": "Google 登录失败",
+    "googleConfigMissing": "Google 登录未配置",
+    "registerSuccess": "注册成功！请检查邮箱验证后登录。",
+    "slogan": "Level Up Your Korean",
+    "welcomeBack": "欢迎回来, 探险家!",
+    "createCharacter": "创建新角色",
+    "placeholderName": "角色昵称 (Character Name)",
+    "placeholderEmail": "电子邮箱 (Email)",
+    "placeholderPassword": "密码 (Password)",
+    "forgotPassword": "忘记密码?",
+    "loginButton": "开始游戏 (LOGIN)",
+    "signupButton": "注册账号 (SIGN UP)",
+    "orContinue": "Or continue with",
+    "noAccount": "还没有账号? ",
+    "hasAccount": "已有账号? ",
+    "registerAction": "注册新角色",
+    "loginAction": "直接登录"
   }
 }

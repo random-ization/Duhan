@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles, AlertCircle, Mail, Lock, User, HelpCircle, Loader
 import { useAuth } from '../contexts/AuthContext';
 import { useMutation } from 'convex/react';
 import { api } from '../convex/_generated/api';
+import { getLabels } from '../utils/i18n';
 
 // Google OAuth Config
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -15,6 +16,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, user, language } = useAuth();
+  const labels = getLabels(language);
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export default function AuthPage() {
 
   const handleGoogleLogin = () => {
     if (!GOOGLE_CLIENT_ID) {
-      setError('Google 登录未配置');
+      setError(labels.auth?.googleConfigMissing || 'Google login not configured');
       return;
     }
 
@@ -117,7 +119,7 @@ export default function AuthPage() {
           password: formData.password.trim()
         });
         setIsLogin(true);
-        setError('注册成功！请检查邮箱验证后登录。');
+        setError(labels.auth?.registerSuccess || 'Registration successful! Please check email to verify.');
       }
     } catch (err: any) {
       // Extract error code from ConvexError
@@ -125,20 +127,16 @@ export default function AuthPage() {
       // The err object here might be the raw error.
       const errorCode = err.data?.code || (err.message && err.message.includes('code') ? 'UNKNOWN' : null);
       // Fallback message if code extraction fails
-      let errorMessage = err.message || (language === 'zh' ? '登录失败' : 'Authentication failed');
+      let errorMessage = err.message || (labels.auth?.loginFailed || 'Authentication failed');
 
-      // Simple mapping if possible, though ConvexError handling in client can be tricky to parse exactly without types
-      const errorMessages: Record<string, string> = {
-        INVALID_CREDENTIALS: language === 'zh' ? '邮箱或密码错误' : 'Invalid email or password',
-        EMAIL_ALREADY_EXISTS: language === 'zh' ? '该邮箱已被注册' : 'An account with this email already exists',
-        EMAIL_NOT_VERIFIED: language === 'zh' ? '请先验证您的邮箱后再登录' : 'Please verify your email before logging in',
-        USER_NOT_FOUND: language === 'zh' ? '用户不存在' : 'User not found',
-      };
-
-      if (errorCode && errorMessages[errorCode]) {
-        errorMessage = errorMessages[errorCode];
-      } else if (err.message && err.message.includes('INVALID_CREDENTIALS')) {
-        errorMessage = errorMessages['INVALID_CREDENTIALS'];
+      if (errorCode === 'INVALID_CREDENTIALS' || (err.message && err.message.includes('INVALID_CREDENTIALS'))) {
+        errorMessage = labels.auth?.invalidCredentials || 'Invalid email or password';
+      } else if (errorCode === 'EMAIL_ALREADY_EXISTS' || (err.message && err.message.includes('EMAIL_ALREADY_EXISTS'))) {
+        errorMessage = labels.auth?.emailExists || 'An account with this email already exists';
+      } else if (errorCode === 'EMAIL_NOT_VERIFIED') {
+        errorMessage = labels.auth?.emailNotVerified || 'Please verify your email before logging in';
+      } else if (errorCode === 'USER_NOT_FOUND') {
+        errorMessage = labels.auth?.userNotFound || 'User not found';
       }
 
       setError(errorMessage);
@@ -157,8 +155,8 @@ export default function AuthPage() {
 
           <div className="relative z-10 text-center">
             <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
-            <h1 className="text-5xl font-black font-display mb-2">DuHan.</h1>
-            <p className="text-indigo-200 font-bold text-lg tracking-wide">Level Up Your Korean</p>
+            <h1 className="text-5xl font-black font-display mb-2">{labels.auth?.brand || "DuHan."}</h1>
+            <p className="text-indigo-200 font-bold text-lg tracking-wide">{labels.auth?.slogan || "Level Up Your Korean"}</p>
           </div>
 
           {/* 3D Rocket Decoration */}
@@ -174,7 +172,7 @@ export default function AuthPage() {
         {/* Right: Console (Form) */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
           <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
-            {isLogin ? "欢迎回来, 探险家!" : "创建新角色"} <Sparkles className="text-yellow-400 fill-current" />
+            {isLogin ? (labels.auth?.welcomeBack || "Welcome back, Explorer!") : (labels.auth?.createCharacter || "Create New Character")} <Sparkles className="text-yellow-400 fill-current" />
           </h2>
 
           {error && (
@@ -189,7 +187,7 @@ export default function AuthPage() {
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition" size={20} />
                 <input
                   type="text"
-                  placeholder="角色昵称 (Character Name)"
+                  placeholder={labels.auth?.placeholderName || "Character Name"}
                   className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -202,7 +200,7 @@ export default function AuthPage() {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition" size={20} />
               <input
                 type="email"
-                placeholder="电子邮箱 (Email)"
+                placeholder={labels.auth?.placeholderEmail || "Email Address"}
                 className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -214,7 +212,7 @@ export default function AuthPage() {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition" size={20} />
               <input
                 type="password"
-                placeholder="密码 (Password)"
+                placeholder={labels.auth?.placeholderPassword || "Password"}
                 className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
@@ -226,7 +224,7 @@ export default function AuthPage() {
             {isLogin && (
               <div className="flex justify-end">
                 <Link to="/forgot-password" className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition">
-                  <HelpCircle size={14} /> 忘记密码?
+                  <HelpCircle size={14} /> {labels.auth?.forgotPassword || "Forgot Password?"}
                 </Link>
               </div>
             )}
@@ -236,7 +234,7 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-black hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? "开始游戏 (LOGIN)" : "注册账号 (SIGN UP)")}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? (labels.auth?.loginButton || "Start Game (LOGIN)") : (labels.auth?.signupButton || "Sign Up (SIGN UP)"))}
               {!loading && <ArrowRight size={20} />}
             </button>
           </form>
@@ -244,7 +242,7 @@ export default function AuthPage() {
           {/* Social Login Divider */}
           <div className="my-8 flex items-center gap-4">
             <div className="h-px bg-slate-200 flex-1"></div>
-            <span className="text-xs font-bold text-slate-400 uppercase">Or continue with</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">{labels.auth?.orContinue || "Or continue with"}</span>
             <div className="h-px bg-slate-200 flex-1"></div>
           </div>
 
@@ -270,13 +268,13 @@ export default function AuthPage() {
           </div>
 
           <div className="mt-8 text-center text-xs font-bold text-slate-400">
-            {isLogin ? "还没有账号? " : "已有账号? "}
+            {isLogin ? (labels.auth?.noAccount || "No account yet? ") : (labels.auth?.hasAccount || "Already have an account? ")}
             <button
               type="button"
               onClick={() => { setIsLogin(!isLogin); setError(null); }}
               className="text-indigo-600 hover:underline uppercase"
             >
-              {isLogin ? "注册新角色" : "直接登录"}
+              {isLogin ? (labels.auth?.registerAction || "Create Character") : (labels.auth?.loginAction || "Login Now")}
             </button>
           </div>
         </div>

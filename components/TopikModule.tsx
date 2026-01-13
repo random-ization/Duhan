@@ -6,6 +6,7 @@ import {
   RotateCcw, Eye, ChevronRight, ChevronLeft, Volume2, Loader2
 } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 import { useAnnotation } from '../hooks/useAnnotation';
 import { useTopikQuestions, prefetchQuestions, TopikExamWithUrl } from '../hooks/useTopikQuestions';
 import AnnotationMenu from './AnnotationMenu';
@@ -517,7 +518,12 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
                 className={`${FONT_SANS} text-[17px] font-bold text-slate-900 leading-snug mb-3 select-text`}
                 onMouseUp={handleTextSelection}
               >
-                {renderHighlightedText(q.question.replace(/\(\s*\)/g, '(      )'), contextKey)}
+                {renderHighlightedText(
+                  q.question
+                    .replace(/^\s*\d+[.．。]\s*/g, '') // 移除开头的题号（如 "46. ", "46．", "46。"）
+                    .replace(/\(\s*\)/g, '(      )'),
+                  contextKey
+                )}
               </div>
             )}
           </div>
@@ -590,6 +596,16 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
             </div>
           )}
         </div>
+
+        {/* Explanation (Review Mode Only) */}
+        {isReview && q.explanation && (
+          <div className="mt-4 ml-9 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="font-bold text-green-800 text-sm mb-1">{labels.explanation || 'Explanation'}:</p>
+            <p className="text-sm text-green-700">
+              {getLocalizedContent(q, 'explanation', language)}
+            </p>
+          </div>
+        )}
       </div>
     );
   };
@@ -653,7 +669,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
         />
         <div className="flex items-center gap-3">
           <Volume2 className="w-5 h-5 text-indigo-400" />
-          <span className="text-xs font-mono font-bold tracking-widest uppercase">Listening Test</span>
+          <span className="text-xs font-mono font-bold tracking-widest uppercase">{labels.listeningTest || 'Listening Test'}</span>
         </div>
         <button onClick={toggle} className="w-10 h-10 bg-white text-slate-900 rounded-full flex items-center justify-center hover:bg-indigo-100 transition-colors shadow-lg active:scale-95">
           {playing ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
@@ -690,7 +706,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
           <div className="w-32 flex justify-end">
             {view === 'EXAM' && (
               <button onClick={submitExam} className="bg-white text-slate-900 px-4 py-1.5 rounded font-bold text-sm hover:bg-indigo-50">
-                제출 (Submit)
+                {labels.submit}
               </button>
             )}
           </div>
@@ -709,8 +725,10 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
 
               {/* Paper Header (Logo area) */}
               <div className="h-20 border-b-2 border-black flex justify-between items-end px-8 pb-3 mb-8 mx-8 mt-8">
-                <span className="font-bold text-2xl text-slate-900 font-serif">TOPIK Ⅱ {currentExam.type === 'READING' ? '읽기 (Reading)' : '듣기 (Listening)'}</span>
-                <span className="font-mono text-slate-500 font-medium">제 {currentExam.round} 회</span>
+                <span className="font-bold text-2xl text-slate-900 font-serif">
+                  TOPIK Ⅱ {currentExam.type === 'READING' ? (labels.reading || 'Reading') : (labels.listening || 'Listening')}
+                </span>
+                <span className="font-mono text-slate-500 font-medium">{labels.round} {currentExam.round}</span>
               </div>
 
               {/* Content */}
@@ -888,7 +906,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({ exams, language, history, onS
             </div>
           </div>
           <button onClick={beginTest} className="w-full py-6 bg-black text-white text-2xl font-bold font-serif hover:bg-slate-800 transition-colors shadow-xl mt-12 tracking-widest">
-            시험 시작 (START EXAM)
+            {labels.startExam}
           </button>
         </div>
       </div>

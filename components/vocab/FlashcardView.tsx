@@ -3,6 +3,7 @@ import { Volume2, Hand, Keyboard, CheckCircle, XCircle } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings } from './types';
 import { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
+import { getLocalizedContent } from '../../utils/languageUtils';
 import { speak } from './utils';
 
 interface FlashcardViewProps {
@@ -186,7 +187,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
                 </>
               ) : (
                 <h3 className="text-4xl font-medium text-slate-800 leading-tight">
-                  {currentCard.english}
+                  {getLocalizedContent(currentCard, 'meaning', language) || currentCard.english}
                 </h3>
               )}
 
@@ -200,20 +201,20 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
             <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-2xl shadow-xl border-b-4 border-emerald-100 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
               {/* POS Badge */}
               {currentCard.partOfSpeech && (
-                <div className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${currentCard.partOfSpeech === 'VERB_TRANSITIVE' ? 'bg-blue-100 text-blue-700' :
-                    currentCard.partOfSpeech === 'VERB_INTRANSITIVE' ? 'bg-red-100 text-red-700' :
-                      currentCard.partOfSpeech === 'ADJECTIVE' ? 'bg-purple-100 text-purple-700' :
-                        currentCard.partOfSpeech === 'NOUN' ? 'bg-green-100 text-green-700' :
-                          currentCard.partOfSpeech === 'ADVERB' ? 'bg-orange-100 text-orange-700' :
-                            currentCard.partOfSpeech === 'PARTICLE' ? 'bg-gray-100 text-gray-700' :
-                              'bg-slate-100 text-slate-700'
+                <div className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${currentCard.partOfSpeech === 'VERB_T' ? 'bg-blue-100 text-blue-700' :
+                  currentCard.partOfSpeech === 'VERB_I' ? 'bg-red-100 text-red-700' :
+                    currentCard.partOfSpeech === 'ADJ' ? 'bg-purple-100 text-purple-700' :
+                      currentCard.partOfSpeech === 'NOUN' ? 'bg-green-100 text-green-700' :
+                        currentCard.partOfSpeech === 'ADV' ? 'bg-orange-100 text-orange-700' :
+                          currentCard.partOfSpeech === 'PARTICLE' ? 'bg-gray-100 text-gray-700' :
+                            'bg-slate-100 text-slate-700'
                   }`}>
-                  {currentCard.partOfSpeech === 'VERB_TRANSITIVE' ? 'v.t. 他动词' :
-                    currentCard.partOfSpeech === 'VERB_INTRANSITIVE' ? 'v.i. 自动词' :
-                      currentCard.partOfSpeech === 'ADJECTIVE' ? 'adj. 形容词' :
-                        currentCard.partOfSpeech === 'NOUN' ? 'n. 名词' :
-                          currentCard.partOfSpeech === 'ADVERB' ? 'adv. 副词' :
-                            currentCard.partOfSpeech === 'PARTICLE' ? 'particle 助词' :
+                  {currentCard.partOfSpeech === 'VERB_T' ? (labels.pos?.verb_t || 'v.t.') :
+                    currentCard.partOfSpeech === 'VERB_I' ? (labels.pos?.verb_i || 'v.i.') :
+                      currentCard.partOfSpeech === 'ADJ' ? (labels.pos?.adj || 'adj.') :
+                        currentCard.partOfSpeech === 'NOUN' ? (labels.pos?.noun || 'n.') :
+                          currentCard.partOfSpeech === 'ADV' ? (labels.pos?.adv || 'adv.') :
+                            currentCard.partOfSpeech === 'PARTICLE' ? (labels.pos?.particle || 'part.') :
                               currentCard.partOfSpeech}
                 </div>
               )}
@@ -223,7 +224,9 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
                   <div className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">
                     {labels.definition}
                   </div>
-                  <p className="text-3xl font-medium text-indigo-600 mb-2">{currentCard.english}</p>
+                  <p className="text-3xl font-medium text-indigo-600 mb-2">
+                    {getLocalizedContent(currentCard, 'meaning', language) || currentCard.english}
+                  </p>
                   {/* Hanja */}
                   {currentCard.hanja && (
                     <p className="text-lg text-slate-500 mb-4">漢字: {currentCard.hanja}</p>
@@ -275,7 +278,9 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
                 <div className="bg-slate-50 p-3 rounded-lg w-full max-w-lg">
                   <p className="text-slate-800 text-base mb-1">{currentCard.exampleSentence}</p>
                   {currentCard.exampleTranslation && (
-                    <p className="text-slate-500 text-sm">{currentCard.exampleTranslation}</p>
+                    <p className="text-slate-500 text-sm">
+                      {getLocalizedContent(currentCard, 'exampleTranslation', language)}
+                    </p>
                   )}
                 </div>
               )}

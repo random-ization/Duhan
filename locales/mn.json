@@ -1,6 +1,5 @@
 {
   "home": "Нүүр",
-  "dashboard": "Сурах бичиг",
   "textbookLearning": "Сурах бичиг",
   "topik": "TOPIK бэлтгэл",
   "profile": "Профайл",
@@ -28,23 +27,6 @@
   "dayStreak": "Өдрийн цуврал",
   "totalWords": "Нийт үг",
   "learningHours": "Сурсан цаг",
-  "pricing": {
-    "title": "Солонгос хэлийг чөлөөтэй эзэмшихэд хөрөнгө оруулаарай",
-    "subtitle": "Өөрийн хурдад тохирсон багцыг сонгоорой."
-  },
-  "plan": {
-    "monthly": "Сар бүр",
-    "annual": "Жил бүр",
-    "lifetime": "Насан туршдаа"
-  },
-  "period": {
-    "per_month": "/ сар",
-    "per_year": "/ жил",
-    "once": "нэг удаа"
-  },
-  "button": {
-    "upgrade": "Одоо сайжруулах"
-  },
   "feature": {
     "topik_access": "Хязгааргүй TOPIK шалгалтууд",
     "textbook_access": "Бүх сурах бичигт нэвтрэх",
@@ -435,6 +417,51 @@
       "listening_desc": "Anytime Anywhere",
       "mistakes": "Mistake Book",
       "mistakes_desc": "Review Weakness"
+    },
+    "welcome": "Өдрийн мэнд, {name}!",
+    "subtitle": "Өнөөдрийн Boss-ыг ялахад бэлэн үү?",
+    "streak": "Өдрийн цуврал",
+    "days": "{count} Өдөр",
+    "premium": "Premium",
+    "upgrade": "Сайжруулах",
+    "member": "Гишүүн",
+    "tiger": {
+      "quote": "Бүү бууж өг! Дахиад 5 минут!",
+      "action": "Quiz эхлүүлэх"
+    },
+    "daily": {
+      "label": "Өдрийн хэллэг"
+    },
+    "textbook": {
+      "default": "Сурах бичиг",
+      "selectLevel": "Түвшин сонгох",
+      "inProgress": "Суралцаж буй",
+      "chapter": "{unit}-р бүлэг"
+    },
+    "topik": {
+      "title": "TOPIK\nШалгалт",
+      "maxScore": "Дээд оноо"
+    },
+    "video": {
+      "title": "Бодит\nВидео",
+      "new": "Шинэчлэлтүүд"
+    },
+    "podcast": {
+      "label": "Подкаст",
+      "listen": "Сонсох"
+    },
+    "vocab": {
+      "label": "Үгсийн сан",
+      "title": "Миний үгс",
+      "subtitle": "Хадгалсан үгс болон утга",
+      "count": "{count} үг"
+    },
+    "notes": {
+      "label": "Тэмдэглэл",
+      "title": "Сургалтын тэмдэглэл",
+      "subtitle": "Алдаа болон тэмдэглэл",
+      "mistake": "Алд",
+      "memo": "Тэм"
     }
   },
   "plan": {
@@ -446,10 +473,6 @@
     "per_month": "/ сар",
     "per_year": "/ жил",
     "once": "нэг удаа"
-  },
-  "feature": {
-    "textbook_access": "Сурах бичиг бүрэн хандах",
-    "topik_access": "Хязгааргүй TOPIK шалгалт"
   },
   "button": {
     "upgrade": "Одоо шинэчлэх"
@@ -523,5 +546,42 @@
         "futureUpdates": "Ирээдүйн шинэчлэлтүүд багтсан"
       }
     }
+  },
+  "generalSettings": "Ерөнхий тохиргоо",
+  "language": "Хэл сонгох",
+  "languageDescription": "Интерфэйс болон сурах бичгийн хэлийг сонгоно уу.",
+  "sidebar": {
+    "dashboard": "Нүүр хуудас",
+    "textbooks": "Сурах бичиг",
+    "topik": "TOPIK шалгалт",
+    "videos": "Видео",
+    "podcasts": "Подкаст",
+    "profile": "Профайл",
+    "settings": "Тохиргоо",
+    "logout": "Гарах"
+  },
+  "auth": {
+    "loginFailed": "Нэвтрэх амжилтгүй",
+    "invalidCredentials": "Имэйл эсвэл нууц үг буруу",
+    "emailExists": "Энэ имэйл бүртгэлтэй байна",
+    "emailNotVerified": "Нэвтрэхийн өмнө имэйлээ баталгаажуулна уу",
+    "userNotFound": "Хэрэглэгч олдсонгүй",
+    "googleLoginFailed": "Google нэвтрэлт амжилтгүй",
+    "googleConfigMissing": "Google тохиргоо хийгдээгүй",
+    "registerSuccess": "Бүртгэл амжилттай! Имэйлээ шалгана уу.",
+    "slogan": "Солонгос хэлээ сайжруул",
+    "welcomeBack": "Тавтай морил, Аялагч аа!",
+    "createCharacter": "Шинэ дүр бүтээх",
+    "placeholderName": "Дүрийн нэр",
+    "placeholderEmail": "Имэйл хаяг",
+    "placeholderPassword": "Нууц үг",
+    "forgotPassword": "Нууц үг мартсан?",
+    "loginButton": "Тоглох (LOGIN)",
+    "signupButton": "Бүртгүүлэх (SIGN UP)",
+    "orContinue": "Эсвэл үргэлжлүүлэх",
+    "noAccount": "Хаяг байхгүй юу? ",
+    "hasAccount": "Хаягтай юу? ",
+    "registerAction": "Шинэ дүр үүсгэх",
+    "loginAction": "Шууд нэвтрэх"
   }
 }

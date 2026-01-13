@@ -13,6 +13,10 @@ import VocabMatch from '../src/features/vocab/components/VocabMatch';
 import EmptyState from '../src/components/common/EmptyState';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useTTS } from '../src/hooks/useTTS';
+import { useApp } from '../contexts/AppContext';
+import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 
 interface ExtendedVocabItem extends VocabularyItem {
     id: string;
@@ -29,6 +33,9 @@ export default function VocabModulePage() {
     const { user, saveWord } = useAuth();
     const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();
     const { institutes, textbookContexts } = useData();
+    const { speak: speakTTS, stop: stopTTS } = useTTS();
+    const { language } = useApp();
+    const labels = getLabels(language);
 
     // Sync instituteId to context - only run when instituteId changes
     useEffect(() => {
@@ -133,8 +140,8 @@ export default function VocabModulePage() {
 
     // Memoized words for Quiz/Match to prevent re-renders
     const gameWords = useMemo(() =>
-        filteredWords.map(w => ({ id: w.id, korean: w.korean, english: w.english, unit: w.unit })),
-        [filteredWords]
+        filteredWords.map(w => ({ id: w.id, korean: w.korean, english: getLocalizedContent(w, 'meaning', language) || w.english, unit: w.unit })),
+        [filteredWords, language]
     );
 
     const handleKnow = async () => {
@@ -186,7 +193,7 @@ export default function VocabModulePage() {
     const goToPrev = () => { setIsFlipped(false); if (cardIndex > 0) setCardIndex(cardIndex - 1); };
     const flipCard = () => { setIsFlipped(!isFlipped); };
     const toggleStar = (id: string) => { setStarredIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
-    const speakWord = (text: string) => { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); u.lang = 'ko-KR'; u.rate = 0.8; speechSynthesis.speak(u); } };
+    const speakWord = useCallback((text: string) => { speakTTS(text); }, [speakTTS]);
 
     // Auto-play TTS when card changes (if enabled)
     useEffect(() => {
@@ -201,7 +208,7 @@ export default function VocabModulePage() {
         if (isAudioLooping) {
             audioLoopRef.current = false;
             setIsAudioLooping(false);
-            speechSynthesis.cancel();
+            stopTTS();
             return;
         }
 
@@ -242,10 +249,10 @@ export default function VocabModulePage() {
     }, [cardIndex, filteredWords.length]);
 
     const modeButtons = [
-        { id: 'flashcard', label: '单词卡', emoji: '🎴' },
-        { id: 'quiz', label: '测试', emoji: '⚡️' },
-        { id: 'match', label: '配对', emoji: '🧩' },
-        { id: 'list', label: '速记', emoji: '📝' },
+        { id: 'flashcard', label: labels.vocab?.flashcard || 'Flashcard', emoji: '🎴' },
+        { id: 'quiz', label: labels.vocab?.quiz || 'Quiz', emoji: '⚡️' },
+        { id: 'match', label: labels.vocab?.match || 'Match', emoji: '🧩' },
+        { id: 'list', label: labels.vocab?.quickStudy || 'Quick Study', emoji: '📝' },
     ];
 
     if (loading && isQueryLoading) {
@@ -253,7 +260,8 @@ export default function VocabModulePage() {
             <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-500 font-medium">加载词汇...</p>
+                    <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-slate-500 font-medium">{labels.loadingVocab || 'Loading...'}</p>
                 </div>
             </div>
         );
@@ -277,8 +285,8 @@ export default function VocabModulePage() {
                             <button onClick={() => setDropdownOpen(!dropdownOpen)} className="flex items-center gap-3 bg-white border-2 border-slate-900 rounded-xl px-4 py-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all active:translate-y-0 active:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
                                 <div className="w-8 h-8 rounded-lg bg-green-100 border border-green-200 flex items-center justify-center text-lg">📚</div>
                                 <div className="text-left mr-2">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Scope</div>
-                                    <div className="font-black text-slate-900 leading-none">{selectedUnitId === 'ALL' ? '全册单词 (All Units)' : `第 ${selectedUnitId} 课`}</div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{labels.vocab?.currentScope || 'Current Scope'}</div>
+                                    <div className="font-black text-slate-900 leading-none">{selectedUnitId === 'ALL' ? (labels.vocab?.allUnits || 'All Units') : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}</div>
                                 </div>
                                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -287,7 +295,7 @@ export default function VocabModulePage() {
                                 <div className="absolute top-full left-0 mt-2 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden z-50">
                                     <div className="p-2 space-y-1">
                                         <button onClick={() => { setSelectedUnitId('ALL'); setDropdownOpen(false); }} className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-green-50 text-green-800 border border-green-200' : 'hover:bg-slate-50 text-slate-600'}`}>
-                                            <span>📚 全册 (Level 1A)</span>
+                                            <span>📚 {labels.vocab?.allUnits || 'All Units'} (Level 1A)</span>
                                             <span className={`px-1.5 rounded text-[10px] ${selectedUnitId === 'ALL' ? 'bg-white border border-green-200' : 'text-slate-300'}`}>{allWords.length}</span>
                                         </button>
                                         <div className="h-px bg-slate-100 my-1" />
@@ -295,7 +303,7 @@ export default function VocabModulePage() {
                                             const count = allWords.filter(w => w.unit === u).length;
                                             return (
                                                 <button key={u} onClick={() => { setSelectedUnitId(u); setDropdownOpen(false); }} className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${selectedUnitId === u ? 'bg-green-50 text-green-800 border border-green-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}>
-                                                    <span>Unit {u}</span>
+                                                    <span>{labels.vocab?.unit || 'Unit'} {u}</span>
                                                     <span className="text-slate-300 text-xs">{count}</span>
                                                 </button>
                                             );
@@ -309,7 +317,7 @@ export default function VocabModulePage() {
                     {/* Mastery */}
                     <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200">
                         <div className="text-right">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase">Mastery</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase">{labels.vocab?.mastery || 'Mastery'}</div>
                             <div className="font-black text-sm text-slate-900">{masteryCount} / {filteredWords.length}</div>
                         </div>
                         <div className="w-10 h-10 relative">
@@ -338,9 +346,9 @@ export default function VocabModulePage() {
                 <div className="w-full max-w-4xl py-12">
                     <EmptyState
                         icon={BookOpen}
-                        title={selectedUnitId === 'ALL' ? "暂无单词" : `Unit ${selectedUnitId} 暂无单词`}
-                        description="本单元尚未添加词汇内容"
-                        actionLabel={selectedUnitId === 'ALL' ? "返回首页" : "查看其他单元"}
+                        title={selectedUnitId === 'ALL' ? (labels.vocab?.noWords || "No Words") : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId} ${labels.vocab?.noWords || 'No Words'}`}
+                        description={labels.vocab?.noWordsDesc || "No vocabulary content added yet."}
+                        actionLabel={selectedUnitId === 'ALL' ? (labels.coursesOverview?.backToHome || "Back to Home") : (labels.vocab?.allUnits || "View All Units")}
                         onAction={() => selectedUnitId === 'ALL' ? navigate('/dashboard') : setSelectedUnitId('ALL')}
                     />
                 </div>
@@ -354,7 +362,7 @@ export default function VocabModulePage() {
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowFlashcardSettings(false)}>
                             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                                 <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-black text-slate-900">⚙️ 单词卡设置</h2>
+                                    <h2 className="text-xl font-black text-slate-900">⚙️ {labels.vocab?.settings || 'Settings'}</h2>
                                     <button onClick={() => setShowFlashcardSettings(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                                         <X className="w-5 h-5" />
                                     </button>
@@ -364,8 +372,8 @@ export default function VocabModulePage() {
                                 <div className="mb-5">
                                     <label className="flex items-center justify-between p-4 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
                                         <div>
-                                            <span className="font-bold text-slate-700 block">🔊 自动播放发音</span>
-                                            <span className="text-xs text-slate-400">切换卡片时自动朗读</span>
+                                            <span className="font-bold text-slate-700 block">🔊 {labels.vocab?.autoPlay || 'Auto Play Audio'}</span>
+                                            <span className="text-xs text-slate-400">{labels.vocab?.autoPlay || 'Auto play when changing cards'}</span>
                                         </div>
                                         <input
                                             type="checkbox"
@@ -378,7 +386,7 @@ export default function VocabModulePage() {
 
                                 {/* Card Front */}
                                 <div className="mb-5">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">卡片正面显示</h3>
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">{labels.vocab?.cardFront || 'Card Front'}</h3>
                                     <div className="space-y-2">
                                         <label className={`flex items-center p-4 rounded-xl cursor-pointer ${flashcardSettings.cardFront === 'KOREAN' ? 'bg-green-50 border-2 border-green-300' : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'}`}>
                                             <input
@@ -389,8 +397,8 @@ export default function VocabModulePage() {
                                                 className="mr-3"
                                             />
                                             <div>
-                                                <span className="font-bold">🇰🇷 韩语在正面</span>
-                                                <span className="text-xs text-slate-400 block">看韩语，猜意思</span>
+                                                <span className="font-bold">🇰🇷 {labels.vocab?.koreanFront || 'Korean Front'}</span>
+                                                <span className="text-xs text-slate-400 block">{labels.vocab?.koreanFront || 'View Korean'}</span>
                                             </div>
                                         </label>
                                         <label className={`flex items-center p-4 rounded-xl cursor-pointer ${flashcardSettings.cardFront === 'MEANING' ? 'bg-green-50 border-2 border-green-300' : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'}`}>
@@ -402,15 +410,15 @@ export default function VocabModulePage() {
                                                 className="mr-3"
                                             />
                                             <div>
-                                                <span className="font-bold">🇨🇳 中文在正面</span>
-                                                <span className="text-xs text-slate-400 block">看意思，想韩语</span>
+                                                <span className="font-bold">🇨🇳 {labels.vocab?.meaningFront || 'Meaning Front'}</span>
+                                                <span className="text-xs text-slate-400 block">{labels.vocab?.meaningFront || 'View Meaning'}</span>
                                             </div>
                                         </label>
                                     </div>
                                 </div>
 
                                 <button onClick={() => setShowFlashcardSettings(false)} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800">
-                                    完成
+                                    {labels.done || 'Done'}
                                 </button>
                             </div>
                         </div>
@@ -423,14 +431,14 @@ export default function VocabModulePage() {
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                                     <span className="text-4xl">🎉</span>
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-900 mb-2">学习完成!</h2>
-                                <p className="text-slate-500 mb-2">本单元 {filteredWords.length} 个单词已全部浏览</p>
+                                <h2 className="text-3xl font-black text-slate-900 mb-2">{labels.sessionComplete || 'Session Complete!'}</h2>
+                                <p className="text-slate-500 mb-2">{filteredWords.length} {labels.wordsUnit || 'words'} reviewed</p>
                                 <div className="flex gap-2 mb-8">
                                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
-                                        ✓ 记住 {masteredIds.size} 个
+                                        ✓ {labels.vocab?.remembered || 'Remembered'} {masteredIds.size}
                                     </span>
                                     <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
-                                        ✕ 忘了 {filteredWords.length - masteredIds.size} 个
+                                        ✕ {labels.vocab?.forgot || 'Forgot'} {filteredWords.length - masteredIds.size}
                                     </span>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
@@ -438,7 +446,7 @@ export default function VocabModulePage() {
                                         onClick={() => setViewMode('quiz')}
                                         className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
                                     >
-                                        ⚡️ 进入测试
+                                        ⚡️ {labels.vocab?.quiz || 'Quiz'}
                                     </button>
                                     {selectedUnitId !== 'ALL' && availableUnits.indexOf(selectedUnitId as number) < availableUnits.length - 1 && (
                                         <button
@@ -450,7 +458,7 @@ export default function VocabModulePage() {
                                             }}
                                             className="px-6 py-3 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
                                         >
-                                            下一单元 →
+                                            {labels.common?.next || 'Next Unit'} →
                                         </button>
                                     )}
                                 </div>
@@ -458,14 +466,14 @@ export default function VocabModulePage() {
                                     onClick={() => { setCardIndex(0); setFlashcardComplete(false); setMasteredIds(new Set()); }}
                                     className="mt-4 text-sm text-slate-400 hover:text-slate-600"
                                 >
-                                    🔄 重新浏览
+                                    🔄 {labels.vocab?.restart || 'Restart'}
                                 </button>
                             </div>
                         ) : (
                             <>
                                 {/* Top Right: Unit + Star */}
                                 <div className="absolute top-4 right-4 z-20 flex gap-2">
-                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-400">Unit {currentCard?.unit}</span>
+                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-400">{labels.vocab?.unit || 'Unit'} {currentCard?.unit}</span>
                                     <button onClick={() => toggleStar(currentCard?.id || '')} className={`w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center ${starredIds.has(currentCard?.id || '') ? 'text-yellow-500' : 'text-slate-300'}`}>
                                         <Star className="w-5 h-5" fill={starredIds.has(currentCard?.id || '') ? 'currentColor' : 'none'} />
                                     </button>
@@ -477,7 +485,7 @@ export default function VocabModulePage() {
                                         {/* Front */}
                                         <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center backface-hidden bg-white">
                                             <h2 className="text-6xl font-black text-slate-900 mb-6">
-                                                {flashcardSettings.cardFront === 'KOREAN' ? currentCard?.korean : currentCard?.english}
+                                                {flashcardSettings.cardFront === 'KOREAN' ? currentCard?.korean : getLocalizedContent(currentCard, 'meaning', language)}
                                             </h2>
                                             {flashcardSettings.cardFront === 'KOREAN' && (
                                                 <button
@@ -525,7 +533,7 @@ export default function VocabModulePage() {
 
                                             {/* Main Content */}
                                             {flashcardSettings.cardFront === 'KOREAN' && (
-                                                <h3 className="font-bold text-4xl text-slate-900 mb-2">{currentCard?.english}</h3>
+                                                <h3 className="font-bold text-4xl text-slate-900 mb-2">{getLocalizedContent(currentCard, 'meaning', language)}</h3>
                                             )}
 
                                             {/* Hanja */}
@@ -559,7 +567,7 @@ export default function VocabModulePage() {
                                                 <div className="bg-slate-100 p-3 rounded-lg w-full max-w-md">
                                                     <p className="text-slate-700 text-base">{currentCard.exampleSentence}</p>
                                                     <p className="text-slate-500 text-sm mt-1 font-medium text-slate-400">
-                                                        {(currentCard as any).exampleMeaning || (currentCard as any).exampleTranslation}
+                                                        {getLocalizedContent(currentCard, 'exampleMeaning', language) || (currentCard as any).exampleTranslation}
                                                     </p>
                                                 </div>
                                             )}
@@ -570,7 +578,7 @@ export default function VocabModulePage() {
                                 {/* Bottom Navigation Bar */}
                                 <div className="bg-slate-100 border-t-2 border-slate-200 py-3 px-6 flex justify-between items-center text-xs font-bold text-slate-500">
                                     <div className="flex items-center gap-2">
-                                        <span>Space 翻转</span>
+                                        <span>Space {labels.vocab?.flip || 'Flip'}</span>
                                         <button
                                             onClick={() => setShowFlashcardSettings(true)}
                                             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg transition-colors"
@@ -587,7 +595,7 @@ export default function VocabModulePage() {
                                             <ChevronRight className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <div className="flex items-center gap-2"><span>快捷键支持</span></div>
+                                    <div className="flex items-center gap-2"><span>{labels.vocab?.shortcuts || 'Shortcuts'}</span></div>
                                 </div>
 
                                 {/* Progress Bar */}
@@ -602,10 +610,10 @@ export default function VocabModulePage() {
                     {!flashcardComplete && (
                         <div className="flex justify-center gap-6 mt-6 px-8">
                             <button onClick={handleDontKnow} className="flex-1 max-w-[180px] py-4 bg-red-50 border-2 border-red-500 text-red-600 rounded-2xl font-black text-lg shadow-[4px_4px_0px_0px_rgba(220,38,38,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(220,38,38,0.5)] active:translate-y-0 active:shadow-none transition-all">
-                                ✕ 忘了
+                                ✕ {labels.vocab?.forgot || 'Forgot'}
                             </button>
                             <button onClick={handleKnow} className="flex-1 max-w-[180px] py-4 bg-green-50 border-2 border-green-500 text-green-600 rounded-2xl font-black text-lg shadow-[4px_4px_0px_0px_rgba(34,197,94,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(34,197,94,0.5)] active:translate-y-0 active:shadow-none transition-all">
-                                ✓ 记住
+                                ✓ {labels.vocab?.remembered || 'Remembered'}
                             </button>
                         </div>
                     )}
@@ -617,7 +625,7 @@ export default function VocabModulePage() {
                 <div className="w-full max-w-4xl">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-2xl font-black text-slate-900">
-                            速记 <span className="text-slate-400 text-lg font-normal ml-2">({filteredWords.length})</span>
+                            {labels.vocab?.quickStudy || 'Quick Study'} <span className="text-slate-400 text-lg font-normal ml-2">({filteredWords.length})</span>
                         </h3>
                         <div className="flex items-center gap-2">
                             {/* Red Sheet Toggle */}
@@ -629,7 +637,7 @@ export default function VocabModulePage() {
                                     }`}
                             >
                                 {redSheetActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                红膜
+                                {labels.vocab?.redSheet || 'Red Sheet'}
                             </button>
                             {/* Audio Loop */}
                             <button
@@ -640,7 +648,7 @@ export default function VocabModulePage() {
                                     }`}
                             >
                                 {isAudioLooping ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                                {isAudioLooping ? '停止' : '连播'}
+                                {isAudioLooping ? (labels.vocab?.stop || 'Stop') : (labels.vocab?.loop || 'Loop')}
                             </button>
                         </div>
                     </div>
@@ -688,7 +696,7 @@ export default function VocabModulePage() {
                                                     ? 'blur-sm hover:blur-none select-none'
                                                     : ''
                                                     }`}>
-                                                    {word.english}
+                                                    {getLocalizedContent(word, 'meaning', language) || word.english}
                                                 </span>
                                                 {word.partOfSpeech && isRevealed && (
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${word.partOfSpeech === 'VERB_T' ? 'bg-red-100 text-red-700' :
@@ -711,10 +719,10 @@ export default function VocabModulePage() {
                                                 }`}>
                                                 <p className={`text-lg leading-relaxed ${isRevealed ? 'text-slate-800' : 'text-slate-600'
                                                     }`}>
-                                                    {maskedSentence || '例句待添加'}
+                                                    {maskedSentence || (labels.vocab?.noExample || 'Example pending')}
                                                 </p>
                                                 {isRevealed && word.exampleTranslation && (
-                                                    <p className="text-sm text-slate-500 mt-1">{word.exampleTranslation}</p>
+                                                    <p className="text-sm text-slate-500 mt-1">{getLocalizedContent(word, 'exampleMeaning', language) || word.exampleTranslation}</p>
                                                 )}
                                             </div>
                                         </div>
@@ -730,7 +738,7 @@ export default function VocabModulePage() {
 
                                     {/* Hint */}
                                     {!isRevealed && (
-                                        <p className="text-xs text-slate-400 mt-3 text-center">点击揭示答案并播放发音</p>
+                                        <p className="text-xs text-slate-400 mt-3 text-center">{labels.vocab?.reval || 'Click to reveal'}</p>
                                     )}
                                 </div>
                             );
@@ -755,8 +763,9 @@ export default function VocabModulePage() {
                                 }
                             }
                         }}
-                        currentUnitLabel={selectedUnitId === 'ALL' ? '全册' : `Unit ${selectedUnitId}`}
+                        currentUnitLabel={selectedUnitId === 'ALL' ? (labels.vocab?.allUnits || 'All Units') : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}
                         userId={user?.id}
+                        language={language}
                     />
                 </div>
             )}

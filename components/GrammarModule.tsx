@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../types';
 import { BookOpen, Search, X } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 
 // Stub for deleted service
 const generateGrammarLesson = async (
@@ -172,7 +173,9 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                     </div>
 
                     <div className="p-6">
-                      <p className="text-slate-700 mb-6 text-lg">{point.explanation}</p>
+                      <p className="text-slate-700 mb-6 text-lg">
+                        {getLocalizedContent(point, 'explanation', language)}
+                      </p>
 
                       <div className="space-y-4">
                         {point.usages.map((usage, uIdx) => (
@@ -188,7 +191,9 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                             <p className="font-medium text-slate-800 text-lg mb-1">
                               {usage.example}
                             </p>
-                            <p className="text-slate-500 italic">{usage.translation}</p>
+                            <p className="text-slate-500 italic">
+                              {getLocalizedContent(usage, 'translation', language)}
+                            </p>
                           </div>
                         ))}
                       </div>

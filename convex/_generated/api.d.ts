@@ -33,6 +33,7 @@ import type * as publishers from "../publishers.js";
 import type * as queryLimits from "../queryLimits.js";
 import type * as storage from "../storage.js";
 import type * as topik from "../topik.js";
+import type * as tts from "../tts.js";
 import type * as units from "../units.js";
 import type * as user from "../user.js";
 import type * as userStats from "../userStats.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   queryLimits: typeof queryLimits;
   storage: typeof storage;
   topik: typeof topik;
+  tts: typeof tts;
   units: typeof units;
   user: typeof user;
   userStats: typeof userStats;
