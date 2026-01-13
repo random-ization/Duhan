@@ -544,3 +544,129 @@ export const updateQ46QuestionText = mutation({
         };
     }
 });
+
+// Diagnostic: Check for duplicate questions in an exam
+export const checkExamQuestions = mutation({
+    args: {
+        round: v.number(),
+    },
+    handler: async (ctx, args) => {
+        // Find exam by round
+        const exam = await ctx.db.query("topik_exams")
+            .filter(q => q.eq(q.field("round"), args.round))
+            .first();
+
+        if (!exam) {
+            return { success: false, error: `Exam with round ${args.round} not found` };
+        }
+
+        // Get all questions for this exam
+        const questions = await ctx.db.query("topik_questions")
+            .withIndex("by_exam", q => q.eq("examId", exam._id))
+            .collect();
+
+        // Check for duplicates by question number
+        const numberCounts: Record<number, number> = {};
+        const duplicates: number[] = [];
+
+        for (const q of questions) {
+            numberCounts[q.number] = (numberCounts[q.number] || 0) + 1;
+            if (numberCounts[q.number] > 1) {
+                duplicates.push(q.number);
+            }
+        }
+
+        return {
+            success: true,
+            examId: exam.legacyId,
+            examTitle: exam.title,
+            totalQuestions: questions.length,
+            questionNumbers: questions.map(q => q.number).sort((a, b) => a - b),
+            duplicateNumbers: [...new Set(duplicates)],
+            hasDuplicates: duplicates.length > 0,
+        };
+    }
+});
+
+// Fix: Remove duplicate questions from an exam  
+export const removeDuplicateQuestions = mutation({
+    args: {
+        round: v.number(),
+    },
+    handler: async (ctx, args) => {
+        // Find exam by round
+        const exam = await ctx.db.query("topik_exams")
+            .filter(q => q.eq(q.field("round"), args.round))
+            .first();
+
+        if (!exam) {
+            return { success: false, error: `Exam with round ${args.round} not found` };
+        }
+
+        // Get all questions for this exam
+        const questions = await ctx.db.query("topik_questions")
+            .withIndex("by_exam", q => q.eq("examId", exam._id))
+            .collect();
+
+        // Find and remove duplicates (keep the first one for each number)
+        const seen: Record<number, boolean> = {};
+        let removedCount = 0;
+
+        for (const q of questions) {
+            if (seen[q.number]) {
+                // This is a duplicate, remove it
+                await ctx.db.delete(q._id);
+                removedCount++;
+            } else {
+                seen[q.number] = true;
+            }
+        }
+
+        return {
+            success: true,
+            message: `Removed ${removedCount} duplicate questions from exam round ${args.round}`,
+            removedCount,
+        };
+    }
+});
+
+// Migration: Update Q39-41 for specific exam rounds (91, 96) - new format without 보기
+export const updateQ39to41ForNewFormat = mutation({
+    args: {
+        round: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const newInstruction = "※ [39～41] 주어진 문장이 들어갈 곳으로 가장 알맞은 것을 고르십시오. (각 2점)";
+
+        // Find exam by round
+        const exam = await ctx.db.query("topik_exams")
+            .filter(q => q.eq(q.field("round"), args.round))
+            .first();
+
+        if (!exam) {
+            return { success: false, error: `Exam with round ${args.round} not found` };
+        }
+
+        // Get Q39-41 for this exam
+        const questions = await ctx.db.query("topik_questions")
+            .withIndex("by_exam", q => q.eq("examId", exam._id))
+            .collect();
+
+        const q39to41 = questions.filter(q => q.number >= 39 && q.number <= 41);
+
+        let updatedCount = 0;
+        for (const q of q39to41) {
+            // Only update instruction - keep contextBox as is
+            await ctx.db.patch(q._id, {
+                instruction: newInstruction,
+            });
+            updatedCount++;
+        }
+
+        return {
+            success: true,
+            message: `Updated instruction for ${updatedCount} questions (Q39-41) for exam round ${args.round}`,
+            examTitle: exam.title,
+        };
+    }
+});

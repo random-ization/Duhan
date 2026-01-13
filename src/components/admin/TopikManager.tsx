@@ -126,23 +126,23 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     36: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
     37: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
     38: { instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'PASSAGE_ONLY', needsPassage: true },
-    // 39-41: 句子插入 - 固定选项㉠㉡㉢㉣，无问题字段
+    // 39-41: 句子插入 - 固定选项㉠㉡㉢㉣
     39: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
     40: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
     41: { instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)", question: "", score: 2, uiType: 'INSERT_SENTENCE', needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
     // 42-43: 分组阅读
-    42: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 사람들의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42, needsPassage: true },
-    43: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42 },
+    42: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 사람들의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42, needsPassage: true, needsQuestionInput: true },
+    43: { instruction: "※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 42, needsQuestionInput: true },
     // 44-45: 分组阅读
-    44: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 주제로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44, needsPassage: true },
-    45: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44 },
-    // 46-47: 句子插入分组 - 46题固定选项㉠㉡㉢㉣，47题问题可编辑
-    46: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글에서 <보기>의 글이 들어가기에 가장 알맞은 곳을 고르십시오.", score: 2, uiType: 'INSERT_SENTENCE', grouped: true, groupStart: 46, needsPassage: true, needsContextBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
-    47: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 46, needsQuestionInput: true },
+    44: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 주제로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44, needsPassage: true, needsQuestionInput: true },
+    45: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 44, needsQuestionInput: true },
+    // 46-47: 分组阅读
+    46: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "윗글에 나타난 필자의 태도로 가장 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 46, needsPassage: true, needsQuestionInput: true },
+    47: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "윗글의 내용과 같은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 46, needsQuestionInput: true },
     // 48-50: 分组阅读
-    48: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "필자가 이 글을 쓴 목적을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48, needsPassage: true },
-    49: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48 },
-    50: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 필자의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48 },
+    48: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "필자가 이 글을 쓴 목적을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48, needsPassage: true, needsQuestionInput: true },
+    49: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "(    )에 들어갈 내용으로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48, needsQuestionInput: true },
+    50: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 필자의 태도로 알맞은 것을 고르십시오.", score: 2, uiType: 'GROUPED', grouped: true, groupStart: 48, needsQuestionInput: true },
 };
 
 // Helper to get question config
@@ -228,7 +228,7 @@ export const TopikManager: React.FC = () => {
     const [selectedExam, setSelectedExam] = useState<TopikExam | null>(null);
     const [activeQuestionId, setActiveQuestionId] = useState<number>(1);
     const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
+    const [uploadingItems, setUploadingItems] = useState<Set<string>>(new Set());
     const [loadingQuestions, setLoadingQuestions] = useState(false);
 
     // Upload Hook
@@ -298,8 +298,9 @@ export const TopikManager: React.FC = () => {
         return questions;
     };
 
-    const handleFileUpload = async (file: File, onSuccess: (url: string) => void) => {
-        setUploading(true);
+    const handleFileUpload = async (file: File, onSuccess: (url: string) => void, uploadKey?: string) => {
+        const key = uploadKey || `upload-${Date.now()}`;
+        setUploadingItems(prev => new Set(prev).add(key));
         try {
             const { url } = await uploadFile(file);
             onSuccess(url);
@@ -307,7 +308,11 @@ export const TopikManager: React.FC = () => {
             console.error(e);
             alert('Upload failed. Please try again.');
         } finally {
-            setUploading(false);
+            setUploadingItems(prev => {
+                const next = new Set(prev);
+                next.delete(key);
+                return next;
+            });
         }
     };
 
@@ -365,6 +370,107 @@ export const TopikManager: React.FC = () => {
         const newImages = [...(q.optionImages || ['', '', '', ''])];
         newImages[optIdx] = url;
         updateQuestion(qId, 'optionImages', newImages);
+    };
+
+    // Bulk upload option images - parses filenames like Q1_Option1.png, Q1_1.png, 1_1.png
+    const handleBulkImageUpload = async (files: FileList) => {
+        if (!selectedExam || !selectedExam.questions) {
+            console.log('No exam selected or no questions');
+            alert('请先选择一套试卷');
+            return;
+        }
+
+        console.log(`Starting bulk upload of ${files.length} files`);
+
+        // Store questions reference at start (for finding question by number)
+        const questionsRef = selectedExam.questions;
+
+        const results: { success: number; failed: number; errors: string[] } = { success: 0, failed: 0, errors: [] };
+        const totalFiles = files.length;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            console.log(`Processing file ${i + 1}/${totalFiles}: ${file.name} -> parsed name: ${fileName}`);
+
+            // Parse filename: Q1_Option1, Q1_1, 1_1, Q1O1, etc.
+            const patterns = [
+                /^Q?(\d+)[_\-]?O?p?t?i?o?n?(\d+)$/i,  // Q1_Option1, Q1Option1, Q1_1, 1_1
+                /^(\d+)[_\-](\d+)$/,                    // 1_1, 1-1
+            ];
+
+            let questionNum: number | null = null;
+            let optionNum: number | null = null;
+
+            for (const pattern of patterns) {
+                const match = fileName.match(pattern);
+                if (match) {
+                    questionNum = parseInt(match[1]);
+                    optionNum = parseInt(match[2]);
+                    console.log(`Matched pattern: Q${questionNum}, Option${optionNum}`);
+                    break;
+                }
+            }
+
+            if (questionNum === null || optionNum === null || optionNum < 1 || optionNum > 4) {
+                results.failed++;
+                results.errors.push(`${file.name}: 无法识别格式`);
+                continue;
+            }
+
+            // Find the question (using stored reference to avoid closure issues)
+            const question = questionsRef.find(q => q.number === questionNum);
+            if (!question) {
+                results.failed++;
+                results.errors.push(`${file.name}: 找不到第 ${questionNum} 题`);
+                continue;
+            }
+
+            // Show loading on this specific option
+            const uploadKey = `opt-${question.id}-${optionNum - 1}`;
+            setUploadingItems(prev => new Set(prev).add(uploadKey));
+
+            try {
+                const { url } = await uploadFile(file);
+
+                // Update state immediately after each successful upload
+                setSelectedExam(prev => {
+                    if (!prev || !prev.questions) return prev;
+                    return {
+                        ...prev,
+                        questions: prev.questions.map(q => {
+                            if (q.id === question.id) {
+                                const newImages = [...(q.optionImages || ['', '', '', ''])];
+                                newImages[optionNum! - 1] = url;
+                                return { ...q, optionImages: newImages };
+                            }
+                            return q;
+                        })
+                    };
+                });
+                results.success++;
+            } catch (e) {
+                results.failed++;
+                results.errors.push(`${file.name}: 上传失败`);
+            } finally {
+                // Remove loading state for this option
+                setUploadingItems(prev => {
+                    const next = new Set(prev);
+                    next.delete(uploadKey);
+                    return next;
+                });
+            }
+        }
+
+        // Show final result
+        let message = `✅ 批量上传完成：成功 ${results.success}/${totalFiles} 张`;
+        if (results.failed > 0) {
+            message += `\n\n❌ 失败 ${results.failed} 张：\n` + results.errors.slice(0, 5).join('\n');
+            if (results.errors.length > 5) {
+                message += `\n... 还有 ${results.errors.length - 5} 个错误`;
+            }
+        }
+        alert(message);
     };
 
     const handleSave = async () => {
@@ -532,11 +638,11 @@ export const TopikManager: React.FC = () => {
                             {currentExam.type === 'LISTENING' && (
                                 <div className="absolute top-0 right-0">
                                     <label className="flex items-center px-4 py-2 bg-purple-100 border-2 border-zinc-900 rounded-lg text-zinc-900 font-bold text-sm cursor-pointer hover:bg-purple-200 transition-colors shadow-[2px_2px_0px_0px_#18181B]">
-                                        {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                        {uploadingItems.has('audio') ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
                                         {currentExam.audioUrl ? "Change Audio" : "Upload Audio"}
                                         <input
                                             type="file" hidden accept="audio/*"
-                                            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateExamField('audioUrl', url))}
+                                            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateExamField('audioUrl', url), 'audio')}
                                         />
                                     </label>
                                     {currentExam.audioUrl && (
@@ -643,10 +749,10 @@ export const TopikManager: React.FC = () => {
                                                                         </div>
                                                                     ) : (
                                                                         <label className="cursor-pointer inline-flex items-center px-4 py-3 bg-blue-50 text-blue-600 text-sm rounded-lg border-2 border-blue-200 hover:border-blue-400">
-                                                                            {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />}
+                                                                            {uploadingItems.has(`img-${q.id}`) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />}
                                                                             上传图片 (必须)
                                                                             <input type="file" hidden accept="image/*" onChange={(e) => {
-                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateQuestion(q.id, 'image', url));
+                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateQuestion(q.id, 'image', url), `img-${q.id}`);
                                                                             }} />
                                                                         </label>
                                                                     )}
@@ -837,11 +943,14 @@ export const TopikManager: React.FC = () => {
                                                                                             </div>
                                                                                         </>
                                                                                     ) : (
-                                                                                        <label className="cursor-pointer flex flex-col items-center text-zinc-400 hover:text-zinc-600 p-4 w-full h-full justify-center">
-                                                                                            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-8 h-8 mb-2" />}
+                                                                                        <label
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                            className="cursor-pointer flex flex-col items-center text-zinc-400 hover:text-zinc-600 p-4 w-full h-full justify-center"
+                                                                                        >
+                                                                                            {uploadingItems.has(`opt-${q.id}-${optIdx}`) ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-8 h-8 mb-2" />}
                                                                                             <span className="text-xs font-bold">上传选项 {optIdx + 1}</span>
                                                                                             <input type="file" hidden accept="image/*" onChange={(e) => {
-                                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateOptionImage(q.id, optIdx, url));
+                                                                                                e.target.files?.[0] && handleFileUpload(e.target.files[0], (url) => updateOptionImage(q.id, optIdx, url), `opt-${q.id}-${optIdx}`);
                                                                                             }} />
                                                                                         </label>
                                                                                     )}
@@ -945,6 +1054,19 @@ export const TopikManager: React.FC = () => {
                                     <FileUp className="w-4 h-4" />
                                     批量导入
                                 </button>
+                                {selectedExam.type === 'LISTENING' && (
+                                    <label className="px-4 py-2 bg-violet-100 border-2 border-violet-300 text-violet-700 rounded-lg hover:border-violet-500 transition-colors font-bold flex items-center gap-2 cursor-pointer">
+                                        <ImageIcon className="w-4 h-4" />
+                                        批量上传图片
+                                        <input
+                                            type="file"
+                                            hidden
+                                            multiple
+                                            accept="image/*"
+                                            onChange={(e) => e.target.files && handleBulkImageUpload(e.target.files)}
+                                        />
+                                    </label>
+                                )}
                                 <button
                                     onClick={handleDelete}
                                     className="px-4 py-2 bg-red-100 border-2 border-red-300 text-red-700 rounded-lg hover:border-red-500 transition-colors font-bold flex items-center gap-2"

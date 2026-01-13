@@ -175,15 +175,17 @@ export const analyzeQuestion = action({
                 messages: [
                     {
                         role: "system",
-                        content: `You are a TOPIK exam tutor. Analyze the question for a learner.
+                        content: `你是一位TOPIK考试辅导老师。请用中文为学生分析这道题目。
 
-Return JSON:
+请返回JSON格式：
 {
-  "translation": string (Chinese translation of question),
-  "keyPoint": string (what this question tests),
-  "analysis": string (detailed explanation),
-  "wrongOptions": { "1": string, "2": string, ... } (why each wrong option is wrong)
-}`,
+  "translation": string (题目的中文翻译),
+  "keyPoint": string (这道题考察的知识点),
+  "analysis": string (详细解析，为什么正确答案是对的),
+  "wrongOptions": { "1": string, "2": string, ... } (分析每个错误选项为什么是错的)
+}
+
+注意：所有内容必须用中文回答。`,
                     },
                     { role: "user", content: `Question: ${args.question}\nOptions: ${args.options.join(', ')}\nCorrect: ${args.correctAnswer + 1}` },
                 ],

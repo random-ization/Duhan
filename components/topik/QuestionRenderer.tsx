@@ -280,79 +280,157 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 />
               )}
 
-              {/* Context Box with 보기 header */}
-              {question.contextBox && !(question.imageUrl || question.image) && (
-                <div className="mb-4 bg-white">
-                  {/* 보기 Header */}
-                  <div className="flex items-center justify-center gap-2 mb-0">
-                    <div className="flex-1 h-px bg-black"></div>
-                    <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
-                      &lt;보 &nbsp; 기&gt;
-                    </span>
-                    <div className="flex-1 h-px bg-black"></div>
+              {/* Context Box - with 보기 header for Q39-41 (unless new format instruction) */}
+              {question.contextBox && !(question.imageUrl || question.image) && (() => {
+                const qNum = questionIndex + 1;
+                // Show 보기 header for Q39-41, but NOT if instruction contains new format text
+                const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
+                const showBogiHeader = (qNum >= 39 && qNum <= 41) && !isNewFormat;
+
+                return (
+                  <div className="mb-4 bg-white">
+                    {showBogiHeader ? (
+                      <>
+                        {/* 보기 Header */}
+                        <div className="flex items-center justify-center gap-2 mb-0">
+                          <div className="flex-1 h-px bg-black"></div>
+                          <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
+                            &lt;보 &nbsp; 기&gt;
+                          </span>
+                          <div className="flex-1 h-px bg-black"></div>
+                        </div>
+                        {/* Content Box without top border */}
+                        <div className="border border-black border-t-0 p-4">
+                          <div
+                            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+                            onMouseUp={onTextSelect}
+                            dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      /* Regular box without 보기 header for other questions */
+                      <div className="border border-black p-4">
+                        <div
+                          className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+                          onMouseUp={onTextSelect}
+                          dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {/* Content Box */}
-                  <div className="border border-black border-t-0 p-4">
-                    <div
-                      className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
-                      onMouseUp={onTextSelect}
-                      dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                    />
-                  </div>
+                );
+              })()}
+
+              {/* Options - Image or Text based */}
+              {question.optionImages && question.optionImages.some(img => img) ? (
+                // Image-based options (Listening Q1-3)
+                <div className="grid grid-cols-2 gap-4">
+                  {question.optionImages.map((imgUrl, optionIndex) => {
+                    const status = getOptionStatus(optionIndex);
+                    const isSelected = userAnswer === optionIndex;
+
+                    let containerClass = `relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer `;
+                    if (status === 'correct') {
+                      containerClass += 'border-green-500 ring-4 ring-green-200';
+                    } else if (status === 'incorrect') {
+                      containerClass += 'border-red-500 ring-4 ring-red-200';
+                    } else if (isSelected) {
+                      containerClass += 'border-blue-500 ring-4 ring-blue-200';
+                    } else {
+                      containerClass += 'border-slate-200 hover:border-slate-400';
+                    }
+
+                    if (showCorrect) containerClass += ' cursor-default';
+
+                    const imageContent = (
+                      <>
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={`Option ${optionIndex + 1}`} className="w-full h-full object-contain bg-white" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                            <span className="text-4xl font-bold">{optionIndex + 1}</span>
+                          </div>
+                        )}
+                        <div className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${status === 'correct' ? 'bg-green-500 text-white' :
+                            status === 'incorrect' ? 'bg-red-500 text-white' :
+                              isSelected ? 'bg-blue-500 text-white' : 'bg-white/80 text-slate-700 border border-slate-300'
+                          }`}>
+                          {CIRCLE_NUMBERS[optionIndex]}
+                        </div>
+                        {status === 'correct' && <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />}
+                        {status === 'incorrect' && <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />}
+                      </>
+                    );
+
+                    if (showCorrect) {
+                      return (
+                        <div key={optionIndex} className={containerClass}>
+                          {imageContent}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button key={optionIndex} onClick={() => onAnswerChange?.(optionIndex)} className={containerClass}>
+                        {imageContent}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Text-based options
+                <div className={`
+                  grid gap-y-2 gap-x-4
+                  ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
+                `}>
+                  {question.options.map((option, optionIndex) => {
+                    const status = getOptionStatus(optionIndex);
+                    const isSelected = userAnswer === optionIndex;
+                    let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
+
+                    if (status === 'correct') {
+                      optionClass += " text-green-700 font-bold bg-green-50/50";
+                    } else if (status === 'incorrect') {
+                      optionClass += " text-red-700 font-bold bg-red-50/50";
+                    } else {
+                      optionClass += " hover:bg-blue-50";
+                    }
+
+                    if (showCorrect) optionClass += " cursor-text";
+
+                    const content = (
+                      <React.Fragment>
+                        <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
+                        <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+                          <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
+                        </span>
+                        {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
+                        {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
+                      </React.Fragment>
+                    );
+
+                    if (showCorrect) {
+                      return (
+                        <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
+                          {content}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={optionIndex}
+                        onClick={() => onAnswerChange?.(optionIndex)}
+                        onMouseUp={onTextSelect}
+                        className={optionClass}
+                      >
+                        {content}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-
-              {/* Options */}
-              <div className={`
-                grid gap-y-2 gap-x-4
-                ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
-              `}>
-                {question.options.map((option, optionIndex) => {
-                  const status = getOptionStatus(optionIndex);
-                  const isSelected = userAnswer === optionIndex;
-                  let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
-
-                  if (status === 'correct') {
-                    optionClass += " text-green-700 font-bold bg-green-50/50";
-                  } else if (status === 'incorrect') {
-                    optionClass += " text-red-700 font-bold bg-red-50/50";
-                  } else {
-                    optionClass += " hover:bg-blue-50";
-                  }
-
-                  if (showCorrect) optionClass += " cursor-text";
-
-                  const content = (
-                    <React.Fragment>
-                      <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
-                      <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
-                        <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
-                      </span>
-                      {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
-                      {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
-                    </React.Fragment>
-                  );
-
-                  if (showCorrect) {
-                    return (
-                      <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
-                        {content}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={optionIndex}
-                      onClick={() => onAnswerChange?.(optionIndex)}
-                      onMouseUp={onTextSelect}
-                      className={optionClass}
-                    >
-                      {content}
-                    </button>
-                  );
-                })}
-              </div>
 
               {/* Explanation */}
               {showCorrect && question.explanation && (
@@ -433,27 +511,45 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
               </div>
             )}
 
-            {/* Context Box with 보기 header */}
-            {question.contextBox && !(question.imageUrl || question.image) && (
-              <div className="mb-4 bg-white ml-8">
-                {/* 보기 Header */}
-                <div className="flex items-center justify-center gap-2 mb-0">
-                  <div className="flex-1 h-px bg-black"></div>
-                  <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
-                    &lt;보 &nbsp; 기&gt;
-                  </span>
-                  <div className="flex-1 h-px bg-black"></div>
+            {/* Context Box - with 보기 header for Q39-41 (unless new format instruction) */}
+            {question.contextBox && !(question.imageUrl || question.image) && (() => {
+              const qNum = questionIndex + 1;
+              const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
+              const showBogiHeader = (qNum >= 39 && qNum <= 41) && !isNewFormat;
+
+              return (
+                <div className="mb-4 bg-white ml-8">
+                  {showBogiHeader ? (
+                    <>
+                      {/* 보기 Header */}
+                      <div className="flex items-center justify-center gap-2 mb-0">
+                        <div className="flex-1 h-px bg-black"></div>
+                        <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
+                          &lt;보 &nbsp; 기&gt;
+                        </span>
+                        <div className="flex-1 h-px bg-black"></div>
+                      </div>
+                      {/* Content Box without top border */}
+                      <div className="border border-black border-t-0 p-4">
+                        <div
+                          className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+                          onMouseUp={onTextSelect}
+                          dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="border border-black p-4">
+                      <div
+                        className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+                        onMouseUp={onTextSelect}
+                        dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+                      />
+                    </div>
+                  )}
                 </div>
-                {/* Content Box */}
-                <div className="border border-black border-t-0 p-4">
-                  <div
-                    className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
-                    onMouseUp={onTextSelect}
-                    dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Options - indented */}
             <div className={`ml-8 grid gap-y-2 gap-x-4 ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>

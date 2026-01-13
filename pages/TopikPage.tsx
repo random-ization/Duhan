@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { Target, Clock, ArrowRight, Archive, History } from 'lucide-react';
+import { Target, Clock, ArrowRight, Archive, History, Headphones, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
 
@@ -16,6 +16,12 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
   const { topikExams } = useData();
   const navigate = useNavigate();
+  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
+
+  // Filter exams based on type
+  const filteredExams = topikExams.filter(exam =>
+    filterType === 'ALL' || exam.type === filterType
+  );
   // We can't use useParams readily because existing routing might not rely on it
   // But usually /topik/:examId implies params. 
   // Let's assume if there is an examId passed via some mechanism or we add local state management
@@ -68,20 +74,60 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
           <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
         </div>
 
+        {/* Filter Buttons */}
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border-2 border-slate-900 shadow-pop w-fit">
+          <button
+            onClick={() => setFilterType('ALL')}
+            className={clsx(
+              'px-4 py-2 rounded-lg text-sm font-black transition-all',
+              filterType === 'ALL'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+            )}
+          >
+            全部
+          </button>
+          <button
+            onClick={() => setFilterType('READING')}
+            className={clsx(
+              'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
+              filterType === 'READING'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+            )}
+          >
+            <BookOpen size={16} /> 阅读
+          </button>
+          <button
+            onClick={() => setFilterType('LISTENING')}
+            className={clsx(
+              'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
+              filterType === 'LISTENING'
+                ? 'bg-violet-600 text-white'
+                : 'text-slate-500 hover:text-violet-600 hover:bg-violet-50'
+            )}
+          >
+            <Headphones size={16} /> 听力
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Main Exam Card */}
           <div className="md:col-span-2 space-y-6">
             <h3 className="font-black text-xl flex items-center gap-2 text-slate-900"><Target size={20} /> 推荐实战</h3>
 
-            {topikExams.length > 0 ? (
+            {filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {topikExams.map((exam) => (
+                {filteredExams.map((exam) => (
                   <div
                     key={exam.id}
                     onClick={() => navigate(`/topik/${exam.id}`)}
                     className="bg-white rounded-2xl p-0 border-2 border-slate-900 shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex flex-col md:flex-row h-auto min-h-[140px]"
                   >
-                    <div className="bg-slate-900 p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden">
+                    <div className={clsx(
+                      "p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden",
+                      exam.type === 'READING' ? 'bg-slate-900' : 'bg-blue-800'
+                    )}>
                       <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 2px, transparent 10px)" }}></div>
                       <div className="text-3xl font-black text-yellow-400 font-display z-10">{exam.round}</div>
                       <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">{exam.type === 'READING' ? 'TOPIK II 읽기' : 'TOPIK II 듣기'}</div>
@@ -90,7 +136,12 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                       <div>
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="font-black text-lg text-slate-900 group-hover:text-indigo-600 transition">{exam.title}</h4>
-                          <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded border border-blue-200">
+                          <span className={clsx(
+                            "text-[10px] font-black px-2 py-0.5 rounded border",
+                            exam.type === 'READING'
+                              ? 'bg-blue-100 text-blue-700 border-blue-200'
+                              : 'bg-rose-100 text-rose-600 border-rose-200'
+                          )}>
                             {exam.type === 'READING' ? '阅读' : '听力'}
                           </span>
                         </div>

@@ -117,9 +117,9 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     // 44-45
     44: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글의 내용과 같은 것을 고르십시오.", score: 2, grouped: true },
     45: { instruction: "※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글을 읽고 알 수 있는 것을 고르십시오.", score: 2, grouped: true },
-    // 46-47: 句子插入分组 - 46题固定选项㉠㉡㉢㉣，47题问题可编辑
-    46: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글에서 <보기>의 글이 들어가기에 가장 알맞은 곳을 고르십시오.", score: 2, grouped: true, hasBox: true, fixedOptions: ['㉠', '㉡', '㉢', '㉣'] },
-    47: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "이 글의 내용과 같은 것을 고르십시오.", score: 2, grouped: true, needsQuestionInput: true },
+    // 46-47: 分组阅读（新样式：普通阅读理解）
+    46: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "윗글에 나타난 필자의 태도로 가장 알맞은 것을 고르십시오.", score: 2, grouped: true, needsQuestionInput: true },
+    47: { instruction: "※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "윗글의 내용과 같은 것을 고르십시오.", score: 2, grouped: true, needsQuestionInput: true },
     // 48-50
     48: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "밑줄 친 부분에 나타난 '나'의 심정으로 알맞은 것을 고르십시오.", score: 2, grouped: true },
     49: { instruction: "※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)", question: "위 글의 내용으로 알맞은 것을 고르십시오.", score: 2, grouped: true },
@@ -600,9 +600,26 @@ const TopikImporter: React.FC = () => {
                                             className="font-bold text-zinc-900 border-b border-transparent hover:border-zinc-300 focus:border-zinc-900 focus:outline-none bg-transparent w-full"
                                         />
                                         <div className="text-xs text-zinc-500 flex items-center gap-2">
-                                            <span className="bg-zinc-200 px-1.5 py-0.5 rounded">
-                                                {exam.metadata.type === "READING" ? "📖 阅读" : "🎧 听力"}
-                                            </span>
+                                            <select
+                                                value={exam.metadata.type}
+                                                onChange={(e) => {
+                                                    const newExams = [...parsedExams];
+                                                    const newType = e.target.value as "READING" | "LISTENING";
+                                                    newExams[idx] = {
+                                                        ...newExams[idx],
+                                                        metadata: {
+                                                            ...newExams[idx].metadata,
+                                                            type: newType,
+                                                            timeLimit: newType === "READING" ? 70 : 60
+                                                        }
+                                                    };
+                                                    setParsedExams(newExams);
+                                                }}
+                                                className="bg-zinc-200 px-2 py-0.5 rounded font-bold text-xs border-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                            >
+                                                <option value="READING">📖 阅读</option>
+                                                <option value="LISTENING">🎧 听力</option>
+                                            </select>
                                             <span>{exam.questions.length} 道题</span>
                                             <span>{exam.metadata.timeLimit} 分钟</span>
                                         </div>
