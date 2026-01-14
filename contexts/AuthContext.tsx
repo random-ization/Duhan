@@ -6,7 +6,7 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import { useConvex, useMutation, useAction, useQuery } from 'convex/react';
+import { useConvex, useMutation, useAction, useQuery, useConvexAuth } from 'convex/react';
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api as convexApi } from '../convex/_generated/api';
 import { api } from '../convex/_generated/api';
@@ -147,20 +147,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   // Session Check (Load User) using Convex Auth
   const { signOut, signIn } = useAuthActions();
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(api.users.viewer);
 
   useEffect(() => {
-    if (viewer) {
-      setUser(viewer as unknown as User);
-      setUserId(viewer._id);
-      setLoading(false);
-    } else if (viewer === null) {
-      // Authenticated but user not found (or not logged in)
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (isAuthenticated) {
+      if (viewer !== undefined) {
+        setUser(viewer as unknown as User);
+        setUserId(viewer ? viewer._id : null);
+        setLoading(false);
+      } else {
+        // Authenticated but viewer query still loading
+        setLoading(true);
+      }
+    } else {
+      // Not authenticated
       setUser(null);
       setUserId(null);
       setLoading(false);
     }
-  }, [viewer]);
+  }, [authLoading, isAuthenticated, viewer]);
 
   // Legacy manual loadUser effect removed
   /*
