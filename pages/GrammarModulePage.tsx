@@ -10,12 +10,16 @@ import GrammarFeed from '../components/grammar/GrammarFeed';
 import GrammarDetailSheet from '../components/grammar/GrammarDetailSheet';
 import { GrammarPointData } from '../types';
 
+// Extracted constant for background style
+const LOADING_BACKGROUND_STYLE = {
+    backgroundImage: 'radial-gradient(#CBD5E1 1.5px, transparent 1.5px)',
+    backgroundSize: '24px 24px'
+} as const;
+
 const GrammarModulePage: React.FC = () => {
     const { instituteId } = useParams<{ instituteId: string }>();
     const navigate = useNavigate();
 
-    const [grammarList, setGrammarList] = useState<GrammarPointData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [selectedUnit, setSelectedUnit] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
@@ -30,27 +34,39 @@ const GrammarModulePage: React.FC = () => {
     );
     const updateStatusMutation = useMutation(api.grammars.updateStatus);
 
-    useEffect(() => {
-        if (grammarListQuery) {
-            setGrammarList(grammarListQuery.map(g => ({
-                ...g,
-                // Ensure type compatibility with frontend interface if needed
-                status: g.status as any
-            })));
-            setIsLoading(false);
-        }
+    // Derive loading state and grammarList directly from query
+    const isLoading = grammarListQuery === undefined;
+    const grammarList = useMemo<GrammarPointData[]>(() => {
+        if (!grammarListQuery) return [];
+        return grammarListQuery.map(g => ({
+            ...g,
+            status: g.status as any
+        }));
     }, [grammarListQuery]);
 
-    // Handle proficiency update (Optimistic UI handled by mutation result if needed, but local state works too)
+    // Local optimistic updates for proficiency
+    const [localUpdates, setLocalUpdates] = useState<Map<string, { proficiency?: number; status?: string }>>(new Map());
+
+    // Merge query data with local optimistic updates
+    const grammarListWithUpdates = useMemo(() => {
+        return grammarList.map(g => {
+            const update = localUpdates.get(g.id);
+            if (update) {
+                return { ...g, ...update };
+            }
+            return g;
+        });
+    }, [grammarList, localUpdates]);
+
+    // Handle proficiency update (Optimistic UI)
     const handleProficiencyUpdate = (grammarId: string, proficiency: number, status: string) => {
-        // Update local state for immediate feedback
-        setGrammarList(prev =>
-            prev.map(point =>
-                point.id === grammarId
-                    ? { ...point, proficiency, status: status as any }
-                    : point
-            )
-        );
+        // Update local optimistic state
+        setLocalUpdates(prev => {
+            const next = new Map(prev);
+            next.set(grammarId, { proficiency, status });
+            return next;
+        });
+        
         if (selectedGrammar?.id === grammarId) {
             setSelectedGrammar(prev =>
                 prev ? { ...prev, proficiency, status: status as any } : null
@@ -62,51 +78,54 @@ const GrammarModulePage: React.FC = () => {
         if (!user?.id) return;
 
         // Determine new status (toggle logic)
-        const current = grammarList.find(g => g.id === grammarId);
+        const current = grammarListWithUpdates.find(g => g.id === grammarId);
         const newStatus = current?.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
+
+        // Optimistic update
+        setLocalUpdates(prev => {
+            const next = new Map(prev);
+            next.set(grammarId, { ...prev.get(grammarId), status: newStatus });
+            return next;
+        });
+
+        if (selectedGrammar?.id === grammarId) {
+            setSelectedGrammar(prev => prev ? { ...prev, status: newStatus as any } : null);
+        }
 
         try {
             await updateStatusMutation({
                 grammarId: grammarId as any,
                 status: newStatus
             });
-
-            // Update local state
-            setGrammarList(prev =>
-                prev.map(point =>
-                    point.id === grammarId ? { ...point, status: newStatus as any } : point
-                )
-            );
-
-            if (selectedGrammar?.id === grammarId) {
-                setSelectedGrammar(prev => prev ? { ...prev, status: newStatus as any } : null);
-            }
         } catch (error) {
             console.error('Failed to toggle status:', error);
+            // Revert optimistic update on error
+            setLocalUpdates(prev => {
+                const next = new Map(prev);
+                next.delete(grammarId);
+                return next;
+            });
         }
     };
 
     // Filtered points based on search
     const displayedPoints = useMemo(() => {
-        if (!searchQuery.trim()) return grammarList;
+        if (!searchQuery.trim()) return grammarListWithUpdates;
         const q = searchQuery.toLowerCase();
-        return grammarList.filter(p =>
+        return grammarListWithUpdates.filter(p =>
             p.title.toLowerCase().includes(q) ||
             p.summary.toLowerCase().includes(q)
         );
-    }, [grammarList, searchQuery]);
+    }, [grammarListWithUpdates, searchQuery]);
 
     // Generate unit list for sidebar
     const unitList = useMemo(() => {
         return Array.from({ length: totalUnits }, (_, i) => `Unit ${i + 1}: 第${i + 1}课`);
     }, [totalUnits]);
 
-    if (isLoading && grammarList.length === 0) {
+    if (isLoading) {
         return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center" style={{
-                backgroundImage: 'radial-gradient(#CBD5E1 1.5px, transparent 1.5px)',
-                backgroundSize: '24px 24px'
-            }}>
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center" style={LOADING_BACKGROUND_STYLE}>
                 <div className="text-xl font-bold text-slate-400 animate-pulse">加载中...</div>
             </div>
         );

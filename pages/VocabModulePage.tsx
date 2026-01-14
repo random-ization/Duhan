@@ -26,6 +26,13 @@ interface ExtendedVocabItem extends VocabularyItem {
 
 type ViewMode = 'flashcard' | 'quiz' | 'match' | 'list';
 
+// Extracted constants for styles to prevent recreation on every render
+const BACKGROUND_STYLE = {
+    backgroundColor: '#F0F4F8',
+    backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+    backgroundSize: '24px 24px',
+} as const;
+
 export default function VocabModulePage() {
     // Force Rebuild Trigger: 2026-01-02
     const navigate = useNavigate();
@@ -51,17 +58,17 @@ export default function VocabModulePage() {
 
     const course = institutes.find(i => i.id === instituteId);
 
-    // State
-    const [allWords, setAllWords] = useState<ExtendedVocabItem[]>([]);
+    // State - Merged related states for better performance
     const [selectedUnitId, setSelectedUnitId] = useState<number | 'ALL'>('ALL');
-    const [viewMode, setViewMode] = useState<ViewMode>('flashcard');
-    const [cardIndex, setCardIndex] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
+    const [viewState, setViewState] = useState({
+        mode: 'flashcard' as ViewMode,
+        cardIndex: 0,
+        isFlipped: false,
+        flashcardComplete: false,
+    });
     const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
     const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [flashcardComplete, setFlashcardComplete] = useState(false); // Flashcard completion state
 
     // Quick Study (速记) mode states
     const [redSheetActive, setRedSheetActive] = useState(true); // 默认开启
@@ -88,37 +95,30 @@ export default function VocabModulePage() {
     );
     const updateProgressMutation = useMutation(api.vocab.updateProgress);
 
-    // Derived Loading State: Query is undefined = loading
-    const isQueryLoading = convexWordsQuery === undefined;
-
-    // Effect: Sync Convex Data to State
-    useEffect(() => {
-        if (convexWordsQuery) {
-            const apiWords: ExtendedVocabItem[] = convexWordsQuery.map((w: any) => ({
-                ...w,
-                id: w._id,
-                korean: w.word,
-                english: w.meaning,
-                unit: w.unitId,
-                mastered: w.mastered || false,
-                progress: w.progress
-            }));
-
-            setAllWords(apiWords);
-
-            // Initialize Mastered IDs
-            const mastered = new Set(
-                apiWords.filter(w => w.mastered || w.progress?.status === 'MASTERED').map(w => w.id)
-            );
-            setMasteredIds(mastered);
-
-            // Explicitly set loading to false when data arrives
-            setLoading(false);
-        }
+    // Derive loading state and allWords directly from query - no extra state needed
+    const isLoading = convexWordsQuery === undefined;
+    const allWords = useMemo<ExtendedVocabItem[]>(() => {
+        if (!convexWordsQuery) return [];
+        return convexWordsQuery.map((w: any) => ({
+            ...w,
+            id: w._id,
+            korean: w.word,
+            english: w.meaning,
+            unit: w.unitId,
+            mastered: w.mastered || false,
+            progress: w.progress
+        }));
     }, [convexWordsQuery]);
 
-    // Safety fallback: If query is done but loading state stuck (rare race condition), force it off
-    // or just rely on isQueryLoading in the render
+    // Initialize Mastered IDs when data arrives
+    useEffect(() => {
+        if (allWords.length > 0) {
+            const mastered = new Set(
+                allWords.filter(w => w.mastered || w.progress?.status === 'MASTERED').map(w => w.id)
+            );
+            setMasteredIds(mastered);
+        }
+    }, [allWords]);
 
 
 
@@ -127,16 +127,18 @@ export default function VocabModulePage() {
         return allWords.filter(w => w.unit === selectedUnitId);
     }, [allWords, selectedUnitId]);
 
-    useEffect(() => { setCardIndex(0); setIsFlipped(false); setFlashcardComplete(false); }, [selectedUnitId]);
+    useEffect(() => {
+        setViewState(prev => ({ ...prev, cardIndex: 0, isFlipped: false, flashcardComplete: false }));
+    }, [selectedUnitId]);
 
     const availableUnits = useMemo(() => {
         const total = course?.totalUnits || 20;
         return Array.from({ length: total }, (_, i) => i + 1);
     }, [course]);
 
-    const currentCard = filteredWords[cardIndex];
+    const currentCard = filteredWords[viewState.cardIndex];
     const masteryCount = useMemo(() => filteredWords.filter(w => masteredIds.has(w.id)).length, [filteredWords, masteredIds]);
-    const progressPercent = filteredWords.length > 0 ? ((cardIndex + 1) / filteredWords.length) * 100 : 0;
+    const progressPercent = filteredWords.length > 0 ? ((viewState.cardIndex + 1) / filteredWords.length) * 100 : 0;
 
     // Memoized words for Quiz/Match to prevent re-renders
     const gameWords = useMemo(() =>
@@ -182,26 +184,31 @@ export default function VocabModulePage() {
         goToNext();
     };
     const goToNext = () => {
-        setIsFlipped(false);
-        if (cardIndex < filteredWords.length - 1) {
-            setCardIndex(cardIndex + 1);
-        } else {
-            // At last card, show completion
-            setFlashcardComplete(true);
-        }
+        setViewState(prev => {
+            if (prev.cardIndex < filteredWords.length - 1) {
+                return { ...prev, cardIndex: prev.cardIndex + 1, isFlipped: false };
+            } else {
+                // At last card, show completion
+                return { ...prev, flashcardComplete: true, isFlipped: false };
+            }
+        });
     };
-    const goToPrev = () => { setIsFlipped(false); if (cardIndex > 0) setCardIndex(cardIndex - 1); };
-    const flipCard = () => { setIsFlipped(!isFlipped); };
+    const goToPrev = () => {
+        setViewState(prev => prev.cardIndex > 0 ? { ...prev, cardIndex: prev.cardIndex - 1, isFlipped: false } : prev);
+    };
+    const flipCard = () => {
+        setViewState(prev => ({ ...prev, isFlipped: !prev.isFlipped }));
+    };
     const toggleStar = (id: string) => { setStarredIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
     const speakWord = useCallback((text: string) => { speakTTS(text); }, [speakTTS]);
 
     // Auto-play TTS when card changes (if enabled)
     useEffect(() => {
-        if (flashcardSettings.autoPlayTTS && currentCard && viewMode === 'flashcard') {
+        if (flashcardSettings.autoPlayTTS && currentCard && viewState.mode === 'flashcard') {
             const textToSpeak = flashcardSettings.cardFront === 'KOREAN' ? currentCard.korean : currentCard.korean;
             speakWord(textToSpeak);
         }
-    }, [cardIndex, flashcardSettings.autoPlayTTS, flashcardSettings.cardFront, viewMode]);
+    }, [viewState.cardIndex, flashcardSettings.autoPlayTTS, flashcardSettings.cardFront, viewState.mode, currentCard, speakWord]);
 
     // Audio loop for Quick Study mode (1.5s gap between words)
     const playAudioLoop = async () => {
@@ -246,7 +253,7 @@ export default function VocabModulePage() {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [cardIndex, filteredWords.length]);
+    }, [viewState.cardIndex, filteredWords.length]);
 
     const tabs = [
         { id: 'flashcard', label: labels.vocab?.flashcard || 'Flashcard', emoji: '🎴' },
@@ -255,11 +262,10 @@ export default function VocabModulePage() {
         { id: 'list', label: labels.vocab?.quickStudy || 'Quick Study', emoji: '⚡' },
     ];
 
-    if (loading && isQueryLoading) {
+    if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
+            <div className="min-h-screen flex items-center justify-center" style={BACKGROUND_STYLE}>
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
                     <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-slate-500 font-medium">{labels.loadingVocab || 'Loading...'}</p>
                 </div>
@@ -270,7 +276,7 @@ export default function VocabModulePage() {
     // Removed blocking EmptyState here to allow UI rendering even if empty
 
     return (
-        <div className="min-h-screen flex flex-col items-center py-6 px-4" style={{ backgroundColor: '#F0F4F8', backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
+        <div className="min-h-screen flex flex-col items-center py-6 px-4" style={BACKGROUND_STYLE}>
             <div className="w-full max-w-4xl mb-6">
                 {/* Top Bar */}
                 <div className="flex items-center justify-between mb-6 z-50 relative">
@@ -332,11 +338,11 @@ export default function VocabModulePage() {
                 {/* Mode Tabs */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {tabs.map(mode => (
-                        <button key={mode.id} onClick={() => setViewMode(mode.id as ViewMode)} className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${viewMode === mode.id ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]' : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'}`}>
-                            {viewMode === mode.id && <div className="absolute inset-0 bg-green-50 z-0" />}
-                            {viewMode === mode.id && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />}
+                        <button key={mode.id} onClick={() => setViewState(prev => ({ ...prev, mode: mode.id as ViewMode }))} className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${viewState.mode === mode.id ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]' : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'}`}>
+                            {viewState.mode === mode.id && <div className="absolute inset-0 bg-green-50 z-0" />}
+                            {viewState.mode === mode.id && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />}
                             <span className="relative z-10 text-xl">{mode.emoji}</span>
-                            <span className={`relative z-10 font-black text-sm ${viewMode === mode.id ? 'text-slate-900' : 'text-slate-500'}`}>{mode.label}</span>
+                            <span className={`relative z-10 font-black text-sm ${viewState.mode === mode.id ? 'text-slate-900' : 'text-slate-500'}`}>{mode.label}</span>
                         </button>
                     ))}
                 </div>
@@ -355,7 +361,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Flashcard */}
-            {viewMode === 'flashcard' && filteredWords.length > 0 && (
+            {viewState.mode === 'flashcard' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl mb-10 z-0">
                     {/* Flashcard Settings Modal */}
                     {showFlashcardSettings && (
@@ -425,7 +431,7 @@ export default function VocabModulePage() {
                     )}
 
                     <div className="bg-white rounded-[1.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden h-[450px] flex flex-col relative perspective-1000">
-                        {flashcardComplete ? (
+                        {viewState.flashcardComplete ? (
                             /* Completion Card */
                             <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-green-50 to-white">
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
@@ -481,7 +487,7 @@ export default function VocabModulePage() {
 
                                 {/* Card Content */}
                                 <div onClick={flipCard} className="flex-1 relative cursor-pointer">
-                                    <div className={`card-content w-full h-full relative transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                                    <div className={`card-content w-full h-full relative transition-transform duration-500 transform-style-3d ${viewState.isFlipped ? 'rotate-y-180' : ''}`}>
                                         {/* Front */}
                                         <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center backface-hidden bg-white">
                                             <h2 className="text-6xl font-black text-slate-900 mb-6">
@@ -587,11 +593,11 @@ export default function VocabModulePage() {
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <button onClick={goToPrev} disabled={cardIndex === 0} className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center">
+                                        <button onClick={goToPrev} disabled={viewState.cardIndex === 0} className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center">
                                             <ChevronLeft className="w-4 h-4" />
                                         </button>
-                                        <span className="font-black text-slate-900">{cardIndex + 1} / {filteredWords.length}</span>
-                                        <button onClick={goToNext} disabled={cardIndex === filteredWords.length - 1} className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center">
+                                        <span className="font-black text-slate-900">{viewState.cardIndex + 1} / {filteredWords.length}</span>
+                                        <button onClick={goToNext} disabled={viewState.cardIndex === filteredWords.length - 1} className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center">
                                             <ChevronRight className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -607,7 +613,7 @@ export default function VocabModulePage() {
                     </div>
 
                     {/* Action Buttons - SRS (only show when not complete) */}
-                    {!flashcardComplete && (
+                    {!viewState.flashcardComplete && (
                         <div className="flex justify-center gap-6 mt-6 px-8">
                             <button onClick={handleDontKnow} className="flex-1 max-w-[180px] py-4 bg-red-50 border-2 border-red-500 text-red-600 rounded-2xl font-black text-lg shadow-[4px_4px_0px_0px_rgba(220,38,38,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(220,38,38,0.5)] active:translate-y-0 active:shadow-none transition-all">
                                 ✕ {labels.vocab?.forgot || 'Forgot'}
@@ -621,7 +627,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Quick Learn List Mode (速记) */}
-            {viewMode === 'list' && filteredWords.length > 0 && (
+            {viewState.mode === 'list' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-2xl font-black text-slate-900">
@@ -748,7 +754,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Quiz Mode */}
-            {viewMode === 'quiz' && filteredWords.length > 0 && (
+            {viewState.mode === 'quiz' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <VocabQuiz
                         key={`quiz-${selectedUnitId}-${gameWords.length}`}
@@ -771,7 +777,7 @@ export default function VocabModulePage() {
             )}
 
             {/* Match Mode */}
-            {viewMode === 'match' && filteredWords.length > 0 && (
+            {viewState.mode === 'match' && filteredWords.length > 0 && (
                 <div className="w-full max-w-4xl">
                     <VocabMatch
                         key={`match-${selectedUnitId}-${gameWords.length}`}

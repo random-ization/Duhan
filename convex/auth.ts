@@ -57,9 +57,40 @@ function generateToken(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-// Helper to fetch and format full user data
+// Helper to fetch basic user data (fast path for most operations)
+async function enrichUserBasic(user: Doc<"users">) {
+    return {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tier: user.tier,
+        subscriptionType: user.subscriptionType,
+        subscriptionExpiry: user.subscriptionExpiry,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        token: user.token,
+
+        // Learning Progress
+        lastInstitute: user.lastInstitute,
+        lastLevel: user.lastLevel,
+        lastUnit: user.lastUnit,
+        lastModule: user.lastModule,
+
+        // Empty arrays for frontend compatibility
+        savedWords: [],
+        mistakes: [],
+        examHistory: [],
+        annotations: [],
+        joinDate: user.createdAt,
+        lastActive: Date.now(),
+    };
+}
+
+// Helper to fetch full user data with collections (slower, use only when needed)
 // OPTIMIZATION: Limit collections to prevent query explosions
-async function enrichUser(ctx: any, user: Doc<"users">) {
+async function enrichUserFull(ctx: any, user: Doc<"users">) {
     const [savedWords, mistakes, examAttempts] = await Promise.all([
         ctx.db.query("saved_words")
             .withIndex("by_user", q => q.eq("userId", user._id))
@@ -92,7 +123,7 @@ async function enrichUser(ctx: any, user: Doc<"users">) {
         lastInstitute: user.lastInstitute,
         lastLevel: user.lastLevel,
         lastUnit: user.lastUnit,
-        lastModule: user.lastModule, // Ensure this is included
+        lastModule: user.lastModule,
 
         // Linked Data
         savedWords: savedWords.map(w => ({
@@ -119,9 +150,9 @@ async function enrichUser(ctx: any, user: Doc<"users">) {
         })),
 
         // Default empty arrays for missing fields in schema but required by frontend User type
-        annotations: [], // Annotations are fetched separately or need a query here if part of User type
-        joinDate: user.createdAt, // Frontend expects number
-        lastActive: Date.now(), // Frontend expects number (implied by type check usually, let's check types.ts)
+        annotations: [],
+        joinDate: user.createdAt,
+        lastActive: Date.now(),
     };
 }
 
@@ -170,7 +201,7 @@ export const register = mutation({
         const newUser = await ctx.db.get(userId);
         if (!newUser) throw new ConvexError({ code: "USER_CREATION_FAILED" });
 
-        const fullUser = await enrichUser(ctx, newUser);
+        const fullUser = await enrichUserFull(ctx, newUser);
 
         return {
             user: fullUser,
@@ -189,52 +220,38 @@ export const login = mutation({
     handler: async (ctx, args) => {
         try {
             const { email, password } = args;
-            console.log(`[DEBUG] Login attempt start for: ${email}`);
 
             const user = await ctx.db.query("users")
                 .withIndex("by_email", q => q.eq("email", email))
                 .first();
 
             if (!user) {
-                console.log(`[DEBUG] Login failed: User not found for ${email}`);
                 throw new ConvexError({ code: "INVALID_CREDENTIALS" });
             }
 
-            console.log(`[DEBUG] User found: ${user._id}, checking password...`);
-
             // Check password
             const isMatch = verifyPassword(password, user.password);
-            console.log(`[DEBUG] Password check result: ${isMatch}`);
 
             if (!isMatch) {
-                console.log(`[DEBUG] Login failed: Password mismatch for ${email}`);
                 throw new ConvexError({ code: "INVALID_CREDENTIALS" });
             }
 
             // Generate Token
-            console.log("[DEBUG] Generating token...");
             const token = generateToken();
 
             // Patch User
-            console.log("[DEBUG] Patching user token...");
             await ctx.db.patch(user._id, { token });
-            console.log("[DEBUG] User token patched.");
 
-            // Enrich User
-            console.log("[DEBUG] Starting enrichUser...");
+            // Enrich User - use full version for login
             const updatedUser = { ...user, token };
-
-            // Log before calling enrichUser
-            const fullUser = await enrichUser(ctx, updatedUser);
-            console.log("[DEBUG] enrichUser successful.");
+            const fullUser = await enrichUserFull(ctx, updatedUser);
 
             return {
                 user: fullUser,
                 token,
             };
         } catch (e: any) {
-            console.error("[CRITICAL] Login Mutation CRASHED:", e);
-            // Re-throw so frontend sees it, but now we have a log
+            // Re-throw so frontend sees it
             if (e instanceof ConvexError) throw e;
 
             // Wrap unknown errors
@@ -244,10 +261,12 @@ export const login = mutation({
 });
 
 // Get current user (auth context only) with full profile data
+// OPTIMIZATION: Support optional full loading with includeFull parameter
 export const getMe = query({
     args: {
         token: v.optional(v.string()),
         userId: v.optional(v.string()),
+        includeFull: v.optional(v.boolean()), // New parameter for full data
     },
     handler: async (ctx, args) => {
         const userId = await getOptionalAuthUserId(ctx, args.token);
@@ -256,7 +275,11 @@ export const getMe = query({
         const user = await ctx.db.get(userId);
         if (!user) return null;
 
-        return await enrichUser(ctx, user);
+        // Return full data if requested, otherwise just basic
+        if (args.includeFull) {
+            return await enrichUserFull(ctx, user);
+        }
+        return await enrichUserBasic(user);
     }
 });
 

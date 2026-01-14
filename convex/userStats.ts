@@ -58,11 +58,20 @@ export const getStats = query({
         const daysSinceLastAccess = Math.floor((now - lastAccess) / oneDayMs);
         const streak = daysSinceLastAccess <= 1 ? 1 : 0; // Simplified streak logic
 
-        // Get course details for progress display
-        const courseDetails = await Promise.all(courseProgress.map(async (p) => {
-            const institute = await ctx.db.query("institutes")
-                .withIndex("by_legacy_id", q => q.eq("id", p.courseId))
-                .first();
+        // OPTIMIZATION: Batch fetch course details
+        const courseIds = [...new Set(courseProgress.map(p => p.courseId))];
+        const institutesArray = await Promise.all(
+            courseIds.map(courseId =>
+                ctx.db.query("institutes")
+                    .withIndex("by_legacy_id", q => q.eq("id", courseId))
+                    .first()
+            )
+        );
+        const institutesMap = new Map(institutesArray.filter(Boolean).map(i => [i!.id, i!]));
+
+        // Get course details for progress display in memory
+        const courseDetails = courseProgress.map((p) => {
+            const institute = institutesMap.get(p.courseId);
 
             return {
                 courseId: p.courseId,
@@ -71,7 +80,7 @@ export const getStats = query({
                 totalUnits: institute?.totalUnits || 0,
                 lastAccessAt: new Date(p.lastAccessAt || now).toISOString(),
             };
-        }));
+        });
 
         // Determine currentProgress (most recently accessed course)
         let currentProgress = null;

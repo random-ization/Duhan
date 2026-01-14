@@ -150,7 +150,7 @@ export const getAll = query({
 });
 
 // Get all vocabulary for a course (Admin List or Module view)
-// OPTIMIZATION: Added limit to prevent excessive queries
+// OPTIMIZATION: Added limit to prevent excessive queries + batch queries with Maps
 export const getOfCourse = query({
     args: {
         courseId: v.string(),
@@ -166,48 +166,55 @@ export const getOfCourse = query({
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
             .take(limit);
 
-        // 2. Fetch linked Words and User Progress
-        const wordsWithData = await Promise.all(
-            appearances.map(async (app) => {
-                const [word, progress] = await Promise.all([
-                    ctx.db.get(app.wordId),
-                    userId
-                        ? ctx.db
-                            .query("user_vocab_progress")
-                            .withIndex("by_user_word", (q) => q.eq("userId", userId).eq("wordId", app.wordId))
-                            .unique()
-                        : Promise.resolve(null),
-                ]);
+        // 2. OPTIMIZATION: Batch fetch words and progress data
+        // Get unique word IDs and batch fetch
+        const wordIds = [...new Set(appearances.map(a => a.wordId))];
+        const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+        const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
-                if (!word) return null;
+        // Batch fetch user progress if userId exists
+        let progressMap = new Map();
+        if (userId) {
+            const allProgress = await ctx.db
+                .query("user_vocab_progress")
+                .withIndex("by_user_word", q => q.eq("userId", userId))
+                .collect();
+            progressMap = new Map(allProgress.map(p => [p.wordId.toString(), p]));
+        }
 
-                return {
-                    ...word,
-                    // Merge appearance data - appearance meanings take priority over word meanings
-                    meaning: app.meaning || word.meaning,
-                    meaningEn: app.meaningEn || word.meaningEn,
-                    meaningVi: app.meaningVi || word.meaningVi,
-                    meaningMn: app.meaningMn || word.meaningMn,
-                    exampleSentence: app.exampleSentence,
-                    exampleMeaning: app.exampleMeaning,
-                    exampleMeaningEn: app.exampleMeaningEn,
-                    exampleMeaningVi: app.exampleMeaningVi,
-                    exampleMeaningMn: app.exampleMeaningMn,
-                    unitId: app.unitId,
-                    courseId: app.courseId,
-                    appearanceId: app._id,
-                    // Merge progress data (normalized structure for frontend)
-                    progress: progress ? {
-                        id: progress._id,
-                        status: progress.status,
-                        interval: progress.interval,
-                        streak: progress.streak,
-                        nextReviewAt: progress.nextReviewAt,
-                    } : null,
-                    mastered: progress?.status === 'MASTERED' || false,
-                };
-            })
-        );
+        // 3. Assemble data in memory
+        const wordsWithData = appearances.map((app) => {
+            const word = wordsMap.get(app.wordId.toString());
+            if (!word) return null;
+
+            const progress = progressMap.get(app.wordId.toString());
+
+            return {
+                ...word,
+                // Merge appearance data - appearance meanings take priority over word meanings
+                meaning: app.meaning || word.meaning,
+                meaningEn: app.meaningEn || word.meaningEn,
+                meaningVi: app.meaningVi || word.meaningVi,
+                meaningMn: app.meaningMn || word.meaningMn,
+                exampleSentence: app.exampleSentence,
+                exampleMeaning: app.exampleMeaning,
+                exampleMeaningEn: app.exampleMeaningEn,
+                exampleMeaningVi: app.exampleMeaningVi,
+                exampleMeaningMn: app.exampleMeaningMn,
+                unitId: app.unitId,
+                courseId: app.courseId,
+                appearanceId: app._id,
+                // Merge progress data (normalized structure for frontend)
+                progress: progress ? {
+                    id: progress._id,
+                    status: progress.status,
+                    interval: progress.interval,
+                    streak: progress.streak,
+                    nextReviewAt: progress.nextReviewAt,
+                } : null,
+                mastered: progress?.status === 'MASTERED' || false,
+            };
+        });
 
         return wordsWithData.filter((w) => w !== null);
     },
@@ -564,6 +571,7 @@ export const bulkImport = mutation({
 });
 
 // Get words due for review (Vocab Book - SRS)
+// OPTIMIZATION: Batch query with Map instead of N+1 queries
 export const getDueForReview = query({
     args: {},
     handler: async (ctx) => {
@@ -579,31 +587,34 @@ export const getDueForReview = query({
         // Filter: not mastered
         const notMastered = progressItems.filter(p => p.status !== 'MASTERED');
 
-        // Fetch word details for each progress item
-        const wordsWithProgress = await Promise.all(
-            notMastered.map(async (progress) => {
-                const word = await ctx.db.get(progress.wordId);
-                if (!word) return null;
+        // OPTIMIZATION: Batch fetch all words
+        const wordIds = [...new Set(notMastered.map(p => p.wordId))];
+        const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+        const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
-                return {
-                    id: word._id,
-                    word: word.word,
-                    meaning: word.meaning,
-                    partOfSpeech: word.partOfSpeech,
-                    hanja: word.hanja,
-                    pronunciation: word.pronunciation,
-                    audioUrl: word.audioUrl,
-                    progress: {
-                        id: progress._id,
-                        status: progress.status,
-                        interval: progress.interval,
-                        streak: progress.streak,
-                        nextReviewAt: progress.nextReviewAt,
-                        lastReviewedAt: progress.lastReviewedAt,
-                    },
-                };
-            })
-        );
+        // Assemble data in memory
+        const wordsWithProgress = notMastered.map((progress) => {
+            const word = wordsMap.get(progress.wordId.toString());
+            if (!word) return null;
+
+            return {
+                id: word._id,
+                word: word.word,
+                meaning: word.meaning,
+                partOfSpeech: word.partOfSpeech,
+                hanja: word.hanja,
+                pronunciation: word.pronunciation,
+                audioUrl: word.audioUrl,
+                progress: {
+                    id: progress._id,
+                    status: progress.status,
+                    interval: progress.interval,
+                    streak: progress.streak,
+                    nextReviewAt: progress.nextReviewAt,
+                    lastReviewedAt: progress.lastReviewedAt,
+                },
+            };
+        });
 
         return wordsWithProgress.filter(w => w !== null);
     },

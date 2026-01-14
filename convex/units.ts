@@ -97,43 +97,49 @@ export const getDetails = query({
 
         const mainUnit = articles[0] || null;
 
-        // Process Vocabulary List
-        const vocabList = await Promise.all(
-            vocabAppearances.map(async (app) => {
-                const word = await ctx.db.get(app.wordId);
-                if (!word) return null;
-                return {
-                    id: word._id,
-                    korean: word.word,
-                    meaning: word.meaning,
-                    pos: word.partOfSpeech,
-                    pronunciation: word.pronunciation,
-                    hanja: word.hanja,
-                    audioUrl: word.audioUrl,
-                    // Context
-                    exampleSentence: app.exampleSentence,
-                    exampleMeaning: app.exampleMeaning,
-                };
-            })
-        );
+        // OPTIMIZATION: Batch fetch vocabulary words
+        const wordIds = [...new Set(vocabAppearances.map(a => a.wordId))];
+        const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+        const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
-        // Process Grammar List
-        const grammarList = await Promise.all(
-            courseGrammars.map(async (cg) => {
-                const grammar = await ctx.db.get(cg.grammarId);
-                if (!grammar) return null;
-                return {
-                    id: grammar._id,
-                    title: grammar.title,
-                    summary: grammar.summary,
-                    explanation: grammar.explanation,
-                    type: grammar.type,
-                    displayOrder: cg.displayOrder,
-                    customNote: cg.customNote,
-                    // Add other fields as needed
-                };
-            })
-        );
+        // Process Vocabulary List in memory
+        const vocabList = vocabAppearances.map((app) => {
+            const word = wordsMap.get(app.wordId.toString());
+            if (!word) return null;
+            return {
+                id: word._id,
+                korean: word.word,
+                meaning: word.meaning,
+                pos: word.partOfSpeech,
+                pronunciation: word.pronunciation,
+                hanja: word.hanja,
+                audioUrl: word.audioUrl,
+                // Context
+                exampleSentence: app.exampleSentence,
+                exampleMeaning: app.exampleMeaning,
+            };
+        }).filter(Boolean);
+
+        // OPTIMIZATION: Batch fetch grammar points
+        const grammarIds = [...new Set(courseGrammars.map(cg => cg.grammarId))];
+        const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
+        const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
+
+        // Process Grammar List in memory
+        const grammarList = courseGrammars.map((cg) => {
+            const grammar = grammarsMap.get(cg.grammarId.toString());
+            if (!grammar) return null;
+            return {
+                id: grammar._id,
+                title: grammar.title,
+                summary: grammar.summary,
+                explanation: grammar.explanation,
+                type: grammar.type,
+                displayOrder: cg.displayOrder,
+                customNote: cg.customNote,
+                // Add other fields as needed
+            };
+        }).filter(Boolean);
 
         return {
             unit: mainUnit,
