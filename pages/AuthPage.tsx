@@ -55,7 +55,7 @@ export default function AuthPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signIn("google", { redirectTo: "/dashboard" });
+      await signIn("google", { redirectTo: window.location.origin + "/dashboard" });
     } catch (e: any) {
       setError(e.message || "Google login failed");
     }
