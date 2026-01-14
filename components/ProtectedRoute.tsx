@@ -13,34 +13,31 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   redirectTo
 }) => {
-  const { isLoading: convexAuthLoading, isAuthenticated } = useConvexAuth();
-  const { user, loading: authContextLoading } = useAuth();
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  const { user, loading: userDataLoading } = useAuth();
 
-  // 1. Wait for Convex WebSocket authentication to complete
-  if (convexAuthLoading) {
-    return <Loading fullScreen size="lg" text="Connecting..." />;
+  // Step 1: ANY loading state = show loading, DO NOT redirect
+  // This is CRITICAL to avoid the race condition
+  if (isLoading || userDataLoading) {
+    return <Loading fullScreen size="lg" text="Loading..." />;
   }
 
-  // 2. Wait for user data to load from AuthContext
-  if (isAuthenticated && authContextLoading) {
-    return <Loading fullScreen size="lg" text="Loading user data..." />;
-  }
-
-  // 3. If not authenticated, redirect
+  // Step 2: Only after ALL loading is complete, check authentication
+  // At this point isAuthenticated has its final value
   if (!isAuthenticated) {
     return <Navigate to={redirectTo || '/'} replace />;
   }
 
-  // 4. If authenticated but user data not loaded yet, show loading
+  // Step 3: Authenticated but waiting for user data (edge case)
   if (!user) {
-    return <Loading fullScreen size="lg" text="Verifying session..." />;
+    return <Loading fullScreen size="lg" text="Loading user..." />;
   }
 
-  // 5. Admin role check
+  // Step 4: Admin role check
   if (requireAdmin && user.role !== 'ADMIN') {
     return <Navigate to={redirectTo || '/dashboard'} replace />;
   }
 
-  // 6. All checks passed
+  // Step 5: All checks passed
   return <Outlet />;
 };
