@@ -672,6 +672,18 @@
       "color": "颜色",
       "cancel": "取消",
       "save": "保存"
+    },
+    "dictionary": {
+      "label": "词典",
+      "placeholder": "搜索韩语单词...",
+      "hint": "输入韩语单词进行搜索",
+      "noResults": "未找到结果",
+      "searching": "搜索中...",
+      "grade": {
+        "beginner": "初级",
+        "intermediate": "中级",
+        "advanced": "高级"
+      }
     }
   },
   "plan": {

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Play, Zap, Disc, Trophy, GripVertical, BookMarked, FileText } from 'lucide-react';
+import { Play, Zap, Disc, Trophy, GripVertical, BookMarked, FileText, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { StatBadge } from '../components/dashboard/StatBadge';
@@ -9,6 +9,7 @@ import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import { getLabels } from '../utils/i18n';
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
+import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
 
 // DnD Kit
 import {
@@ -123,7 +124,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 return <LearnerSummaryCard />;
             case 'tiger':
                 return (
-                    <BentoCard className="flex flex-col items-center justify-center text-center h-full" bgClass="bg-[#FFD233]" borderClass="border-white ring-4 ring-slate-900">
+                    <BentoCard className="flex flex-col items-center justify-center text-center h-full" bgClass="bg-[#FFE066]" borderClass="border-amber-300">
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(black 1px, transparent 1px)", backgroundSize: "10px 10px" }}></div>
                         <img src={ASSETS.tiger} className="w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500" alt="tiger coach" />
                         <div className="relative z-10 mt-4 bg-white border-2 border-slate-900 px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
@@ -134,27 +135,9 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         </button>
                     </BentoCard>
                 );
-            case 'daily-phrase':
-                return (
-                    <BentoCard borderClass="border-indigo-50" className="h-full">
-                        <div className="flex justify-between items-start relative z-10 h-full">
-                            <div>
-                                <div className="text-xs font-black text-indigo-500 uppercase mb-2 tracking-wider flex items-center gap-2">
-                                    <img src={ASSETS.sparkles} className="w-4 h-4" alt="sparkles" /> {labels.dashboard?.daily?.label || "Daily Phrase"}
-                                </div>
-                                <h2 className="text-4xl font-black text-slate-900 leading-tight">"시작이 반이다"</h2>
-                                <p className="text-slate-500 font-bold mt-2 text-lg">{labels.dashboard?.daily?.fallback || labels.dashboard?.daily?.quote || "Well begun is half done."}</p>
-                            </div>
-                            <button className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[4px_4px_0px_0px_black] border-2 border-black hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_black] transition-all">
-                                <Play size={28} fill="currentColor" />
-                            </button>
-                        </div>
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-50 rounded-full opacity-50 border-2 border-indigo-100"></div>
-                    </BentoCard>
-                );
             case 'textbook':
                 return (
-                    <BentoCard onClickPath="/courses" bgClass="bg-blue-50" borderClass="border-slate-900" className="h-full">
+                    <BentoCard onClickPath="/courses" bgClass="bg-sky-50" borderClass="border-sky-200" className="h-full">
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div className="flex justify-between items-start">
                                 <h3 className="font-black text-2xl text-slate-900 leading-tight">
@@ -178,7 +161,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 );
             case 'topik':
                 return (
-                    <BentoCard onClickPath="/topik" bgClass="bg-yellow-50" borderClass="border-slate-900" className="h-full">
+                    <BentoCard onClickPath="/topik" bgClass="bg-amber-50" borderClass="border-amber-200" className="h-full">
                         <div className="relative z-10">
                             <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">{labels.dashboard?.topik?.title || "TOPIK\nMock Exam"}</h3>
                             <div className="mt-2 inline-block bg-white px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 shadow-sm border-2 border-yellow-100">
@@ -190,7 +173,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 );
             case 'youtube':
                 return (
-                    <BentoCard onClickPath="/youtube" bgClass="bg-red-50" borderClass="border-slate-900" className="h-full">
+                    <BentoCard onClickPath="/youtube" bgClass="bg-rose-50" borderClass="border-rose-200" className="h-full">
                         <div className="relative z-10">
                             <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">{labels.dashboard?.video?.title || "Immersion\nVideo"}</h3>
                             <div className="mt-2 inline-block bg-red-500 text-white px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 shadow-sm">
@@ -202,32 +185,32 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 );
             case 'podcast':
                 return (
-                    <BentoCard onClickPath="/podcasts" bgClass="bg-slate-900" borderClass="border-slate-900" className="text-white h-full">
-                        <div className="absolute right-[-20px] bottom-[-20px] opacity-20 group-hover:opacity-40 transition duration-700 group-hover:rotate-45">
-                            <Disc size={120} />
+                    <BentoCard onClickPath="/podcasts" bgClass="bg-violet-100" borderClass="border-violet-200" className="h-full">
+                        <div className="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:opacity-20 transition duration-700 group-hover:rotate-45">
+                            <Disc size={120} className="text-violet-500" />
                         </div>
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div>
-                                <div className="inline-block bg-purple-500 text-white border-2 border-purple-300 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">{labels.dashboard?.podcast?.label || "Podcast"}</div>
-                                <h3 className="font-bold text-lg mt-2 leading-tight">
+                                <div className="inline-block bg-violet-500 text-white border-2 border-violet-400 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">{labels.dashboard?.podcast?.label || "Podcast"}</div>
+                                <h3 className="font-bold text-lg mt-2 leading-tight text-slate-900">
                                     {labels.dashboard?.podcast?.title || "Latest Podcast"}<br />
                                     {labels.dashboard?.podcast?.subtitle || "Iyagi Series"}
                                 </h3>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="flex gap-1 h-3 items-end">
-                                    <div className="w-1 bg-green-400 h-full animate-pulse"></div>
-                                    <div className="w-1 bg-green-400 h-2/3 animate-pulse"></div>
-                                    <div className="w-1 bg-green-400 h-full animate-pulse"></div>
+                                    <div className="w-1 bg-violet-500 h-full animate-pulse"></div>
+                                    <div className="w-1 bg-violet-500 h-2/3 animate-pulse"></div>
+                                    <div className="w-1 bg-violet-500 h-full animate-pulse"></div>
                                 </div>
-                                <span className="text-xs font-mono text-green-400">{labels.dashboard?.podcast?.listen || "Listen Now"}</span>
+                                <span className="text-xs font-mono text-violet-600 font-bold">{labels.dashboard?.podcast?.listen || "Listen Now"}</span>
                             </div>
                         </div>
                     </BentoCard>
                 );
             case 'vocab':
                 return (
-                    <BentoCard onClickPath="/vocab-book" bgClass="bg-indigo-50" borderClass="border-slate-900" className="h-full">
+                    <BentoCard onClickPath="/vocab-book" bgClass="bg-indigo-50" borderClass="border-indigo-200" className="h-full">
                         <div className="absolute -right-4 -bottom-4 opacity-10">
                             <BookMarked size={80} className="text-indigo-600 rotate-12" />
                         </div>
@@ -245,7 +228,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                 );
             case 'notes':
                 return (
-                    <BentoCard onClickPath="/notebook" bgClass="bg-amber-50" borderClass="border-slate-900" className="h-full">
+                    <BentoCard onClickPath="/notebook" bgClass="bg-orange-50" borderClass="border-orange-200" className="h-full">
                         <div className="absolute -right-4 -bottom-4 opacity-10">
                             <FileText size={80} className="text-amber-600 rotate-12" />
                         </div>
@@ -273,9 +256,6 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
             case 'tiger':
                 // Orig: md:col-span-1 row-span-2
                 return 'md:col-span-1 md:row-span-2';
-            case 'daily-phrase':
-                // Orig: md:col-span-2 row-span-1
-                return 'md:col-span-2';
             default:
                 // Default 1x1
                 return 'md:col-span-1';
@@ -305,35 +285,18 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                     <p className="text-slate-500 font-bold mt-1">{labels.dashboard?.subtitle || "Ready to beat today's boss?"}</p>
                 </div>
 
-                <div className="flex gap-4">
-                    <StatBadge icon={ASSETS.fire} label={labels.dashboard?.streak || "Streak"} value={(labels.dashboard?.days || "{count} Days").replace('{count}', String(streak)) + " 🔥"} colorClass="bg-orange-100 border-orange-200" borderClass="border-slate-900" />
+                <div className="flex gap-4 items-center">
+                    {/* Dictionary Search with Dropdown */}
+                    <DictionarySearchDropdown />
 
-                    {/* Subscription Badge */}
-                    {user?.tier === 'PAID' || user?.subscriptionType ? (
+                    {/* Simplified Premium Badge */}
+                    {(user?.tier === 'PAID' || user?.subscriptionType) && (
                         <div
                             onClick={() => navigate('/pricing')}
-                            className="bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-2 pr-6 rounded-full flex items-center gap-3 shadow-pop border-2 border-amber-600 hover:scale-105 transition cursor-pointer"
+                            className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 hover:scale-105 transition cursor-pointer"
                         >
-                            <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center border-2 border-white/50">
-                                <span className="text-xl">👑</span>
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-black text-amber-900 uppercase">{labels.dashboard?.premium || "Premium"}</div>
-                                <div className="font-black text-white">{user?.subscriptionType || (labels.dashboard?.member || 'Member')}</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            onClick={() => navigate('/pricing')}
-                            className="bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 pr-6 rounded-full flex items-center gap-3 shadow-pop border-2 border-indigo-700 hover:scale-105 transition cursor-pointer group"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30 group-hover:bg-white/30 transition">
-                                <span className="text-xl">⭐</span>
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-black text-indigo-200 uppercase">{labels.dashboard?.upgrade || "Upgrade"}</div>
-                                <div className="font-black text-white">{labels.dashboard?.upgrade?.premium || "Premium →"}</div>
-                            </div>
+                            <span className="text-lg">👑</span>
+                            <span className="font-bold text-white text-sm">Premium</span>
                         </div>
                     )}
                 </div>

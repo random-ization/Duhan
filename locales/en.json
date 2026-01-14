@@ -663,6 +663,18 @@
       "color": "Color",
       "cancel": "Cancel",
       "save": "Save"
+    },
+    "dictionary": {
+      "label": "Dictionary",
+      "placeholder": "Search Korean word...",
+      "hint": "Enter a Korean word to search",
+      "noResults": "No results found",
+      "searching": "Searching...",
+      "grade": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      }
     }
   },
   "plan": {

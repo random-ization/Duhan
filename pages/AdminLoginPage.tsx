@@ -34,9 +34,9 @@ const AdminLoginPage: React.FC = () => {
         try {
             const result = await loginMutation({ email, password });
 
-            if (result?.user) {
-                // Save user ID as token (simplified - in production use proper JWT)
-                localStorage.setItem('token', result.user.id);
+            if (result?.user && result.token) {
+                // Save actual session token (not user ID)
+                localStorage.setItem('token', result.token);
                 localStorage.setItem('userId', result.user.id);
 
                 // Map Convex user to AuthContext User type

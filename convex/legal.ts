@@ -20,6 +20,22 @@ const DOCUMENTS = {
 export const getDocument = query({
     args: { type: v.string() }, // "terms" | "privacy" | "refund"
     handler: async (ctx, args) => {
+        // Try fetching from database first
+        const dbDoc = await ctx.db
+            .query("legal_documents")
+            .withIndex("by_identifier", (q) => q.eq("identifier", args.type))
+            .unique();
+
+        if (dbDoc) {
+            return {
+                id: args.type,
+                title: dbDoc.title,
+                content: dbDoc.content,
+                updatedAt: dbDoc.updatedAt,
+            };
+        }
+
+        // Fallback to defaults
         const doc = DOCUMENTS[args.type as keyof typeof DOCUMENTS];
         if (!doc) throw new Error("Document not found");
 
@@ -27,7 +43,7 @@ export const getDocument = query({
             id: args.type,
             title: doc.title,
             content: doc.content,
-            updatedAt: Date.now(), // Dynamic for now
+            updatedAt: Date.now(),
         };
     }
 });
@@ -38,10 +54,10 @@ export const saveDocument = mutation({
         type: v.string(),
         title: v.string(),
         content: v.string(),
+        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx);
-        // ... (existing comments)
+        await requireAdmin(ctx, args.token);
 
         const existing = await ctx.db
             .query("legal_documents")

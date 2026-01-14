@@ -573,9 +573,11 @@ export const bulkImport = mutation({
 // Get words due for review (Vocab Book - SRS)
 // OPTIMIZATION: Batch query with Map instead of N+1 queries
 export const getDueForReview = query({
-    args: {},
-    handler: async (ctx) => {
-        const userId = await getOptionalAuthUserId(ctx);
+    args: {
+        token: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const userId = await getOptionalAuthUserId(ctx, args.token);
         if (!userId) return [];
 
         // Get all user progress that is not MASTERED
@@ -623,6 +625,7 @@ export const getDueForReview = query({
 // Add word to review list (Manual add to SRS)
 export const addToReview = mutation({
     args: {
+        token: v.optional(v.string()), // Auth token
         word: v.string(),
         meaning: v.string(),
         partOfSpeech: v.optional(v.string()),
@@ -630,8 +633,11 @@ export const addToReview = mutation({
         source: v.optional(v.string()), // e.g., "TOPIK", "READING", "MANUAL"
     },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
+        console.log(`[addToReview] Called for word: ${args.word}, source: ${args.source}`);
+        const userId = await getAuthUserId(ctx, args.token);
         const now = Date.now();
+        console.log(`[addToReview] User ID: ${userId}`);
+
 
         // 1. Check if word exists in master dictionary
         let existingWord = await ctx.db

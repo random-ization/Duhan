@@ -639,6 +639,18 @@
       "color": "Màu sắc",
       "cancel": "Hủy",
       "save": "Lưu"
+    },
+    "dictionary": {
+      "label": "Từ điển",
+      "placeholder": "Tìm kiếm từ tiếng Hàn...",
+      "hint": "Nhập từ tiếng Hàn để tìm kiếm",
+      "noResults": "Không tìm thấy kết quả",
+      "searching": "Đang tìm kiếm...",
+      "grade": {
+        "beginner": "Sơ cấp",
+        "intermediate": "Trung cấp",
+        "advanced": "Cao cấp"
+      }
     }
   },
   "plan": {

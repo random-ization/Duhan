@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 export const DEFAULT_CARD_ORDER = [
     'summary', // LearnerSummaryCard (Added recently)
     'tiger',   // Tiger Coach
-    'daily-phrase',
     'textbook',
     'topik',
     'youtube',
@@ -37,14 +36,17 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (savedOrder) {
             try {
                 const parsed = JSON.parse(savedOrder);
-                // Ensure all default cards are present (in case of updates)
-                const merged = [...parsed];
+                // Filter out cards that are no longer valid (removed cards)
+                const validCards = parsed.filter((id: string) => DEFAULT_CARD_ORDER.includes(id));
+                // Add any new cards that weren't in saved order
                 DEFAULT_CARD_ORDER.forEach(id => {
-                    if (!merged.includes(id)) {
-                        merged.push(id);
+                    if (!validCards.includes(id)) {
+                        validCards.push(id);
                     }
                 });
-                setCardOrder(merged);
+                setCardOrder(validCards);
+                // Update localStorage with cleaned order
+                localStorage.setItem('dashboard_layout', JSON.stringify(validCards));
             } catch (e) {
                 console.error('Failed to parse dashboard layout', e);
                 setCardOrder(DEFAULT_CARD_ORDER);

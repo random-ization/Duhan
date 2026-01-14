@@ -639,6 +639,18 @@
       "color": "Өнгө",
       "cancel": "Цуцлах",
       "save": "Хадгалах"
+    },
+    "dictionary": {
+      "label": "Толь бичиг",
+      "placeholder": "Солонгос үг хайх...",
+      "hint": "Хайх үгээ оруулна уу",
+      "noResults": "Илэрц олдсонгүй",
+      "searching": "Хайж байна...",
+      "grade": {
+        "beginner": "Анхан",
+        "intermediate": "Дунд",
+        "advanced": "Гүнзгий"
+      }
     }
   },
   "plan": {

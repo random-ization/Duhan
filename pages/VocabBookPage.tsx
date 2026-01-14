@@ -29,8 +29,12 @@ const VocabBookPage: React.FC = () => {
     const labels = getLabels(language);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Get token directly to ensure it works even if context is loading
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : undefined;
+
     // 从SRS系统获取待复习词汇（不包含MASTERED）
-    const srsWordsResult = useQuery(convexApi.vocab.getDueForReview as any, {});
+    // Pass token to ensure authentication works with custom auth system
+    const srsWordsResult = useQuery(convexApi.vocab.getDueForReview as any, { token });
     const loading = srsWordsResult === undefined;
     const words: VocabWord[] = useMemo(() => {
         if (!srsWordsResult) return [];

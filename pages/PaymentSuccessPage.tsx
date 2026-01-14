@@ -17,7 +17,30 @@ const PaymentSuccessPage: React.FC = () => {
 
     useEffect(() => {
         const verifyPayment = async () => {
+            const provider = searchParams.get('provider');
             const sessionId = searchParams.get('session_id');
+
+            // Lemon Squeezy doesn't pass a session_id, it uses webhooks instead
+            // We just show success and rely on webhook to update user status
+            if (provider === 'lemonsqueezy') {
+                setStatus('success');
+                setMessage('Payment completed! Your subscription will be activated shortly.');
+
+                // Refresh user profile (webhook may have already updated it)
+                try {
+                    await refreshUser();
+                } catch (e) {
+                    console.log('User refresh pending, webhook may still be processing');
+                }
+
+                // Redirect after delay
+                setTimeout(() => {
+                    navigate('/dashboard');
+                }, 3000);
+                return;
+            }
+
+            // Creem flow - requires session_id verification
             if (!sessionId) {
                 setStatus('error');
                 setMessage('No session ID found.');
@@ -37,9 +60,6 @@ const PaymentSuccessPage: React.FC = () => {
                 }, 3000);
             } catch (error: any) {
                 console.error('Verification failed:', error);
-
-                // If it's a mock session, we might want to allow it anyway if backend verify fails? 
-                // But backend verify SHOULD succeed for mock sessions.
                 setStatus('error');
                 setMessage(error.message || 'Payment verification failed.');
             }

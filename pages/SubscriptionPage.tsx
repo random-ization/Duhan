@@ -15,7 +15,7 @@ const SubscriptionPage: React.FC = () => {
     const navigate = useNavigate();
     const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
-    const createCheckoutSession = useAction(api.payments.createCheckoutSession);
+    const createCheckoutSession = useAction(api.lemonsqueezy.createCheckout);
 
     const languages: { code: Language; label: string }[] = [
         { code: 'en', label: 'English' },

@@ -16,9 +16,18 @@ export function BentoCard({ children, className, onClickPath, bgClass, borderCla
         <div
             onClick={() => onClickPath && navigate(onClickPath)}
             className={clsx(
-                "relative overflow-hidden shadow-pop rounded-[2.5rem] p-4 md:p-6 transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.01] cursor-pointer group border-2",
+                // Claymorphism style: soft 3D, thick borders, double shadows, rounded corners
+                "relative overflow-hidden rounded-[24px] p-4 md:p-6 transition-all duration-200 ease-out cursor-pointer group",
+                // Thick border (3-4px) for clay look
+                "border-[3px]",
+                // Claymorphism double shadow: outer + inner shadow for depth
+                "shadow-[0_8px_30px_rgba(0,0,0,0.08),inset_0_-4px_10px_rgba(255,255,255,0.6),inset_0_4px_10px_rgba(255,255,255,0.9)]",
+                // Soft hover effect (no scale to avoid layout shift)
+                "hover:shadow-[0_12px_40px_rgba(0,0,0,0.12),inset_0_-4px_10px_rgba(255,255,255,0.6),inset_0_4px_10px_rgba(255,255,255,0.9)]",
+                "hover:-translate-y-1",
+                // Default colors
                 bgClass || "bg-white",
-                borderClass || "border-slate-900",
+                borderClass || "border-slate-200",
                 className
             )}
         >

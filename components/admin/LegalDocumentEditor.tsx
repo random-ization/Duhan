@@ -24,11 +24,17 @@ const LegalDocumentEditor: React.FC = () => {
   const handleSave = async () => {
     setStatus(null);
     try {
-      await saveDocument({ type: docType, title: title || "", content });
+      const token = localStorage.getItem("token") || undefined;
+      if (!token) {
+        setStatus("错误: 未检测到登录凭证，请先登录后再访问管理后台");
+        return;
+      }
+      await saveDocument({ type: docType, title: title || "", content, token });
       setStatus("已保存并同步到 Convex 数据库");
     } catch (error: any) {
-      console.error(error);
-      setStatus(error?.message || "保存失败");
+      const errorCode = error?.data?.code || "";
+      const errorMessage = error?.data?.message || error?.message || "保存失败";
+      setStatus(`错误 [${errorCode}]: ${errorMessage}`);
     }
   };
 

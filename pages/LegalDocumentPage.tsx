@@ -84,12 +84,12 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
             <FileText className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">{getTitle()}</h1>
+            <h1 className="text-3xl font-bold text-slate-800">{document.title}</h1>
             {document.updatedAt && (
               <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {labels.lastUpdated || 'Last updated'}:{' '}
+                  Last updated:{' '}
                   {new Date(document.updatedAt).toLocaleDateString()}
                 </span>
               </div>
@@ -136,10 +136,18 @@ function formatContent(content: string): string {
   // Convert line breaks to paragraphs
   const paragraphs = content.split('\n\n').filter(p => p.trim());
 
+  // Track if we've skipped the first h1 (title is already shown in header)
+  let skippedFirstH1 = false;
+
   return paragraphs
     .map(para => {
       // Check if it's a heading (starts with #)
       if (para.trim().startsWith('# ')) {
+        // Skip first h1 since it's already displayed in the header card
+        if (!skippedFirstH1) {
+          skippedFirstH1 = true;
+          return '';
+        }
         return `<h1 class="text-3xl font-bold mb-6 mt-8">${parseInline(escapeHtml(para.substring(2).trim()))}</h1>`;
       } else if (para.trim().startsWith('## ')) {
         return `<h2 class="text-2xl font-bold mb-4 mt-6">${parseInline(escapeHtml(para.substring(3).trim()))}</h2>`;
@@ -171,9 +179,15 @@ function formatContent(content: string): string {
         return `<ol class="my-4 ml-6 list-decimal">${listItems}</ol>`;
       }
 
+      // Skip "Last updated" line since it's already shown in header
+      if (para.trim().toLowerCase().startsWith('last updated')) {
+        return '';
+      }
+
       // Regular paragraph
       return `<p class="mb-4 leading-relaxed">${parseInline(escapeHtml(para.trim()))}</p>`;
     })
+    .filter(html => html) // Remove empty strings from skipped content
     .join('');
 }
 
