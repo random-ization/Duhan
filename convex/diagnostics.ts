@@ -14,32 +14,36 @@ export const getHealthStats = query({
         // 2. Get User Count (for latency check context)
         const userCount = (await ctx.db.query("users").collect()).length;
 
-        // 3. For each institute, count words (via appearances) and units
-        const data = await Promise.all(institutes.map(async (ins) => {
-            const courseId = ins.id; // Schema uses 'id' as manual ID
+        // 3. OPTIMIZATION: Batch fetch all data for institutes
+        const courseIds = institutes.map(ins => ins.id);
+        
+        // Batch query all vocabulary appearances
+        const allVocabAppearances = await ctx.db.query("vocabulary_appearances").collect();
+        const vocabCountMap = new Map<string, number>();
+        allVocabAppearances.forEach(app => {
+            vocabCountMap.set(app.courseId, (vocabCountMap.get(app.courseId) || 0) + 1);
+        });
 
-            // Count Vocab Appearances
-            // Words are linked via vocabulary_appearances.
-            // We use the "by_course_unit" index (courseId, unitId). 
-            // Querying with just courseId eq works as it's the first segment.
-            const vocabCount = (await ctx.db.query("vocabulary_appearances")
-                .withIndex("by_course_unit", q => q.eq("courseId", courseId))
-                .collect()).length;
+        // Batch query all units
+        const allUnits = await ctx.db.query("textbook_units").collect();
+        const unitCountMap = new Map<string, number>();
+        allUnits.forEach(unit => {
+            unitCountMap.set(unit.courseId, (unitCountMap.get(unit.courseId) || 0) + 1);
+        });
 
-            // Count Units
-            const unitCount = (await ctx.db.query("textbook_units")
-                .withIndex("by_course", q => q.eq("courseId", courseId))
-                .collect()).length;
+        // Build data in memory
+        const data = institutes.map((ins) => {
+            const courseId = ins.id;
 
             return {
                 id: courseId,
                 name: ins.name,
                 publisher: ins.publisher || null,
                 totalUnitsSetting: ins.totalUnits || null,
-                vocabCount,
-                unitCount
+                vocabCount: vocabCountMap.get(courseId) || 0,
+                unitCount: unitCountMap.get(courseId) || 0
             };
-        }));
+        });
 
         const scanTime = Date.now() - start;
 

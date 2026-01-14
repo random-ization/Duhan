@@ -95,11 +95,20 @@ export const getAllProgress = query({
             .withIndex("by_user", q => q.eq("userId", userId))
             .collect();
 
-        // Enrich with institute data
-        const result = await Promise.all(progressRecords.map(async (p) => {
-            const institute = await ctx.db.query("institutes")
-                .withIndex("by_legacy_id", q => q.eq("id", p.courseId))
-                .first();
+        // OPTIMIZATION: Batch fetch institutes
+        const courseIds = [...new Set(progressRecords.map(p => p.courseId))];
+        const institutesArray = await Promise.all(
+            courseIds.map(courseId =>
+                ctx.db.query("institutes")
+                    .withIndex("by_legacy_id", q => q.eq("id", courseId))
+                    .first()
+            )
+        );
+        const institutesMap = new Map(institutesArray.filter(Boolean).map(i => [i!.id, i!]));
+
+        // Enrich with institute data in memory
+        const result = progressRecords.map((p) => {
+            const institute = institutesMap.get(p.courseId);
 
             return {
                 courseId: p.courseId,
@@ -108,7 +117,7 @@ export const getAllProgress = query({
                 totalUnits: institute?.totalUnits || 0,
                 lastAccessAt: p.lastAccessAt,
             };
-        }));
+        });
 
         return result;
     }

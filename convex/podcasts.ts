@@ -27,13 +27,18 @@ export const getTrending = query({
             }));
 
         // Populate channel for internal items
-        const internalWithChannel = await Promise.all(internal.map(async (ep) => {
-            const channel = await ctx.db.get(ep.channelId);
+        // OPTIMIZATION: Batch fetch channels
+        const channelIds = [...new Set(internal.map(ep => ep.channelId))];
+        const channelsArray = await Promise.all(channelIds.map(id => ctx.db.get(id)));
+        const channelsMap = new Map(channelsArray.filter(Boolean).map(c => [c!._id.toString(), c!]));
+
+        const internalWithChannel = internal.map((ep) => {
+            const channel = channelsMap.get(ep.channelId.toString());
             return {
                 ...ep,
                 channel: channel ? { ...channel, id: channel._id } : null
             };
-        }));
+        });
 
         // 2. External: Placeholder for now (or fetch from a curated lists table if we had one)
         // Legacy API likely fetched from iTunes or a "Featured" DB table.
@@ -59,10 +64,15 @@ export const getSubscriptions = query({
             .withIndex("by_user", q => q.eq("userId", userId))
             .collect();
 
-        const channels = await Promise.all(subs.map(async (sub) => {
-            const channel = await ctx.db.get(sub.channelId);
+        // OPTIMIZATION: Batch fetch channels
+        const channelIds = [...new Set(subs.map(sub => sub.channelId))];
+        const channelsArray = await Promise.all(channelIds.map(id => ctx.db.get(id)));
+        const channelsMap = new Map(channelsArray.filter(Boolean).map(c => [c!._id.toString(), c!]));
+
+        const channels = subs.map((sub) => {
+            const channel = channelsMap.get(sub.channelId.toString());
             return channel ? { ...channel, id: channel._id } : null;
-        }));
+        });
 
         return channels.filter(c => c !== null);
     }
