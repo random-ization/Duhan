@@ -3,7 +3,7 @@ import { useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Sparkles, AlertCircle, Mail, Lock, User, HelpCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { getLabels } from '../utils/i18n';
 
@@ -14,13 +14,21 @@ import { getLabels } from '../utils/i18n';
 export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, user, language } = useAuth();
+  const { login, user, language, loading: authLoading } = useAuth(); // Assume loading is available
   const labels = getLabels(language);
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      const redirectUrl = searchParams.get('redirect') || '/dashboard';
+      navigate(redirectUrl);
+    }
+  }, [user, authLoading, navigate, searchParams]);
 
   // Handle Google OAuth callback
   useEffect(() => {
@@ -30,9 +38,9 @@ export default function AuthPage() {
     }
   }, [searchParams, user]);
 
-  const loginMutation = useMutation(api.auth.login);
-  const registerMutation = useMutation(api.auth.register);
-  const googleAuthMutation = useMutation(api.auth.googleAuth);
+  // const loginMutation = useMutation(api.auth.login);
+  // const registerMutation = useMutation(api.auth.register);
+  // const googleAuthMutation = useMutation(api.auth.googleAuth);
 
   const handleGoogleCallback = async (code: string) => {
     setGoogleLoading(true);
@@ -76,6 +84,7 @@ export default function AuthPage() {
   };
 
   const { signIn } = useAuthActions();
+  const logoSetting = useQuery(api.settings.getSetting, { key: "logo" });
 
   const handleGoogleLogin = async () => {
     try {
@@ -94,21 +103,18 @@ export default function AuthPage() {
       if (isLogin) {
         // useMutation for login
         // convex/auth.ts login returns { user: enrichedUser, token: string }
-        const response = await loginMutation({
-          email: formData.email.trim(),
-          password: formData.password.trim()
-        });
-        login(response.user as any, response.token);
+        // const response = await loginMutation({ ... });
+        // login(response.user as any, response.token);
+        alert("Please use Google Login for now. Email login is being upgraded.");
+        return;
         const redirectUrl = searchParams.get('redirect') || '/dashboard';
         navigate(redirectUrl);
       } else {
         // useMutation for register
         // convex/auth.ts register returns { user, token, message }
-        await registerMutation({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password.trim()
-        });
+        // await registerMutation({ ... });
+        alert("Please use Google Login for now. Registration is being upgraded.");
+        return;
         setIsLogin(true);
         setError(labels.auth?.registerSuccess || 'Registration successful! Please check email to verify.');
       }
@@ -145,7 +151,15 @@ export default function AuthPage() {
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 10px)" }}></div>
 
           <div className="relative z-10 text-center">
-            <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
+            {logoSetting?.value?.url ? (
+              <img
+                src={logoSetting.value.url}
+                alt="Logo"
+                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
+            )}
             <h1 className="text-5xl font-black font-display mb-2">{labels.auth?.brand || "DuHan."}</h1>
             <p className="text-indigo-200 font-bold text-lg tracking-wide">{labels.auth?.slogan || (language === 'zh' ? "提升你的韩语水平" : "Level Up Your Korean")}</p>
           </div>

@@ -21,7 +21,7 @@ export const grantAccess = internalMutation({
         if (!user) {
             // Fallback to email lookup
             user = await ctx.db.query("users")
-                .withIndex("by_email", q => q.eq("email", args.customerEmail))
+                .withIndex("email", q => q.eq("email", args.customerEmail))
                 .first();
         }
 
@@ -66,7 +66,7 @@ export const revokeAccess = internalMutation({
 
         if (!user) {
             user = await ctx.db.query("users")
-                .withIndex("by_email", q => q.eq("email", args.customerEmail))
+                .withIndex("email", q => q.eq("email", args.customerEmail))
                 .first();
         }
 

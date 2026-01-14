@@ -41,7 +41,7 @@ export default defineSchema({
         verifyCode: v.optional(v.string()),
 
         createdAt: v.optional(v.number()),
-    }).index("by_email", ["email"])
+    }).index("email", ["email"]) // Renamed from by_email for @convex-dev/auth compatibility
         .index("by_googleId", ["googleId"])
         .index("by_token", ["token"]) // Security index
         .index("by_postgresId", ["postgresId"]),
