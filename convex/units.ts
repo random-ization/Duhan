@@ -32,18 +32,16 @@ export const getByCourse = query({
     },
 });
 
-import { getUserByTokenOrId } from "./utils";
+import { getOptionalAuthUserId, requireAdmin } from "./utils";
 
 export const getDetails = query({
     args: {
-        token: v.optional(v.string()), // Added token support for Shim
         courseId: v.string(),
         unitIndex: v.number(),
     },
     handler: async (ctx, args) => {
-        // Resolve user via Token (Shim) or Auth (Native)
-        const user = await getUserByTokenOrId(ctx, args.token);
-        const convexUserId = user?._id;
+        // Resolve user via JWT auth
+        const convexUserId = await getOptionalAuthUserId(ctx);
 
         // RESOLVE COURSE ID: Support both Convex ID and Legacy ID
         // The frontend might pass a Convex ID, but data (units, grammars) might be linked via Legacy ID.
@@ -223,19 +221,9 @@ export const bulkImport = mutation({
             audioUrl: v.optional(v.string()),
         })),
         courseId: v.string(),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        // Verify admin via token if provided
-        if (args.token) {
-            const user = await ctx.db
-                .query("users")
-                .withIndex("by_token", (q) => q.eq("token", args.token))
-                .unique();
-            if (!user || user.role !== "ADMIN") {
-                throw new Error("Unauthorized");
-            }
-        }
+        await requireAdmin(ctx);
 
         let success = 0;
         let failed = 0;

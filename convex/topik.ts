@@ -2,7 +2,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
-import { getAuthUserId, getUserByTokenOrId } from "./utils";
+import { getAuthUserId } from "./utils";
 
 // ============================================
 // TOPIK Exam CRUD Functions
@@ -130,14 +130,10 @@ export const getExamQuestions = query({
 // Start an exam session - creates session with fixed endTime
 export const startExam = mutation({
     args: {
-        token: v.optional(v.string()), // Added token support
         examId: v.string(), // Legacy ID
     },
     handler: async (ctx, args) => {
-        const user = await getUserByTokenOrId(ctx, args.token);
-        if (!user) {
-            throw new ConvexError({ code: "UNAUTHORIZED" });
-        }
+        const userId = await getAuthUserId(ctx);
 
         // Find the exam by legacy ID
         const exam = await ctx.db.query("topik_exams")
@@ -150,7 +146,7 @@ export const startExam = mutation({
 
         // Check if an active session already exists for this user+exam
         const existingSession = await ctx.db.query("exam_sessions")
-            .withIndex("by_user_exam", q => q.eq("userId", user._id).eq("examId", exam._id))
+            .withIndex("by_user_exam", q => q.eq("userId", userId).eq("examId", exam._id))
             .first();
 
         if (existingSession && existingSession.status === "IN_PROGRESS") {
@@ -172,7 +168,7 @@ export const startExam = mutation({
 
         // Create new session
         const sessionId = await ctx.db.insert("exam_sessions", {
-            userId: user._id,
+            userId: userId,
             examId: exam._id,
             status: "IN_PROGRESS",
             startTime: now,
@@ -250,15 +246,11 @@ export const getSession = query({
 // Update answers during exam (saves progress)
 export const updateAnswers = mutation({
     args: {
-        token: v.optional(v.string()),
         sessionId: v.id("exam_sessions"),
         answers: v.any(), // { [questionNumber]: selectedOption }
     },
     handler: async (ctx, args) => {
-        const user = await getUserByTokenOrId(ctx, args.token);
-        if (!user) {
-            throw new ConvexError({ code: "UNAUTHORIZED" });
-        }
+        await getAuthUserId(ctx); // Verify authentication
 
         const session = await ctx.db.get(args.sessionId);
         if (!session) {
@@ -285,15 +277,11 @@ export const updateAnswers = mutation({
 // Submit exam manually (before timer expires)
 export const submitExam = mutation({
     args: {
-        token: v.optional(v.string()),
         sessionId: v.id("exam_sessions"),
         answers: v.any(),
     },
     handler: async (ctx, args) => {
-        const user = await getUserByTokenOrId(ctx, args.token);
-        if (!user) {
-            throw new ConvexError({ code: "UNAUTHORIZED" });
-        }
+        await getAuthUserId(ctx); // Verify authentication
 
         const session = await ctx.db.get(args.sessionId);
         if (!session) {

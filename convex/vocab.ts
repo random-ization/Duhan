@@ -416,10 +416,9 @@ export const bulkImport = mutation({
 
             tips: v.optional(v.any()), // JSON
         })),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
 
         let successCount = 0;
         let failedCount = 0;
@@ -573,11 +572,9 @@ export const bulkImport = mutation({
 // Get words due for review (Vocab Book - SRS)
 // OPTIMIZATION: Batch query with Map instead of N+1 queries
 export const getDueForReview = query({
-    args: {
-        token: v.optional(v.string()),
-    },
-    handler: async (ctx, args) => {
-        const userId = await getOptionalAuthUserId(ctx, args.token);
+    args: {},
+    handler: async (ctx) => {
+        const userId = await getOptionalAuthUserId(ctx);
         if (!userId) return [];
 
         // Get all user progress that is not MASTERED
@@ -625,7 +622,6 @@ export const getDueForReview = query({
 // Add word to review list (Manual add to SRS)
 export const addToReview = mutation({
     args: {
-        token: v.optional(v.string()), // Auth token
         word: v.string(),
         meaning: v.string(),
         partOfSpeech: v.optional(v.string()),
@@ -634,7 +630,7 @@ export const addToReview = mutation({
     },
     handler: async (ctx, args) => {
         console.log(`[addToReview] Called for word: ${args.word}, source: ${args.source}`);
-        const userId = await getAuthUserId(ctx, args.token);
+        const userId = await getAuthUserId(ctx);
         const now = Date.now();
         console.log(`[addToReview] User ID: ${userId}`);
 
@@ -694,7 +690,6 @@ export const addToReview = mutation({
 // Update vocabulary word and its appearance (Admin only)
 export const updateVocab = mutation({
     args: {
-        token: v.optional(v.string()),
         wordId: v.id("words"),
         appearanceId: v.optional(v.id("vocabulary_appearances")),
         // Word fields
@@ -713,9 +708,9 @@ export const updateVocab = mutation({
         exampleMeaningMn: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
 
-        const { wordId, appearanceId, token, ...fields } = args;
+        const { wordId, appearanceId, ...fields } = args;
 
         // 1. Update word fields
         const wordFields: Record<string, string | undefined> = {};

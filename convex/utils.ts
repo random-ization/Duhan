@@ -1,108 +1,42 @@
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { getAuthUserId as convexGetAuthUserId } from "@convex-dev/auth/server";
 
 /**
  * Get authenticated user ID from context.
+ * Uses @convex-dev/auth JWT-based authentication.
  * Throws ConvexError with code 'UNAUTHORIZED' if not authenticated.
  */
-/**
- * Get authenticated user ID from context or token.
- * Throws ConvexError with code 'UNAUTHORIZED' if not authenticated.
- */
-export async function getAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<Id<"users">> {
-    // 1. Try explicit token first (shim auth)
-    if (token) {
-        const user = await getUserByTokenOrId(ctx, token);
-        if (user) return user._id;
-    }
-
-    // 2. Try context auth (Convex auth)
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+export async function getAuthUserId(ctx: QueryCtx | MutationCtx): Promise<Id<"users">> {
+    const userId = await convexGetAuthUserId(ctx);
+    if (!userId) {
         throw new ConvexError({ code: "UNAUTHORIZED" });
     }
-
-    const user = await getUserByTokenOrId(ctx, identity.subject);
-    if (!user) {
-        throw new ConvexError({ code: "UNAUTHORIZED" });
-    }
-    return user._id;
+    return userId as Id<"users">;
 }
 
 /**
  * Get authenticated user ID if available, returns null if not authenticated.
  * Use this for queries that should work for both authenticated and unauthenticated users.
  */
-export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx, token?: string): Promise<Id<"users"> | null> {
-    if (token) {
-        const user = await getUserByTokenOrId(ctx, token);
-        if (user) return user._id;
-    }
-
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const user = await getUserByTokenOrId(ctx, identity.subject);
-    return user?._id ?? null;
-}
-
-/**
- * Robust User Resolver: Tries Token -> Auth Identity -> ID -> PostgresID
- * This bridges the gap between the Shim (Shim Token) and Native Auth
- */
-export async function getUserByTokenOrId(ctx: any, tokenOrId: string | null | undefined): Promise<any | null> {
-    // 1. Try provided token/ID argument first
-    if (tokenOrId) {
-        // Try by token (Secure/Recent)
-        const byToken = await ctx.db.query("users")
-            .withIndex("by_token", q => q.eq("token", tokenOrId))
-            .first();
-        if (byToken) return byToken;
-
-        // Try as ID (Legacy internal)
-        try {
-            const user = await ctx.db.get(tokenOrId as any);
-            if (user) return user;
-        } catch (e) { /* ignore invalid id */ }
-
-        // Try as PostgresID (Migration)
-        const byPostgres = await ctx.db.query("users")
-            .withIndex("by_postgresId", q => q.eq("postgresId", tokenOrId))
-            .first();
-        if (byPostgres) return byPostgres;
-    }
-
-    // 2. Fallback to Context Auth (Native Client)
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity) {
-        const userByToken = await ctx.db.query("users").withIndex("by_token", q => q.eq("token", identity.subject)).first();
-        if (userByToken) return userByToken;
-
-        try {
-            const userById = await ctx.db.get(identity.subject as any);
-            if (userById) return userById;
-        } catch (e) {
-            // subject was not a Convex document id
-        }
-
-        const userByPostgres = await ctx.db.query("users").withIndex("by_postgresId", q => q.eq("postgresId", identity.subject)).first();
-        if (userByPostgres) return userByPostgres;
-    }
-
-    return null;
+export async function getOptionalAuthUserId(ctx: QueryCtx | MutationCtx): Promise<Id<"users"> | null> {
+    const userId = await convexGetAuthUserId(ctx);
+    return userId as Id<"users"> | null;
 }
 
 /**
  * Require Admin Role
  * Throws ConvexError if user is not authenticated or not an admin.
  */
-export async function requireAdmin(ctx: QueryCtx | MutationCtx, token?: string) {
-    const userId = await getAuthUserId(ctx, token);
-    const finalUser = await ctx.db.get(userId);
+export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+    const userId = await getAuthUserId(ctx);
+    const user = await ctx.db.get(userId);
 
-    if (!finalUser || finalUser.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN') {
         throw new ConvexError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 
-    return finalUser;
+    return user;
 }
+

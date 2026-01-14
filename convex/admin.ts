@@ -85,10 +85,9 @@ export const updateUser = mutation({
             subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
             subscriptionExpiry: v.optional(v.string()), // ISO Date string
         }),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
         const { userId, updates } = args;
 
         await ctx.db.patch(userId, updates);
@@ -101,10 +100,9 @@ export const updateUser = mutation({
 export const deleteUser = mutation({
     args: {
         userId: v.id("users"),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
         await ctx.db.delete(args.userId);
         return { success: true };
     }
@@ -156,7 +154,6 @@ export const getInstitutes = query({
 // Create institute
 export const createInstitute = mutation({
     args: {
-        token: v.optional(v.string()),
         id: v.string(),
         name: v.string(),
         levels: v.any(), // Array of level objects
@@ -168,9 +165,8 @@ export const createInstitute = mutation({
         volume: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
-        const { token, ...instituteData } = args;
-        const instituteId = await ctx.db.insert("institutes", instituteData);
+        await requireAdmin(ctx);
+        const instituteId = await ctx.db.insert("institutes", args);
         return { id: instituteId, success: true };
     }
 });
@@ -178,7 +174,6 @@ export const createInstitute = mutation({
 // Update institute
 export const updateInstitute = mutation({
     args: {
-        token: v.optional(v.string()),
         legacyId: v.string(),
         updates: v.object({
             name: v.optional(v.string()),
@@ -192,7 +187,7 @@ export const updateInstitute = mutation({
         }),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
         const { legacyId, updates } = args;
 
         const institute = await ctx.db.query("institutes")
@@ -211,11 +206,10 @@ export const updateInstitute = mutation({
 // Delete institute (soft delete)
 export const deleteInstitute = mutation({
     args: {
-        token: v.optional(v.string()),
         legacyId: v.string(),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
         const institute = await ctx.db.query("institutes")
             .withIndex("by_legacy_id", q => q.eq("id", args.legacyId))
             .first();

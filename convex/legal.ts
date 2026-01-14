@@ -54,10 +54,9 @@ export const saveDocument = mutation({
         type: v.string(),
         title: v.string(),
         content: v.string(),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await requireAdmin(ctx, args.token);
+        await requireAdmin(ctx);
 
         const existing = await ctx.db
             .query("legal_documents")

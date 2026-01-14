@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId, getOptionalAuthUserId } from "./utils";
+import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from "./utils";
 
 // Get Grammar stats for sidebar
 export const getStats = query({
@@ -297,20 +297,9 @@ export const removeFromUnit = mutation({
 
 // Delete All Grammars (Admin) - for cleanup
 export const deleteAllGrammars = mutation({
-    args: {
-        token: v.optional(v.string()),
-    },
-    handler: async (ctx, args) => {
-        // Simple admin check via token
-        if (args.token) {
-            const user = await ctx.db
-                .query("users")
-                .withIndex("by_token", (q) => q.eq("token", args.token))
-                .unique();
-            if (!user || user.role !== "ADMIN") {
-                throw new Error("Unauthorized");
-            }
-        }
+    args: {},
+    handler: async (ctx) => {
+        await requireAdmin(ctx);
 
         // Delete all course_grammars links
         const links = await ctx.db.query("course_grammars").collect();
@@ -353,19 +342,9 @@ export const bulkImport = mutation({
             courseId: v.string(),
             unitId: v.number(),
         })),
-        token: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        // Simple admin check via token
-        if (args.token) {
-            const user = await ctx.db
-                .query("users")
-                .withIndex("by_token", (q) => q.eq("token", args.token))
-                .unique();
-            if (!user || user.role !== "ADMIN") {
-                throw new Error("Unauthorized");
-            }
-        }
+        await requireAdmin(ctx);
 
         let successCount = 0;
         let failedCount = 0;
