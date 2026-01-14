@@ -5,6 +5,7 @@ import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
     ...authTables,
     // Users (Mirrors User model)
+    // Users (Merged with Auth)
     users: defineTable({
         email: v.string(),
         password: v.optional(v.string()), // Made optional for OAuth users

@@ -30,6 +30,7 @@ export default function AuthPage() {
     }
   }, [user, authLoading, navigate, searchParams]);
 
+  /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
   // Handle Google OAuth callback
   useEffect(() => {
     const code = searchParams.get('code');
@@ -37,58 +38,24 @@ export default function AuthPage() {
       handleGoogleCallback(code);
     }
   }, [searchParams, user]);
+  */
 
   // const loginMutation = useMutation(api.auth.login);
   // const registerMutation = useMutation(api.auth.register);
   // const googleAuthMutation = useMutation(api.auth.googleAuth);
 
+  /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
   const handleGoogleCallback = async (code: string) => {
-    setGoogleLoading(true);
-    setError(null);
-    try {
-      // Legacy API call for Google might still be needed if Convex doesn't handle the OAuth code exchange directly
-      // However, looking at convex/auth.ts, googleAuth expects { googleId, email, name, avatar }.
-      // The frontend flow for Google Auth usually involves getting a code, swapping for token, then getting user info.
-      // If the legacy api.googleLogin handles the swap and returns user info, we might need to keep it OR move that logic to a Convex Action.
-      // For now, let's assume we maintain the legacy API for the OAUTH SWAP only (since it's server-side logic often),
-      // OR better, we use the legacy API to get the profile, then sync with Convex via googleAuth mutation.
-      // BUT, the plan said "Replace api.googleLogin with useMutation(api.auth.googleAuth)".
-      // Let's look at api.googleLogin implementation if possible.
-      // Assuming api.googleLogin returns the user profile, we can then call convex login?
-      // actually, if we want to move entirely to Convex, we should use a Convex Action for the oauth swap.
-      // Since we didn't create that action yet, I will keep the legacy API for the *network request* to google if needed,
-      // but the plan implies full migration.
-      // Let's stick to the plan: if I can't swap code for token in browser, I might need the legacy API helper for now just for that step,
-      // UNTIL we write a Convex Action for it.
-      // However, to strictly follow "Migrate Auth to Convex", I should use the mutation.
-      // But convex/auth.ts googleAuth mutation takes user details, not a code.
-      // So I will keep legacy api.googleLogin for the code exchange for now (as it's an external service interaction),
-      // and clarify this limitation.
-      // Wait, looking at lines 35-36 of original: api.googleLogin returns {user, token}.
-      // Let's assume for this specific step (login/register form) we can fully migrate.
-      // For Google, I'll temporarily leave it or use the legacy API just for the fetch, then passing to context.
-
-      // const response = await apiLegacy.googleLogin({ code, redirectUri: REDIRECT_URI });
-      // login(response.user, response.token);
-      throw new Error("Google Login temporarily unavailable during migration.");
-      // login(response.user, response.token);
-      // const redirectUrl = searchParams.get('redirect') || '/dashboard';
-      // window.history.replaceState({}, '', '/auth');
-      // navigate(redirectUrl);
-    } catch (err: any) {
-      setError(err.message || labels.auth?.googleLoginFailed || (language === 'zh' ? 'Google 登录失败' : 'Google login failed'));
-      window.history.replaceState({}, '', '/auth');
-    } finally {
-      setGoogleLoading(false);
-    }
+     // ...
   };
+  */
 
   const { signIn } = useAuthActions();
   const logoSetting = useQuery(api.settings.getSetting, { key: "logo" });
 
   const handleGoogleLogin = async () => {
     try {
-      await signIn("google");
+      await signIn("google", { redirectTo: "/dashboard" });
     } catch (e: any) {
       setError(e.message || "Google login failed");
     }
@@ -96,49 +63,10 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        // useMutation for login
-        // convex/auth.ts login returns { user: enrichedUser, token: string }
-        // const response = await loginMutation({ ... });
-        // login(response.user as any, response.token);
-        alert("Please use Google Login for now. Email login is being upgraded.");
-        return;
-        const redirectUrl = searchParams.get('redirect') || '/dashboard';
-        navigate(redirectUrl);
-      } else {
-        // useMutation for register
-        // convex/auth.ts register returns { user, token, message }
-        // await registerMutation({ ... });
-        alert("Please use Google Login for now. Registration is being upgraded.");
-        return;
-        setIsLogin(true);
-        setError(labels.auth?.registerSuccess || 'Registration successful! Please check email to verify.');
-      }
-    } catch (err: any) {
-      // Extract error code from ConvexError
-      // Convex errors usually come as { message: ... } or data object if using ConvexError
-      // The err object here might be the raw error.
-      const errorCode = err.data?.code || (err.message && err.message.includes('code') ? 'UNKNOWN' : null);
-      // Fallback message if code extraction fails
-      let errorMessage = err.message || (labels.auth?.loginFailed || 'Authentication failed');
-
-      if (errorCode === 'INVALID_CREDENTIALS' || (err.message && err.message.includes('INVALID_CREDENTIALS'))) {
-        errorMessage = labels.auth?.invalidCredentials || 'Invalid email or password';
-      } else if (errorCode === 'EMAIL_ALREADY_EXISTS' || (err.message && err.message.includes('EMAIL_ALREADY_EXISTS'))) {
-        errorMessage = labels.auth?.emailExists || 'An account with this email already exists';
-      } else if (errorCode === 'EMAIL_NOT_VERIFIED') {
-        errorMessage = labels.auth?.emailNotVerified || 'Please verify your email before logging in';
-      } else if (errorCode === 'USER_NOT_FOUND') {
-        errorMessage = labels.auth?.userNotFound || 'User not found';
-      }
-
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+    if (isLogin) {
+      alert("Email login is currently being upgraded. Please use Google Login.");
+    } else {
+      alert("Registration is currently being upgraded. Please use Google Login.");
     }
   };
 
