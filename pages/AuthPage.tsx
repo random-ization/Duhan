@@ -63,10 +63,33 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLogin) {
-      alert("Email login is currently being upgraded. Please use Google Login.");
-    } else {
-      alert("Registration is currently being upgraded. Please use Google Login.");
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        // Login with email/password
+        await signIn("password", {
+          email: formData.email,
+          password: formData.password,
+          flow: "signIn",
+          redirectTo: window.location.origin + "/dashboard"
+        });
+      } else {
+        // Register with email/password
+        await signIn("password", {
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          flow: "signUp",
+          redirectTo: window.location.origin + "/dashboard"
+        });
+      }
+    } catch (e: any) {
+      console.error("Auth error:", e);
+      setError(e.message || (isLogin ? "Login failed" : "Registration failed"));
+    } finally {
+      setLoading(false);
     }
   };
 
