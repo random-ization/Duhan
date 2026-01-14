@@ -5,6 +5,7 @@ import { useAction, useQuery, useMutation } from 'convex/react';
 import { api as convexApi } from '../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/ui/BackButton';
+import { getLabels } from '../utils/i18n';
 
 interface Episode {
     title: string;
@@ -30,7 +31,8 @@ const PodcastChannelPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, language } = useAuth();
+    const labels = getLabels(language);
 
     // Get channel from navigation state or query params
     const stateChannel = (location.state as any)?.channel;
@@ -54,7 +56,7 @@ const PodcastChannelPage: React.FC = () => {
             if (stateChannel) {
                 setLoading(false);
             } else {
-                setError('缺少频道 Feed URL');
+                setError(labels.podcast?.missingFeed || 'Missing Channel Feed URL');
                 setLoading(false);
             }
             return;
@@ -66,7 +68,7 @@ const PodcastChannelPage: React.FC = () => {
                 setData(result);
             } catch (err) {
                 console.error('Failed to fetch episodes:', err);
-                setError('无法加载播客剧集');
+                setError(labels.podcast?.loadEpisodesError || 'Failed to load episodes');
             } finally {
                 setLoading(false);
             }
@@ -86,7 +88,7 @@ const PodcastChannelPage: React.FC = () => {
 
     const handleToggleSubscribe = async () => {
         if (!user) {
-            alert('请先登录');
+            alert(labels.podcast?.loginRequired || 'Please login first');
             return;
         }
 
@@ -112,7 +114,7 @@ const PodcastChannelPage: React.FC = () => {
         } catch (err: any) {
             setIsSubscribed(oldState);
             console.error('Failed to toggle subscription:', err);
-            alert('订阅失败: ' + (err?.message || '请稍后重试'));
+            alert((labels.podcast?.subscribeFailed || 'Subscription failed: ') + (err?.message || 'Please try again later'));
         }
     };
 
@@ -150,7 +152,7 @@ const PodcastChannelPage: React.FC = () => {
         if (!duration) return '—';
         if (typeof duration === 'number') {
             const mins = Math.floor(duration / 60);
-            return `${mins} 分钟`;
+            return `${mins} ${labels.podcast?.minutes || 'mins'}`;
         }
         // Already formatted string like "01:23:45" or "23:45"
         return duration;
@@ -160,7 +162,7 @@ const PodcastChannelPage: React.FC = () => {
         if (!dateStr) return '';
         try {
             const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-            return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: 'numeric' });
+            return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         } catch {
             return String(dateStr);
         }
@@ -171,7 +173,7 @@ const PodcastChannelPage: React.FC = () => {
             <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="text-center space-y-4">
                     <div className="animate-spin rounded-full h-10 w-10 border-3 border-indigo-500 border-t-transparent mx-auto" />
-                    <p className="text-slate-500 text-sm">加载剧集中...</p>
+                    <p className="text-slate-500 text-sm">{labels.loading || 'Loading episodes...'}</p>
                 </div>
             </div>
         );
@@ -183,12 +185,12 @@ const PodcastChannelPage: React.FC = () => {
     if (error && !displayChannel) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-                <p className="text-red-500">{error || '加载失败'}</p>
+                <p className="text-red-500">{error || (labels.errors?.loadError || 'Load failed')}</p>
                 <button
                     onClick={() => navigate(-1)}
                     className="text-indigo-600 hover:underline flex items-center gap-1"
                 >
-                    <ArrowLeft className="w-4 h-4" /> 返回
+                    <ArrowLeft className="w-4 h-4" /> {labels.errors?.backToHome || 'Back'}
                 </button>
             </div>
         );
@@ -197,8 +199,8 @@ const PodcastChannelPage: React.FC = () => {
     if (!displayChannel) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-                <p className="text-slate-500">无法找到频道信息</p>
-                <button onClick={() => navigate(-1)} className="text-indigo-600">返回</button>
+                <p className="text-slate-500">{labels.podcast?.noChannelInfo || 'Channel not found'}</p>
+                <button onClick={() => navigate(-1)} className="text-indigo-600">{labels.errors?.backToHome || 'Back'}</button>
             </div>
         );
     }
@@ -258,7 +260,7 @@ const PodcastChannelPage: React.FC = () => {
                         }`}
                 >
                     <Heart className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`} />
-                    {isSubscribed ? '已订阅' : '订阅频道'}
+                    {isSubscribed ? (labels.podcast?.subscribed || 'Subscribed') : (labels.podcast?.subscribe || 'Subscribe')}
                 </button>
             </div>
 
@@ -274,9 +276,9 @@ const PodcastChannelPage: React.FC = () => {
                             className="mt-2 text-xs text-indigo-600 font-medium flex items-center gap-1"
                         >
                             {isDescExpanded ? (
-                                <>收起 <ChevronUp className="w-4 h-4" /></>
+                                <>{labels.podcast?.collapse || 'Collapse'} <ChevronUp className="w-4 h-4" /></>
                             ) : (
-                                <>展开 <ChevronDown className="w-4 h-4" /></>
+                                <>{labels.podcast?.expand || 'Expand'} <ChevronDown className="w-4 h-4" /></>
                             )}
                         </button>
                     )}
@@ -286,12 +288,12 @@ const PodcastChannelPage: React.FC = () => {
             {/* Episode List */}
             <div className="p-4">
                 <h2 className="font-bold text-lg text-slate-800 mb-4">
-                    剧集 ({data?.episodes?.length || 0})
+                    {labels.podcast?.episodes || 'Episodes'} ({data?.episodes?.length || 0})
                 </h2>
                 {(!data?.episodes || data.episodes.length === 0) && (
                     <div className="text-center py-12 text-slate-400">
-                        <p>暂无剧集信息</p>
-                        {!feedUrl && <p className="text-xs mt-2">Feed URL 未找到，无法加载剧集</p>}
+                        <p>{labels.podcast?.noEpisodes || 'No episodes found'}</p>
+                        {!feedUrl && <p className="text-xs mt-2">{labels.podcast?.missingFeed || 'Missing Feed URL'}</p>}
                     </div>
                 )}
                 <div className="space-y-3">

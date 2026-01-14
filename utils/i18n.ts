@@ -5,21 +5,17 @@ import viTranslations from '../locales/vi.json';
 import mnTranslations from '../locales/mn.json';
 
 // Type for translation object - exported so components can use it
-export type TranslationObject = {
-  [key: string]: string | string[] | TranslationObject;
-};
+export type TranslationObject = Record<string, any>;
 
 // Type for accessing labels - allows any string key access
-export type Labels = {
-  [key: string]: any;
-};
+export type Labels = Record<string, any>;
 
 // Load translations from JSON files
 export const translations: Record<Language, TranslationObject> = {
-  en: enTranslations,
-  zh: zhTranslations,
-  vi: viTranslations,
-  mn: mnTranslations,
+  en: enTranslations as any,
+  zh: zhTranslations as any,
+  vi: viTranslations as any,
+  mn: mnTranslations as any,
 };
 
 // Helper to deep merge objects

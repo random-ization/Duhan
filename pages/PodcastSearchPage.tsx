@@ -5,11 +5,15 @@ import { useAction } from 'convex/react';
 import { api as convexApi } from '../convex/_generated/api';
 import { PodcastChannel } from '../types';
 import BackButton from '../components/ui/BackButton';
+import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
 
 export default function PodcastSearchPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
     const navigate = useNavigate();
+    const { language } = useAuth();
+    const labels = getLabels(language);
 
     const [searchTerm, setSearchTerm] = useState(query);
     const [results, setResults] = useState<PodcastChannel[]>([]);
@@ -32,7 +36,7 @@ export default function PodcastSearchPage() {
             setResults(data || []);
         } catch (err: any) {
             console.error('Search failed:', err);
-            setError('搜索失败，请稍后重试');
+            setError(labels.podcast?.searchError || 'Search failed, please try again later');
         } finally {
             setLoading(false);
         }
@@ -53,7 +57,7 @@ export default function PodcastSearchPage() {
                 <div className="space-y-6">
                     <div className="flex items-center gap-4">
                         <BackButton onClick={() => navigate('/podcasts')} />
-                        <h1 className="text-3xl font-black text-slate-900">搜索播客</h1>
+                        <h1 className="text-3xl font-black text-slate-900">{labels.podcast?.searchTitle || 'Search Podcasts'}</h1>
                     </div>
 
                     <form onSubmit={handleSearchSubmit} className="relative group">
@@ -61,7 +65,7 @@ export default function PodcastSearchPage() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="输入关键词搜索..."
+                            placeholder={labels.podcast?.searchPlaceholder || "Enter keywords..."}
                             autoFocus
                             className="w-full bg-white border-2 border-slate-900 rounded-xl py-4 px-12 shadow-pop focus:outline-none focus:translate-y-1 focus:shadow-none transition font-bold placeholder:text-slate-400 text-slate-900 text-lg"
                         />
@@ -71,7 +75,7 @@ export default function PodcastSearchPage() {
                             disabled={loading || !searchTerm.trim()}
                             className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition disabled:opacity-50"
                         >
-                            搜索
+                            {labels.common?.search || 'Search'}
                         </button>
                     </form>
                 </div>
@@ -81,7 +85,7 @@ export default function PodcastSearchPage() {
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                             <Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" />
-                            <p className="font-bold">正在搜索精彩内容...</p>
+                            <p className="font-bold">{labels.podcast?.searching || 'Searching...'}</p>
                         </div>
                     ) : error ? (
                         <div className="text-center py-20 text-red-500 font-bold bg-white rounded-2xl border-2 border-red-100 p-8">
@@ -89,7 +93,7 @@ export default function PodcastSearchPage() {
                         </div>
                     ) : results.length > 0 ? (
                         <>
-                            <p className="font-bold text-slate-500 mb-4">找到 {results.length} 个相关结果</p>
+                            <p className="font-bold text-slate-500 mb-4">{(labels.podcast?.foundResults || 'Found {{count}} results').replace('{{count}}', String(results.length))}</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {results.map((channel) => (
                                     <div
@@ -116,12 +120,12 @@ export default function PodcastSearchPage() {
                     ) : query && !loading ? (
                         <div className="text-center py-20 bg-white rounded-[2rem] border-dashed border-2 border-slate-300">
                             <Podcast className="w-16 h-16 mx-auto text-slate-200 mb-4" />
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">未找到相关播客</h3>
-                            <p className="text-slate-500">换个关键词试试看？比如 "Korean", "Talk To Me In Korean"</p>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">{labels.podcast?.noResults || 'No podcasts found'}</h3>
+                            <p className="text-slate-500">{(labels.podcast?.msg?.EMPTY_SEARCH_DESC || 'Try another keyword? e.g. \"Talk To Me In Korean\"')}</p>
                         </div>
                     ) : (
                         <div className="text-center py-20">
-                            <p className="text-slate-400 font-bold">输入关键词开始搜索</p>
+                            <p className="text-slate-400 font-bold">{labels.podcast?.searchPlaceholder || 'Enter keywords to start search'}</p>
                         </div>
                     )}
                 </div>

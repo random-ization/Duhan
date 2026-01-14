@@ -56,7 +56,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         {[
           {
             id: LearningModuleType.VOCABULARY,
-            label: labels.vocab,
+            label: labels.vocabLabel,
             desc: labels.vocabDesc,
             icon: Book,
             color: 'text-emerald-600',

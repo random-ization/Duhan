@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useAuth } from '../../contexts/AuthContext';
+import { getLabels } from '../../utils/i18n';
 // import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
-import { useAuth } from '../../contexts/AuthContext'; // If needed
 
 interface TranscriptSegment {
     start: number;
@@ -44,42 +45,48 @@ interface WordPopupProps {
     onClose: () => void;
     onSpeak: () => void;
     onSave: () => void;
+    language: any;
 }
 
-const WordPopup: React.FC<WordPopupProps> = ({ word, position, onClose, onSpeak, onSave }) => (
-    <div
-        className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[180px]"
-        style={{ left: Math.min(position.x, window.innerWidth - 220), top: position.y }}
-    >
-        <button
-            onClick={onClose}
-            className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-900 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition"
+const WordPopup: React.FC<WordPopupProps> = ({ word, position, onClose, onSpeak, onSave, language }) => {
+    const labels = getLabels(language);
+    return (
+        <div
+            className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[180px]"
+            style={{ left: Math.min(position.x, window.innerWidth - 220), top: position.y }}
         >
-            <X className="w-3 h-3" />
-        </button>
-        <div className="text-xl font-black text-zinc-900 mb-3">{word}</div>
-        <div className="flex gap-2">
             <button
-                onClick={onSpeak}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                onClick={onClose}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-900 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition"
             >
-                <Volume2 className="w-3 h-3" />
-                朗读
+                <X className="w-3 h-3" />
             </button>
-            <button
-                onClick={onSave}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
-            >
-                <Plus className="w-3 h-3" />
-                收藏
-            </button>
+            <div className="text-xl font-black text-zinc-900 mb-3">{word}</div>
+            <div className="flex gap-2">
+                <button
+                    onClick={onSpeak}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-zinc-100 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                >
+                    <Volume2 className="w-3 h-3" />
+                    {labels.dashboard?.common?.read || "朗读"}
+                </button>
+                <button
+                    onClick={onSave}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                >
+                    <Plus className="w-3 h-3" />
+                    {labels.dashboard?.common?.favorite || "收藏"}
+                </button>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const VideoPlayerPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { language } = useAuth();
+    const labels = getLabels(language);
     const videoRef = useRef<HTMLVideoElement>(null);
     const transcriptContainerRef = useRef<HTMLDivElement>(null);
     const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -103,7 +110,8 @@ const VideoPlayerPage: React.FC = () => {
     } | null>(null);
 
     // Convex Integration
-    const convexVideo = useQuery(api.videos.get, id ? { id: id as any } : "skip");
+    const getVideoApi: any = api.videos.get;
+    const convexVideo = useQuery(getVideoApi, id ? { id: id as any } : "skip");
 
     // Use state variable instead of early return to avoid hooks order issues
     const isQueryLoading = convexVideo === undefined;
@@ -120,7 +128,7 @@ const VideoPlayerPage: React.FC = () => {
             });
             setLoading(false);
         } else if (convexVideo === null) {
-            setError('视频不存在');
+            setError(labels.dashboard?.video?.notFound || 'Video not found');
             setLoading(false);
         }
     }, [convexVideo]);
@@ -235,12 +243,12 @@ const VideoPlayerPage: React.FC = () => {
         return (
             <div className="min-h-screen flex items-center justify-center bg-zinc-100">
                 <div className="text-center">
-                    <p className="text-red-500 font-bold text-lg mb-4">{error || '视频不存在'}</p>
+                    <p className="text-red-500 font-bold text-lg mb-4">{error || (labels.dashboard?.video?.notFound || 'Video not found')}</p>
                     <button
                         onClick={() => navigate('/videos')}
                         className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold"
                     >
-                        返回视频库
+                        {labels.dashboard?.video?.back || "Back to Library"}
                     </button>
                 </div>
             </div>
@@ -269,7 +277,7 @@ const VideoPlayerPage: React.FC = () => {
                         <h1 className="font-black text-lg line-clamp-1">{video.title}</h1>
                         <div className="flex items-center gap-2 text-sm text-zinc-500">
                             <Eye className="w-4 h-4" />
-                            {video.views} 次观看
+                            {(labels.dashboard?.video?.views || "{count} views").replace('{count}', String(video.views))}
                         </div>
                     </div>
                 </div>
@@ -281,7 +289,7 @@ const VideoPlayerPage: React.FC = () => {
                         className="lg:hidden px-3 py-2 bg-white border-2 border-zinc-900 rounded-xl flex items-center gap-2 font-bold text-sm shadow-[2px_2px_0px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
                     >
                         <List className="w-4 h-4" />
-                        <span className="hidden sm:inline">字幕列表</span>
+                        <span className="hidden sm:inline">{labels.dashboard?.video?.subtitleList || "Subtitles"}</span>
                     </button>
 
                     <button
@@ -292,7 +300,7 @@ const VideoPlayerPage: React.FC = () => {
                             }`}
                     >
                         <Languages className="w-4 h-4 inline mr-1" />
-                        译文
+                        {labels.dashboard?.video?.translation || "Translation"}
                     </button>
                 </div>
             </header>
@@ -328,7 +336,7 @@ const VideoPlayerPage: React.FC = () => {
                 >
                     {/* Mobile Pull Handle / Header */}
                     <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b-2 border-zinc-100 bg-white rounded-t-2xl">
-                        <span className="font-bold text-lg">字幕列表</span>
+                        <span className="font-bold text-lg">{labels.dashboard?.video?.subtitleList || "Subtitles"}</span>
                         <button onClick={() => setIsTranscriptOpen(false)} className="p-1 hover:bg-zinc-100 rounded-full">
                             <X className="w-5 h-5 text-zinc-500" />
                         </button>
@@ -338,9 +346,9 @@ const VideoPlayerPage: React.FC = () => {
                     <div className="hidden lg:block sticky top-0 bg-[#FDFBF7] border-b-2 border-zinc-200 px-4 py-3 z-10">
                         <h2 className="font-black text-lg flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-indigo-600" />
-                            实时字幕
+                            {labels.dashboard?.video?.realtimeSubtitles || "Real-time Subtitles"}
                         </h2>
-                        <p className="text-xs text-zinc-400 mt-1">点击句子跳转播放，点击单词查词</p>
+                        <p className="text-xs text-zinc-400 mt-1">{labels.dashboard?.video?.hint || "Click sentence to jump, click word to look up"}</p>
                     </div>
 
                     {/* Transcript Content */}
@@ -348,8 +356,8 @@ const VideoPlayerPage: React.FC = () => {
                         {!video.transcriptData || video.transcriptData.length === 0 ? (
                             <div className="text-center py-12 text-zinc-400">
                                 <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                                <p className="font-bold">暂无字幕数据</p>
-                                <p className="text-sm mt-1">该视频尚未配置字幕</p>
+                                <p className="font-bold">{labels.dashboard?.video?.noSubtitles || "No Subtitles"}</p>
+                                <p className="text-sm mt-1">{labels.dashboard?.video?.noSubtitlesDesc || "This video has no subtitles yet"}</p>
                             </div>
                         ) : (
                             video.transcriptData.map((segment, index) => {
@@ -429,6 +437,7 @@ const VideoPlayerPage: React.FC = () => {
                             // TODO: Save to vocabulary
                             setSelectedWord(null);
                         }}
+                        language={language}
                     />
                 </div>
             )}

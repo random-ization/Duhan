@@ -69,7 +69,7 @@ export default function AuthPage() {
       // window.history.replaceState({}, '', '/auth');
       // navigate(redirectUrl);
     } catch (err: any) {
-      setError(err.message || 'Google 登录失败');
+      setError(err.message || labels.auth?.googleLoginFailed || (language === 'zh' ? 'Google 登录失败' : 'Google login failed'));
       window.history.replaceState({}, '', '/auth');
     } finally {
       setGoogleLoading(false);
@@ -156,7 +156,7 @@ export default function AuthPage() {
           <div className="relative z-10 text-center">
             <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
             <h1 className="text-5xl font-black font-display mb-2">{labels.auth?.brand || "DuHan."}</h1>
-            <p className="text-indigo-200 font-bold text-lg tracking-wide">{labels.auth?.slogan || "Level Up Your Korean"}</p>
+            <p className="text-indigo-200 font-bold text-lg tracking-wide">{labels.auth?.slogan || (language === 'zh' ? "提升你的韩语水平" : "Level Up Your Korean")}</p>
           </div>
 
           {/* 3D Rocket Decoration */}
@@ -172,7 +172,7 @@ export default function AuthPage() {
         {/* Right: Console (Form) */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
           <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
-            {isLogin ? (labels.auth?.welcomeBack || "Welcome back, Explorer!") : (labels.auth?.createCharacter || "Create New Character")} <Sparkles className="text-yellow-400 fill-current" />
+            {isLogin ? (labels.auth?.welcomeBack || (language === 'zh' ? "欢迎回来，探索者！" : "Welcome back, Explorer!")) : (labels.auth?.createCharacter || (language === 'zh' ? "创建新角色" : "Create New Character"))} <Sparkles className="text-yellow-400 fill-current" />
           </h2>
 
           {error && (
@@ -234,7 +234,7 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-black hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? (labels.auth?.loginButton || "Start Game (LOGIN)") : (labels.auth?.signupButton || "Sign Up (SIGN UP)"))}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? (labels.auth?.loginButton || (language === 'zh' ? "开始游戏 (登录)" : "Start Game (LOGIN)")) : (labels.auth?.signupButton || (language === 'zh' ? "注册账户" : "Sign Up")))}
               {!loading && <ArrowRight size={20} />}
             </button>
           </form>
@@ -242,7 +242,7 @@ export default function AuthPage() {
           {/* Social Login Divider */}
           <div className="my-8 flex items-center gap-4">
             <div className="h-px bg-slate-200 flex-1"></div>
-            <span className="text-xs font-bold text-slate-400 uppercase">{labels.auth?.orContinue || "Or continue with"}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">{labels.auth?.orContinue || (language === 'zh' ? "或通过以下方式继续" : "Or continue with")}</span>
             <div className="h-px bg-slate-200 flex-1"></div>
           </div>
 
@@ -268,7 +268,7 @@ export default function AuthPage() {
           </div>
 
           <div className="mt-8 text-center text-xs font-bold text-slate-400">
-            {isLogin ? (labels.auth?.noAccount || "No account yet? ") : (labels.auth?.hasAccount || "Already have an account? ")}
+            {isLogin ? (labels.auth?.noAccount || (language === 'zh' ? "还没有账号？" : "No account yet? ")) : (labels.auth?.hasAccount || (language === 'zh' ? "已经有账号？" : "Already have an account? "))}
             <button
               type="button"
               onClick={() => { setIsLogin(!isLogin); setError(null); }}

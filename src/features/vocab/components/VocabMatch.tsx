@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Timer, Trophy, RefreshCw, Sparkles } from 'lucide-react';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { getLabels } from '../../../../utils/i18n';
 
 interface VocabItem {
     id: string;
@@ -25,6 +27,8 @@ type CardState = 'normal' | 'selected' | 'matched' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
 
 export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
+    const { language } = useAuth();
+    const labels = getLabels(language);
     const [cards, setCards] = useState<MatchCard[]>([]);
     const [selectedCards, setSelectedCards] = useState<string[]>([]);
     const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
@@ -176,7 +180,9 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
     if (words.length < totalPairs) {
         return (
             <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
-                <p className="text-slate-500 font-medium">需要至少 {totalPairs} 个单词才能开始配对游戏</p>
+                <p className="text-slate-500 font-medium">
+                    {(labels.vocab?.minWordsMatch || 'Need at least {count} words to start matching game').replace('{count}', String(totalPairs))}
+                </p>
             </div>
         );
     }
@@ -190,24 +196,24 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
                     <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-yellow-100 flex items-center justify-center">
                         <Trophy className="w-12 h-12 text-yellow-600" />
                     </div>
-                    <h2 className="text-4xl font-black text-slate-900 mb-2">🎉 完美配对!</h2>
-                    <p className="text-slate-500 mb-6">你成功匹配了所有单词!</p>
+                    <h2 className="text-4xl font-black text-slate-900 mb-2">🎉 {labels.vocab?.matchTitle || 'Perfect Match!'}</h2>
+                    <p className="text-slate-500 mb-6">{labels.vocab?.matchDesc || 'You matched all words!'}</p>
 
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
                             <div className="text-3xl font-black text-slate-900">{formatTime(timer)}</div>
-                            <div className="text-xs text-slate-400 font-bold">用时</div>
+                            <div className="text-xs text-slate-400 font-bold">{labels.vocab?.time || 'Time'}</div>
                         </div>
                         <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
                             <div className="text-3xl font-black text-slate-900">{moves}</div>
-                            <div className="text-xs text-slate-400 font-bold">步数</div>
+                            <div className="text-xs text-slate-400 font-bold">{labels.vocab?.moves || 'Moves'}</div>
                         </div>
                     </div>
 
                     <button onClick={restartGame} className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-black rounded-xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all">
                         <RefreshCw className="w-5 h-5" />
-                        再来一次
+                        {labels.vocab?.restart || 'Restart'}
                     </button>
                 </div>
             </div>
@@ -224,10 +230,10 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
                 </div>
                 <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-yellow-400" />
-                    <span className="font-bold">{matchedPairs} / {totalPairs} 对</span>
+                    <span className="font-bold">{matchedPairs} / {totalPairs} {labels.vocab?.pairs || 'Pairs'}</span>
                 </div>
                 <div className="text-sm font-medium text-slate-400">
-                    步数: <span className="text-white font-black">{moves}</span>
+                    {labels.vocab?.moves || 'Moves'}: <span className="text-white font-black">{moves}</span>
                 </div>
             </div>
 

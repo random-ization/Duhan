@@ -41,9 +41,9 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Convex Mutations & Actions
-  const updateProfileMutation = useMutation(api.auth.updateProfile);
-  const changePasswordMutation = useMutation(api.auth.changePassword);
-  const getUploadUrlAction = useAction(api.storage.getUploadUrl);
+  const updateProfileMutation = useMutation(api.auth.updateProfile as any);
+  const changePasswordMutation = useMutation(api.auth.changePassword as any);
+  const getUploadUrlAction = useAction(api.storage.getUploadUrl as any);
 
   if (!user) return <Loading fullScreen size="lg" />;
 
@@ -56,11 +56,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       // await api.updateProfile({ name: newName });
       await updateProfileMutation({ name: newName });
       updateUser({ name: newName });
-      success(labels.profileUpdated);
+      success(labels.profileUpdated || (language === 'zh' ? '名字已更新' : 'Profile updated'));
       setIsEditingName(false);
     } catch (err) {
       console.error(err);
-      error('Failed to update name');
+      error(labels.profile?.updateNameFailed || (language === 'zh' ? '更新名字失败' : 'Failed to update name'));
     }
   };
 
@@ -68,11 +68,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      error('Please upload an image file');
+      error(labels.profile?.uploadImageError || (language === 'zh' ? '请上传图片文件' : 'Please upload an image file'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      error('Image size must be less than 5MB');
+      error(labels.profile?.imageTooLarge || (language === 'zh' ? '图片大小不能超过 5MB' : 'Image size must be less than 5MB'));
       return;
     }
     setIsUploadingAvatar(true);
@@ -98,10 +98,10 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
       // 4. Update local state
       updateUser({ avatar: publicUrl });
-      success(labels.avatarUpdated);
+      success(labels.avatarUpdated || (language === 'zh' ? '头像已更新' : 'Avatar updated'));
     } catch (err) {
       console.error("Avatar upload failed:", err);
-      error('Failed to upload avatar');
+      error(labels.profile?.uploadAvatarFailed || (language === 'zh' ? '上传头像失败' : 'Failed to upload avatar'));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -118,14 +118,14 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         currentPassword,
         newPassword
       });
-      success(labels.passwordUpdated);
+      success(labels.passwordUpdated || (language === 'zh' ? '密码已更新' : 'Password updated'));
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('incorrect') || msg.includes('wrong') || msg.includes('INCORRECT_PASSWORD')) {
-        error(labels.wrongPassword);
+        error(labels.wrongPassword || (language === 'zh' ? '密码不正确' : 'Incorrect password'));
       } else {
-        error('Failed to change password');
+        error(labels.profile?.changePasswordFailed || (language === 'zh' ? '修改密码失败' : 'Failed to change password'));
       }
     } finally {
       setIsChangingPassword(false);
@@ -191,17 +191,17 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
             {!isEditingName && (
               <button onClick={() => setIsEditingName(true)} className="text-slate-400 hover:text-indigo-600 transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
             )}
-            {user.tier === 'PAID' && <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1"><Crown size={12} className="fill-current" /> Premium</span>}
+            {user.tier === 'PAID' && <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1"><Crown size={12} className="fill-current" /> {labels.profile?.premiumBadge || 'Premium'}</span>}
           </div>
           <p className="text-slate-500 font-medium">{user.email}</p>
           <div className="mt-4 flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
               <Calendar size={14} className="text-indigo-500" />
-              Joined {new Date(user.createdAt).toLocaleDateString()}
+              {labels.profile?.joined || 'Joined'} {new Date(user.createdAt).toLocaleDateString()}
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
               <Trophy size={14} className="text-orange-500" />
-              {examsTaken} exams completed
+              {examsTaken} {labels.profile?.examsCompleted || 'exams completed'}
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[400px]">
         {activeTab === 'info' && (
           <div className="max-w-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">Account Details</h3>
+            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">{labels.profile?.accountTitle || 'Account Details'}</h3>
             <div className="grid gap-6">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{labels.displayName}</label>
@@ -258,7 +258,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
               </div>
               <div className="pt-4">
                 <Button type="submit" variant="primary" loading={isChangingPassword} disabled={!currentPassword || !newPassword || !confirmPassword}>
-                  Update Password
+                  {labels.profile?.updatePassword || 'Update Password'}
                 </Button>
               </div>
             </form>
@@ -298,7 +298,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 { label: labels.dayStreak, value: user.statistics?.dayStreak || 0, color: 'text-orange-500', bg: 'bg-orange-50' },
                 { label: labels.wordsLearned, value: (user.savedWords || []).length, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                 { label: labels.examsTaken, value: examsTaken, color: 'text-purple-500', bg: 'bg-purple-50' },
-                { label: labels.averageScore, value: `${averageScore}%`, color: 'text-blue-500', bg: 'bg-blue-50' }
+                { label: labels.averageScore, value: `${averageScore}%`, color: 'text-blue-500', bg: 'bg-blue-50' },
               ].map((stat, i) => (
                 <div key={i} className={`p-4 rounded-2xl ${stat.bg} border border-transparent`}>
                   <div className={`text-2xl font-black ${stat.color} mb-1`}>{stat.value}</div>
@@ -307,11 +307,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
               ))}
             </div>
 
-            <h3 className="text-lg font-bold text-slate-800 mb-4">{labels.recentActivity}</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-4">{labels.profile?.recentActivity || 'Recent Activity'}</h3>
             <div className="space-y-3">
               {user.examHistory?.length === 0 ? (
                 <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-slate-400">
-                  No activity yet. Start a test to see your progress!
+                  {labels.profile?.noActivity || 'No activity yet. Start a test to see your progress!'}
                 </div>
               ) : (
                 user.examHistory?.slice(0, 5).map((exam, i) => (
@@ -335,18 +335,18 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
         {activeTab === 'settings' && (
           <div className="max-w-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">{labels.generalSettings || "General Settings"}</h3>
+            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">{labels.profile?.settingsTitle || "General Settings"}</h3>
 
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{labels.language || "Display Language"}</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{labels.profile?.displayLanguage || "Display Language"}</label>
                 <div className="p-1">
                   {/* Using LanguageSelector but styled slightly differently via props if needed, or just container */}
                   <div className="max-w-xs">
                     <LanguageSelector upwards={false} />
                   </div>
                   <p className="mt-2 text-xs text-slate-400">
-                    {labels.languageDescription || "Choose the language for the interface and learning materials."}
+                    {labels.profile?.languageDesc || "Choose the language for the interface and learning materials."}
                   </p>
                 </div>
               </div>

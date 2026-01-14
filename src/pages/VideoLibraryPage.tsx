@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useAuth } from '../../contexts/AuthContext';
+import { getLabels } from '../../utils/i18n';
 
 interface VideoItem {
     id: string;
@@ -23,21 +25,24 @@ interface VideoItem {
     createdAt: string;
 }
 
-const LEVELS = [
-    { key: '', label: '全部' },
-    { key: 'Beginner', label: '初级' },
-    { key: 'Intermediate', label: '中级' },
-    { key: 'Advanced', label: '高级' },
+const LEVELS_KEYS = [
+    { key: '', labelKey: 'all' },
+    { key: 'Beginner', labelKey: 'beginner' },
+    { key: 'Intermediate', labelKey: 'intermediate' },
+    { key: 'Advanced', labelKey: 'advanced' },
 ];
 
 const VideoLibraryPage: React.FC = () => {
     const navigate = useNavigate();
+    const { language } = useAuth();
+    const labels = getLabels(language);
     const [videos, setVideos] = useState<VideoItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeLevel, setActiveLevel] = useState('');
 
     // Convex Integration
-    const convexVideos = useQuery(api.videos.list, activeLevel ? { level: activeLevel } : {});
+    const listVideosApi: any = api.videos.list;
+    const convexVideos = useQuery(listVideosApi, activeLevel ? { level: activeLevel } : {});
 
     useEffect(() => {
         if (convexVideos) {
@@ -101,9 +106,9 @@ const VideoLibraryPage: React.FC = () => {
 
     const getLevelLabel = (level: string) => {
         switch (level) {
-            case 'Beginner': return '初级';
-            case 'Intermediate': return '中级';
-            case 'Advanced': return '高级';
+            case 'Beginner': return labels.dashboard?.video?.beginner || 'Beginner';
+            case 'Intermediate': return labels.dashboard?.video?.intermediate || 'Intermediate';
+            case 'Advanced': return labels.dashboard?.video?.advanced || 'Advanced';
             default: return level;
         }
     };
@@ -124,10 +129,10 @@ const VideoLibraryPage: React.FC = () => {
                         <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center border-2 border-zinc-900">
                             <Video className="w-6 h-6 text-indigo-600" />
                         </div>
-                        视频中心
+                        {labels.dashboard?.video?.title || "Video Center"}
                     </h1>
                     <p className="text-zinc-500 mt-2 ml-15">
-                        沉浸式韩语视频学习，配有同步字幕和查词功能
+                        {labels.dashboard?.video?.subtitle || "Immersive Korean video learning with subtitles and lookup."}
                     </p>
                 </div>
             </div>
@@ -135,7 +140,7 @@ const VideoLibraryPage: React.FC = () => {
             {/* Filters */}
             <div className="max-w-6xl mx-auto px-6 py-6">
                 <div className="flex flex-wrap gap-2">
-                    {LEVELS.map((level) => (
+                    {LEVELS_KEYS.map((level) => (
                         <button
                             key={level.key}
                             onClick={() => setActiveLevel(level.key)}
@@ -144,7 +149,7 @@ const VideoLibraryPage: React.FC = () => {
                                 : 'bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300'
                                 }`}
                         >
-                            {level.label}
+                            {labels.dashboard?.video?.[level.labelKey as any] || level.labelKey}
                         </button>
                     ))}
                 </div>
@@ -159,9 +164,9 @@ const VideoLibraryPage: React.FC = () => {
                 ) : videos.length === 0 ? (
                     <div className="text-center py-20">
                         <Video className="w-20 h-20 mx-auto mb-4 text-zinc-300" />
-                        <p className="text-xl font-bold text-zinc-400">暂无视频</p>
+                        <p className="text-xl font-bold text-zinc-400">{labels.dashboard?.video?.noVideos || "No Videos"}</p>
                         <p className="text-zinc-400 mt-2">
-                            {activeLevel ? '该等级下暂无视频' : '视频内容正在准备中...'}
+                            {activeLevel ? (labels.dashboard?.video?.noVideosLevel || 'No videos in this level') : (labels.dashboard?.video?.preparing || 'Content is being prepared...')}
                         </p>
                     </div>
                 ) : (
@@ -217,11 +222,11 @@ const VideoLibraryPage: React.FC = () => {
                                     <div className="flex items-center gap-4 mt-4 text-sm text-zinc-400">
                                         <span className="flex items-center gap-1">
                                             <Eye className="w-4 h-4" />
-                                            {video.views} 次观看
+                                            {(labels.dashboard?.video?.views || "{count} views").replace('{count}', String(video.views))}
                                         </span>
                                         <span className="flex items-center gap-1">
                                             <Clock className="w-4 h-4" />
-                                            {new Date(video.createdAt).toLocaleDateString('zh-CN')}
+                                            {new Date(video.createdAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'en' ? 'en-US' : language === 'vi' ? 'vi-VN' : 'mn-MN')}
                                         </span>
                                     </div>
                                 </div>

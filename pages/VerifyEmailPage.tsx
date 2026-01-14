@@ -21,7 +21,7 @@ const VerifyEmailPage: React.FC = () => {
 
             if (!token) {
                 setStatus('error');
-                setMessage('Invalid verification link. Token is missing.');
+                setMessage(labels.auth?.invalidLinkDesc || (language === 'zh' ? '链接已失效或缺失令牌，请重新请求' : 'Invalid verification link. Token is missing.'));
                 return;
             }
 
@@ -60,10 +60,10 @@ const VerifyEmailPage: React.FC = () => {
                         <>
                             <Loader2 className="w-16 h-16 text-indigo-400 mx-auto animate-spin mb-6" />
                             <h1 className="text-2xl font-bold text-white mb-2">
-                                {language === 'zh' ? '正在验证邮箱...' : 'Verifying your email...'}
+                                {labels.auth?.verifyingEmail || 'Verifying your email...'}
                             </h1>
                             <p className="text-indigo-200 text-sm">
-                                {language === 'zh' ? '请稍候' : 'Please wait'}
+                                {labels.auth?.waitPlease || 'Please wait'}
                             </p>
                         </>
                     )}
@@ -72,7 +72,7 @@ const VerifyEmailPage: React.FC = () => {
                         <>
                             <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
                             <h1 className="text-2xl font-bold text-white mb-2">
-                                {language === 'zh' ? '验证成功！' : 'Email Verified!'}
+                                {labels.auth?.verifySuccess || 'Email Verified!'}
                             </h1>
                             <p className="text-indigo-200 text-sm mb-8">{message}</p>
                             <button
@@ -88,14 +88,14 @@ const VerifyEmailPage: React.FC = () => {
                         <>
                             <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
                             <h1 className="text-2xl font-bold text-white mb-2">
-                                {language === 'zh' ? '验证失败' : 'Verification Failed'}
+                                {labels.auth?.verifyFailed || 'Verification Failed'}
                             </h1>
                             <p className="text-red-200 text-sm mb-8">{message}</p>
                             <button
                                 onClick={() => navigate('/login')}
                                 className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
                             >
-                                {language === 'zh' ? '返回登录' : 'Back to Login'}
+                                {labels.auth?.backToLogin || 'Back to Login'}
                             </button>
                         </>
                     )}

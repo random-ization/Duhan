@@ -2,21 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
 
 interface DailyPhrase {
     id: string;
     korean: string;
     romanization: string;
-    chinese: string;
-    english?: string;
+    translation: string;
 }
 
 const DailyPhrase: React.FC = () => {
+    const { language } = useAuth();
+    const labels = getLabels(language);
     //     const [phrase, setPhrase] = useState<DailyPhrase | null>(null);
     //     const [loading, setLoading] = useState(true);
     //     const [error, setError] = useState<string | null>(null);
 
-    const phrase = useQuery(api.vocab.getDailyPhrase);
+    const phrase = useQuery(api.vocab.getDailyPhrase as any, { language });
     const loading = phrase === undefined;
     const error = phrase === null;
 
@@ -57,7 +60,7 @@ const DailyPhrase: React.FC = () => {
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
                 <MessageSquare className="w-5 h-5 text-amber-600" />
-                <h3 className="text-sm font-bold text-amber-900 tracking-wide">每日一句</h3>
+                <h3 className="text-sm font-bold text-amber-900 tracking-wide">{labels.dashboard?.daily?.label || 'Daily Phrase'}</h3>
             </div>
 
             {/* Korean Sentence */}
@@ -77,7 +80,7 @@ const DailyPhrase: React.FC = () => {
             {/* Translation */}
             <div className="pt-3 border-t border-yellow-200/50">
                 <p className="text-slate-700 leading-relaxed">
-                    {phrase.chinese}
+                    {phrase.translation}
                 </p>
             </div>
         </div>

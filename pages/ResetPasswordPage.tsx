@@ -28,12 +28,12 @@ const ResetPasswordPage: React.FC = () => {
         setError('');
 
         if (newPassword !== confirmPassword) {
-            setError(language === 'zh' ? '两次输入的密码不一致' : 'Passwords do not match');
+            setError(labels.auth?.passwordsNotMatch || (language === 'zh' ? '两次输入的密码不一致' : 'Passwords do not match'));
             return;
         }
 
         if (newPassword.length < 6) {
-            setError(language === 'zh' ? '密码至少需要6个字符' : 'Password must be at least 6 characters');
+            setError(labels.auth?.passwordTooShort || (language === 'zh' ? '密码至少需要6个字符' : 'Password must be at least 6 characters'));
             return;
         }
 
@@ -68,16 +68,16 @@ const ResetPasswordPage: React.FC = () => {
                     <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10 text-center">
                         <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
                         <h1 className="text-2xl font-bold text-white mb-2">
-                            {language === 'zh' ? '无效链接' : 'Invalid Link'}
+                            {labels.auth?.invalidLink || (language === 'zh' ? '无效链接' : 'Invalid Link')}
                         </h1>
                         <p className="text-red-200 text-sm mb-8">
-                            {language === 'zh' ? '缺少重置令牌，请重新请求密码重置' : 'Reset token is missing. Please request a new password reset.'}
+                            {labels.auth?.invalidLinkDesc || (language === 'zh' ? '链接已失效或缺失令牌，请重新请求' : 'Reset token is missing or expired. Please request a new one.')}
                         </p>
                         <button
                             onClick={() => navigate('/forgot-password')}
                             className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
                         >
-                            {language === 'zh' ? '重新请求' : 'Request Again'}
+                            {labels.auth?.requestAgain || (language === 'zh' ? '重新请求' : 'Request Again')}
                         </button>
                     </div>
                 </div>
@@ -102,10 +102,10 @@ const ResetPasswordPage: React.FC = () => {
                             <div className="text-center mb-8">
                                 <Lock className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
                                 <h1 className="text-2xl font-bold text-white mb-2">
-                                    {language === 'zh' ? '设置新密码' : 'Set New Password'}
+                                    {labels.auth?.setNewPassword || (language === 'zh' ? '设置新密码' : 'Set New Password')}
                                 </h1>
                                 <p className="text-indigo-200 text-sm">
-                                    {language === 'zh' ? '请输入您的新密码' : 'Enter your new password below'}
+                                    {labels.auth?.enterNewPassword || (language === 'zh' ? '请输入您的新密码' : 'Enter your new password below')}
                                 </p>
                             </div>
 
@@ -138,7 +138,7 @@ const ResetPasswordPage: React.FC = () => {
 
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-                                        {language === 'zh' ? '确认密码' : 'Confirm Password'}
+                                        {labels.auth?.confirmPasswordLabel || (language === 'zh' ? '确认密码' : 'Confirm Password')}
                                     </label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -164,7 +164,7 @@ const ResetPasswordPage: React.FC = () => {
                                     {loading ? (
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : (
-                                        language === 'zh' ? '重置密码' : 'Reset Password'
+                                        labels.auth?.recoverPassword || (language === 'zh' ? '重置密码' : 'Reset Password')
                                     )}
                                 </button>
                             </form>
@@ -175,10 +175,10 @@ const ResetPasswordPage: React.FC = () => {
                         <div className="text-center">
                             <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
                             <h1 className="text-2xl font-bold text-white mb-2">
-                                {language === 'zh' ? '密码重置成功！' : 'Password Reset!'}
+                                {labels.auth?.resetSuccess || (language === 'zh' ? '密码重置成功！' : 'Password Reset!')}
                             </h1>
                             <p className="text-indigo-200 text-sm mb-8">
-                                {language === 'zh' ? '您已退出登录，请使用新密码重新登录' : 'You have been logged out. Please log in with your new password.'}
+                                {labels.auth?.resetSuccessDesc || (language === 'zh' ? '您已退出登录，请使用新密码重新登录' : 'You have been logged out. Please log in with your new password.')}
                             </p>
                             <button
                                 onClick={() => navigate('/login')}
@@ -193,14 +193,14 @@ const ResetPasswordPage: React.FC = () => {
                         <div className="text-center">
                             <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
                             <h1 className="text-2xl font-bold text-white mb-2">
-                                {language === 'zh' ? '链接已失效' : 'Link Expired'}
+                                {labels.auth?.invalidLink || (language === 'zh' ? '链接已失效' : 'Link Expired')}
                             </h1>
                             <p className="text-red-200 text-sm mb-8">{error}</p>
                             <button
                                 onClick={() => navigate('/forgot-password')}
                                 className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
                             >
-                                {language === 'zh' ? '重新请求' : 'Request New Link'}
+                                {labels.auth?.requestAgain || (language === 'zh' ? '重新请求' : 'Request New Link')}
                             </button>
                         </div>
                     )}

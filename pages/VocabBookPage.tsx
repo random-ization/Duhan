@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api as convexApi } from '../convex/_generated/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
 
 interface VocabWord {
     id: string;
@@ -23,10 +25,12 @@ interface VocabWord {
 
 const VocabBookPage: React.FC = () => {
     const navigate = useNavigate();
+    const { language } = useAuth();
+    const labels = getLabels(language);
     const [searchQuery, setSearchQuery] = useState('');
 
     // 从SRS系统获取待复习词汇（不包含MASTERED）
-    const srsWordsResult = useQuery(convexApi.vocab.getDueForReview, {});
+    const srsWordsResult = useQuery(convexApi.vocab.getDueForReview as any, {});
     const loading = srsWordsResult === undefined;
     const words: VocabWord[] = useMemo(() => {
         if (!srsWordsResult) return [];
@@ -64,11 +68,11 @@ const VocabBookPage: React.FC = () => {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'NEW':
-                return <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-bold rounded-full">新</span>;
+                return <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-bold rounded-full">{labels.vocab?.newBadge || 'NEW'}</span>;
             case 'LEARNING':
-                return <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-xs font-bold rounded-full">学习中</span>;
+                return <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-xs font-bold rounded-full">{labels.vocab?.learningBadge || 'Learning'}</span>;
             case 'REVIEW':
-                return <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs font-bold rounded-full">复习</span>;
+                return <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs font-bold rounded-full">{labels.vocab?.reviewBadge || 'Review'}</span>;
             default:
                 return null;
         }
@@ -78,12 +82,12 @@ const VocabBookPage: React.FC = () => {
         if (!timestamp) return '';
         const now = Date.now();
         const diff = timestamp - now;
-        if (diff <= 0) return '现在';
+        if (diff <= 0) return labels.dashboard?.topik?.startNow || 'Now';
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const days = Math.floor(hours / 24);
-        if (days > 0) return `${days}天后`;
-        if (hours > 0) return `${hours}小时后`;
-        return '即将';
+        if (days > 0) return (labels.vocab?.daysLater || "{count}d later").replace('{count}', String(days));
+        if (hours > 0) return (labels.vocab?.hoursLater || "{count}h later").replace('{count}', String(hours));
+        return labels.vocab?.forgot || labels.dashboard?.vocab?.forgot || 'Soon';
     };
 
     return (
@@ -104,8 +108,8 @@ const VocabBookPage: React.FC = () => {
                                     <BookOpen className="w-5 h-5 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-slate-800">生词本</h1>
-                                    <p className="text-sm text-slate-500">SRS智能复习系统</p>
+                                    <h1 className="text-2xl font-bold text-slate-800">{labels.dashboard?.vocab?.title || "Vocab Book"}</h1>
+                                    <p className="text-sm text-slate-500">SRS {labels.dashboard?.vocab?.subtitle || "Smart Review"}</p>
                                 </div>
                             </div>
                         </div>
@@ -113,10 +117,10 @@ const VocabBookPage: React.FC = () => {
                         <div className="hidden sm:flex items-center gap-3">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 rounded-lg">
                                 <Zap className="w-4 h-4 text-red-500" />
-                                <span className="text-sm font-bold text-red-600">{stats.dueNow} 待复习</span>
+                                <span className="text-sm font-bold text-red-600">{stats.dueNow} {labels.dashboard?.vocab?.dueNow || "Due Now"}</span>
                             </div>
                             <div className="text-sm text-slate-500">
-                                共 {stats.total} 个生词
+                                {labels.dashboard?.vocab?.totalWords || "Total"} {stats.total}
                             </div>
                         </div>
                     </div>
@@ -127,7 +131,7 @@ const VocabBookPage: React.FC = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="搜索生词..."
+                                placeholder={labels.dashboard?.vocab?.search || "Search words..."}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:bg-white transition-all"
@@ -147,10 +151,10 @@ const VocabBookPage: React.FC = () => {
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                         <BookOpen className="w-16 h-16 mb-4 opacity-50" />
                         <p className="text-lg font-medium">
-                            {searchQuery ? '没有找到匹配的生词' : '🎉 没有待复习的生词'}
+                            {searchQuery ? (labels.dashboard?.vocab?.noMatch || 'No results') : (labels.dashboard?.vocab?.noDueNow || 'No words due')}
                         </p>
                         <p className="text-sm mt-2">
-                            {searchQuery ? '' : '在单词学习中选择"不认识"的词会自动加入这里'}
+                            {searchQuery ? '' : (labels.dashboard?.vocab?.srsDesc || 'Words you pick as "Don\'t know" will appear here')}
                         </p>
                     </div>
                 ) : (
@@ -181,7 +185,7 @@ const VocabBookPage: React.FC = () => {
                                             </div>
                                             <p className="text-slate-600">{word.meaning}</p>
                                             {word.hanja && (
-                                                <p className="text-sm text-slate-400 mt-1">漢字: {word.hanja}</p>
+                                                <p className="text-sm text-slate-400 mt-1">{labels.vocab?.hanja || 'Hanja'}: {word.hanja}</p>
                                             )}
                                         </div>
                                         <div className="text-right text-sm text-slate-400">
@@ -190,7 +194,7 @@ const VocabBookPage: React.FC = () => {
                                                 <span>{formatRelativeTime(word.progress.nextReviewAt)}</span>
                                             </div>
                                             <div className="text-xs mt-1">
-                                                连续 {word.progress.streak} 次
+                                                {(labels.vocab?.streakCount || "{count} streak").replace('{count}', String(word.progress.streak))}
                                             </div>
                                         </div>
                                     </div>

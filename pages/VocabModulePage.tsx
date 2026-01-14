@@ -248,11 +248,11 @@ export default function VocabModulePage() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [cardIndex, filteredWords.length]);
 
-    const modeButtons = [
+    const tabs = [
         { id: 'flashcard', label: labels.vocab?.flashcard || 'Flashcard', emoji: '🎴' },
-        { id: 'quiz', label: labels.vocab?.quiz || 'Quiz', emoji: '⚡️' },
+        { id: 'quiz', label: labels.vocab?.quiz || 'Quiz', emoji: '🎯' },
         { id: 'match', label: labels.vocab?.match || 'Match', emoji: '🧩' },
-        { id: 'list', label: labels.vocab?.quickStudy || 'Quick Study', emoji: '📝' },
+        { id: 'list', label: labels.vocab?.quickStudy || 'Quick Study', emoji: '⚡' },
     ];
 
     if (loading && isQueryLoading) {
@@ -331,7 +331,7 @@ export default function VocabModulePage() {
 
                 {/* Mode Tabs */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {modeButtons.map(mode => (
+                    {tabs.map(mode => (
                         <button key={mode.id} onClick={() => setViewMode(mode.id as ViewMode)} className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${viewMode === mode.id ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]' : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'}`}>
                             {viewMode === mode.id && <div className="absolute inset-0 bg-green-50 z-0" />}
                             {viewMode === mode.id && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />}
@@ -521,12 +521,12 @@ export default function VocabModulePage() {
                                                                     currentCard.partOfSpeech === 'PARTICLE' ? 'bg-gray-100 text-gray-700' :
                                                                         'bg-slate-100 text-slate-700'
                                                     }`}>
-                                                    {currentCard.partOfSpeech === 'VERB_T' ? 'v.t. 他动词' :
-                                                        currentCard.partOfSpeech === 'VERB_I' ? 'v.i. 自动词' :
-                                                            currentCard.partOfSpeech === 'ADJ' ? 'adj. 形容词' :
-                                                                currentCard.partOfSpeech === 'NOUN' ? 'n. 名词' :
-                                                                    currentCard.partOfSpeech === 'ADV' ? 'adv. 副词' :
-                                                                        currentCard.partOfSpeech === 'PARTICLE' ? '助词' :
+                                                    {currentCard.partOfSpeech === 'VERB_T' ? `${labels.vocab?.pos?.verb_t_short || 'v.t.'} ${labels.vocab?.pos?.verb_t || 'Transitive Verb'}` :
+                                                        currentCard.partOfSpeech === 'VERB_I' ? `${labels.vocab?.pos?.verb_i_short || 'v.i.'} ${labels.vocab?.pos?.verb_i || 'Intransitive Verb'}` :
+                                                            currentCard.partOfSpeech === 'ADJ' ? `${labels.vocab?.pos?.adj_short || 'adj.'} ${labels.vocab?.pos?.adj || 'Adjective'}` :
+                                                                currentCard.partOfSpeech === 'NOUN' ? `${labels.vocab?.pos?.noun_short || 'n.'} ${labels.vocab?.pos?.noun || 'Noun'}` :
+                                                                    currentCard.partOfSpeech === 'ADV' ? `${labels.vocab?.pos?.adv_short || 'adv.'} ${labels.vocab?.pos?.adv || 'Adverb'}` :
+                                                                        currentCard.partOfSpeech === 'PARTICLE' ? labels.vocab?.pos?.particle || 'Particle' :
                                                                             currentCard.partOfSpeech}
                                                 </div>
                                             )}
@@ -705,10 +705,10 @@ export default function VocabModulePage() {
                                                                 word.partOfSpeech === 'NOUN' ? 'bg-blue-100 text-blue-700' :
                                                                     'bg-slate-100 text-slate-700'
                                                         }`}>
-                                                        {word.partOfSpeech === 'VERB_T' ? 'v.t.' :
-                                                            word.partOfSpeech === 'VERB_I' ? 'v.i.' :
-                                                                word.partOfSpeech === 'ADJ' ? 'adj.' :
-                                                                    word.partOfSpeech === 'NOUN' ? 'n.' :
+                                                        {word.partOfSpeech === 'VERB_T' ? labels.vocab?.pos?.verb_t_short || 'v.t.' :
+                                                            word.partOfSpeech === 'VERB_I' ? labels.vocab?.pos?.verb_i_short || 'v.i.' :
+                                                                word.partOfSpeech === 'ADJ' ? labels.vocab?.pos?.adj_short || 'adj.' :
+                                                                    word.partOfSpeech === 'NOUN' ? labels.vocab?.pos?.noun_short || 'n.' :
                                                                         word.partOfSpeech}
                                                     </span>
                                                 )}

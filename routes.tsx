@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
+import { getLabels } from './utils/i18n';
 
 // Lazy load pages for code splitting
 import AppLayout from './components/layout/AppLayout';
@@ -40,7 +41,7 @@ const VideoLibraryPage = lazy(() => import('./src/pages/VideoLibraryPage'));
 const VideoPlayerPage = lazy(() => import('./src/pages/VideoPlayerPage'));
 
 // Loading fallback component with branded skeleton
-const PageLoader = () => (
+const PageLoader = ({ labels }: { labels: any }) => (
   <div className="min-h-screen flex items-center justify-center bg-[#f4f4f5]"
     style={{
       backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
@@ -52,7 +53,7 @@ const PageLoader = () => (
         <div className="absolute inset-0 border-4 border-indigo-200 rounded-full"></div>
         <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
-      <div className="font-bold text-zinc-700">正在加载...</div>
+      <div className="font-bold text-zinc-700">{labels?.loading || 'Loading...'}</div>
     </div>
   </div>
 );
@@ -64,10 +65,11 @@ interface AppRoutesProps {
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
   const { language, setLanguage } = useAuth();
+  const labels = getLabels(language);
 
   return (
-    <ErrorBoundary moduleName="应用">
-      <Suspense fallback={<PageLoader />}>
+    <ErrorBoundary moduleName={labels.common?.appName || "Hangyeol"} language={language}>
+      <Suspense fallback={<PageLoader labels={labels} />}>
         <Routes>
           {/* === 公开路由 (无需登录) === */}
           <Route path="/" element={<Landing language={language} onLanguageChange={setLanguage} />} />

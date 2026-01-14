@@ -8,6 +8,7 @@ import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
 import { useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useApp } from '../../contexts/AppContext';
+import { getLabels } from '../../utils/i18n';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -36,6 +37,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const navigate = useNavigate();
   const convex = useConvex();
   const { setSidebarHidden } = useApp();
+  const labels = getLabels(language);
 
   const [view, setViewState] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
@@ -173,7 +175,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     } catch (error) {
       console.error("Failed to load exam content:", error);
-      alert("无法加载试卷内容，请检查：\n1. 网络连接是否正常\n2. 服务器是否运行正常");
+      alert(labels.dashboard?.topik?.examLoadError || "Failed to load exam content.");
     } finally {
       setLoading(false); // 结束加载
     }
@@ -248,7 +250,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           setView('REVIEW');
         } catch (error) {
           console.error("Failed to load exam for review:", error);
-          alert("无法加载试卷，请重试");
+          alert(labels.dashboard?.topik?.examLoadError || "Failed to load exam.");
         } finally {
           setLoading(false);
         }
@@ -308,7 +310,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
         </div>
-        <p className="text-slate-500 font-medium text-lg">正在下载试卷数据...</p>
+        <p className="text-slate-500 font-medium text-lg">{labels.dashboard?.topik?.loadingExam || "Downloading exam data..."}</p>
       </div>
     );
   }
@@ -370,7 +372,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         onSubmit={submitExam}
         onExit={() => {
           // Show confirmation dialog
-          if (window.confirm('确定要结束考试吗？\n当前答题进度将被保存为考试记录。')) {
+          if (window.confirm(labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?')) {
             submitExam(); // Save and submit
           }
         }}

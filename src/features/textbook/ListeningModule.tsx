@@ -14,6 +14,7 @@ import { api } from '../../../convex/_generated/api';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
 import { Language } from '../../../types';
 import { getLocalizedContent } from '../../../utils/languageUtils';
+import { getLabels } from '../../../utils/i18n';
 
 // =========================================
 // Types
@@ -61,11 +62,13 @@ interface FlashcardPopoverProps {
     onClose: () => void;
     onSave: () => void;
     onSpeak: () => void;
+    language: Language;
 }
 
 const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
-    word, meaning, position, onClose, onSave, onSpeak
+    word, meaning, position, onClose, onSave, onSpeak, language
 }) => {
+    const labels = getLabels(language);
     return (
         <div
             className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[200px]"
@@ -87,38 +90,39 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
                     className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
                 >
                     <Volume2 className="w-3 h-3" />
-                    朗读
+                    {labels.dashboard?.common?.read || "朗读"}
                 </button>
                 <button
                     onClick={onSave}
                     className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
                 >
                     <Plus className="w-3 h-3" />
-                    加入生词本
+                    {labels.dashboard?.common?.addVocab || "加入生词本"}
                 </button>
             </div>
         </div>
     );
 };
 
-// Settings Panel
 interface SettingsPanelProps {
     fontSize: number;
     isKaraokeMode: boolean;
     onFontSizeChange: (size: number) => void;
     onKaraokeModeToggle: () => void;
     onClose: () => void;
+    language: Language;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
-    fontSize, isKaraokeMode, onFontSizeChange, onKaraokeModeToggle, onClose
+    fontSize, isKaraokeMode, onFontSizeChange, onKaraokeModeToggle, onClose, language
 }) => {
+    const labels = getLabels(language);
     return (
         <div className="absolute right-0 top-full mt-2 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56 z-50">
-            <h4 className="font-black text-sm mb-3">听力设置</h4>
+            <h4 className="font-black text-sm mb-3">{labels.dashboard?.listening?.settings || "听力设置"}</h4>
 
             <div className="mb-4">
-                <label className="text-xs font-bold text-zinc-600 mb-2 block">字体大小</label>
+                <label className="text-xs font-bold text-zinc-600 mb-2 block">{labels.dashboard?.listening?.fontSize || "字体大小"}</label>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => onFontSizeChange(Math.max(14, fontSize - 2))}
@@ -137,7 +141,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
 
             <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-600">卡拉OK高亮</span>
+                <span className="text-xs font-bold text-zinc-600">{labels.dashboard?.listening?.karaoke || "卡拉OK高亮"}</span>
                 <button
                     onClick={onKaraokeModeToggle}
                     className={`w-12 h-6 rounded-full border-2 border-zinc-900 relative transition-colors ${isKaraokeMode ? 'bg-lime-300' : 'bg-zinc-200'}`}
@@ -163,10 +167,11 @@ interface ListeningModuleProps {
 const ListeningModule: React.FC<ListeningModuleProps> = ({
     courseId = 'snu_1a',
     unitIndex = 1,
-    unitTitle = '第1单元: 听力练习',
+    unitTitle = 'Unit 1: Listening Practice',
     language = 'zh',
     onBack
 }) => {
+    const labels = getLabels(language);
     // Loading state
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -196,10 +201,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // ========================================
     // Data Fetching - Use dedicated listening API
     // ========================================
-    // ========================================
     // Data Fetching - Use dedicated listening API
     // ========================================
-    const unitDetails = useQuery(api.units.getDetails, { courseId, unitIndex });
+    const unitDetails = useQuery(api.units.getDetails as any, { courseId, unitIndex });
 
     // Use state variable instead of early return to avoid hooks order issues
     const isQueryLoading = unitDetails === undefined;
@@ -272,7 +276,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             const rect = target.getBoundingClientRect();
 
             // Lookup meaning from mock vocab
-            const meaning = MOCK_VOCAB[clickedWord] || '暂无释义';
+            const meaning = labels.dashboard?.common?.noMeaning || '暂无释义';
 
             setSelectedWord({
                 word: clickedWord,
@@ -313,8 +317,8 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             return (
                 <div className="text-center py-12 text-zinc-400">
                     <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-bold">暂无听力内容</p>
-                    <p className="text-sm mt-2">请在管理后台添加听力音频和时间戳文稿</p>
+                    <p className="font-bold">{labels.dashboard?.listening?.empty || "暂无听力内"}</p>
+                    <p className="text-sm mt-2">{labels.dashboard?.listening?.emptyDesc || "请在管理后台添加听力音频和时间戳文稿"}</p>
                 </div>
             );
         }
@@ -395,7 +399,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-zinc-400" />
-                        <p className="font-bold text-zinc-500">加载中...</p>
+                        <p className="font-bold text-zinc-500">{labels.dashboard?.common?.loading || "加载中..."}</p>
                     </div>
                 </div>
             )}
@@ -409,7 +413,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                             onClick={onBack}
                             className="px-4 py-2 bg-zinc-900 text-white rounded-lg font-bold"
                         >
-                            返回
+                            {labels.dashboard?.common?.back || "返回"}
                         </button>
                     </div>
                 </div>
@@ -436,8 +440,8 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
                         {/* Center: Unit Info Badge */}
                         <div className="flex gap-2">
-                            <span className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm">
-                                🎧 第 {unitIndex} 课 · 听力
+                            <span className="px-3 py-1 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs shadow-[2px_2px_0px_0px_#18181B]">
+                                {(labels.dashboard?.listening?.title || "第 {index} 课 · 听力").replace('{index}', String(unitIndex))}
                             </span>
                             <button
                                 onClick={() => setShowTranslation(!showTranslation)}
@@ -445,7 +449,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                                     }`}
                             >
                                 <Languages className="w-4 h-4 inline mr-1" />
-                                译文
+                                {labels.dashboard?.listening?.translate || "译文"}
                             </button>
                         </div>
 
@@ -464,6 +468,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                                     onFontSizeChange={setFontSize}
                                     onKaraokeModeToggle={() => setIsKaraokeMode(!isKaraokeMode)}
                                     onClose={() => setShowSettings(false)}
+                                    language={language}
                                 />
                             )}
                         </div>
@@ -474,13 +479,13 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                         <div className="bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-3xl mx-auto">
                             <h2 className="text-2xl font-black mb-6 text-zinc-900 flex items-center gap-2">
                                 <Headphones className="w-6 h-6 text-lime-600" />
-                                听力文稿
+                                {labels.dashboard?.listening?.transcript || "听力文稿"}
                             </h2>
 
                             {/* Karaoke hint */}
                             {unitData?.transcriptData && unitData.transcriptData.length > 0 && (
                                 <div className="mb-6 p-3 bg-lime-50 border border-lime-200 rounded-lg text-sm text-lime-700">
-                                    💡 点击任意句子可跳转到对应位置播放
+                                    {labels.dashboard?.listening?.hint || "💡 点击任意句子可跳转到对应位置播放"}
                                 </div>
                             )}
 
@@ -503,6 +508,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                             setSelectedWord(null);
                         }}
                         onSpeak={() => speak(selectedWord.word)}
+                        language={language}
                     />
                 </div>
             )}

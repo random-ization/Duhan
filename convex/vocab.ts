@@ -213,6 +213,38 @@ export const getOfCourse = query({
     },
 });
 
+// Get Daily Phrase (Word of the day)
+export const getDailyPhrase = query({
+    args: {
+        language: v.optional(v.string()), // 'zh', 'en', 'vi', 'mn'
+    },
+    handler: async (ctx, args) => {
+        const lang = args.language || 'zh';
+
+        // 1. Get total words to pick one deterministically by date
+        const allWords = await ctx.db.query("words").take(100); // Take a subset for random selection
+        if (allWords.length === 0) return null;
+
+        // 2. Deterministic selection based on day
+        const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+        const index = day % allWords.length;
+        const word = allWords[index];
+
+        // 3. Map translation based on language
+        let translation = word.meaning;
+        if (lang === 'en' && word.meaningEn) translation = word.meaningEn;
+        if (lang === 'vi' && word.meaningVi) translation = word.meaningVi;
+        if (lang === 'mn' && word.meaningMn) translation = word.meaningMn;
+
+        return {
+            id: word._id,
+            korean: word.word,
+            romanization: word.pronunciation || "",
+            translation: translation,
+        };
+    },
+});
+
 // Save a word (Upsert Logic - Admin)
 export const saveWord = mutation({
     args: {

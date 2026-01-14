@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { getLabels } from '../../../utils/i18n';
 
 interface SummaryStats {
     streak: number;
-    todayMinutes: number;
+    dailyMinutes: number;
     dailyGoal: number;
-    wordsToReview: number;
+    dueReviews: number;
 }
 
 export const LearnerSummaryCard: React.FC = () => {
+    const { language } = useAuth();
+    const labels = getLabels(language);
     // Convex Integration
     const userStats = useQuery(api.userStats.getStats);
 
@@ -18,9 +22,9 @@ export const LearnerSummaryCard: React.FC = () => {
     const loading = userStats === undefined;
     const stats = userStats ? {
         streak: userStats.streak,
-        todayMinutes: userStats.todayMinutes,
+        dailyMinutes: userStats.dailyMinutes,
         dailyGoal: userStats.dailyGoal,
-        wordsToReview: userStats.wordsToReview
+        dueReviews: userStats.vocabStats.dueReviews
     } : null;
 
     // Legacy fetch removed
@@ -58,23 +62,23 @@ export const LearnerSummaryCard: React.FC = () => {
 
     if (!stats) return null;
 
-    const progressPercent = Math.min(100, (stats.todayMinutes / stats.dailyGoal) * 100);
+    const progressPercent = Math.min(100, (stats.dailyMinutes / (stats.dailyGoal || 1)) * 100);
 
     return (
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">今日学习概览</h3>
+                <h3 className="font-bold text-lg">{labels.dashboard?.summary?.title || "Today's Overview"}</h3>
                 <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full">
                     <Flame className="w-4 h-4 text-orange-300" />
-                    <span className="font-bold">{stats.streak} 天连续</span>
+                    <span className="font-bold">{(labels.dashboard?.summary?.streak || "{count} day streak").replace('{count}', String(stats.streak))}</span>
                 </div>
             </div>
 
             {/* Progress Bar */}
             <div className="mb-4">
                 <div className="flex justify-between text-sm mb-1 opacity-80">
-                    <span>今日进度</span>
-                    <span>{stats.todayMinutes} / {stats.dailyGoal} 分钟</span>
+                    <span>{labels.dashboard?.summary?.progress || "Today's Progress"}</span>
+                    <span>{stats.dailyMinutes} / {stats.dailyGoal} {labels.dashboard?.summary?.minutes || "mins"}</span>
                 </div>
                 <div className="h-3 bg-white/20 rounded-full overflow-hidden">
                     <div
@@ -89,29 +93,29 @@ export const LearnerSummaryCard: React.FC = () => {
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                         <Clock className="w-4 h-4 opacity-70" />
-                        <span className="text-2xl font-black">{stats.todayMinutes}</span>
+                        <span className="text-2xl font-black">{stats.dailyMinutes}</span>
                     </div>
-                    <span className="text-xs opacity-70">分钟</span>
+                    <span className="text-xs opacity-70">{labels.dashboard?.summary?.minutes || "mins"}</span>
                 </div>
                 <div className="text-center border-x border-white/20">
                     <div className="flex items-center justify-center gap-1">
                         <BookOpen className="w-4 h-4 opacity-70" />
-                        <span className="text-2xl font-black">{stats.wordsToReview}</span>
+                        <span className="text-2xl font-black">{stats.dueReviews}</span>
                     </div>
-                    <span className="text-xs opacity-70">待复习</span>
+                    <span className="text-xs opacity-70">{labels.dashboard?.summary?.due || "Due"}</span>
                 </div>
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                         <Target className="w-4 h-4 opacity-70" />
                         <span className="text-2xl font-black">{Math.round(progressPercent)}%</span>
                     </div>
-                    <span className="text-xs opacity-70">目标完成</span>
+                    <span className="text-xs opacity-70">{labels.dashboard?.summary?.goalComplete || "Goal"}</span>
                 </div>
             </div>
 
             {progressPercent >= 100 && (
                 <div className="mt-3 text-center bg-white/20 rounded-lg py-2 font-bold">
-                    ✨ 今日目标已完成！
+                    {labels.dashboard?.summary?.completed || "✨ Goal Achieved!"}
                 </div>
             )}
         </div>

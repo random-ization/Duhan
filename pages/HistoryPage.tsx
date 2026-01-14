@@ -3,13 +3,16 @@ import { api } from '../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { Play, Calendar } from 'lucide-react';
 import { ListeningHistoryItem, User } from '../types';
-import { PODCAST_MESSAGES } from '../constants/podcast-messages';
+import { PODCAST_MESSAGES, getPodcastMessages } from '../constants/podcast-messages';
 import BackButton from '../components/ui/BackButton';
 import EmptyState from '../src/components/common/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
 
 export default function HistoryPage() {
-    const { user } = useAuth();
+    const { user, language } = useAuth();
+    const labels = getLabels(language);
+    const podcastMsgs = getPodcastMessages(labels);
 
     const history = useQuery(api.podcasts.getHistory);
     const loading = history === undefined;
@@ -25,7 +28,7 @@ export default function HistoryPage() {
         <div className="min-h-screen bg-slate-50 pb-20">
             <div className="bg-white p-4 sticky top-0 z-10 border-b flex items-center gap-4">
                 <BackButton onClick={() => navigate(-1)} />
-                <h1 className="text-xl font-bold">{PODCAST_MESSAGES.HISTORY_TITLE}</h1>
+                <h1 className="text-xl font-bold">{podcastMsgs.HISTORY_TITLE}</h1>
             </div>
 
             <div className="p-4 space-y-3">
@@ -42,9 +45,9 @@ export default function HistoryPage() {
                 {!loading && (!history || history.length === 0) && (
                     <EmptyState
                         icon={Play}
-                        title="还没有收听记录"
-                        description="开始你的第一次韩语听力之旅吧！"
-                        actionLabel="探索播客"
+                        title={podcastMsgs.EMPTY_HISTORY}
+                        description={podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}
+                        actionLabel={podcastMsgs.ACTION_EXPLORE}
                         onAction={() => navigate('/podcasts')}
                     />
                 )}
@@ -74,7 +77,7 @@ export default function HistoryPage() {
                             <p className="text-xs text-slate-500 mb-1">{item.channelName}</p>
                             <div className="flex items-center text-xs text-slate-400 gap-1">
                                 <Calendar size={12} />
-                                {new Date(item.playedAt).toLocaleDateString('zh-CN')}
+                                {new Date(item.playedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}
                             </div>
                         </div>
                         <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">

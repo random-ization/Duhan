@@ -6,10 +6,14 @@ import { api } from "../convex/_generated/api";
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
+import { getLabels } from '../utils/i18n';
+import { getPodcastMessages } from '../constants/podcast-messages';
 
 export default function PodcastDashboard() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, language } = useAuth();
+    const labels = getLabels(language);
+    const podcastMsgs = getPodcastMessages(labels);
 
     // State
     const [trending, setTrending] = useState<{ external: any[], internal: any[] }>({ external: [], internal: [] });
@@ -100,8 +104,8 @@ export default function PodcastDashboard() {
                     <div className="flex items-center gap-4">
                         <BackButton onClick={() => navigate('/dashboard')} />
                         <div>
-                            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">播客中心</h2>
-                            <p className="text-slate-500 font-bold">听力磨耳朵</p>
+                            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">{podcastMsgs.DASHBOARD_TITLE}</h2>
+                            <p className="text-slate-500 font-bold">{labels.dashboard?.podcast?.subtitle || "Listening Skills"}</p>
                         </div>
                         <img src="/emojis/Headphone.png" className="w-14 h-14 animate-bounce-slow" alt="headphone" />
                     </div>
@@ -109,7 +113,7 @@ export default function PodcastDashboard() {
                         onClick={() => navigate('/podcasts/subscriptions')}
                         className="flex items-center gap-2 bg-white border-2 border-slate-900 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 shadow-pop active:shadow-none active:translate-y-1 transition text-slate-900"
                     >
-                        <Library size={18} /> 我的订阅
+                        <Library size={18} /> {labels.dashboard?.podcast?.mySubs || "My Subscriptions"}
                     </button>
                 </div>
 
@@ -120,15 +124,15 @@ export default function PodcastDashboard() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="搜索播客频道、单集..."
+                            placeholder={podcastMsgs.ACTION_SEARCH}
                             className="w-full bg-white border-2 border-slate-900 rounded-xl py-3 px-12 shadow-pop focus:outline-none focus:translate-y-1 focus:shadow-none transition font-bold placeholder:text-slate-400 text-slate-900"
                         />
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition" size={20} />
                     </form>
                     <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
-                        <button className="px-4 py-3 bg-slate-900 text-white rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap shadow-pop hover:translate-y-1 hover:shadow-none transition">全部</button>
-                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">初级</button>
-                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">日常对话</button>
+                        <button className="px-4 py-3 bg-slate-900 text-white rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap shadow-pop hover:translate-y-1 hover:shadow-none transition">{labels.common?.all || "All"}</button>
+                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">{labels.dashboard?.level?.beginner || "Beginner"}</button>
+                        <button className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition">{labels.dashboard?.podcast?.dailyConv || "Daily Conv"}</button>
                     </div>
                 </div>
 
@@ -196,14 +200,14 @@ export default function PodcastDashboard() {
                             </div>
                         ) : (
                             <div className="bg-slate-800 rounded-[2rem] p-8 text-center text-slate-400">
-                                <p>开始探索播客吧！您的收听历史和推荐将显示在这里。</p>
+                                <p>{podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}</p>
                             </div>
                         )}
 
                         {/* Listening History (Vertical Grid) */}
                         {history.length > 0 && (
                             <div>
-                                <h3 className="font-black text-xl mb-4 flex items-center gap-2 text-slate-900"><HistoryIcon size={20} /> 收听历史</h3>
+                                <h3 className="font-black text-xl mb-4 flex items-center gap-2 text-slate-900"><HistoryIcon size={20} /> {podcastMsgs.HISTORY_TITLE}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                     {history.map((record) => (
                                         <div
@@ -231,7 +235,7 @@ export default function PodcastDashboard() {
                                                 <div className="text-xs font-bold text-slate-400 truncate flex items-center gap-1">
                                                     {record.channelName}
                                                     <span className="text-slate-300">•</span>
-                                                    {new Date(record.playedAt).toLocaleDateString()}
+                                                    {new Date(record.playedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}
                                                 </div>
                                             </div>
                                             {record.progress > 0 && (
@@ -256,13 +260,13 @@ export default function PodcastDashboard() {
                                 onClick={() => setActiveTab('community')}
                                 className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'community' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                                社区热播
+                                {podcastMsgs.DASHBOARD_COMMUNITY}
                             </button>
                             <button
                                 onClick={() => setActiveTab('weekly')}
                                 className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'weekly' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                                本周推荐
+                                {podcastMsgs.DASHBOARD_EDITOR_PICKS}
                             </button>
                         </div>
 
@@ -315,12 +319,12 @@ export default function PodcastDashboard() {
 
                             {!loading && (activeTab === 'community' ? trending.internal : trending.external).length === 0 && (
                                 <div className="text-center py-8 text-slate-400 font-bold text-sm">
-                                    暂无数据
+                                    {podcastMsgs.EMPTY_TRENDING}
                                 </div>
                             )}
                         </div>
                         <button className="w-full mt-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-500 hover:border-slate-900 hover:text-slate-900 transition">
-                            查看完整榜单
+                            {podcastMsgs.DASHBOARD_VIEW_ALL}
                         </button>
                     </div>
 

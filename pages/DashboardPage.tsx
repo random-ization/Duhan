@@ -111,10 +111,10 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
 
     // Lookup institute name
     const instituteName = useMemo(() => {
-        if (!selectedInstitute) return '教材';
+        if (!selectedInstitute) return labels.dashboard?.textbook?.label || 'Textbook';
         const inst = institutes.find(i => i.id === selectedInstitute);
         return inst ? inst.name : selectedInstitute;
-    }, [selectedInstitute, institutes]);
+    }, [selectedInstitute, institutes, labels]);
 
     // Render Card Content based on ID
     const renderCard = (id: string) => {
@@ -143,7 +143,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                                     <img src={ASSETS.sparkles} className="w-4 h-4" alt="sparkles" /> {labels.dashboard?.daily?.label || "Daily Phrase"}
                                 </div>
                                 <h2 className="text-4xl font-black text-slate-900 leading-tight">"시작이 반이다"</h2>
-                                <p className="text-slate-500 font-bold mt-2 text-lg">千里之行，始于足下。</p>
+                                <p className="text-slate-500 font-bold mt-2 text-lg">{labels.dashboard?.daily?.fallback || labels.dashboard?.daily?.quote || "Well begun is half done."}</p>
                             </div>
                             <button className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[4px_4px_0px_0px_black] border-2 border-black hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_black] transition-all">
                                 <Play size={28} fill="currentColor" />
@@ -159,7 +159,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                             <div className="flex justify-between items-start">
                                 <h3 className="font-black text-2xl text-slate-900 leading-tight">
                                     {instituteName}<br />
-                                    {selectedLevel ? `Level ${selectedLevel}` : (labels.dashboard?.textbook?.selectLevel || 'Select Level')}
+                                    {selectedLevel ? (labels.dashboard?.textbook?.level || "Level {level}").replace('{level}', String(selectedLevel)) : (labels.dashboard?.textbook?.selectLevel || 'Select Level')}
                                 </h3>
                                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">{labels.dashboard?.textbook?.inProgress || "In Progress"}</div>
                             </div>
@@ -209,7 +209,10 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                         <div className="relative z-10 h-full flex flex-col justify-between">
                             <div>
                                 <div className="inline-block bg-purple-500 text-white border-2 border-purple-300 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">{labels.dashboard?.podcast?.label || "Podcast"}</div>
-                                <h3 className="font-bold text-lg mt-2 leading-tight">Iyagi Series<br />Real Talk</h3>
+                                <h3 className="font-bold text-lg mt-2 leading-tight">
+                                    {labels.dashboard?.podcast?.title || "Latest Podcast"}<br />
+                                    {labels.dashboard?.podcast?.subtitle || "Iyagi Series"}
+                                </h3>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="flex gap-1 h-3 items-end">
@@ -329,7 +332,7 @@ export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }:
                             </div>
                             <div>
                                 <div className="text-[10px] font-black text-indigo-200 uppercase">{labels.dashboard?.upgrade || "Upgrade"}</div>
-                                <div className="font-black text-white">Premium →</div>
+                                <div className="font-black text-white">{labels.dashboard?.upgrade?.premium || "Premium →"}</div>
                             </div>
                         </div>
                     )}

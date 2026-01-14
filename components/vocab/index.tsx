@@ -217,7 +217,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               ? customListType === 'SAVED'
                 ? labels.vocabBook
                 : labels.mistakeBook
-              : labels.vocab}
+              : labels.vocabLabel}
           </h2>
           <p className="text-sm text-slate-500">
             {filteredWords.length} {labels.term}

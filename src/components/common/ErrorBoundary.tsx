@@ -1,11 +1,14 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { getLabels } from '../../../utils/i18n';
+import { Language } from '../../../types';
 
 interface ErrorBoundaryProps {
     children: ReactNode;
     fallback?: ReactNode;
     onReset?: () => void;
     moduleName?: string; // Optional: name of the module for better error messages
+    language?: Language;
 }
 
 interface ErrorBoundaryState {
@@ -61,7 +64,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             }
 
             const isDev = (import.meta as any).env?.DEV || process.env.NODE_ENV === 'development';
-            const moduleName = this.props.moduleName || '页面';
+            const labels = getLabels(this.props.language || 'en');
+            const moduleName = this.props.moduleName || (labels.common?.page || 'Page');
 
             // Default fallback UI
             return (
@@ -74,12 +78,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
                         {/* Title */}
                         <h2 className="text-2xl font-black text-zinc-800 mb-2">
-                            哎呀，出错了！
+                            {labels.errors?.oops || 'Oops, something went wrong!'}
                         </h2>
 
                         {/* Description */}
                         <p className="text-zinc-500 font-medium mb-6">
-                            {moduleName}加载时遇到了问题。别担心，这不会影响其他功能。
+                            {(labels.errors?.loadError || 'The module encountered a problem.').replace('{{module}}', moduleName)}
                         </p>
 
                         {/* Dev Mode Error Details - Temporarily enabled for debugging */}
@@ -103,25 +107,25 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                                 className="flex items-center justify-center gap-2 px-6 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                             >
                                 <RefreshCw className="w-4 h-4" />
-                                重试
+                                {labels.errors?.retry || 'Retry'}
                             </button>
                             <button
                                 onClick={this.handleGoHome}
                                 className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-zinc-300 rounded-xl font-bold text-sm text-zinc-600 hover:border-zinc-900 transition-all"
                             >
                                 <Home className="w-4 h-4" />
-                                返回首页
+                                {labels.errors?.backToHome || 'Back to Home'}
                             </button>
                         </div>
 
                         {/* Reload hint */}
                         <p className="mt-6 text-xs text-zinc-400">
-                            如果问题持续存在，请尝试{' '}
+                            {labels.errors?.reloadPrompt || 'If the problem persists, please try'}{' '}
                             <button
                                 onClick={this.handleReload}
                                 className="text-indigo-500 hover:underline"
                             >
-                                刷新页面
+                                {labels.errors?.refreshPage || 'refresh the page'}
                             </button>
                         </p>
                     </div>
