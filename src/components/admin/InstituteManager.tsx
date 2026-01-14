@@ -71,9 +71,7 @@ export const InstituteManager: React.FC = () => {
                 .replace(/-+/g, '-')
                 + '-' + Date.now().toString(36);
 
-            const token = localStorage.getItem('token') || undefined;
             await createInstituteMutation({
-                token,
                 id: generatedId,
                 name: formData.name.trim(),
                 levels: [{ level: 1, units: formData.totalUnits || 10 }] as any,
@@ -98,9 +96,7 @@ export const InstituteManager: React.FC = () => {
         if (!editingId || !formData.name?.trim()) return;
         setSaving(true);
         try {
-            const token = localStorage.getItem('token') || undefined;
             await updateInstituteMutation({
-                token,
                 legacyId: editingId,
                 updates: {
                     name: formData.name.trim(),
@@ -125,8 +121,7 @@ export const InstituteManager: React.FC = () => {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`确定要删除教材 "${name}" 吗？此操作不可恢复。`)) return;
         try {
-            const token = localStorage.getItem('token') || undefined;
-            await deleteInstituteMutation({ token, legacyId: id });
+            await deleteInstituteMutation({ legacyId: id });
         } catch (e) {
             console.error('Delete failed', e);
             alert('删除失败');

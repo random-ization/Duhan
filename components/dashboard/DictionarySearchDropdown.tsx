@@ -143,17 +143,11 @@ export default function DictionarySearchDropdown() {
 
     // Save word to vocab book
     const handleSaveWord = async (entry: DictionaryEntry) => {
-        // Retrieve token from local storage directly if not in context, or assume context handles it
-        // Note: AuthContext might not expose token directly in the returned object based on the interface I saw?
-        // Let's check AuthContext interface usage. 
-        // Actually, let's get it from localStorage to be safe as per AuthContext logic
-        const token = localStorage.getItem('token');
-
         console.log('Attempting to save word:', entry.word);
         console.log('User state:', user);
 
-        if (!user || !token) {
-            console.error('Save failed: No user or token found');
+        if (!user) {
+            console.error('Save failed: No user found');
             return;
         }
 
@@ -164,9 +158,8 @@ export default function DictionarySearchDropdown() {
                 || entry.senses[0]?.definition
                 || '';
 
-            console.log('Calling addToReview mutation with token...');
+            console.log('Calling addToReview mutation...');
             const result = await addToReview({
-                token,
                 word: entry.word,
                 meaning: cleanText(meaning),
                 partOfSpeech: entry.pos || 'NOUN',

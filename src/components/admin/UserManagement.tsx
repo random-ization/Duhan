@@ -62,9 +62,8 @@ export const UserManagement: React.FC = () => {
 
     const handleDelete = async (id: string) => {
         if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
-        const token = localStorage.getItem('token');
         try {
-            await deleteUserMutation({ userId: id as any, token: token || undefined });
+            await deleteUserMutation({ userId: id as any });
         } catch (e) {
             alert('删除失败');
         }
@@ -73,11 +72,9 @@ export const UserManagement: React.FC = () => {
     const handleSave = async () => {
         if (!editingUser || !editingUser.id) return;
         setSaving(true);
-        const token = localStorage.getItem('token');
         try {
             await updateUserMutation({
                 userId: editingUser.id as any,
-                token: token || undefined,
                 updates: {
                     name: editingUser.name,
                     role: editingUser.role,
