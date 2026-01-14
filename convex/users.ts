@@ -17,3 +17,13 @@ export const viewer = query({
         return user;
     },
 });
+
+// Debug query to verify JWT recognition
+export const currentUser = query({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        console.log("getUserIdentity result:", identity);
+        return identity;
+    },
+});
