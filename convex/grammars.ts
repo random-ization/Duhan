@@ -40,6 +40,7 @@ export const getStats = query({
 });
 
 // Get all grammars for a course (Student View)
+// OPTIMIZATION: Batch query with Map instead of N*2 queries
 export const getByCourse = query({
     args: {
         courseId: v.string(),
@@ -52,20 +53,28 @@ export const getByCourse = query({
             .withIndex("by_course_unit", (q) => q.eq("courseId", args.courseId))
             .collect();
 
-        const results = await Promise.all(links.map(async (link) => {
-            const grammar = await ctx.db.get(link.grammarId);
+        // OPTIMIZATION: Batch fetch all grammars and progress
+        const grammarIds = [...new Set(links.map(l => l.grammarId))];
+        const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
+        const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
+
+        // Batch fetch user progress if userId exists
+        let progressMap = new Map();
+        if (userId) {
+            const allProgress = await ctx.db
+                .query("user_grammar_progress")
+                .withIndex("by_user_grammar", q => q.eq("userId", userId))
+                .collect();
+            progressMap = new Map(allProgress.map(p => [p.grammarId.toString(), p]));
+        }
+
+        // Assemble data in memory
+        const results = links.map((link) => {
+            const grammar = grammarsMap.get(link.grammarId.toString());
             if (!grammar) return null;
 
-            let userStatus = 'NOT_STARTED';
-            if (userId) {
-                const progress = await ctx.db
-                    .query("user_grammar_progress")
-                    .withIndex("by_user_grammar", q =>
-                        q.eq("userId", userId).eq("grammarId", link.grammarId)
-                    )
-                    .unique();
-                if (progress) userStatus = progress.status;
-            }
+            const progress = progressMap.get(link.grammarId.toString());
+            const userStatus = progress ? progress.status : 'NOT_STARTED';
 
             return {
                 id: grammar._id,
@@ -74,7 +83,7 @@ export const getByCourse = query({
                 unitId: link.unitId,
                 status: userStatus,
             };
-        }));
+        });
 
         return results.filter(g => g !== null).sort((a, b) => a.unitId - b.unitId);
     },
@@ -120,20 +129,27 @@ export const getUnitGrammar = query({
             // 2. Sort by displayOrder (copy to avoid mutating readonly array)
             const sortedGrammars = [...courseGrammars].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
-            // 3. Fetch Details
-            const results = await Promise.all(sortedGrammars.map(async (link) => {
-                const grammar = await ctx.db.get(link.grammarId);
+            // 3. OPTIMIZATION: Batch fetch grammars and progress
+            const grammarIds = [...new Set(sortedGrammars.map(l => l.grammarId))];
+            const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
+            const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
+
+            // Batch fetch user progress if userId exists
+            let progressMap = new Map();
+            if (userId) {
+                const allProgress = await ctx.db
+                    .query("user_grammar_progress")
+                    .withIndex("by_user_grammar", q => q.eq("userId", userId))
+                    .collect();
+                progressMap = new Map(allProgress.map(p => [p.grammarId.toString(), p]));
+            }
+
+            // 4. Assemble data in memory
+            const results = sortedGrammars.map((link) => {
+                const grammar = grammarsMap.get(link.grammarId.toString());
                 if (!grammar) return null;
 
-                let userProgress = null;
-                if (userId) {
-                    userProgress = await ctx.db
-                        .query("user_grammar_progress")
-                        .withIndex("by_user_grammar", q =>
-                            q.eq("userId", userId).eq("grammarId", link.grammarId)
-                        )
-                        .first(); // Use .first() instead of .unique() to avoid error
-                }
+                const userProgress = progressMap.get(link.grammarId.toString());
 
                 return {
                     ...grammar,
@@ -145,7 +161,7 @@ export const getUnitGrammar = query({
                     status: userProgress?.status || "NOT_STARTED",
                     proficiency: userProgress?.proficiency || 0,
                 };
-            }));
+            });
 
             return results.filter(g => g !== null);
         } catch (error: any) {
