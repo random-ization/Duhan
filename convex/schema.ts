@@ -447,4 +447,11 @@ export default defineSchema({
         content: v.string(),
         updatedAt: v.number(),
     }).index("by_identifier", ["identifier"]),
+
+    // Global Site Settings
+    site_settings: defineTable({
+        key: v.string(), // "logo", "theme", "meta"
+        value: v.any(),
+        updatedAt: v.number(),
+    }).index("by_key", ["key"]),
 });

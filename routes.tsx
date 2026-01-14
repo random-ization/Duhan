@@ -68,7 +68,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
   const labels = getLabels(language);
 
   return (
-    <ErrorBoundary moduleName={labels.common?.appName || "Hangyeol"} language={language}>
+    <ErrorBoundary moduleName={labels.common?.appName || "Duhan"} language={language}>
       <Suspense fallback={<PageLoader labels={labels} />}>
         <Routes>
           {/* === 公开路由 (无需登录) === */}

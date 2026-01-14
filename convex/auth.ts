@@ -426,11 +426,11 @@ export const requestPasswordReset = mutation({
 
         await ctx.scheduler.runAfter(0, api.emails.sendEmail, {
             to: args.email,
-            subject: "Reset your Hangyeol Password",
+            subject: "Reset your Duhan Password",
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2>Reset Password</h2>
-                    <p>You requested a password reset for your Hangyeol account.</p>
+                    <p>You requested a password reset for your Duhan account.</p>
                     <p>Click the button below to set a new password:</p>
                     <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #000; color: #fff; text-decoration: none; border-radius: 5px;">Reset Password</a>
                     <p style="margin-top: 20px; font-size: 12px; color: #666;">If you didn't request this, you can ignore this email.</p>

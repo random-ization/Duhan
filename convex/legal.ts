@@ -5,7 +5,7 @@ import { requireAdmin } from "./utils";
 const DOCUMENTS = {
     terms: {
         title: "Terms of Service",
-        content: `# Terms of Service\n\nLast updated: January 1, 2024\n\n## 1. Introduction\nWelcome to Hangyeol. By using our service, you agree to these terms.\n\n## 2. Usage\nYou serve right to learn Korean effectively.`
+        content: `# Terms of Service\n\nLast updated: January 1, 2024\n\n## 1. Introduction\nWelcome to Duhan. By using our service, you agree to these terms.\n\n## 2. Usage\nYou serve right to learn Korean effectively.`
     },
     privacy: {
         title: "Privacy Policy",
