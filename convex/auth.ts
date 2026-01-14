@@ -144,8 +144,8 @@ async function enrichUserFull(ctx: any, user: Doc<"users">) {
             id: e._id,
             examId: e.examId,
             score: e.score,
-            maxScore: e.totalQuestions,
-            userAnswers: e.sectionScores,
+            maxScore: e.totalQuestions, // Map backend 'totalQuestions' to frontend 'maxScore'
+            userAnswers: e.sectionScores, // Map backend 'sectionScores' to frontend 'userAnswers'
             timestamp: e.createdAt,
         })),
 
