@@ -1,0 +1,10 @@
+[[redirects]]
+  from = "/api/auth/*"
+  to = "https://calculating-cassowary-602.convex.cloud/api/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
