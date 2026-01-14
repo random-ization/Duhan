@@ -1,14 +1,22 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
+    ...authTables,
     // Users (Mirrors User model)
     users: defineTable({
         email: v.string(),
-        password: v.string(), // Consider hashed
-        name: v.string(),
-        role: v.string(), // "STUDENT" | "ADMIN"
-        tier: v.string(),
+        password: v.optional(v.string()), // Made optional for OAuth users
+        name: v.optional(v.string()),
+        image: v.optional(v.string()), // Added for Auth compatibility
+        emailVerificationTime: v.optional(v.number()), // Added for Auth compatibility
+        phone: v.optional(v.string()), // Added for Auth compatibility
+        phoneVerificationTime: v.optional(v.number()), // Added for Auth compatibility
+        isAnonymous: v.optional(v.boolean()), // Added for Auth compatibility
+
+        role: v.optional(v.string()), // "STUDENT" | "ADMIN"
+        tier: v.optional(v.string()),
         subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
         subscriptionExpiry: v.optional(v.string()), // ISO Date or timestamp string
         avatar: v.optional(v.string()),
@@ -16,7 +24,7 @@ export default defineSchema({
         // Auth
         googleId: v.optional(v.string()),
         token: v.optional(v.string()), // Session token
-        isVerified: v.boolean(),
+        isVerified: v.optional(v.boolean()),
 
         // Progress pointers
         lastInstitute: v.optional(v.string()),
@@ -32,7 +40,7 @@ export default defineSchema({
         // Email Verification
         verifyCode: v.optional(v.string()),
 
-        createdAt: v.number(),
+        createdAt: v.optional(v.number()),
     }).index("by_email", ["email"])
         .index("by_googleId", ["googleId"])
         .index("by_token", ["token"]) // Security index

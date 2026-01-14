@@ -6,8 +6,10 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import { useConvex, useMutation, useAction } from 'convex/react';
+import { useConvex, useMutation, useAction, useQuery } from 'convex/react';
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api as convexApi } from '../convex/_generated/api';
+import { api } from '../convex/_generated/api';
 import {
   User,
   Language,
@@ -90,7 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   const convex = useConvex();
 
-  // Mutations
+  // Mutations - token argument no longer needed for backend that uses getAuthUserId
   const saveSavedWordMutation = useMutation(convexApi.user.saveSavedWord);
   const saveMistakeMutation = useMutation(convexApi.user.saveMistake);
   const saveAnnotationMutation = useMutation(convexApi.annotations.save);
@@ -98,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const deleteExamAttemptMutation = useMutation(convexApi.user.deleteExamAttempt);
   const logActivityMutation = useMutation(convexApi.user.logActivity);
   const updateLearningProgressMutation = useMutation(convexApi.user.updateLearningProgress);
-  const requestPasswordResetMutation = useMutation(convexApi.auth.requestPasswordReset);
+  // const requestPasswordResetMutation = useMutation(convexApi.auth.requestPasswordReset); // Auth handled by library now
 
   // Initialize language
   const [language, setLanguageState] = useState<Language>(() => {
@@ -143,94 +145,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     initLanguage();
   }, []);
 
-  // Session Check (Load User)
+  // Session Check (Load User) using Convex Auth
+  const { signOut, signIn } = useAuthActions();
+  const viewer = useQuery(api.users.viewer);
+
+  useEffect(() => {
+    if (viewer) {
+      setUser(viewer as unknown as User);
+      setUserId(viewer._id);
+      setLoading(false);
+    } else if (viewer === null) {
+      // Authenticated but user not found (or not logged in)
+      setUser(null);
+      setUserId(null);
+      setLoading(false);
+    }
+  }, [viewer]);
+
+  // Legacy manual loadUser effect removed
+  /*
   useEffect(() => {
     const loadUser = async () => {
-      if (!token && !userId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const userData = await convex.query(convexApi.auth.getMe, {
-          token: token || undefined,
-          userId: userId || undefined
-        });
-
-        if (userData) {
-          setUser(userData as unknown as User);
-          // Sync token if returned (assuming user might have been loaded by ID but backend has generated one?)
-          // Actually getMe returns the existing token if found.
-          if (userData.token && userData.token !== token) {
-            setToken(userData.token);
-            localStorage.setItem('token', userData.token);
-          }
-          if (onLoginSuccess) onLoginSuccess();
-        } else {
-          // Both Invalid
-          localStorage.removeItem('userId');
-          localStorage.removeItem('token');
-          setUserId(null);
-          setToken(null);
-        }
-      } catch (e) {
-        console.error('Failed to load user:', e);
-      }
-      setLoading(false);
-    };
-    loadUser();
+    ...
   }, [token, userId, convex, onLoginSuccess]);
+  */
 
   const login = useCallback(
-    (loggedInUser: User, sessionToken?: string) => {
-      console.log('AuthContext.login called with:', loggedInUser, sessionToken);
-      try {
-        if (!loggedInUser || !loggedInUser.id) {
-          console.error('Login failed: Invalid user object', loggedInUser);
-          return;
-        }
-
-        setUser(loggedInUser);
-        localStorage.setItem('userId', loggedInUser.id);
-        setUserId(loggedInUser.id);
-
-        if (sessionToken) {
-          setToken(sessionToken);
-          localStorage.setItem('token', sessionToken);
-        }
-
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        }
-      } catch (e) {
-        console.error('AuthContext.login CRASHED:', e);
-      }
+    async (loggedInUser: User, sessionToken?: string) => {
+      // Compatibility mode: if this is called, it might be from legacy manual login.
+      // For Google Auth, we use signIn directly.
+      // For manual email/pass, we should also use signIn if migrated.
+      console.warn("Manual login() called. Prefer useAuthActions().signIn()");
+      // We can't easily "force" a session from client side with Convex Auth like this.
+      // But if loggedInUser is passed, we can set state locally.
+      setUser(loggedInUser);
     },
-    [onLoginSuccess]
+    []
   );
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
+  const logout = useCallback(async () => {
+    await signOut();
     setUserId(null);
     setToken(null);
     setUser(null);
-  }, []);
+    localStorage.removeItem('token'); // cleanup legacy
+    localStorage.removeItem('userId'); // cleanup legacy
+  }, [signOut]);
 
   const refreshUser = useCallback(async () => {
-    if (!token && !userId) return;
-    try {
-      const userData = await convex.query(convexApi.auth.getMe, {
-        token: token || undefined,
-        userId: userId || undefined
-      });
-      if (userData) {
-        setUser(userData as unknown as User);
-      }
-    } catch (e) {
-      console.error('Failed to refresh user:', e);
-    }
-  }, [token, userId, convex]);
+    // Managed by useQuery(api.users.viewer) automatically
+  }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => (prev ? { ...prev, ...updates } : null));
@@ -238,12 +202,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
   const resetPassword = useCallback(async (email: string) => {
     try {
-      await requestPasswordResetMutation({ email });
+      // await requestPasswordResetMutation({ email });
+      console.warn("Reset password not yet implemented with Convex Auth");
     } catch (e) {
       console.error("Failed to request password reset:", e);
       throw e;
     }
-  }, [requestPasswordResetMutation]);
+  }, []);
 
   const saveWord = useCallback(
     async (vocabItem: VocabularyItem | string, meaning?: string) => {
@@ -277,7 +242,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
       try {
         await saveSavedWordMutation({
-          token,
           korean,
           english,
           exampleSentence: newItem.exampleSentence,
@@ -316,10 +280,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
       try {
         await saveMistakeMutation({
-          token,
           korean,
           english,
-          wordId: wordId,
+          wordId: wordId as any, // Cast to any to bypass strict ID check for now if needed, or fix upstream type
           context: 'Web App'
         });
       } catch (e) {
@@ -387,14 +350,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
 
       try {
         await saveExamAttemptMutation({
-          token,
-          examId: attempt.examId,
+          examId: attempt.examId as any,
           score: attempt.score,
-          totalQuestions: attempt.maxScore, // Mapping maxScore to totalQuestions for now
+          totalQuestions: attempt.maxScore,
           sectionScores: attempt.userAnswers
         });
         await logActivityMutation({
-          token,
           activityType: 'EXAM',
           duration: undefined,
           itemsStudied: 1,
@@ -432,10 +393,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       itemsStudied?: number,
       metadata?: any
     ) => {
-      if (!user || !token) return;
+      if (!user) return;
       try {
         await logActivityMutation({
-          token,
           activityType,
           duration,
           itemsStudied,
@@ -464,11 +424,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
         };
       });
 
-      if (!token) return;
+      if (!user) return;
 
       try {
         await updateLearningProgressMutation({
-          token,
           lastInstitute: institute,
           lastLevel: level,
           lastUnit: unit,

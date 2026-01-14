@@ -5,7 +5,8 @@ import App from './App';
 import { AppProvider } from './contexts/AppContext';
 import './utils/i18next-config'; // Initialize i18n
 import './src/index.css';
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { getConvexUrl } from "./utils/convexConfig";
 
 const convexUrl = getConvexUrl();
@@ -20,11 +21,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <ConvexProvider client={convex}>
+      <ConvexAuthProvider client={convex}>
         <AppProvider>
           <App />
         </AppProvider>
-      </ConvexProvider>
+      </ConvexAuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

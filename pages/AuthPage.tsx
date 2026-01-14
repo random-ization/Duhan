@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Sparkles, AlertCircle, Mail, Lock, User, HelpCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { getLabels } from '../utils/i18n';
 
-// Google OAuth Config
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const REDIRECT_URI = typeof window !== 'undefined'
-  ? `${window.location.origin}/auth`
-  : '';
+// Google OAuth Config - Removed legacy config
+// const GOOGLE_CLIENT_ID ...
+// const REDIRECT_URI ...
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -76,22 +75,14 @@ export default function AuthPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    if (!GOOGLE_CLIENT_ID) {
-      setError(labels.auth?.googleConfigMissing || 'Google login not configured');
-      return;
+  const { signIn } = useAuthActions();
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signIn("google");
+    } catch (e: any) {
+      setError(e.message || "Google login failed");
     }
-
-    const scope = 'openid email profile';
-    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', scope);
-    authUrl.searchParams.set('access_type', 'offline');
-    authUrl.searchParams.set('prompt', 'select_account');
-
-    window.location.href = authUrl.toString();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -251,7 +242,6 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              disabled={!GOOGLE_CLIENT_ID}
               className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
