@@ -13,6 +13,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
+import { VideoLibrarySkeleton } from '../../components/common';
 
 interface VideoItem {
     id: string;
@@ -60,11 +61,7 @@ const VideoLibraryPage: React.FC = () => {
 
     // Early return for loading state - MUST be after all hooks
     if (convexVideos === undefined) {
-        return (
-            <div className="flex items-center justify-center h-80">
-                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
-            </div>
-        );
+        return <VideoLibrarySkeleton />;
     }
 
     // Legacy fetch removed

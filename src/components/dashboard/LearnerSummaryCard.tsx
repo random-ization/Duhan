@@ -4,6 +4,7 @@ import { api } from "../../../convex/_generated/api";
 import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLabels } from '../../../utils/i18n';
+import { Skeleton } from '../../../components/common';
 
 interface SummaryStats {
     streak: number;
@@ -55,7 +56,14 @@ export const LearnerSummaryCard: React.FC = () => {
     if (loading) {
         return (
             <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white h-40 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin opacity-50" />
+                <div className="animate-pulse space-y-3 w-full">
+                    <div className="flex items-center justify-between">
+                        <Skeleton className="h-5 w-20 bg-indigo-400" />
+                        <Skeleton className="h-8 w-8 rounded-lg bg-indigo-400" />
+                    </div>
+                    <Skeleton className="h-8 w-24 bg-indigo-400" />
+                    <Skeleton className="h-4 w-full bg-indigo-400" />
+                </div>
             </div>
         );
     }

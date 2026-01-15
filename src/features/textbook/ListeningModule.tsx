@@ -15,6 +15,7 @@ import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
 import { Language } from '../../../types';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import { getLabels } from '../../../utils/i18n';
+import { ListeningModuleSkeleton } from '../../../components/common';
 
 // =========================================
 // Types
@@ -396,12 +397,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
         >
             {/* Loading State */}
             {loading && (
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-zinc-400" />
-                        <p className="font-bold text-zinc-500">{labels.dashboard?.common?.loading || "加载中..."}</p>
-                    </div>
-                </div>
+                <ListeningModuleSkeleton />
             )}
 
             {/* Error State */}

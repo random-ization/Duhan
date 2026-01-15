@@ -17,6 +17,7 @@ import { useTTS } from '../src/hooks/useTTS';
 import { useApp } from '../contexts/AppContext';
 import { getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
+import { VocabModuleSkeleton } from '../components/common';
 
 interface ExtendedVocabItem extends VocabularyItem {
     id: string;
@@ -263,14 +264,7 @@ export default function VocabModulePage() {
     ];
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center" style={BACKGROUND_STYLE}>
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-500 font-medium">{labels.loadingVocab || 'Loading...'}</p>
-                </div>
-            </div>
-        );
+        return <VocabModuleSkeleton />;
     }
 
     // Removed blocking EmptyState here to allow UI rendering even if empty

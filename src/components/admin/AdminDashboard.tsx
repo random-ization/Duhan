@@ -6,6 +6,7 @@ import {
     Loader2, TrendingUp, DollarSign, Zap, Activity,
     BarChart3, RefreshCw
 } from 'lucide-react';
+import { AdminDashboardSkeleton } from '../../../components/common';
 
 interface OverviewStats {
     users: number;
@@ -74,11 +75,7 @@ export const AdminDashboard: React.FC = () => {
     const handleRefresh = () => { }; // No-op since it's realtime
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
-            </div>
-        );
+        return <AdminDashboardSkeleton />;
     }
 
     const statCards = [

@@ -12,6 +12,7 @@ import { useAnnotation } from '../hooks/useAnnotation';
 import AnnotationMenu from './AnnotationMenu';
 import { getHighlightClasses } from '../src/utils/highlightUtils';
 import AnnotationSidebar from '../src/components/annotation/AnnotationSidebar';
+import { ListeningModuleSkeleton } from './common';
 
 // Stub for deleted service
 const generateReadingPassage = async (
@@ -354,12 +355,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
   // --- 2. Loading View ---
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="w-16 h-16 border-4 border-violet-100 border-t-violet-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-medium animate-pulse">{labels.preparingListening}</p>
-      </div>
-    );
+    return <ListeningModuleSkeleton />;
   }
 
   // --- 3. Listening Player View ---
