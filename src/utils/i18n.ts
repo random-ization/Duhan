@@ -2,11 +2,16 @@ import { Language } from '../types';
 
 import i18n from './i18next-config';
 
+// Recursive type for translation values (can be strings or nested objects)
+interface TranslationValue {
+  [key: string]: string | TranslationValue;
+}
+
 // Type for translation object - exported so components can use it
-export type TranslationObject = Record<string, any>;
+export type TranslationObject = TranslationValue;
 
 // Type for accessing labels - allows any string key access
-export type Labels = Record<string, any>;
+export type Labels = TranslationValue;
 
 // Deprecated: translations are now managed by i18next
 // We export an empty object or proxy to satisfy legacy imports if any
