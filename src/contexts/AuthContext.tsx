@@ -7,18 +7,12 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { useConvex, useMutation, useAction, useQuery, useConvexAuth } from 'convex/react';
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvex, useMutation, useQuery, useConvexAuth } from 'convex/react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
-import {
-  User,
-  Language,
-  Annotation,
-  ExamAttempt,
-  TextbookContent,
-  TopikExam,
-} from '../types';
+import { Id } from '../../convex/_generated/dataModel';
+import { User, Language, Annotation, ExamAttempt, TextbookContent, TopikExam } from '../types';
 
 import { fetchUserCountry } from '../utils/geo';
 import i18n from '../utils/i18next-config';
@@ -43,7 +37,6 @@ interface AuthContextType {
 
   // User Actions
 
-
   // Permission Checking
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
   showUpgradePrompt: boolean;
@@ -54,11 +47,15 @@ interface AuthContextType {
   deleteExamAttempt: (attemptId: string) => Promise<void>;
   saveAnnotation: (annotation: Annotation) => Promise<void>;
   deleteAnnotation: (annotationId: string) => Promise<void>;
-  updateLearningProgress: (institute: string, level: number, unit?: number, module?: string) => Promise<void>;
+  updateLearningProgress: (
+    institute: string,
+    level: number,
+    unit?: number,
+    module?: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -79,10 +76,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const { ready } = useTranslation();
 
-  const convex = useConvex();
+  // useConvex hook kept for potential future use
+  useConvex();
 
   // Mutations - token argument no longer needed for backend that uses getAuthUserId
-
 
   // Initialize language
   const [language, setLanguageState] = useState<Language>(() => {
@@ -128,9 +125,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Session Check (Load User) using Convex Auth
-  const { signOut, signIn } = useAuthActions();
+  const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(api.users.viewer);
+
+  // Track viewer ID to avoid infinite re-renders when viewer object reference changes
+  const viewerIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) {
@@ -139,15 +139,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (isAuthenticated) {
-      if (viewer !== undefined) {
-        setUser(viewer as unknown as User);
+      if (viewer !== undefined && viewer !== null) {
+        // Only update user if viewer ID actually changed
+        const viewerId = (viewer as { _id?: string })?._id || null;
+        if (viewerId !== viewerIdRef.current) {
+          viewerIdRef.current = viewerId;
+          setUser(viewer as unknown as User);
+        }
+        setLoading(false);
+      } else if (viewer === null) {
+        // Viewer returned null (user not found in DB)
+        viewerIdRef.current = null;
+        setUser(null);
         setLoading(false);
       } else {
-        // Authenticated but viewer query still loading
+        // Authenticated but viewer query still loading (undefined)
         setLoading(true);
       }
     } else {
       // Not authenticated
+      viewerIdRef.current = null;
       setUser(null);
       setLoading(false);
     }
@@ -205,18 +216,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [token, userId, convex, onLoginSuccess]);
   */
 
-  const login = useCallback(
-    async (loggedInUser: User, _sessionToken?: string) => {
-      // Compatibility mode: if this is called, it might be from legacy manual login.
-      // For Google Auth, we use signIn directly.
-      // For manual email/pass, we should also use signIn if migrated.
-      console.warn("Manual login() called. Prefer useAuthActions().signIn()");
-      // We can't easily "force" a session from client side with Convex Auth like this.
-      // But if loggedInUser is passed, we can set state locally.
-      setUser(loggedInUser);
-    },
-    []
-  );
+  const login = useCallback(async (loggedInUser: User, _sessionToken?: string) => {
+    // Compatibility mode: if this is called, it might be from legacy manual login.
+    // For Google Auth, we use signIn directly.
+    // For manual email/pass, we should also use signIn if migrated.
+    console.warn('Manual login() called. Prefer useAuthActions().signIn()');
+    // We can't easily "force" a session from client side with Convex Auth like this.
+    // But if loggedInUser is passed, we can set state locally.
+    setUser(loggedInUser);
+  }, []);
 
   const logout = useCallback(async () => {
     await signOut();
@@ -236,14 +244,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = useCallback(async (_email: string) => {
     try {
       // await requestPasswordResetMutation({ email });
-      console.warn("Reset password not yet implemented with Convex Auth");
+      console.warn('Reset password not yet implemented with Convex Auth');
     } catch (err: unknown) {
-      console.error("Failed to request password reset:", err);
+      console.error('Failed to request password reset:', err);
       throw err;
     }
   }, []);
-
-
 
   const canAccessContent = useCallback(
     (content: TextbookContent | TopikExam): boolean => {
@@ -261,94 +267,112 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const deleteExamAttemptMutation = useMutation(api.user.deleteExamAttempt);
   const updateLearningProgressMutation = useMutation(api.user.updateLearningProgress);
 
-  const saveAnnotation = useCallback(async (annotation: Annotation) => {
-    // Adapter for Annotation object to mutation args
-    await saveAnnotationMutation({
-      contextKey: annotation.contextKey,
-      text: annotation.text,
-      note: annotation.note,
-      color: annotation.color || undefined,
-      startOffset: annotation.startOffset,
-      endOffset: annotation.endOffset,
-    });
-    // Optimistic update or refetch should happen automatically if using live queries
-  }, [saveAnnotationMutation]);
+  const saveAnnotation = useCallback(
+    async (annotation: Annotation) => {
+      // Adapter for Annotation object to mutation args
+      await saveAnnotationMutation({
+        contextKey: annotation.contextKey,
+        text: annotation.text,
+        note: annotation.note,
+        color: annotation.color || undefined,
+        startOffset: annotation.startOffset,
+        endOffset: annotation.endOffset,
+      });
+      // Optimistic update or refetch should happen automatically if using live queries
+    },
+    [saveAnnotationMutation]
+  );
 
-  const deleteAnnotation = useCallback(async (annotationId: string) => {
-    await deleteAnnotationMutation({ annotationId: annotationId as any });
-  }, [deleteAnnotationMutation]);
+  const deleteAnnotation = useCallback(
+    async (annotationId: string) => {
+      await deleteAnnotationMutation({ annotationId: annotationId as Id<'annotations'> });
+    },
+    [deleteAnnotationMutation]
+  );
 
-  const saveExamAttempt = useCallback(async (attempt: ExamAttempt) => {
-    await saveExamAttemptMutation({
-      examId: attempt.examId,
-      score: attempt.score,
-      answers: attempt.userAnswers,
-    });
-  }, [saveExamAttemptMutation]);
+  const saveExamAttempt = useCallback(
+    async (attempt: ExamAttempt) => {
+      await saveExamAttemptMutation({
+        examId: attempt.examId,
+        score: attempt.score,
+        answers: attempt.userAnswers,
+      });
+    },
+    [saveExamAttemptMutation]
+  );
 
-  const deleteExamAttempt = useCallback(async (attemptId: string) => {
-    await deleteExamAttemptMutation({ attemptId: attemptId as any });
-  }, [deleteExamAttemptMutation]);
+  const deleteExamAttempt = useCallback(
+    async (attemptId: string) => {
+      await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
+    },
+    [deleteExamAttemptMutation]
+  );
 
-  const updateLearningProgress = useCallback(async (institute: string, level: number, unit?: number, module?: string) => {
-    // Optimistic update
-    updateUser({
-      lastInstitute: institute,
-      lastLevel: level,
-      lastUnit: unit,
-      lastModule: module,
-    });
+  const updateLearningProgress = useCallback(
+    async (institute: string, level: number, unit?: number, module?: string) => {
+      // Optimistic update
+      updateUser({
+        lastInstitute: institute,
+        lastLevel: level,
+        lastUnit: unit,
+        lastModule: module,
+      });
 
-    await updateLearningProgressMutation({
-      lastInstitute: institute,
-      lastLevel: level,
-      lastUnit: unit,
-      lastModule: module
-    });
-  }, [updateUser, updateLearningProgressMutation]);
+      await updateLearningProgressMutation({
+        lastInstitute: institute,
+        lastLevel: level,
+        lastUnit: unit,
+        lastModule: module,
+      });
+    },
+    [updateUser, updateLearningProgressMutation]
+  );
 
-  const value = useMemo<AuthContextType>(() => ({
-    user,
-    loading: loading || !ready,
-    language,
-    login,
-    logout,
-    updateUser,
-    refreshUser,
-    resetPassword,
-    setLanguage,
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      loading: loading || !ready,
+      language,
+      login,
+      logout,
+      updateUser,
+      refreshUser,
+      resetPassword,
+      setLanguage,
 
-    canAccessContent,
-    showUpgradePrompt,
-    setShowUpgradePrompt,
-    sessionExpired,
-    setSessionExpired,
+      canAccessContent,
+      showUpgradePrompt,
+      setShowUpgradePrompt,
+      sessionExpired,
+      setSessionExpired,
 
-    saveExamAttempt,
-    deleteExamAttempt,
-    saveAnnotation,
-    deleteAnnotation,
-    updateLearningProgress,
-  }), [
-    user,
-    loading,
-    ready,
-    language,
-    login,
-    logout,
-    updateUser,
-    refreshUser,
-    resetPassword,
-    setLanguage,
-    canAccessContent,
-    showUpgradePrompt,
-    sessionExpired,
-    saveExamAttempt,
-    deleteExamAttempt,
-    saveAnnotation,
-    deleteAnnotation,
-    updateLearningProgress
-  ]);
+      saveExamAttempt,
+      deleteExamAttempt,
+      saveAnnotation,
+      deleteAnnotation,
+      updateLearningProgress,
+    }),
+    [
+      user,
+      loading,
+      ready,
+      language,
+      login,
+      logout,
+      updateUser,
+      refreshUser,
+      resetPassword,
+      setLanguage,
+      canAccessContent,
+      showUpgradePrompt,
+      sessionExpired,
+      saveExamAttempt,
+      deleteExamAttempt,
+      saveAnnotation,
+      deleteAnnotation,
+      updateLearningProgress,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
