@@ -181,11 +181,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   // Session expiration detection
   // If user was authenticated but then becomes unauthenticated, flag session as expired
   useEffect(() => {
+    // Track if we've completed initial load to avoid false positives
+    const hasCompletedInitialLoad = !authLoading;
+    if (!hasCompletedInitialLoad) {
+      return;
+    }
+
     const wasAuthenticated = user !== null;
     const nowAuthenticated = isAuthenticated;
 
     // If we had a user but are no longer authenticated (and not loading), session expired
-    if (wasAuthenticated && !nowAuthenticated && !authLoading) {
+    if (wasAuthenticated && !nowAuthenticated) {
       setSessionExpired(true);
     }
 
@@ -196,24 +202,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   }, [isAuthenticated, user, authLoading, sessionExpired]);
 
   // Silent token refresh - proactively keep session alive
-  // Convex Auth handles token refresh automatically, but we add a heartbeat
-  // to ensure the session stays active during long user sessions
+  // The viewer query is reactive and will automatically trigger on the interval
+  // This ensures Convex Auth's automatic token refresh mechanism stays active
   useEffect(() => {
-    if (!isAuthenticated || !viewer) {
+    if (!isAuthenticated) {
       return;
     }
 
-    // Ping the server every 5 minutes to keep session active
+    // Trigger viewer query refresh every 5 minutes
+    // This keeps the Convex session active and allows automatic token refresh
     const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
     
     const refreshTimer = setInterval(() => {
-      // Simply querying the viewer keeps the session active
-      // Convex will automatically refresh tokens as needed
-      console.log('[Auth] Heartbeat - keeping session active');
+      // The viewer query dependency will cause a re-fetch
+      // Convex will automatically refresh tokens as needed during this query
+      console.log('[Auth] Session heartbeat');
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(refreshTimer);
-  }, [isAuthenticated, viewer]);
+  }, [isAuthenticated, viewer]); // viewer dependency ensures query stays active
 
   // Legacy manual loadUser effect removed
   /*

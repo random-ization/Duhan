@@ -50,7 +50,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleGoogleLogin = async () => {
     try {
       setError(null);
-      await signIn("google", { redirectTo: window.location.href });
+      // Use clean URL path to avoid issues with fragments and query params
+      const cleanRedirect = window.location.origin + window.location.pathname;
+      await signIn("google", { redirectTo: cleanRedirect });
     } catch (e: any) {
       setError(e.message || "Google login failed");
     }

@@ -36,19 +36,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!isAuthenticated) {
     // If session expired, show modal instead of redirecting
     if (sessionExpired || showLoginModal) {
+      const handleLoginSuccess = () => {
+        setShowLoginModal(false);
+        setSessionExpired(false);
+      };
+
       return (
         <>
           <Outlet />
           <LoginModal
             isOpen={true}
-            onClose={() => {
-              // Don't allow closing without login
-              // User must login or navigate away
-            }}
-            onSuccess={() => {
-              setShowLoginModal(false);
-              setSessionExpired(false);
-            }}
+            onClose={() => undefined} // Explicitly no-op: user must login or navigate away
+            onSuccess={handleLoginSuccess}
           />
         </>
       );
@@ -66,6 +65,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo || '/dashboard'} replace />;
   }
 
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    setSessionExpired(false);
+  };
+
   // Step 5: All checks passed
   return (
     <>
@@ -74,13 +78,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       {showLoginModal && (
         <LoginModal
           isOpen={showLoginModal}
-          onClose={() => {
-            // Don't allow closing without login
-          }}
-          onSuccess={() => {
-            setShowLoginModal(false);
-            setSessionExpired(false);
-          }}
+          onClose={() => undefined} // Explicitly no-op: user must login
+          onSuccess={handleLoginSuccess}
         />
       )}
     </>
