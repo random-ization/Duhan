@@ -1,0 +1,14 @@
+# Generated files
+convex/_generated/
+**/_generated/
+
+# Build output
+dist/
+build/
+.next/
+
+# Dependencies
+node_modules/
+
+# Test coverage
+coverage/
