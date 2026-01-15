@@ -1,25 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { sanitizeHtml } from '../utils/sanitize';
 import { useQuery } from 'convex/react';
 import { api as convexApi } from '../../convex/_generated/api';
 import { Loading } from '../components/common/Loading';
-import { FileText, Calendar, User } from 'lucide-react';
+import { FileText, Calendar } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 
 interface LegalDocumentPageProps {
   language: Language;
   documentType: 'terms' | 'privacy' | 'refund';
-}
-
-interface LegalDocument {
-  id: string;
-  title: string;
-  content: string;
-  updatedAt: number;
-  updatedBy?: string;
 }
 
 const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documentType }) => {
@@ -39,19 +31,6 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
   } : null;
   const error = doc === null; // If query returns null (not undefined) -> error
 
-
-  const getTitle = () => {
-    switch (documentType) {
-      case 'terms':
-        return labels.termsOfService || 'Terms of Service';
-      case 'privacy':
-        return labels.privacyPolicy || 'Privacy Policy';
-      case 'refund':
-        return labels.refundPolicy || 'Refund Policy';
-      default:
-        return '';
-    }
-  };
 
   if (loading) {
     return <Loading fullScreen size="lg" />;

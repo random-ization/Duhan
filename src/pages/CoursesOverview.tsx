@@ -3,8 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 // import { useData } from '../contexts/DataContext';
-import { ChevronDown, ArrowRight, BookOpen, Search, ChevronRight, Layers } from 'lucide-react';
-import { Institute } from '../types';
+import { ChevronDown, Search, ChevronRight, Layers } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { useQuery } from "convex/react";
 import { api } from '../../convex/_generated/api';
@@ -18,7 +17,6 @@ const PUBLISHER_THEMES: Record<string, { bg: string, text: string, accent: strin
 
 const CoursesOverview: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
 
     // 1. Fetch Data
     const courses = useQuery(api.institutes.getAll);

@@ -29,7 +29,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
     sidebarAnnotations,
     activeAnnotationId,
     editingAnnotationId,
-    hoveredAnnotationId,
+    _hoveredAnnotationId,
     labels,
     onActivate,
     onHover,

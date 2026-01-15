@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
@@ -23,8 +23,6 @@ const GrammarModulePage: React.FC = () => {
     const [selectedUnit, setSelectedUnit] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
-    const [instituteName, setInstituteName] = useState('');
-    const [totalUnits, setTotalUnits] = useState<number>(10); // Default to 10 units
 
     const { user } = useAuth();
 

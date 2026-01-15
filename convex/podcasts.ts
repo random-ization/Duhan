@@ -1,5 +1,5 @@
 import { query, mutation } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { getAuthUserId, getOptionalAuthUserId } from "./utils";
 
 // ============================================
@@ -284,7 +284,7 @@ export const trackView = mutation({
             return { success: true, views: episode.views + 1 };
         } else {
             // Create new episode
-            const newId = await ctx.db.insert("podcast_episodes", {
+            await ctx.db.insert("podcast_episodes", {
                 channelId,
                 guid,
                 title,

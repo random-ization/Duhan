@@ -2,7 +2,6 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import { Play, Calendar } from 'lucide-react';
-import { ListeningHistoryItem, User } from '../types';
 // import { PODCAST_MESSAGES, getPodcastMessages } from '../constants/podcast-messages';
 
 const getPodcastMessages = (labels: any) => ({
@@ -17,13 +16,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 
 export default function HistoryPage() {
-    const { user, language } = useAuth();
+    const { language } = useAuth();
     const labels = getLabels(language);
     const podcastMsgs = getPodcastMessages(labels);
 
     const history = useQuery(api.podcasts.getHistory);
     const loading = history === undefined;
-    const error = null; // Convex handles errors via ErrorBoundary usually, or returns undefined while loading
     const navigate = useNavigate();
 
     // Mapping logic if necessary (Convex returns _id, frontend might wait for id)

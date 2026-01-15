@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
     Plus,
     Pencil,
@@ -40,11 +40,6 @@ export default function VideoManager() {
     const createVideo = useMutation(convexApi.videos.create);
     const updateVideo = useMutation(convexApi.videos.update);
     const deleteVideo = useMutation(convexApi.videos.remove);
-    const getVideo = useQuery(convexApi.videos.get,
-        // We will fetch detail separately if needed, but for now relies on list
-        // Or we use this for a specific video if needed.
-        "skip"
-    );
 
     const loading = videos === undefined;
 

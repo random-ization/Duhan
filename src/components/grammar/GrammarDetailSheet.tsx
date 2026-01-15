@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { X, Sparkles, Trophy, AlertCircle } from 'lucide-react';
 import { GrammarPointData } from '../../types';
-import { useAction, useMutation } from "convex/react";
-import { api } from '../../../convex/_generated/api';
+import { useMutation } from "convex/react";
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 

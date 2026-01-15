@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Disc, GripVertical, BookMarked, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BentoCard } from '../components/dashboard/BentoCard';
@@ -75,9 +75,9 @@ const SortableItem = ({ id, children, isEditing, className }: { id: string, chil
     );
 };
 
-export default function DashboardPage({ canAccessContent, onShowUpgradePrompt }: {
-    canAccessContent: (content: TextbookContent | TopikExam) => boolean;
-    onShowUpgradePrompt: () => void;
+export default function DashboardPage({ _canAccessContent, _onShowUpgradePrompt }: {
+    _canAccessContent: (content: TextbookContent | TopikExam) => boolean;
+    _onShowUpgradePrompt: () => void;
 }) {
     const { user, language } = useAuth();
     const labels = getLabels(language);

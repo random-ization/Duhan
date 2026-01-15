@@ -57,7 +57,7 @@ const NotebookPage: React.FC = () => {
     }, [notes, searchQuery]);
 
     // Handle delete (Convex will auto-refresh the list)
-    const handleDelete = (id: string) => {
+    const handleDelete = (_id: string) => {
         // List will auto-refresh via Convex subscription
     };
 

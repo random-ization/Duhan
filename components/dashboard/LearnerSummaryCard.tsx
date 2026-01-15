@@ -1,17 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { BentoCard } from './BentoCard';
 import { CardSkeleton } from '../common';
-
-interface SummaryStats {
-    streak: number;
-    todayMinutes: number;
-    dailyGoal: number;
-    dailyProgress: number;
-    wordsToReview: number;
-}
 
 export const LearnerSummaryCard: React.FC = () => {
     // Convex Integration

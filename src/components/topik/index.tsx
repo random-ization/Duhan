@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';

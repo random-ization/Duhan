@@ -18,14 +18,6 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(true);
 
-
-
-    // Get user initials for avatar fallback
-    const getInitials = (name?: string) => {
-        if (!name) return 'U';
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    };
-
     const navItems = useMemo(() => [
         {
             path: '/dashboard', label: t('sidebar.dashboard'),

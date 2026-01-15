@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { useLearning } from '../contexts/LearningContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import DailyPhrase from './DailyPhrase';

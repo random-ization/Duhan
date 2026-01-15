@@ -34,7 +34,6 @@ export const InstituteManager: React.FC = () => {
         id: i.id || (i as any)._id // fallback for types
     })) as Institute[];
 
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'institutes' | 'publishers'>('institutes');
 

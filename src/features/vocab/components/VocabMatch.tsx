@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Timer, Trophy, RefreshCw, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLabels } from '../../../utils/i18n';

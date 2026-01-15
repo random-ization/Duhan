@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Search, Loader2, Volume2, BookOpen } from 'lucide-react';
+import { Search, Loader2, BookOpen } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';

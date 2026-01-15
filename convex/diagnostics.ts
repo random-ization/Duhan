@@ -1,6 +1,4 @@
 import { query } from "./_generated/server";
-import { v } from "convex/values";
-import { api } from "./_generated/api";
 
 // Return diagnostic data for all courses
 export const getHealthStats = query({
@@ -13,9 +11,6 @@ export const getHealthStats = query({
 
         // 2. Get User Count (for latency check context)
         const userCount = (await ctx.db.query("users").collect()).length;
-
-        // 3. OPTIMIZATION: Batch fetch all data for institutes
-        const courseIds = institutes.map(ins => ins.id);
         
         // Batch query all vocabulary appearances
         const allVocabAppearances = await ctx.db.query("vocabulary_appearances").collect();

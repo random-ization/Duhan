@@ -1,15 +1,13 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Language } from '../../types';
-import { getLabels } from '../../utils/i18n';
 
 interface AudioPlayerProps {
   audioUrl: string;
   language: Language;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = React.memo(({ audioUrl, language }) => {
-  const labels = useMemo(() => getLabels(language), [language]);
+export const AudioPlayer: React.FC<AudioPlayerProps> = React.memo(({ audioUrl }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);

@@ -3,7 +3,7 @@ import { usePaginatedQuery, useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import {
     Search, Trash2, Edit2, Shield, User as UserIcon,
-    Crown, ChevronLeft, ChevronRight, X, Save, Loader2
+    Crown, ChevronRight, X, Save, Loader2
 } from 'lucide-react';
 
 // 类型定义

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Sparkles, AlertCircle, Mail, Lock, User, HelpCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation, useQuery } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getLabels } from '../utils/i18n';
 
@@ -14,13 +14,12 @@ import { getLabels } from '../utils/i18n';
 export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, user, language, loading: authLoading } = useAuth(); // Assume loading is available
+  const { user, language, loading: authLoading } = useAuth(); // Assume loading is available
   const labels = getLabels(language);
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Auto-redirect if already logged in
   useEffect(() => {

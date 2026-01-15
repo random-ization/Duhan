@@ -219,7 +219,7 @@ export const handleWebhook = action({
                     }
                     break;
 
-                case "subscription_updated":
+                case "subscription_updated": {
                     // Check status to determine if access should be granted or revoked
                     const status = attributes.status;
                     if (status === "active" || status === "on_trial") {
@@ -241,6 +241,7 @@ export const handleWebhook = action({
                         }
                     }
                     break;
+                }
 
                 default:
                     console.log(`[LemonSqueezy] Unhandled event: ${eventName}`);

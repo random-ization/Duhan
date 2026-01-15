@@ -571,7 +571,7 @@ export const bulkImport = mutation({
         }
 
         // Phase 2: Resolve Appearances (Concurrent based on resolved IDs)
-        const appOps = items.map(async (item, idx) => {
+        const appOps = items.map(async (item) => {
             const wordId = wordIdMap.get(item.word);
             if (!wordId) {
                 failedCount++;

@@ -15,7 +15,6 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({
   isOpen,
   onClose,
   language,
-  contentType = 'textbook',
 }) => {
   const labels = getLabels(language);
 

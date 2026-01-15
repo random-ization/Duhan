@@ -8,13 +8,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { LearningModuleType, TextbookContent } from '../types';
-import { getLabels } from '../utils/i18n';
 import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 
 const ModulePage: React.FC = () => {
   const { user, language } = useAuth();
-  const { saveWord, recordMistake, saveAnnotation } = useUserActions();
+  const { saveWord, recordMistake } = useUserActions();
   const {
     setActiveModule,
     setActiveCustomList,
@@ -33,7 +32,6 @@ const ModulePage: React.FC = () => {
   // 2. /course/:instituteId/:moduleParam (new pattern)
   const { moduleParam, instituteId } = useParams<{ moduleParam: string; instituteId?: string }>();
   const [searchParams] = useSearchParams();
-  const labels = getLabels(language);
 
   // Determine if we're using the new course route pattern
   const isCourseRoute = location.pathname.startsWith('/course/');

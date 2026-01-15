@@ -1,18 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useQuery } from "convex/react";
 import { api } from '../../convex/_generated/api';
-
-
-// Grammar point type from API
-interface GrammarPoint {
-    id: string;
-    title: string;
-    summary: string;
-    unitId: number;
-    status: 'NEW' | 'LEARNING' | 'MASTERED';
-}
 
 export default function CourseDashboard() {
     const navigate = useNavigate();

@@ -32,10 +32,6 @@ export function useVocabProgress(courseId: string) {
             const currentVocab = localStore.getQuery(api.vocab.getOfCourse, { courseId });
             if (!currentVocab) return;
 
-            // Calculate new progress values based on quality
-            const isCorrect = quality >= 4;
-            const now = Date.now();
-
             // Update the word's progress in the local cache
             const updatedVocab = currentVocab.map(word => {
                 if (word._id !== wordId) return word;

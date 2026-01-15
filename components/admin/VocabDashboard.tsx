@@ -11,8 +11,6 @@ import {
   Search,
   Edit2,
   X,
-  ChevronLeft,
-  ChevronRight,
   Save,
   Download,
 } from "lucide-react";
@@ -52,7 +50,6 @@ const VocabDashboard: React.FC = () => {
     | undefined;
   const [selectedCourse, setSelectedCourse] = useState<string>("ALL");
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [editingWord, setEditingWord] = useState<WordRow | null>(null);
   const [editForm, setEditForm] = useState<Partial<WordRow>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -69,14 +66,6 @@ const VocabDashboard: React.FC = () => {
     selectedCourse === "ALL"
       ? institutes?.[0]?.id || institutes?.[0]?._id || ""
       : selectedCourse;
-
-  const vocabArgs = useMemo(
-    () =>
-      selectedCourse === "ALL"
-        ? { limit: 2000 }
-        : { limit: 2000, courseId: selectedCourse },
-    [selectedCourse]
-  );
 
   const { results: words, status, loadMore } = usePaginatedQuery(
     api.vocab.getAllPaginated,

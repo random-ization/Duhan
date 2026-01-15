@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useMutation, useAction } from 'convex/react';
 import { api as convexApi } from '../../../convex/_generated/api';
 import { TopikQuestion, Language, Annotation } from '../../types';
-import { Volume2, Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
 
@@ -24,7 +24,6 @@ interface QuestionRendererProps {
 
 // Korean serif font for authentic TOPIK paper look
 const FONT_SERIF = "font-['Batang','KoPubBatang','Times_New_Roman',serif]";
-const FONT_SANS = "font-sans";
 
 // Unicode circle numbers for TOPIK-style options
 const CIRCLE_NUMBERS = ['①', '②', '③', '④'];

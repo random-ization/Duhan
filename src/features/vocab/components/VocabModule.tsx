@@ -34,8 +34,8 @@ interface VocabModuleProps {
 }
 
 const VocabModule: React.FC<VocabModuleProps> = ({
-  course,
-  instituteName,
+  _course,
+  _instituteName,
   language,
   levelContexts,
   customWordList,
