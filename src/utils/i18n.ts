@@ -28,10 +28,10 @@ export const getLabels = (language: Language): Labels => {
   const target = i18n.getResourceBundle(language, 'translation') || {};
   const basis = i18n.getResourceBundle('en', 'translation') || {};
 
-  if (language === 'en') return Object.keys(basis).length > 0 ? basis : target;
+  if (language === 'en') return (Object.keys(basis).length > 0 ? basis : target) as Labels;
 
   // Simple shallow merge approach to ensure missing keys fall back to English
-  return { ...basis, ...target };
+  return { ...basis, ...target } as Labels;
 };
 
 export default translations;

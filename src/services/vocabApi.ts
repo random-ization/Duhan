@@ -26,6 +26,14 @@ type ConvexVocabWord = Doc<'words'> & {
   } | null;
 };
 
+// Helper function to convert ConvexVocabWord to VocabWord
+function toVocabWord(word: ConvexVocabWord): VocabWord {
+  return {
+    ...word,
+    id: word._id,
+  };
+}
+
 interface VocabCacheEntry<T = unknown> {
   data: T | null;
   timestamp: number;
@@ -194,14 +202,11 @@ export async function fetchVocabSession(
   );
 
   // Assemble and Shim ID
-  const session = [...reviews, ...learning, ...newWords].slice(0, limit).map(w => ({
-    ...w,
-    id: w._id,
-  }));
+  const session = [...reviews, ...learning, ...newWords].slice(0, limit).map(toVocabWord);
 
   return {
     success: true,
-    session: session as VocabWord[],
+    session,
     stats: {
       total: (candidates as ConvexVocabWord[]).length,
       dueReviews: reviews.length,
@@ -261,6 +266,6 @@ export async function fetchAllVocab(
 
   return {
     success: true,
-    words: filtered,
+    words: filtered.map(toVocabWord),
   };
 }
