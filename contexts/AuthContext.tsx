@@ -38,6 +38,10 @@ interface AuthContextType {
   setLanguage: (lang: Language) => void;
   resetPassword: (email: string) => Promise<void>; // Added
 
+  // Session Management
+  sessionExpired: boolean;
+  setSessionExpired: (expired: boolean) => void;
+
   // User Actions
   saveWord: (vocabItem: VocabularyItem | string, meaning?: string) => Promise<void>;
   recordMistake: (word: Mistake | VocabularyItem) => Promise<void>;
@@ -89,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const [token, setToken] = useState<string | null>(() =>
     typeof window !== 'undefined' ? localStorage.getItem('token') : null
   );
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const convex = useConvex();
 
@@ -172,6 +177,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       setLoading(false);
     }
   }, [authLoading, isAuthenticated, viewer]);
+
+  // Session expiration detection
+  // If user was authenticated but then becomes unauthenticated, flag session as expired
+  useEffect(() => {
+    const wasAuthenticated = user !== null;
+    const nowAuthenticated = isAuthenticated;
+
+    // If we had a user but are no longer authenticated (and not loading), session expired
+    if (wasAuthenticated && !nowAuthenticated && !authLoading) {
+      setSessionExpired(true);
+    }
+
+    // If we become authenticated again, clear the expired flag
+    if (nowAuthenticated && sessionExpired) {
+      setSessionExpired(false);
+    }
+  }, [isAuthenticated, user, authLoading, sessionExpired]);
 
   // Legacy manual loadUser effect removed
   /*
@@ -481,6 +503,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     canAccessContent,
     showUpgradePrompt,
     setShowUpgradePrompt,
+    sessionExpired,
+    setSessionExpired,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
