@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
 import { getLabels } from './utils/i18n';
+import { ContentSkeleton } from './components/common';
 
 // Lazy load pages for code splitting
 import AppLayout from './components/layout/AppLayout';
@@ -40,22 +41,9 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const VideoLibraryPage = lazy(() => import('./src/pages/VideoLibraryPage'));
 const VideoPlayerPage = lazy(() => import('./src/pages/VideoPlayerPage'));
 
-// Loading fallback component with branded skeleton
+// Loading fallback component with skeleton screen
 const PageLoader = ({ labels }: { labels: any }) => (
-  <div className="min-h-screen flex items-center justify-center bg-[#f4f4f5]"
-    style={{
-      backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
-      backgroundSize: '20px 20px',
-    }}
-  >
-    <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-2xl border-2 border-zinc-900 shadow-[6px_6px_0px_0px_#18181B]">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 border-4 border-indigo-200 rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-      <div className="font-bold text-zinc-700">{labels?.loading || 'Loading...'}</div>
-    </div>
-  </div>
+  <ContentSkeleton />
 );
 
 interface AppRoutesProps {

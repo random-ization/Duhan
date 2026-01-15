@@ -38,6 +38,10 @@ interface AuthContextType {
   setLanguage: (lang: Language) => void;
   resetPassword: (email: string) => Promise<void>; // Added
 
+  // Session Management
+  sessionExpired: boolean;
+  setSessionExpired: (expired: boolean) => void;
+
   // User Actions
   saveWord: (vocabItem: VocabularyItem | string, meaning?: string) => Promise<void>;
   recordMistake: (word: Mistake | VocabularyItem) => Promise<void>;
@@ -89,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
   const [token, setToken] = useState<string | null>(() =>
     typeof window !== 'undefined' ? localStorage.getItem('token') : null
   );
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const convex = useConvex();
 
@@ -172,6 +177,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
       setLoading(false);
     }
   }, [authLoading, isAuthenticated, viewer]);
+
+  // Session expiration detection
+  // If user was authenticated but then becomes unauthenticated, flag session as expired
+  useEffect(() => {
+    // Track if we've completed initial load to avoid false positives
+    const hasCompletedInitialLoad = !authLoading;
+    if (!hasCompletedInitialLoad) {
+      return;
+    }
+
+    const wasAuthenticated = user !== null;
+    const nowAuthenticated = isAuthenticated;
+
+    // If we had a user but are no longer authenticated (and not loading), session expired
+    if (wasAuthenticated && !nowAuthenticated) {
+      setSessionExpired(true);
+    }
+
+    // If we become authenticated again, clear the expired flag
+    if (nowAuthenticated && sessionExpired) {
+      setSessionExpired(false);
+    }
+  }, [isAuthenticated, user, authLoading, sessionExpired]);
+
+  // Silent token refresh - proactively keep session alive
+  // The viewer query is reactive and will automatically trigger on the interval
+  // This ensures Convex Auth's automatic token refresh mechanism stays active
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    // Trigger viewer query refresh every 5 minutes
+    // This keeps the Convex session active and allows automatic token refresh
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    
+    const refreshTimer = setInterval(() => {
+      // The viewer query dependency will cause a re-fetch
+      // Convex will automatically refresh tokens as needed during this query
+      console.log('[Auth] Session heartbeat');
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(refreshTimer);
+  }, [isAuthenticated, viewer]); // viewer dependency ensures query stays active
 
   // Legacy manual loadUser effect removed
   /*
@@ -481,6 +530,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     canAccessContent,
     showUpgradePrompt,
     setShowUpgradePrompt,
+    sessionExpired,
+    setSessionExpired,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

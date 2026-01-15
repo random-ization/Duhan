@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useConvexAuth } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { Loading } from './common/Loading';
+import { LoginModal } from './common/LoginModal';
 
 interface ProtectedRouteProps {
   requireAdmin?: boolean;
@@ -14,7 +15,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo
 }) => {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const { user, loading: userDataLoading } = useAuth();
+  const { user, loading: userDataLoading, sessionExpired, setSessionExpired } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Monitor session expiration
+  useEffect(() => {
+    if (sessionExpired && !isLoading && !userDataLoading) {
+      setShowLoginModal(true);
+    }
+  }, [sessionExpired, isLoading, userDataLoading]);
 
   // Step 1: ANY loading state = show loading, DO NOT redirect
   // This is CRITICAL to avoid the race condition
@@ -25,6 +34,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Step 2: Only after ALL loading is complete, check authentication
   // At this point isAuthenticated has its final value
   if (!isAuthenticated) {
+    // If session expired, show modal instead of redirecting
+    if (sessionExpired || showLoginModal) {
+      const handleLoginSuccess = () => {
+        setShowLoginModal(false);
+        setSessionExpired(false);
+      };
+
+      return (
+        <>
+          <Outlet />
+          <LoginModal
+            isOpen={true}
+            onClose={() => undefined} // Explicitly no-op: user must login or navigate away
+            onSuccess={handleLoginSuccess}
+          />
+        </>
+      );
+    }
     return <Navigate to={redirectTo || '/'} replace />;
   }
 
@@ -38,6 +65,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo || '/dashboard'} replace />;
   }
 
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    setSessionExpired(false);
+  };
+
   // Step 5: All checks passed
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      {/* Show login modal if session expires while user is on the page */}
+      {showLoginModal && (
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => undefined} // Explicitly no-op: user must login
+          onSuccess={handleLoginSuccess}
+        />
+      )}
+    </>
+  );
 };

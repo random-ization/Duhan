@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
 import { BentoCard } from './BentoCard';
+import { CardSkeleton } from '../common';
 
 interface SummaryStats {
     streak: number;
@@ -33,8 +34,8 @@ export const LearnerSummaryCard: React.FC = () => {
 
     if (loading) {
         return (
-            <BentoCard bgClass="bg-indigo-50" className="flex items-center justify-center min-h-[220px]">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            <BentoCard bgClass="bg-indigo-50" className="min-h-[220px]">
+                <CardSkeleton />
             </BentoCard>
         );
     }
