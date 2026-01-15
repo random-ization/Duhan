@@ -31,6 +31,12 @@ function toVocabWord(word: ConvexVocabWord): VocabWord {
   return {
     ...word,
     id: word._id,
+    progress: word.progress
+      ? {
+          ...word.progress,
+          id: `progress-${word._id}`,
+        }
+      : null,
   };
 }
 
