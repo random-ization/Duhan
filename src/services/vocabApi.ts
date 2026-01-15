@@ -1,7 +1,7 @@
 // Vocabulary API Service - SRS Learning System
 import { ConvexHttpClient } from "convex/browser";
 import { api as convexApi } from "../../convex/_generated/api";
-import { getConvexUrl } from "../../utils/convexConfig";
+import { getConvexUrl } from "../utils/convexConfig";
 
 const CONVEX_URL = getConvexUrl();
 const client = new ConvexHttpClient(CONVEX_URL);
@@ -13,9 +13,9 @@ const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_VOCAB_CACHE_SIZE = 50; // Maximum cache entries
 
 interface VocabCacheEntry {
-    data: any;
+    data: unknown;
     timestamp: number;
-    promise?: Promise<any>;
+    promise?: Promise<unknown>;
     lastAccessed: number;
 }
 
@@ -26,52 +26,52 @@ function evictVocabLRUIfNeeded() {
     if (vocabCache.size >= MAX_VOCAB_CACHE_SIZE) {
         let oldestKey: string | null = null;
         let oldestTime = Infinity;
-        
+
         vocabCache.forEach((entry, key) => {
             if (entry.lastAccessed < oldestTime) {
                 oldestTime = entry.lastAccessed;
                 oldestKey = key;
             }
         });
-        
+
         if (oldestKey) {
             vocabCache.delete(oldestKey);
         }
     }
 }
 
-function serializeVocabCacheKey(method: string, params: any): string {
+function serializeVocabCacheKey(method: string, params: Record<string, unknown> | unknown): string {
     // Sort keys recursively to ensure consistent serialization regardless of property order
     const sortedParams = JSON.stringify(params, (key, value) => {
         if (value && typeof value === 'object' && !Array.isArray(value)) {
             return Object.keys(value)
                 .sort()
                 .reduce((sorted, k) => {
-                    sorted[k] = value[k];
+                    sorted[k] = (value as Record<string, unknown>)[k];
                     return sorted;
-                }, {} as any);
+                }, {} as Record<string, unknown>);
         }
         return value;
     });
     return `${method}:${sortedParams}`;
 }
 
-async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, params: any): Promise<any> {
+async function cachedVocabQuery<T>(method: string, queryFn: () => Promise<T>, params: unknown): Promise<T> {
     const cacheKey = serializeVocabCacheKey(method, params);
     const now = Date.now();
-    
+
     const cached = vocabCache.get(cacheKey);
     if (cached) {
         if (cached.promise) {
-            return cached.promise;
+            return cached.promise as Promise<T>;
         }
         if (now - cached.timestamp < VOCAB_CACHE_TTL_MS) {
             cached.lastAccessed = now; // Update LRU
-            return cached.data;
+            return cached.data as T;
         }
         vocabCache.delete(cacheKey);
     }
-    
+
     const promise = queryFn().then(
         (data) => {
             evictVocabLRUIfNeeded();
@@ -83,35 +83,33 @@ async function cachedVocabQuery(method: string, queryFn: () => Promise<any>, par
             throw error;
         }
     );
-    
+
     evictVocabLRUIfNeeded();
     vocabCache.set(cacheKey, { data: null, timestamp: now, lastAccessed: now, promise });
     return promise;
 }
 
 export interface VocabWord {
-    id: string;
-    courseId: string;
-    unitId: string;
+    _id: string;
+    id: string; // Shim for frontend
     word: string;
     meaning: string;
+    meaningEn?: string;
+    meaningVi?: string;
+    meaningMn?: string;
     pronunciation?: string;
     audioUrl?: string;
     hanja?: string;
-    partOfSpeech: 'NOUN' | 'VERB_T' | 'VERB_I' | 'ADJ' | 'ADV' | 'PARTICLE';
-    tips?: {
-        synonyms?: string[];
-        antonyms?: string[];
-        nuance?: string;
-    };
-    exampleSentence?: string;
-    exampleMeaning?: string;
+    partOfSpeech: string;
+    courseId?: string;
+    unitId?: number;
+    appearanceId?: string;
     progress?: {
         id: string;
-        status: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+        status: string;
         interval: number;
         streak: number;
-        nextReviewAt: string | null;
+        nextReviewAt: number | null;
     } | null;
 }
 
@@ -143,7 +141,7 @@ export async function fetchVocabSession(
 ): Promise<VocabSessionResponse> {
     // OPTIMIZATION: Use caching to reduce query volume
     const cacheKey = { courseId, unitId: unitId || 'ALL' };
-    
+
     const allWords = await cachedVocabQuery(
         'getOfCourse',
         () => client.query(convexApi.vocab.getOfCourse, { courseId }),
@@ -156,26 +154,29 @@ export async function fetchVocabSession(
     if (unitId && unitId !== 'ALL') {
         const uId = parseInt(unitId);
         if (!isNaN(uId)) {
-            candidates = candidates.filter((w: any) => w.unitId === uId);
+            candidates = (candidates as any[]).filter((w) => w.unitId === uId);
         }
     }
 
     // SRS Priority Logic (Client-side Shim)
     const now = Date.now();
-    const reviews = candidates.filter((w: any) =>
-        w.progress && w.progress.nextReviewAt && w.progress.nextReviewAt <= now && w.progress.status !== 'MASTERED' // Include Review
+    const reviews = (candidates as unknown as VocabWord[]).filter((w) =>
+        w.progress && w.progress.nextReviewAt && new Date(w.progress.nextReviewAt).getTime() <= now && w.progress.status !== 'MASTERED' // Include Review
     );
-    const newWords = candidates.filter((w: any) => !w.progress);
-    const learning = candidates.filter((w: any) => w.progress && w.progress.status === 'LEARNING');
+    const newWords = (candidates as unknown as VocabWord[]).filter((w) => !w.progress);
+    const learning = (candidates as unknown as VocabWord[]).filter((w) => w.progress && w.progress.status === 'LEARNING');
 
-    // Combine: Review > Learning > New
-    const session = [...reviews, ...learning, ...newWords].slice(0, limit);
+    // Assemble and Shim ID
+    const session = [...reviews, ...learning, ...newWords].slice(0, limit).map(w => ({
+        ...w,
+        id: w._id
+    }));
 
     return {
         success: true,
-        session: session as any[],
+        session: session as VocabWord[],
         stats: {
-            total: candidates.length,
+            total: (candidates as unknown as VocabWord[]).length,
             dueReviews: reviews.length
         }
     };
@@ -216,23 +217,23 @@ export async function fetchAllVocab(
 ): Promise<{ success: boolean; words: VocabWord[] }> {
     // OPTIMIZATION: Use caching to reduce query volume
     const cacheKey = { courseId, unitId: unitId || 'ALL', allVocab: true };
-    
+
     const words = await cachedVocabQuery(
         'getAllVocab',
         () => client.query(convexApi.vocab.getOfCourse, { courseId }),
         cacheKey
     );
 
-    let filtered = words;
+    let filtered = words as unknown as VocabWord[];
     if (unitId && unitId !== 'ALL') {
         const uId = parseInt(unitId);
         if (!isNaN(uId)) {
-            filtered = filtered.filter((w: any) => w.unitId === uId);
+            filtered = filtered.filter((w) => (w as any).unitId === uId);
         }
     }
 
     return {
         success: true,
-        words: filtered as any[]
+        words: filtered
     };
 }

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { BookOpen, Save, Plus, Loader2, FileText, Mic, RefreshCw, CheckCircle, Trash2, Upload } from 'lucide-react';
+import { BookOpen, Save, Plus, Loader2, FileText, Mic, RefreshCw, CheckCircle, Upload } from 'lucide-react';
 
 interface Institute {
     _id: string; // Convex ID
@@ -24,15 +24,17 @@ interface UnitContent {
     translationMn: string;    // Mongolian
     audioUrl: string;
     hasAnalysis?: boolean;
-    analysisData?: any;
-    transcriptData?: any;
+    analysisData?: unknown;
+    transcriptData?: unknown;
+    _id?: string; // Add internal Convex ID
 }
 
 export const ReadingContentManager: React.FC = () => {
     // ========================================
     // Data Fetching (Convex)
     // ========================================
-    const institutes = useQuery(api.institutes.getAll) || [];
+    const institutesData = useQuery(api.institutes.getAll);
+    const institutes = useMemo(() => (institutesData as unknown as Institute[]) || [], [institutesData]);
 
     // In Convex, IDs are consistent. We'll use the first institute as default.
     // We need to manage selectedCourseId state.
@@ -50,7 +52,7 @@ export const ReadingContentManager: React.FC = () => {
             // otherwise use some ID. The API expects string courseId.
             // In the DB, 'courseId' is likely 'snu_1a'.
             // Check if institutes have an 'id' field (legacy) or 'postgresId'.
-            const first = institutes[0] as any;
+            const first = institutes[0];
             setSelectedCourseId(first.id || first.postgresId || first._id);
         }
     }, [institutes, selectedCourseId]);
@@ -62,7 +64,7 @@ export const ReadingContentManager: React.FC = () => {
     const uniqueUnits = React.useMemo(() => {
         if (!courseUnits) return [];
         const map = new Map();
-        courseUnits.forEach((u: any) => {
+        (courseUnits as unknown as UnitContent[]).forEach((u) => {
             if (!map.has(u.unitIndex)) {
                 map.set(u.unitIndex, {
                     id: u._id,
@@ -88,26 +90,26 @@ export const ReadingContentManager: React.FC = () => {
     // ========================================
     // Local UI State
     // ========================================
-    const [loadingDetail, setLoadingDetail] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [editingUnit, setEditingUnit] = useState<UnitContent | null>(null);
-    const [availableArticles, setAvailableArticles] = useState<any[]>([]);
+    const [availableArticles, setAvailableArticles] = useState<UnitContent[]>([]);
 
     // ========================================
     // Handlers
     // ========================================
 
-    const loadUnitDetail = async (courseId: string, unitIndex: number, articleIndex: number = 1) => {
+    const loadUnitDetail = async (_courseId: string, unitIndex: number, articleIndex: number = 1) => {
         // Since we don't have a direct "get specific article" query suitable for *editing* (we have getDetails which is aggregated),
         // we can filter from 'courseUnits' if it contained all data, but 'courseUnits' result might be large.
         // Actually, getByCourse returns everything. So we can just find it in 'courseUnits'.
         if (!courseUnits) return;
 
-        const articles = courseUnits.filter((u: any) => u.unitIndex === unitIndex);
+        const articles = (courseUnits as unknown as UnitContent[]).filter((u) => u.unitIndex === unitIndex);
         setAvailableArticles(articles);
 
-        const target = articles.find((a: any) => a.articleIndex === articleIndex) || articles[0];
+        const target = articles.find((a) => a.articleIndex === articleIndex) || articles[0];
 
         if (target) {
             setEditingUnit({
@@ -155,12 +157,10 @@ export const ReadingContentManager: React.FC = () => {
             // Only re-analyze if we don't have data OR user explicitly requested (handled by handleReanalyze)
             // But here we want "Save and Analyze" behavior.
             // Let's optimisticly analyze if missing.
-            let tokenCount = 0;
             if (!analysisData && editingUnit.readingText) {
                 const result = await analyzeTextAction({ text: editingUnit.readingText });
                 if (result) {
                     analysisData = result.tokens;
-                    tokenCount = result.tokenCount;
                 }
             }
 
@@ -274,7 +274,7 @@ export const ReadingContentManager: React.FC = () => {
                         value={selectedCourseId}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
                     >
-                        {institutes.map((i: any) => (
+                        {institutes.map((i) => (
                             <option key={i._id} value={i.id || i.postgresId || i._id}>
                                 {i.name} {i.displayLevel || ''} {i.volume || ''}
                             </option>
@@ -326,7 +326,7 @@ export const ReadingContentManager: React.FC = () => {
                             <div className="flex gap-2">
                                 {availableArticles.map((a) => (
                                     <button
-                                        key={a._id || a.articleIndex}
+                                        key={(a as any)._id || a.articleIndex}
                                         onClick={() => switchArticle(a.articleIndex || 1)}
                                         className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${editingUnit.articleIndex === (a.articleIndex || 1)
                                             ? 'bg-zinc-900 text-white border-zinc-900'

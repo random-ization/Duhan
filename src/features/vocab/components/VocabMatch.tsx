@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Timer, Trophy, RefreshCw, Sparkles } from 'lucide-react';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { getLabels } from '../../../../utils/i18n';
+import { useAuth } from '../../../contexts/AuthContext';
+import { getLabels } from '../../../utils/i18n';
 
 interface VocabItem {
     id: string;

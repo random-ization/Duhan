@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api as convexApi } from '../../../convex/_generated/api';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { Headphones, Save, Loader2, Plus, Music, Upload, X } from 'lucide-react';
+import { Headphones, Save, Loader2, Plus, Music, Upload } from 'lucide-react';
 
 interface Institute {
     _id: string;
     id?: string;
+    postgresId?: string;
     name: string;
     displayLevel?: string;
     volume?: string;
@@ -24,13 +25,13 @@ interface UnitListeningData {
     unitIndex: number;
     title: string;
     audioUrl: string;
-    transcriptData: any;
+    transcriptData: unknown;
 }
 
 export const ListeningContentManager: React.FC = () => {
     // Convex hooks
-    // @ts-expect-error Convex auto types missing for institutes namespace
-    const institutes = useQuery(convexApi.institutes.getAll) || [];
+    const institutesData = useQuery(convexApi.institutes.getAll);
+    const institutes = useMemo(() => (institutesData as unknown as Institute[]) || [], [institutesData]);
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
     const courseUnits = useQuery(convexApi.units.getByCourse, selectedCourseId ? { courseId: selectedCourseId } : "skip");
@@ -40,15 +41,15 @@ export const ListeningContentManager: React.FC = () => {
     // Derived unit list
     const units = useMemo(() => {
         if (!courseUnits) return [];
-        return courseUnits.map((u: any) => ({
+        return (courseUnits as unknown as { _id: string, unitIndex: number, title: string, audioUrl?: string }[]).map((u) => ({
             id: u._id,
             unitIndex: u.unitIndex,
             title: u.title,
             hasAudio: !!u.audioUrl
-        })).sort((a: any, b: any) => a.unitIndex - b.unitIndex);
+        })).sort((a, b) => a.unitIndex - b.unitIndex);
     }, [courseUnits]);
 
-    const [loading, setLoading] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -70,7 +71,7 @@ export const ListeningContentManager: React.FC = () => {
     // Effect: Update selectedCourseId
     useEffect(() => {
         if (institutes.length > 0 && !selectedCourseId) {
-            const first = institutes[0] as any;
+            const first = institutes[0];
             setSelectedCourseId(first.id || first.postgresId || first._id);
         }
     }, [institutes, selectedCourseId]);
@@ -100,7 +101,7 @@ export const ListeningContentManager: React.FC = () => {
     };
 
     const createNewUnit = () => {
-        const nextIndex = units.length > 0 ? Math.max(...units.map((u: any) => u.unitIndex)) + 1 : 1;
+        const nextIndex = units.length > 0 ? Math.max(...units.map((u) => u.unitIndex)) + 1 : 1;
         setViewingUnitIndex(null);
         setEditingUnit({
             unitIndex: nextIndex,
@@ -168,11 +169,7 @@ export const ListeningContentManager: React.FC = () => {
         }
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+
 
     return (
         <div className="flex h-[calc(100vh-100px)] gap-6">
@@ -184,7 +181,7 @@ export const ListeningContentManager: React.FC = () => {
                         value={selectedCourseId}
                         onChange={(e) => { setSelectedCourseId(e.target.value); setViewingUnitIndex(null); setEditingUnit(null); }}
                     >
-                        {institutes.map((i: any) => (
+                        {institutes.map((i) => (
                             <option key={i._id} value={i.id || i.postgresId || i._id}>
                                 {i.name} {i.displayLevel || ''} {i.volume || ''}
                             </option>
@@ -197,7 +194,7 @@ export const ListeningContentManager: React.FC = () => {
                     ) : units.length === 0 ? (
                         <div className="text-center text-zinc-400 py-10">暂无单元</div>
                     ) : (
-                        units.map((unit: any) => (
+                        units.map((unit) => (
                             <div
                                 key={unit.unitIndex}
                                 onClick={() => handleSelectUnit(unit)}

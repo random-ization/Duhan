@@ -5,15 +5,13 @@ import {
     Play,
     Eye,
     Clock,
-    Loader2,
-    Search,
-    Filter
+    Loader2
 } from 'lucide-react';
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { useAuth } from '../../contexts/AuthContext';
-import { getLabels } from '../../utils/i18n';
-import { VideoLibrarySkeleton } from '../../components/common';
+import { api } from '../../convex/_generated/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
+import { VideoLibrarySkeleton } from '../components/common';
 
 interface VideoItem {
     id: string;

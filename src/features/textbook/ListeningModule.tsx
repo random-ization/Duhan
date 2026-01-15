@@ -12,10 +12,10 @@ import {
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
-import { Language } from '../../../types';
-import { getLocalizedContent } from '../../../utils/languageUtils';
-import { getLabels } from '../../../utils/i18n';
-import { ListeningModuleSkeleton } from '../../../components/common';
+import { Language } from '../../types';
+import { getLocalizedContent } from '../../utils/languageUtils';
+import { getLabels } from '../../utils/i18n';
+import { ListeningModuleSkeleton } from '../../components/common';
 
 // =========================================
 // Types

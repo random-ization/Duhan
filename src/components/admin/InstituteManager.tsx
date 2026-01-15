@@ -330,7 +330,7 @@ export const InstituteManager: React.FC = () => {
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="text-[10px] text-zinc-400 mt-1">如需新增出版社，请前往"出版社管理"标签页。</p>
+                                    <p className="text-[10px] text-zinc-400 mt-1">如需新增出版社，请前往&quot;出版社管理&quot;标签页。</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -386,7 +386,7 @@ export const InstituteManager: React.FC = () => {
                             <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                                 <BookOpen size={48} className="mb-4 opacity-20" />
                                 <p className="font-bold">选择教材进行编辑</p>
-                                <p className="text-sm mt-1">或点击"新建教材"创建新教材</p>
+                                <p className="text-sm mt-1">或点击&quot;新建教材&quot;创建新教材</p>
                             </div>
                         )}
                     </div>

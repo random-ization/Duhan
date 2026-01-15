@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+# Run lint-staged for file-specific linting and formatting
+npx lint-staged
+
+# Run TypeScript type checking (non-blocking for now, remove || true to make blocking)
+echo "Running TypeScript type check..."
+npx tsc --noEmit || echo "⚠️ TypeScript errors found. Consider fixing before commit."

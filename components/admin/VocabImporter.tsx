@@ -245,25 +245,51 @@ const VocabImporter: React.FC = () => {
         return;
       }
 
-      const result: BulkImportResult = await bulkImportMutation({ items, token: localStorage.getItem("token") || undefined });
-      const r = result?.results;
-      if (r?.errors?.length) {
-        setStatus(`部分导入失败：${r.errors.join("; ")}`);
-      } else if (r) {
-        const parts: string[] = [`成功导入 ${r.success} 条词汇`];
-        if (r.smartFilled > 0) {
-          parts.push(`智能填充 ${r.smartFilled} 条`);
+      // === Batch Processing ===
+      const BATCH_SIZE = 50;
+      const totalItems = items.length;
+      const batches = [];
+      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+        batches.push(items.slice(i, i + BATCH_SIZE));
+      }
+
+      let successCount = 0;
+      let failedCount = 0;
+      let newWordsCount = 0;
+      let smartFilledCount = 0;
+      const allErrors: string[] = [];
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        setStatus(`正在处理第 ${i + 1}/${batches.length} 批次 (${batch.length} 条)...`);
+
+        try {
+          // Pass token implicitly via Convex client, or if needed by schema (args doesn't ask for token, so removed)
+          const result: BulkImportResult = await bulkImportMutation({ items: batch });
+          const r = result?.results;
+
+          if (r) {
+            successCount += r.success;
+            failedCount += r.failed;
+            newWordsCount += r.newWords;
+            smartFilledCount += r.smartFilled;
+            if (r.errors) allErrors.push(...r.errors);
+          }
+        } catch (err: any) {
+          console.error(`Batch ${i + 1} failed:`, err);
+          failedCount += batch.length;
+          allErrors.push(`Batch ${i + 1} Error: ${err.message}`);
         }
-        if (r.newWords > 0) {
-          parts.push(`新增词汇 ${r.newWords} 条`);
-        }
-        const notFilled = items.filter(i => !i.meaning).length - (r.smartFilled || 0);
-        if (notFilled > 0) {
-          parts.push(`${notFilled} 条未填充释义`);
-        }
-        setStatus(parts.join('，'));
+      }
+
+      // Final Summary
+      if (allErrors.length > 0) {
+        setStatus(`部分导入完成。成功: ${successCount}, 失败: ${failedCount}。错误: ${allErrors.slice(0, 3).join("; ")}...`);
       } else {
-        setStatus(`成功导入 ${items.length} 条词汇`);
+        const parts: string[] = [`全部完成！成功导入 ${successCount} 条`];
+        if (smartFilledCount > 0) parts.push(`智能填充 ${smartFilledCount} 条`);
+        if (newWordsCount > 0) parts.push(`新增词汇 ${newWordsCount} 条`);
+        setStatus(parts.join('，'));
       }
       setBulkText("");
     } catch (error: any) {

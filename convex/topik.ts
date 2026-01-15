@@ -425,7 +425,7 @@ export const saveExam = mutation({
         const { id, questions, ...examData } = args;
 
         // Check if exam exists
-        let exam = await ctx.db.query("topik_exams")
+        const exam = await ctx.db.query("topik_exams")
             .withIndex("by_legacy_id", q => q.eq("legacyId", id))
             .first();
 

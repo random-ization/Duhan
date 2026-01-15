@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { api } from '../../../../convex/_generated/api';
 import {
     Flame, BookOpen, GraduationCap, Clock, Target,
     Loader2, ChevronRight, RefreshCw

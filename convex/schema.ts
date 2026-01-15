@@ -51,7 +51,10 @@ export default defineSchema({
     institutes: defineTable({
         id: v.string(), // Manual ID like "yonsei-1"
         name: v.string(),
-        levels: v.any(),
+        levels: v.array(v.union(
+            v.number(),
+            v.object({ level: v.number(), units: v.number() })
+        )),
         coverUrl: v.optional(v.string()),
         themeColor: v.optional(v.string()),
         publisher: v.optional(v.string()),
@@ -86,8 +89,31 @@ export default defineSchema({
         audioUrl: v.optional(v.string()),
 
         // JSON data
-        transcriptData: v.optional(v.any()), // JSON
-        analysisData: v.optional(v.any()), // JSON
+        transcriptData: v.optional(v.array(v.object({
+            start: v.number(),
+            end: v.number(),
+            text: v.string(),
+            translation: v.optional(v.string()),
+            words: v.optional(v.array(v.object({
+                word: v.string(),
+                start: v.number(),
+                end: v.number()
+            })))
+        }))),
+        analysisData: v.optional(v.object({
+            vocabulary: v.array(v.object({
+                word: v.string(),
+                root: v.string(),
+                meaning: v.string(),
+                type: v.string()
+            })),
+            grammar: v.array(v.object({
+                structure: v.string(),
+                explanation: v.string()
+            })),
+            nuance: v.string(),
+            cached: v.optional(v.boolean())
+        })),
 
         createdAt: v.number(), // timestamp
         postgresId: v.optional(v.string()),
@@ -112,7 +138,11 @@ export default defineSchema({
         pronunciation: v.optional(v.string()),
         audioUrl: v.optional(v.string()),
 
-        tips: v.optional(v.any()), // JSON
+        tips: v.optional(v.object({
+            synonyms: v.optional(v.array(v.string())),
+            antonyms: v.optional(v.array(v.string())),
+            nuance: v.optional(v.string())
+        })),
         postgresId: v.optional(v.string()), // For migration mapping
         createdAt: v.optional(v.number()),
         updatedAt: v.optional(v.number()),
@@ -180,9 +210,16 @@ export default defineSchema({
         explanationVi: v.optional(v.string()),
         explanationMn: v.optional(v.string()),
 
-        conjugationRules: v.any(), // JSON
+        conjugationRules: v.optional(v.any()), // Map<string, string> - keeping any as Convex lacks v.record
         // Examples format: [{ kr: string, cn: string, en?: string, vi?: string, mn?: string }]
-        examples: v.any(), // JSON
+        examples: v.array(v.object({
+            kr: v.string(),
+            cn: v.string(),
+            en: v.optional(v.string()),
+            vi: v.optional(v.string()),
+            mn: v.optional(v.string()),
+            audio: v.optional(v.string())
+        })),
         postgresId: v.optional(v.string()),
 
         createdAt: v.optional(v.number()),
@@ -243,7 +280,17 @@ export default defineSchema({
         duration: v.optional(v.number()),
         views: v.number(),
 
-        transcriptData: v.optional(v.any()), // JSON [{start, end, text, translation}]
+        transcriptData: v.optional(v.array(v.object({
+            start: v.number(),
+            end: v.number(),
+            text: v.string(),
+            translation: v.optional(v.string()),
+            words: v.optional(v.array(v.object({
+                word: v.string(),
+                start: v.number(),
+                end: v.number()
+            })))
+        }))),
 
         postgresId: v.optional(v.string()),
         youtubeId: v.optional(v.string()),
@@ -331,7 +378,7 @@ export default defineSchema({
         userId: v.id("users"),
         type: v.string(), // "WORD", "GRAMMAR", "NOTE", etc.
         title: v.string(),
-        content: v.any(),
+        content: v.any(), // Rich text content (likely JSON)
         preview: v.optional(v.string()),
         tags: v.array(v.string()),
         createdAt: v.number(),
@@ -390,8 +437,9 @@ export default defineSchema({
         examId: v.id("topik_exams"),
         score: v.number(),
         totalQuestions: v.number(),
-        sectionScores: v.optional(v.any()), // JSON
+        sectionScores: v.optional(v.any()), // Map<string, number>
         duration: v.optional(v.number()),
+        answers: v.optional(v.any()), // Map<string, number>
         createdAt: v.number(),
     }).index("by_user", ["userId"]),
 
@@ -411,7 +459,7 @@ export default defineSchema({
         activityType: v.string(),
         duration: v.optional(v.number()),
         itemsStudied: v.optional(v.number()),
-        metadata: v.optional(v.any()),
+        metadata: v.optional(v.any()), // Dynamic metadata
         createdAt: v.number(),
     }).index("by_user", ["userId"]),
 
@@ -422,7 +470,7 @@ export default defineSchema({
         status: v.string(), // "IN_PROGRESS" | "COMPLETED" | "AUTO_SUBMITTED"
         startTime: v.number(), // timestamp
         endTime: v.number(), // calculated: startTime + exam.timeLimit
-        answers: v.optional(v.any()), // JSON: { [questionNumber]: selectedOption }
+        answers: v.optional(v.any()), // Map<string, number>
         score: v.optional(v.number()),
         scheduledJobId: v.optional(v.id("_scheduled_functions")), // For auto-submit scheduler
         createdAt: v.number(),
@@ -443,7 +491,17 @@ export default defineSchema({
         targetType: v.string(), // "TEXTBOOK", "EXAM"
         pageIndex: v.number(),
 
-        data: v.any(), // Canvas paths/strokes JSON
+        data: v.object({
+            lines: v.array(v.object({
+                id: v.string(),
+                tool: v.string(),
+                points: v.array(v.number()),
+                color: v.string(),
+                strokeWidth: v.number(),
+                opacity: v.number()
+            })),
+            version: v.number()
+        }),
 
         createdAt: v.number(),
         updatedAt: v.number(),

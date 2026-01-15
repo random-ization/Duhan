@@ -7,22 +7,20 @@ import {
     Languages,
     PenLine,
     Highlighter,
-    BookOpen,
     MessageSquare,
     Sparkles,
     Send,
     X,
     ChevronDown,
-    Loader2,
     Menu
 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import BottomSheet from '../../components/common/BottomSheet';
-import { Language } from '../../../types';
-import { getLocalizedContent } from '../../../utils/languageUtils';
-import { getLabels } from '../../../utils/i18n';
-import { ListeningModuleSkeleton } from '../../../components/common';
+import { Language } from '../../types';
+import { getLocalizedContent } from '../../utils/languageUtils';
+import { getLabels } from '../../utils/i18n';
+import { ListeningModuleSkeleton } from '../../components/common';
 
 // Legacy API removed - using Convex
 
@@ -370,7 +368,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const availableUnits = useQuery(api.units.getByCourse, { courseId });
     const uniqueUnitIndices = useMemo(() => {
         if (!availableUnits) return [];
-        const indices = [...new Set(availableUnits.map((u: any) => u.unitIndex))];
+        const indices = [...new Set(availableUnits.map((u: { unitIndex: number }) => u.unitIndex))];
         return indices.sort((a, b) => a - b);
     }, [availableUnits]);
 
@@ -419,7 +417,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const unitData = useMemo(() => {
         if (articles.length === 0) return null;
         // Try to find article by activeArticleIndex
-        const found = articles.find((a: any) => a.articleIndex === activeArticleIndex);
+        const found = articles.find((a: { articleIndex?: number }) => a.articleIndex === activeArticleIndex);
         // If not found, use first article
         return found || articles[0];
     }, [articles, activeArticleIndex]);
@@ -513,14 +511,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         const tokens = unitData.analysisData;
 
         // Strategy 1: Try to find by exact surface match
-        const exactMatch = tokens.find(t => t.surface === clickedWord);
+        const exactMatch = tokens.find((t: TextToken) => t.surface === clickedWord);
         if (exactMatch) {
             return { base: exactMatch.base, surface: exactMatch.surface };
         }
 
         // Strategy 2: If we have character index, find token containing that position
         if (charIndex !== undefined) {
-            const tokenAtPosition = tokens.find(t =>
+            const tokenAtPosition = tokens.find((t: TextToken) =>
                 charIndex >= t.offset && charIndex < t.offset + t.length
             );
             if (tokenAtPosition) {
@@ -529,7 +527,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         }
 
         // Strategy 3: Find token where surface contains the clicked word
-        const partialMatch = tokens.find(t => t.surface.includes(clickedWord));
+        const partialMatch = tokens.find((t: TextToken) => t.surface.includes(clickedWord));
         if (partialMatch) {
             return { base: partialMatch.base, surface: partialMatch.surface };
         }
@@ -542,7 +540,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     // ========================================
     const lookupInVocabList = useCallback((word: string): VocabItem | null => {
         // Direct match
-        const directMatch = vocabList.find(v => v.korean === word);
+        const directMatch = vocabList.find((v: VocabItem) => v.korean === word);
         if (directMatch) return directMatch;
 
         // Try removing common endings for verb/adj lookup
@@ -550,7 +548,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         for (const ending of endings) {
             if (word.endsWith(ending)) {
                 const stem = word.slice(0, -ending.length);
-                const stemMatch = vocabList.find(v =>
+                const stemMatch = vocabList.find((v: VocabItem) =>
                     v.korean === stem + '다' || v.korean.startsWith(stem)
                 );
                 if (stemMatch) return stemMatch;
@@ -802,7 +800,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                             {/* Article Selector */}
                             {articles.length > 1 && (
                                 <div className="flex bg-white border-2 border-zinc-900 rounded-lg overflow-hidden">
-                                    {articles.map((article: any) => (
+                                    {articles.map((article: { articleIndex: number }) => (
                                         <button
                                             key={article.articleIndex}
                                             onClick={() => setActiveArticleIndex(article.articleIndex)}
@@ -959,7 +957,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                                                 <p className="text-xs">{labels.dashboard?.reading?.addGrammar || "请先添加课程语法"}</p>
                                             </div>
                                         ) : (
-                                            grammarList.map(grammar => (
+                                            grammarList.map((grammar: GrammarItem) => (
                                                 <div
                                                     key={grammar.id}
                                                     className="bg-white border-2 border-zinc-900 rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
@@ -1113,7 +1111,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
                         {activeTab === 'grammar' && (
                             <div className="space-y-2">
-                                {grammarList.slice(0, 5).map(g => (
+                                {grammarList.slice(0, 5).map((g: GrammarItem) => (
                                     <div key={g.id} className="p-3 bg-zinc-50 rounded-lg">
                                         <div className="font-bold text-zinc-900">{g.title}</div>
                                         <div className="text-sm text-zinc-500">{g.explanation}</div>

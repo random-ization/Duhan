@@ -396,8 +396,8 @@ export const TopikManager: React.FC = () => {
 
             // Parse filename: Q1_Option1, Q1_1, 1_1, Q1O1, etc.
             const patterns = [
-                /^Q?(\d+)[_\-]?O?p?t?i?o?n?(\d+)$/i,  // Q1_Option1, Q1Option1, Q1_1, 1_1
-                /^(\d+)[_\-](\d+)$/,                    // 1_1, 1-1
+                /^Q?(\d+)[_-]?O?p?t?i?o?n?(\d+)$/i,  // Q1_Option1, Q1Option1, Q1_1, 1_1
+                /^(\d+)[_-](\d+)$/,                    // 1_1, 1-1
             ];
 
             let questionNum: number | null = null;

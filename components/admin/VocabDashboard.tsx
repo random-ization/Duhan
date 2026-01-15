@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import * as XLSX from "xlsx";
@@ -78,7 +78,12 @@ const VocabDashboard: React.FC = () => {
     [selectedCourse]
   );
 
-  const words = useQuery(api.vocab.getAll, vocabArgs);
+  const { results: words, status, loadMore } = usePaginatedQuery(
+    api.vocab.getAllPaginated,
+    // Provide clean args without limit, let hook manage pagination
+    selectedCourse === "ALL" ? {} : { courseId: selectedCourse },
+    { initialNumItems: ITEMS_PER_PAGE }
+  );
 
   const stats = useQuery(api.vocab.getStats, {
     courseId: resolvedCourse || "",
@@ -133,17 +138,14 @@ const VocabDashboard: React.FC = () => {
     return result;
   }, [words, search, meaningFilter, posFilter, unitFrom, unitTo]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredWords.length / ITEMS_PER_PAGE);
-  const paginatedWords = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredWords.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredWords, currentPage]);
+  // Pagination (Frontend - Removed, using Infinite Scroll)
+  // We display all filtered words from the loaded set
+  const paginatedWords = filteredWords; // No client slicing
 
-  // Reset to page 1 when filter changes
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [search, selectedCourse, meaningFilter, posFilter, unitFrom, unitTo]);
+  // No page reset needed for infinite scroll list
+  // React.useEffect(() => {
+  //   setCurrentPage(1);
+  // }, [search, selectedCourse, meaningFilter, posFilter, unitFrom, unitTo]);
 
   const totalWords = words?.length ?? 0;
 
@@ -174,9 +176,7 @@ const VocabDashboard: React.FC = () => {
     if (!editingWord) return;
     setIsSaving(true);
     try {
-      const token = localStorage.getItem("token") || undefined;
       await updateVocab({
-        token,
         wordId: editingWord._id as Id<"words">,
         appearanceId: editingWord.appearanceId as Id<"vocabulary_appearances"> | undefined,
         word: editForm.word,
@@ -396,24 +396,10 @@ const VocabDashboard: React.FC = () => {
           </div>
           <div className="flex items-center gap-4 text-xs text-zinc-500">
             <span>
-              第 {currentPage} / {totalPages || 1} 页 · 共 {filteredWords.length} 条
+              已加载 {words?.length || 0} 条 · 当前显示 {filteredWords.length} 条
             </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-zinc-200 disabled:opacity-30"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="p-1 rounded hover:bg-zinc-200 disabled:opacity-30"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            {/* Previous/Next buttons removed for infinite scroll */}
+
           </div>
         </div>
 
@@ -495,41 +481,30 @@ const VocabDashboard: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 py-3 border-t border-zinc-200 bg-zinc-50">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
-            >
-              首页
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
-            >
-              上一页
-            </button>
-            <span className="px-3 py-1 text-sm font-medium">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
-            >
-              下一页
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm rounded hover:bg-zinc-200 disabled:opacity-30"
-            >
-              末页
-            </button>
+        {/* Infinite Scroll Footer */}
+        <div className="flex flex-col items-center justify-center gap-2 py-4 border-t border-zinc-200 bg-zinc-50">
+          <div className="text-xs text-zinc-500 mb-2">
+            已加载 {words?.length || 0} 个词条 ({filteredWords.length} 显示)
           </div>
-        )}
+          {status === "CanLoadMore" ? (
+            <button
+              onClick={() => loadMore(ITEMS_PER_PAGE)}
+              className="px-6 py-2 bg-white border border-zinc-300 rounded-lg shadow-sm text-sm font-medium hover:bg-zinc-50 text-zinc-700 transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              加载更多
+            </button>
+          ) : status === "LoadingMore" ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              加载中...
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-400 font-medium">
+              没有更多数据了
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Edit Modal */}

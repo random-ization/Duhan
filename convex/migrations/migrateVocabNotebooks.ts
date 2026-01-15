@@ -44,7 +44,7 @@ export const migrateVocabNotebooks = mutation({
                 }
 
                 // 2. Check if word exists in words table
-                let existingWord = await ctx.db
+                const existingWord = await ctx.db
                     .query("words")
                     .withIndex("by_word", q => q.eq("word", word))
                     .unique();

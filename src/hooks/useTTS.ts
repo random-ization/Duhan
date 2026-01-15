@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useAction } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from '../../convex/_generated/api';
 
 /**
  * Hook for Text-to-Speech using Azure Cognitive Services with S3 caching

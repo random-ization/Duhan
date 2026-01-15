@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from '../../../convex/_generated/api';
 import {
-    BookOpen, Plus, Loader2, Search, Trash2, Check, X,
-    ChevronDown, Sparkles, GraduationCap
+    Plus, Loader2, Search, Trash2, Check, X,
+    Sparkles, GraduationCap, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -20,24 +20,9 @@ interface UnitInfo {
     title: string;
 }
 
-interface GrammarItem {
-    id: string;
-    title: string;
-    type: string;
-    summary: string;
-    explanation?: string;
-    examples?: any;
-    displayOrder?: number;
-}
 
-interface SearchResult {
-    _id: string; // Changed to _id to match Convex
-    title: string;
-    searchKey?: string;
-    level: string;
-    type: string;
-    summary: string;
-}
+
+
 
 export const GrammarManager: React.FC = () => {
     // 1. Fetch Institutes (Convex)
@@ -117,8 +102,8 @@ export const GrammarManager: React.FC = () => {
             setShowAddPanel(false);
             setSearchQuery('');
             toast.success('已关联语法点');
-        } catch (e) {
-            console.error('Assign failed', e);
+        } catch (_e) {
+            console.error('Assign failed', _e);
             toast.error('关联失败');
         }
     };
@@ -132,8 +117,8 @@ export const GrammarManager: React.FC = () => {
                 grammarId: grammarId as any
             });
             toast.success('已移除');
-        } catch (e) {
-            console.error('Remove failed', e);
+        } catch (_e) {
+            console.error('Remove failed', _e);
             toast.error('移除失败');
         }
     };
@@ -167,8 +152,8 @@ export const GrammarManager: React.FC = () => {
             setShowNewForm(false);
             setShowAddPanel(false);
             toast.success('创建并关联成功');
-        } catch (e) {
-            console.error('Create failed', e);
+        } catch (_e) {
+            console.error('Create failed', _e);
             toast.error('创建失败');
         } finally {
             setCreating(false);
@@ -308,7 +293,7 @@ export const GrammarManager: React.FC = () => {
                             </div>
                         ) : searchQuery.trim() ? (
                             <div className="text-center py-6 text-zinc-400 mb-6">
-                                <p>未找到 "{searchQuery}" 相关的语法</p>
+                                <p>未找到 &quot;{searchQuery}&quot; 相关的语法</p>
                             </div>
                         ) : null}
 
@@ -377,7 +362,7 @@ export const GrammarManager: React.FC = () => {
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                         <BookOpen size={48} className="mb-4 opacity-20" />
-                        <p className="font-bold">选择单元后点击"添加语法点"</p>
+                        <p className="font-bold">选择单元后点击&quot;添加语法点&quot;</p>
                         <p className="text-sm mt-1">可搜索已有语法或创建新语法</p>
                     </div>
                 )}

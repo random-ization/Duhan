@@ -1,20 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { api as convexApi } from '../../../convex/_generated/api';
 import { useQuery } from 'convex/react';
 import { RefreshCw, Database, AlertCircle, Activity, Wifi } from 'lucide-react';
 
-interface DiagnosticData {
-    id: string;
-    name: string;
-    publisher: string | null;
-    vocabCount: number;
-    unitCount: number;
-    totalUnitsSetting: number | null;
-}
+
 
 export default function DataDiagnostics() {
     // Convex Query
-    // @ts-expect-error Convex types not generated for diagnostics namespace yet
     const healthStats = useQuery(convexApi.diagnostics.getHealthStats);
 
     // Derived state

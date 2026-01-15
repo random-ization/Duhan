@@ -1,38 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api as convexApi } from '../../../convex/_generated/api';
 import {
     Users, BookOpen, GraduationCap, FileText,
-    Loader2, TrendingUp, DollarSign, Zap, Activity,
+    TrendingUp, DollarSign, Activity,
     BarChart3, RefreshCw
 } from 'lucide-react';
 import { AdminDashboardSkeleton } from '../../../components/common';
 
-interface OverviewStats {
-    users: number;
-    institutes: number;
-    // overview stats could return string for vocab limit indicator
-    vocabulary: number | string;
-    grammar: number;
-    units: number;
-    exams: number;
-}
 
-interface AiUsageStats {
-    period: string;
-    summary: {
-        totalCalls: number;
-        totalTokens: number;
-        totalCost: number;
-    };
-    byFeature: Record<string, { calls: number; tokens: number; cost: number }>;
-    daily: { date: string; calls: number; cost: number }[];
-}
-
-interface ActivitySummary {
-    recent: any[];
-    summary: Record<string, number>;
-}
 
 export const AdminDashboard: React.FC = () => {
     const overview = useQuery(convexApi.admin.getOverviewStats);
@@ -168,7 +144,7 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                     ) : (
                         <div className="text-center text-zinc-400 py-8">
-                            <Zap className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
                             <p className="text-sm">暂无 AI 使用记录</p>
                         </div>
                     )}

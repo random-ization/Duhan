@@ -3,8 +3,8 @@ import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-reac
 import { useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import { useTTS } from '../../../hooks/useTTS';
-import { getLabels } from '../../../../utils/i18n';
-import { Language } from '../../../../types';
+import { getLabels } from '../../../utils/i18n';
+import { Language } from '../../../types';
 
 interface VocabItem {
     id: string;

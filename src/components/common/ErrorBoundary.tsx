@@ -1,9 +1,10 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { getLabels } from '../../../utils/i18n';
+import { WithTranslation, withTranslation } from 'react-i18next';
 import { Language } from '../../../types';
+import { logger } from '../../utils/logger';
 
-interface ErrorBoundaryProps {
+interface ErrorBoundaryProps extends WithTranslation {
     children: ReactNode;
     fallback?: ReactNode;
     onReset?: () => void;
@@ -36,9 +37,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        // Log error to console (could be sent to error reporting service)
-        console.error('[ErrorBoundary] Caught error:', error);
-        console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+        // Log error using structured logger
+        logger.error('[ErrorBoundary] Caught error:', { error, componentStack: errorInfo.componentStack });
 
         this.setState({ errorInfo });
     }
@@ -57,15 +57,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
 
     render() {
+        // HOC injects t function
+        const { t } = this.props;
+
         if (this.state.hasError) {
             // Custom fallback provided
             if (this.props.fallback) {
                 return this.props.fallback;
             }
 
-            const isDev = (import.meta as any).env?.DEV || process.env.NODE_ENV === 'development';
-            const labels = getLabels(this.props.language || 'en');
-            const moduleName = this.props.moduleName || (labels.common?.page || 'Page');
+            const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
+            const moduleName = this.props.moduleName || t('common.page', 'Page');
 
             // Default fallback UI
             return (
@@ -78,12 +80,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
                         {/* Title */}
                         <h2 className="text-2xl font-black text-zinc-800 mb-2">
-                            {labels.errors?.oops || 'Oops, something went wrong!'}
+                            {t('errors.oops')}
                         </h2>
 
                         {/* Description */}
                         <p className="text-zinc-500 font-medium mb-6">
-                            {(labels.errors?.loadError || 'The module encountered a problem.').replace('{{module}}', moduleName)}
+                            {t('errors.loadError', { module: moduleName })}
                         </p>
 
                         {/* Dev Mode Error Details - Temporarily enabled for debugging */}
@@ -107,25 +109,25 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                                 className="flex items-center justify-center gap-2 px-6 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                             >
                                 <RefreshCw className="w-4 h-4" />
-                                {labels.errors?.retry || 'Retry'}
+                                {t('errors.retry')}
                             </button>
                             <button
                                 onClick={this.handleGoHome}
                                 className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-zinc-300 rounded-xl font-bold text-sm text-zinc-600 hover:border-zinc-900 transition-all"
                             >
                                 <Home className="w-4 h-4" />
-                                {labels.errors?.backToHome || 'Back to Home'}
+                                {t('errors.backToHome')}
                             </button>
                         </div>
 
                         {/* Reload hint */}
                         <p className="mt-6 text-xs text-zinc-400">
-                            {labels.errors?.reloadPrompt || 'If the problem persists, please try'}{' '}
+                            {t('errors.reloadPrompt')}{' '}
                             <button
                                 onClick={this.handleReload}
                                 className="text-indigo-500 hover:underline"
                             >
-                                {labels.errors?.refreshPage || 'refresh the page'}
+                                {t('errors.refreshPage')}
                             </button>
                         </p>
                     </div>
@@ -137,4 +139,4 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 }
 
-export default ErrorBoundary;
+export default withTranslation()(ErrorBoundary);

@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   server: {
@@ -20,10 +21,18 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: ['koreanstudy.me', 'www.koreanstudy.me', 'joyhan-foq2p.ondigitalocean.app'],
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    visualizer({
+      filename: 'stats.html',
+      open: false, // Set to true to auto-open after build
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   build: {

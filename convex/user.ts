@@ -60,33 +60,60 @@ export const saveMistake = mutation({
     }
 });
 
-// Save Exam Attempt
+// Save Exam Attempt (Robust version with legacy ID support)
 export const saveExamAttempt = mutation({
     args: {
-        examId: v.id("topik_exams"),
+        examId: v.string(), // Legacy ID or Convex ID
         score: v.number(),
-        totalQuestions: v.number(),
+        totalQuestions: v.optional(v.number()),
         sectionScores: v.optional(v.any()), // JSON object
         duration: v.optional(v.number()),
+        answers: v.optional(v.any()), // JSON record of questionId -> optionIndex
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
         const user = await ctx.db.get(userId);
         if (!user) throw new ConvexError({ code: "USER_NOT_FOUND" });
 
-        const { examId, score, totalQuestions, sectionScores, duration } = args;
+        const { examId, score, sectionScores, duration } = args;
 
-        await ctx.db.insert("exam_attempts", {
+        // Resolve Exam ID
+        let exam = await ctx.db.query("topik_exams")
+            .withIndex("by_legacy_id", q => q.eq("legacyId", examId))
+            .first();
+
+        if (!exam) {
+            try {
+                const doc = await ctx.db.get(examId as any);
+                if (doc && "legacyId" in doc) {
+                    exam = doc as any;
+                }
+            } catch (e) { /* ignore parse errors */ }
+        }
+
+        if (!exam) throw new ConvexError({ code: "EXAM_NOT_FOUND", message: `Exam not found: ${examId}` });
+
+        // Resolve total questions if not provided
+        let totalQuestions = args.totalQuestions;
+        if (!totalQuestions) {
+            const questions = await ctx.db.query("topik_questions")
+                .withIndex("by_exam", q => q.eq("examId", exam!._id))
+                .collect();
+            totalQuestions = questions.length;
+        }
+
+        const attemptId = await ctx.db.insert("exam_attempts", {
             userId,
-            examId,
+            examId: exam._id,
             score,
             totalQuestions,
             sectionScores,
             duration,
+            answers: args.answers,
             createdAt: Date.now(),
         });
 
-        return { success: true };
+        return { success: true, attemptId };
     }
 });
 

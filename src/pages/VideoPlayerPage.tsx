@@ -14,9 +14,9 @@ import {
     List // Added List icon for mobile toggle
 } from 'lucide-react';
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { useAuth } from '../../contexts/AuthContext';
-import { getLabels } from '../../utils/i18n';
+import { api } from '../../convex/_generated/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getLabels } from '../utils/i18n';
 // import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
 
 interface TranscriptSegment {
@@ -131,7 +131,7 @@ const VideoPlayerPage: React.FC = () => {
             setError(labels.dashboard?.video?.notFound || 'Video not found');
             setLoading(false);
         }
-    }, [convexVideo]);
+    }, [convexVideo, labels.dashboard?.video?.notFound]);
 
     /*
     // Fetch video data
