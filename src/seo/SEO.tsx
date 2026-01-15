@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 
 interface SEOProps {
   title: string;
@@ -18,8 +19,9 @@ export const SEO: React.FC<SEOProps> = ({
   ogImage = '/logo.png',
   noIndex = false,
 }) => {
+  const location = useLocation();
   const siteUrl = 'https://koreanstudy.me';
-  const fullCanonicalUrl = canonicalUrl || `${siteUrl}${window.location.pathname}`;
+  const fullCanonicalUrl = canonicalUrl || `${siteUrl}${location.pathname}`;
   const fullOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
 
   return (
