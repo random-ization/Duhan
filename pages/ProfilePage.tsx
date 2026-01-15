@@ -233,7 +233,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{labels.role}</label>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium flex items-center justify-between">
                   {user.role}
-                  <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600">ID: {user.id.slice(0, 8)}</span>
+                  <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600">ID: {(user.id || "").slice(0, 8)}</span>
                 </div>
               </div>
             </div>
@@ -314,7 +314,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   {labels.profile?.noActivity || 'No activity yet. Start a test to see your progress!'}
                 </div>
               ) : (
-                user.examHistory?.slice(0, 5).map((exam, i) => (
+                (user.examHistory || []).slice(0, 5).map((exam, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div>
                       <div className="font-bold text-slate-800">{exam.examTitle}</div>
