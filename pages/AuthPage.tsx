@@ -109,7 +109,11 @@ export default function AuthPage() {
                 className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl"
               />
             ) : (
-              <div className="w-24 h-24 bg-white text-indigo-600 rounded-3xl flex items-center justify-center text-5xl font-black border-4 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] mb-6 mx-auto font-display">D</div>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl"
+              />
             )}
             <h1 className="text-5xl font-black font-display mb-2">{labels.auth?.brand || "DuHan."}</h1>
             <p className="text-indigo-200 font-bold text-lg tracking-wide">{labels.auth?.slogan || (language === 'zh' ? "提升你的韩语水平" : "Level Up Your Korean")}</p>

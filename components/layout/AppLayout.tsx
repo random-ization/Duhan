@@ -25,7 +25,10 @@ export default function AppLayout() {
                     >
                         <Menu size={20} />
                     </button>
-                    <div className="font-black text-xl text-slate-900">DuHan</div>
+                    <div className="flex items-center gap-3">
+                        <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+                        <div className="font-black text-xl text-slate-900">DuHan</div>
+                    </div>
                     <div className="w-10" /> {/* Spacer for centering */}
                 </div>
 

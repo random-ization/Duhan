@@ -93,11 +93,12 @@ export default function Sidebar() {
                     title={labels.sidebar?.profile || "Profile"}
                 >
                     {/* Avatar */}
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-lg border-2 border-slate-900 shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
+                    {/* Avatar - Use Logo as fallback if no user avatar */}
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border-2 border-slate-900 shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
                         {user?.avatar ? (
                             <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
                         ) : (
-                            getInitials(user?.name)
+                            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
                         )}
                     </div>
                     {!collapsed && (

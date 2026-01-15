@@ -1,0 +1,12 @@
+# AI Behavior Rules
+
+## Convex Environment - PRODUCTION ONLY
+- **STRICT RULE**: You must **ALWAYS** interact with the **PRODUCTION** Convex environment (`calculating-cassowary-602`).
+- **PROHIBITED**: **NEVER** run `npx convex dev`. This command connects to the development environment and overwrites local configuration.
+- **PROHIBITED**: **NEVER** modify `.env.local` to point to a development deployment (starting with `dev:` or ending in `deafening-partridge-486`).
+- **ALLOWED**: Use `npx convex deploy` to push changes. This pushes to Production.
+- **ALLOWED**: Use `npx convex run ... --prod` or `npx convex logs --prod` to interact with the backend.
+
+## Environment variables
+- Ensure `VITE_CONVEX_URL` always points to `https://calculating-cassowary-602.convex.cloud`.
+- Ensure `CONVEX_DEPLOYMENT` always points to `calculating-cassowary-602`.

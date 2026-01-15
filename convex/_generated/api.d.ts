@@ -23,6 +23,7 @@ import type * as init from "../init.js";
 import type * as institutes from "../institutes.js";
 import type * as legal from "../legal.js";
 import type * as lemonsqueezy from "../lemonsqueezy.js";
+import type * as migrate_password_users from "../migrate_password_users.js";
 import type * as migrations from "../migrations.js";
 import type * as migrations_migrateVocabNotebooks from "../migrations/migrateVocabNotebooks.js";
 import type * as notebooks from "../notebooks.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   institutes: typeof institutes;
   legal: typeof legal;
   lemonsqueezy: typeof lemonsqueezy;
+  migrate_password_users: typeof migrate_password_users;
   migrations: typeof migrations;
   "migrations/migrateVocabNotebooks": typeof migrations_migrateVocabNotebooks;
   notebooks: typeof notebooks;

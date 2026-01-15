@@ -21,9 +21,7 @@ export default function Landing() {
             <nav className="fixed top-0 w-full z-50 bg-[#F0F4F8]/90 backdrop-blur-md border-b-2 border-black">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 bg-indigo-500 border-2 border-black rounded-lg flex items-center justify-center text-white font-display text-2xl shadow-pop group-hover:translate-y-1 group-hover:shadow-none transition-all">
-                            H
-                        </div>
+                        <img src="/logo.png" alt="Logo" className="w-10 h-10 rounded-lg shadow-pop group-hover:translate-y-1 group-hover:shadow-none transition-all object-contain" />
                         <span className="font-display text-2xl tracking-wide">{t('common.appName')}</span>
                     </Link>
 
@@ -454,7 +452,7 @@ export default function Landing() {
             <footer className="bg-white border-t-2 border-black py-12 px-6 mt-12">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-display">H</div>
+                        <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
                         <span className="font-bold text-slate-900">© 2025 {t('common.appName')}.</span>
                     </div>
                     <div className="flex gap-8 text-sm font-bold text-slate-500">

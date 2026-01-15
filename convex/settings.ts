@@ -44,6 +44,16 @@ export const getSetting = query({
 });
 
 /**
+ * DEBUG: List all settings
+ */
+export const debugListSettings = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("site_settings").collect();
+    },
+});
+
+/**
  * Save the logo storage ID specifically
  */
 export const saveLogo = mutation({
