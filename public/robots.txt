@@ -1,0 +1,21 @@
+# www.robotstxt.org/
+# Allow crawling of all content
+
+User-agent: *
+Allow: /
+
+# Disallow authenticated/user-specific routes
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /admin
+Disallow: /course/
+Disallow: /topik/
+Disallow: /notebook
+Disallow: /vocab-book
+Disallow: /video/
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /payment/
+
+# Sitemap location
+Sitemap: https://www.koreanstudy.me/sitemap.xml

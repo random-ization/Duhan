@@ -1,0 +1,60 @@
+/**
+ * Centralized route configuration for pre-rendering
+ * Lists all public/static routes that should be pre-rendered for SEO
+ */
+
+export interface RouteConfig {
+  path: string;
+  title: string;
+  description: string;
+  isPublic: boolean;
+}
+
+// Public routes that should be pre-rendered for SEO
+export const PUBLIC_ROUTES: RouteConfig[] = [
+  {
+    path: '/',
+    title: 'DuHan - Learn Korean Through Real Content',
+    description:
+      'Master Korean with interactive lessons, TOPIK exam prep, authentic podcasts, and personalized learning. Join thousands of learners achieving fluency.',
+    isPublic: true,
+  },
+  {
+    path: '/pricing',
+    title: 'Pricing Plans - DuHan Korean Learning',
+    description:
+      'Choose the perfect plan for your Korean learning journey. Free tier available with premium options for unlimited access to all content and features.',
+    isPublic: true,
+  },
+  {
+    path: '/terms',
+    title: 'Terms of Service - DuHan',
+    description:
+      'Read our terms of service to understand your rights and responsibilities when using DuHan Korean learning platform.',
+    isPublic: true,
+  },
+  {
+    path: '/privacy',
+    title: 'Privacy Policy - DuHan',
+    description:
+      'Learn how DuHan protects your privacy and handles your personal data. Your privacy is our priority.',
+    isPublic: true,
+  },
+  {
+    path: '/refund',
+    title: 'Refund Policy - DuHan',
+    description:
+      'Learn about our refund policy and how we handle subscription cancellations and refund requests.',
+    isPublic: true,
+  },
+];
+
+// Get list of paths for sitemap generation
+export const getPublicRoutePaths = (): string[] => {
+  return PUBLIC_ROUTES.map(route => route.path);
+};
+
+// Get route config by path
+export const getRouteConfig = (path: string): RouteConfig | undefined => {
+  return PUBLIC_ROUTES.find(route => route.path === path);
+};

@@ -13,6 +13,7 @@ node_modules
 # 构建输出
 dist
 dist-ssr
+stats.html
 
 # 系统文件
 .DS_Store

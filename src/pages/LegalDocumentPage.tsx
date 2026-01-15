@@ -8,29 +8,56 @@ import { api as convexApi } from '../../convex/_generated/api';
 import { Loading } from '../components/common/Loading';
 import { FileText, Calendar } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
+import { SEO } from '../components/SEO';
 
 interface LegalDocumentPageProps {
   language: Language;
   documentType: 'terms' | 'privacy' | 'refund';
 }
 
+const getSEOConfig = (documentType: string) => {
+  const configs = {
+    terms: {
+      title: 'Terms of Service - DuHan',
+      description:
+        'Read our terms of service to understand your rights and responsibilities when using DuHan Korean learning platform.',
+      path: '/terms',
+    },
+    privacy: {
+      title: 'Privacy Policy - DuHan',
+      description:
+        'Learn how DuHan protects your privacy and handles your personal data. Your privacy is our priority.',
+      path: '/privacy',
+    },
+    refund: {
+      title: 'Refund Policy - DuHan',
+      description:
+        'Learn about our refund policy and how we handle subscription cancellations and refund requests.',
+      path: '/refund',
+    },
+  };
+  return configs[documentType as keyof typeof configs] || configs.terms;
+};
+
 const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documentType }) => {
   const labels = getLabels(language);
   const navigate = useNavigate();
+  const seoConfig = getSEOConfig(documentType);
 
   const doc = useQuery(convexApi.legal.getDocument, { type: documentType });
 
   const loading = doc === undefined;
   // Convert Convex doc result to matching frontend interface if needed, or use directly
-  const document = doc ? {
-    id: doc.id,
-    title: doc.title,
-    content: doc.content,
-    updatedAt: doc.updatedAt,
-    updatedBy: "System"
-  } : null;
+  const document = doc
+    ? {
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        updatedAt: doc.updatedAt,
+        updatedBy: 'System',
+      }
+    : null;
   const error = doc === null; // If query returns null (not undefined) -> error
-
 
   if (loading) {
     return <Loading fullScreen size="lg" />;
@@ -38,54 +65,63 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   if (error || !document) {
     return (
-      <div className="max-w-4xl mx-auto text-center py-12">
-        <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-          {labels.documentNotFound || 'Document Not Found'}
-        </h2>
-        <p className="text-slate-600">
-          {labels.documentNotFoundDesc || 'The requested document could not be found.'}
-        </p>
-      </div>
+      <>
+        <SEO
+          title={seoConfig.title}
+          description={seoConfig.description}
+          canonical={seoConfig.path}
+        />
+        <div className="max-w-4xl mx-auto text-center py-12">
+          <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+            {labels.documentNotFound || 'Document Not Found'}
+          </h2>
+          <p className="text-slate-600">
+            {labels.documentNotFoundDesc || 'The requested document could not be found.'}
+          </p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Back Button */}
-      <div className="mb-6">
-        <BackButton onClick={() => navigate(-1)} />
-      </div>
+    <>
+      <SEO title={seoConfig.title} description={seoConfig.description} canonical={seoConfig.path} />
+      <div className="max-w-4xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-6">
+          <BackButton onClick={() => navigate(-1)} />
+        </div>
 
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-indigo-100 p-3 rounded-lg">
-            <FileText className="w-6 h-6 text-indigo-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">{document.title}</h1>
-            {document.updatedAt && (
-              <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  Last updated:{' '}
-                  {new Date(document.updatedAt).toLocaleDateString()}
-                </span>
-              </div>
-            )}
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-indigo-100 p-3 rounded-lg">
+              <FileText className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">{document.title}</h1>
+              {document.updatedAt && (
+                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    Last updated: {new Date(document.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
-        <div
-          className="prose prose-slate max-w-none"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatContent(document.content)) }}
-        />
+        {/* Content */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+          <div
+            className="prose prose-slate max-w-none"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatContent(document.content)) }}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -109,7 +145,10 @@ function formatContent(content: string): string {
     let parsed = text;
     parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     parsed = parsed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    parsed = parsed.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
     return parsed;
   };
 
