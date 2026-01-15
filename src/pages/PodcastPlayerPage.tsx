@@ -6,10 +6,8 @@ import {
     ArrowLeft,
     Play,
     Pause,
-    RotateCcw,
     Repeat,
     Sparkles,
-    MoreHorizontal,
     X,
     BookOpen,
     MessageSquare,
@@ -107,14 +105,12 @@ const PodcastPlayerPage: React.FC = () => {
     // Refs
     const audioRef = useRef<HTMLAudioElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const activeLineRef = useRef<HTMLDivElement>(null);
 
     // Audio State
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [speed, setSpeed] = useState(1.0);
-    const [volume, setVolume] = useState(1.0);
     const [isLoading, setIsLoading] = useState(true);
 
     // Learning Features State

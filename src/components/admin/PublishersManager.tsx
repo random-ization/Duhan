@@ -1,8 +1,7 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useFileUpload } from '../../hooks/useFileUpload';
-import { Loader2, Upload, ImageIcon, Save, X } from 'lucide-react';
+import { Loader2, Upload, ImageIcon, X } from 'lucide-react';
 
 export const PublishersManager: React.FC = () => {
     const publishers = useQuery(api.publishers.getAll);

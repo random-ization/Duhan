@@ -104,7 +104,6 @@ export default function DataDiagnostics() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {data.map(item => {
-                                const isHealthy = item.vocabCount > 0 && item.totalUnitsSetting;
                                 return (
                                     <tr key={item.id} className={`hover:bg-slate-50 ${item.vocabCount === 0 ? 'bg-red-50' : ''}`}>
                                         <td className="p-4 font-mono text-xs text-slate-500">{item.id}</td>

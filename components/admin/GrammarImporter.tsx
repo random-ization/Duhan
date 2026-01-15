@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { CheckCircle2, Loader2, Upload, FileSpreadsheet, BookOpen, AlertCircle, X, ChevronDown } from "lucide-react";
@@ -186,24 +186,7 @@ const GrammarImporter: React.FC = () => {
         }
     }, [institutes, form.courseId]);
 
-    const levelOptions = useMemo(
-        () => [
-            { value: "Beginner", label: "初级" },
-            { value: "Intermediate", label: "中级" },
-            { value: "Advanced", label: "高级" },
-        ],
-        []
-    );
 
-    const typeOptions = useMemo(
-        () => [
-            { value: "GRAMMAR", label: "语法" },
-            { value: "ENDING", label: "词尾" },
-            { value: "PARTICLE", label: "助词" },
-            { value: "EXPRESSION", label: "惯用表达" },
-        ],
-        []
-    );
 
     /**
      * Parse rows from a sheet into BulkImportItems
@@ -211,8 +194,7 @@ const GrammarImporter: React.FC = () => {
     const parseSheetRows = (rows: Record<string, unknown>[], courseId: string, defaultUnitId: number): BulkImportItem[] => {
         if (rows.length === 0) return [];
 
-        // Get headers from first row keys
-        const headers = Object.keys(rows[0]).map(h => h.toLowerCase());
+
 
         const findColumn = (keywords: string[]): string | null => {
             const headerKey = Object.keys(rows[0]).find(h =>

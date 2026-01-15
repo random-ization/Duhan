@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Flame, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
+import { Flame, Clock, BookOpen, Target } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { Skeleton } from '../../components/common';
-
-interface SummaryStats {
-    streak: number;
-    dailyMinutes: number;
-    dailyGoal: number;
-    dueReviews: number;
-}
 
 export const LearnerSummaryCard: React.FC = () => {
     const { language } = useAuth();

@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Mic, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
+import { Play, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
 import { useQuery } from "convex/react";
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
 import { getLabels } from '../utils/i18n';
 // import { getPodcastMessages } from '../constants/podcast-messages';
@@ -29,7 +28,6 @@ export default function PodcastDashboard() {
     // State
     const [trending, setTrending] = useState<{ external: any[], internal: any[] }>({ external: [], internal: [] });
     const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
-    const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [history, setHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');

@@ -46,7 +46,7 @@ type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
 type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
 
-function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, currentUnitLabel, userId, language = 'zh' }: VocabQuizProps) {
+function VocabQuizComponent({ words, onComplete, hasNextUnit, onNextUnit, _currentUnitLabel, userId, language = 'zh' }: VocabQuizProps) {
     const labels = getLabels(language);
     // Settings
     const [settings, setSettings] = useState<QuizSettings>({

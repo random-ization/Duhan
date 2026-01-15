@@ -1,6 +1,6 @@
 "use node";
 import { action } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import crypto from "crypto";
 
 // Azure Cognitive Services TTS with S3 caching

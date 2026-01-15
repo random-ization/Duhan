@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import React, { useState } from "react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { CheckCircle2, Loader2, Upload, FileSpreadsheet, FileText, AlertCircle } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -335,7 +335,6 @@ const TopikImporter: React.FC = () => {
     const [parsedExams, setParsedExams] = useState<ParsedExam[]>([]);
     const [status, setStatus] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [selectedExamIndex, setSelectedExamIndex] = useState<number | null>(null);
 
     // Handle Excel file upload
     const handleExcelFile = (file: File) => {
@@ -533,7 +532,7 @@ const TopikImporter: React.FC = () => {
                     <div className="border-2 border-dashed border-zinc-300 rounded-xl p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition-all group">
                         <FileSpreadsheet className="w-10 h-10 mx-auto text-zinc-400 mb-2 group-hover:text-blue-500 transition-colors" />
                         <p className="text-sm font-bold text-zinc-700">点击上传 Excel 文件</p>
-                        <p className="text-xs text-zinc-400 mt-1">每个工作表名应包含届数和类型，如 "第93届阅读A"</p>
+                        <p className="text-xs text-zinc-400 mt-1">每个工作表名应包含届数和类型，如 &quot;第93届阅读A&quot;</p>
                     </div>
                 </div>
 

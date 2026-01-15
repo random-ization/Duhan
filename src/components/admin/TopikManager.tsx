@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useFileUpload } from '../../hooks/useFileUpload';
 import {
-    FileText, Headphones, Save, Trash2, Loader2, Plus,
+    FileText, Headphones, Save, Trash2, Loader2,
     ArrowLeft, Upload, CheckSquare, ImageIcon, FileUp, X
 } from 'lucide-react';
 import * as XLSX from 'xlsx';

@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useRef } from 'react';
-import { X, GripHorizontal } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface BottomSheetProps {
     isOpen: boolean;

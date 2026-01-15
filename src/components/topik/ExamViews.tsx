@@ -1,14 +1,14 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { TopikExam, Language, Annotation } from '../../types';
 import {
-  Clock, Trophy, RotateCcw, ArrowLeft, CheckCircle,
-  PlayCircle, FileText, BarChart3, ArrowRight, Headphones, Pencil, Loader2,
+  Clock, RotateCcw, ArrowLeft,
+  FileText, ArrowRight, Headphones, Pencil, Loader2,
   Eye, MessageSquare, Trash2, Check
 } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
-import CanvasLayer, { CanvasData, ToolType, CanvasToolbar } from '../../features/annotation/components/CanvasLayer';
+import CanvasLayer, { ToolType, CanvasToolbar } from '../../features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAnnotation';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -166,8 +166,7 @@ interface ExamResultViewProps {
 }
 
 export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
-  ({ exam, result, language, onReview, onTryAgain, onBackToList }) => {
-    const labels = useMemo(() => getLabels(language), [language]);
+  ({ exam, result, _language, onReview, onTryAgain, onBackToList }) => {
     const percentage = Math.round((result.score / result.totalScore) * 100);
     const passed = percentage >= 60;
 
@@ -264,7 +263,7 @@ interface ExamReviewViewProps {
 }
 
 export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
-  ({ exam, userAnswers, language, annotations, onSaveAnnotation, onDeleteAnnotation, onBack }) => {
+  ({ exam, userAnswers, language, annotations, onSaveAnnotation, _onDeleteAnnotation, onBack }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -322,7 +321,6 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [selectionText, setSelectionText] = useState('');
     const [selectionContextKey, setSelectionContextKey] = useState('');
-    const [noteInput, setNoteInput] = useState('');
     const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
     const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);

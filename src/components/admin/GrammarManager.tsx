@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from "convex/react";
 import { api } from '../../../convex/_generated/api';
 import {
@@ -6,14 +6,6 @@ import {
     Sparkles, GraduationCap, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface Institute {
-    id: string;
-    name: string;
-    displayLevel?: string;
-    volume?: string;
-    totalUnits?: number; // Added totalUnits
-}
 
 interface UnitInfo {
     unitIndex: number;

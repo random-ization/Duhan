@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { getOptionalAuthUserId, getAuthUserId } from "./utils";
 
 export const getCanvas = query({

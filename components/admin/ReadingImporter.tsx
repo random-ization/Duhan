@@ -242,7 +242,7 @@ const ReadingImporter: React.FC = () => {
             // Try patterns: "1-1", "1_1", "unit1-1", "1"
             let unitIndex = 0, articleIndex = 1;
 
-            const dashMatch = nameWithoutExt.match(/(\d+)[\-_](\d+)/);
+            const dashMatch = nameWithoutExt.match(/(\d+)[-_](\d+)/);
             if (dashMatch) {
                 unitIndex = parseInt(dashMatch[1], 10);
                 articleIndex = parseInt(dashMatch[2], 10);

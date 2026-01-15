@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { TopikExam, TopikQuestion, Language, Annotation } from '../../types';
+import React, { useRef, useMemo } from 'react';
+import { TopikExam, Language } from '../../types';
 import { Clock, ArrowLeft } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
@@ -10,7 +10,7 @@ interface ExamSessionProps {
   language: Language;
   userAnswers: Record<number, number>;
   timeLeft: number;
-  timerActive: boolean;
+  _timerActive: boolean;
   onAnswerChange: (questionIndex: number, optionIndex: number) => void;
   onSubmit: () => void;
   onExit?: () => void;
@@ -18,7 +18,6 @@ interface ExamSessionProps {
 
 // PDF 仿真样式常量
 const PAPER_MAX_WIDTH = "max-w-[900px]";
-const FONT_SERIF = "font-serif";
 
 // TOPIK Reading 结构定义
 const TOPIK_READING_STRUCTURE: { range: [number, number]; instruction: string; grouped?: boolean }[] = [
@@ -76,7 +75,6 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
     onSubmit,
     onExit,
   }) => {
-    const labels = useMemo(() => getLabels(language), [language]);
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
 
@@ -133,9 +131,6 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
       const section = getSectionForQuestion(qIndex);
       return section?.grouped && qNum === section.range[0];
     };
-
-    // Progress calculation
-    const answeredCount = Object.keys(userAnswers).length;
 
     return (
       <div className="min-h-screen bg-slate-200 flex flex-col">

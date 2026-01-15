@@ -105,7 +105,7 @@ export const handleWebhook = action({
         try {
             await creem.webhooks.handleEvents(args.body, args.signature, {
                 // Called when subscription becomes active, trialing, or paid
-                onGrantAccess: async ({ reason, customer, product, metadata }) => {
+                onGrantAccess: async ({ reason, customer, _product, metadata }) => {
                     console.log(`[Webhook] Grant access: ${reason} for ${customer?.email}`);
 
                     if (customer?.email) {

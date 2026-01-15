@@ -1,12 +1,12 @@
 "use node";
 import { action } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import OpenAI from "openai";
 
 // Helper: Delete transcript (action since "use node" requires actions only)
 export const deleteTranscript = action({
     args: { episodeId: v.string() },
-    handler: async (ctx, args) => {
+    handler: async (_ctx, _args) => {
         // Currently a no-op as transcripts are cached on frontend/S3
         // If stored in DB, would need to call an internal mutation
         return { success: true };

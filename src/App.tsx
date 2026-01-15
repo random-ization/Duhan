@@ -27,12 +27,8 @@ function App() {
   const {
     selectedInstitute,
     selectedLevel,
-    setActiveModule,
-    setActiveCustomList,
-    setActiveListType,
   } = useLearning();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-  const navigate = useNavigate();
 
   // Track learning progress when user changes institute/level
   useEffect(() => {

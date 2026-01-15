@@ -66,7 +66,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 return this.props.fallback;
             }
 
-            const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
             const moduleName = this.props.moduleName || t('common.page', 'Page');
 
             // Default fallback UI
