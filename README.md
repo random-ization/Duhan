@@ -119,7 +119,11 @@ To manually generate the sitemap:
 npm run generate:sitemap
 ```
 
-To update the base URL in the sitemap, edit `scripts/generate-sitemap.mjs` and update the `BASE_URL` constant.
+**Configuration**: The sitemap and all SEO settings are centralized in `src/config/seo.config.json`:
+- `baseUrl`: The production domain (currently https://www.koreanstudy.me)
+- `routes`: Array of public routes with their SEO metadata
+
+To update the base URL or add new routes, edit this file and run the build again.
 
 #### Robots.txt
 

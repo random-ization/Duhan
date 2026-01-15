@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { BASE_URL } from '../config/routes.config';
 
 export interface SEOProps {
   title: string;
@@ -20,9 +21,8 @@ export const SEO: React.FC<SEOProps> = ({
   twitterCard = 'summary_large_image',
   noIndex = false,
 }) => {
-  const baseUrl = 'https://www.koreanstudy.me';
-  const fullCanonical = canonical ? `${baseUrl}${canonical}` : undefined;
-  const fullOgImage = ogImage.startsWith('http') ? ogImage : `${baseUrl}${ogImage}`;
+  const fullCanonical = canonical ? `${BASE_URL}${canonical}` : undefined;
+  const fullOgImage = ogImage.startsWith('http') ? ogImage : `${BASE_URL}${ogImage}`;
 
   return (
     <Helmet>

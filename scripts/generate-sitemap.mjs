@@ -4,51 +4,18 @@
  * Generates sitemap.xml from the centralized route configuration
  */
 
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-// Import route configuration
-const PUBLIC_ROUTES = [
-  {
-    path: '/',
-    title: 'DuHan - Learn Korean Through Real Content',
-    description:
-      'Master Korean with interactive lessons, TOPIK exam prep, authentic podcasts, and personalized learning. Join thousands of learners achieving fluency.',
-    isPublic: true,
-  },
-  {
-    path: '/pricing',
-    title: 'Pricing Plans - DuHan Korean Learning',
-    description:
-      'Choose the perfect plan for your Korean learning journey. Free tier available with premium options for unlimited access to all content and features.',
-    isPublic: true,
-  },
-  {
-    path: '/terms',
-    title: 'Terms of Service - DuHan',
-    description:
-      'Read our terms of service to understand your rights and responsibilities when using DuHan Korean learning platform.',
-    isPublic: true,
-  },
-  {
-    path: '/privacy',
-    title: 'Privacy Policy - DuHan',
-    description:
-      'Learn how DuHan protects your privacy and handles your personal data. Your privacy is our priority.',
-    isPublic: true,
-  },
-  {
-    path: '/refund',
-    title: 'Refund Policy - DuHan',
-    description:
-      'Learn about our refund policy and how we handle subscription cancellations and refund requests.',
-    isPublic: true,
-  },
-];
+// Load route configuration from JSON
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const seoConfigPath = resolve(__dirname, '../src/config/seo.config.json');
+const seoConfig = JSON.parse(readFileSync(seoConfigPath, 'utf-8'));
 
-// Configuration
-const BASE_URL = 'https://www.koreanstudy.me';
+const PUBLIC_ROUTES = seoConfig.routes;
+const BASE_URL = seoConfig.baseUrl;
 const CURRENT_DATE = new Date().toISOString().split('T')[0];
 
 // Generate sitemap XML
@@ -77,8 +44,6 @@ ${urls}
 // Main execution
 function main() {
   try {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
     const sitemap = generateSitemap();
     const outputPath = resolve(__dirname, '../public/sitemap.xml');
 
