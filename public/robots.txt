@@ -1,0 +1,23 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Block authentication and private pages
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /profile
+Disallow: /courses
+Disallow: /course/
+Disallow: /topik
+Disallow: /notebook
+Disallow: /vocab-book
+Disallow: /podcasts
+Disallow: /video/
+Disallow: /videos
+Disallow: /auth
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /payment/
+
+# Sitemap
+Sitemap: https://koreanstudy.me/sitemap.xml

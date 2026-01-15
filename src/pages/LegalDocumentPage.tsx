@@ -1,5 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { SEO } from '../seo/SEO';
+import { getRouteMeta } from '../seo/publicRoutes';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { sanitizeHtml } from '../utils/sanitize';
@@ -17,20 +19,23 @@ interface LegalDocumentPageProps {
 const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documentType }) => {
   const labels = getLabels(language);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const meta = getRouteMeta(location.pathname);
   const doc = useQuery(convexApi.legal.getDocument, { type: documentType });
 
   const loading = doc === undefined;
   // Convert Convex doc result to matching frontend interface if needed, or use directly
-  const document = doc ? {
-    id: doc.id,
-    title: doc.title,
-    content: doc.content,
-    updatedAt: doc.updatedAt,
-    updatedBy: "System"
-  } : null;
+  const document = doc
+    ? {
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        updatedAt: doc.updatedAt,
+        updatedBy: 'System',
+      }
+    : null;
   const error = doc === null; // If query returns null (not undefined) -> error
-
 
   if (loading) {
     return <Loading fullScreen size="lg" />;
@@ -52,6 +57,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   return (
     <div className="max-w-4xl mx-auto">
+      <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
       {/* Back Button */}
       <div className="mb-6">
         <BackButton onClick={() => navigate(-1)} />
@@ -69,8 +75,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
               <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Last updated:{' '}
-                  {new Date(document.updatedAt).toLocaleDateString()}
+                  Last updated: {new Date(document.updatedAt).toLocaleDateString()}
                 </span>
               </div>
             )}
@@ -109,7 +114,10 @@ function formatContent(content: string): string {
     let parsed = text;
     parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     parsed = parsed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    parsed = parsed.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
     return parsed;
   };
 
