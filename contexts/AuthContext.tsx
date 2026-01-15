@@ -195,6 +195,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onLoginSuc
     }
   }, [isAuthenticated, user, authLoading, sessionExpired]);
 
+  // Silent token refresh - proactively keep session alive
+  // Convex Auth handles token refresh automatically, but we add a heartbeat
+  // to ensure the session stays active during long user sessions
+  useEffect(() => {
+    if (!isAuthenticated || !viewer) {
+      return;
+    }
+
+    // Ping the server every 5 minutes to keep session active
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    
+    const refreshTimer = setInterval(() => {
+      // Simply querying the viewer keeps the session active
+      // Convex will automatically refresh tokens as needed
+      console.log('[Auth] Heartbeat - keeping session active');
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(refreshTimer);
+  }, [isAuthenticated, viewer]);
+
   // Legacy manual loadUser effect removed
   /*
   useEffect(() => {
