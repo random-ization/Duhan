@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -15,7 +16,7 @@ interface TopikPageProps {
 const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
   const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
   const { topikExams } = useData();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
 
   // Filter exams based on type

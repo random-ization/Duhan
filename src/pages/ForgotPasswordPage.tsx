@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { LocalizedLink } from '../components/LocalizedLink';
 import { ArrowLeft, Mail, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
@@ -11,7 +13,7 @@ import { api as convexApi } from '../../convex/_generated/api';
 export default function ForgotPasswordPage() {
   const resetPassword = useMutation(convexApi.auth.resetPassword);
   const { language } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
   const labels = getLabels(language);
   const [email, setEmail] = useState('');
@@ -75,12 +77,12 @@ export default function ForgotPasswordPage() {
         {/* Right: Recovery Console */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
           <div className="mb-8">
-            <Link
+            <LocalizedLink
               to="/login"
               className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition mb-4"
             >
               <ArrowLeft size={16} /> {labels.auth?.backToLogin || 'Back to Login'}
-            </Link>
+            </LocalizedLink>
             <h2 className="text-3xl font-black text-slate-900">
               {labels.auth?.recoverPassword ||
                 (language === 'zh' ? '重置密码' : 'Recover Password')}

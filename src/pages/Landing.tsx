@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
@@ -29,7 +31,7 @@ import {
 
 export default function Landing() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
   const [isAnnual, setIsAnnual] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,17 +41,71 @@ export default function Landing() {
   return (
     <div className="min-h-screen text-slate-900 font-sans antialiased overflow-x-hidden bg-[#F0F4F8] bg-[radial-gradient(#cbd5e1_1.5px,transparent_1.5px)] [background-size:24px_24px]">
       <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
+
+      {/* JSON-LD Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "DuHan Korean Learning",
+            "description": meta.description,
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "url": "https://koreanstudy.me",
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Monthly Subscription",
+                "price": "6.90",
+                "priceCurrency": "USD",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock"
+              },
+              {
+                "@type": "Offer",
+                "name": "Annual Subscription",
+                "price": "49.00",
+                "priceCurrency": "USD",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock"
+              },
+              {
+                "@type": "Offer",
+                "name": "Lifetime Access",
+                "price": "99.00",
+                "priceCurrency": "USD",
+                "priceValidUntil": "2026-12-31",
+                "availability": "https://schema.org/InStock"
+              }
+            ],
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "ratingCount": "500",
+              "bestRating": "5",
+              "worstRating": "1"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "DuHan",
+              "url": "https://koreanstudy.me"
+            }
+          })
+        }}
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-[#F0F4F8]/90 backdrop-blur-md border-b-2 border-black">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <LocalizedLink to="/" className="flex items-center gap-3 group">
             <img
               src="/logo.png"
-              alt="Logo"
+              alt="DuHan - Korean Language Learning Platform Logo"
               className="w-10 h-10 rounded-lg shadow-pop group-hover:translate-y-1 group-hover:shadow-none transition-all object-contain"
             />
             <span className="font-display text-2xl tracking-wide">{t('common.appName')}</span>
-          </Link>
+          </LocalizedLink>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8 font-bold text-slate-700">
@@ -549,16 +605,16 @@ export default function Landing() {
       <footer className="bg-white border-t-2 border-black py-12 px-6 mt-12">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+            <img src="/logo.png" alt="DuHan - Korean Language Learning Platform Logo" className="w-8 h-8 rounded-lg object-contain" />
             <span className="font-bold text-slate-900">© 2025 {t('common.appName')}.</span>
           </div>
           <div className="flex gap-8 text-sm font-bold text-slate-500">
-            <Link to="/privacy" className="hover:text-black">
+            <LocalizedLink to="/privacy" className="hover:text-black">
               {t('common.privacy')}
-            </Link>
-            <Link to="/terms" className="hover:text-black">
+            </LocalizedLink>
+            <LocalizedLink to="/terms" className="hover:text-black">
               {t('common.terms')}
-            </Link>
+            </LocalizedLink>
             <a href="mailto:support@koreanstudy.me" className="hover:text-black">
               {t('common.contact')}
             </a>

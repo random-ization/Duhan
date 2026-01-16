@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { LocalizedLink } from '../components/LocalizedLink';
 import {
   ArrowRight,
   Sparkles,
@@ -23,7 +25,7 @@ import { getLabels } from '../utils/i18n';
 // const REDIRECT_URI ...
 
 export default function AuthPage() {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user, language, loading: authLoading } = useAuth(); // Assume loading is available
@@ -157,9 +159,9 @@ export default function AuthPage() {
           <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
             {isLogin
               ? labels.auth?.welcomeBack ||
-                (language === 'zh' ? '欢迎回来，探索者！' : 'Welcome back, Explorer!')
+              (language === 'zh' ? '欢迎回来，探索者！' : 'Welcome back, Explorer!')
               : labels.auth?.createCharacter ||
-                (language === 'zh' ? '创建新角色' : 'Create New Character')}{' '}
+              (language === 'zh' ? '创建新角色' : 'Create New Character')}{' '}
             <Sparkles className="text-yellow-400 fill-current" />
           </h2>
 
@@ -222,12 +224,12 @@ export default function AuthPage() {
             {/* Forgot Password Link */}
             {isLogin && (
               <div className="flex justify-end">
-                <Link
+                <LocalizedLink
                   to="/forgot-password"
                   className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition"
                 >
                   <HelpCircle size={14} /> {labels.auth?.forgotPassword || 'Forgot Password?'}
-                </Link>
+                </LocalizedLink>
               </div>
             )}
 
@@ -286,7 +288,7 @@ export default function AuthPage() {
             {isLogin
               ? labels.auth?.noAccount || (language === 'zh' ? '还没有账号？' : 'No account yet? ')
               : labels.auth?.hasAccount ||
-                (language === 'zh' ? '已经有账号？' : 'Already have an account? ')}
+              (language === 'zh' ? '已经有账号？' : 'Already have an account? ')}
             <button
               type="button"
               onClick={() => {

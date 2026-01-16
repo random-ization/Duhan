@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Disc, GripVertical, BookMarked, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
@@ -98,7 +98,7 @@ export default function DashboardPage({
   const { selectedInstitute, selectedLevel } = useLearning();
   const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
   const { institutes } = useData(); // Get institutes data
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
   // Sensors
   const sensors = useSensors(
@@ -190,9 +190,9 @@ export default function DashboardPage({
                   <br />
                   {selectedLevel
                     ? (labels.dashboard?.textbook?.level || 'Level {level}').replace(
-                        '{level}',
-                        String(selectedLevel)
-                      )
+                      '{level}',
+                      String(selectedLevel)
+                    )
                     : labels.dashboard?.textbook?.selectLevel || 'Select Level'}
                 </h3>
                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">

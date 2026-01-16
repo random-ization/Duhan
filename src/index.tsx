@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
+
 import App from './App';
 import { AppProvider } from './contexts/AppContext';
 import './utils/i18next-config'; // Initialize i18n
@@ -21,14 +21,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <HelmetProvider>
-      <BrowserRouter>
-        <ConvexAuthProvider client={convex}>
-          <AppProvider>
-            <App />
-          </AppProvider>
-        </ConvexAuthProvider>
-      </BrowserRouter>
-    </HelmetProvider>
+    <BrowserRouter>
+      <ConvexAuthProvider client={convex}>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </ConvexAuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

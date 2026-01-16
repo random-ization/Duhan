@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { LocalizedLink } from '../components/LocalizedLink';
 import { useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Language } from '../types';
@@ -21,7 +22,7 @@ interface ProfileProps {
 
 const Profile: React.FC<ProfileProps> = ({ language }) => {
   const { user, updateUser } = useApp();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const labels = getLabels(language);
   const success = toast.success;
   const error = toast.error;
@@ -281,7 +282,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                     <p className="text-sm text-slate-500 mb-3">
                       {labels.forgotPasswordProfileDescription || "If you've forgotten your current password, you can reset it via email verification."}
                     </p>
-                    <Link
+                    <LocalizedLink
                       to="/forgot-password"
                       className="inline-flex items-center gap-2 text-indigo-600 font-semibold text-sm hover:text-indigo-700 transition-colors"
                     >
@@ -289,7 +290,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M5 12h14M12 5l7 7-7 7" />
                       </svg>
-                    </Link>
+                    </LocalizedLink>
                   </div>
                 </div>
               </div>

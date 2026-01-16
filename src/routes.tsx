@@ -1,10 +1,11 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { getLabels } from './utils/i18n';
 import { ContentSkeleton } from './components/common';
+import { LanguageRouter, DEFAULT_LANGUAGE, isValidLanguage } from './components/LanguageRouter';
 
 // Lazy load pages for code splitting
 import AppLayout from './components/layout/AppLayout';
@@ -53,8 +54,13 @@ interface AppRoutesProps {
   onShowUpgradePrompt: () => void;
 }
 
-export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { language } = useAuth();
+// Inner routes component that uses language from URL params
+const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
+  const { lang } = useParams<{ lang: string }>();
+  const { language: authLanguage } = useAuth();
+
+  // Use URL language if valid, otherwise fall back to auth context language
+  const language = lang && isValidLanguage(lang) ? lang : authLanguage;
   const labels = getLabels(language);
 
   return (
@@ -94,8 +100,8 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
                 path="/dashboard"
                 element={
                   <DashboardPage
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={onShowUpgradePrompt}
+                    _canAccessContent={canAccessContent}
+                    _onShowUpgradePrompt={onShowUpgradePrompt}
                   />
                 }
               />
@@ -160,15 +166,37 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
           </Route>
 
           {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}
-          <Route element={<ProtectedRoute requireAdmin={true} redirectTo="/admin/login" />}>
+          <Route element={<ProtectedRoute requireAdmin={true} redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`} />}>
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/:tab" element={<AdminPage />} />
           </Route>
 
-          {/* 404 或未知路径重定向 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 在当前语言下重定向到首页 */}
+          <Route path="*" element={<Navigate to={`/${lang || DEFAULT_LANGUAGE}`} replace />} />
         </Routes>
       </Suspense>
     </ErrorBoundary>
+  );
+};
+
+export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
+  return (
+    <Routes>
+      {/* Redirect root to default language */}
+      <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+
+      {/* Language-prefixed routes */}
+      <Route path="/:lang/*" element={
+        <LanguageRouter>
+          <LanguageAwareRoutes
+            canAccessContent={canAccessContent}
+            onShowUpgradePrompt={onShowUpgradePrompt}
+          />
+        </LanguageRouter>
+      } />
+
+      {/* Catch-all: redirect to default language */}
+      <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+    </Routes>
   );
 };
