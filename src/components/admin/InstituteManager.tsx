@@ -8,6 +8,10 @@ import { NoArgs, mRef, qRef } from '../../utils/convexRefs';
 interface Institute {
   id: string;
   name: string;
+  nameZh?: string;
+  nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
   coverUrl?: string; // Kept for interface compatibility but not used in form
   themeColor?: string;
   publisher?: string;
@@ -46,6 +50,10 @@ export const InstituteManager: React.FC = () => {
   // Form fields
   const [formData, setFormData] = useState<Partial<Institute>>({
     name: '',
+    nameZh: '',
+    nameEn: '',
+    nameVi: '',
+    nameMn: '',
     publisher: '',
     displayLevel: '',
     volume: '',
@@ -58,6 +66,10 @@ export const InstituteManager: React.FC = () => {
       {
         id: string;
         name: string;
+        nameZh?: string;
+        nameEn?: string;
+        nameVi?: string;
+        nameMn?: string;
         levels: Array<{ level: number; units: number }>;
         publisher: string;
         displayLevel: string;
@@ -77,6 +89,10 @@ export const InstituteManager: React.FC = () => {
           Pick<
             Institute,
             | 'name'
+            | 'nameZh'
+            | 'nameEn'
+            | 'nameVi'
+            | 'nameMn'
             | 'publisher'
             | 'displayLevel'
             | 'volume'
@@ -114,6 +130,10 @@ export const InstituteManager: React.FC = () => {
       await createInstituteMutation({
         id: generatedId,
         name: formData.name.trim(),
+        nameZh: formData.nameZh?.trim() || '',
+        nameEn: formData.nameEn?.trim() || '',
+        nameVi: formData.nameVi?.trim() || '',
+        nameMn: formData.nameMn?.trim() || '',
         levels: [{ level: 1, units: formData.totalUnits || 10 }],
         publisher: formData.publisher?.trim() || '',
         displayLevel: formData.displayLevel?.trim() || '',
@@ -140,6 +160,10 @@ export const InstituteManager: React.FC = () => {
         legacyId: editingId,
         updates: {
           name: formData.name.trim(),
+          nameZh: formData.nameZh?.trim() || '',
+          nameEn: formData.nameEn?.trim() || '',
+          nameVi: formData.nameVi?.trim() || '',
+          nameMn: formData.nameMn?.trim() || '',
           publisher: formData.publisher?.trim(),
           displayLevel: formData.displayLevel?.trim(),
           volume: formData.volume?.trim(),
@@ -172,6 +196,10 @@ export const InstituteManager: React.FC = () => {
     setEditingId(inst.id);
     setFormData({
       name: inst.name,
+      nameZh: inst.nameZh || '',
+      nameEn: inst.nameEn || '',
+      nameVi: inst.nameVi || '',
+      nameMn: inst.nameMn || '',
       publisher: inst.publisher || '',
       displayLevel: inst.displayLevel || '',
       volume: inst.volume || '',
@@ -184,6 +212,10 @@ export const InstituteManager: React.FC = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      nameZh: '',
+      nameEn: '',
+      nameVi: '',
+      nameMn: '',
       publisher: '',
       displayLevel: '',
       volume: '',
@@ -331,7 +363,7 @@ export const InstituteManager: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-1">教材名称 *</label>
+                  <label className="block text-xs font-bold mb-1">教材名称(韩语) *</label>
                   <input
                     type="text"
                     placeholder="如：首尔大学韩国语"
@@ -339,6 +371,49 @@ export const InstituteManager: React.FC = () => {
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="w-full p-3 border-2 border-zinc-900 rounded-lg font-bold focus:shadow-[2px_2px_0px_0px_#18181B] outline-none"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">教材名称(中文)</label>
+                    <input
+                      type="text"
+                      placeholder="如：首尔大学韩国语"
+                      value={formData.nameZh || ''}
+                      onChange={e => setFormData({ ...formData, nameZh: e.target.value })}
+                      className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">教材名称(English)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Seoul National University Korean"
+                      value={formData.nameEn || ''}
+                      onChange={e => setFormData({ ...formData, nameEn: e.target.value })}
+                      className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">教材名称(Tiếng Việt)</label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Tiếng Hàn Đại học Quốc gia Seoul"
+                      value={formData.nameVi || ''}
+                      onChange={e => setFormData({ ...formData, nameVi: e.target.value })}
+                      className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">教材名称(Монгол)</label>
+                    <input
+                      type="text"
+                      placeholder="Жишээ: Сөүл Үндэсний Их Сургуулийн Солонгос хэл"
+                      value={formData.nameMn || ''}
+                      onChange={e => setFormData({ ...formData, nameMn: e.target.value })}
+                      className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

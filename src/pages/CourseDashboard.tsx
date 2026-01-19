@@ -5,11 +5,14 @@ import { useQuery } from 'convex/react';
 import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useAuth } from '../contexts/AuthContext';
+import { getLocalizedContent } from '../utils/languageUtils';
 
 export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
+  const { language } = useAuth();
 
   // Use same Convex query as CoursesOverview for consistency
   type Institute = {
@@ -39,7 +42,10 @@ export default function CourseDashboard() {
 
   // Find current course by ID
   const course = institutes?.find(i => i.id === instituteId);
-  const courseName = course?.name || t('courseDashboard.defaultCourseName');
+  const courseName =
+    (course && getLocalizedContent(course, 'name', language)) ||
+    course?.name ||
+    t('courseDashboard.defaultCourseName');
   const displayLevel = course?.displayLevel || t('courseDashboard.defaultDisplayLevel');
   const coverUrl = course?.coverUrl;
   const totalUnits = course?.totalUnits || 10;
@@ -173,7 +179,7 @@ export default function CourseDashboard() {
             {/* Course Info */}
             <div className="flex-1 text-center md:text-left z-10">
               <h1 className="font-display text-4xl font-black text-slate-900 mb-2 tracking-tight">
-                {course?.name || t('loading')}
+                {courseName || t('loading')}
                 <span className="text-xs text-slate-400 font-normal ml-2">ID: {instituteId}</span>
               </h1>
               <p className="text-slate-500 font-medium flex items-center gap-2">

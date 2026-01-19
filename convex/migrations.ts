@@ -191,6 +191,25 @@ export const analyzeDuplicates = query({
   },
 });
 
+export const renameInstituteName = mutation({
+  args: {
+    from: v.string(),
+    to: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const institutes = await ctx.db
+      .query('institutes')
+      .filter(q => q.eq(q.field('name'), args.from))
+      .collect();
+
+    for (const inst of institutes) {
+      await ctx.db.patch(inst._id, { name: args.to });
+    }
+
+    return { updated: institutes.length };
+  },
+});
+
 export const analyzeIntegrity = query({
   args: {},
   handler: async ctx => {

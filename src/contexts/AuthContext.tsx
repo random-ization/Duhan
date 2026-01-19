@@ -243,20 +243,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const saveExamAttempt = useCallback(
     async (attempt: ExamAttempt) => {
+      if (!user) return;
+
+      updateUser({ examHistory: [...(user.examHistory || []), attempt] });
+
       await saveExamAttemptMutation({
         examId: attempt.examId,
         score: attempt.score,
+        totalQuestions: attempt.totalScore ?? attempt.maxScore,
         answers: attempt.userAnswers,
       });
     },
-    [saveExamAttemptMutation]
+    [saveExamAttemptMutation, updateUser, user]
   );
 
   const deleteExamAttempt = useCallback(
     async (attemptId: string) => {
+      if (!user) return;
+
+      updateUser({
+        examHistory: (user.examHistory || []).filter(attempt => attempt.id !== attemptId),
+      });
+
       await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
     },
-    [deleteExamAttemptMutation]
+    [deleteExamAttemptMutation, updateUser, user]
   );
 
   const updateLearningProgress = useCallback(

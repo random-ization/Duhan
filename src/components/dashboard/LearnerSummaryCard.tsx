@@ -5,8 +5,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { Skeleton } from '../../components/common';
 import { NoArgs, qRef } from '../../utils/convexRefs';
+import { BentoCard } from './BentoCard';
 
-export const LearnerSummaryCard: React.FC = () => {
+interface LearnerSummaryCardProps {
+  className?: string;
+}
+
+export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ className = '' }) => {
   const { language } = useAuth();
   const labels = getLabels(language);
   // Convex Integration
@@ -56,7 +61,11 @@ export const LearnerSummaryCard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white h-40 flex items-center justify-center">
+      <BentoCard
+        bgClass="bg-gradient-to-br from-indigo-500 to-purple-600"
+        borderClass="border-indigo-400/60"
+        className={`text-white h-40 flex items-center justify-center ${className}`}
+      >
         <div className="animate-pulse space-y-3 w-full">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-20 bg-indigo-400" />
@@ -65,7 +74,7 @@ export const LearnerSummaryCard: React.FC = () => {
           <Skeleton className="h-8 w-24 bg-indigo-400" />
           <Skeleton className="h-4 w-full bg-indigo-400" />
         </div>
-      </div>
+      </BentoCard>
     );
   }
 
@@ -74,7 +83,11 @@ export const LearnerSummaryCard: React.FC = () => {
   const progressPercent = Math.min(100, (stats.dailyMinutes / (stats.dailyGoal || 1)) * 100);
 
   return (
-    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+    <BentoCard
+      bgClass="bg-gradient-to-br from-indigo-500 to-purple-600"
+      borderClass="border-indigo-400/60"
+      className={`text-white shadow-lg ${className}`}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg">
           {labels.dashboard?.summary?.title || "Today's Overview"}
@@ -138,7 +151,7 @@ export const LearnerSummaryCard: React.FC = () => {
           {labels.dashboard?.summary?.completed || '✨ Goal Achieved!'}
         </div>
       )}
-    </div>
+    </BentoCard>
   );
 };
 

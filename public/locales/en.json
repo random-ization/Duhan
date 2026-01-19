@@ -459,6 +459,8 @@
       "goalPart2": "TOPIK 6",
       "goalPart3": "Keep it up!"
     },
+    "subtitle": "Ready to beat today's boss?",
+    "premiumBadge": "Premium",
     "common": {
       "streak": "Streak Challenge",
       "days": "{{count}} days",
@@ -528,6 +530,8 @@
       "level": "Level {level}"
     },
     "topik": {
+      "cardTitle": "TOPIK\nMock Exam",
+      "bestLabel": "Best",
       "examCenter": "Exam Center",
       "realExam": "Real Exam Simulation",
       "all": "All",
@@ -548,6 +552,7 @@
       "examLoadError": "Failed to load exam content. Please check your connection."
     },
     "video": {
+      "cardTitle": "Immersion\nVideo",
       "title": "Video Center",
       "new": "New Updates",
       "subtitle": "Immersive Korean video learning with subtitles and lookup.",

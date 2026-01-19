@@ -6,10 +6,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
-import { getLabels } from '../utils/i18n';
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../../components/dashboard/DictionarySearchDropdown';
 import { TextbookContent, TopikExam } from '../types';
+import { useTranslation } from 'react-i18next';
 
 // DnD Kit
 import {
@@ -94,8 +94,8 @@ export default function DashboardPage({
   _canAccessContent: (content: TextbookContent | TopikExam) => boolean;
   _onShowUpgradePrompt: () => void;
 }) {
-  const { user, language } = useAuth();
-  const labels = getLabels(language);
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearning();
   const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
   const { institutes } = useData(); // Get institutes data
@@ -129,23 +129,23 @@ export default function DashboardPage({
 
   // Lookup institute name
   const instituteName = useMemo(() => {
-    if (!selectedInstitute) return labels.dashboard?.textbook?.label || 'Textbook';
+    if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
     const inst = institutes.find(i => i.id === selectedInstitute);
     return inst ? inst.name : selectedInstitute;
-  }, [selectedInstitute, institutes, labels]);
+  }, [selectedInstitute, institutes, t]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return labels.dashboard?.morning || 'Morning';
-    if (hour < 18) return labels.dashboard?.afternoon || 'Afternoon';
-    return labels.dashboard?.evening || 'Evening';
+    if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
+    if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
+    return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
   };
 
   // Render Card Content based on ID
   const renderCard = (id: string) => {
     switch (id) {
       case 'summary':
-        return <LearnerSummaryCard />;
+        return <LearnerSummaryCard className="h-full" />;
       case 'tiger':
         return (
           <BentoCard
@@ -167,12 +167,15 @@ export default function DashboardPage({
             />
             <div className="relative z-10 mt-4 bg-white border-2 border-slate-900 px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
               <p className="font-bold text-slate-900 text-sm">
-                &quot;{labels.dashboard?.tiger?.quote || "Don't give up! Just 5 more minutes!"}
+                &quot;
+                {t('dashboard.tiger.quote', {
+                  defaultValue: "Don't give up! Just 5 more minutes!",
+                })}
                 &quot;
               </p>
             </div>
             <button className="mt-4 bg-slate-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-black">
-              {labels.dashboard?.tiger?.action || 'Start Quiz'}
+              {t('dashboard.tiger.action', { defaultValue: 'Start Quiz' })}
             </button>
           </BentoCard>
         );
@@ -190,20 +193,20 @@ export default function DashboardPage({
                   {instituteName}
                   <br />
                   {selectedLevel
-                    ? (labels.dashboard?.textbook?.level || 'Level {level}').replace(
+                    ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
                         '{level}',
                         String(selectedLevel)
                       )
-                    : labels.dashboard?.textbook?.selectLevel || 'Select Level'}
+                    : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
                 </h3>
                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">
-                  {labels.dashboard?.textbook?.inProgress || 'In Progress'}
+                  {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}
                 </div>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between text-xs font-bold text-blue-400 mb-1">
                   <span>
-                    {(labels.dashboard?.textbook?.chapter || 'Chapter {unit}').replace(
+                    {t('dashboard.textbook.chapter', { defaultValue: 'Chapter {unit}' }).replace(
                       '{unit}',
                       String(currentUnit)
                     )}
@@ -235,10 +238,10 @@ export default function DashboardPage({
           >
             <div className="relative z-10">
               <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">
-                {labels.dashboard?.topik?.title || 'TOPIK\nMock Exam'}
+                {t('dashboard.topik.cardTitle', { defaultValue: 'TOPIK\nMock Exam' })}
               </h3>
               <div className="mt-2 inline-block bg-white px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 shadow-sm border-2 border-yellow-100">
-                {labels.dashboard?.topik?.maxScore || 'Best'}:{' '}
+                {t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}:{' '}
                 <span className="text-slate-900">{topScore}</span>
               </div>
             </div>
@@ -259,10 +262,10 @@ export default function DashboardPage({
           >
             <div className="relative z-10">
               <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">
-                {labels.dashboard?.video?.title || 'Immersion\nVideo'}
+                {t('dashboard.video.cardTitle', { defaultValue: 'Immersion\nVideo' })}
               </h3>
               <div className="mt-2 inline-block bg-red-500 text-white px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 shadow-sm">
-                {labels.dashboard?.video?.new || 'New Updates'}
+                {t('dashboard.video.new', { defaultValue: 'New Updates' })}
               </div>
             </div>
             <img
@@ -286,12 +289,12 @@ export default function DashboardPage({
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
                 <div className="inline-block bg-violet-500 text-white border-2 border-violet-400 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
-                  {labels.dashboard?.podcast?.label || 'Podcast'}
+                  {t('dashboard.podcast.label', { defaultValue: 'Podcast' })}
                 </div>
                 <h3 className="font-bold text-lg mt-2 leading-tight text-slate-900">
-                  {labels.dashboard?.podcast?.title || 'Latest Podcast'}
+                  {t('dashboard.podcast.title', { defaultValue: 'Latest Podcast' })}
                   <br />
-                  {labels.dashboard?.podcast?.subtitle || 'Iyagi Series'}
+                  {t('dashboard.podcast.subtitle', { defaultValue: 'Iyagi Series' })}
                 </h3>
               </div>
               <div className="flex items-center gap-2">
@@ -301,7 +304,7 @@ export default function DashboardPage({
                   <div className="w-1 bg-violet-500 h-full animate-pulse"></div>
                 </div>
                 <span className="text-xs font-mono text-violet-600 font-bold">
-                  {labels.dashboard?.podcast?.listen || 'Listen Now'}
+                  {t('dashboard.podcast.listen', { defaultValue: 'Listen Now' })}
                 </span>
               </div>
             </div>
@@ -321,17 +324,17 @@ export default function DashboardPage({
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
                 <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {labels.dashboard?.vocab?.label || 'Vocab Book'}
+                  {t('dashboard.vocab.label', { defaultValue: 'Vocab Book' })}
                 </div>
                 <h3 className="font-black text-xl text-slate-900 leading-tight">
-                  {labels.dashboard?.vocab?.title || 'My Vocab'}
+                  {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
                 </h3>
                 <p className="text-slate-500 font-bold text-sm mt-1">
-                  {labels.dashboard?.vocab?.subtitle || 'Saved words and definitions'}
+                  {t('dashboard.vocab.subtitle', { defaultValue: 'Saved words and definitions' })}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
-                {(labels.dashboard?.vocab?.count || '{count} Words').replace(
+                {t('dashboard.vocab.count', { defaultValue: '{count} Words' }).replace(
                   '{count}',
                   String(wordsToReview)
                 )}
@@ -353,21 +356,21 @@ export default function DashboardPage({
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
                 <div className="inline-block bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {labels.dashboard?.notes?.label || 'Notebook'}
+                  {t('dashboard.notes.label', { defaultValue: 'Notebook' })}
                 </div>
                 <h3 className="font-black text-xl text-slate-900 leading-tight">
-                  {labels.dashboard?.notes?.title || 'Study Notes'}
+                  {t('dashboard.notes.title', { defaultValue: 'Study Notes' })}
                 </h3>
                 <p className="text-slate-500 font-bold text-sm mt-1">
-                  {labels.dashboard?.notes?.subtitle || 'Mistakes and memos'}
+                  {t('dashboard.notes.subtitle', { defaultValue: 'Mistakes and memos' })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[9px] font-bold text-red-600">
-                  {labels.dashboard?.notes?.mistake || 'Err'}
+                  {t('dashboard.notes.mistake', { defaultValue: 'Err' })}
                 </div>
                 <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600">
-                  {labels.dashboard?.notes?.memo || 'Mem'}
+                  {t('dashboard.notes.memo', { defaultValue: 'Mem' })}
                 </div>
               </div>
             </div>
@@ -412,7 +415,7 @@ export default function DashboardPage({
           />
           {/* SVG Underline Header */}
           <h1 className="text-4xl md:text-5xl font-black font-display text-slate-900 tracking-tight mb-2">
-            Good {getGreeting()},{' '}
+            {getGreeting()},{' '}
             <span className="text-indigo-600 relative inline-block">
               {user?.name?.split(' ')[0] || 'Learner'}
               <svg
@@ -425,7 +428,7 @@ export default function DashboardPage({
             </span>
           </h1>
           <p className="text-slate-500 font-bold mt-1">
-            {labels.dashboard?.subtitle || "Ready to beat today's boss?"}
+            {t('dashboard.subtitle', { defaultValue: "Ready to beat today's boss?" })}
           </p>
         </div>
 
@@ -440,7 +443,9 @@ export default function DashboardPage({
               className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 hover:scale-110 transition cursor-pointer"
             >
               <span className="text-lg">👑</span>
-              <span className="font-bold text-white text-sm">Premium</span>
+              <span className="font-bold text-white text-sm">
+                {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
+              </span>
             </div>
           )}
         </div>
@@ -450,7 +455,7 @@ export default function DashboardPage({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
           <div
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[220px] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''}`}
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''}`}
           >
             {cardOrder.map(id => (
               <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>

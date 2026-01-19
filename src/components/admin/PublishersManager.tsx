@@ -5,7 +5,19 @@ import { NoArgs, qRef, mRef } from '../../utils/convexRefs';
 
 export const PublishersManager: React.FC = () => {
   const publishers = useQuery(
-    qRef<NoArgs, { _id: string; name: string; imageUrl?: string }[]>('publishers:getAll')
+    qRef<
+      NoArgs,
+      {
+        _id: string;
+        name: string;
+        nameKo?: string;
+        nameZh?: string;
+        nameEn?: string;
+        nameVi?: string;
+        nameMn?: string;
+        imageUrl?: string;
+      }[]
+    >('publishers:getAll')
   );
   const institutes = useQuery(
     qRef<NoArgs, { _id: string; id?: string; postgresId?: string; publisher?: string }[]>(
@@ -13,13 +25,29 @@ export const PublishersManager: React.FC = () => {
     )
   );
   const savePublisher = useMutation(
-    mRef<{ name: string; imageUrl?: string }, unknown>('publishers:save')
+    mRef<
+      {
+        name: string;
+        nameKo?: string;
+        nameZh?: string;
+        nameEn?: string;
+        nameVi?: string;
+        nameMn?: string;
+        imageUrl?: string;
+      },
+      unknown
+    >('publishers:save')
   );
   const generateUploadUrl = useMutation(mRef<NoArgs, string>('publishers:generateUploadUrl'));
 
   const [editingPub, setEditingPub] = useState<{
     id?: string;
     name: string;
+    nameKo?: string;
+    nameZh?: string;
+    nameEn?: string;
+    nameVi?: string;
+    nameMn?: string;
     imageUrl?: string;
   } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -28,11 +56,32 @@ export const PublishersManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mergedPublishers = useMemo(() => {
-    const pubMap = new Map<string, { id?: string; name: string; imageUrl?: string }>();
+    const pubMap = new Map<
+      string,
+      {
+        id?: string;
+        name: string;
+        nameKo?: string;
+        nameZh?: string;
+        nameEn?: string;
+        nameVi?: string;
+        nameMn?: string;
+        imageUrl?: string;
+      }
+    >();
 
     // 1. Add existing publishers from DB
     publishers?.forEach(p => {
-      pubMap.set(p.name, { id: p._id, name: p.name, imageUrl: p.imageUrl });
+      pubMap.set(p.name, {
+        id: p._id,
+        name: p.name,
+        nameKo: p.nameKo,
+        nameZh: p.nameZh,
+        nameEn: p.nameEn,
+        nameVi: p.nameVi,
+        nameMn: p.nameMn,
+        imageUrl: p.imageUrl,
+      });
     });
 
     // 2. Add found publishers from Institutes
@@ -42,7 +91,11 @@ export const PublishersManager: React.FC = () => {
       }
     });
 
-    return Array.from(pubMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(pubMap.values()).sort((a, b) => {
+      const left = a.nameKo || a.name;
+      const right = b.nameKo || b.name;
+      return left.localeCompare(right);
+    });
   }, [publishers, institutes]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,10 +144,19 @@ export const PublishersManager: React.FC = () => {
 
   const handleSave = async () => {
     if (!editingPub?.name.trim()) return;
+    const normalizeText = (value?: string) => {
+      const trimmed = value?.trim();
+      return trimmed ? trimmed : undefined;
+    };
     setSaving(true);
     try {
       await savePublisher({
-        name: editingPub.name,
+        name: editingPub.name.trim(),
+        nameKo: normalizeText(editingPub.nameKo),
+        nameZh: normalizeText(editingPub.nameZh),
+        nameEn: normalizeText(editingPub.nameEn),
+        nameVi: normalizeText(editingPub.nameVi),
+        nameMn: normalizeText(editingPub.nameMn),
         imageUrl: editingPub.imageUrl,
       });
       setEditingPub(null);
@@ -135,7 +197,16 @@ export const PublishersManager: React.FC = () => {
             <div
               key={pub.name}
               onClick={() => {
-                setEditingPub({ id: pub.id, name: pub.name, imageUrl: pub.imageUrl });
+                setEditingPub({
+                  id: pub.id,
+                  name: pub.name,
+                  nameKo: pub.nameKo,
+                  nameZh: pub.nameZh,
+                  nameEn: pub.nameEn,
+                  nameVi: pub.nameVi,
+                  nameMn: pub.nameMn,
+                  imageUrl: pub.imageUrl,
+                });
                 setPreviewUrl(null);
               }}
               className={`p-3 border-2 rounded-lg cursor-pointer flex items-center gap-3 ${editingPub?.name === pub.name ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'}`}
@@ -152,7 +223,10 @@ export const PublishersManager: React.FC = () => {
                 </div>
               )}
               <div className="flex-1">
-                <div className="font-bold">{pub.name}</div>
+                <div className="font-bold">{pub.nameKo || pub.name}</div>
+                {pub.nameKo && pub.nameKo !== pub.name && (
+                  <div className="text-[10px] text-zinc-500 font-medium">{pub.name}</div>
+                )}
                 {!pub.id && <div className="text-[10px] text-amber-500 font-bold">未配置</div>}
               </div>
             </div>
@@ -166,7 +240,7 @@ export const PublishersManager: React.FC = () => {
       {/* Editor */}
       <div className="flex-1 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
         {editingPub ? (
-          <div className="max-w-md mx-auto space-y-6">
+          <div className="max-w-2xl mx-auto space-y-6">
             <h2 className="text-xl font-black">{editingPub.id ? '编辑出版社' : '新增出版社'}</h2>
 
             <div>
@@ -180,6 +254,57 @@ export const PublishersManager: React.FC = () => {
                 className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
                 placeholder="如：延世大学"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-2">韩语名称（主展示）</label>
+              <input
+                value={editingPub.nameKo || ''}
+                onChange={e => setEditingPub({ ...editingPub, nameKo: e.target.value })}
+                className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
+                placeholder="예: 연세대학교"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">出版社名称（中文）</label>
+                <input
+                  value={editingPub.nameZh || ''}
+                  onChange={e => setEditingPub({ ...editingPub, nameZh: e.target.value })}
+                  className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                  placeholder="如：延世大学"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Publisher Name (English)</label>
+                <input
+                  value={editingPub.nameEn || ''}
+                  onChange={e => setEditingPub({ ...editingPub, nameEn: e.target.value })}
+                  className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                  placeholder="e.g. Yonsei University"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">
+                  Tên nhà xuất bản (Tiếng Việt)
+                </label>
+                <input
+                  value={editingPub.nameVi || ''}
+                  onChange={e => setEditingPub({ ...editingPub, nameVi: e.target.value })}
+                  className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                  placeholder="Ví dụ: Đại học Yonsei"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Нэр (Монгол)</label>
+                <input
+                  value={editingPub.nameMn || ''}
+                  onChange={e => setEditingPub({ ...editingPub, nameMn: e.target.value })}
+                  className="w-full p-2 border-2 border-zinc-300 rounded-lg"
+                  placeholder="Жишээ: Ёнсэ их сургууль"
+                />
+              </div>
             </div>
 
             <div>
@@ -240,7 +365,7 @@ export const PublishersManager: React.FC = () => {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !editingPub.name}
+                disabled={saving || !editingPub.name.trim()}
                 className="flex-1 py-2 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800 disabled:opacity-50"
               >
                 {saving ? '保存中...' : '保存'}

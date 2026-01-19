@@ -480,6 +480,7 @@
     "streak": "Chuỗi ngày",
     "days": "{count} Ngày",
     "premium": "Premium",
+    "premiumBadge": "Premium",
     "upgrade": {
       "premium": "Cao cấp →"
     },
@@ -504,6 +505,8 @@
     "topik": {
       "title": "Thi thử\nTOPIK",
       "maxScore": "Điểm cao",
+      "cardTitle": "Thi thử\nTOPIK",
+      "bestLabel": "Điểm cao",
       "all": "Tất cả",
       "clickStart": "Bấm để bắt đầu thi",
       "confirmEnd": "Bạn có chắc chắn muốn kết thúc bài thi? Tiến độ sẽ được lưu lại.",
@@ -524,6 +527,7 @@
       "examLoadError": "Không thể tải nội dung đề thi. Vui lòng kiểm tra kết nối."
     },
     "video": {
+      "cardTitle": "Video\nNhập vai",
       "title": "Trung tâm video",
       "new": "Mới cập nhật",
       "subtitle": "Học tiếng Hàn qua video với phụ đề và tra từ.",

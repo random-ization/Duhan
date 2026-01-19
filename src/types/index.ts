@@ -67,7 +67,7 @@ export interface ExamAttempt {
   totalScore?: number; // Alias for maxScore
   correctCount?: number; // Number of correct answers
   timestamp: number;
-  userAnswers: Record<string, number>; // questionId (string) -> optionIndex (JSON keys are always strings)
+  userAnswers: Record<number, number>;
 }
 
 // Mistake model - simplified version, matches Prisma Mistake model
@@ -118,6 +118,10 @@ export interface LevelConfig {
 export interface Institute {
   id: string;
   name: string; // e.g., Yonsei, Sogang, Ewha
+  nameZh?: string;
+  nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
   levels: (LevelConfig | number)[]; // Support both old format and new format mixed array from Convex
   coverUrl?: string; // Cover image URL for all books in this series
   themeColor?: string; // Theme color for book styling (hex color)

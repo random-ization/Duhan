@@ -11,6 +11,7 @@ import { useData } from '../contexts/DataContext';
 import { LearningModuleType, TextbookContent } from '../types';
 import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
+import { getLocalizedContent } from '../utils/languageUtils';
 
 const ModulePage: React.FC = () => {
   const { t } = useTranslation();
@@ -171,7 +172,10 @@ const ModulePage: React.FC = () => {
     derivedListType = 'MISTAKES' as const;
   }
 
-  const instituteName = institutes.find(i => i.id === effectiveInstitute)?.name || 'Korean';
+  const institute = institutes.find(i => i.id === effectiveInstitute);
+  const instituteName = institute
+    ? getLocalizedContent(institute, 'name', language) || institute.name || 'Korean'
+    : 'Korean';
 
   return (
     <div className="p-6">

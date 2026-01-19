@@ -449,7 +449,7 @@
       "unlockDesc": "升级后解锁全部 100+ 单元教材与 TOPIK 真题库。",
       "viewBenefits": "查看会员权益",
       "decorationTitle": "升级会员，解锁完整课程体系与真题库",
-      "decorationDesc": "Upgrade to unlock full curriculum & TOPIK exams"
+      "decorationDesc": "升级后解锁完整课程体系与 TOPIK 真题库"
     },
     "greeting": {
       "morning": "早安",
@@ -506,6 +506,7 @@
     "streak": "连续打卡",
     "days": "{count} 天",
     "premium": "Premium",
+    "premiumBadge": "高级会员",
     "upgrade": {
       "premium": "高级版 →"
     },
@@ -528,6 +529,8 @@
       "level": "{level} 级"
     },
     "topik": {
+      "cardTitle": "TOPIK\n模拟考试",
+      "bestLabel": "最高",
       "examCenter": "考试中心",
       "realExam": "真题实战模拟",
       "all": "全部",
@@ -548,6 +551,7 @@
       "examLoadError": "无法加载试卷内容，请检查网络连接。"
     },
     "video": {
+      "cardTitle": "沉浸\n视频",
       "title": "视频中心",
       "new": "最新更新",
       "subtitle": "沉浸式韩语视频学习，配有同步字幕和查词功能",
@@ -570,7 +574,7 @@
       "noSubtitlesDesc": "该视频尚未配置字幕"
     },
     "podcast": {
-      "label": "Podcast",
+      "label": "播客",
       "listen": "立即收听",
       "subtitle": "谈话系列",
       "mySubs": "我的订阅",

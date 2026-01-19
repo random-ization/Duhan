@@ -152,6 +152,10 @@ export const createInstitute = mutation({
   args: {
     id: v.string(),
     name: v.string(),
+    nameZh: v.optional(v.string()),
+    nameEn: v.optional(v.string()),
+    nameVi: v.optional(v.string()),
+    nameMn: v.optional(v.string()),
     levels: v.any(), // Array of level objects
     coverUrl: v.optional(v.string()),
     themeColor: v.optional(v.string()),
@@ -162,6 +166,13 @@ export const createInstitute = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const existing = await ctx.db
+      .query('institutes')
+      .withIndex('by_name', q => q.eq('name', args.name))
+      .first();
+    if (existing && existing.isArchived !== true) {
+      throw new ConvexError({ code: 'INSTITUTE_NAME_EXISTS' });
+    }
     const instituteId = await ctx.db.insert('institutes', args);
     return { id: instituteId, success: true };
   },
@@ -173,6 +184,10 @@ export const updateInstitute = mutation({
     legacyId: v.string(),
     updates: v.object({
       name: v.optional(v.string()),
+      nameZh: v.optional(v.string()),
+      nameEn: v.optional(v.string()),
+      nameVi: v.optional(v.string()),
+      nameMn: v.optional(v.string()),
       levels: v.optional(v.string()),
       coverUrl: v.optional(v.string()),
       themeColor: v.optional(v.string()),
@@ -193,6 +208,16 @@ export const updateInstitute = mutation({
 
     if (!institute) {
       throw new ConvexError({ code: 'INSTITUTE_NOT_FOUND' });
+    }
+
+    if (updates.name && updates.name !== institute.name) {
+      const existing = await ctx.db
+        .query('institutes')
+        .withIndex('by_name', q => q.eq('name', updates.name as string))
+        .first();
+      if (existing && existing._id !== institute._id && existing.isArchived !== true) {
+        throw new ConvexError({ code: 'INSTITUTE_NAME_EXISTS' });
+      }
     }
 
     // @ts-expect-error: Fix build error

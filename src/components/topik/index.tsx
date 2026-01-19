@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';
@@ -9,6 +9,7 @@ import { TOPIK } from '../../utils/convexRefs';
 import { TopikQuestionDto } from '../../../convex/topik';
 import { useApp } from '../../contexts/AppContext';
 import { getLabels } from '../../utils/i18n';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -34,7 +35,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   onDeleteHistory,
 }) => {
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const convex = useConvex();
   const { setSidebarHidden } = useApp();
   const labels = getLabels(language);
@@ -245,7 +246,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           const fullExam = { ...exam, questions: fullQuestions };
           setCurrentExam(fullExam as TopikExam);
           setUserAnswers(attempt.userAnswers);
-          setView('REVIEW');
+          setViewState('REVIEW');
+          navigate(`/topik/${exam.id}/review`);
         } catch (error) {
           console.error('Failed to load exam for review:', error);
           alert(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
@@ -255,7 +257,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         return;
       }
     }
-    setView('REVIEW');
+    setViewState('REVIEW');
   };
 
   const resetExam = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 // import { useAuth } from '../contexts/AuthContext';
 // import { useData } from '../contexts/DataContext';
 import { ChevronDown, Search, ChevronRight, Layers } from 'lucide-react';
@@ -19,6 +19,13 @@ const PUBLISHER_THEMES: Record<
     border: 'border-indigo-900',
     light: 'bg-indigo-50',
   },
+  연세대학교: {
+    bg: 'bg-indigo-100',
+    text: 'text-indigo-600',
+    accent: 'bg-indigo-500',
+    border: 'border-indigo-900',
+    light: 'bg-indigo-50',
+  },
   首尔大学: {
     bg: 'bg-rose-100',
     text: 'text-rose-600',
@@ -26,7 +33,21 @@ const PUBLISHER_THEMES: Record<
     border: 'border-rose-900',
     light: 'bg-rose-50',
   },
+  서울대학교: {
+    bg: 'bg-rose-100',
+    text: 'text-rose-600',
+    accent: 'bg-rose-500',
+    border: 'border-rose-900',
+    light: 'bg-rose-50',
+  },
   中央大学: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-600',
+    accent: 'bg-emerald-500',
+    border: 'border-emerald-900',
+    light: 'bg-emerald-50',
+  },
+  중앙대학교: {
     bg: 'bg-emerald-100',
     text: 'text-emerald-600',
     accent: 'bg-emerald-500',
@@ -42,9 +63,58 @@ const PUBLISHER_THEMES: Record<
   },
 };
 
+const PUBLISHER_TRANSLATIONS: Record<
+  string,
+  { ko: string; zh: string; en: string; vi: string; mn: string }
+> = {
+  延世大学: {
+    ko: '연세대학교',
+    zh: '延世大学',
+    en: 'Yonsei University',
+    vi: 'Đại học Yonsei',
+    mn: 'Ёнсэ их сургууль',
+  },
+  연세대학교: {
+    ko: '연세대학교',
+    zh: '延世大学',
+    en: 'Yonsei University',
+    vi: 'Đại học Yonsei',
+    mn: 'Ёнсэ их сургууль',
+  },
+  首尔大学: {
+    ko: '서울대학교',
+    zh: '首尔大学',
+    en: 'Seoul National University',
+    vi: 'Đại học Quốc gia Seoul',
+    mn: 'Сөүлийн үндэсний их сургууль',
+  },
+  서울대학교: {
+    ko: '서울대학교',
+    zh: '首尔大学',
+    en: 'Seoul National University',
+    vi: 'Đại học Quốc gia Seoul',
+    mn: 'Сөүлийн үндэсний их сургууль',
+  },
+  中央大学: {
+    ko: '중앙대학교',
+    zh: '中央大学',
+    en: 'Chung-Ang University',
+    vi: 'Đại học Chung-Ang',
+    mn: 'Чүнган их сургууль',
+  },
+  중앙대학교: {
+    ko: '중앙대학교',
+    zh: '中央大学',
+    en: 'Chung-Ang University',
+    vi: 'Đại học Chung-Ang',
+    mn: 'Чүнган их сургууль',
+  },
+};
+
 const CoursesOverview: React.FC = () => {
   const navigate = useLocalizedNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = useMemo(() => (i18n.language || 'en').split('-')[0], [i18n.language]);
 
   // 1. Fetch Data
   type Course = {
@@ -58,13 +128,78 @@ const CoursesOverview: React.FC = () => {
     totalUnits?: number;
     volume?: string;
   };
-  type Publisher = { name: string; imageUrl?: string };
+  type Publisher = {
+    name: string;
+    nameKo?: string;
+    nameZh?: string;
+    nameEn?: string;
+    nameVi?: string;
+    nameMn?: string;
+    imageUrl?: string;
+  };
   const courses = useQuery(qRef<NoArgs, Course[]>('institutes:getAll'));
   const publishersData = useQuery(qRef<NoArgs, Publisher[]>('publishers:getAll'));
   const isLoading = courses === undefined;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedPublisher, setExpandedPublisher] = useState<string | null>(null);
+
+  const publishersByName = useMemo(() => {
+    const entries = publishersData?.map(p => [p.name, p] as const) || [];
+    return new Map(entries);
+  }, [publishersData]);
+
+  const getPublisherNames = useCallback(
+    (publisher: string) => {
+      const data = publishersByName.get(publisher);
+      const fallback = PUBLISHER_TRANSLATIONS[publisher];
+      const primary = data?.nameKo || fallback?.ko || publisher;
+      let localized: string | undefined;
+      switch (currentLang) {
+        case 'zh':
+          localized = data?.nameZh || fallback?.zh;
+          break;
+        case 'en':
+          localized = data?.nameEn || fallback?.en;
+          break;
+        case 'vi':
+          localized = data?.nameVi || fallback?.vi;
+          break;
+        case 'mn':
+          localized = data?.nameMn || fallback?.mn;
+          break;
+        default:
+          localized = undefined;
+          break;
+      }
+      return {
+        primary,
+        localized: localized && localized !== primary ? localized : undefined,
+      };
+    },
+    [currentLang, publishersByName]
+  );
+
+  const getPublisherSearchValues = useCallback(
+    (publisher: string) => {
+      const data = publishersByName.get(publisher);
+      const fallback = PUBLISHER_TRANSLATIONS[publisher];
+      return [
+        publisher,
+        data?.nameKo,
+        data?.nameZh,
+        data?.nameEn,
+        data?.nameVi,
+        data?.nameMn,
+        fallback?.ko,
+        fallback?.zh,
+        fallback?.en,
+        fallback?.vi,
+        fallback?.mn,
+      ].filter(Boolean) as string[];
+    },
+    [publishersByName]
+  );
 
   // 2. Group Data by Publisher
   const groupedCourses = useMemo(() => {
@@ -78,7 +213,9 @@ const CoursesOverview: React.FC = () => {
         const query = searchQuery.toLowerCase();
         const titleMatch = course.name.toLowerCase().includes(query);
         const levelMatch = course.displayLevel?.toLowerCase().includes(query);
-        const publisherMatch = course.publisher?.toLowerCase().includes(query);
+        const publisherMatch = getPublisherSearchValues(course.publisher || '').some(value =>
+          value.toLowerCase().includes(query)
+        );
         if (!titleMatch && !levelMatch && !publisherMatch) return false;
       }
       return true;
@@ -101,7 +238,7 @@ const CoursesOverview: React.FC = () => {
     });
 
     return groups;
-  }, [courses, searchQuery, t]);
+  }, [courses, searchQuery, t, getPublisherSearchValues]);
 
   // Auto-expand if searching or if only one group
   React.useEffect(() => {
@@ -193,6 +330,8 @@ const CoursesOverview: React.FC = () => {
         {Object.entries(groupedCourses).map(([publisher, groupCourses]) => {
           const theme = getTheme(publisher);
           const isOpen = expandedPublisher === publisher;
+          const publisherData = publishersByName.get(publisher);
+          const displayNames = getPublisherNames(publisher);
 
           return (
             <div key={publisher} className={`group ${isOpen ? 'drawer-open' : ''}`}>
@@ -217,15 +356,15 @@ const CoursesOverview: React.FC = () => {
                     <div
                       className={`w-16 h-16 ${theme.bg} border-2 border-slate-900 rounded-xl flex items-center justify-center shadow-sm group-hover:rotate-3 transition-transform overflow-hidden relative`}
                     >
-                      {publishersData?.find(p => p.name === publisher)?.imageUrl ? (
+                      {publisherData?.imageUrl ? (
                         <img
-                          src={publishersData.find(p => p.name === publisher)?.imageUrl}
-                          alt={publisher}
+                          src={publisherData.imageUrl}
+                          alt={displayNames.primary}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <span className={`font-display text-3xl font-black ${theme.text}`}>
-                          {publisher.charAt(0)}
+                          {displayNames.primary.charAt(0)}
                         </span>
                       )}
                     </div>
@@ -233,8 +372,13 @@ const CoursesOverview: React.FC = () => {
                       <h2
                         className={`font-display text-2xl md:text-3xl font-black text-slate-900 ${isOpen ? theme.text : 'group-hover:' + theme.text} transition-colors`}
                       >
-                        {publisher}
+                        {displayNames.primary}
                       </h2>
+                      {displayNames.localized && (
+                        <div className="text-xs font-bold text-slate-500 mt-1">
+                          {displayNames.localized}
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mt-1">
                         <span className="bg-slate-100 border border-slate-900 px-2 py-0.5 rounded text-xs font-bold text-slate-600">
                           {t('coursesLibrary.booksCount', { count: groupCourses.length })}
@@ -276,16 +420,16 @@ const CoursesOverview: React.FC = () => {
                   >
                     <div className="w-full h-0.5 bg-slate-200 mb-6 border-b-2 border-dashed border-slate-300/50"></div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
                       {groupCourses.map(course => (
                         <div
                           key={course._id || course.id}
                           onClick={() => navigate(`/course/${course.id || course.postgresId}`)}
-                          className="flex w-full bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group/card h-20"
+                          className="flex w-full bg-white border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group/card min-h-[104px]"
                         >
                           {/* Left: Level Strip */}
                           <div
-                            className={`w-14 ${theme.accent} border-r-2 border-slate-900 flex flex-col items-center justify-center relative overflow-hidden`}
+                            className={`w-16 ${theme.accent} border-r-2 border-slate-900 flex flex-col items-center justify-center relative overflow-hidden px-1`}
                           >
                             {/* Diagonal stripes pattern overlay */}
                             <div
@@ -297,7 +441,7 @@ const CoursesOverview: React.FC = () => {
                               }}
                             ></div>
 
-                            <span className="text-2xl font-black text-white leading-none italic relative z-10">
+                            <span className="text-base font-black text-white leading-none relative z-10 whitespace-nowrap">
                               {course.displayLevel
                                 ? t('coursesLibrary.levelTag', { level: course.displayLevel })
                                 : '?'}
@@ -305,9 +449,9 @@ const CoursesOverview: React.FC = () => {
                           </div>
 
                           {/* Center: Content */}
-                          <div className="flex-1 px-4 flex flex-col justify-center min-w-0">
+                          <div className="flex-1 px-4 py-3 flex flex-col justify-center min-w-0">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-black text-lg text-slate-900 leading-tight group-hover/card:text-blue-600 transition-colors truncate">
+                              <h3 className="font-black text-lg text-slate-900 leading-snug group-hover/card:text-blue-600 transition-colors line-clamp-2 break-words">
                                 {course.name}
                               </h3>
                               {course.volume && (
