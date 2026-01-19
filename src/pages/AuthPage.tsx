@@ -21,8 +21,8 @@ import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
-import { getLabels } from '../utils/i18n';
 import { qRef } from '../utils/convexRefs';
+import { useTranslation } from 'react-i18next';
 
 // Google OAuth Config - Removed legacy config
 // const GOOGLE_CLIENT_ID ...
@@ -33,8 +33,8 @@ export default function AuthPage() {
   const currentLanguage = useCurrentLanguage();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { user, language, loading: authLoading } = useAuth(); // Assume loading is available
-  const labels = getLabels(language);
+  const { user, loading: authLoading } = useAuth(); // Assume loading is available
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export default function AuthPage() {
       await signIn('google', { redirectTo: postAuthRedirectUrl });
     } catch (e) {
       const error = e as Error;
-      setError(error.message || 'Google login failed');
+      setError(error.message || t('auth.googleLoginFailed'));
     }
   };
 
@@ -115,7 +115,7 @@ export default function AuthPage() {
     } catch (e) {
       const error = e as Error;
       console.error('Auth error:', error);
-      setError(error.message || (isLogin ? 'Login failed' : 'Registration failed'));
+      setError(error.message || t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -139,46 +139,39 @@ export default function AuthPage() {
             {logoSetting?.value?.url ? (
               <img
                 src={logoSetting.value.url}
-                alt="Logo"
+                alt={t('common.alt.logo')}
                 className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl"
               />
             ) : (
               <img
                 src="/logo.png"
-                alt="Logo"
+                alt={t('common.alt.logo')}
                 className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl"
               />
             )}
-            <h1 className="text-5xl font-black font-display mb-2">
-              {labels.auth?.brand || 'DuHan.'}
-            </h1>
-            <p className="text-indigo-200 font-bold text-lg tracking-wide">
-              {labels.auth?.slogan ||
-                (language === 'zh' ? '提升你的韩语水平' : 'Level Up Your Korean')}
-            </p>
+            <h1 className="text-5xl font-black font-display mb-2">{t('auth.brand')}</h1>
+            <p className="text-indigo-200 font-bold text-lg tracking-wide">{t('auth.slogan')}</p>
           </div>
 
           {/* 3D Rocket Decoration */}
           <div className="absolute bottom-10 -left-10 animate-bounce duration-[2000ms]">
-            <img src="/emojis/Rocket.png" className="w-32 h-32 drop-shadow-xl" alt="Rocket" />
+            <img
+              src="/emojis/Rocket.png"
+              className="w-32 h-32 drop-shadow-xl"
+              alt={t('auth.alt.rocket')}
+            />
           </div>
         </div>
 
         {/* Right: Console (Form) */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
           <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
-            {isLogin
-              ? labels.auth?.welcomeBack ||
-                (language === 'zh' ? '欢迎回来，探索者！' : 'Welcome back, Explorer!')
-              : labels.auth?.createCharacter ||
-                (language === 'zh' ? '创建新角色' : 'Create New Character')}{' '}
+            {isLogin ? t('auth.welcomeBack') : t('auth.createCharacter')}{' '}
             <Sparkles className="text-yellow-400 fill-current" />
           </h2>
 
           {error && (
-            <div
-              className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-2 font-bold text-sm ${error.includes('成功') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}
-            >
+            <div className="mb-6 p-4 rounded-xl border-2 flex items-center gap-2 font-bold text-sm bg-red-50 text-red-600 border-red-100">
               <AlertCircle size={18} /> {error}
             </div>
           )}
@@ -192,7 +185,7 @@ export default function AuthPage() {
                 />
                 <input
                   type="text"
-                  placeholder={labels.auth?.placeholderName || 'Character Name'}
+                  placeholder={t('auth.placeholderName')}
                   className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -208,7 +201,7 @@ export default function AuthPage() {
               />
               <input
                 type="email"
-                placeholder={labels.auth?.placeholderEmail || 'Email Address'}
+                placeholder={t('auth.placeholderEmail')}
                 className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -223,7 +216,7 @@ export default function AuthPage() {
               />
               <input
                 type="password"
-                placeholder={labels.auth?.placeholderPassword || 'Password'}
+                placeholder={t('auth.placeholderPassword')}
                 className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
@@ -238,7 +231,7 @@ export default function AuthPage() {
                   to="/forgot-password"
                   className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition"
                 >
-                  <HelpCircle size={14} /> {labels.auth?.forgotPassword || 'Forgot Password?'}
+                  <HelpCircle size={14} /> {t('auth.forgotPassword')}
                 </LocalizedLink>
               </div>
             )}
@@ -251,10 +244,9 @@ export default function AuthPage() {
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : isLogin ? (
-                labels.auth?.loginButton ||
-                (language === 'zh' ? '开始游戏 (登录)' : 'Start Game (LOGIN)')
+                t('auth.loginButton')
               ) : (
-                labels.auth?.signupButton || (language === 'zh' ? '注册账户' : 'Sign Up')
+                t('auth.signupButton')
               )}
               {!loading && <ArrowRight size={20} />}
             </button>
@@ -264,8 +256,7 @@ export default function AuthPage() {
           <div className="my-8 flex items-center gap-4">
             <div className="h-px bg-slate-200 flex-1"></div>
             <span className="text-xs font-bold text-slate-400 uppercase">
-              {labels.auth?.orContinue ||
-                (language === 'zh' ? '或通过以下方式继续' : 'Or continue with')}
+              {t('auth.orContinue')}
             </span>
             <div className="h-px bg-slate-200 flex-1"></div>
           </div>
@@ -280,9 +271,9 @@ export default function AuthPage() {
               <img
                 src="https://www.svgrepo.com/show/475656/google-color.svg"
                 className="w-5 h-5"
-                alt="Google"
+                alt={t('auth.social.google')}
               />
-              Google
+              {t('auth.social.google')}
             </button>
             <button
               type="button"
@@ -290,15 +281,12 @@ export default function AuthPage() {
               className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-400 cursor-not-allowed opacity-50"
             >
               <span className="bg-yellow-400 text-black font-black text-xs px-1 rounded">K</span>
-              Kakao
+              {t('auth.social.kakao')}
             </button>
           </div>
 
           <div className="mt-8 text-center text-xs font-bold text-slate-400">
-            {isLogin
-              ? labels.auth?.noAccount || (language === 'zh' ? '还没有账号？' : 'No account yet? ')
-              : labels.auth?.hasAccount ||
-                (language === 'zh' ? '已经有账号？' : 'Already have an account? ')}
+            {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
             <button
               type="button"
               onClick={() => {
@@ -307,9 +295,7 @@ export default function AuthPage() {
               }}
               className="text-indigo-600 hover:underline uppercase"
             >
-              {isLogin
-                ? labels.auth?.registerAction || 'Create Character'
-                : labels.auth?.loginAction || 'Login Now'}
+              {isLogin ? t('auth.registerAction') : t('auth.loginAction')}
             </button>
           </div>
         </div>

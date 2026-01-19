@@ -390,6 +390,58 @@
     "booksDigitized": "100+ 数字化教材",
     "examPapers": "35+ 套真题试卷"
   },
+  "coursesLibrary": {
+    "badge": "教材库",
+    "title": "选择教材",
+    "summary": "共收录 {{count}} 本教材，按出版社分组",
+    "searchPlaceholder": "搜索教材...",
+    "noResults": "未找到相关教材",
+    "publisherBadge": "出版社",
+    "booksCount": "{{count}} 本书",
+    "levelTag": "{{level}}级",
+    "unitsCount": "{{count}} 单元",
+    "otherPublisher": "其他教材"
+  },
+  "courseDashboard": {
+    "defaultCourseName": "首尔大学韩国语 1A",
+    "defaultDisplayLevel": "第一册",
+    "backToShelf": "返回书架",
+    "courseMeta": "{{level}} · 第 1-{{totalUnits}} 课",
+    "overallProgress": "总进度",
+    "trainingModules": "专项训练",
+    "modules": {
+      "vocabulary": "单词记忆",
+      "grammar": "语法训练",
+      "reading": "课文阅读",
+      "listening": "听力磨耳朵"
+    },
+    "progress": {
+      "totalWords": "总单词",
+      "grammarPoints": "语法点",
+      "units": "单元数"
+    },
+    "lessonCount": "{{count}} 课",
+    "grammarTitle": "本册语法",
+    "grammarSubtitle": "重点语法",
+    "viewAll": "查看全部",
+    "noGrammar": "暂无语法数据",
+    "status": {
+      "mastered": "已掌握",
+      "learning": "学习中",
+      "notStarted": "未学习"
+    }
+  },
+  "module": {
+    "unitTitle": "第{{unit}}单元",
+    "listeningUnitTitle": "第{{unit}}单元 · 听力"
+  },
+  "topikLobby": {
+    "roundTitle": "第 {{round}} 届 TOPIK II 真题",
+    "timeLimit": "{{count}} 分钟",
+    "noExams": "暂无可用考试",
+    "unknownExam": "未知考试",
+    "viewAllHistory": "查看全部历史"
+  },
   "dashboard": {
     "banner": {
       "upgradeTitle": "升级到 Premium 会员",
@@ -701,6 +753,9 @@
   },
   "common": {
     "appName": "Duhan",
+    "alt": {
+      "logo": "Duhan 标志"
+    },
     "login": "登录",
     "getStarted": "开始使用",
     "privacy": "隐私政策",
@@ -723,6 +778,7 @@
     },
     "stats": {
       "videos": "视频课程",
+      "levelRange": "1-6级",
       "curriculum": "完整课程",
       "ai": "AI 导师",
       "exam": "模拟考试"
@@ -764,14 +820,18 @@
       "videoWord2": "的",
       "videoWord3": "迫降",
       "subtitle": "李正赫...",
+      "prevSentence": "……上一句。",
       "lessonTitle": "第一课：自我介绍",
+      "lessonLevel1": "第 1 级",
       "lessonContent": "你好？我是詹姆斯。",
       "grammarTitle": "语法点",
       "grammarDesc": "用于标识主语身份。",
       "podcastTitle": "TTMIK 播客",
       "podcastHost": "主持人：贤宇",
       "examTitle": "TOPIK II (写作)",
+      "questionTitle": "Q53. 图表分析",
       "feedbackTitle": "AI 反馈",
+      "grammarCheck": "语法检查：",
       "feedbackContent": "作文请使用正式语尾。"
     },
     "pricing": {
@@ -798,6 +858,9 @@
     "discount": "70% OFF",
     "title": "为您的韩语流利度投资",
     "subtitle": "选择适合您进度的计划。",
+    "paymentUpgrading": "支付系统升级中……",
+    "recommended": "推荐",
+    "currentPlan": "当前方案",
     "features": {
       "monthly": {
         "cloudSync": "云端笔记同步"
@@ -824,6 +887,7 @@
     "videos": "沉浸视频",
     "podcasts": "韩语播客",
     "profile": "个人资料",
+    "viewProfile": "查看资料",
     "settings": "设置",
     "logout": "退出"
   },
@@ -873,7 +937,14 @@
     "resetSuccessDesc": "您已退出登录，请使用新密码重新登录",
     "invalidLink": "无效链接",
     "invalidLinkDesc": "链接已失效或缺失令牌，请重新请求",
-    "requestAgain": "重新请求"
+    "requestAgain": "重新请求",
+    "alt": {
+      "rocket": "火箭"
+    },
+    "social": {
+      "google": "Google",
+      "kakao": "Kakao"
+    }
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "创建播客频道失败。",

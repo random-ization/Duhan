@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 // import { useAuth } from '../contexts/AuthContext';
 // import { useData } from '../contexts/DataContext';
 import { ChevronDown, Search, ChevronRight, Layers } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { useQuery } from 'convex/react';
 import { NoArgs, qRef } from '../utils/convexRefs';
+import { useTranslation } from 'react-i18next';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 const PUBLISHER_THEMES: Record<
   string,
@@ -42,7 +43,8 @@ const PUBLISHER_THEMES: Record<
 };
 
 const CoursesOverview: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
 
   // 1. Fetch Data
   type Course = {
@@ -84,7 +86,7 @@ const CoursesOverview: React.FC = () => {
 
     // Then Group
     filtered.forEach(course => {
-      const pub = course.publisher || '其他教材';
+      const pub = course.publisher || t('coursesLibrary.otherPublisher');
       if (!groups[pub]) groups[pub] = [];
       groups[pub].push(course);
     });
@@ -99,7 +101,7 @@ const CoursesOverview: React.FC = () => {
     });
 
     return groups;
-  }, [courses, searchQuery]);
+  }, [courses, searchQuery, t]);
 
   // Auto-expand if searching or if only one group
   React.useEffect(() => {
@@ -142,14 +144,16 @@ const CoursesOverview: React.FC = () => {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <span className="bg-slate-900 text-white px-3 py-1 rounded text-xs font-black uppercase tracking-wider -rotate-2">
-                Library
+                {t('coursesLibrary.badge')}
               </span>
               <h1 className="font-display text-4xl font-black text-slate-900 tracking-tight">
-                选择教材
+                {t('coursesLibrary.title')}
               </h1>
             </div>
             <p className="text-slate-500 font-bold">
-              {isLoading ? '加载中...' : `共收录 ${courses?.length || 0} 本教材，按出版社分组`}
+              {isLoading
+                ? t('loading')
+                : t('coursesLibrary.summary', { count: courses?.length || 0 })}
             </p>
           </div>
         </div>
@@ -158,7 +162,7 @@ const CoursesOverview: React.FC = () => {
         <div className="relative w-full md:w-72 group">
           <input
             type="text"
-            placeholder="搜索教材..."
+            placeholder={t('coursesLibrary.searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-slate-900 focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all bg-white placeholder:text-slate-400 font-bold"
@@ -181,7 +185,9 @@ const CoursesOverview: React.FC = () => {
         )}
 
         {!isLoading && Object.keys(groupedCourses).length === 0 && (
-          <div className="text-center py-20 text-slate-400 font-bold">未找到相关教材</div>
+          <div className="text-center py-20 text-slate-400 font-bold">
+            {t('coursesLibrary.noResults')}
+          </div>
         )}
 
         {Object.entries(groupedCourses).map(([publisher, groupCourses]) => {
@@ -199,7 +205,7 @@ const CoursesOverview: React.FC = () => {
                   className={`absolute -top-7 left-6 ${theme.accent} border-2 border-b-0 border-slate-900 px-6 py-1.5 rounded-t-xl z-0 transition-transform group-hover:-translate-y-1`}
                 >
                   <span className="text-white text-xs font-black tracking-widest uppercase">
-                    Publisher
+                    {t('coursesLibrary.publisherBadge')}
                   </span>
                 </div>
 
@@ -231,7 +237,7 @@ const CoursesOverview: React.FC = () => {
                       </h2>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="bg-slate-100 border border-slate-900 px-2 py-0.5 rounded text-xs font-bold text-slate-600">
-                          {groupCourses.length} 本书
+                          {t('coursesLibrary.booksCount', { count: groupCourses.length })}
                         </span>
                       </div>
                     </div>
@@ -292,7 +298,9 @@ const CoursesOverview: React.FC = () => {
                             ></div>
 
                             <span className="text-2xl font-black text-white leading-none italic relative z-10">
-                              {course.displayLevel ? course.displayLevel + '급' : '?'}
+                              {course.displayLevel
+                                ? t('coursesLibrary.levelTag', { level: course.displayLevel })
+                                : '?'}
                             </span>
                           </div>
 
@@ -311,7 +319,7 @@ const CoursesOverview: React.FC = () => {
                             <div className="flex items-center gap-3 mt-1">
                               <div className="text-xs font-bold text-slate-500 flex items-center gap-1">
                                 <Layers size={14} />
-                                {course.totalUnits || 10} 单元
+                                {t('coursesLibrary.unitsCount', { count: course.totalUnits || 10 })}
                               </div>
                             </div>
                           </div>

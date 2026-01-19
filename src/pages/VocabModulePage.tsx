@@ -783,7 +783,9 @@ export default function VocabModulePage() {
 
                       {/* Hanja */}
                       {currentCard?.hanja && (
-                        <p className="text-lg text-slate-500 mb-3">漢字: {currentCard.hanja}</p>
+                        <p className="text-lg text-slate-500 mb-3">
+                          {labels.vocab?.hanja || 'Hanja'}: {currentCard.hanja}
+                        </p>
                       )}
 
                       {/* Tips Section (Yellow Background) */}

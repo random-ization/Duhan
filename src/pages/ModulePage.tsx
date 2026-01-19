@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { VocabModule } from '../features/vocab';
 import ReadingModule from '../features/textbook/ReadingModule';
 import ListeningModule from '../features/textbook/ListeningModule';
@@ -12,6 +13,7 @@ import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 
 const ModulePage: React.FC = () => {
+  const { t } = useTranslation();
   const { user, language } = useAuth();
   const { saveWord, recordMistake } = useUserActions();
   const {
@@ -54,7 +56,14 @@ const ModulePage: React.FC = () => {
         setSelectedLevel(1);
       }
     }
-  }, [isCourseRoute, instituteId, selectedInstitute, selectedLevel, setSelectedInstitute, setSelectedLevel]);
+  }, [
+    isCourseRoute,
+    instituteId,
+    selectedInstitute,
+    selectedLevel,
+    setSelectedInstitute,
+    setSelectedLevel,
+  ]);
 
   // Effective institute and level (prefer URL params for course routes)
   const effectiveInstitute = isCourseRoute && instituteId ? instituteId : selectedInstitute;
@@ -67,10 +76,14 @@ const ModulePage: React.FC = () => {
       case 'vocabulary':
       case 'vocab':
         return LearningModuleType.VOCABULARY;
-      case 'reading': return LearningModuleType.READING;
-      case 'listening': return LearningModuleType.LISTENING;
-      case 'grammar': return LearningModuleType.GRAMMAR;
-      default: return null;
+      case 'reading':
+        return LearningModuleType.READING;
+      case 'listening':
+        return LearningModuleType.LISTENING;
+      case 'grammar':
+        return LearningModuleType.GRAMMAR;
+      default:
+        return null;
     }
   }, [effectiveModuleParam]);
 
@@ -110,11 +123,14 @@ const ModulePage: React.FC = () => {
     return contexts;
   }, [textbookContexts, effectiveInstitute, effectiveLevel]);
 
-  const currentCourse = useMemo(() => ({
-    instituteId: effectiveInstitute || '',
-    level: effectiveLevel,
-    textbookUnit: 0
-  }), [effectiveInstitute, effectiveLevel]);
+  const currentCourse = useMemo(
+    () => ({
+      instituteId: effectiveInstitute || '',
+      level: effectiveLevel,
+      textbookUnit: 0,
+    }),
+    [effectiveInstitute, effectiveLevel]
+  );
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -178,7 +194,7 @@ const ModulePage: React.FC = () => {
         <ReadingModule
           courseId={effectiveInstitute || 'snu_1a'}
           unitIndex={effectiveLevel}
-          unitTitle={`第${effectiveLevel}单元`}
+          unitTitle={t('module.unitTitle', { unit: effectiveLevel })}
           language={language}
           onBack={handleBack}
         />
@@ -187,7 +203,7 @@ const ModulePage: React.FC = () => {
         <ListeningModule
           courseId={effectiveInstitute || 'snu_1a'}
           unitIndex={effectiveLevel}
-          unitTitle={`第${effectiveLevel}单元 · 听力`}
+          unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
           language={language}
           onBack={handleBack}
         />

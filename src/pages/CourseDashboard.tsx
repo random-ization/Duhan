@@ -1,12 +1,15 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
+import { useTranslation } from 'react-i18next';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 export default function CourseDashboard() {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
+  const { t } = useTranslation();
 
   // Use same Convex query as CoursesOverview for consistency
   type Institute = {
@@ -36,8 +39,8 @@ export default function CourseDashboard() {
 
   // Find current course by ID
   const course = institutes?.find(i => i.id === instituteId);
-  const courseName = course?.name || '首尔大学韩国语 1A';
-  const displayLevel = course?.displayLevel || '第一册';
+  const courseName = course?.name || t('courseDashboard.defaultCourseName');
+  const displayLevel = course?.displayLevel || t('courseDashboard.defaultDisplayLevel');
   const coverUrl = course?.coverUrl;
   const totalUnits = course?.totalUnits || 10;
 
@@ -52,14 +55,14 @@ export default function CourseDashboard() {
   const modules = [
     {
       id: 'vocabulary',
-      label: '单词记忆',
+      label: t('courseDashboard.modules.vocabulary'),
       subtitle: 'VOCABULARY',
       emoji: '🧩',
       stripeColor: 'bg-green-400',
       iconBg: 'bg-green-50',
       iconBorder: 'border-green-200',
       hoverBg: 'bg-green-400/90',
-      progressLabel: '总单词',
+      progressLabel: t('courseDashboard.progress.totalWords'),
       progressValue: loadingVocab ? '...' : `${vocabStats.total}`,
       progressColor: 'bg-green-400',
       progressWidth:
@@ -72,14 +75,14 @@ export default function CourseDashboard() {
     },
     {
       id: 'grammar',
-      label: '语法训练',
+      label: t('courseDashboard.modules.grammar'),
       subtitle: 'GRAMMAR',
       emoji: '⚡️',
       stripeColor: 'bg-purple-400',
       iconBg: 'bg-purple-50',
       iconBorder: 'border-purple-200',
       hoverBg: 'bg-purple-400/90',
-      progressLabel: '语法点',
+      progressLabel: t('courseDashboard.progress.grammarPoints'),
       progressValue: loadingGrammar ? '...' : `${grammarPoints.length}`,
       progressColor: 'bg-purple-400',
       progressWidth:
@@ -90,15 +93,15 @@ export default function CourseDashboard() {
     },
     {
       id: 'reading',
-      label: '课文阅读',
+      label: t('courseDashboard.modules.reading'),
       subtitle: 'READING',
       emoji: '📖',
       stripeColor: 'bg-blue-400',
       iconBg: 'bg-blue-50',
       iconBorder: 'border-blue-200',
       hoverBg: 'bg-blue-400/90',
-      progressLabel: '单元数',
-      progressValue: `${totalUnits} 课`,
+      progressLabel: t('courseDashboard.progress.units'),
+      progressValue: t('courseDashboard.lessonCount', { count: totalUnits }),
       progressColor: 'bg-blue-400',
       progressWidth: '0%',
       hoverText: 'READ',
@@ -107,15 +110,15 @@ export default function CourseDashboard() {
     },
     {
       id: 'listening',
-      label: '听力磨耳朵',
+      label: t('courseDashboard.modules.listening'),
       subtitle: 'LISTENING',
       emoji: '🎧',
       stripeColor: 'bg-[#FEE500]',
       iconBg: 'bg-yellow-50',
       iconBorder: 'border-yellow-200',
       hoverBg: 'bg-[#FEE500]/90',
-      progressLabel: '单元数',
-      progressValue: `${totalUnits} 课`,
+      progressLabel: t('courseDashboard.progress.units'),
+      progressValue: t('courseDashboard.lessonCount', { count: totalUnits }),
       progressColor: 'bg-[#FEE500]',
       progressWidth: '0%',
       hoverText: 'LISTEN',
@@ -144,7 +147,7 @@ export default function CourseDashboard() {
             <span className="bg-white border-2 border-slate-300 rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
               ←
             </span>
-            返回书架
+            {t('courseDashboard.backToShelf')}
           </button>
 
           {/* Header Card */}
@@ -170,18 +173,18 @@ export default function CourseDashboard() {
             {/* Course Info */}
             <div className="flex-1 text-center md:text-left z-10">
               <h1 className="font-display text-4xl font-black text-slate-900 mb-2 tracking-tight">
-                {course?.name || '加载中...'}
+                {course?.name || t('loading')}
                 <span className="text-xs text-slate-400 font-normal ml-2">ID: {instituteId}</span>
               </h1>
               <p className="text-slate-500 font-medium flex items-center gap-2">
                 <span>{course?.publisher}</span>
-                {displayLevel} · 第 1-{totalUnits} 课
+                {t('courseDashboard.courseMeta', { level: displayLevel, totalUnits })}
               </p>
 
               {/* Progress Bar */}
               <div className="max-w-md mx-auto md:mx-0">
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span>总进度</span>
+                  <span>{t('courseDashboard.overallProgress')}</span>
                   <span>{overallProgress}%</span>
                 </div>
                 <div className="w-full bg-slate-100 h-4 rounded-full border-2 border-slate-900 overflow-hidden relative">
@@ -197,8 +200,7 @@ export default function CourseDashboard() {
 
         {/* Training Modules Section */}
         <h2 className="text-3xl font-black mb-6 flex items-center gap-2">
-          <span>🚀</span> 专项训练{' '}
-          <span className="text-slate-400 text-lg font-normal">(Training Modules)</span>
+          <span>🚀</span> {t('courseDashboard.trainingModules')}
         </h2>
 
         {/* 4-Grid Modules */}
@@ -258,11 +260,15 @@ export default function CourseDashboard() {
         <div className="border-t-2 border-slate-200 pt-10">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h3 className="text-2xl font-black text-slate-900 mb-1">本册语法</h3>
-              <p className="text-slate-500 text-sm font-bold">Key Grammar Points</p>
+              <h3 className="text-2xl font-black text-slate-900 mb-1">
+                {t('courseDashboard.grammarTitle')}
+              </h3>
+              <p className="text-slate-500 text-sm font-bold">
+                {t('courseDashboard.grammarSubtitle')}
+              </p>
             </div>
             <button className="text-sm font-bold text-slate-400 hover:text-slate-900 flex items-center gap-1">
-              查看全部 <ChevronRight className="w-4 h-4" />
+              {t('courseDashboard.viewAll')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
@@ -280,7 +286,7 @@ export default function CourseDashboard() {
                 </div>
               ))
             ) : grammarPoints.length === 0 ? (
-              <div className="text-slate-400 text-sm py-4">暂无语法数据</div>
+              <div className="text-slate-400 text-sm py-4">{t('courseDashboard.noGrammar')}</div>
             ) : (
               grammarPoints.map(gp => (
                 <div
@@ -302,15 +308,15 @@ export default function CourseDashboard() {
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                     {gp.status === 'MASTERED' ? (
                       <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                        已掌握
+                        {t('courseDashboard.status.mastered')}
                       </span>
                     ) : gp.status === 'LEARNING' ? (
                       <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
-                        学习中
+                        {t('courseDashboard.status.learning')}
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                        未学习
+                        {t('courseDashboard.status.notStarted')}
                       </span>
                     )}
                     <span className="text-slate-300 group-hover:text-purple-600 transition-colors">

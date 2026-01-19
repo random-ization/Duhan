@@ -14,7 +14,6 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { User, Language, Annotation, ExamAttempt, TextbookContent, TopikExam } from '../types';
 import { mRef, NoArgs, qRef } from '../utils/convexRefs';
 
-import { fetchUserCountry } from '../utils/geo';
 import i18n from '../utils/i18next-config';
 
 interface AuthContextType {
@@ -78,7 +77,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const setLanguage = useCallback((lang: Language) => {
-    localStorage.setItem('language', lang);
+    localStorage.setItem('preferredLanguage', lang);
+    document.documentElement.lang = lang;
     i18n.changeLanguage(lang);
   }, []);
 
@@ -88,29 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     i18n.language === 'vi' ||
     i18n.language === 'mn'
       ? i18n.language
-      : 'zh';
-
-  useEffect(() => {
-    const storedLang = localStorage.getItem('language');
-    if (storedLang && i18n.language !== storedLang) {
-      i18n.changeLanguage(storedLang);
-      return;
-    }
-
-    if (storedLang) return;
-
-    const initLanguage = async () => {
-      const country = await fetchUserCountry();
-      let targetLang: Language = 'en';
-      if (country === 'CN') targetLang = 'zh';
-      else if (country === 'VN') targetLang = 'vi';
-      else if (country === 'MN') targetLang = 'mn';
-      localStorage.setItem('language', targetLang);
-      i18n.changeLanguage(targetLang);
-    };
-
-    initLanguage();
-  }, []);
+      : 'en';
 
   // Session Check (Load User) using Convex Auth
   const { signOut } = useAuthActions();

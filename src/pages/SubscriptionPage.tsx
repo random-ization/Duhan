@@ -1,22 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import { useAction } from 'convex/react';
 import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
-import { Globe, Check } from 'lucide-react';
-import { Language } from '../types';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
 import { aRef } from '../utils/convexRefs';
+import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 
 const SubscriptionPage: React.FC = () => {
-  const { user, language, setLanguage } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const meta = getRouteMeta(location.pathname);
   const createCheckoutSession = useAction(
@@ -26,13 +24,6 @@ const SubscriptionPage: React.FC = () => {
     >('lemonsqueezy:createCheckout')
   );
 
-  const languages: { code: Language; label: string }[] = [
-    { code: 'en', label: 'English' },
-    { code: 'zh', label: '中文' },
-    { code: 'vi', label: 'Tiếng Việt' },
-    { code: 'mn', label: 'Монгол' },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
@@ -41,43 +32,7 @@ const SubscriptionPage: React.FC = () => {
         <div className="mb-8 flex justify-between items-center">
           <BackButton onClick={() => navigate(-1)} />
 
-          {/* Language Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-colors shadow-sm"
-            >
-              <Globe className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {languages.find(l => l.code === language)?.label || 'English'}
-              </span>
-            </button>
-
-            {isLangMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsLangMenuOpen(false)}></div>
-                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
-                  {languages.map(lang => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setLanguage(lang.code);
-                        setIsLangMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${
-                        language === lang.code
-                          ? 'text-indigo-600 font-bold bg-indigo-50/50 dark:bg-indigo-900/20'
-                          : 'text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      {lang.label}
-                      {language === lang.code && <Check className="w-3.5 h-3.5" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <LanguageSwitcher />
         </div>
 
         <div className="text-center mb-16">

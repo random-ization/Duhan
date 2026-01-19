@@ -390,6 +390,58 @@
     "booksDigitized": "100+ Digitized Books",
     "examPapers": "35+ Exam Sets"
   },
+  "coursesLibrary": {
+    "badge": "Library",
+    "title": "Choose Textbooks",
+    "summary": "Includes {{count}} textbooks, grouped by publisher",
+    "searchPlaceholder": "Search textbooks...",
+    "noResults": "No matching textbooks found",
+    "publisherBadge": "Publisher",
+    "booksCount": "{{count}} books",
+    "levelTag": "Lv {{level}}",
+    "unitsCount": "{{count}} units",
+    "otherPublisher": "Other"
+  },
+  "courseDashboard": {
+    "defaultCourseName": "Korean 1A",
+    "defaultDisplayLevel": "Book 1",
+    "backToShelf": "Back to Library",
+    "courseMeta": "{{level}} · Lesson 1-{{totalUnits}}",
+    "overallProgress": "Overall Progress",
+    "trainingModules": "Training Modules",
+    "modules": {
+      "vocabulary": "Vocabulary",
+      "grammar": "Grammar",
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "progress": {
+      "totalWords": "Total Words",
+      "grammarPoints": "Grammar Points",
+      "units": "Units"
+    },
+    "lessonCount": "{{count}} lessons",
+    "grammarTitle": "Grammar in This Book",
+    "grammarSubtitle": "Key Grammar Points",
+    "viewAll": "View All",
+    "noGrammar": "No grammar data yet",
+    "status": {
+      "mastered": "Mastered",
+      "learning": "Learning",
+      "notStarted": "Not Started"
+    }
+  },
+  "module": {
+    "unitTitle": "Unit {{unit}}",
+    "listeningUnitTitle": "Unit {{unit}} · Listening"
+  },
+  "topikLobby": {
+    "roundTitle": "Round {{round}} TOPIK II Past Exam",
+    "timeLimit": "{{count}} min",
+    "noExams": "No exams available",
+    "unknownExam": "Unknown Exam",
+    "viewAllHistory": "View Full History"
+  },
   "dashboard": {
     "banner": {
       "upgradeTitle": "Upgrade to Premium",
@@ -692,6 +744,9 @@
   },
   "common": {
     "appName": "Duhan",
+    "alt": {
+      "logo": "Duhan logo"
+    },
     "login": "Log in",
     "getStarted": "Get Started",
     "privacy": "Privacy Policy",
@@ -714,6 +769,7 @@
     },
     "stats": {
       "videos": "Video Lessons",
+      "levelRange": "Level 1-6",
       "curriculum": "Full Curriculum",
       "ai": "AI Tutor",
       "exam": "Exam Simulation"
@@ -755,14 +811,18 @@
       "videoWord2": "'s",
       "videoWord3": "Landing",
       "subtitle": "Lee Jeong-hyeok...",
+      "prevSentence": "...previous sentence.",
       "lessonTitle": "Unit 1: Introduction",
+      "lessonLevel1": "Level 1",
       "lessonContent": "Hello? I am James.",
       "grammarTitle": "Grammar Point",
       "grammarDesc": "Used to identify the subject.",
       "podcastTitle": "TTMIK Podcast",
       "podcastHost": "Host: Hyun-woo",
       "examTitle": "TOPIK II (Writing)",
+      "questionTitle": "Q53. Graph Analysis",
       "feedbackTitle": "AI Feedback",
+      "grammarCheck": "Grammar Check:",
       "feedbackContent": "Use formal ending for essays."
     },
     "pricing": {
@@ -789,6 +849,9 @@
     "discount": "70% OFF",
     "title": "Invest in your Korean Fluency",
     "subtitle": "Choose the plan that fits your pace.",
+    "paymentUpgrading": "Payment system upgrading...",
+    "recommended": "Recommended",
+    "currentPlan": "Current Plan",
     "features": {
       "monthly": {
         "cloudSync": "Cloud sync for notes"
@@ -887,7 +950,14 @@
     "resetSuccessDesc": "You have been logged out. Please log in with your new password.",
     "invalidLink": "Invalid Link",
     "invalidLinkDesc": "Reset token is missing or expired. Please request a new one.",
-    "requestAgain": "Request Again"
+    "requestAgain": "Request Again",
+    "alt": {
+      "rocket": "Rocket"
+    },
+    "social": {
+      "google": "Google",
+      "kakao": "Kakao"
+    }
   },
   "loading": "Loading...",
   "podcast": {

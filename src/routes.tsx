@@ -1,9 +1,9 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { getLabels, getLabel } from './utils/i18n';
 import { ContentSkeleton } from './components/common';
 import { LanguageRouter, DEFAULT_LANGUAGE, isValidLanguage } from './components/LanguageRouter';
 
@@ -59,16 +59,13 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
 }) => {
   const { lang } = useParams<{ lang: string }>();
   const { language: authLanguage } = useAuth();
+  const { t } = useTranslation();
 
   // Use URL language if valid, otherwise fall back to auth context language
   const language = lang && isValidLanguage(lang) ? lang : authLanguage;
-  const labels = getLabels(language);
 
   return (
-    <ErrorBoundary
-      moduleName={getLabel(labels, ['common', 'appName']) || 'Duhan'}
-      language={language}
-    >
+    <ErrorBoundary moduleName={t('common.appName', 'Duhan')} language={language}>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* === 公开路由 (无需登录) === */}

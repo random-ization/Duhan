@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import UpgradePrompt from './components/UpgradePrompt';
 import { AppRoutes } from './routes';
@@ -22,6 +23,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const { t } = useTranslation();
   const { user, loading, language, canAccessContent, updateLearningProgress } = useAuth();
   const { selectedInstitute, selectedLevel } = useLearning();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -37,7 +39,7 @@ function App() {
     }
   }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
 
-  if (loading) return <Loading fullScreen size="lg" text="Loading..." />;
+  if (loading) return <Loading fullScreen size="lg" text={t('loading')} />;
 
   /* 
   const handleNavigate = (page: string) => {
@@ -53,7 +55,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary moduleName="应用">
+      <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
         <Routes>
           <Route
             path="/*"

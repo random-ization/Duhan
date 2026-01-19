@@ -99,7 +99,6 @@ export function useExamSession(examId: string) {
   }, [startExamMutation, examId]);
 
   // Update a single answer (with debounced save to server)
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const updateAnswer = useCallback(
     (questionNumber: number, selectedOption: number) => {
       // Immediately update local state
@@ -122,11 +121,10 @@ export function useExamSession(examId: string) {
         return updated;
       });
     },
-    [session?.sessionId, updateAnswersMutation]
+    [session, updateAnswersMutation]
   );
 
   // Submit exam
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const submitExam = useCallback(async () => {
     if (!session?.sessionId) {
       throw new Error('No active session');
@@ -141,7 +139,7 @@ export function useExamSession(examId: string) {
       sessionId: session.sessionId,
       answers: localAnswers,
     });
-  }, [session?.sessionId, submitExamMutation, localAnswers]);
+  }, [session, submitExamMutation, localAnswers]);
 
   // Format time for display
   const formatTime = useCallback((ms: number | null): string => {

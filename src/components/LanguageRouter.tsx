@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../types';
+import { fetchUserCountry } from '../utils/geo';
 
 // Supported languages
 export const SUPPORTED_LANGUAGES = ['en', 'zh', 'vi', 'mn'] as const;
@@ -14,12 +15,17 @@ export const isValidLanguage = (lang: string): lang is Language => {
 };
 
 // Get language from URL or detect from browser
-export const detectLanguage = (): Language => {
+export const detectLanguage = async (): Promise<Language> => {
   // Check localStorage first (user preference)
   const stored = localStorage.getItem('preferredLanguage');
   if (stored && isValidLanguage(stored)) {
     return stored;
   }
+
+  const country = await fetchUserCountry();
+  if (country === 'CN') return 'zh';
+  if (country === 'VN') return 'vi';
+  if (country === 'MN') return 'mn';
 
   // Check browser language
   const browserLang = navigator.language.split('-')[0];
@@ -52,10 +58,19 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
   useEffect(() => {
     // If no valid language in URL, redirect to detected language
     if (!lang || !isValidLanguage(lang)) {
-      const detectedLang = detectLanguage();
-      const newPath = `/${detectedLang}${location.pathname}${location.search}${location.hash}`;
-      navigate(newPath, { replace: true });
-      return;
+      let cancelled = false;
+
+      detectLanguage().then(detectedLang => {
+        if (cancelled) return;
+        const segments = location.pathname.split('/').filter(Boolean);
+        const rest = segments.length > 0 ? `/${segments.slice(1).join('/')}` : '/';
+        const newPath = `/${detectedLang}${rest}${location.search}${location.hash}`;
+        navigate(newPath, { replace: true });
+      });
+
+      return () => {
+        cancelled = true;
+      };
     }
 
     // Sync i18n with URL language

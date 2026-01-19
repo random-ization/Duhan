@@ -364,6 +364,58 @@
     "booksDigitized": "100+ Giáo trình số hóa",
     "examPapers": "35+ Bộ đề thi"
   },
+  "coursesLibrary": {
+    "badge": "Thư viện",
+    "title": "Chọn giáo trình",
+    "summary": "Có {{count}} giáo trình, được nhóm theo nhà xuất bản",
+    "searchPlaceholder": "Tìm kiếm giáo trình...",
+    "noResults": "Không tìm thấy giáo trình phù hợp",
+    "publisherBadge": "Nhà xuất bản",
+    "booksCount": "{{count}} sách",
+    "levelTag": "Cấp {{level}}",
+    "unitsCount": "{{count}} bài",
+    "otherPublisher": "Khác"
+  },
+  "courseDashboard": {
+    "defaultCourseName": "Tiếng Hàn 1A",
+    "defaultDisplayLevel": "Quyển 1",
+    "backToShelf": "Quay lại thư viện",
+    "courseMeta": "{{level}} · Bài 1-{{totalUnits}}",
+    "overallProgress": "Tiến độ tổng",
+    "trainingModules": "Chuyên đề luyện tập",
+    "modules": {
+      "vocabulary": "Từ vựng",
+      "grammar": "Ngữ pháp",
+      "reading": "Đọc",
+      "listening": "Nghe"
+    },
+    "progress": {
+      "totalWords": "Tổng từ",
+      "grammarPoints": "Điểm ngữ pháp",
+      "units": "Số bài"
+    },
+    "lessonCount": "{{count}} bài",
+    "grammarTitle": "Ngữ pháp trong giáo trình",
+    "grammarSubtitle": "Điểm ngữ pháp chính",
+    "viewAll": "Xem tất cả",
+    "noGrammar": "Chưa có dữ liệu ngữ pháp",
+    "status": {
+      "mastered": "Đã thành thạo",
+      "learning": "Đang học",
+      "notStarted": "Chưa học"
+    }
+  },
+  "module": {
+    "unitTitle": "Bài {{unit}}",
+    "listeningUnitTitle": "Bài {{unit}} · Nghe"
+  },
+  "topikLobby": {
+    "roundTitle": "Đề TOPIK II vòng {{round}}",
+    "timeLimit": "{{count}} phút",
+    "noExams": "Không có đề thi khả dụng",
+    "unknownExam": "Bài thi không xác định",
+    "viewAllHistory": "Xem toàn bộ lịch sử"
+  },
   "dashboard": {
     "banner": {
       "upgradeTitle": "Upgrade to Premium",
@@ -699,12 +751,7 @@
     "card1Desc": "Giáo trình số hóa từ Yonsei, Sogang. Học song song với lớp học ngay cả khi bạn không ở Hàn Quốc.",
     "card2Title": "Luyện thi TOPIK",
     "card2Desc": "Đề thi các năm và phân tích lỗi sai. Đạt cấp 6 và giành học bổng.",
-    "card2List": [
-      "Môi trường thi thật",
-      "Chấm điểm tự động",
-      "Săn học bổng",
-      "Kho đề thi cũ"
-    ],
+    "card2List": ["Môi trường thi thật", "Chấm điểm tự động", "Săn học bổng", "Kho đề thi cũ"],
     "card3Title": "Luyện nghe thực tế",
     "card3Desc": "Audio chuẩn từ lớp học, nghe từng câu, điều chỉnh tốc độ.",
     "card4Title": "Theo dõi tiến độ",
@@ -771,13 +818,17 @@
       "examTitle": "TOPIK II (Viết)",
       "feedbackContent": "Sử dụng kết thúc trang trọng cho bài luận.",
       "feedbackTitle": "Phản hồi từ AI",
+      "grammarCheck": "Kiểm tra ngữ pháp:",
       "grammarDesc": "Dùng để xác định chủ ngữ.",
       "grammarTitle": "Điểm ngữ pháp",
       "lessonContent": "Xin chào? Tôi là James.",
       "lessonTitle": "Bài 1: Giới thiệu",
+      "lessonLevel1": "Cấp 1",
       "podcastHost": "Người dẫn chương trình: Hyun-woo",
       "podcastTitle": "TTMIK Podcast",
       "subtitle": "Lee Jeong-hyeok...",
+      "prevSentence": "...câu trước.",
+      "questionTitle": "Câu 53. Phân tích biểu đồ",
       "videoTitle": "Hạ cánh nơi anh",
       "videoWord1": "Tình yêu",
       "videoWord2": "'s",
@@ -791,6 +842,7 @@
       "ai": "Gia sư AI",
       "curriculum": "Đầy đủ chương trình",
       "exam": "Mô phỏng bài thi",
+      "levelRange": "Cấp 1–6",
       "videos": "Bài học video"
     }
   },
@@ -802,6 +854,9 @@
     "discount": "GIẢM 70%",
     "title": "Đầu tư cho sự trôi chảy tiếng Hàn của bạn",
     "subtitle": "Chọn gói phù hợp với tốc độ của bạn.",
+    "paymentUpgrading": "Hệ thống thanh toán đang được nâng cấp...",
+    "recommended": "Đề xuất",
+    "currentPlan": "Gói hiện tại",
     "features": {
       "monthly": {
         "cloudSync": "Đồng bộ ghi chú đám mây"
@@ -828,6 +883,7 @@
     "videos": "Video",
     "podcasts": "Podcast",
     "profile": "Hồ sơ",
+    "viewProfile": "Xem hồ sơ",
     "settings": "Cài đặt",
     "logout": "Đăng xuất"
   },
@@ -877,7 +933,14 @@
     "resetSuccessDesc": "Bạn đã được đăng xuất. Vui lòng đăng nhập lại bằng mật khẩu mới.",
     "invalidLink": "Liên kết không hợp lệ",
     "invalidLinkDesc": "Mã xác nhận thiếu hoặc đã hết hạn. Vui lòng yêu cầu lại.",
-    "requestAgain": "Yêu cầu lại"
+    "requestAgain": "Yêu cầu lại",
+    "alt": {
+      "rocket": "Tên lửa"
+    },
+    "social": {
+      "google": "Google",
+      "kakao": "Kakao"
+    }
   },
   "addToVocab": "Thêm vào từ vựng",
   "aiAssistant": "Trợ lý AI",
@@ -886,6 +949,9 @@
   "colors": "Màu sắc",
   "common": {
     "appName": "Duhan",
+    "alt": {
+      "logo": "Logo Duhan"
+    },
     "contact": "Liên hệ hỗ trợ",
     "getStarted": "Bắt đầu ngay",
     "login": "Đăng nhập",

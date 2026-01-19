@@ -364,6 +364,58 @@
     "booksDigitized": "100+ Дижитал ном",
     "examPapers": "35+ Шалгалтын материал"
   },
+  "coursesLibrary": {
+    "badge": "Номын сан",
+    "title": "Сурах бичиг сонгох",
+    "summary": "{{count}} сурах бичигтэй, хэвлэлийн газраар бүлэглэсэн",
+    "searchPlaceholder": "Сурах бичиг хайх...",
+    "noResults": "Тохирох сурах бичиг олдсонгүй",
+    "publisherBadge": "Хэвлэлийн газар",
+    "booksCount": "{{count}} ном",
+    "levelTag": "{{level}}-р түвшин",
+    "unitsCount": "{{count}} нэгж",
+    "otherPublisher": "Бусад"
+  },
+  "courseDashboard": {
+    "defaultCourseName": "Солонгос хэл 1A",
+    "defaultDisplayLevel": "Ном 1",
+    "backToShelf": "Номын сан руу буцах",
+    "courseMeta": "{{level}} · 1-{{totalUnits}}-р хичээл",
+    "overallProgress": "Нийт ахиц",
+    "trainingModules": "Дасгалын модулиуд",
+    "modules": {
+      "vocabulary": "Үгийн сан",
+      "grammar": "Дүрэм",
+      "reading": "Унших",
+      "listening": "Сонсох"
+    },
+    "progress": {
+      "totalWords": "Нийт үг",
+      "grammarPoints": "Дүрмийн цэг",
+      "units": "Нэгж"
+    },
+    "lessonCount": "{{count}} хичээл",
+    "grammarTitle": "Энэ номын дүрэм",
+    "grammarSubtitle": "Гол дүрмийн цэгүүд",
+    "viewAll": "Бүгдийг үзэх",
+    "noGrammar": "Дүрмийн өгөгдөл алга",
+    "status": {
+      "mastered": "Эзэмшсэн",
+      "learning": "Сурч байна",
+      "notStarted": "Эхлээгүй"
+    }
+  },
+  "module": {
+    "unitTitle": "{{unit}}-р нэгж",
+    "listeningUnitTitle": "{{unit}}-р нэгж · Сонсох"
+  },
+  "topikLobby": {
+    "roundTitle": "{{round}}-р TOPIK II шалгалт",
+    "timeLimit": "{{count}} минут",
+    "noExams": "Боломжтой шалгалт алга",
+    "unknownExam": "Тодорхойгүй шалгалт",
+    "viewAllHistory": "Бүх түүхийг үзэх"
+  },
   "dashboard": {
     "banner": {
       "upgradeTitle": "Upgrade to Premium",
@@ -755,13 +807,17 @@
       "examTitle": "TOPIK II (Бичих)",
       "feedbackContent": "Эссэ бичихдээ албан ёсны төгсгөл ашиглана уу.",
       "feedbackTitle": "AI зөвлөгөө",
+      "grammarCheck": "Дүрмийн шалгалт:",
       "grammarDesc": "Өгүүлбэрийн эзэн биеийг тодорхойлоход ашигладаг.",
       "grammarTitle": "Дүрмийн хэсэг",
       "lessonContent": "Сайн байна уу? Намайг Жеймс гэдэг.",
       "lessonTitle": "Хичээл 1: Танилцуулга",
+      "lessonLevel1": "1-р түвшин",
       "podcastHost": "Хөтлөгч: Хён-вүү",
       "podcastTitle": "TTMIK подкаст",
       "subtitle": "Ли Жон Хёк...",
+      "prevSentence": "...өмнөх өгүүлбэр.",
+      "questionTitle": "Асуулт 53. Графикийн шинжилгээ",
       "videoTitle": "Хайрын буулт (Crash Landing on You)",
       "videoWord1": "Хайр",
       "videoWord2": "-ын",
@@ -790,6 +846,7 @@
       "ai": "AI Туслах",
       "curriculum": "Иж бүрэн хөтөлбөр",
       "exam": "Шалгалтын орчин",
+      "levelRange": "1–6 түвшин",
       "videos": "Видео хичээл"
     }
   },
@@ -801,6 +858,9 @@
     "discount": "70% ХЯМДРАЛ",
     "title": "Солонгос хэлээ сайжруулахад хөрөнгө оруулаарай",
     "subtitle": "Өөрийн хурдад тохирсон багцаа сонгоорой.",
+    "paymentUpgrading": "Төлбөрийн систем шинэчлэгдэж байна...",
+    "recommended": "Санал болгож байна",
+    "currentPlan": "Одоогийн багц",
     "features": {
       "monthly": {
         "cloudSync": "Тэмдэглэл үүлэн синк"
@@ -827,6 +887,7 @@
     "videos": "Видео",
     "podcasts": "Подкаст",
     "profile": "Профайл",
+    "viewProfile": "Профайл үзэх",
     "settings": "Тохиргоо",
     "logout": "Гарах"
   },
@@ -876,7 +937,14 @@
     "resetSuccessDesc": "Та системээс гарлаа. Шинэ нууц үгээрээ нэвтэрнэ үү.",
     "invalidLink": "Хүчингүй холбоос",
     "invalidLinkDesc": "Тэмдэгт байхгүй эсвэл хугацаа нь дууссан байна.",
-    "requestAgain": "Дахин хүсэлт илгээх"
+    "requestAgain": "Дахин хүсэлт илгээх",
+    "alt": {
+      "rocket": "Пуужин"
+    },
+    "social": {
+      "google": "Google",
+      "kakao": "Kakao"
+    }
   },
   "addToVocab": "Үгсийн санд нэмэх",
   "aiAssistant": "AI Туслах",
@@ -885,6 +953,9 @@
   "colors": "Өнгө",
   "common": {
     "appName": "Duhan",
+    "alt": {
+      "logo": "Duhan лого"
+    },
     "contact": "Тусламж авах",
     "getStarted": "Эхлэх",
     "login": "Нэвтрэх",

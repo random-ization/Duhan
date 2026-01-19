@@ -1,6 +1,4 @@
 import json
-import os
-
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
@@ -14,10 +12,10 @@ def get_keys(d, prefix=''):
             keys.add(prefix + k)
     return keys
 
-en = load_json('locales/en.json')
-zh = load_json('locales/zh.json')
-vi = load_json('locales/vi.json')
-mn = load_json('locales/mn.json')
+en = load_json('public/locales/en.json')
+zh = load_json('public/locales/zh.json')
+vi = load_json('public/locales/vi.json')
+mn = load_json('public/locales/mn.json')
 
 en_keys = get_keys(en)
 zh_keys = get_keys(zh)

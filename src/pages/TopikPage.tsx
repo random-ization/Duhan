@@ -7,6 +7,7 @@ import { useData } from '../contexts/DataContext';
 import { Target, Clock, ArrowRight, Archive, History, Headphones, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
+import { useTranslation } from 'react-i18next';
 
 // Use any here to be compatible with the restricted type in routes.tsx (TextbookContent | TopikExam)
 // Defining specific union type here causes circular dependency or tight coupling with AuthContext
@@ -19,6 +20,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
   const { topikExams } = useData();
   const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
 
   // Filter exams based on type
@@ -75,9 +77,9 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
           <BackButton onClick={() => navigate('/dashboard')} />
           <div>
             <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
-              考试中心
+              {t('dashboard.topik.examCenter')}
             </h2>
-            <p className="text-slate-500 font-bold">真题实战模拟</p>
+            <p className="text-slate-500 font-bold">{t('dashboard.topik.realExam')}</p>
           </div>
           <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
         </div>
@@ -93,7 +95,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
             )}
           >
-            全部
+            {t('dashboard.topik.all')}
           </button>
           <button
             onClick={() => setFilterType('READING')}
@@ -104,7 +106,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                 : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
             )}
           >
-            <BookOpen size={16} /> 阅读
+            <BookOpen size={16} /> {t('dashboard.topik.reading')}
           </button>
           <button
             onClick={() => setFilterType('LISTENING')}
@@ -115,7 +117,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                 : 'text-slate-500 hover:text-violet-600 hover:bg-violet-50'
             )}
           >
-            <Headphones size={16} /> 听力
+            <Headphones size={16} /> {t('dashboard.topik.listening')}
           </button>
         </div>
 
@@ -123,7 +125,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
           {/* Main Exam Card */}
           <div className="md:col-span-2 space-y-6">
             <h3 className="font-black text-xl flex items-center gap-2 text-slate-900">
-              <Target size={20} /> 推荐实战
+              <Target size={20} /> {t('dashboard.topik.recommended')}
             </h3>
 
             {filteredExams.length > 0 ? (
@@ -151,7 +153,9 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                         {exam.round}
                       </div>
                       <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                        {exam.type === 'READING' ? 'TOPIK II 읽기' : 'TOPIK II 듣기'}
+                        {exam.type === 'READING'
+                          ? `TOPIK II ${t('dashboard.topik.reading')}`
+                          : `TOPIK II ${t('dashboard.topik.listening')}`}
                       </div>
                     </div>
                     <div className="p-4 flex-1 flex flex-col justify-between">
@@ -168,22 +172,27 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                                 : 'bg-rose-100 text-rose-600 border-rose-200'
                             )}
                           >
-                            {exam.type === 'READING' ? '阅读' : '听力'}
+                            {exam.type === 'READING'
+                              ? t('dashboard.topik.reading')
+                              : t('dashboard.topik.listening')}
                           </span>
                         </div>
                         <p className="text-slate-500 text-xs font-bold">
-                          第 {exam.round} 届 TOPIK II 真题
+                          {t('topikLobby.roundTitle', { round: exam.round })}
                         </p>
                         <div className="flex gap-4 mt-2">
                           <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                            <Clock size={12} /> {exam.timeLimit} 分钟
+                            <Clock size={12} />{' '}
+                            {t('topikLobby.timeLimit', { count: exam.timeLimit })}
                           </div>
                         </div>
                       </div>
                       <div className="mt-3 flex justify-between items-center border-t border-slate-100 pt-3">
-                        <span className="text-[10px] font-bold text-slate-400">点击开始考试</span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {t('dashboard.topik.clickStart')}
+                        </span>
                         <button className="bg-slate-900 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition flex items-center gap-1">
-                          立即开考 <ArrowRight size={12} />
+                          {t('dashboard.topik.startNow')} <ArrowRight size={12} />
                         </button>
                       </div>
                     </div>
@@ -192,7 +201,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
               </div>
             ) : (
               <div className="bg-white rounded-[2rem] p-8 border-2 border-slate-200 text-center">
-                <p className="text-slate-500 font-bold">暂无可用考试</p>
+                <p className="text-slate-500 font-bold">{t('topikLobby.noExams')}</p>
               </div>
             )}
           </div>
@@ -201,7 +210,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
           {/* Sidebar: Archive */}
           <div className="h-fit sticky top-6 space-y-6">
             <h3 className="font-black text-xl text-slate-900 flex items-center gap-2">
-              <History size={20} /> 考试记录
+              <History size={20} /> {t('dashboard.topik.examHistory')}
             </h3>
 
             <div className="bg-white rounded-2xl border-2 border-slate-900 p-4 shadow-sm">
@@ -219,7 +228,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                         <div className="flex justify-between items-start">
                           <div>
                             <h5 className="font-bold text-slate-900 text-xs">
-                              {attempt.examTitle || '未知考试'}
+                              {attempt.examTitle || t('topikLobby.unknownExam')}
                             </h5>
                             <p className="text-[10px] text-slate-500 font-bold mt-0.5">
                               {attempt.timestamp
@@ -243,7 +252,9 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                 ) : (
                   <div className="text-center py-6">
                     <Archive size={24} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 font-bold">暂无考试记录</p>
+                    <p className="text-xs text-slate-400 font-bold">
+                      {t('dashboard.topik.noHistory')}
+                    </p>
                   </div>
                 )}
               </div>
@@ -252,7 +263,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                   onClick={() => navigate('/topik/history')}
                   className="w-full mt-4 py-2 border-2 border-slate-200 rounded-xl font-bold text-xs text-slate-500 hover:border-slate-900 hover:text-slate-900 transition"
                 >
-                  查看全部历史
+                  {t('topikLobby.viewAllHistory')}
                 </button>
               )}
             </div>

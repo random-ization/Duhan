@@ -47,52 +47,52 @@ export default function Landing() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "DuHan Korean Learning",
-            "description": meta.description,
-            "applicationCategory": "EducationalApplication",
-            "operatingSystem": "Web",
-            "url": "https://koreanstudy.me",
-            "offers": [
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'DuHan Korean Learning',
+            description: meta.description,
+            applicationCategory: 'EducationalApplication',
+            operatingSystem: 'Web',
+            url: 'https://koreanstudy.me',
+            offers: [
               {
-                "@type": "Offer",
-                "name": "Monthly Subscription",
-                "price": "6.90",
-                "priceCurrency": "USD",
-                "priceValidUntil": "2026-12-31",
-                "availability": "https://schema.org/InStock"
+                '@type': 'Offer',
+                name: 'Monthly Subscription',
+                price: '6.90',
+                priceCurrency: 'USD',
+                priceValidUntil: '2026-12-31',
+                availability: 'https://schema.org/InStock',
               },
               {
-                "@type": "Offer",
-                "name": "Annual Subscription",
-                "price": "49.00",
-                "priceCurrency": "USD",
-                "priceValidUntil": "2026-12-31",
-                "availability": "https://schema.org/InStock"
+                '@type': 'Offer',
+                name: 'Annual Subscription',
+                price: '49.00',
+                priceCurrency: 'USD',
+                priceValidUntil: '2026-12-31',
+                availability: 'https://schema.org/InStock',
               },
               {
-                "@type": "Offer",
-                "name": "Lifetime Access",
-                "price": "99.00",
-                "priceCurrency": "USD",
-                "priceValidUntil": "2026-12-31",
-                "availability": "https://schema.org/InStock"
-              }
+                '@type': 'Offer',
+                name: 'Lifetime Access',
+                price: '99.00',
+                priceCurrency: 'USD',
+                priceValidUntil: '2026-12-31',
+                availability: 'https://schema.org/InStock',
+              },
             ],
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "ratingCount": "500",
-              "bestRating": "5",
-              "worstRating": "1"
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: '4.8',
+              ratingCount: '500',
+              bestRating: '5',
+              worstRating: '1',
             },
-            "publisher": {
-              "@type": "Organization",
-              "name": "DuHan",
-              "url": "https://koreanstudy.me"
-            }
-          })
+            publisher: {
+              '@type': 'Organization',
+              name: 'DuHan',
+              url: 'https://koreanstudy.me',
+            },
+          }),
         }}
       />
       {/* Navigation */}
@@ -101,7 +101,7 @@ export default function Landing() {
           <LocalizedLink to="/" className="flex items-center gap-3 group">
             <img
               src="/logo.png"
-              alt="DuHan - Korean Language Learning Platform Logo"
+              alt={t('common.alt.logo')}
               className="w-10 h-10 rounded-lg shadow-pop group-hover:translate-y-1 group-hover:shadow-none transition-all object-contain"
             />
             <span className="font-display text-2xl tracking-wide">{t('common.appName')}</span>
@@ -123,13 +123,13 @@ export default function Landing() {
             </a>
             <LanguageSwitcher />
             <button onClick={() => navigate('/login')} className="text-black hover:text-indigo-600">
-              {t('common.login')}
+              {t('login')}
             </button>
             <button
               onClick={() => navigate('/register')}
               className="bg-black text-white px-6 py-2.5 rounded-xl border-2 border-transparent shadow-pop hover:shadow-pop-hover hover:-translate-y-1 transition-all active:translate-y-0 active:shadow-none font-bold"
             >
-              {t('common.getStarted')}
+              {t('register')}
             </button>
           </div>
 
@@ -150,7 +150,7 @@ export default function Landing() {
               }}
               className="block w-full text-left font-bold py-2"
             >
-              {t('common.login')}
+              {t('login')}
             </button>
             <button
               onClick={() => {
@@ -159,7 +159,7 @@ export default function Landing() {
               }}
               className="block w-full bg-black text-white px-6 py-3 rounded-xl font-bold text-center"
             >
-              {t('common.getStarted')}
+              {t('register')}
             </button>
           </div>
         )}
@@ -216,7 +216,9 @@ export default function Landing() {
             </p>
           </div>
           <div>
-            <p className="font-display text-4xl text-pink-500 mb-1">Level 1-6</p>
+            <p className="font-display text-4xl text-pink-500 mb-1">
+              {t('landing.stats.levelRange')}
+            </p>
             <p className="font-bold text-slate-500 text-sm uppercase tracking-wider">
               {t('landing.stats.curriculum')}
             </p>
@@ -305,7 +307,7 @@ export default function Landing() {
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2">
                   <span className="font-display text-xl">{t('landing.mock.lessonTitle')}</span>
                   <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-200">
-                    Level 1
+                    {t('landing.mock.lessonLevel1')}
                   </span>
                 </div>
                 <div className="flex gap-4">
@@ -400,7 +402,7 @@ export default function Landing() {
               </div>
               <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 h-24 overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent z-10 pointer-events-none"></div>
-                <p className="text-sm text-slate-400 mb-2">...previous sentence.</p>
+                <p className="text-sm text-slate-400 mb-2">{t('landing.mock.prevSentence')}</p>
                 <p className="text-base font-bold text-slate-900 bg-yellow-100 inline p-1 rounded">
                   {t('landing.mock.subtitle')}
                 </p>
@@ -457,7 +459,7 @@ export default function Landing() {
                 </div>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 mb-4">
-                <p className="text-sm font-bold mb-2">Q53. Graph Analysis</p>
+                <p className="text-sm font-bold mb-2">{t('landing.mock.questionTitle')}</p>
                 <div className="h-20 bg-white border border-slate-200 rounded-lg flex items-end justify-center gap-4 p-2">
                   <div className="w-8 bg-blue-400 h-1/2"></div>
                   <div className="w-8 bg-blue-600 h-3/4"></div>
@@ -468,7 +470,9 @@ export default function Landing() {
                 <div className="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-lg shadow-sm">
                   {t('landing.mock.feedbackTitle')}
                 </div>
-                <p className="text-xs text-green-800 font-mono mb-1">Grammar Check:</p>
+                <p className="text-xs text-green-800 font-mono mb-1">
+                  {t('landing.mock.grammarCheck')}
+                </p>
                 <p className="text-sm text-slate-700">{t('landing.mock.feedbackContent')}</p>
               </div>
             </div>
@@ -605,7 +609,11 @@ export default function Landing() {
       <footer className="bg-white border-t-2 border-black py-12 px-6 mt-12">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="DuHan - Korean Language Learning Platform Logo" className="w-8 h-8 rounded-lg object-contain" />
+            <img
+              src="/logo.png"
+              alt={t('common.alt.logo')}
+              className="w-8 h-8 rounded-lg object-contain"
+            />
             <span className="font-bold text-slate-900">© 2025 {t('common.appName')}.</span>
           </div>
           <div className="flex gap-8 text-sm font-bold text-slate-500">
