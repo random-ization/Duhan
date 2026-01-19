@@ -95,7 +95,8 @@ export const getPublicRoutePaths = (): string[] => {
 
 // Get meta for a specific route
 export const getRouteMeta = (path: string) => {
-  const route = PUBLIC_ROUTES.find(r => r.path === path);
+  const normalizedPath = path.replace(/^\/(en|zh|vi|mn)(\/|$)/, '/').replace(/\/+$/, '') || '/';
+  const route = PUBLIC_ROUTES.find(r => r.path === normalizedPath);
   return (
     route?.meta || {
       title: 'DuHan - Korean Learning Platform',
