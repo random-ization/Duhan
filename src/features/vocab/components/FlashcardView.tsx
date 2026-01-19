@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Volume2, Hand, Keyboard, CheckCircle, XCircle } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings } from '../types';
 import { Language } from '../../../types';
@@ -69,47 +69,56 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       resetDrag();
     };
 
-    const handleCardRate = (know: boolean) => {
-      if (!currentCard) return;
+    const handleCardRate = useCallback(
+      (know: boolean) => {
+        if (!currentCard) return;
 
-      const updatedStats = {
-        correct: know ? [...sessionStats.correct, currentCard] : sessionStats.correct,
-        incorrect: !know ? [...sessionStats.incorrect, currentCard] : sessionStats.incorrect,
-      };
-      setSessionStats(updatedStats);
+        const updatedStats = {
+          correct: know ? [...sessionStats.correct, currentCard] : sessionStats.correct,
+          incorrect: !know ? [...sessionStats.incorrect, currentCard] : sessionStats.incorrect,
+        };
+        setSessionStats(updatedStats);
 
-      // If "Don't Know", save it
-      if (!know && onSaveWord) {
-        onSaveWord(currentCard);
-      }
+        // If "Don't Know", save it
+        if (!know && onSaveWord) {
+          onSaveWord(currentCard);
+        }
 
-      if (cardIndex + 1 < words.length) {
-        setCardIndex(cardIndex + 1);
-        setIsFlipped(false);
-      } else {
-        // Session complete
-        onComplete(updatedStats);
-      }
-    };
+        if (cardIndex + 1 < words.length) {
+          setCardIndex(cardIndex + 1);
+          setIsFlipped(false);
+        } else {
+          // Session complete
+          onComplete(updatedStats);
+        }
+      },
+      [cardIndex, currentCard, onComplete, onSaveWord, sessionStats, words.length]
+    );
 
-    // Keyboard controls
-    React.useEffect(() => {
+    // Keyboard shortcuts
+    useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === ' ') {
-          e.preventDefault();
-          setIsFlipped(!isFlipped);
-        } else if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          handleCardRate(false);
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          handleCardRate(true);
+        if (!isFlipped) {
+          // Use !isFlipped to represent showFront
+          if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault();
+            setIsFlipped(true); // Flip to back
+          }
+        } else {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handleCardRate(false); // Don't Know
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleCardRate(true); // Know
+          }
         }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFlipped, cardIndex]);
+    }, [isFlipped, handleCardRate]);
 
     if (!currentCard) {
       return <div className="text-center text-slate-500">{labels.noWords}</div>;
@@ -201,21 +210,36 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
             <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-2xl shadow-xl border-b-4 border-emerald-100 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
               {/* POS Badge */}
               {currentCard.partOfSpeech && (
-                <div className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${currentCard.partOfSpeech === 'VERB_T' ? 'bg-blue-100 text-blue-700' :
-                  currentCard.partOfSpeech === 'VERB_I' ? 'bg-red-100 text-red-700' :
-                    currentCard.partOfSpeech === 'ADJ' ? 'bg-purple-100 text-purple-700' :
-                      currentCard.partOfSpeech === 'NOUN' ? 'bg-green-100 text-green-700' :
-                        currentCard.partOfSpeech === 'ADV' ? 'bg-orange-100 text-orange-700' :
-                          currentCard.partOfSpeech === 'PARTICLE' ? 'bg-gray-100 text-gray-700' :
-                            'bg-slate-100 text-slate-700'
-                  }`}>
-                  {currentCard.partOfSpeech === 'VERB_T' ? (labels.pos?.verb_t || 'v.t.') :
-                    currentCard.partOfSpeech === 'VERB_I' ? (labels.pos?.verb_i || 'v.i.') :
-                      currentCard.partOfSpeech === 'ADJ' ? (labels.pos?.adj || 'adj.') :
-                        currentCard.partOfSpeech === 'NOUN' ? (labels.pos?.noun || 'n.') :
-                          currentCard.partOfSpeech === 'ADV' ? (labels.pos?.adv || 'adv.') :
-                            currentCard.partOfSpeech === 'PARTICLE' ? (labels.pos?.particle || 'part.') :
-                              currentCard.partOfSpeech}
+                <div
+                  className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    currentCard.partOfSpeech === 'VERB_T'
+                      ? 'bg-blue-100 text-blue-700'
+                      : currentCard.partOfSpeech === 'VERB_I'
+                        ? 'bg-red-100 text-red-700'
+                        : currentCard.partOfSpeech === 'ADJ'
+                          ? 'bg-purple-100 text-purple-700'
+                          : currentCard.partOfSpeech === 'NOUN'
+                            ? 'bg-green-100 text-green-700'
+                            : currentCard.partOfSpeech === 'ADV'
+                              ? 'bg-orange-100 text-orange-700'
+                              : currentCard.partOfSpeech === 'PARTICLE'
+                                ? 'bg-gray-100 text-gray-700'
+                                : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {currentCard.partOfSpeech === 'VERB_T'
+                    ? labels.pos?.verb_t || 'v.t.'
+                    : currentCard.partOfSpeech === 'VERB_I'
+                      ? labels.pos?.verb_i || 'v.i.'
+                      : currentCard.partOfSpeech === 'ADJ'
+                        ? labels.pos?.adj || 'adj.'
+                        : currentCard.partOfSpeech === 'NOUN'
+                          ? labels.pos?.noun || 'n.'
+                          : currentCard.partOfSpeech === 'ADV'
+                            ? labels.pos?.adv || 'adv.'
+                            : currentCard.partOfSpeech === 'PARTICLE'
+                              ? labels.pos?.particle || 'part.'
+                              : currentCard.partOfSpeech}
                 </div>
               )}
 
@@ -253,25 +277,29 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
               )}
 
               {/* Tips Section (Yellow Background) */}
-              {currentCard.tips && (currentCard.tips.synonyms || currentCard.tips.antonyms || currentCard.tips.nuance) && (
-                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg w-full max-w-lg mb-3">
-                  {currentCard.tips.synonyms && currentCard.tips.synonyms.length > 0 && (
-                    <p className="text-sm text-yellow-800 mb-1">
-                      <span className="font-bold">≈</span> {currentCard.tips.synonyms.join(', ')}
-                    </p>
-                  )}
-                  {currentCard.tips.antonyms && currentCard.tips.antonyms.length > 0 && (
-                    <p className="text-sm text-yellow-800 mb-1">
-                      <span className="font-bold">≠</span> {currentCard.tips.antonyms.join(', ')}
-                    </p>
-                  )}
-                  {currentCard.tips.nuance && (
-                    <p className="text-sm text-yellow-700">
-                      <span className="mr-1">💡</span>{currentCard.tips.nuance}
-                    </p>
-                  )}
-                </div>
-              )}
+              {currentCard.tips &&
+                (currentCard.tips.synonyms ||
+                  currentCard.tips.antonyms ||
+                  currentCard.tips.nuance) && (
+                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg w-full max-w-lg mb-3">
+                    {currentCard.tips.synonyms && currentCard.tips.synonyms.length > 0 && (
+                      <p className="text-sm text-yellow-800 mb-1">
+                        <span className="font-bold">≈</span> {currentCard.tips.synonyms.join(', ')}
+                      </p>
+                    )}
+                    {currentCard.tips.antonyms && currentCard.tips.antonyms.length > 0 && (
+                      <p className="text-sm text-yellow-800 mb-1">
+                        <span className="font-bold">≠</span> {currentCard.tips.antonyms.join(', ')}
+                      </p>
+                    )}
+                    {currentCard.tips.nuance && (
+                      <p className="text-sm text-yellow-700">
+                        <span className="mr-1">💡</span>
+                        {currentCard.tips.nuance}
+                      </p>
+                    )}
+                  </div>
+                )}
 
               {/* Example Sentence (Slate Background) */}
               {currentCard.exampleSentence && (
@@ -317,6 +345,6 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     );
   }
 );
-FlashcardView.displayName = "FlashcardView";
+FlashcardView.displayName = 'FlashcardView';
 
 export default FlashcardView;

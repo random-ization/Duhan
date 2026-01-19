@@ -6,10 +6,10 @@ import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { sanitizeHtml } from '../utils/sanitize';
 import { useQuery } from 'convex/react';
-import { api as convexApi } from '../../convex/_generated/api';
 import { Loading } from '../components/common/Loading';
 import { FileText, Calendar } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
+import { qRef } from '../utils/convexRefs';
 
 interface LegalDocumentPageProps {
   language: Language;
@@ -22,15 +22,21 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);
-  const doc = useQuery(convexApi.legal.getDocument, { type: documentType });
+  const doc = useQuery(
+    qRef<
+      { type: LegalDocumentPageProps['documentType'] },
+      { id: string; title?: string; content?: string; updatedAt?: number } | null
+    >('legal:getDocument'),
+    { type: documentType }
+  );
 
   const loading = doc === undefined;
   // Convert Convex doc result to matching frontend interface if needed, or use directly
   const document = doc
     ? {
         id: doc.id,
-        title: doc.title,
-        content: doc.content,
+        title: doc.title ?? '',
+        content: doc.content ?? '',
         updatedAt: doc.updatedAt,
         updatedBy: 'System',
       }

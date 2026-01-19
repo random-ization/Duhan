@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import * as XLSX from "xlsx";
+import React, { useMemo, useState } from 'react';
+import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
+import { Id } from '../../convex/_generated/dataModel';
+import * as XLSX from 'xlsx';
+import { makeFunctionReference } from 'convex/server';
 import {
   BarChart3,
   BookOpen,
@@ -13,7 +13,7 @@ import {
   X,
   Save,
   Download,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface WordRow {
   _id: string;
@@ -45,43 +45,49 @@ interface InstituteRow {
 const ITEMS_PER_PAGE = 20;
 
 const VocabDashboard: React.FC = () => {
-  const institutes = useQuery(api.institutes.getAll, {}) as
-    | InstituteRow[]
-    | undefined;
-  const [selectedCourse, setSelectedCourse] = useState<string>("ALL");
-  const [search, setSearch] = useState("");
+  const institutes = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
+    makeFunctionReference('institutes:getAll'),
+    {}
+  ) as InstituteRow[] | undefined;
+  const [selectedCourse, setSelectedCourse] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
   const [editingWord, setEditingWord] = useState<WordRow | null>(null);
   const [editForm, setEditForm] = useState<Partial<WordRow>>({});
   const [isSaving, setIsSaving] = useState(false);
 
   // Field filters
-  const [meaningFilter, setMeaningFilter] = useState<"all" | "filled" | "empty">("all");
-  const [posFilter, setPosFilter] = useState<string>("ALL");
-  const [unitFrom, setUnitFrom] = useState<string>("");
-  const [unitTo, setUnitTo] = useState<string>("");
+  const [meaningFilter, setMeaningFilter] = useState<'all' | 'filled' | 'empty'>('all');
+  const [posFilter, setPosFilter] = useState<string>('ALL');
+  const [unitFrom, setUnitFrom] = useState<string>('');
+  const [unitTo, setUnitTo] = useState<string>('');
 
-  const updateVocab = useMutation(api.vocab.updateVocab);
+  const updateVocab = (
+    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
+  )(makeFunctionReference('vocab:updateVocab'));
 
   const resolvedCourse =
-    selectedCourse === "ALL"
-      ? institutes?.[0]?.id || institutes?.[0]?._id || ""
-      : selectedCourse;
+    selectedCourse === 'ALL' ? institutes?.[0]?.id || institutes?.[0]?._id || '' : selectedCourse;
 
-  const { results: words, status, loadMore } = usePaginatedQuery(
-    api.vocab.getAllPaginated,
+  const {
+    results: words,
+    status,
+    loadMore,
+  } = (usePaginatedQuery as unknown as (...args: any[]) => any)(
+    makeFunctionReference('vocab:getAllPaginated'),
     // Provide clean args without limit, let hook manage pagination
-    selectedCourse === "ALL" ? {} : { courseId: selectedCourse },
+    selectedCourse === 'ALL' ? {} : { courseId: selectedCourse },
     { initialNumItems: ITEMS_PER_PAGE }
   );
 
-  const stats = useQuery(api.vocab.getStats, {
-    courseId: resolvedCourse || "",
-  });
+  const stats = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
+    makeFunctionReference('vocab:getStats'),
+    { courseId: resolvedCourse || '' }
+  ) as any;
 
   // Get unique POS values for filter dropdown
   const posOptions = useMemo(() => {
     if (!words) return [];
-    const posSet = new Set((words as WordRow[]).map(w => w.partOfSpeech || "").filter(Boolean));
+    const posSet = new Set((words as WordRow[]).map(w => w.partOfSpeech || '').filter(Boolean));
     return Array.from(posSet).sort();
   }, [words]);
 
@@ -93,7 +99,7 @@ const VocabDashboard: React.FC = () => {
     if (search.trim()) {
       const term = search.toLowerCase();
       result = result.filter(
-        (w) =>
+        w =>
           w.word.toLowerCase().includes(term) ||
           w.meaning.toLowerCase().includes(term) ||
           (w.meaningEn && w.meaningEn.toLowerCase().includes(term))
@@ -101,14 +107,14 @@ const VocabDashboard: React.FC = () => {
     }
 
     // Meaning status filter
-    if (meaningFilter === "filled") {
-      result = result.filter(w => w.meaning && w.meaning.trim() !== "");
-    } else if (meaningFilter === "empty") {
-      result = result.filter(w => !w.meaning || w.meaning.trim() === "");
+    if (meaningFilter === 'filled') {
+      result = result.filter(w => w.meaning && w.meaning.trim() !== '');
+    } else if (meaningFilter === 'empty') {
+      result = result.filter(w => !w.meaning || w.meaning.trim() === '');
     }
 
     // POS filter
-    if (posFilter !== "ALL") {
+    if (posFilter !== 'ALL') {
       result = result.filter(w => w.partOfSpeech === posFilter);
     }
 
@@ -143,16 +149,16 @@ const VocabDashboard: React.FC = () => {
     setEditForm({
       word: word.word,
       meaning: word.meaning,
-      meaningEn: word.meaningEn || "",
-      meaningVi: word.meaningVi || "",
-      meaningMn: word.meaningMn || "",
-      partOfSpeech: word.partOfSpeech || "",
+      meaningEn: word.meaningEn || '',
+      meaningVi: word.meaningVi || '',
+      meaningMn: word.meaningMn || '',
+      partOfSpeech: word.partOfSpeech || '',
       unitId: word.unitId,
-      exampleSentence: word.exampleSentence || "",
-      exampleMeaning: word.exampleMeaning || "",
-      exampleMeaningEn: word.exampleMeaningEn || "",
-      exampleMeaningVi: word.exampleMeaningVi || "",
-      exampleMeaningMn: word.exampleMeaningMn || "",
+      exampleSentence: word.exampleSentence || '',
+      exampleMeaning: word.exampleMeaning || '',
+      exampleMeaningEn: word.exampleMeaningEn || '',
+      exampleMeaningVi: word.exampleMeaningVi || '',
+      exampleMeaningMn: word.exampleMeaningMn || '',
     });
   };
 
@@ -166,8 +172,8 @@ const VocabDashboard: React.FC = () => {
     setIsSaving(true);
     try {
       await updateVocab({
-        wordId: editingWord._id as Id<"words">,
-        appearanceId: editingWord.appearanceId as Id<"vocabulary_appearances"> | undefined,
+        wordId: editingWord._id as Id<'words'>,
+        appearanceId: editingWord.appearanceId as Id<'vocabulary_appearances'> | undefined,
         word: editForm.word,
         meaning: editForm.meaning,
         meaningEn: editForm.meaningEn,
@@ -183,8 +189,8 @@ const VocabDashboard: React.FC = () => {
       });
       closeEditModal();
     } catch (error) {
-      console.error("Failed to update:", error);
-      alert("保存失败: " + (error as Error).message);
+      console.error('Failed to update:', error);
+      alert('保存失败: ' + (error as Error).message);
     } finally {
       setIsSaving(false);
     }
@@ -192,34 +198,37 @@ const VocabDashboard: React.FC = () => {
 
   const handleExport = () => {
     if (!filteredWords.length) {
-      alert("没有可导出的数据");
+      alert('没有可导出的数据');
       return;
     }
 
     // Prepare data with headers
-    const exportData = filteredWords.map((w) => ({
-      "单元": w.unitId || "",
-      "韩语": w.word,
-      "词性": w.partOfSpeech || "",
-      "释义(中)": w.meaning || "",
-      "释义(英)": w.meaningEn || "",
-      "释义(蒙)": w.meaningMn || "",
-      "释义(越)": w.meaningVi || "",
-      "例句": w.exampleSentence || "",
-      "例句翻译(中)": w.exampleMeaning || "",
-      "例句翻译(英)": w.exampleMeaningEn || "",
-      "例句翻译(蒙)": w.exampleMeaningMn || "",
-      "例句翻译(越)": w.exampleMeaningVi || "",
-      "教材": w.courseName || "",
+    const exportData = filteredWords.map(w => ({
+      单元: w.unitId || '',
+      韩语: w.word,
+      词性: w.partOfSpeech || '',
+      '释义(中)': w.meaning || '',
+      '释义(英)': w.meaningEn || '',
+      '释义(蒙)': w.meaningMn || '',
+      '释义(越)': w.meaningVi || '',
+      例句: w.exampleSentence || '',
+      '例句翻译(中)': w.exampleMeaning || '',
+      '例句翻译(英)': w.exampleMeaningEn || '',
+      '例句翻译(蒙)': w.exampleMeaningMn || '',
+      '例句翻译(越)': w.exampleMeaningVi || '',
+      教材: w.courseName || '',
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "词汇");
+    XLSX.utils.book_append_sheet(wb, ws, '词汇');
 
     // Generate filename with date
     const date = new Date().toISOString().slice(0, 10);
-    const courseName = selectedCourse === "ALL" ? "全部" : (institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || selectedCourse);
+    const courseName =
+      selectedCourse === 'ALL'
+        ? '全部'
+        : institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || selectedCourse;
     XLSX.writeFile(wb, `词汇导出_${courseName}_${date}.xlsx`);
   };
 
@@ -228,27 +237,25 @@ const VocabDashboard: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-zinc-900">词汇资产大盘</h2>
-          <p className="text-sm text-zinc-500">
-            来自 Convex 的实时词汇数据概览
-          </p>
+          <p className="text-sm text-zinc-500">来自 Convex 的实时词汇数据概览</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
               placeholder="搜索单词或释义"
               className="pl-9 pr-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900"
             />
           </div>
           <select
             value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
+            onChange={e => setSelectedCourse(e.target.value)}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
             <option value="ALL">全部教材</option>
-            {(institutes || []).map((inst) => {
+            {(institutes || []).map(inst => {
               // Build display name with level and volume
               let displayName = inst.name || '';
               if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
@@ -277,20 +284,20 @@ const VocabDashboard: React.FC = () => {
         {/* Meaning Status */}
         <div className="flex items-center gap-1 bg-white rounded-lg border border-zinc-200 p-0.5">
           <button
-            onClick={() => setMeaningFilter("all")}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "all" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+            onClick={() => setMeaningFilter('all')}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'all' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
           >
             全部
           </button>
           <button
-            onClick={() => setMeaningFilter("filled")}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "filled" ? "bg-emerald-600 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+            onClick={() => setMeaningFilter('filled')}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'filled' ? 'bg-emerald-600 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
           >
             已填充
           </button>
           <button
-            onClick={() => setMeaningFilter("empty")}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === "empty" ? "bg-amber-500 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+            onClick={() => setMeaningFilter('empty')}
+            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'empty' ? 'bg-amber-500 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
           >
             未填充
           </button>
@@ -299,12 +306,14 @@ const VocabDashboard: React.FC = () => {
         {/* POS Filter */}
         <select
           value={posFilter}
-          onChange={(e) => setPosFilter(e.target.value)}
+          onChange={e => setPosFilter(e.target.value)}
           className="px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium"
         >
           <option value="ALL">全部词性</option>
           {posOptions.map(pos => (
-            <option key={pos} value={pos}>{pos}</option>
+            <option key={pos} value={pos}>
+              {pos}
+            </option>
           ))}
         </select>
 
@@ -314,7 +323,7 @@ const VocabDashboard: React.FC = () => {
           <input
             type="number"
             value={unitFrom}
-            onChange={(e) => setUnitFrom(e.target.value)}
+            onChange={e => setUnitFrom(e.target.value)}
             placeholder="从"
             className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
           />
@@ -322,7 +331,7 @@ const VocabDashboard: React.FC = () => {
           <input
             type="number"
             value={unitTo}
-            onChange={(e) => setUnitTo(e.target.value)}
+            onChange={e => setUnitTo(e.target.value)}
             placeholder="到"
             className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
           />
@@ -340,9 +349,7 @@ const VocabDashboard: React.FC = () => {
             <Database className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
-              词条总数
-            </p>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">词条总数</p>
             <p className="text-2xl font-black text-zinc-900">{totalWords}</p>
           </div>
         </div>
@@ -351,12 +358,8 @@ const VocabDashboard: React.FC = () => {
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
-              精通词汇
-            </p>
-            <p className="text-2xl font-black text-zinc-900">
-              {stats?.mastered ?? 0}
-            </p>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">精通词汇</p>
+            <p className="text-2xl font-black text-zinc-900">{stats?.mastered ?? 0}</p>
           </div>
         </div>
         <div className="p-4 bg-white border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(24,24,27,0.25)] flex items-center gap-3">
@@ -364,14 +367,11 @@ const VocabDashboard: React.FC = () => {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
-              当前教材
-            </p>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">当前教材</p>
             <p className="text-sm font-black text-zinc-900">
-              {selectedCourse === "ALL"
-                ? "全部"
-                : institutes?.find((i) => (i.id || i._id) === selectedCourse)
-                  ?.name || "未选择"}
+              {selectedCourse === 'ALL'
+                ? '全部'
+                : institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || '未选择'}
             </p>
           </div>
         </div>
@@ -388,7 +388,6 @@ const VocabDashboard: React.FC = () => {
               已加载 {words?.length || 0} 条 · 当前显示 {filteredWords.length} 条
             </span>
             {/* Previous/Next buttons removed for infinite scroll */}
-
           </div>
         </div>
 
@@ -414,34 +413,43 @@ const VocabDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedWords.map((word) => (
+                {paginatedWords.map(word => (
                   <tr
                     key={word._id}
                     className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors"
                   >
-                    <td className="px-3 py-2 text-zinc-600">
-                      {word.unitId ?? "-"}
+                    <td className="px-3 py-2 text-zinc-600">{word.unitId ?? '-'}</td>
+                    <td className="px-3 py-2 font-bold text-zinc-900">{word.word}</td>
+                    <td className="px-3 py-2 text-zinc-500 text-xs">{word.partOfSpeech || '-'}</td>
+                    <td
+                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
+                      title={word.meaningMn}
+                    >
+                      {word.meaningMn || '-'}
                     </td>
-                    <td className="px-3 py-2 font-bold text-zinc-900">
-                      {word.word}
+                    <td
+                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
+                      title={word.meaningVi}
+                    >
+                      {word.meaningVi || '-'}
                     </td>
-                    <td className="px-3 py-2 text-zinc-500 text-xs">
-                      {word.partOfSpeech || "-"}
+                    <td
+                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
+                      title={word.meaningEn}
+                    >
+                      {word.meaningEn || '-'}
                     </td>
-                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningMn}>
-                      {word.meaningMn || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningVi}>
-                      {word.meaningVi || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaningEn}>
-                      {word.meaningEn || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-zinc-600 max-w-[120px] truncate" title={word.meaning}>
+                    <td
+                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
+                      title={word.meaning}
+                    >
                       {word.meaning}
                     </td>
-                    <td className="px-3 py-2 text-zinc-500 text-xs max-w-[150px] truncate" title={word.exampleSentence}>
-                      {word.exampleSentence || "-"}
+                    <td
+                      className="px-3 py-2 text-zinc-500 text-xs max-w-[150px] truncate"
+                      title={word.exampleSentence}
+                    >
+                      {word.exampleSentence || '-'}
                     </td>
                     <td className="px-3 py-2">
                       <button
@@ -456,10 +464,7 @@ const VocabDashboard: React.FC = () => {
                 ))}
                 {paginatedWords.length === 0 && (
                   <tr>
-                    <td
-                      className="px-4 py-6 text-center text-zinc-500"
-                      colSpan={9}
-                    >
+                    <td className="px-4 py-6 text-center text-zinc-500" colSpan={9}>
                       未找到匹配的词条
                     </td>
                   </tr>
@@ -475,7 +480,7 @@ const VocabDashboard: React.FC = () => {
           <div className="text-xs text-zinc-500 mb-2">
             已加载 {words?.length || 0} 个词条 ({filteredWords.length} 显示)
           </div>
-          {status === "CanLoadMore" ? (
+          {status === 'CanLoadMore' ? (
             <button
               onClick={() => loadMore(ITEMS_PER_PAGE)}
               className="px-6 py-2 bg-white border border-zinc-300 rounded-lg shadow-sm text-sm font-medium hover:bg-zinc-50 text-zinc-700 transition-colors flex items-center gap-2"
@@ -483,15 +488,13 @@ const VocabDashboard: React.FC = () => {
               <Download className="w-4 h-4" />
               加载更多
             </button>
-          ) : status === "LoadingMore" ? (
+          ) : status === 'LoadingMore' ? (
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Loader2 className="w-4 h-4 animate-spin" />
               加载中...
             </div>
           ) : (
-            <div className="text-sm text-zinc-400 font-medium">
-              没有更多数据了
-            </div>
+            <div className="text-sm text-zinc-400 font-medium">没有更多数据了</div>
           )}
         </div>
       </div>
@@ -501,48 +504,42 @@ const VocabDashboard: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
-              <h3 className="text-lg font-bold text-zinc-900">
-                编辑词汇: {editingWord.word}
-              </h3>
-              <button
-                onClick={closeEditModal}
-                className="p-2 rounded-lg hover:bg-zinc-100"
-              >
+              <h3 className="text-lg font-bold text-zinc-900">编辑词汇: {editingWord.word}</h3>
+              <button onClick={closeEditModal} className="p-2 rounded-lg hover:bg-zinc-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">
-                    韩语
-                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">韩语</label>
                   <input
-                    value={editForm.word || ""}
-                    onChange={(e) => setEditForm({ ...editForm, word: e.target.value })}
+                    value={editForm.word || ''}
+                    onChange={e => setEditForm({ ...editForm, word: e.target.value })}
                     className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">
-                    词性
-                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">词性</label>
                   <input
-                    value={editForm.partOfSpeech || ""}
-                    onChange={(e) => setEditForm({ ...editForm, partOfSpeech: e.target.value })}
+                    value={editForm.partOfSpeech || ''}
+                    onChange={e => setEditForm({ ...editForm, partOfSpeech: e.target.value })}
                     className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">
-                    单元
-                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">单元</label>
                   <input
                     type="number"
-                    value={editForm.unitId ?? ""}
-                    onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value ? Number(e.target.value) : undefined })}
+                    value={editForm.unitId ?? ''}
+                    onChange={e =>
+                      setEditForm({
+                        ...editForm,
+                        unitId: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                   />
                 </div>
@@ -555,8 +552,8 @@ const VocabDashboard: React.FC = () => {
                       释义(CH) 中文
                     </label>
                     <input
-                      value={editForm.meaning || ""}
-                      onChange={(e) => setEditForm({ ...editForm, meaning: e.target.value })}
+                      value={editForm.meaning || ''}
+                      onChange={e => setEditForm({ ...editForm, meaning: e.target.value })}
                       className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
@@ -565,8 +562,8 @@ const VocabDashboard: React.FC = () => {
                       释义(EN) English
                     </label>
                     <input
-                      value={editForm.meaningEn || ""}
-                      onChange={(e) => setEditForm({ ...editForm, meaningEn: e.target.value })}
+                      value={editForm.meaningEn || ''}
+                      onChange={e => setEditForm({ ...editForm, meaningEn: e.target.value })}
                       className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
@@ -575,8 +572,8 @@ const VocabDashboard: React.FC = () => {
                       释义(VN) Tiếng Việt
                     </label>
                     <input
-                      value={editForm.meaningVi || ""}
-                      onChange={(e) => setEditForm({ ...editForm, meaningVi: e.target.value })}
+                      value={editForm.meaningVi || ''}
+                      onChange={e => setEditForm({ ...editForm, meaningVi: e.target.value })}
                       className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
@@ -585,8 +582,8 @@ const VocabDashboard: React.FC = () => {
                       释义(MN) Монгол
                     </label>
                     <input
-                      value={editForm.meaningMn || ""}
-                      onChange={(e) => setEditForm({ ...editForm, meaningMn: e.target.value })}
+                      value={editForm.meaningMn || ''}
+                      onChange={e => setEditForm({ ...editForm, meaningMn: e.target.value })}
                       className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
@@ -596,12 +593,10 @@ const VocabDashboard: React.FC = () => {
                 <h4 className="text-sm font-bold text-zinc-800 mb-3">例句</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                      韩语例句
-                    </label>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">韩语例句</label>
                     <textarea
-                      value={editForm.exampleSentence || ""}
-                      onChange={(e) => setEditForm({ ...editForm, exampleSentence: e.target.value })}
+                      value={editForm.exampleSentence || ''}
+                      onChange={e => setEditForm({ ...editForm, exampleSentence: e.target.value })}
                       className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                       rows={2}
                     />
@@ -612,8 +607,8 @@ const VocabDashboard: React.FC = () => {
                         例句翻译(CH)
                       </label>
                       <input
-                        value={editForm.exampleMeaning || ""}
-                        onChange={(e) => setEditForm({ ...editForm, exampleMeaning: e.target.value })}
+                        value={editForm.exampleMeaning || ''}
+                        onChange={e => setEditForm({ ...editForm, exampleMeaning: e.target.value })}
                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                       />
                     </div>
@@ -622,8 +617,10 @@ const VocabDashboard: React.FC = () => {
                         例句翻译(EN)
                       </label>
                       <input
-                        value={editForm.exampleMeaningEn || ""}
-                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningEn: e.target.value })}
+                        value={editForm.exampleMeaningEn || ''}
+                        onChange={e =>
+                          setEditForm({ ...editForm, exampleMeaningEn: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                       />
                     </div>
@@ -632,8 +629,10 @@ const VocabDashboard: React.FC = () => {
                         例句翻译(VN)
                       </label>
                       <input
-                        value={editForm.exampleMeaningVi || ""}
-                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningVi: e.target.value })}
+                        value={editForm.exampleMeaningVi || ''}
+                        onChange={e =>
+                          setEditForm({ ...editForm, exampleMeaningVi: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                       />
                     </div>
@@ -642,8 +641,10 @@ const VocabDashboard: React.FC = () => {
                         例句翻译(MN)
                       </label>
                       <input
-                        value={editForm.exampleMeaningMn || ""}
-                        onChange={(e) => setEditForm({ ...editForm, exampleMeaningMn: e.target.value })}
+                        value={editForm.exampleMeaningMn || ''}
+                        onChange={e =>
+                          setEditForm({ ...editForm, exampleMeaningMn: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
                       />
                     </div>

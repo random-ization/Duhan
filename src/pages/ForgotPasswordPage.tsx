@@ -7,11 +7,15 @@ import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
-import { useMutation } from 'convex/react';
-import { api as convexApi } from '../../convex/_generated/api';
+import { useAction } from 'convex/react';
+import { makeFunctionReference } from 'convex/server';
 
 export default function ForgotPasswordPage() {
-  const resetPassword = useMutation(convexApi.auth.resetPassword);
+  const requestPasswordReset = useAction(
+    makeFunctionReference<'action', { email: string }, { success: boolean }>(
+      'passwordReset:requestPasswordReset'
+    )
+  );
   const { language } = useAuth();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
@@ -29,7 +33,7 @@ export default function ForgotPasswordPage() {
       setMessage('');
       setError('');
       setLoading(true);
-      await resetPassword({ email }); // Changed to pass email as an object
+      await requestPasswordReset({ email });
       setMessage(labels.auth?.resendSuccess || 'Reset link sent! Please check your inbox.');
     } catch {
       setError(labels.auth?.resendError || 'Failed to reset password.');

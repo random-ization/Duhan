@@ -21,8 +21,8 @@ import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { getLabels } from '../utils/i18n';
+import { qRef } from '../utils/convexRefs';
 
 // Google OAuth Config - Removed legacy config
 // const GOOGLE_CLIENT_ID ...
@@ -72,7 +72,10 @@ export default function AuthPage() {
   */
 
   const { signIn } = useAuthActions();
-  const logoSetting = useQuery(api.settings.getSetting, { key: 'logo' });
+  const logoSetting = useQuery(
+    qRef<{ key: string }, { value?: { url?: string } } | null>('settings:getSetting'),
+    { key: 'logo' }
+  );
   const postAuthRedirectPath = getLocalizedPath('/dashboard', currentLanguage);
   const postAuthRedirectUrl = `${window.location.origin}${postAuthRedirectPath}`;
 

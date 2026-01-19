@@ -68,6 +68,24 @@ export default [
         },
     },
 
+    // Backend: forbid explicit `any` (Convex + Workers)
+    {
+        files: ["convex/**/*.{ts,tsx}", "workers/**/*.{ts,tsx}"],
+        rules: {
+            "@typescript-eslint/no-explicit-any": "error",
+        },
+    },
+
+    // Workers runtime globals (Cloudflare Workers)
+    {
+        files: ["workers/**/*.{ts,tsx}"],
+        languageOptions: {
+            globals: {
+                WebSocketPair: "readonly",
+            },
+        },
+    },
+
     // JavaScript files configuration
     {
         files: ["**/*.{js,mjs,cjs}"],

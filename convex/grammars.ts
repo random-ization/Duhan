@@ -1,13 +1,20 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
+import { toErrorMessage } from './errors';
+import type { Id } from './_generated/dataModel';
+
+export type GrammarStatsDto = {
+  total: number;
+  mastered: number;
+};
 
 // Get Grammar stats for sidebar
 export const getStats = query({
   args: {
     courseId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<GrammarStatsDto> => {
     const userId = await getOptionalAuthUserId(ctx);
 
     // 1. Get all CourseGrammar links for this course
@@ -39,13 +46,21 @@ export const getStats = query({
   },
 });
 
+export type GrammarItemDto = {
+  id: Id<'grammar_points'>;
+  title: string;
+  summary: string;
+  unitId: number;
+  status: string;
+};
+
 // Get all grammars for a course (Student View)
 // OPTIMIZATION: Batch query with Map instead of N*2 queries
 export const getByCourse = query({
   args: {
     courseId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<GrammarItemDto[]> => {
     const userId = await getOptionalAuthUserId(ctx);
 
     const links = await ctx.db
@@ -85,16 +100,50 @@ export const getByCourse = query({
       };
     });
 
-    return results.filter(g => g !== null).sort((a, b) => a.unitId - b.unitId);
+    return results
+      .filter((g): g is GrammarItemDto => g !== null)
+      .sort((a, b) => a.unitId - b.unitId);
   },
 });
+
+export type UnitGrammarDto = {
+  id: Id<'grammar_points'>;
+  title: string;
+  level: string;
+  type: string;
+  summary: string;
+  summaryEn: string | undefined;
+  summaryVi: string | undefined;
+  summaryMn: string | undefined;
+  explanation: string;
+  explanationEn: string | undefined;
+  explanationVi: string | undefined;
+  explanationMn: string | undefined;
+  examples: Array<{
+    kr: string;
+    cn: string;
+    en?: string;
+    vi?: string;
+    mn?: string;
+    audio?: string;
+  }>;
+  conjugationRules: unknown[];
+  createdAt: number;
+  updatedAt: number;
+  // Course Context
+  customNote: string | undefined;
+  unitId: number;
+  // Progress
+  status: string;
+  proficiency: number;
+};
 
 export const getUnitGrammar = query({
   args: {
     courseId: v.string(),
     unitId: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<UnitGrammarDto[]> => {
     try {
       const userId = await getOptionalAuthUserId(ctx);
 
@@ -154,8 +203,22 @@ export const getUnitGrammar = query({
         const userProgress = progressMap.get(link.grammarId.toString());
 
         return {
-          ...grammar,
           id: grammar._id,
+          title: grammar.title,
+          level: grammar.level,
+          type: grammar.type,
+          summary: grammar.summary,
+          summaryEn: grammar.summaryEn,
+          summaryVi: grammar.summaryVi,
+          summaryMn: grammar.summaryMn,
+          explanation: grammar.explanation,
+          explanationEn: grammar.explanationEn,
+          explanationVi: grammar.explanationVi,
+          explanationMn: grammar.explanationMn,
+          examples: grammar.examples,
+          conjugationRules: grammar.conjugationRules,
+          createdAt: grammar.createdAt,
+          updatedAt: grammar.updatedAt,
           // Course Context
           customNote: link.customNote,
           unitId: link.unitId,
@@ -165,9 +228,9 @@ export const getUnitGrammar = query({
         };
       });
 
-      return results.filter(g => g !== null);
-    } catch (error: any) {
-      console.error('[getUnitGrammar] Error:', error?.message || error);
+      return results.filter((g): g is UnitGrammarDto => g !== null);
+    } catch (error: unknown) {
+      console.error('[getUnitGrammar] Error:', toErrorMessage(error));
       throw error;
     }
   },
@@ -208,15 +271,25 @@ export const updateStatus = mutation({
     }
   },
 });
+
 // Search Grammar (Admin)
 export const search = query({
   args: { query: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<GrammarItemDto[]> => {
     if (!args.query) return [];
-    return await ctx.db
+    const results = await ctx.db
       .query('grammar_points')
       .withSearchIndex('search_title', q => q.search('title', args.query))
       .take(20);
+
+    return results.map(g => ({
+      id: g._id,
+      title: g.title,
+      summary: g.summary,
+      // Mock these for search results if they don't exist in the search view/context
+      unitId: 0,
+      status: 'NOT_STARTED',
+    }));
   },
 });
 
@@ -228,7 +301,7 @@ export const create = mutation({
     type: v.string(),
     level: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ id: Id<'grammar_points'> }> => {
     const id = await ctx.db.insert('grammar_points', {
       ...args,
       createdAt: Date.now(),
@@ -368,7 +441,7 @@ export const bulkImport = mutation({
           return gBaseTitle === baseTitle;
         });
 
-        let grammarId: any;
+        let grammarId: Id<'grammar_points'> | null = null;
         let shouldCreateNew = false;
         let reuseGrammar = null;
 
@@ -495,6 +568,12 @@ export const bulkImport = mutation({
           });
         }
 
+        if (!grammarId) {
+          failedCount++;
+          errors.push(`${item.title}: Failed to resolve grammarId`);
+          continue;
+        }
+
         // 2. Link to course unit (upsert)
         const existingLink = await ctx.db
           .query('course_grammars')
@@ -523,9 +602,9 @@ export const bulkImport = mutation({
         }
 
         successCount++;
-      } catch (e: any) {
+      } catch (e: unknown) {
         failedCount++;
-        errors.push(`${item.title}: ${e.message}`);
+        errors.push(`${item.title}: ${toErrorMessage(e)}`);
       }
     }
 

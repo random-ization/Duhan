@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { ToastMessage, ToastType } from '../components/common/Toast';
+
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastMessage = { id: string; type: ToastType; message: string; duration?: number };
 
 export const useToast = () => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);

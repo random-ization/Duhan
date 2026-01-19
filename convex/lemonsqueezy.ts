@@ -2,6 +2,54 @@
 import { action } from './_generated/server';
 import { v } from 'convex/values';
 import crypto from 'node:crypto';
+import { makeFunctionReference } from 'convex/server';
+import type { FunctionReference } from 'convex/server';
+import { toErrorMessage } from './errors';
+import { getPath, isRecord, parseJson, readString } from './validation';
+
+const readStringish = (value: unknown, path: readonly string[]): string | undefined => {
+  const v = getPath(value, path);
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return undefined;
+};
+
+type GrantAccessArgs = {
+  customerEmail: string;
+  plan: string;
+  creemCustomerId?: string;
+  creemSubscriptionId?: string;
+  lemonSqueezyCustomerId?: string;
+  lemonSqueezySubscriptionId?: string;
+  userId?: string;
+};
+
+type RevokeAccessArgs = {
+  customerEmail: string;
+  userId?: string;
+};
+
+const grantAccessMutation = makeFunctionReference<
+  'mutation',
+  GrantAccessArgs,
+  { success: boolean; error?: string }
+>('paymentsMutations:grantAccess') as unknown as FunctionReference<
+  'mutation',
+  'internal',
+  GrantAccessArgs,
+  { success: boolean; error?: string }
+>;
+
+const revokeAccessMutation = makeFunctionReference<
+  'mutation',
+  RevokeAccessArgs,
+  { success: boolean; error?: string }
+>('paymentsMutations:revokeAccess') as unknown as FunctionReference<
+  'mutation',
+  'internal',
+  RevokeAccessArgs,
+  { success: boolean; error?: string }
+>;
 
 // Environment variable names
 const API_KEY_ENV = 'LEMONSQUEEZY_API_KEY';
@@ -107,9 +155,9 @@ export const createCheckout = action({
 
       console.log('[LemonSqueezy] Checkout created:', checkoutUrl);
       return { checkoutUrl };
-    } catch (error: any) {
-      console.error('[LemonSqueezy] Error creating checkout:', error.message);
-      throw error;
+    } catch (error: unknown) {
+      console.error('[LemonSqueezy] Error creating checkout:', toErrorMessage(error));
+      throw error instanceof Error ? error : new Error(toErrorMessage(error));
     }
   },
 });
@@ -151,36 +199,37 @@ export const handleWebhook = action({
     }
 
     // Parse webhook payload
-    let payload: any;
+    let payload: unknown;
     try {
-      payload = JSON.parse(args.body);
+      payload = parseJson(args.body);
     } catch {
       console.error('[LemonSqueezy] Failed to parse webhook body');
       return { success: false, error: 'Invalid JSON' };
     }
 
-    const eventName = payload.meta?.event_name;
-    const customData = payload.meta?.custom_data || {};
-    const attributes = payload.data?.attributes || {};
+    const eventName = readString(payload, ['meta', 'event_name']);
+    const customData = getPath(payload, ['meta', 'custom_data']);
+    const attributes = getPath(payload, ['data', 'attributes']);
+    const userEmail = readString(payload, ['data', 'attributes', 'user_email']);
+    const userId = isRecord(customData) ? readString(customData, ['user_id']) : undefined;
+    const planFromCustom = isRecord(customData) ? readString(customData, ['plan']) : undefined;
+    const customerId = readStringish(payload, ['data', 'attributes', 'customer_id']);
+    const subscriptionOrOrderId = readStringish(payload, ['data', 'id']);
 
-    console.log(`[LemonSqueezy] Webhook received: ${eventName}`);
-
-    // Import internal mutations
-    // @ts-expect-error: Fix build error
-    const { internal } = await import('./_generated/api');
+    console.log(`[LemonSqueezy] Webhook received: ${eventName ?? 'unknown'}`);
 
     try {
       switch (eventName) {
         case 'order_created':
           // One-time purchase (e.g., LIFETIME)
-          if (customData.user_id || attributes.user_email) {
-            await ctx.runMutation(internal.paymentsMutations.grantAccess as any, {
-              customerEmail: attributes.user_email || '',
-              plan: customData.plan || 'LIFETIME',
-              userId: customData.user_id,
-              lemonSqueezyCustomerId: String(attributes.customer_id || ''),
+          if (userEmail) {
+            await ctx.runMutation(grantAccessMutation, {
+              customerEmail: userEmail,
+              plan: planFromCustom ?? 'LIFETIME',
+              userId,
+              lemonSqueezyCustomerId: customerId,
             });
-            console.log(`[LemonSqueezy] Granted access for order: ${attributes.user_email}`);
+            console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
           }
           break;
 
@@ -189,19 +238,20 @@ export const handleWebhook = action({
         case 'subscription_resumed':
         case 'subscription_unpaused':
           // Subscription activated or renewed
-          if (attributes.user_email) {
+          if (userEmail) {
+            const variantName = readString(attributes, ['variant_name']);
             const plan =
-              customData.plan ||
-              (attributes.variant_name?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
+              planFromCustom ??
+              (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
 
-            await ctx.runMutation(internal.paymentsMutations.grantAccess as any, {
-              customerEmail: attributes.user_email,
+            await ctx.runMutation(grantAccessMutation, {
+              customerEmail: userEmail,
               plan,
-              userId: customData.user_id,
-              lemonSqueezyCustomerId: String(attributes.customer_id || ''),
-              lemonSqueezySubscriptionId: String(payload.data?.id || ''),
+              userId,
+              lemonSqueezyCustomerId: customerId,
+              lemonSqueezySubscriptionId: subscriptionOrOrderId,
             });
-            console.log(`[LemonSqueezy] Granted subscription access: ${attributes.user_email}`);
+            console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
           }
           break;
 
@@ -209,33 +259,33 @@ export const handleWebhook = action({
         case 'subscription_expired':
         case 'subscription_paused':
           // Subscription ended
-          if (attributes.user_email) {
-            await ctx.runMutation(internal.paymentsMutations.revokeAccess as any, {
-              customerEmail: attributes.user_email,
-              userId: customData.user_id,
+          if (userEmail) {
+            await ctx.runMutation(revokeAccessMutation, {
+              customerEmail: userEmail,
+              userId,
             });
-            console.log(`[LemonSqueezy] Revoked access: ${attributes.user_email}`);
+            console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
           }
           break;
 
         case 'subscription_updated': {
           // Check status to determine if access should be granted or revoked
-          const status = attributes.status;
+          const status = readString(attributes, ['status']);
           if (status === 'active' || status === 'on_trial') {
-            if (attributes.user_email) {
-              await ctx.runMutation(internal.paymentsMutations.grantAccess as any, {
-                customerEmail: attributes.user_email,
-                plan: customData.plan || 'MONTHLY',
-                userId: customData.user_id,
-                lemonSqueezyCustomerId: String(attributes.customer_id || ''),
-                lemonSqueezySubscriptionId: String(payload.data?.id || ''),
+            if (userEmail) {
+              await ctx.runMutation(grantAccessMutation, {
+                customerEmail: userEmail,
+                plan: planFromCustom ?? 'MONTHLY',
+                userId,
+                lemonSqueezyCustomerId: customerId,
+                lemonSqueezySubscriptionId: subscriptionOrOrderId,
               });
             }
           } else if (status === 'cancelled' || status === 'expired' || status === 'paused') {
-            if (attributes.user_email) {
-              await ctx.runMutation(internal.paymentsMutations.revokeAccess as any, {
-                customerEmail: attributes.user_email,
-                userId: customData.user_id,
+            if (userEmail) {
+              await ctx.runMutation(revokeAccessMutation, {
+                customerEmail: userEmail,
+                userId,
               });
             }
           }
@@ -247,9 +297,9 @@ export const handleWebhook = action({
       }
 
       return { success: true };
-    } catch (error: any) {
-      console.error('[LemonSqueezy] Error processing webhook:', error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      console.error('[LemonSqueezy] Error processing webhook:', toErrorMessage(error));
+      return { success: false, error: toErrorMessage(error) };
     }
   },
 });

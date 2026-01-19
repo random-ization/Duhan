@@ -1,8 +1,8 @@
 // Vocabulary API Service - SRS Learning System
 import { ConvexHttpClient } from 'convex/browser';
-import { api as convexApi } from '../../convex/_generated/api';
 import { getConvexUrl } from '../utils/convexConfig';
-import { Doc, Id } from '../../convex/_generated/dataModel';
+import { Id } from '../../convex/_generated/dataModel';
+import { VOCAB } from '../utils/convexRefs';
 
 const CONVEX_URL = getConvexUrl();
 const client = new ConvexHttpClient(CONVEX_URL);
@@ -13,18 +13,10 @@ const client = new ConvexHttpClient(CONVEX_URL);
 const VOCAB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_VOCAB_CACHE_SIZE = 50; // Maximum cache entries
 
+import { VocabWordDto } from '../../convex/vocab';
+
 // Type for vocab word returned from Convex
-type ConvexVocabWord = Doc<'words'> & {
-  unitId?: number;
-  courseId?: string;
-  appearanceId?: string;
-  progress?: {
-    status: string;
-    interval: number;
-    streak: number;
-    nextReviewAt: number | null;
-  } | null;
-};
+type ConvexVocabWord = VocabWordDto;
 
 // Helper function to convert ConvexVocabWord to VocabWord
 function toVocabWord(word: ConvexVocabWord): VocabWord {
@@ -125,8 +117,8 @@ async function cachedVocabQuery<T>(
 }
 
 export interface VocabWord {
-  _id: string;
-  id: string; // Shim for frontend
+  _id: Id<'words'>;
+  id: Id<'words'>;
   word: string;
   meaning: string;
   meaningEn?: string;
@@ -164,7 +156,7 @@ export interface VocabProgressResponse {
     status: string;
     interval: number;
     streak: number;
-    nextReviewAt: string;
+    nextReviewAt: number;
   };
 }
 
@@ -177,35 +169,33 @@ export async function fetchVocabSession(
   // OPTIMIZATION: Use caching to reduce query volume
   const cacheKey = { courseId, unitId: unitId || 'ALL' };
 
-  const allWords = await cachedVocabQuery(
+  const allWords = await cachedVocabQuery<ConvexVocabWord[]>(
     'getOfCourse',
-    () => client.query(convexApi.vocab.getOfCourse, { courseId }),
+    () => client.query(VOCAB.getOfCourse, { courseId }),
     cacheKey
   );
 
-  let candidates = allWords;
+  let candidates: ConvexVocabWord[] = allWords;
 
   // Filter by Unit if specified
   if (unitId && unitId !== 'ALL') {
     const uId = parseInt(unitId);
     if (!isNaN(uId)) {
-      candidates = (candidates as ConvexVocabWord[]).filter(w => w.unitId === uId);
+      candidates = candidates.filter(w => w.unitId === uId);
     }
   }
 
   // SRS Priority Logic (Client-side Shim)
   const now = Date.now();
-  const reviews = (candidates as ConvexVocabWord[]).filter(
+  const reviews = candidates.filter(
     w =>
       w.progress &&
       w.progress.nextReviewAt &&
       new Date(w.progress.nextReviewAt).getTime() <= now &&
       w.progress.status !== 'MASTERED' // Include Review
   );
-  const newWords = (candidates as ConvexVocabWord[]).filter(w => !w.progress);
-  const learning = (candidates as ConvexVocabWord[]).filter(
-    w => w.progress && w.progress.status === 'LEARNING'
-  );
+  const newWords = candidates.filter(w => !w.progress);
+  const learning = candidates.filter(w => w.progress && w.progress.status === 'LEARNING');
 
   // Assemble and Shim ID
   const session = [...reviews, ...learning, ...newWords].slice(0, limit).map(toVocabWord);
@@ -214,7 +204,7 @@ export async function fetchVocabSession(
     success: true,
     session,
     stats: {
-      total: (candidates as ConvexVocabWord[]).length,
+      total: candidates.length,
       dueReviews: reviews.length,
     },
   };
@@ -225,16 +215,10 @@ export async function updateVocabProgress(
   wordId: string,
   quality: 0 | 5 // 0 = Forgot, 5 = Know
 ): Promise<VocabProgressResponse> {
-  await client.mutation(convexApi.vocab.updateProgress, {
-    wordId: wordId as Id<'words'>,
+  await client.mutation(VOCAB.updateProgress, {
+    wordId,
     quality,
   });
-
-  // We need to fetch the updated status to return.
-  // Ideally mutation returns it, but my mutation doesn't currently return the object.
-  // For now, return a mock success or refactor mutation.
-  // Let's just return success=true and mock the return structure to satisfy frontend type.
-  // The frontend likely re-fetches or updates Optimistically?
 
   return {
     success: true,
@@ -243,7 +227,7 @@ export async function updateVocabProgress(
       status: quality >= 4 ? 'REVIEW' : 'LEARNING',
       interval: 1,
       streak: 1,
-      nextReviewAt: new Date().toISOString(),
+      nextReviewAt: Date.now(),
     },
   };
 }
@@ -256,13 +240,13 @@ export async function fetchAllVocab(
   // OPTIMIZATION: Use caching to reduce query volume
   const cacheKey = { courseId, unitId: unitId || 'ALL', allVocab: true };
 
-  const words = await cachedVocabQuery(
+  const words = await cachedVocabQuery<ConvexVocabWord[]>(
     'getAllVocab',
-    () => client.query(convexApi.vocab.getOfCourse, { courseId }),
+    () => client.query(VOCAB.getOfCourse, { courseId }),
     cacheKey
   );
 
-  let filtered = words as ConvexVocabWord[];
+  let filtered = words;
   if (unitId && unitId !== 'ALL') {
     const uId = parseInt(unitId);
     if (!isNaN(uId)) {

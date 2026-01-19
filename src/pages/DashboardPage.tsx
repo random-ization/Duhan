@@ -19,6 +19,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -190,9 +191,9 @@ export default function DashboardPage({
                   <br />
                   {selectedLevel
                     ? (labels.dashboard?.textbook?.level || 'Level {level}').replace(
-                      '{level}',
-                      String(selectedLevel)
-                    )
+                        '{level}',
+                        String(selectedLevel)
+                      )
                     : labels.dashboard?.textbook?.selectLevel || 'Select Level'}
                 </h3>
                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">
@@ -389,13 +390,12 @@ export default function DashboardPage({
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
-      const oldIndex = cardOrder.indexOf(active.id);
-      const newIndex = cardOrder.indexOf(over.id);
+    if (over && active.id !== over.id) {
+      const oldIndex = cardOrder.indexOf(active.id as string);
+      const newIndex = cardOrder.indexOf(over.id as string);
       updateCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
     }
   };

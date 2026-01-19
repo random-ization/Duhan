@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { getLabels } from './utils/i18n';
+import { getLabels, getLabel } from './utils/i18n';
 import { ContentSkeleton } from './components/common';
 import { LanguageRouter, DEFAULT_LANGUAGE, isValidLanguage } from './components/LanguageRouter';
 
@@ -45,9 +45,7 @@ const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
 import { TextbookContent, TopikExam } from './types';
 
 // Loading fallback component with skeleton screen
-const PageLoader = ({ labels: _labels }: { labels: any }) => (
-  <ContentSkeleton />
-);
+const PageLoader = () => <ContentSkeleton />;
 
 interface AppRoutesProps {
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
@@ -55,7 +53,10 @@ interface AppRoutesProps {
 }
 
 // Inner routes component that uses language from URL params
-const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
+const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
+  canAccessContent,
+  onShowUpgradePrompt,
+}) => {
   const { lang } = useParams<{ lang: string }>();
   const { language: authLanguage } = useAuth();
 
@@ -64,8 +65,11 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onSho
   const labels = getLabels(language);
 
   return (
-    <ErrorBoundary moduleName={labels.common?.appName || "Duhan"} language={language}>
-      <Suspense fallback={<PageLoader labels={labels} />}>
+    <ErrorBoundary
+      moduleName={getLabel(labels, ['common', 'appName']) || 'Duhan'}
+      language={language}
+    >
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* === 公开路由 (无需登录) === */}
           <Route path="/" element={<Landing />} />
@@ -89,10 +93,8 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onSho
           />
           <Route path="/pricing" element={<SubscriptionPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
-
           {/* === 管理员登录页 (公开) === */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/profile" element={<ProfilePage language={language} />} />
@@ -164,13 +166,18 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onSho
               <Route path="/video/:id" element={<VideoPlayerPage />} />
             </Route>
           </Route>
-
           {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}
-          <Route element={<ProtectedRoute requireAdmin={true} redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`} />}>
+          <Route
+            element={
+              <ProtectedRoute
+                requireAdmin={true}
+                redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`}
+              />
+            }
+          >
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/:tab" element={<AdminPage />} />
           </Route>
-
           {/* 404 在当前语言下重定向到首页 */}
           <Route path="*" element={<Navigate to={`/${lang || DEFAULT_LANGUAGE}`} replace />} />
         </Routes>
@@ -186,14 +193,17 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
       <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
 
       {/* Language-prefixed routes */}
-      <Route path="/:lang/*" element={
-        <LanguageRouter>
-          <LanguageAwareRoutes
-            canAccessContent={canAccessContent}
-            onShowUpgradePrompt={onShowUpgradePrompt}
-          />
-        </LanguageRouter>
-      } />
+      <Route
+        path="/:lang/*"
+        element={
+          <LanguageRouter>
+            <LanguageAwareRoutes
+              canAccessContent={canAccessContent}
+              onShowUpgradePrompt={onShowUpgradePrompt}
+            />
+          </LanguageRouter>
+        }
+      />
 
       {/* Catch-all: redirect to default language */}
       <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />

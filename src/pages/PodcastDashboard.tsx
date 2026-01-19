@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/ui/BackButton';
-import { getLabels, Labels } from '../utils/i18n';
+import { getLabel, getLabels, Labels } from '../utils/i18n';
+import { NoArgs, qRef } from '../utils/convexRefs';
 // import { getPodcastMessages } from '../constants/podcast-messages';
 
 // Types for podcast data
@@ -49,7 +49,7 @@ interface HistoryItem {
 
 const getPodcastMessages = (labels: Labels) => ({
   DASHBOARD_TITLE: labels.podcastDashboard || 'Podcast Dashboard',
-  ACTION_SEARCH: labels.search || 'Search',
+  ACTION_SEARCH: getLabel(labels, ['search']) || 'Search',
   DASHBOARD_COMMUNITY: labels.trending || 'Trending',
   DASHBOARD_EDITOR_PICKS: labels.editorsPicks || 'Editor Picks',
   DASHBOARD_VIEW_ALL: labels.viewAll || 'View All',
@@ -58,6 +58,30 @@ const getPodcastMessages = (labels: Labels) => ({
   HISTORY_TITLE: labels.history || 'History',
 });
 
+const toPodcastItemList = (value: unknown): PodcastItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((v): v is Record<string, unknown> => typeof v === 'object' && v !== null)
+    .map(v => ({
+      _id: typeof v._id === 'string' ? v._id : undefined,
+      id: typeof v.id === 'string' ? v.id : undefined,
+      guid: typeof v.guid === 'string' ? v.guid : undefined,
+      title: typeof v.title === 'string' ? v.title : '',
+      audioUrl: typeof v.audioUrl === 'string' ? v.audioUrl : undefined,
+      artwork: typeof v.artwork === 'string' ? v.artwork : undefined,
+      artworkUrl: typeof v.artworkUrl === 'string' ? v.artworkUrl : undefined,
+      author: typeof v.author === 'string' ? v.author : undefined,
+      views: typeof v.views === 'number' ? v.views : undefined,
+      channel:
+        typeof v.channel === 'object' && v.channel !== null
+          ? (v.channel as PodcastChannel)
+          : undefined,
+      itunesId: typeof v.itunesId === 'string' ? v.itunesId : undefined,
+      feedUrl: typeof v.feedUrl === 'string' ? v.feedUrl : undefined,
+    }))
+    .filter(p => p.title !== '');
+};
+
 export default function PodcastDashboard() {
   const navigate = useNavigate();
   const { user, language } = useAuth();
@@ -65,73 +89,45 @@ export default function PodcastDashboard() {
   const podcastMsgs = getPodcastMessages(labels);
 
   // State
-  const [trending, setTrending] = useState<{ external: PodcastItem[]; internal: PodcastItem[] }>({
-    external: [],
-    internal: [],
-  });
   const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Convex Integration
-  const trendingData = useQuery(api.podcasts.getTrending);
+  type TrendingResult = {
+    internal: (PodcastItem & { _id: string; channel?: PodcastChannel & { _id: string } })[];
+    external: unknown[];
+  };
+  const trendingData = useQuery(qRef<NoArgs, TrendingResult>('podcasts:getTrending'));
   // Note: getHistory and getSubscriptions use authentication internally, no userId arg needed
-  const historyData = useQuery(api.podcasts.getHistory, user ? {} : 'skip');
-  const subscriptionsData = useQuery(api.podcasts.getSubscriptions, user ? {} : 'skip');
+  const historyData = useQuery(
+    qRef<NoArgs, (HistoryItem & { _id: string })[]>('podcasts:getHistory'),
+    user ? {} : 'skip'
+  );
+  // Note: we fetch subscriptions to keep cache fresh, even if not used directly
+  useQuery(qRef<NoArgs, unknown>('podcasts:getSubscriptions'), user ? {} : 'skip');
 
-  useEffect(() => {
-    if (trendingData) {
-      setTrending({
-        internal: trendingData.internal.map(ep => ({
-          ...ep,
-          id: ep._id,
-          channel: ep.channel ? { ...ep.channel, id: ep.channel._id } : undefined,
-        })),
-        external: trendingData.external || [],
-      });
-    }
-    if (historyData) {
-      setHistory(
-        historyData.map(h => ({
-          ...h,
-          id: h._id,
-        }))
-      );
-    }
-    // Note: subscriptions data is available via subscriptionsData query
-    // but is not currently displayed on this page (used in subscriptions page)
+  // Derived State
+  const trending = React.useMemo(() => {
+    if (!trendingData) return { external: [], internal: [] };
+    return {
+      internal: trendingData.internal.map(ep => ({
+        ...ep,
+        id: ep._id,
+        channel: ep.channel ? { ...ep.channel, id: ep.channel._id } : undefined,
+      })),
+      external: toPodcastItemList(trendingData.external),
+    };
+  }, [trendingData]);
 
-    // Stop loading once critical data (trending) is ready
-    if (trendingData) setLoading(false);
-  }, [trendingData, historyData, subscriptionsData]);
+  const history = React.useMemo(() => {
+    if (!historyData) return [];
+    return historyData.map(h => ({
+      ...h,
+      id: h._id,
+    }));
+  }, [historyData]);
 
-  /*
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Parallel fetch for better performance
-                const [trendingRes, historyRes] = await Promise.all([
-                    api.getPodcastTrending().catch(() => ({ external: [], internal: [] })),
-                    user ? api.getPodcastHistory().catch(() => []) : Promise.resolve([])
-                ]);
-
-                setTrending(trendingRes); // Store full object
-                setHistory(historyRes || []);
-
-                if (user) {
-                    const subs = await api.getPodcastSubscriptions().catch(() => []);
-                    setSubscriptions(subs || []);
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, [user]);
-    */
+  const loading = trendingData === undefined;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,12 +349,15 @@ export default function PodcastDashboard() {
                           )}
                         </div>
                       </div>
-                      {record.progress > 0 && (
+                      {typeof record.progress === 'number' && record.progress > 0 && (
                         <div className="absolute bottom-0 left-3 right-3 h-1 bg-slate-100 rounded-full overflow-hidden mb-[-2px] opacity-0 group-hover:opacity-100 transition">
                           <div
                             className="bg-green-400 h-full"
                             style={{
-                              width: `${Math.min(100, (record.progress / (record.duration || 1800)) * 100)}%`,
+                              width: `${Math.min(
+                                100,
+                                ((record.progress ?? 0) / (record.duration || 1800)) * 100
+                              )}%`,
                             }}
                           ></div>
                         </div>
@@ -397,7 +396,7 @@ export default function PodcastDashboard() {
                       if (activeTab === 'weekly') {
                         // External (Channel) -> Go to Channel Page
                         navigate(
-                          `/podcasts/channel?id=${pod.id}&feedUrl=${encodeURIComponent(pod.feedUrl)}`
+                          `/podcasts/channel?id=${pod.id}&feedUrl=${encodeURIComponent(pod.feedUrl ?? '')}`
                         );
                       } else {
                         // Internal (Episode) -> Go to Player directly

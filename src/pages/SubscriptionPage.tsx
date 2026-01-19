@@ -5,11 +5,11 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useAction } from 'convex/react';
 import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
-import { api } from '../../convex/_generated/api';
 import { Globe, Check } from 'lucide-react';
 import { Language } from '../types';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
+import { aRef } from '../utils/convexRefs';
 
 const SubscriptionPage: React.FC = () => {
   const { user, language, setLanguage } = useAuth();
@@ -19,7 +19,12 @@ const SubscriptionPage: React.FC = () => {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const meta = getRouteMeta(location.pathname);
-  const createCheckoutSession = useAction(api.lemonsqueezy.createCheckout);
+  const createCheckoutSession = useAction(
+    aRef<
+      { plan: 'basic' | 'premium' | 'lifetime'; userId: string; userEmail: string },
+      { checkoutUrl: string }
+    >('lemonsqueezy:createCheckout')
+  );
 
   const languages: { code: Language; label: string }[] = [
     { code: 'en', label: 'English' },

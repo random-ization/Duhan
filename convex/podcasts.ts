@@ -43,7 +43,7 @@ export const getTrending = query({
     // 2. External: Placeholder for now (or fetch from a curated lists table if we had one)
     // Legacy API likely fetched from iTunes or a "Featured" DB table.
     // We'll return empty for now or populate if we have data.
-    const external: any[] = [];
+    const external: unknown[] = [];
 
     return {
       internal: internalWithChannel,

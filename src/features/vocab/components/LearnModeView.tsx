@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Pencil, AlignLeft, Check, X, Volume2, ArrowRight } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings, QuestionType, SessionStats } from '../types';
 import { Language } from '../../../types';
@@ -14,12 +14,30 @@ interface LearnModeViewProps {
   onRecordMistake?: (word: ExtendedVocabularyItem) => void;
 }
 
-const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
+const pickQuestionType = (settings: VocabSettings): QuestionType => {
+  const availableTypes: QuestionType[] = [];
+  const { types, answers } = settings.learn;
+
+  if (types.multipleChoice && answers.native) availableTypes.push('CHOICE_K_TO_N');
+  if (types.multipleChoice && answers.korean) availableTypes.push('CHOICE_N_TO_K');
+  if (types.writing && answers.korean) availableTypes.push('WRITING_N_TO_K');
+  if (types.writing && answers.native) availableTypes.push('WRITING_K_TO_N');
+
+  const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+  return randomType || 'CHOICE_K_TO_N';
+};
+
+const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
   ({ words, settings, language, allWords, onComplete, onRecordMistake }) => {
     const labels = useMemo(() => getLabels(language), [language]);
-    const [learnQueue, setLearnQueue] = useState<ExtendedVocabularyItem[]>([]);
+    const [learnQueue] = useState<ExtendedVocabularyItem[]>(() => {
+      const queue = settings.learn.random ? shuffleArray([...words]) : [...words];
+      return queue.slice(0, settings.learn.batchSize);
+    });
     const [learnIndex, setLearnIndex] = useState(0);
-    const [currentQuestionType, setCurrentQuestionType] = useState<QuestionType>('CHOICE_K_TO_N');
+    const [currentQuestionType, setCurrentQuestionType] = useState<QuestionType>(() =>
+      pickQuestionType(settings)
+    );
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [userInput, setUserInput] = useState('');
     const [showFeedback, setShowFeedback] = useState(false);
@@ -29,32 +47,6 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
     const currentItem = learnQueue[learnIndex];
     const progressPercent =
       learnQueue.length > 0 ? ((learnIndex + 1) / learnQueue.length) * 100 : 0;
-
-    // Initialize learn queue
-    useEffect(() => {
-      const queue = settings.learn.random ? shuffleArray([...words]) : [...words];
-      setLearnQueue(queue.slice(0, settings.learn.batchSize));
-      setLearnIndex(0);
-    }, [words, settings.learn.batchSize, settings.learn.random]);
-
-    // Pick question type for current item
-    useEffect(() => {
-      if (!currentItem) return;
-
-      const availableTypes: QuestionType[] = [];
-      const { types, answers } = settings.learn;
-
-      if (types.multipleChoice && answers.native) availableTypes.push('CHOICE_K_TO_N');
-      if (types.multipleChoice && answers.korean) availableTypes.push('CHOICE_N_TO_K');
-      if (types.writing && answers.korean) availableTypes.push('WRITING_N_TO_K');
-      if (types.writing && answers.native) availableTypes.push('WRITING_K_TO_N');
-
-      const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-      setCurrentQuestionType(randomType || 'CHOICE_K_TO_N');
-      setSelectedAnswer(null);
-      setUserInput('');
-      setShowFeedback(false);
-    }, [currentItem, settings.learn]);
 
     const generateDistractors = useCallback(
       (correctAnswer: string, count: number = 3): string[] => {
@@ -98,11 +90,16 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
 
     const handleNext = useCallback(() => {
       if (learnIndex < learnQueue.length - 1) {
-        setLearnIndex(prev => prev + 1);
+        setLearnIndex(learnIndex + 1);
+        setCurrentQuestionType(pickQuestionType(settings));
+        setSelectedAnswer(null);
+        setUserInput('');
+        setShowFeedback(false);
+        setIsCorrect(false);
       } else {
         onComplete(sessionStats);
       }
-    }, [learnIndex, learnQueue.length, sessionStats, onComplete]);
+    }, [learnIndex, learnQueue.length, sessionStats, onComplete, settings]);
 
     if (!currentItem) {
       return (
@@ -187,14 +184,15 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                         key={idx}
                         onClick={() => !showFeedback && setSelectedAnswer(choice)}
                         disabled={showFeedback}
-                        className={`p-4 rounded-xl text-left font-medium transition-all ${showCorrect
-                          ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700'
-                          : showWrong
-                            ? 'bg-red-100 border-2 border-red-500 text-red-700'
-                            : isSelected
-                              ? 'bg-white border-2 border-indigo-500 text-indigo-700'
-                              : 'bg-white border border-slate-300 hover:border-indigo-300 text-slate-700'
-                          } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
+                        className={`p-4 rounded-xl text-left font-medium transition-all ${
+                          showCorrect
+                            ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700'
+                            : showWrong
+                              ? 'bg-red-100 border-2 border-red-500 text-red-700'
+                              : isSelected
+                                ? 'bg-white border-2 border-indigo-500 text-indigo-700'
+                                : 'bg-white border border-slate-300 hover:border-indigo-300 text-slate-700'
+                        } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-lg">{choice}</span>
@@ -215,12 +213,13 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
                     onKeyPress={e => e.key === 'Enter' && !showFeedback && checkAnswer()}
                     disabled={showFeedback}
                     placeholder={labels.typeAnswer || 'Type your answer...'}
-                    className={`w-full p-4 text-lg rounded-xl border-2 transition-all ${showFeedback
-                      ? isCorrect
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-red-500 bg-red-50'
-                      : 'border-slate-300 focus:border-indigo-500'
-                      } focus:outline-none`}
+                    className={`w-full p-4 text-lg rounded-xl border-2 transition-all ${
+                      showFeedback
+                        ? isCorrect
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-red-500 bg-red-50'
+                        : 'border-slate-300 focus:border-indigo-500'
+                    } focus:outline-none`}
                     autoFocus
                   />
                   {showFeedback && !isCorrect && (
@@ -252,10 +251,11 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
               ) : (
                 <button
                   onClick={handleNext}
-                  className={`px-8 py-3 font-bold rounded-xl transition-all flex items-center gap-2 ${isCorrect
-                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                    }`}
+                  className={`px-8 py-3 font-bold rounded-xl transition-all flex items-center gap-2 ${
+                    isCorrect
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  }`}
                 >
                   {learnIndex < learnQueue.length - 1 ? (
                     <>
@@ -279,6 +279,14 @@ const LearnModeView: React.FC<LearnModeViewProps> = React.memo(
     );
   }
 );
-LearnModeView.displayName = "LearnModeView";
+LearnModeViewInner.displayName = 'LearnModeView';
+
+const LearnModeView: React.FC<LearnModeViewProps> = props => {
+  const resetKey = useMemo(() => {
+    const wordKey = props.words.map(w => w.id || w.korean).join('|');
+    return `${props.settings.learn.batchSize}-${props.settings.learn.random ? 1 : 0}-${wordKey}`;
+  }, [props.words, props.settings.learn.batchSize, props.settings.learn.random]);
+  return <LearnModeViewInner key={resetKey} {...props} />;
+};
 
 export default LearnModeView;

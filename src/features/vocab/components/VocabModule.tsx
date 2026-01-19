@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Beaker,
   Filter,
@@ -16,7 +16,7 @@ import LearnModeView from './LearnModeView';
 import ListView from './ListView';
 
 // Stub
-const getMockVocabulary = async () => [];
+const getMockVocabulary = async (): Promise<VocabularyItem[]> => [];
 import VocabSettingsModal from './VocabSettingsModal';
 import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from '../types';
@@ -34,8 +34,8 @@ interface VocabModuleProps {
 }
 
 const VocabModule: React.FC<VocabModuleProps> = ({
-  _course,
-  _instituteName,
+  course: _course,
+  instituteName: _instituteName,
   language,
   levelContexts,
   customWordList,
@@ -47,17 +47,17 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   const labels = getLabels(language);
 
   // Data State
-  const [allWords, setAllWords] = useState<ExtendedVocabularyItem[]>([]);
-  const [filteredWords, setFilteredWords] = useState<ExtendedVocabularyItem[]>([]);
+  const [mockWords, setMockWords] = useState<ExtendedVocabularyItem[]>([]);
   const [selectedUnitFilter, setSelectedUnitFilter] = useState<number | 'ALL'>('ALL');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [reviewingIncorrect, setReviewingIncorrect] = useState(false);
 
   // View State
   const [viewMode, setViewMode] = useState<LearningMode>('CARDS');
   const [showSettings, setShowSettings] = useState(false);
   const [isSessionComplete, setIsSessionComplete] = useState(false);
   const [sessionStats, setSessionStats] = useState<SessionStats>({ correct: [], incorrect: [] });
-  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
+  const [sessionStartTime, setSessionStartTime] = useState<number>(() => Date.now());
 
   // Settings
   const [settings, setSettings] = useState<VocabSettings>({
@@ -81,9 +81,8 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     },
   });
 
-  // Parse and combine words
-  const parseAndCombineWords = useCallback(() => {
-    setLoading(true);
+  // Derived Words (sync parsing)
+  const parsedWords = useMemo(() => {
     const combined: ExtendedVocabularyItem[] = [];
 
     if (customWordList && customWordList.length > 0) {
@@ -108,34 +107,31 @@ const VocabModule: React.FC<VocabModuleProps> = ({
         }
       });
     }
-
-    setAllWords(combined);
-    setLoading(false);
+    return combined;
   }, [levelContexts, customWordList]);
 
-  useEffect(() => {
-    parseAndCombineWords();
-  }, [parseAndCombineWords]);
+  const allWords = mockWords.length > 0 ? mockWords : parsedWords;
 
-  // Handle filtering
-  useEffect(() => {
-    let filtered = allWords;
-    if (selectedUnitFilter !== 'ALL') {
-      filtered = allWords.filter(w => w.unit === selectedUnitFilter);
+  const filteredWords = useMemo(() => {
+    if (reviewingIncorrect) {
+      return sessionStats.incorrect;
     }
-    setFilteredWords(filtered);
-  }, [allWords, selectedUnitFilter]);
+    if (selectedUnitFilter !== 'ALL') {
+      return allWords.filter(w => w.unit === selectedUnitFilter);
+    }
+    return allWords;
+  }, [allWords, selectedUnitFilter, reviewingIncorrect, sessionStats.incorrect]);
 
   const loadMockData = async () => {
     setLoading(true);
     try {
-      const mockWords = await getMockVocabulary();
-      const extended: ExtendedVocabularyItem[] = mockWords.map((item, idx) => ({
+      const mockResult = await getMockVocabulary();
+      const extended: ExtendedVocabularyItem[] = mockResult.map((item, idx) => ({
         ...item,
         unit: Math.floor(idx / 20) + 1,
         id: `mock-${idx}`,
       }));
-      setAllWords(extended);
+      setMockWords(extended);
     } catch (error) {
       console.error('Failed to load mock data:', error);
     }
@@ -163,7 +159,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
 
   const handleReviewIncorrect = () => {
     setIsSessionComplete(false);
-    setFilteredWords(sessionStats.incorrect);
+    setReviewingIncorrect(true);
     setSessionStats({ correct: [], incorrect: [] });
     setSessionStartTime(Date.now());
   };
@@ -189,7 +185,9 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     );
   }
 
-  const availableUnits: number[] = Array.from(new Set(allWords.map(w => w.unit).filter((u): u is number => typeof u === 'number')));
+  const availableUnits: number[] = Array.from(
+    new Set(allWords.map(w => w.unit).filter((u): u is number => typeof u === 'number'))
+  );
   availableUnits.sort((a, b) => a - b);
 
   if (allWords.length === 0) {
@@ -239,9 +237,10 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           <div className="relative flex-1 lg:flex-none min-w-[200px]">
             <select
               value={selectedUnitFilter}
-              onChange={e =>
-                setSelectedUnitFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))
-              }
+              onChange={e => {
+                setSelectedUnitFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value));
+                setReviewingIncorrect(false);
+              }}
               className="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
             >
               <option value="ALL">{labels.allUnits}</option>
@@ -260,11 +259,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
             onClick={() => {
               setViewMode('CARDS');
               setIsSessionComplete(false);
+              setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'CARDS'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'CARDS'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <Layers className="w-4 h-4 mr-2" />
             {labels.flashcards}
@@ -273,11 +274,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
             onClick={() => {
               setViewMode('LEARN');
               setIsSessionComplete(false);
+              setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LEARN'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'LEARN'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <Brain className="w-4 h-4 mr-2" />
             {labels.learn}
@@ -286,11 +289,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
             onClick={() => {
               setViewMode('LIST');
               setIsSessionComplete(false);
+              setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LIST'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'LIST'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <ListIcon className="w-4 h-4 mr-2" />
             {labels.list}

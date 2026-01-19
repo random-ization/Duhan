@@ -112,7 +112,7 @@ export interface SavedWord {
 
 export interface LevelConfig {
   level: number;
-  units: number;  // Number of units in this level
+  units: number; // Number of units in this level
 }
 
 export interface Institute {
@@ -144,7 +144,7 @@ export interface UserWordProgress {
   status: WordStatus;
   interval: number;
   streak: number;
-  nextReviewAt: string | null;
+  nextReviewAt: number | null;
 }
 
 export interface VocabTips {
@@ -155,16 +155,16 @@ export interface VocabTips {
 
 export interface VocabularyItem {
   id?: string;
-  korean: string;       // Legacy field alias for 'word'
-  english: string;      // Legacy field alias for 'meaning'
-  word?: string;        // Database field
-  meaning?: string;     // Database field
-  meaningEn?: string;   // Localized meaning
+  korean: string; // Legacy field alias for 'word'
+  english: string; // Legacy field alias for 'meaning'
+  word?: string; // Database field
+  meaning?: string; // Database field
+  meaningEn?: string; // Localized meaning
   meaningVi?: string;
   meaningMn?: string;
   pronunciation?: string;
   audioUrl?: string;
-  pos?: string;         // Legacy field
+  pos?: string; // Legacy field
   partOfSpeech?: PartOfSpeech;
   hanja?: string;
   tips?: VocabTips;
@@ -173,7 +173,7 @@ export interface VocabularyItem {
   exampleTranslationEn?: string;
   exampleTranslationVi?: string;
   exampleTranslationMn?: string;
-  exampleMeaning?: string;     // Database field
+  exampleMeaning?: string; // Database field
   unit?: number;
   courseId?: string;
   unitId?: string;
@@ -261,7 +261,7 @@ export interface TopikQuestion {
   groupCount?: number; // New: If > 1, this question shares its PASSAGE with the next (n-1) questions.
   passage?: string; // The text or context for the question
   contextBox?: string; // Additional context (like <보기>)
-  visualData?: any; // For tables/charts (Deprecated for Q5-10, used for data structure if needed)
+  visualData?: unknown; // For tables/charts (Deprecated for Q5-10, used for data structure if needed)
   question: string; // The actual question prompt
   options: string[]; // Array of 4 options
   optionImages?: string[]; // New: Array of 4 image URLs/Base64 for IMAGE_CHOICE questions (Listening Q1-3)
@@ -305,7 +305,7 @@ export type TranslationLanguage = 'cn' | 'en' | 'vi' | 'mn';
 export interface ReadingArticleV2 {
   id: string;
   title: string;
-  contentKr: string;           // Korean original text
+  contentKr: string; // Korean original text
   translations: Partial<Record<TranslationLanguage, string>>;
   createdAt: number;
 }
@@ -315,8 +315,8 @@ export interface ListeningTrackV2 {
   id: string;
   title: string;
   audioUrl: string | null;
-  audioFileName?: string;      // Original file name for display
-  scriptKr: string;            // Korean script
+  audioFileName?: string; // Original file name for display
+  scriptKr: string; // Korean script
   translations: Partial<Record<TranslationLanguage, string>>;
   createdAt: number;
 }
@@ -325,19 +325,19 @@ export interface ListeningTrackV2 {
 export interface VocabularyItemV2 {
   id: string;
   korean: string;
-  pos?: string;                // Part of Speech
+  pos?: string; // Part of Speech
   translations: Partial<Record<TranslationLanguage, string>>;
-  example?: string;            // Example sentence in Korean
+  example?: string; // Example sentence in Korean
   exampleTranslations?: Partial<Record<TranslationLanguage, string>>;
 }
 
 // V2: Grammar Point
 export interface GrammarPointV2 {
   id: string;
-  pattern: string;             // e.g., "-아/어서"
-  meaning: string;             // Brief meaning
-  conjugation: string;         // How to conjugate
-  explanation: string;         // Detailed explanation
+  pattern: string; // e.g., "-아/어서"
+  meaning: string; // Brief meaning
+  conjugation: string; // How to conjugate
+  explanation: string; // Detailed explanation
   examples?: { korean: string; translation: string }[];
 }
 
@@ -352,8 +352,12 @@ export interface TextbookContentV2 {
 }
 
 // Helper type guard
-export const isTextbookContentV2 = (content: any): content is TextbookContentV2 => {
-  return content && content.version === 2;
+export const isTextbookContentV2 = (content: unknown): content is TextbookContentV2 => {
+  return (
+    typeof content === 'object' &&
+    content !== null &&
+    (content as Record<string, unknown>).version === 2
+  );
 };
 
 // ==============================================
@@ -367,7 +371,7 @@ export interface PodcastChannel {
   author: string;
   feedUrl: string;
   artworkUrl?: string;
-  artwork?: string;  // Alias
+  artwork?: string; // Alias
   description?: string;
 }
 
@@ -437,7 +441,7 @@ export interface GrammarPointData {
   id: string;
   title: string;
   slug?: string;
-  level?: string;  // "TOPIK 1", "TOPIK 2"
+  level?: string; // "TOPIK 1", "TOPIK 2"
 
   // Chinese summary (default)
   summary: string;
@@ -456,7 +460,7 @@ export interface GrammarPointData {
   explanationMn?: string;
 
   construction?: Record<string, string>; // Legacy field
-  conjugationRules?: any; // New: flexible rules object
+  conjugationRules?: unknown; // New: flexible rules object
 
   // Examples with multi-language support
   examples: {
@@ -465,7 +469,7 @@ export interface GrammarPointData {
     en?: string;
     vi?: string;
     mn?: string;
-    audio?: string
+    audio?: string;
   }[];
 
   displayOrder?: number;
@@ -482,3 +486,13 @@ export interface UnitGrammarData {
   grammarPoints: GrammarPointData[];
 }
 
+export interface DictionaryEntry {
+  id?: string;
+  word?: string;
+  korean: string;
+  english?: string;
+  type?: string;
+  pos?: string;
+  definitions?: string[];
+  examples?: { sentence: string; translation: string }[];
+}

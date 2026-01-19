@@ -1,45 +1,97 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { TopikExam, Language, Annotation } from '../../types';
 import {
-  Clock, RotateCcw, ArrowLeft,
-  FileText, ArrowRight, Headphones, Pencil, Loader2,
-  Eye, MessageSquare, Trash2, Check
+  Clock,
+  RotateCcw,
+  ArrowLeft,
+  FileText,
+  ArrowRight,
+  Headphones,
+  Pencil,
+  Loader2,
+  Eye,
+  MessageSquare,
+  Trash2,
+  Check,
 } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
-import CanvasLayer, { ToolType, CanvasToolbar } from '../../features/annotation/components/CanvasLayer';
+import CanvasLayer, {
+  ToolType,
+  CanvasToolbar,
+} from '../../features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAnnotation';
 import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import toast from 'react-hot-toast';
+import { mRef } from '../../utils/convexRefs';
 
-const PAPER_MAX_WIDTH = "max-w-[900px]";
-
+const PAPER_MAX_WIDTH = 'max-w-[900px]';
 
 const TOPIK_READING_STRUCTURE = [
-  { range: [1, 2], instruction: "※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)" },
-  { range: [3, 4], instruction: "※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)" },
-  { range: [5, 8], instruction: "※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)" },
-  { range: [9, 12], instruction: "※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)" },
-  { range: [13, 15], instruction: "※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)" },
-  { range: [16, 18], instruction: "※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)" },
-  { range: [19, 24], instruction: "※ [19～24] 다음을 읽고 물음에 답하십시오. (각 2점)" },
-  { range: [25, 27], instruction: "※ [25～27] 다음은 신문 기사의 제목입니다. 가장 잘 설명한 것을 고르십시오. (각 2점)" },
-  { range: [28, 31], instruction: "※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)" },
-  { range: [32, 34], instruction: "※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)" },
-  { range: [35, 38], instruction: "※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)" },
-  { range: [39, 41], instruction: "※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)" },
-  { range: [42, 50], instruction: "※ [42～50] 다음을 읽고 물음에 답하십시오. (각 2점)" },
+  { range: [1, 2], instruction: '※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)' },
+  {
+    range: [3, 4],
+    instruction: '※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)',
+  },
+  { range: [5, 8], instruction: '※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)' },
+  {
+    range: [9, 12],
+    instruction: '※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [13, 15],
+    instruction: '※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [16, 18],
+    instruction:
+      '※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  { range: [19, 24], instruction: '※ [19～24] 다음을 읽고 물음에 답하십시오. (각 2점)' },
+  {
+    range: [25, 27],
+    instruction:
+      '※ [25～27] 다음은 신문 기사의 제목입니다. 가장 잘 설명한 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [28, 31],
+    instruction:
+      '※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  { range: [32, 34], instruction: '※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)' },
+  {
+    range: [35, 38],
+    instruction: '※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [39, 41],
+    instruction:
+      '※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)',
+  },
+  { range: [42, 50], instruction: '※ [42～50] 다음을 읽고 물음에 답하십시오. (각 2점)' },
 ];
 
 const TOPIK_LISTENING_STRUCTURE = [
-  { range: [1, 3], instruction: "※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)" },
-  { range: [4, 8], instruction: "※ [4～8] 다음 대화를 잘 듣고 이어질 수 있는 말을 고르십시오. (각 2점)" },
-  { range: [9, 12], instruction: "※ [9～12] 다음 대화를 잘 듣고 여자가 이어서 할 행동으로 알맞은 것을 고르십시오. (각 2점)" },
-  { range: [13, 16], instruction: "※ [13～16] 다음을 듣고 내용과 일치하는 것을 고르십시오. (각 2점)" },
-  { range: [17, 20], instruction: "※ [17～20] 다음을 듣고 남자의 중심 생각을 고르십시오. (각 2점)" },
-  { range: [21, 50], instruction: "※ [21～50] 다음을 듣고 물음에 답하십시오. (각 2점)" },
+  { range: [1, 3], instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)' },
+  {
+    range: [4, 8],
+    instruction: '※ [4～8] 다음 대화를 잘 듣고 이어질 수 있는 말을 고르십시오. (각 2점)',
+  },
+  {
+    range: [9, 12],
+    instruction:
+      '※ [9～12] 다음 대화를 잘 듣고 여자가 이어서 할 행동으로 알맞은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [13, 16],
+    instruction: '※ [13～16] 다음을 듣고 내용과 일치하는 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [17, 20],
+    instruction: '※ [17～20] 다음을 듣고 남자의 중심 생각을 고르십시오. (각 2점)',
+  },
+  { range: [21, 50], instruction: '※ [21～50] 다음을 듣고 물음에 답하십시오. (각 2점)' },
 ];
 
 // === 1. Modern Exam Cover View ===
@@ -57,39 +109,54 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
 
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
-
         {/* Background Decor */}
         <div className="absolute top-0 left-0 w-full h-96 bg-indigo-600 skew-y-3 origin-top-left -translate-y-20 z-0"></div>
         <div className="absolute top-20 right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl z-0"></div>
 
         <div className="relative z-10 w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-
           {/* Left Panel: Info */}
           <div className="md:w-2/5 bg-slate-900 text-white p-10 flex flex-col justify-between relative overflow-hidden">
             <div className="relative z-10">
-              <button onClick={onBack} className="flex items-center text-slate-400 hover:text-white transition-colors mb-8 text-sm font-bold uppercase tracking-wider">
+              <button
+                onClick={onBack}
+                className="flex items-center text-slate-400 hover:text-white transition-colors mb-8 text-sm font-bold uppercase tracking-wider"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" /> {labels.back || 'Back'}
               </button>
 
               <div className="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
-                {exam.type === 'READING' ? <FileText className="w-8 h-8" /> : <Headphones className="w-8 h-8" />}
+                {exam.type === 'READING' ? (
+                  <FileText className="w-8 h-8" />
+                ) : (
+                  <Headphones className="w-8 h-8" />
+                )}
               </div>
 
-              <h1 className="text-3xl font-bold mb-2 leading-tight">TOPIK II<br />{exam.type}</h1>
+              <h1 className="text-3xl font-bold mb-2 leading-tight">
+                TOPIK II
+                <br />
+                {exam.type}
+              </h1>
               <p className="text-indigo-200 font-medium">第 {exam.round} 届真题模拟</p>
             </div>
 
             <div className="relative z-10 space-y-6">
               <div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Total Time</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">
+                  Total Time
+                </div>
                 <div className="text-2xl font-mono">{exam.timeLimit} Min</div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Questions</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">
+                  Questions
+                </div>
                 <div className="text-2xl font-mono">{exam.questions.length}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Full Score</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">
+                  Full Score
+                </div>
                 <div className="text-2xl font-mono">100</div>
               </div>
             </div>
@@ -104,17 +171,25 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
 
             <div className="space-y-4 flex-1">
               <div className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 text-slate-500 font-bold border border-slate-200">1</div>
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 text-slate-500 font-bold border border-slate-200">
+                  1
+                </div>
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm">全真模拟环境</h4>
-                  <p className="text-xs text-slate-500 mt-1">考试期间请勿离开页面，计时器结束后将自动提交试卷。</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    考试期间请勿离开页面，计时器结束后将自动提交试卷。
+                  </p>
                 </div>
               </div>
               <div className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 text-slate-500 font-bold border border-slate-200">2</div>
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 text-slate-500 font-bold border border-slate-200">
+                  2
+                </div>
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm">答案提交</h4>
-                  <p className="text-xs text-slate-500 mt-1">所有选择题均为单选。提交后即可查看分数和解析。</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    所有选择题均为单选。提交后即可查看分数和解析。
+                  </p>
                 </div>
               </div>
               {exam.type === 'LISTENING' && (
@@ -124,7 +199,9 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-800 text-sm">听力注意事项</h4>
-                    <p className="text-xs text-slate-500 mt-1">音频将自动播放且无法暂停。请检查您的扬声器设备。</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      音频将自动播放且无法暂停。请检查您的扬声器设备。
+                    </p>
                   </div>
                 </div>
               )}
@@ -138,9 +215,7 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                 {hasAttempted ? '重新挑战' : '开始考试'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
-              <p className="text-center text-xs text-slate-400 mt-4">
-                点击开始即代表您已做好准备
-              </p>
+              <p className="text-center text-xs text-slate-400 mt-4">点击开始即代表您已做好准备</p>
             </div>
           </div>
         </div>
@@ -148,7 +223,7 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
     );
   }
 );
-ExamCoverView.displayName = "ExamCoverView";
+ExamCoverView.displayName = 'ExamCoverView';
 
 // === 2. Modern Result View ===
 interface ExamResultViewProps {
@@ -166,16 +241,17 @@ interface ExamResultViewProps {
 }
 
 export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
-  ({ exam, result, _language, onReview, onTryAgain, onBackToList }) => {
+  ({ exam, result, language: _language, onReview, onTryAgain, onBackToList }) => {
     const percentage = Math.round((result.score / result.totalScore) * 100);
     const passed = percentage >= 60;
 
     return (
       <div className="min-h-screen bg-slate-50 py-12 px-4 flex justify-center items-center font-sans">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-
           {/* Header / Score Banner */}
-          <div className={`p-8 text-center relative overflow-hidden ${passed ? 'bg-emerald-600' : 'bg-slate-800'}`}>
+          <div
+            className={`p-8 text-center relative overflow-hidden ${passed ? 'bg-emerald-600' : 'bg-slate-800'}`}
+          >
             <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl opacity-20"></div>
 
@@ -195,9 +271,15 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
           {/* Score Stats */}
           <div className="p-8 -mt-6">
             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 flex flex-col items-center">
-              <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Your Score</div>
+              <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">
+                Your Score
+              </div>
               <div className="flex items-baseline gap-2 mb-6">
-                <span className={`text-6xl font-black ${passed ? 'text-emerald-600' : 'text-slate-800'}`}>{result.score}</span>
+                <span
+                  className={`text-6xl font-black ${passed ? 'text-emerald-600' : 'text-slate-800'}`}
+                >
+                  {result.score}
+                </span>
                 <span className="text-xl text-slate-400 font-bold">/ {result.totalScore}</span>
               </div>
 
@@ -207,11 +289,15 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
                   <div className="text-xs font-bold text-slate-400 uppercase">Accuracy</div>
                 </div>
                 <div className="bg-emerald-50 p-3 rounded-xl text-center border border-emerald-100">
-                  <div className="text-2xl font-bold text-emerald-600 mb-1">{result.correctCount}</div>
+                  <div className="text-2xl font-bold text-emerald-600 mb-1">
+                    {result.correctCount}
+                  </div>
                   <div className="text-xs font-bold text-emerald-700/60 uppercase">Correct</div>
                 </div>
                 <div className="bg-red-50 p-3 rounded-xl text-center border border-red-100">
-                  <div className="text-2xl font-bold text-red-500 mb-1">{result.totalQuestions - result.correctCount}</div>
+                  <div className="text-2xl font-bold text-red-500 mb-1">
+                    {result.totalQuestions - result.correctCount}
+                  </div>
                   <div className="text-xs font-bold text-red-700/60 uppercase">Incorrect</div>
                 </div>
               </div>
@@ -243,13 +329,12 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
               </button>
             </div>
           </div>
-
         </div>
       </div>
     );
   }
 );
-ExamResultView.displayName = "ExamResultView";
+ExamResultView.displayName = 'ExamResultView';
 
 // === 3. Exam Review View - Full Paper Rendering ===
 interface ExamReviewViewProps {
@@ -263,14 +348,28 @@ interface ExamReviewViewProps {
 }
 
 export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
-  ({ exam, userAnswers, language, annotations, onSaveAnnotation, _onDeleteAnnotation, onBack }) => {
+  ({
+    exam,
+    userAnswers,
+    language,
+    annotations,
+    onSaveAnnotation,
+    onDeleteAnnotation: _onDeleteAnnotation,
+    onBack,
+  }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
     // Convex Mutation
-    const saveNotebook = useMutation(api.notebooks.save);
+    const saveNotebook = useMutation(
+      mRef<
+        { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
+        unknown
+      >('notebooks:save')
+    );
 
-    const structure = exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
+    const structure =
+      exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
 
     // Calculate stats
     const stats = useMemo(() => {
@@ -321,7 +420,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [selectionText, setSelectionText] = useState('');
     const [selectionContextKey, setSelectionContextKey] = useState('');
-    const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
+    const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>(
+      'yellow'
+    );
     const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
     const [editNoteInput, setEditNoteInput] = useState('');
@@ -368,9 +469,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
     // Sidebar annotations: show those with notes OR the one being edited
     const sidebarAnnotations = useMemo(
-      () => currentAnnotations.filter(a =>
-        (a.note && a.note.trim().length > 0) || a.id === editingAnnotationId
-      ),
+      () =>
+        currentAnnotations.filter(
+          a => (a.note && a.note.trim().length > 0) || a.id === editingAnnotationId
+        ),
       [currentAnnotations, editingAnnotationId]
     );
 
@@ -398,17 +500,17 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       setSelectionContextKey(contextKey);
       setShowAnnotationMenu(true);
 
-      const existing = annotations.find(a =>
-        a.contextKey === contextKey &&
-        (a.text === selectedText || a.selectedText === selectedText)
+      const existing = annotations.find(
+        a =>
+          a.contextKey === contextKey &&
+          (a.text === selectedText || a.selectedText === selectedText)
       );
 
       if (existing) {
-        setNoteInput(existing.note || '');
-        if (existing.color) setSelectedColor(existing.color as 'yellow' | 'green' | 'blue' | 'pink');
+        if (existing.color)
+          setSelectedColor(existing.color as 'yellow' | 'green' | 'blue' | 'pink');
         setActiveAnnotationId(existing.id);
       } else {
-        setNoteInput('');
         setActiveAnnotationId(null);
       }
     };
@@ -417,9 +519,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const saveAnnotationQuick = (colorOverride?: string) => {
       if (!selectionText || !selectionContextKey) return null;
 
-      const existing = annotations.find(a =>
-        a.contextKey === selectionContextKey &&
-        (a.text === selectionText || a.selectedText === selectionText)
+      const existing = annotations.find(
+        a =>
+          a.contextKey === selectionContextKey &&
+          (a.text === selectionText || a.selectedText === selectionText)
       );
 
       const annotation: Annotation = {
@@ -457,45 +560,51 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     };
 
     // Save selection to Vocab Notebook
-    const handleSaveToVocab = useCallback(async (text: string) => {
-      if (!text) return;
+    const handleSaveToVocab = useCallback(
+      async (text: string) => {
+        if (!text) return;
 
-      // Get question context from selection
-      const questionIndex = selectionContextKey.split('-Q')[1];
-      const question = questionIndex ? exam.questions[parseInt(questionIndex)] : null;
-      const context = question?.question || question?.passage?.substring(0, 100) || '';
+        // Get question context from selection
+        const questionIndex = selectionContextKey.split('-Q')[1];
+        const question = questionIndex ? exam.questions[parseInt(questionIndex)] : null;
+        const context = question?.question || question?.passage?.substring(0, 100) || '';
 
-      // Save to notebook
-      try {
-        await saveNotebook({
-          type: 'VOCAB',
-          title: text,
-          content: {
-            text: text, // Normalized field for notebook content
-            word: text,
-            context: context,
-            examId: exam.id,
-            examTitle: exam.title,
-            questionIndex: questionIndex ? parseInt(questionIndex) : undefined,
-            savedAt: new Date().toISOString(),
-          },
-          tags: ['exam-vocab', `topik-${exam.round}`],
-        });
-        toast.success("Saved to Notebook");
-      } catch (_e: any) {
-        console.error("Failed to save to notebook", _e);
-        toast.error("Failed to save");
-      }
-    }, [exam, selectionContextKey, saveNotebook]);
+        // Save to notebook
+        try {
+          await saveNotebook({
+            type: 'VOCAB',
+            title: text,
+            content: {
+              text: text, // Normalized field for notebook content
+              word: text,
+              context: context,
+              examId: exam.id,
+              examTitle: exam.title,
+              questionIndex: questionIndex ? parseInt(questionIndex) : undefined,
+              savedAt: new Date().toISOString(),
+            },
+            tags: ['exam-vocab', `topik-${exam.round}`],
+          });
+          toast.success('Saved to Notebook');
+        } catch (_e: unknown) {
+          console.error('Failed to save to notebook', _e);
+          toast.error('Failed to save');
+        }
+      },
+      [exam, selectionContextKey, saveNotebook]
+    );
 
-    const tempAnnotation: Annotation | null = showAnnotationMenu && selectionText && selectionContextKey ? {
-      id: 'temp',
-      contextKey: selectionContextKey,
-      text: selectionText,
-      note: '',
-      color: selectedColor,
-      timestamp: Date.now()
-    } : null;
+    const tempAnnotation: Annotation | null =
+      showAnnotationMenu && selectionText && selectionContextKey
+        ? {
+            id: 'temp',
+            contextKey: selectionContextKey,
+            text: selectionText,
+            note: '',
+            color: selectedColor,
+            timestamp: Date.now(),
+          }
+        : null;
 
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
@@ -503,13 +612,18 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm shrink-0">
           <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button onClick={onBack} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-colors">
+              <button
+                onClick={onBack}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-colors"
+              >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
                 <h1 className="font-bold text-slate-800 text-lg">{exam.title}</h1>
                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                  <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">Review Mode</span>
+                  <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">
+                    Review Mode
+                  </span>
                   <span>•</span>
                   <span>第 {exam.round} 届</span>
                 </div>
@@ -520,10 +634,11 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsDrawingMode(!isDrawingMode)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${isDrawingMode
-                  ? 'bg-amber-50 border-amber-200 text-amber-600'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                  isDrawingMode
+                    ? 'bg-amber-50 border-amber-200 text-amber-600'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
               >
                 <Pencil className="w-4 h-4" />
                 标记
@@ -587,8 +702,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center bg-slate-200/50">
           {/* PDF Paper with Canvas Overlay */}
-          <div ref={paperContainerRef} className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-xl min-h-screen pb-16 relative border border-slate-200`}>
-
+          <div
+            ref={paperContainerRef}
+            className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-xl min-h-screen pb-16 relative border border-slate-200`}
+          >
             {/* Canvas Layer - Drawing Mode */}
             {isDrawingMode && (
               <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }}>
@@ -622,7 +739,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               <div className="bg-black text-white py-6 px-8 rounded-2xl mb-16 shadow-lg">
                 <div className="flex items-baseline justify-center gap-4 mb-2">
                   <span className="text-xl md:text-2xl font-bold">제{exam.round}회</span>
-                  <span className="text-3xl md:text-5xl font-bold tracking-wider">한 국 어 능 력 시 험</span>
+                  <span className="text-3xl md:text-5xl font-bold tracking-wider">
+                    한 국 어 능 력 시 험
+                  </span>
                 </div>
                 <div className="text-center text-sm md:text-lg italic opacity-80">
                   The {exam.round}th Test of Proficiency in Korean
@@ -667,10 +786,12 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             <div className="bg-white border-b border-black mx-8 md:mx-12 mb-8 pb-1">
               <div className="flex justify-between items-end">
                 <div className="font-bold text-sm text-gray-500">
-                  제{exam.round}회 한국어능력시험 II {exam.paperType || 'B'}형 {exam.type === 'READING' ? '2교시 (읽기)' : '1교시 (듣기)'}
+                  제{exam.round}회 한국어능력시험 II {exam.paperType || 'B'}형{' '}
+                  {exam.type === 'READING' ? '2교시 (읽기)' : '1교시 (듣기)'}
                 </div>
                 <div className="font-bold bg-gray-200 px-4 py-1 rounded-full text-sm">
-                  TOPIK Ⅱ {exam.type === 'READING' ? '읽기' : '듣기'} (1번 ~ {exam.questions.length}번)
+                  TOPIK Ⅱ {exam.type === 'READING' ? '읽기' : '듣기'} (1번 ~ {exam.questions.length}
+                  번)
                 </div>
               </div>
             </div>
@@ -678,8 +799,12 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             {/* Questions (copied from ExamSession) */}
             <div className="px-8 md:px-12">
               {exam.questions.map((question, idx) => (
-                <div key={idx} ref={el => { questionRefs.current[idx] = el; }}>
-
+                <div
+                  key={idx}
+                  ref={el => {
+                    questionRefs.current[idx] = el;
+                  }}
+                >
                   {/* Instruction Bar */}
                   {shouldShowInstruction(idx) && (
                     <div className="mb-4 font-bold text-lg leading-relaxed text-black font-['Batang','KoPubBatang','Times_New_Roman',serif]">
@@ -688,7 +813,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                   )}
 
                   {/* Question */}
-                  <div className="mb-12" onMouseUp={(e) => handleTextSelect(idx, e)}>
+                  <div className="mb-12" onMouseUp={e => handleTextSelect(idx, e)}>
                     <QuestionRenderer
                       question={question}
                       questionIndex={idx}
@@ -702,7 +827,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           : annotations
                       }
                       contextPrefix={`TOPIK-${exam.id}`}
-                      onTextSelect={(e) => handleTextSelect(idx, e)}
+                      onTextSelect={e => handleTextSelect(idx, e)}
                       activeAnnotationId={activeAnnotationId}
                     />
                   </div>
@@ -745,12 +870,13 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           className="bg-white p-3 rounded-lg border-2 border-indigo-500 shadow-md scroll-mt-20"
                         >
                           <div className="text-xs font-bold mb-2 text-slate-500">
-                            {labels.editingNote || '编辑笔记'}: &quot;{ann.text.substring(0, 15)}...&quot;
+                            {labels.editingNote || '编辑笔记'}: &quot;{ann.text.substring(0, 15)}
+                            ...&quot;
                           </div>
                           <textarea
                             value={editNoteInput}
-                            onChange={(e) => setEditNoteInput(e.target.value)}
-                            onKeyDown={(e) => {
+                            onChange={e => setEditNoteInput(e.target.value)}
+                            onKeyDown={e => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 handleUpdateNote(ann.id);
@@ -783,32 +909,39 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                         key={ann.id}
                         id={`sidebar-card-${ann.id}`}
                         className={`group p-3 rounded-lg border transition-all cursor-pointer relative scroll-mt-20
-                              ${isActive
-                            ? 'bg-indigo-50 border-indigo-300 shadow-md'
-                            : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:shadow-sm'
-                          }`}
+                              ${
+                                isActive
+                                  ? 'bg-indigo-50 border-indigo-300 shadow-md'
+                                  : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:shadow-sm'
+                              }`}
                         onClick={() => {
                           setActiveAnnotationId(ann.id);
                           setEditingAnnotationId(ann.id);
                           setEditNoteInput(ann.note || '');
                         }}
                       >
-                        <div className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${{
-                          'yellow': 'bg-yellow-100 text-yellow-800',
-                          'green': 'bg-green-100 text-green-800',
-                          'blue': 'bg-blue-100 text-blue-800',
-                          'pink': 'bg-pink-100 text-pink-800',
-                        }[ann.color || 'yellow'] || 'bg-yellow-100 text-yellow-800'}`}>
+                        <div
+                          className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${
+                            {
+                              yellow: 'bg-yellow-100 text-yellow-800',
+                              green: 'bg-green-100 text-green-800',
+                              blue: 'bg-blue-100 text-blue-800',
+                              pink: 'bg-pink-100 text-pink-800',
+                            }[ann.color || 'yellow'] || 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
                           {ann.text.substring(0, 20)}...
                         </div>
                         {ann.note ? (
                           <p className="text-sm text-slate-700">{ann.note}</p>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">{labels.clickToAddNote || '点击添加笔记...'}</p>
+                          <p className="text-xs text-slate-400 italic">
+                            {labels.clickToAddNote || '点击添加笔记...'}
+                          </p>
                         )}
 
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.stopPropagation();
                             handleDeleteAnnotation(ann.id);
                           }}
@@ -824,8 +957,6 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             </div>
           </div>
         </div>
-
-
 
         {/* Annotation Menu */}
         <AnnotationMenu
@@ -847,7 +978,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             saveAnnotationQuick(color || undefined);
           }}
           selectedColor={selectedColor}
-          setSelectedColor={(val: 'yellow' | 'green' | 'blue' | 'pink' | null) => val && setSelectedColor(val)}
+          setSelectedColor={(val: 'yellow' | 'green' | 'blue' | 'pink' | null) =>
+            val && setSelectedColor(val)
+          }
           onClose={() => {
             setShowAnnotationMenu(false);
             window.getSelection()?.removeAllRanges();
@@ -859,4 +992,4 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     );
   }
 );
-ExamReviewView.displayName = "ExamReviewView";
+ExamReviewView.displayName = 'ExamReviewView';

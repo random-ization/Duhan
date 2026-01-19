@@ -13,6 +13,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
+    "typecheck": "npm run typecheck:src && npm run typecheck:convex && npm run typecheck:workers",
+    "typecheck:src": "tsc -p tsconfig.json --noEmit",
+    "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
+    "typecheck:workers": "tsc -p workers/tts-proxy/tsconfig.json --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -64,6 +68,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260118.0",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
@@ -97,7 +102,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings 0",
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.{json,css,md}": [

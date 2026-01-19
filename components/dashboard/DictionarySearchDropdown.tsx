@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, Loader2, X, Star, ExternalLink, ChevronRight } from 'lucide-react';
 import { useAction, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { makeFunctionReference } from 'convex/server';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { getLabels } from '../../src/utils/i18n';
+import { VOCAB } from '../../src/utils/convexRefs';
 
 // Map app language codes to KRDICT translation language codes
 const LANG_MAP: Record<string, string> = {
@@ -46,12 +47,12 @@ export default function DictionarySearchDropdown() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const searchDictionary = useAction(api.dictionary.searchDictionary as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addToReview = useMutation(api.vocab.addToReview as any);
+  const searchDictionary = (
+    useAction as unknown as (a: unknown) => (args: unknown) => Promise<unknown>
+  )(makeFunctionReference('dictionary:searchDictionary'));
+  const addToReview = useMutation(VOCAB.addToReview);
 
   // Click outside to close
   useEffect(() => {
@@ -87,7 +88,8 @@ export default function DictionarySearchDropdown() {
           translationLang,
           num: 8,
         });
-        setResults(result.entries);
+        const data = result as { entries?: DictionaryEntry[] };
+        setResults(data.entries ?? []);
       } catch (err: unknown) {
         console.error('Dictionary search error:', err);
         setError(err instanceof Error ? err.message : 'Search failed');

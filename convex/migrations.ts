@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import type { Doc, TableNames } from './_generated/dataModel';
 
 // Fix institutes missing isArchived field (migration fix)
 export const fixInstitutesIsArchived = mutation({
@@ -48,7 +49,7 @@ export const importData = mutation({
       //    Or add `postgresId` column to `words` table temporarily to look up.
 
       // For now, simple insert.
-      await ctx.db.insert(table as any, item);
+      await ctx.db.insert(table as TableNames, item);
     }
   },
 });
@@ -143,7 +144,7 @@ export const analyzeDuplicates = query({
     const channels = await ctx.db.query('podcast_channels').collect();
     const courseGrammars = await ctx.db.query('course_grammars').collect();
 
-    const countDuplicates = (items: any[], keyFn: (item: any) => string) => {
+    const countDuplicates = <T>(items: T[], keyFn: (item: T) => string) => {
       const map = new Map<string, number>();
       items.forEach(item => {
         const key = keyFn(item);
@@ -202,16 +203,7 @@ export const analyzeIntegrity = query({
     let orphanAppearances = 0;
     for (const a of appearances) {
       const word = await ctx.db.get(a.wordId);
-      // Verify Unit exists if we had unitId link (schema uses unitId: Id<"textbook_units">)
-      // Wait, schema for 'vocabulary_appearances' has 'unitId: v.id("textbook_units")' ?
-      // Let's check schema.ts. Assuming standard Convex ID.
-
-      // Actually, for efficacy, let's load all IDs into sets.
-      // But 'get' is cheap.
-
-      // @ts-expect-error: Fix build error
-      const unit = await ctx.db.get(a.unitId);
-      if (!word || !unit) {
+      if (!word) {
         orphanAppearances++;
       }
     }
@@ -237,9 +229,12 @@ export const analyzeIntegrity = query({
 export const deleteDuplicateData = mutation({
   args: {},
   handler: async ctx => {
-    const deleteDuplicates = async (tableName: any, keyFn: (item: any) => string) => {
+    const deleteDuplicates = async <T extends TableNames>(
+      tableName: T,
+      keyFn: (item: Doc<T>) => string
+    ) => {
       const items = await ctx.db.query(tableName).collect();
-      const map = new Map<string, any[]>();
+      const map = new Map<string, Doc<T>[]>();
       items.forEach(item => {
         const key = keyFn(item);
         if (!key) return;
@@ -431,7 +426,7 @@ export const copyListeningQuestions91To83 = mutation({
       .collect();
 
     // 4. Map Source Questions by Number
-    const sourceMap = new Map<number, any>();
+    const sourceMap = new Map<number, (typeof sourceQuestions)[number]>();
     sourceQuestions.forEach(q => sourceMap.set(q.number, q));
 
     // 5. Update Target Questions

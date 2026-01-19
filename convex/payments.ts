@@ -1,6 +1,47 @@
 'use node';
 import { action } from './_generated/server';
 import { v } from 'convex/values';
+import { toErrorMessage } from './errors';
+import { readString } from './validation';
+import { makeFunctionReference } from 'convex/server';
+import type { FunctionReference } from 'convex/server';
+
+type GrantAccessArgs = {
+  customerEmail: string;
+  plan: string;
+  creemCustomerId?: string;
+  creemSubscriptionId?: string;
+  lemonSqueezyCustomerId?: string;
+  lemonSqueezySubscriptionId?: string;
+  userId?: string;
+};
+
+type RevokeAccessArgs = {
+  customerEmail: string;
+  userId?: string;
+};
+
+const grantAccessMutation = makeFunctionReference<
+  'mutation',
+  GrantAccessArgs,
+  { success: boolean; error?: string }
+>('paymentsMutations:grantAccess') as unknown as FunctionReference<
+  'mutation',
+  'internal',
+  GrantAccessArgs,
+  { success: boolean; error?: string }
+>;
+
+const revokeAccessMutation = makeFunctionReference<
+  'mutation',
+  RevokeAccessArgs,
+  { success: boolean; error?: string }
+>('paymentsMutations:revokeAccess') as unknown as FunctionReference<
+  'mutation',
+  'internal',
+  RevokeAccessArgs,
+  { success: boolean; error?: string }
+>;
 
 // Lazy import creem_io to avoid bundling issues
 async function getCreemClient() {
@@ -52,8 +93,8 @@ export const createCheckoutSession = action({
 
       console.log('[Checkout] Success! URL:', checkout.checkoutUrl);
       return { checkoutUrl: checkout.checkoutUrl };
-    } catch (error: any) {
-      console.error('[Checkout] API Error:', error.message);
+    } catch (error: unknown) {
+      console.error('[Checkout] API Error:', toErrorMessage(error));
 
       // Fallback to direct payment link if API fails
       const paymentPath = isTestMode ? 'test/payment' : 'payment';
@@ -81,9 +122,9 @@ export const verifyPaymentSession = action({
       }
 
       return { success: false, status: checkout.status };
-    } catch (error: any) {
-      console.error('Error verifying payment session:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      console.error('Error verifying payment session:', toErrorMessage(error));
+      return { success: false, error: toErrorMessage(error) };
     }
   },
 });
@@ -96,7 +137,6 @@ export const handleWebhook = action({
   },
   handler: async (ctx, args) => {
     const { createCreem } = await import('creem_io');
-    const { internal } = await import('./_generated/api');
 
     const creem = createCreem({
       apiKey: process.env.CREEM_API_KEY!,
@@ -106,41 +146,52 @@ export const handleWebhook = action({
     try {
       await creem.webhooks.handleEvents(args.body, args.signature, {
         // Called when subscription becomes active, trialing, or paid
-        onGrantAccess: async ({ reason, customer, _product, metadata }: any) => {
-          console.log(`[Webhook] Grant access: ${reason} for ${customer?.email}`);
+        onGrantAccess: async (event: unknown) => {
+          const reason = readString(event, ['reason']) ?? 'unknown';
+          const customerEmail = readString(event, ['customer', 'email']);
+          const customerId = readString(event, ['customer', 'id']);
+          const plan = readString(event, ['metadata', 'plan']) ?? 'MONTHLY';
+          const userId = readString(event, ['metadata', 'userId']);
 
-          if (customer?.email) {
-            await ctx.runMutation(internal.paymentsMutations.grantAccess, {
-              customerEmail: customer.email,
-              plan: (metadata?.plan as string) || 'MONTHLY',
-              creemCustomerId: customer.id,
-              userId: metadata?.userId as string,
+          console.log(`[Webhook] Grant access: ${reason} for ${customerEmail ?? 'unknown'}`);
+
+          if (customerEmail) {
+            await ctx.runMutation(grantAccessMutation, {
+              customerEmail,
+              plan,
+              creemCustomerId: customerId,
+              userId,
             });
           }
         },
 
         // Called when subscription is paused or expired
-        onRevokeAccess: async ({ reason, customer, metadata }) => {
-          console.log(`[Webhook] Revoke access: ${reason} for ${customer?.email}`);
+        onRevokeAccess: async (event: unknown) => {
+          const reason = readString(event, ['reason']) ?? 'unknown';
+          const customerEmail = readString(event, ['customer', 'email']);
+          const userId = readString(event, ['metadata', 'userId']);
 
-          if (customer?.email) {
-            await ctx.runMutation(internal.paymentsMutations.revokeAccess, {
-              customerEmail: customer.email,
-              userId: metadata?.userId as string,
+          console.log(`[Webhook] Revoke access: ${reason} for ${customerEmail ?? 'unknown'}`);
+
+          if (customerEmail) {
+            await ctx.runMutation(revokeAccessMutation, {
+              customerEmail,
+              userId,
             });
           }
         },
 
         // Called when checkout is completed
-        onCheckoutCompleted: async data => {
-          console.log(`[Webhook] Checkout completed for ${data.customer?.email}`);
+        onCheckoutCompleted: async (event: unknown) => {
+          const customerEmail = readString(event, ['customer', 'email']);
+          console.log(`[Webhook] Checkout completed for ${customerEmail ?? 'unknown'}`);
         },
       });
 
       return { success: true };
-    } catch (error: any) {
-      console.error('Webhook processing error:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      console.error('Webhook processing error:', toErrorMessage(error));
+      return { success: false, error: toErrorMessage(error) };
     }
   },
 });

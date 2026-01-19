@@ -1,7 +1,17 @@
-import { httpRouter } from 'convex/server';
+import { httpRouter, makeFunctionReference } from 'convex/server';
 import { httpAction } from './_generated/server';
-import { api } from './_generated/api';
 import { auth } from './auth';
+import { toErrorMessage } from './errors';
+
+type WebhookResult = { success: boolean; error?: string };
+type WebhookArgs = { body: string; signature: string };
+
+const creemWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
+  'payments:handleWebhook'
+);
+const lemonWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
+  'lemonsqueezy:handleWebhook'
+);
 
 const http = httpRouter();
 
@@ -23,8 +33,7 @@ http.route({
 
     try {
       // Delegate to Node.js action for actual webhook processing
-      // Cast to any to avoid "Type instantiation excessively deep" error
-      const result = await ctx.runAction(api.payments.handleWebhook as any, {
+      const result = await ctx.runAction(creemWebhookAction, {
         body,
         signature,
       });
@@ -34,9 +43,9 @@ http.route({
       } else {
         return new Response(result.error || 'Webhook processing failed', { status: 400 });
       }
-    } catch (error: any) {
-      console.error('Webhook error:', error);
-      return new Response(`Webhook error: ${error.message}`, { status: 400 });
+    } catch (error: unknown) {
+      console.error('Webhook error:', toErrorMessage(error));
+      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
     }
   }),
 });
@@ -65,7 +74,7 @@ http.route({
 
     try {
       // Delegate to Node.js action for actual webhook processing
-      const result = await ctx.runAction(api.lemonsqueezy.handleWebhook as any, {
+      const result = await ctx.runAction(lemonWebhookAction, {
         body,
         signature,
       });
@@ -75,9 +84,9 @@ http.route({
       } else {
         return new Response(result.error || 'Webhook processing failed', { status: 400 });
       }
-    } catch (error: any) {
-      console.error('Lemon Squeezy webhook error:', error);
-      return new Response(`Webhook error: ${error.message}`, { status: 400 });
+    } catch (error: unknown) {
+      console.error('Lemon Squeezy webhook error:', toErrorMessage(error));
+      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
     }
   }),
 });

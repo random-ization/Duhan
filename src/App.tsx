@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import UpgradePrompt from './components/UpgradePrompt';
@@ -22,12 +22,8 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { user, loading, language, canAccessContent, updateLearningProgress } =
-    useAuth();
-  const {
-    selectedInstitute,
-    selectedLevel,
-  } = useLearning();
+  const { user, loading, language, canAccessContent, updateLearningProgress } = useAuth();
+  const { selectedInstitute, selectedLevel } = useLearning();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Track learning progress when user changes institute/level
@@ -59,12 +55,15 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName="应用">
         <Routes>
-          <Route path="/*" element={
-            <AppRoutes
-              canAccessContent={canAccessContent}
-              onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-            />
-          } />
+          <Route
+            path="/*"
+            element={
+              <AppRoutes
+                canAccessContent={canAccessContent}
+                onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+              />
+            }
+          />
         </Routes>
 
         <UpgradePrompt

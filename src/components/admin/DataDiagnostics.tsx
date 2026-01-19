@@ -1,153 +1,179 @@
 import React, { useState } from 'react';
-import { api as convexApi } from '../../../convex/_generated/api';
 import { useQuery } from 'convex/react';
 import { RefreshCw, Database, AlertCircle, Activity, Wifi } from 'lucide-react';
-
-
+import { NoArgs, qRef } from '../../utils/convexRefs';
 
 export default function DataDiagnostics() {
-    // Convex Query
-    const healthStats = useQuery(convexApi.diagnostics.getHealthStats);
+  // Convex Query
+  type CourseHealthRow = {
+    id: string;
+    name: string;
+    publisher?: string;
+    totalUnitsSetting?: number;
+    unitCount: number;
+    vocabCount: number;
+  };
+  type HealthStats = {
+    data: CourseHealthRow[];
+    latency?: { ping: number; scan: number; userCount: number };
+  };
+  const healthStats = useQuery(qRef<NoArgs, HealthStats>('diagnostics:getHealthStats'));
 
-    // Derived state
-    const data = healthStats?.data || [];
-    const latency = healthStats?.latency || null;
-    const loading = healthStats === undefined;
-    const error = null; // Convex handles errors via boundary usually, or we can check load state
+  // Derived state
+  const data = healthStats?.data || [];
+  const latency = healthStats?.latency || null;
+  const loading = healthStats === undefined;
+  const error = null; // Convex handles errors via boundary usually, or we can check load state
 
-    const [checkingLatency, setCheckingLatency] = useState(false);
+  const [checkingLatency, setCheckingLatency] = useState(false);
 
-    const checkLatency = () => {
-        setCheckingLatency(true);
-        // Fake a re-fetch or just visual delay
-        setTimeout(() => setCheckingLatency(false), 500);
-    };
+  const checkLatency = () => {
+    setCheckingLatency(true);
+    // Fake a re-fetch or just visual delay
+    setTimeout(() => setCheckingLatency(false), 500);
+  };
 
-    return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                    <Database className="w-8 h-8 text-blue-600" />
-                    <h1 className="text-2xl font-black text-slate-900">数据诊断 (Data Diagnostics)</h1>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={checkLatency}
-                        disabled={checkingLatency}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
-                    >
-                        <Activity className={`w-4 h-4 ${checkingLatency ? 'animate-pulse' : ''}`} />
-                        {checkingLatency ? 'Testing...' : 'Test DB Speed'}
-                    </button>
-                    <button
-                        onClick={checkLatency} // Just triggers visual for now, data is updated reactively
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-700 font-bold transition-colors"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        刷新数据
-                    </button>
-                </div>
-            </div>
-
-            {latency && (
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-xl flex items-center gap-4">
-                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                            <Wifi className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-emerald-600 font-bold uppercase">Connection Ping</p>
-                            <p className="text-xl font-black text-slate-900">{latency.ping} ms</p>
-                        </div>
-                    </div>
-                    <div className="bg-blue-50 border-2 border-blue-100 p-4 rounded-xl flex items-center gap-4">
-                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <Database className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-blue-600 font-bold uppercase">Query Scan</p>
-                            <p className="text-xl font-black text-slate-900">{latency.scan} ms</p>
-                        </div>
-                    </div>
-                    <div className="bg-violet-50 border-2 border-violet-100 p-4 rounded-xl flex items-center gap-4">
-                        <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
-                            <Activity className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-violet-600 font-bold uppercase">User Count</p>
-                            <p className="text-xl font-black text-slate-900">{latency.userCount}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="bg-red-50 border-2 border-red-500 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5" />
-                    {error}
-                </div>
-            )}
-
-            <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b-2 border-slate-200">
-                            <tr>
-                                <th className="p-4 font-black text-slate-900">Institute ID (Course)</th>
-                                <th className="p-4 font-black text-slate-900">Name</th>
-                                <th className="p-4 font-black text-slate-900">Publisher</th>
-                                <th className="p-4 font-black text-slate-900">Total Units (Setting)</th>
-                                <th className="p-4 font-black text-slate-900">Unit Records (DB)</th>
-                                <th className="p-4 font-black text-slate-900">Vocab Count (DB)</th>
-                                <th className="p-4 font-black text-slate-900">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {data.map(item => {
-                                return (
-                                    <tr key={item.id} className={`hover:bg-slate-50 ${item.vocabCount === 0 ? 'bg-red-50' : ''}`}>
-                                        <td className="p-4 font-mono text-xs text-slate-500">{item.id}</td>
-                                        <td className="p-4 font-bold text-slate-900">{item.name}</td>
-                                        <td className="p-4 text-slate-600">{item.publisher || '-'}</td>
-                                        <td className="p-4 font-mono font-bold text-blue-600">{item.totalUnitsSetting || 'Unset'}</td>
-                                        <td className="p-4 font-mono text-slate-600">{item.unitCount}</td>
-                                        <td className={`p-4 font-mono font-black ${item.vocabCount === 0 ? 'text-red-500' : 'text-green-600'}`}>
-                                            {item.vocabCount}
-                                        </td>
-                                        <td className="p-4">
-                                            {item.vocabCount === 0 ? (
-                                                <span className="inline-flex items-center px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold">
-                                                    NO DATA
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-bold">
-                                                    HEALTHY
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {data.length === 0 && !loading && (
-                                <tr>
-                                    <td colSpan={7} className="p-8 text-center text-slate-400">
-                                        No courses found in database
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <h3 className="font-bold text-blue-800 mb-2">Diagnostic Guide</h3>
-                <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                    <li><b>Vocab Count = 0</b>: Indicates no words are linked to this Course ID. Check Import script or Course ID matching.</li>
-                    <li><b>Unit Records (DB)</b>: Number of `TextbookUnit` rows (Reading content). It is OK if this is 0 if you only want Vocab.</li>
-                    <li><b>Total Units (Setting)</b>: Controls the dropdown menu range (1-20). If Unset, defaults to 20.</li>
-                </ul>
-            </div>
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <Database className="w-8 h-8 text-blue-600" />
+          <h1 className="text-2xl font-black text-slate-900">数据诊断 (Data Diagnostics)</h1>
         </div>
-    );
+        <div className="flex gap-2">
+          <button
+            onClick={checkLatency}
+            disabled={checkingLatency}
+            className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <Activity className={`w-4 h-4 ${checkingLatency ? 'animate-pulse' : ''}`} />
+            {checkingLatency ? 'Testing...' : 'Test DB Speed'}
+          </button>
+          <button
+            onClick={checkLatency} // Just triggers visual for now, data is updated reactively
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-700 font-bold transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            刷新数据
+          </button>
+        </div>
+      </div>
+
+      {latency && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-emerald-50 border-2 border-emerald-100 p-4 rounded-xl flex items-center gap-4">
+            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+              <Wifi className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-emerald-600 font-bold uppercase">Connection Ping</p>
+              <p className="text-xl font-black text-slate-900">{latency.ping} ms</p>
+            </div>
+          </div>
+          <div className="bg-blue-50 border-2 border-blue-100 p-4 rounded-xl flex items-center gap-4">
+            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-blue-600 font-bold uppercase">Query Scan</p>
+              <p className="text-xl font-black text-slate-900">{latency.scan} ms</p>
+            </div>
+          </div>
+          <div className="bg-violet-50 border-2 border-violet-100 p-4 rounded-xl flex items-center gap-4">
+            <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-violet-600 font-bold uppercase">User Count</p>
+              <p className="text-xl font-black text-slate-900">{latency.userCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border-2 border-red-500 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b-2 border-slate-200">
+              <tr>
+                <th className="p-4 font-black text-slate-900">Institute ID (Course)</th>
+                <th className="p-4 font-black text-slate-900">Name</th>
+                <th className="p-4 font-black text-slate-900">Publisher</th>
+                <th className="p-4 font-black text-slate-900">Total Units (Setting)</th>
+                <th className="p-4 font-black text-slate-900">Unit Records (DB)</th>
+                <th className="p-4 font-black text-slate-900">Vocab Count (DB)</th>
+                <th className="p-4 font-black text-slate-900">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.map(item => {
+                return (
+                  <tr
+                    key={item.id}
+                    className={`hover:bg-slate-50 ${item.vocabCount === 0 ? 'bg-red-50' : ''}`}
+                  >
+                    <td className="p-4 font-mono text-xs text-slate-500">{item.id}</td>
+                    <td className="p-4 font-bold text-slate-900">{item.name}</td>
+                    <td className="p-4 text-slate-600">{item.publisher || '-'}</td>
+                    <td className="p-4 font-mono font-bold text-blue-600">
+                      {item.totalUnitsSetting || 'Unset'}
+                    </td>
+                    <td className="p-4 font-mono text-slate-600">{item.unitCount}</td>
+                    <td
+                      className={`p-4 font-mono font-black ${item.vocabCount === 0 ? 'text-red-500' : 'text-green-600'}`}
+                    >
+                      {item.vocabCount}
+                    </td>
+                    <td className="p-4">
+                      {item.vocabCount === 0 ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold">
+                          NO DATA
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-bold">
+                          HEALTHY
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {data.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-400">
+                    No courses found in database
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <h3 className="font-bold text-blue-800 mb-2">Diagnostic Guide</h3>
+        <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
+          <li>
+            <b>Vocab Count = 0</b>: Indicates no words are linked to this Course ID. Check Import
+            script or Course ID matching.
+          </li>
+          <li>
+            <b>Unit Records (DB)</b>: Number of `TextbookUnit` rows (Reading content). It is OK if
+            this is 0 if you only want Vocab.
+          </li>
+          <li>
+            <b>Total Units (Setting)</b>: Controls the dropdown menu range (1-20). If Unset,
+            defaults to 20.
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
 }

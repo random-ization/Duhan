@@ -95,7 +95,6 @@ const DIST_DIR = join(__dirname, '..', 'dist');
 function injectMetaTags(html, route) {
   const { title, description, keywords } = route.meta;
   const canonicalUrl = `${SITE_URL}${route.path}`;
-  const ogImage = `${SITE_URL}/logo.png`;
 
   // Escape special regex characters and HTML entities
   function escapeHtml(text) {

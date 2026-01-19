@@ -10,9 +10,9 @@ import React, {
 import { useConvex, useMutation, useQuery, useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../convex/_generated/api';
-import { Id } from '../../convex/_generated/dataModel';
+import type { Id } from '../../convex/_generated/dataModel';
 import { User, Language, Annotation, ExamAttempt, TextbookContent, TopikExam } from '../types';
+import { mRef, NoArgs, qRef } from '../utils/convexRefs';
 
 import { fetchUserCountry } from '../utils/geo';
 import i18n from '../utils/i18next-config';
@@ -30,10 +30,6 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   setLanguage: (lang: Language) => void;
   resetPassword: (email: string) => Promise<void>; // Added
-
-  // Session Management
-  sessionExpired: boolean;
-  setSessionExpired: (expired: boolean) => void;
 
   // User Actions
 
@@ -71,54 +67,46 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sessionExpired, setSessionExpired] = useState(false);
   const { ready } = useTranslation();
+  const [userOverride, setUserOverride] = useState<Partial<User> | null>(null);
 
   // useConvex hook kept for potential future use
   useConvex();
 
   // Mutations - token argument no longer needed for backend that uses getAuthUserId
 
-  // Initialize language
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('language');
-      if (stored) return stored as Language;
-    }
-    return 'zh';
-  });
-
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const setLanguage = useCallback((lang: Language) => {
-    setLanguageState(lang);
     localStorage.setItem('language', lang);
     i18n.changeLanguage(lang);
   }, []);
 
+  const language: Language =
+    i18n.language === 'zh' ||
+    i18n.language === 'en' ||
+    i18n.language === 'vi' ||
+    i18n.language === 'mn'
+      ? i18n.language
+      : 'zh';
+
   useEffect(() => {
-    if (i18n.language !== language) {
-      i18n.changeLanguage(language);
+    const storedLang = localStorage.getItem('language');
+    if (storedLang && i18n.language !== storedLang) {
+      i18n.changeLanguage(storedLang);
+      return;
     }
-  }, [language]);
 
-  // IP Parsing
-  useEffect(() => {
+    if (storedLang) return;
+
     const initLanguage = async () => {
-      const storedLang = localStorage.getItem('language');
-      if (storedLang) return;
-
       const country = await fetchUserCountry();
-      console.log('Detected Country:', country);
-
       let targetLang: Language = 'en';
       if (country === 'CN') targetLang = 'zh';
       else if (country === 'VN') targetLang = 'vi';
       else if (country === 'MN') targetLang = 'mn';
-
-      setLanguageState(targetLang);
+      localStorage.setItem('language', targetLang);
+      i18n.changeLanguage(targetLang);
     };
 
     initLanguage();
@@ -127,65 +115,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Session Check (Load User) using Convex Auth
   const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
-  const viewer = useQuery(api.users.viewer);
+  const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'));
+  const loading = !ready || authLoading || (isAuthenticated && viewer === undefined);
 
-  // Track viewer ID to avoid infinite re-renders when viewer object reference changes
-  const viewerIdRef = React.useRef<string | null>(null);
-
-  useEffect(() => {
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
-
-    if (isAuthenticated) {
-      if (viewer !== undefined && viewer !== null) {
-        // Only update user if viewer ID actually changed
-        const viewerId = (viewer as { _id?: string })?._id || null;
-        if (viewerId !== viewerIdRef.current) {
-          viewerIdRef.current = viewerId;
-          setUser(viewer as unknown as User);
-        }
-        setLoading(false);
-      } else if (viewer === null) {
-        // Viewer returned null (user not found in DB)
-        viewerIdRef.current = null;
-        setUser(null);
-        setLoading(false);
-      } else {
-        // Authenticated but viewer query still loading (undefined)
-        setLoading(true);
-      }
-    } else {
-      // Not authenticated
-      viewerIdRef.current = null;
-      setUser(null);
-      setLoading(false);
-    }
-  }, [authLoading, isAuthenticated, viewer]);
-
-  // Session expiration detection
-  // If user was authenticated but then becomes unauthenticated, flag session as expired
-  useEffect(() => {
-    // Track if we've completed initial load to avoid false positives
-    const hasCompletedInitialLoad = !authLoading;
-    if (!hasCompletedInitialLoad) {
-      return;
-    }
-
-    const wasAuthenticated = user !== null;
-    const nowAuthenticated = isAuthenticated;
-
-    // If we had a user but are no longer authenticated (and not loading), session expired
-    if (wasAuthenticated && !nowAuthenticated) {
-      setSessionExpired(true);
-    }
-
-    // If we become authenticated again, clear the expired flag
-    if (nowAuthenticated && sessionExpired) {
-      setSessionExpired(false);
-    }
-  }, [isAuthenticated, user, authLoading, sessionExpired]);
+  const user = useMemo<User | null>(() => {
+    if (!isAuthenticated) return null;
+    if (viewer === undefined) return null;
+    if (!viewer) return null;
+    return { ...viewer, ...(userOverride ?? {}) };
+  }, [isAuthenticated, viewer, userOverride]);
 
   // Silent token refresh - proactively keep session alive
   // The viewer query is reactive and will automatically trigger on the interval
@@ -223,12 +161,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.warn('Manual login() called. Prefer useAuthActions().signIn()');
     // We can't easily "force" a session from client side with Convex Auth like this.
     // But if loggedInUser is passed, we can set state locally.
-    setUser(loggedInUser);
+    setUserOverride(loggedInUser);
   }, []);
 
   const logout = useCallback(async () => {
     await signOut();
-    setUser(null);
+    setUserOverride(null);
     localStorage.removeItem('token'); // cleanup legacy
     localStorage.removeItem('userId'); // cleanup legacy
   }, [signOut]);
@@ -238,7 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
-    setUser(prev => (prev ? { ...prev, ...updates } : null));
+    setUserOverride(prev => ({ ...(prev ?? {}), ...updates }));
   }, []);
 
   const resetPassword = useCallback(async (_email: string) => {
@@ -261,11 +199,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [user]
   );
 
-  const saveAnnotationMutation = useMutation(api.annotations.save);
-  const deleteAnnotationMutation = useMutation(api.annotations.remove);
-  const saveExamAttemptMutation = useMutation(api.user.saveExamAttempt);
-  const deleteExamAttemptMutation = useMutation(api.user.deleteExamAttempt);
-  const updateLearningProgressMutation = useMutation(api.user.updateLearningProgress);
+  const saveAnnotationMutation = useMutation(
+    mRef<
+      {
+        contextKey: string;
+        text: string;
+        note?: string;
+        color?: string;
+        startOffset?: number;
+        endOffset?: number;
+      },
+      { id: Id<'annotations'>; success: boolean }
+    >('annotations:save')
+  );
+  const deleteAnnotationMutation = useMutation(
+    mRef<{ annotationId: Id<'annotations'> }, { success: boolean }>('annotations:remove')
+  );
+  const saveExamAttemptMutation = useMutation(
+    mRef<
+      {
+        examId: string;
+        score: number;
+        totalQuestions?: number;
+        sectionScores?: unknown;
+        duration?: number;
+        answers?: unknown;
+      },
+      { success: boolean; attemptId: Id<'exam_attempts'> }
+    >('user:saveExamAttempt')
+  );
+  const deleteExamAttemptMutation = useMutation(
+    mRef<{ attemptId: Id<'exam_attempts'> }, { success: boolean; error?: string }>(
+      'user:deleteExamAttempt'
+    )
+  );
+  const updateLearningProgressMutation = useMutation(
+    mRef<
+      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      { success: boolean }
+    >('user:updateLearningProgress')
+  );
 
   const saveAnnotation = useCallback(
     async (annotation: Annotation) => {
@@ -331,7 +304,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = useMemo<AuthContextType>(
     () => ({
       user,
-      loading: loading || !ready,
+      loading,
       language,
       login,
       logout,
@@ -343,8 +316,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       canAccessContent,
       showUpgradePrompt,
       setShowUpgradePrompt,
-      sessionExpired,
-      setSessionExpired,
 
       saveExamAttempt,
       deleteExamAttempt,
@@ -355,7 +326,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [
       user,
       loading,
-      ready,
       language,
       login,
       logout,
@@ -365,7 +335,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLanguage,
       canAccessContent,
       showUpgradePrompt,
-      sessionExpired,
       saveExamAttempt,
       deleteExamAttempt,
       saveAnnotation,

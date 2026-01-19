@@ -11,9 +11,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AuthProvider>
       <DataProvider>
         <LayoutProvider>
-          <LearningProvider>
-            {children}
-          </LearningProvider>
+          <LearningProvider>{children}</LearningProvider>
         </LayoutProvider>
       </DataProvider>
     </AuthProvider>
@@ -42,8 +40,6 @@ export const useApp = () => {
     canAccessContent: auth.canAccessContent,
     showUpgradePrompt: auth.showUpgradePrompt,
     setShowUpgradePrompt: auth.setShowUpgradePrompt,
-    sessionExpired: auth.sessionExpired,
-    setSessionExpired: auth.setSessionExpired,
 
     // Data Actions (Moved from Auth)
     saveWord: userActions.saveWord,

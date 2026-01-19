@@ -8,6 +8,8 @@ import { Target, Clock, ArrowRight, Archive, History, Headphones, BookOpen } fro
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
 
+// Use any here to be compatible with the restricted type in routes.tsx (TextbookContent | TopikExam)
+// Defining specific union type here causes circular dependency or tight coupling with AuthContext
 interface TopikPageProps {
   canAccessContent: (content: any) => boolean;
   onShowUpgradePrompt: () => void;
@@ -20,11 +22,9 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
 
   // Filter exams based on type
-  const filteredExams = topikExams.filter(exam =>
-    filterType === 'ALL' || exam.type === filterType
-  );
+  const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);
   // We can't use useParams readily because existing routing might not rely on it
-  // But usually /topik/:examId implies params. 
+  // But usually /topik/:examId implies params.
   // Let's assume if there is an examId passed via some mechanism or we add local state management
   // Actually, usually TopikModule handles the selection.
   // But for this Lobby, we want to SHOW the lobby if no exam is active.
@@ -63,13 +63,20 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
 
   // Lobby View
   return (
-    <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32" style={{ backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}>
+    <div
+      className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32"
+      style={{
+        backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+        backgroundSize: '24px 24px',
+      }}
+    >
       <div className="max-w-7xl mx-auto space-y-12">
-
         <div className="flex items-center gap-4 mb-4">
           <BackButton onClick={() => navigate('/dashboard')} />
           <div>
-            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">考试中心</h2>
+            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
+              考试中心
+            </h2>
             <p className="text-slate-500 font-bold">真题实战模拟</p>
           </div>
           <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
@@ -115,38 +122,58 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Main Exam Card */}
           <div className="md:col-span-2 space-y-6">
-            <h3 className="font-black text-xl flex items-center gap-2 text-slate-900"><Target size={20} /> 推荐实战</h3>
+            <h3 className="font-black text-xl flex items-center gap-2 text-slate-900">
+              <Target size={20} /> 推荐实战
+            </h3>
 
             {filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredExams.map((exam) => (
+                {filteredExams.map(exam => (
                   <div
                     key={exam.id}
                     onClick={() => navigate(`/topik/${exam.id}`)}
                     className="bg-white rounded-2xl p-0 border-2 border-slate-900 shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex flex-col md:flex-row h-auto min-h-[140px]"
                   >
-                    <div className={clsx(
-                      "p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden",
-                      exam.type === 'READING' ? 'bg-slate-900' : 'bg-blue-800'
-                    )}>
-                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 2px, transparent 10px)" }}></div>
-                      <div className="text-3xl font-black text-yellow-400 font-display z-10">{exam.round}</div>
-                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">{exam.type === 'READING' ? 'TOPIK II 읽기' : 'TOPIK II 듣기'}</div>
+                    <div
+                      className={clsx(
+                        'p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden',
+                        exam.type === 'READING' ? 'bg-slate-900' : 'bg-blue-800'
+                      )}
+                    >
+                      <div
+                        className="absolute inset-0 opacity-20"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 2px, transparent 10px)',
+                        }}
+                      ></div>
+                      <div className="text-3xl font-black text-yellow-400 font-display z-10">
+                        {exam.round}
+                      </div>
+                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
+                        {exam.type === 'READING' ? 'TOPIK II 읽기' : 'TOPIK II 듣기'}
+                      </div>
                     </div>
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-black text-lg text-slate-900 group-hover:text-indigo-600 transition">{exam.title}</h4>
-                          <span className={clsx(
-                            "text-[10px] font-black px-2 py-0.5 rounded border",
-                            exam.type === 'READING'
-                              ? 'bg-blue-100 text-blue-700 border-blue-200'
-                              : 'bg-rose-100 text-rose-600 border-rose-200'
-                          )}>
+                          <h4 className="font-black text-lg text-slate-900 group-hover:text-indigo-600 transition">
+                            {exam.title}
+                          </h4>
+                          <span
+                            className={clsx(
+                              'text-[10px] font-black px-2 py-0.5 rounded border',
+                              exam.type === 'READING'
+                                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                : 'bg-rose-100 text-rose-600 border-rose-200'
+                            )}
+                          >
                             {exam.type === 'READING' ? '阅读' : '听力'}
                           </span>
                         </div>
-                        <p className="text-slate-500 text-xs font-bold">第 {exam.round} 届 TOPIK II 真题</p>
+                        <p className="text-slate-500 text-xs font-bold">
+                          第 {exam.round} 届 TOPIK II 真题
+                        </p>
                         <div className="flex gap-4 mt-2">
                           <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
                             <Clock size={12} /> {exam.timeLimit} 分钟
@@ -185,16 +212,24 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                     const maxScore = attempt.maxScore || attempt.totalScore || 100;
                     const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
                     return (
-                      <div key={idx} className="relative bg-slate-50 p-3 rounded-xl border border-slate-200 group cursor-pointer hover:bg-white hover:border-slate-900 transition">
+                      <div
+                        key={idx}
+                        className="relative bg-slate-50 p-3 rounded-xl border border-slate-200 group cursor-pointer hover:bg-white hover:border-slate-900 transition"
+                      >
                         <div className="flex justify-between items-start">
                           <div>
-                            <h5 className="font-bold text-slate-900 text-xs">{attempt.examTitle || '未知考试'}</h5>
+                            <h5 className="font-bold text-slate-900 text-xs">
+                              {attempt.examTitle || '未知考试'}
+                            </h5>
                             <p className="text-[10px] text-slate-500 font-bold mt-0.5">
-                              {attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'}
+                              {attempt.timestamp
+                                ? new Date(attempt.timestamp).toLocaleDateString()
+                                : 'N/A'}
                             </p>
                           </div>
                           <span className="font-black text-sm text-slate-900">
-                            {score}<span className="text-[10px] text-slate-400">/{maxScore}</span>
+                            {score}
+                            <span className="text-[10px] text-slate-400">/{maxScore}</span>
                           </span>
                         </div>
                         {percentage >= 60 && (
@@ -229,4 +264,3 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
 };
 
 export default TopikPage;
-

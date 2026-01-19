@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  ReactNode,
-  useEffect,
-} from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { LearningModuleType, VocabularyItem, Mistake } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -41,39 +34,36 @@ interface LearningProviderProps {
 
 export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const [selectedInstitute, setSelectedInstitute] = useState<string>('');
-  const [selectedLevel, setSelectedLevel] = useState<number>(0);
+  const [selectedInstituteOverride, setSelectedInstituteOverride] = useState<string | null>(null);
+  const [selectedLevelOverride, setSelectedLevelOverride] = useState<number | null>(null);
   const [activeModule, setActiveModule] = useState<LearningModuleType | null>(null);
-  const [activeCustomList, setActiveCustomList] = useState<VocabularyItem[] | Mistake[] | null>(null);
+  const [activeCustomList, setActiveCustomList] = useState<VocabularyItem[] | Mistake[] | null>(
+    null
+  );
   const [activeListType, setActiveListType] = useState<'SAVED' | 'MISTAKES' | null>(null);
 
-  // Resume learning from last position when user logs in
-  useEffect(() => {
-    if (user?.lastInstitute && user?.lastLevel) {
-      setSelectedInstitute(user.lastInstitute);
-      setSelectedLevel(user.lastLevel);
-    }
-  }, [user?.lastInstitute, user?.lastLevel]);
+  const selectedInstitute = selectedInstituteOverride ?? user?.lastInstitute ?? '';
+  const selectedLevel = selectedLevelOverride ?? user?.lastLevel ?? 0;
+
+  const setSelectedInstitute = (id: string) => setSelectedInstituteOverride(id);
+  const setSelectedLevel = (level: number) => setSelectedLevelOverride(level);
 
   // OPTIMIZATION: Use useMemo to stabilize context value and prevent unnecessary re-renders
-  const value = useMemo<LearningContextType>(() => ({
-    selectedInstitute,
-    setSelectedInstitute,
-    selectedLevel,
-    setSelectedLevel,
-    activeModule,
-    setActiveModule,
-    activeCustomList,
-    setActiveCustomList,
-    activeListType,
-    setActiveListType,
-  }), [
-    selectedInstitute,
-    selectedLevel,
-    activeModule,
-    activeCustomList,
-    activeListType,
-  ]);
+  const value = useMemo<LearningContextType>(
+    () => ({
+      selectedInstitute,
+      setSelectedInstitute,
+      selectedLevel,
+      setSelectedLevel,
+      activeModule,
+      setActiveModule,
+      activeCustomList,
+      setActiveCustomList,
+      activeListType,
+      setActiveListType,
+    }),
+    [selectedInstitute, selectedLevel, activeModule, activeCustomList, activeListType]
+  );
 
   return <LearningContext.Provider value={value}>{children}</LearningContext.Provider>;
 };

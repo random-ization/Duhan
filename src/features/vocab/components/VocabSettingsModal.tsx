@@ -13,6 +13,32 @@ interface VocabSettingsModalProps {
   onUpdate: (newSettings: VocabSettings) => void;
 }
 
+const Switch = ({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label?: string;
+}) => (
+  <div className="flex items-center justify-between py-3">
+    {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
+    <button
+      onClick={onChange}
+      className={`w-12 h-7 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${
+        checked ? 'bg-indigo-600' : 'bg-slate-300'
+      }`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  </div>
+);
+
 const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
   ({ isOpen, settings, language, initialTab = 'FLASHCARD', onClose, onUpdate }) => {
     const labels = useMemo(() => getLabels(language), [language]);
@@ -42,30 +68,6 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
       });
     }, []);
 
-    const Switch = ({
-      checked,
-      onChange,
-      label,
-    }: {
-      checked: boolean;
-      onChange: () => void;
-      label?: string;
-    }) => (
-      <div className="flex items-center justify-between py-3">
-        {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
-        <button
-          onClick={onChange}
-          className={`w-12 h-7 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${checked ? 'bg-indigo-600' : 'bg-slate-300'
-            }`}
-        >
-          <div
-            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${checked ? 'translate-x-6' : 'translate-x-1'
-              }`}
-          />
-        </button>
-      </div>
-    );
-
     if (!isOpen) return null;
 
     return (
@@ -86,19 +88,21 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab('FLASHCARD')}
-              className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'FLASHCARD'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
+              className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${
+                activeTab === 'FLASHCARD'
+                  ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
             >
               {labels.flashcards}
             </button>
             <button
               onClick={() => setActiveTab('LEARN')}
-              className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'LEARN'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
+              className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${
+                activeTab === 'LEARN'
+                  ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
             >
               {labels.learn}
             </button>
@@ -146,10 +150,11 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                               flashcard: { ...s.flashcard, cardFront: 'KOREAN' },
                             }))
                           }
-                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${localSettings.flashcard.cardFront === 'KOREAN'
-                            ? 'bg-white shadow text-indigo-600'
-                            : 'text-slate-500'
-                            }`}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                            localSettings.flashcard.cardFront === 'KOREAN'
+                              ? 'bg-white shadow text-indigo-600'
+                              : 'text-slate-500'
+                          }`}
                         >
                           {labels.korean}
                         </button>
@@ -160,10 +165,11 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                               flashcard: { ...s.flashcard, cardFront: 'NATIVE' },
                             }))
                           }
-                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${localSettings.flashcard.cardFront === 'NATIVE'
-                            ? 'bg-white shadow text-indigo-600'
-                            : 'text-slate-500'
-                            }`}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                            localSettings.flashcard.cardFront === 'NATIVE'
+                              ? 'bg-white shadow text-indigo-600'
+                              : 'text-slate-500'
+                          }`}
                         >
                           {labels.native}
                         </button>
@@ -300,6 +306,6 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
     );
   }
 );
-VocabSettingsModal.displayName = "VocabSettingsModal";
+VocabSettingsModal.displayName = 'VocabSettingsModal';
 
 export default VocabSettingsModal;

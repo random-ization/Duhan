@@ -5,8 +5,8 @@ interface UseApiOptions<T> {
   onError?: (error: Error) => void;
 }
 
-export const useApi = <T = any>(
-  apiFunction: (...args: any[]) => Promise<T>,
+export const useApi = <T = unknown, A extends unknown[] = unknown[]>(
+  apiFunction: (...args: A) => Promise<T>,
   options?: UseApiOptions<T>
 ) => {
   const [data, setData] = useState<T | null>(null);
@@ -14,7 +14,7 @@ export const useApi = <T = any>(
   const [error, setError] = useState<Error | null>(null);
 
   const execute = useCallback(
-    async (...args: any[]) => {
+    async (...args: A) => {
       try {
         setLoading(true);
         setError(null);
