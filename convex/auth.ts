@@ -69,6 +69,51 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       // Fallback to SITE_URL (backend)
       return process.env.SITE_URL!;
     },
+    async createOrUpdateUser(ctx, args) {
+      const email =
+        typeof args.profile.email === 'string'
+          ? args.profile.email.trim().toLowerCase()
+          : undefined;
+      let userId = args.existingUserId;
+      let isLinking = false;
+      try {
+        const currentUserId = await getAuthUserId(ctx);
+        if (currentUserId) {
+          userId = currentUserId;
+          isLinking = true;
+        }
+      } catch {
+        isLinking = false;
+      }
+
+      const emailVerified =
+        args.profile.emailVerified === true ||
+        ((args.provider.type === 'oauth' || args.provider.type === 'oidc') &&
+          args.provider.allowDangerousEmailAccountLinking !== false);
+
+      if (!isLinking && !userId && email && emailVerified) {
+        const matches = await ctx.db
+          .query('users')
+          .filter(q => q.eq(q.field('email'), email))
+          .take(2);
+
+        if (matches.length === 1) {
+          userId = matches[0]._id;
+        }
+      }
+
+      const userData = {
+        ...args.profile,
+        ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
+      };
+
+      if (userId) {
+        await ctx.db.patch(userId, userData);
+        return userId;
+      }
+
+      return await ctx.db.insert('users', userData);
+    },
   },
 });
 
