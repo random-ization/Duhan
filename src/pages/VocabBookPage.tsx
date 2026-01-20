@@ -11,7 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
@@ -21,7 +21,7 @@ import { VOCAB } from '../utils/convexRefs';
 // Actually DTO is compatible. Let's use the query.
 
 const VocabBookPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
   const [searchQuery, setSearchQuery] = useState('');

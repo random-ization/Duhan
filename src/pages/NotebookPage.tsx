@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, BookOpen, GraduationCap, Target, FileText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import NoteCard from '../components/notebook/NoteCard';
 import NoteDetailModal from '../components/notebook/NoteDetailModal';
@@ -24,7 +24,7 @@ interface Note {
 }
 
 const NotebookPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);

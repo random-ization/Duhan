@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { ShieldCheck, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -15,7 +15,7 @@ const AdminLoginPage: React.FC = () => {
 
   const { user } = useAuth();
   const { signIn } = useAuthActions();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
   // If already logged in as admin, redirect to admin panel
   useEffect(() => {
@@ -126,9 +126,13 @@ const AdminLoginPage: React.FC = () => {
 
           {/* Footer */}
           <div className="mt-6 pt-6 border-t border-zinc-200 text-center">
-            <a href="/" className="text-sm text-zinc-500 hover:text-zinc-700 transition">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-sm text-zinc-500 hover:text-zinc-700 transition"
+            >
               ← 返回首页
-            </a>
+            </button>
           </div>
         </div>
 

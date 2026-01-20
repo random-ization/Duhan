@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Podcast, Loader2 } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { PodcastChannel } from '../types';
@@ -7,11 +7,12 @@ import BackButton from '../components/ui/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { aRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 export default function PodcastSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
 

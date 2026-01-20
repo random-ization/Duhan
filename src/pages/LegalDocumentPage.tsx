@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { SEO } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { Language } from '../types';
@@ -10,6 +10,7 @@ import { Loading } from '../components/common/Loading';
 import { FileText, Calendar } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { qRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface LegalDocumentPageProps {
   language: Language;
@@ -18,7 +19,7 @@ interface LegalDocumentPageProps {
 
 const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documentType }) => {
   const labels = getLabels(language);
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);

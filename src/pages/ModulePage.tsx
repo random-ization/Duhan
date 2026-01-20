@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { VocabModule } from '../features/vocab';
@@ -14,6 +14,7 @@ import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { qRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 const ModulePage: React.FC = () => {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ const ModulePage: React.FC = () => {
     setSelectedLevel,
   } = useLearning();
   const { institutes, textbookContexts } = useData();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
 
   // Support both route patterns:

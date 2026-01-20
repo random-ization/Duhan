@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Lock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
@@ -7,10 +7,11 @@ import { getLabels } from '../utils/i18n';
 import { useAction } from 'convex/react';
 import { makeFunctionReference } from 'convex/server';
 import { toErrorMessage } from '../utils/errors';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language, logout } = useAuth();
   const labels = getLabels(language);
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import { useAction } from 'convex/react';
 import { SEO } from '../seo/SEO';
@@ -9,11 +9,12 @@ import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
 import { aRef } from '../utils/convexRefs';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 const SubscriptionPage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);

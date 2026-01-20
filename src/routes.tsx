@@ -155,6 +155,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
 
               {/* Podcast Learning */}
               <Route path="/podcasts" element={<PodcastDashboard />} />
+              <Route path="/podcasts/subscriptions" element={<PodcastDashboard />} />
               <Route path="/podcasts/search" element={<PodcastSearchPage />} />
               <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
               <Route path="/podcasts/player" element={<PodcastPlayerPage />} />

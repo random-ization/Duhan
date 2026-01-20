@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTranslation, Trans } from 'react-i18next';
 import {
   Play,
@@ -58,7 +58,7 @@ interface LearningStats {
 }
 
 export default function ModernDashboard() {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
   const { institutes } = useData();

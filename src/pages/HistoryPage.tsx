@@ -1,5 +1,5 @@
 import { useQuery } from 'convex/react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Play, Calendar } from 'lucide-react';
 // import { PODCAST_MESSAGES, getPodcastMessages } from '../constants/podcast-messages';
 
@@ -32,7 +32,7 @@ export default function HistoryPage() {
   };
   const history = useQuery(qRef<NoArgs, HistoryItem[]>('podcasts:getHistory'));
   const loading = history === undefined;
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
   // Mapping logic if necessary (Convex returns _id, frontend might wait for id)
   // The query returns { ...h, id: h._id } so it should be compatible.

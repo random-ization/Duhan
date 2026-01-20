@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Video, Play, Eye, Clock, Loader2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,7 +26,7 @@ const LEVELS_KEYS = [
 ];
 
 const VideoLibraryPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
   const [activeLevel, setActiveLevel] = useState('');

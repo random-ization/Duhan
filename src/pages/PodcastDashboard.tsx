@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Play, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/ui/BackButton';
 import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, qRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 // import { getPodcastMessages } from '../constants/podcast-messages';
 
 // Types for podcast data
@@ -17,6 +18,7 @@ interface PodcastChannel {
   artwork?: string;
   artworkUrl?: string;
   feedUrl?: string;
+  itunesId?: string;
 }
 
 interface PodcastItem {
@@ -83,7 +85,8 @@ const toPodcastItemList = (value: unknown): PodcastItem[] => {
 };
 
 export default function PodcastDashboard() {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const { user, language } = useAuth();
   const labels = getLabels(language);
   const podcastMsgs = getPodcastMessages(labels);
@@ -103,8 +106,10 @@ export default function PodcastDashboard() {
     qRef<NoArgs, (HistoryItem & { _id: string })[]>('podcasts:getHistory'),
     user ? {} : 'skip'
   );
-  // Note: we fetch subscriptions to keep cache fresh, even if not used directly
-  useQuery(qRef<NoArgs, unknown>('podcasts:getSubscriptions'), user ? {} : 'skip');
+  const subscriptionsData = useQuery(
+    qRef<NoArgs, PodcastChannel[]>('podcasts:getSubscriptions'),
+    user ? {} : 'skip'
+  );
 
   // Derived State
   const trending = React.useMemo(() => {
@@ -128,6 +133,95 @@ export default function PodcastDashboard() {
   }, [historyData]);
 
   const loading = trendingData === undefined;
+  const subscriptionsLoading = user ? subscriptionsData === undefined : false;
+  const subscriptions = React.useMemo(() => subscriptionsData ?? [], [subscriptionsData]);
+  const isSubscriptionsView = location.pathname.includes('/podcasts/subscriptions');
+
+  if (isSubscriptionsView) {
+    return (
+      <div
+        className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32"
+        style={{
+          backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
+        }}
+      >
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="flex items-center gap-4">
+            <BackButton onClick={() => navigate('/podcasts')} />
+            <h1 className="text-3xl font-black text-slate-900">
+              {labels.dashboard?.podcast?.mySubs || 'My Subscriptions'}
+            </h1>
+          </div>
+
+          {!user && (
+            <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 text-center space-y-4">
+              <p className="font-bold text-slate-600">
+                {labels.podcast?.loginRequired || 'Please login first'}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
+              >
+                {labels.login || 'Login'}
+              </button>
+            </div>
+          )}
+
+          {user && subscriptionsLoading && (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
+            </div>
+          )}
+
+          {user && !subscriptionsLoading && subscriptions.length === 0 && (
+            <div className="text-center py-16 bg-white rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold">
+              {labels.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
+            </div>
+          )}
+
+          {user && !subscriptionsLoading && subscriptions.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {subscriptions.map(channel => {
+                const channelId = channel.itunesId || channel.id || channel._id;
+                const params = new URLSearchParams();
+                if (channelId) params.set('id', String(channelId));
+                if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
+                const query = params.toString();
+                return (
+                  <button
+                    key={channelId || channel.title}
+                    type="button"
+                    onClick={() =>
+                      navigate(`/podcasts/channel${query ? `?${query}` : ''}`, {
+                        state: { channel },
+                      })
+                    }
+                    className="text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex gap-4 items-center"
+                  >
+                    <img
+                      src={channel.artworkUrl || channel.artwork || 'https://placehold.co/100x100'}
+                      alt={channel.title}
+                      className="w-16 h-16 rounded-xl border-2 border-slate-100 object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-lg text-slate-900 line-clamp-1">
+                        {channel.title}
+                      </h3>
+                      <p className="text-sm font-bold text-slate-500 line-clamp-1">
+                        {channel.author}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

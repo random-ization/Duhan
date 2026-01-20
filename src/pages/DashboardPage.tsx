@@ -261,7 +261,7 @@ export default function DashboardPage({
       case 'youtube':
         return (
           <BentoCard
-            onClickPath="/youtube"
+            onClickPath="/videos"
             bgClass="bg-rose-50"
             borderClass="border-rose-200"
             className="h-full"

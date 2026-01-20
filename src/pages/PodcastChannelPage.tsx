@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play, Clock, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/ui/BackButton';
 import { getLabels } from '../utils/i18n';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface Episode {
   title: string;
@@ -35,7 +36,7 @@ interface FeedData {
 const PodcastChannelPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
   const labels = getLabels(language);
 

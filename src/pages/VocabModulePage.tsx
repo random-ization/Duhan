@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronDown,
@@ -28,6 +28,7 @@ import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
 import { VOCAB } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface ExtendedVocabItem extends VocabularyItem {
   id: string;
@@ -47,7 +48,7 @@ const BACKGROUND_STYLE = {
 
 export default function VocabModulePage() {
   // Force Rebuild Trigger: 2026-01-02
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user } = useAuth();
   const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();

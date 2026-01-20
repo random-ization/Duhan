@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
 

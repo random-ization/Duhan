@@ -1,10 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { ArrowLeft } from 'lucide-react';
 
 interface BackButtonProps {
-    className?: string;
-    onClick?: () => void;
+  className?: string;
+  onClick?: () => void;
 }
 
 /**
@@ -12,20 +12,20 @@ interface BackButtonProps {
  * Use on secondary pages to navigate back
  */
 const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
-    const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
-    const handleClick = () => {
-        if (onClick) {
-            onClick();
-        } else {
-            navigate(-1);
-        }
-    };
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(-1);
+    }
+  };
 
-    return (
-        <button
-            onClick={handleClick}
-            className={`
+  return (
+    <button
+      onClick={handleClick}
+      className={`
         w-12 h-12 flex items-center justify-center
         bg-white border-2 border-slate-900 rounded-xl
         shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
@@ -35,11 +35,11 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
         transition-all duration-150
         ${className}
       `}
-            aria-label="返回上一页"
-        >
-            <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
-        </button>
-    );
+      aria-label="返回上一页"
+    >
+      <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+    </button>
+  );
 };
 
 export default BackButton;

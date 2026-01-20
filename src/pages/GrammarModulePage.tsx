@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 import { useQuery, useMutation } from 'convex/react';
@@ -11,6 +11,7 @@ import { GrammarPointData } from '../types';
 import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
 import { GRAMMARS } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 // Extracted constant for background style
 const LOADING_BACKGROUND_STYLE = {
@@ -20,7 +21,7 @@ const LOADING_BACKGROUND_STYLE = {
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');

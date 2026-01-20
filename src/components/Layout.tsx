@@ -1,15 +1,10 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  BookOpen,
-  NotebookPen,
-  Settings,
-  Headphones
-} from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { LayoutDashboard, BookOpen, NotebookPen, Settings, Headphones } from 'lucide-react';
 import { User as UserType, Language } from '../types';
 import Sidebar from './layout/Sidebar';
 import Footer from './Footer';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,7 +17,7 @@ interface LayoutProps {
 }
 
 function MobileNavBar() {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
   const tabs = [
     { icon: LayoutDashboard, path: '/dashboard' },
@@ -34,7 +29,7 @@ function MobileNavBar() {
 
   return (
     <div className="md:hidden fixed bottom-6 left-4 right-4 bg-white rounded-[2rem] border-2 border-slate-900 shadow-pop z-50 h-20 flex justify-around items-center px-2 animate-in slide-in-from-bottom-5 duration-300">
-      {tabs.map((tab) => {
+      {tabs.map(tab => {
         const isActive = location.pathname.startsWith(tab.path);
         return (
           <button
@@ -44,17 +39,13 @@ function MobileNavBar() {
           >
             <tab.icon size={26} strokeWidth={isActive ? 3 : 2} />
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
-const Layout: React.FC<LayoutProps> = ({
-  children,
-  language,
-  onNavigate,
-}) => {
+const Layout: React.FC<LayoutProps> = ({ children, language, onNavigate }) => {
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
 
@@ -67,7 +58,11 @@ const Layout: React.FC<LayoutProps> = ({
         {children}
 
         {/* Footer - Hide on Landing Page */}
-        {!isLandingPage && <div className="mt-20"><Footer language={language} onNavigate={onNavigate} /></div>}
+        {!isLandingPage && (
+          <div className="mt-20">
+            <Footer language={language} onNavigate={onNavigate} />
+          </div>
+        )}
       </main>
     </div>
   );

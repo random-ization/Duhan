@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAction, useMutation, useQuery } from 'convex/react'; // Added hooks
 import {
   ArrowLeft,
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 // Types
 interface TranscriptLine {
@@ -92,7 +93,7 @@ const MOCK_TRANSCRIPT: TranscriptLine[] = [
 
 const PodcastPlayerPage: React.FC = () => {
   const { state } = useLocation();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
 
   // 🔥 FIX: Support URL params for page refresh

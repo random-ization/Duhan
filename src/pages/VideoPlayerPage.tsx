@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Video,
@@ -18,6 +18,7 @@ import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
 import { qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface TranscriptSegment {
   start: number;
@@ -93,7 +94,7 @@ const WordPopup: React.FC<WordPopupProps> = ({
 
 const VideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
   const videoRef = useRef<HTMLVideoElement>(null);
