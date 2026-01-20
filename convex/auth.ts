@@ -1,4 +1,5 @@
 import Google from '@auth/core/providers/google';
+import Kakao from '@auth/core/providers/kakao';
 import { Password } from '@convex-dev/auth/providers/Password';
 import { convexAuth } from '@convex-dev/auth/server';
 import { compareSync, hashSync } from 'bcryptjs';
@@ -16,6 +17,27 @@ const bcryptCrypto = {
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Google,
+    (options: Record<string, unknown>) =>
+      Kakao({
+        ...options,
+        authorization: {
+          params: {
+            scope: 'account_email profile_nickname profile_image',
+          },
+        },
+        profile(profile) {
+          const email = profile?.kakao_account?.email;
+          if (!email || typeof email !== 'string') {
+            throw new Error('KAKAO_EMAIL_REQUIRED');
+          }
+          return {
+            id: String(profile.id),
+            name: profile?.kakao_account?.profile?.nickname,
+            email: email.trim().toLowerCase(),
+            image: profile?.kakao_account?.profile?.profile_image_url,
+          };
+        },
+      }),
     Password({
       id: 'password', // Explicitly set provider ID
       crypto: bcryptCrypto,

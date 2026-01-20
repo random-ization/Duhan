@@ -974,6 +974,7 @@
     "INCORRECT_PASSWORD": "Одоогийн нууц үг буруу байна.",
     "INSTITUTE_NOT_FOUND": "Сурах бичиг олдсонгүй.",
     "INVALID_CREDENTIALS": "Имэйл эсвэл нууц үг буруу байна.",
+    "KAKAO_EMAIL_REQUIRED": "Kakao-р нэвтрэх үед имэйлээ хуваалцахыг зөвшөөрнө үү.",
     "RSS_PARSE_FAILED": "Подкаст сувгийг уншиж чадсангүй.",
     "SESSION_ALREADY_COMPLETED": "Энэ шалгалтыг аль хэдийн өгсөн байна.",
     "SESSION_EXPIRED": "Шалгалтын хугацаа дууссан байна.",

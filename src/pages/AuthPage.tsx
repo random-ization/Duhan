@@ -87,12 +87,27 @@ export default function AuthPage() {
   const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
   const postAuthRedirectUrl = `${window.location.origin}${postAuthRedirectPath}`;
 
+  const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {
+    const message = err instanceof Error ? err.message : String(err);
+    const translated = t(`errors.${message}`, { defaultValue: '' });
+    if (translated) return translated;
+    if (message && !message.startsWith('errors.')) return message;
+    return t(fallbackKey);
+  };
+
   const handleGoogleLogin = async () => {
     try {
       await signIn('google', { redirectTo: postAuthRedirectUrl });
-    } catch (e) {
-      const error = e as Error;
-      setError(error.message || t('auth.googleLoginFailed'));
+    } catch (e: unknown) {
+      setError(toAuthErrorMessage(e, 'auth.googleLoginFailed'));
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    try {
+      await signIn('kakao', { redirectTo: postAuthRedirectUrl });
+    } catch (e: unknown) {
+      setError(toAuthErrorMessage(e, 'auth.loginFailed'));
     }
   };
 
@@ -120,10 +135,9 @@ export default function AuthPage() {
           redirectTo: postAuthRedirectUrl,
         });
       }
-    } catch (e) {
-      const error = e as Error;
-      console.error('Auth error:', error);
-      setError(error.message || t('auth.loginFailed'));
+    } catch (e: unknown) {
+      console.error('Auth error:', e);
+      setError(toAuthErrorMessage(e, 'auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -285,8 +299,8 @@ export default function AuthPage() {
             </button>
             <button
               type="button"
-              disabled
-              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-400 cursor-not-allowed opacity-50"
+              onClick={handleKakaoLogin}
+              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
             >
               <span className="bg-yellow-400 text-black font-black text-xs px-1 rounded">K</span>
               {t('auth.social.kakao')}
