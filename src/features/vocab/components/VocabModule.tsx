@@ -1,22 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  Beaker,
-  Filter,
-  Layers,
-  Brain,
-  List as ListIcon,
-  Settings as SettingsIcon,
-} from 'lucide-react';
+import { Filter, Layers, Brain, List as ListIcon, Settings as SettingsIcon } from 'lucide-react';
 import { CourseSelection, VocabularyItem, Language, TextbookContent } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { useApp } from '../../../contexts/AppContext';
-// import { getMockVocabulary } from '../../../services/geminiService';
 import FlashcardView from './FlashcardView';
 import LearnModeView from './LearnModeView';
 import ListView from './ListView';
 
-// Stub
-const getMockVocabulary = async (): Promise<VocabularyItem[]> => [];
 import VocabSettingsModal from './VocabSettingsModal';
 import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from '../types';
@@ -47,9 +37,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   const labels = getLabels(language);
 
   // Data State
-  const [mockWords, setMockWords] = useState<ExtendedVocabularyItem[]>([]);
   const [selectedUnitFilter, setSelectedUnitFilter] = useState<number | 'ALL'>('ALL');
-  const [loading, setLoading] = useState(false);
   const [reviewingIncorrect, setReviewingIncorrect] = useState(false);
 
   // View State
@@ -110,7 +98,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     return combined;
   }, [levelContexts, customWordList]);
 
-  const allWords = mockWords.length > 0 ? mockWords : parsedWords;
+  const allWords = parsedWords;
 
   const filteredWords = useMemo(() => {
     if (reviewingIncorrect) {
@@ -121,22 +109,6 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     }
     return allWords;
   }, [allWords, selectedUnitFilter, reviewingIncorrect, sessionStats.incorrect]);
-
-  const loadMockData = async () => {
-    setLoading(true);
-    try {
-      const mockResult = await getMockVocabulary();
-      const extended: ExtendedVocabularyItem[] = mockResult.map((item, idx) => ({
-        ...item,
-        unit: Math.floor(idx / 20) + 1,
-        id: `mock-${idx}`,
-      }));
-      setMockWords(extended);
-    } catch (error) {
-      console.error('Failed to load mock data:', error);
-    }
-    setLoading(false);
-  };
 
   const handleSessionComplete = useCallback(
     (stats: SessionStats) => {
@@ -176,15 +148,6 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     return words.slice(0, batchSize);
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="text-slate-500">{labels.loadingVocab}</p>
-      </div>
-    );
-  }
-
   const availableUnits: number[] = Array.from(
     new Set(allWords.map(w => w.unit).filter((u): u is number => typeof u === 'number'))
   );
@@ -193,14 +156,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   if (allWords.length === 0) {
     return (
       <div className="text-center p-12 bg-slate-50 rounded-xl border border-slate-200">
-        <p className="text-slate-600 mb-6">{labels.noWords}</p>
-        <button
-          onClick={loadMockData}
-          className="inline-flex items-center px-6 py-3 border border-indigo-200 shadow-sm text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50"
-        >
-          <Beaker className="w-5 h-5 mr-2" />
-          {labels.loadMockData}
-        </button>
+        <p className="text-slate-600">{labels.noWords}</p>
       </div>
     );
   }

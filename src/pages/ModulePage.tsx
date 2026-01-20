@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from 'convex/react';
 import { VocabModule } from '../features/vocab';
 import ReadingModule from '../features/textbook/ReadingModule';
 import ListeningModule from '../features/textbook/ListeningModule';
@@ -8,10 +9,11 @@ import GrammarModule from '../components/GrammarModule';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
-import { LearningModuleType, TextbookContent } from '../types';
+import { LearningModuleType, TextbookContent, VocabularyItem, Mistake } from '../types';
 import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 import { getLocalizedContent } from '../utils/languageUtils';
+import { qRef } from '../utils/convexRefs';
 
 const ModulePage: React.FC = () => {
   const { t } = useTranslation();
@@ -35,6 +37,32 @@ const ModulePage: React.FC = () => {
   // 2. /course/:instituteId/:moduleParam (new pattern)
   const { moduleParam, instituteId } = useParams<{ moduleParam: string; instituteId?: string }>();
   const [searchParams] = useSearchParams();
+  const listParam = searchParams.get('list');
+
+  type SavedWordRow = {
+    id: string;
+    korean: string;
+    english: string;
+    exampleSentence?: string;
+    exampleTranslation?: string;
+    createdAt: number;
+  };
+  type MistakeRow = {
+    id: string;
+    korean: string;
+    english: string;
+    context?: string;
+    createdAt: number;
+  };
+
+  const savedWordsData = useQuery(
+    qRef<{ limit?: number }, SavedWordRow[]>('user:getSavedWords'),
+    listParam === 'saved' ? { limit: 500 } : 'skip'
+  );
+  const mistakesData = useQuery(
+    qRef<{ limit?: number }, MistakeRow[]>('user:getMistakes'),
+    listParam === 'mistakes' ? { limit: 500 } : 'skip'
+  );
 
   // Determine if we're using the new course route pattern
   const isCourseRoute = location.pathname.startsWith('/course/');
@@ -92,20 +120,8 @@ const ModulePage: React.FC = () => {
   useEffect(() => {
     if (currentModule) {
       setActiveModule(currentModule);
-
-      const listParam = searchParams.get('list');
-      if (listParam === 'saved' && user?.savedWords) {
-        setActiveCustomList(user.savedWords);
-        setActiveListType('SAVED');
-      } else if (listParam === 'mistakes' && user?.mistakes) {
-        setActiveCustomList(user.mistakes);
-        setActiveListType('MISTAKES');
-      } else {
-        setActiveCustomList(null);
-        setActiveListType(null);
-      }
     }
-  }, [currentModule, searchParams, setActiveModule, setActiveCustomList, setActiveListType, user]);
+  }, [currentModule, setActiveModule]);
 
   const currentLevelContexts = useMemo(() => {
     if (!effectiveInstitute || !effectiveLevel) return {};
@@ -133,6 +149,47 @@ const ModulePage: React.FC = () => {
     [effectiveInstitute, effectiveLevel]
   );
 
+  const derivedCustomList = useMemo(() => {
+    if (listParam === 'saved') {
+      return (savedWordsData ?? []).map(
+        (w): VocabularyItem => ({
+          korean: w.korean,
+          english: w.english,
+          exampleSentence: w.exampleSentence,
+          exampleTranslation: w.exampleTranslation,
+        })
+      );
+    }
+    if (listParam === 'mistakes') {
+      return (mistakesData ?? []).map(
+        (m): Mistake => ({
+          id: m.id,
+          korean: m.korean,
+          english: m.english,
+          createdAt: m.createdAt,
+        })
+      );
+    }
+    return undefined;
+  }, [listParam, savedWordsData, mistakesData]);
+
+  const derivedListType = useMemo(() => {
+    if (listParam === 'saved') return 'SAVED' as const;
+    if (listParam === 'mistakes') return 'MISTAKES' as const;
+    return undefined;
+  }, [listParam]);
+
+  useEffect(() => {
+    if (!currentModule) return;
+    if (derivedCustomList && derivedListType) {
+      setActiveCustomList(derivedCustomList);
+      setActiveListType(derivedListType);
+    } else {
+      setActiveCustomList(null);
+      setActiveListType(null);
+    }
+  }, [currentModule, derivedCustomList, derivedListType, setActiveCustomList, setActiveListType]);
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -159,18 +216,6 @@ const ModulePage: React.FC = () => {
       navigate('/dashboard/course');
     }
   };
-
-  // Derive List for immediate render (avoid flickering)
-  const listParam = searchParams.get('list');
-  let derivedCustomList = undefined;
-  let derivedListType = undefined;
-  if (listParam === 'saved') {
-    derivedCustomList = user.savedWords;
-    derivedListType = 'SAVED' as const;
-  } else if (listParam === 'mistakes') {
-    derivedCustomList = user.mistakes;
-    derivedListType = 'MISTAKES' as const;
-  }
 
   const institute = institutes.find(i => i.id === effectiveInstitute);
   const instituteName = institute

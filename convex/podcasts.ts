@@ -143,6 +143,20 @@ export const recordHistory = mutation({
   },
 });
 
+export const removeHistoryRecord = mutation({
+  args: {
+    historyId: v.id('listening_history'),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const row = await ctx.db.get(args.historyId);
+    if (!row) return { success: false, error: 'Not found' };
+    if (row.userId !== userId) throw new ConvexError({ code: 'FORBIDDEN' });
+    await ctx.db.delete(args.historyId);
+    return { success: true };
+  },
+});
+
 // Toggle Subscription
 export const toggleSubscription = mutation({
   args: {
@@ -228,10 +242,13 @@ export const trackView = mutation({
 
     // 1. Find or Create Channel
     let channelId;
-    if (channelInfo.feedUrl) {
+    const normalizedFeedUrl = channelInfo.feedUrl?.trim() || undefined;
+    const normalizedItunesId = channelInfo.itunesId?.trim() || undefined;
+
+    if (normalizedFeedUrl) {
       const existingChannel = await ctx.db
         .query('podcast_channels')
-        .withIndex('by_feedUrl', q => q.eq('feedUrl', channelInfo.feedUrl!))
+        .withIndex('by_feedUrl', q => q.eq('feedUrl', normalizedFeedUrl))
         .first();
 
       if (existingChannel) {
@@ -240,9 +257,29 @@ export const trackView = mutation({
         channelId = await ctx.db.insert('podcast_channels', {
           title: channelInfo.title,
           author: channelInfo.author || 'Unknown',
-          feedUrl: channelInfo.feedUrl,
+          feedUrl: normalizedFeedUrl,
           artworkUrl: channelInfo.artworkUrl,
           itunesId: channelInfo.itunesId,
+          isFeatured: false,
+          createdAt: Date.now(),
+        });
+      }
+    } else if (normalizedItunesId) {
+      const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
+      const existingChannel = await ctx.db
+        .query('podcast_channels')
+        .withIndex('by_feedUrl', q => q.eq('feedUrl', pseudoFeedUrl))
+        .first();
+
+      if (existingChannel) {
+        channelId = existingChannel._id;
+      } else {
+        channelId = await ctx.db.insert('podcast_channels', {
+          title: channelInfo.title,
+          author: channelInfo.author || 'Unknown',
+          feedUrl: pseudoFeedUrl,
+          artworkUrl: channelInfo.artworkUrl,
+          itunesId: normalizedItunesId,
           isFeatured: false,
           createdAt: Date.now(),
         });
@@ -256,21 +293,7 @@ export const trackView = mutation({
       if (existingChannel) channelId = existingChannel._id;
     }
 
-    if (!channelId) {
-      // Create dummy channel if needed or just skip channel linkage strictly?
-      // For now, let's allow episode without strict channel check if we can't find it easily?
-      // Actually, listening_history stores channelName string.
-      // But podcast_episodes needs channelId.
-      // Let's create a placeholder channel if we really have to.
-      channelId = await ctx.db.insert('podcast_channels', {
-        title: channelInfo.title,
-        author: channelInfo.author || 'Unknown',
-        feedUrl: channelInfo.feedUrl || '',
-        artworkUrl: channelInfo.artworkUrl,
-        createdAt: Date.now(),
-        isFeatured: false,
-      });
-    }
+    if (!channelId) return { success: false, error: 'Missing channel identifier' };
 
     // 2. Find or Create Episode
     let episode = await ctx.db

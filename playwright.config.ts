@@ -1,26 +1,30 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-    testDir: './tests/e2e',
-    fullyParallel: true,
-    forbidOnly: !!process.env.CI,
-    retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : undefined,
-    reporter: 'html',
-    use: {
-        baseURL: 'http://localhost:3000',
-        trace: 'on-first-retry',
-        screenshot: 'only-on-failure',
+  testDir: './tests/e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://0.0.0.0:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
-    projects: [
-        {
-            name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
-        },
-        {
+    ...(process.env.PW_WEBKIT
+      ? [
+          {
             name: 'Mobile Safari',
             use: { ...devices['iPhone 13'] },
-        },
-    ],
-    // NOTE: Start dev server manually with `npm run dev` before running E2E tests
+          },
+        ]
+      : []),
+  ],
+  // NOTE: Start dev server manually with `npm run dev` before running E2E tests
 });

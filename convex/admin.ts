@@ -298,17 +298,52 @@ export const getAiUsageStats = query({
     days: v.number(),
   },
   handler: async (ctx, args) => {
-    // This is a placeholder implementation
-    // In a real implementation, you would have an ai_usage_logs table
+    const start = Date.now() - args.days * 24 * 60 * 60 * 1000;
+    const logs = await ctx.db
+      .query('ai_usage_logs')
+      .withIndex('by_createdAt', q => q.gte('createdAt', start))
+      .collect();
+
+    const summary = {
+      totalCalls: logs.length,
+      totalTokens: 0,
+      totalCost: 0,
+    };
+
+    const byFeature: Record<string, { calls: number; tokens: number; cost: number }> = {};
+    const dailyMap = new Map<
+      string,
+      { date: string; calls: number; tokens: number; cost: number }
+    >();
+
+    for (const log of logs) {
+      const tokens = log.totalTokens || 0;
+      const cost = log.costUsd || 0;
+
+      summary.totalTokens += tokens;
+      summary.totalCost += cost;
+
+      const feature = log.feature || 'unknown';
+      byFeature[feature] = byFeature[feature] || { calls: 0, tokens: 0, cost: 0 };
+      byFeature[feature].calls += 1;
+      byFeature[feature].tokens += tokens;
+      byFeature[feature].cost += cost;
+
+      const date = new Date(log.createdAt).toISOString().slice(0, 10);
+      const daily = dailyMap.get(date) || { date, calls: 0, tokens: 0, cost: 0 };
+      daily.calls += 1;
+      daily.tokens += tokens;
+      daily.cost += cost;
+      dailyMap.set(date, daily);
+    }
+
+    const daily = [...dailyMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+
     return {
       period: `${args.days} days`,
-      summary: {
-        totalCalls: 0,
-        totalTokens: 0,
-        totalCost: 0,
-      },
-      byFeature: {},
-      daily: [],
+      summary,
+      byFeature,
+      daily,
     };
   },
 });

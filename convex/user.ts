@@ -1,4 +1,4 @@
-import { mutation } from './_generated/server';
+import { mutation, query } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 
 import { getAuthUserId } from './utils';
@@ -28,6 +28,155 @@ export const saveSavedWord = mutation({
       createdAt: Date.now(),
     });
     return { success: true };
+  },
+});
+
+export const getSavedWords = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limit = args.limit ?? 200;
+
+    const rows = await ctx.db
+      .query('saved_words')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(limit);
+
+    return rows
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(r => ({
+        id: r._id,
+        korean: r.korean,
+        english: r.english,
+        exampleSentence: r.exampleSentence,
+        exampleTranslation: r.exampleTranslation,
+        createdAt: r.createdAt,
+      }));
+  },
+});
+
+export const getSavedWordsCount = query({
+  args: {},
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx);
+    const rows = await ctx.db
+      .query('saved_words')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+    return { count: rows.length };
+  },
+});
+
+export const getMistakes = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limit = args.limit ?? 200;
+
+    const rows = await ctx.db
+      .query('mistakes')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(limit);
+
+    return rows
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(r => ({
+        id: r._id,
+        korean: r.korean,
+        english: r.english,
+        context: r.context,
+        createdAt: r.createdAt,
+      }));
+  },
+});
+
+export const getMistakesCount = query({
+  args: {},
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx);
+    const rows = await ctx.db
+      .query('mistakes')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+    return { count: rows.length };
+  },
+});
+
+export const getExamAttempts = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limit = args.limit ?? 200;
+
+    const attempts = await ctx.db
+      .query('exam_attempts')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(limit);
+
+    const sorted = attempts.sort((a, b) => b.createdAt - a.createdAt);
+    const examIds = [...new Set(sorted.map(a => a.examId))];
+
+    const examsArray = await Promise.all(examIds.map(id => ctx.db.get(id)));
+    const examsMap = new Map(examsArray.filter(Boolean).map(e => [e!._id.toString(), e!]));
+
+    const scoreMap = new Map<
+      string,
+      { totalScore: number; correctAnswerMap: Map<number, number> }
+    >();
+    await Promise.all(
+      examIds.map(async examId => {
+        const questions = await ctx.db
+          .query('topik_questions')
+          .withIndex('by_exam', q => q.eq('examId', examId))
+          .collect();
+        const totalScore = questions.reduce((sum, q) => sum + (q.score || 0), 0);
+        const correctAnswerMap = new Map<number, number>(
+          questions.map(q => [q.number, q.correctAnswer])
+        );
+        scoreMap.set(examId.toString(), { totalScore, correctAnswerMap });
+      })
+    );
+
+    return sorted
+      .map(a => {
+        const exam = examsMap.get(a.examId.toString());
+        if (!exam) return null;
+
+        const answers = (a.answers || {}) as Record<string, number>;
+        const userAnswers: Record<number, number> = {};
+        for (const [k, v] of Object.entries(answers)) {
+          const n = Number(k);
+          if (Number.isFinite(n)) userAnswers[n] = v;
+        }
+
+        const scoreInfo = scoreMap.get(a.examId.toString());
+        const totalScore = scoreInfo?.totalScore ?? 0;
+        const correctAnswerMap = scoreInfo?.correctAnswerMap ?? new Map<number, number>();
+        let correctCount = 0;
+        for (const [qn, ans] of Object.entries(userAnswers)) {
+          const qNum = Number(qn);
+          if (correctAnswerMap.get(qNum) === ans) correctCount++;
+        }
+
+        return {
+          id: a._id,
+          examId: exam.legacyId,
+          examTitle: exam.title,
+          score: a.score,
+          maxScore: totalScore,
+          correctCount,
+          timestamp: a.createdAt,
+          userAnswers,
+          totalQuestions: a.totalQuestions,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
   },
 });
 
@@ -119,6 +268,43 @@ export const saveExamAttempt = mutation({
     });
 
     return { success: true, attemptId };
+  },
+});
+
+export const removeSavedWord = mutation({
+  args: { savedWordId: v.id('saved_words') },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const row = await ctx.db.get(args.savedWordId);
+    if (!row) return { success: false, error: 'Not found' };
+    if (row.userId !== userId) throw new ConvexError({ code: 'FORBIDDEN' });
+    await ctx.db.delete(args.savedWordId);
+    return { success: true };
+  },
+});
+
+export const clearMistakes = mutation({
+  args: {},
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx);
+    const rows = await ctx.db
+      .query('mistakes')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+    await Promise.all(rows.map(r => ctx.db.delete(r._id)));
+    return { success: true, deleted: rows.length };
+  },
+});
+
+export const removeMistake = mutation({
+  args: { mistakeId: v.id('mistakes') },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const row = await ctx.db.get(args.mistakeId);
+    if (!row) return { success: false, error: 'Not found' };
+    if (row.userId !== userId) throw new ConvexError({ code: 'FORBIDDEN' });
+    await ctx.db.delete(args.mistakeId);
+    return { success: true };
   },
 });
 

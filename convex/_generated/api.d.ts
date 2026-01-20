@@ -10,6 +10,7 @@
 
 import type * as admin from '../admin.js';
 import type * as ai from '../ai.js';
+import type * as aiUsageLogs from '../aiUsageLogs.js';
 import type * as annotations from '../annotations.js';
 import type * as auth from '../auth.js';
 import type * as canvas from '../canvas.js';
@@ -37,6 +38,7 @@ import type * as podcastActions from '../podcastActions.js';
 import type * as podcasts from '../podcasts.js';
 import type * as progress from '../progress.js';
 import type * as publishers from '../publishers.js';
+import type * as qa from '../qa.js';
 import type * as queryLimits from '../queryLimits.js';
 import type * as settings from '../settings.js';
 import type * as storage from '../storage.js';
@@ -56,6 +58,7 @@ import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   ai: typeof ai;
+  aiUsageLogs: typeof aiUsageLogs;
   annotations: typeof annotations;
   auth: typeof auth;
   canvas: typeof canvas;
@@ -83,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   podcasts: typeof podcasts;
   progress: typeof progress;
   publishers: typeof publishers;
+  qa: typeof qa;
   queryLimits: typeof queryLimits;
   settings: typeof settings;
   storage: typeof storage;

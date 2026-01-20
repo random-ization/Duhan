@@ -87,7 +87,14 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
 
   // Don't render children until we have a valid language
   if (!lang || !isValidLanguage(lang)) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex items-center gap-3 text-slate-600 font-medium">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600" />
+          <span>Loading…</span>
+        </div>
+      </div>
+    );
   }
 
   return <>{children || <Outlet />}</>;

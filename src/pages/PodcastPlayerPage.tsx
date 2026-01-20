@@ -115,13 +115,12 @@ const PodcastPlayerPage: React.FC = () => {
       };
     }
 
-    // Fallback demo
     return {
-      title: 'Demo Episode',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      channelTitle: 'Demo Channel',
+      title: '',
+      audioUrl: '',
+      channelTitle: '',
       channelArtwork: '',
-      guid: 'demo-episode',
+      guid: '',
     };
   }, [state, searchParams]);
 
@@ -135,6 +134,12 @@ const PodcastPlayerPage: React.FC = () => {
     artwork?: string;
   };
   const channel: PodcastChannel = (state as { channel?: PodcastChannel } | null)?.channel ?? {};
+
+  useEffect(() => {
+    if (!episode.audioUrl) {
+      navigate('/podcasts', { replace: true });
+    }
+  }, [episode, navigate]);
 
   // Refs
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -179,7 +184,7 @@ const PodcastPlayerPage: React.FC = () => {
   const generateTranscript = useAction(
     aRef<
       { audioUrl: string; episodeId: string; language: string },
-      { success: boolean; data?: { segments?: TranscriptLine[] } }
+      { success: boolean; data?: { segments?: TranscriptLine[] }; error?: string }
     >('ai:generateTranscript')
   );
   type PlaylistEpisode = Omit<PodcastEpisode, 'audioUrl'> & { audioUrl?: string };
@@ -195,11 +200,11 @@ const PodcastPlayerPage: React.FC = () => {
     duration: number;
     pubDate: number;
     channel: {
-      itunesId: string;
+      itunesId?: string;
       title: string;
-      author: string;
-      feedUrl: string;
-      artworkUrl: string;
+      author?: string;
+      feedUrl?: string;
+      artworkUrl?: string;
     };
   };
   const trackView = useMutation(mRef<TrackViewArgs, unknown>('podcasts:trackView'));
@@ -243,6 +248,14 @@ const PodcastPlayerPage: React.FC = () => {
 
     // Load transcript with mount check
     const loadTranscriptSafe = async () => {
+      if (!episode.audioUrl) {
+        if (isMounted) {
+          setTranscript([]);
+          setTranscriptLoading(false);
+          setTranscriptError('缺少音频链接');
+        }
+        return;
+      }
       const episodeId = getEpisodeId();
       setTranscriptLoading(true);
       setTranscriptError(null);
@@ -310,25 +323,32 @@ const PodcastPlayerPage: React.FC = () => {
             setTranscript(result.data.segments);
             // 🔥 Save to localStorage for next time
             try {
-              localStorage.setItem(
-                localCacheKey,
-                JSON.stringify({
-                  segments: result.data.segments,
-                  cachedAt: Date.now(),
-                })
-              );
+              if (result.data.segments.length > 0) {
+                localStorage.setItem(
+                  localCacheKey,
+                  JSON.stringify({
+                    segments: result.data.segments,
+                    cachedAt: Date.now(),
+                  })
+                );
+              }
             } catch (storageError) {
               console.warn('Failed to cache generated transcript', storageError);
             }
           } else {
-            throw new Error('Invalid transcript response');
+            throw new Error(result?.error || 'Invalid transcript response');
           }
         }
       } catch (err) {
         console.error('Transcript failed:', err);
         if (isMounted) {
-          setTranscript(MOCK_TRANSCRIPT);
-          setTranscriptError('使用演示字幕 (AI 生成失败)');
+          if (import.meta.env.DEV) {
+            setTranscript(MOCK_TRANSCRIPT);
+            setTranscriptError('使用演示字幕 (字幕生成失败)');
+          } else {
+            setTranscript([]);
+            setTranscriptError('字幕不可用');
+          }
         }
       } finally {
         if (isMounted) {
@@ -375,7 +395,7 @@ const PodcastPlayerPage: React.FC = () => {
             itunesId: channel.itunesId || channel.id || 'unknown',
             title: channel.title || episode.channelTitle || 'Unknown',
             author: channel.author || '',
-            feedUrl: channel.feedUrl || '',
+            feedUrl: channel.feedUrl || undefined,
             artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork || '',
           },
         }).catch(console.error);

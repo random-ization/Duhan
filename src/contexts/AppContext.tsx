@@ -23,6 +23,7 @@ export const useApp = () => {
   const auth = useAuth();
   const learning = useLearning();
   const data = useData();
+  const layout = useLayout();
   const userActions = useUserActions();
   const { logActivity } = useActivityLogger();
 
@@ -75,14 +76,14 @@ export const useApp = () => {
     deleteTopikExam: data.deleteTopikExam,
 
     // Layout context
-    isEditing: useLayout().isEditing,
-    toggleEditMode: useLayout().toggleEditMode,
-    cardOrder: useLayout().cardOrder,
-    updateCardOrder: useLayout().updateCardOrder,
-    resetLayout: useLayout().resetLayout,
-    isMobileMenuOpen: useLayout().isMobileMenuOpen,
-    toggleMobileMenu: useLayout().toggleMobileMenu,
-    sidebarHidden: useLayout().sidebarHidden,
-    setSidebarHidden: useLayout().setSidebarHidden,
+    isEditing: layout.isEditing,
+    toggleEditMode: layout.toggleEditMode,
+    cardOrder: layout.cardOrder,
+    updateCardOrder: layout.updateCardOrder,
+    resetLayout: layout.resetLayout,
+    isMobileMenuOpen: layout.isMobileMenuOpen,
+    toggleMobileMenu: layout.toggleMobileMenu,
+    sidebarHidden: layout.sidebarHidden,
+    setSidebarHidden: layout.setSidebarHidden,
   };
 };

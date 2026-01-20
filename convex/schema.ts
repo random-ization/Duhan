@@ -299,7 +299,9 @@ export default defineSchema({
     sentenceIndex: v.optional(v.number()),
 
     createdAt: v.number(),
-  }).index('by_user_context', ['userId', 'contextKey']),
+  })
+    .index('by_user_context', ['userId', 'contextKey'])
+    .index('by_user', ['userId']),
 
   // Videos
   videos: defineTable({
@@ -500,6 +502,19 @@ export default defineSchema({
     exampleTranslation: v.optional(v.string()),
     createdAt: v.number(),
   }).index('by_user', ['userId']),
+
+  ai_usage_logs: defineTable({
+    userId: v.optional(v.id('users')),
+    feature: v.string(),
+    model: v.string(),
+    promptTokens: v.optional(v.number()),
+    completionTokens: v.optional(v.number()),
+    totalTokens: v.optional(v.number()),
+    costUsd: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_createdAt', ['createdAt'])
+    .index('by_feature', ['feature']),
 
   // Activity Logs
   activity_logs: defineTable({

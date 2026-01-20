@@ -7,7 +7,7 @@ import { toErrorMessage } from '../utils/errors';
 import { mRef } from '../utils/convexRefs';
 
 export const useUserActions = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
 
   const saveSavedWordMutation = useMutation(
     mRef<
@@ -20,6 +20,9 @@ export const useUserActions = () => {
       { wordId?: Id<'words'>; korean: string; english: string; context?: string },
       { success: boolean }
     >('user:saveMistake')
+  );
+  const clearMistakesMutation = useMutation(
+    mRef<Record<string, never>, { success: boolean; deleted: number }>('user:clearMistakes')
   );
   const saveAnnotationMutation = useMutation(
     mRef<
@@ -82,9 +85,6 @@ export const useUserActions = () => {
         english = newItem.english || newItem.meaning || '';
       }
 
-      // Optimistic update
-      updateUser({ savedWords: [...(user.savedWords || []), newItem] });
-
       try {
         await saveSavedWordMutation({
           korean,
@@ -94,10 +94,9 @@ export const useUserActions = () => {
         });
       } catch (e) {
         console.error('Failed to save word', e);
-        // Revert optimistic update if needed, or just let next fetch fix it
       }
     },
-    [user, updateUser, saveSavedWordMutation]
+    [user, saveSavedWordMutation]
   );
 
   const recordMistake = useCallback(
@@ -111,18 +110,6 @@ export const useUserActions = () => {
       const wordId =
         !isExistingMistake && typeof word.id === 'string' ? (word.id as Id<'words'>) : undefined;
 
-      const mistake: Mistake = isExistingMistake
-        ? (word as Mistake)
-        : {
-            id: `mistake-${Date.now()}`,
-            korean,
-            english,
-            createdAt: Date.now(),
-          };
-
-      // Optimistic update
-      updateUser({ mistakes: [...(user.mistakes || []), mistake] });
-
       try {
         await saveMistakeMutation({
           korean,
@@ -134,34 +121,20 @@ export const useUserActions = () => {
         console.error('Failed to save mistake', toErrorMessage(e));
       }
     },
-    [user, updateUser, saveMistakeMutation]
+    [user, saveMistakeMutation]
   );
 
   const clearMistakes = useCallback(() => {
     if (window.confirm('Are you sure?')) {
-      updateUser({ mistakes: [] });
-      // Server sync todo
+      clearMistakesMutation({}).catch(e =>
+        console.error('Failed to clear mistakes', toErrorMessage(e))
+      );
     }
-  }, [updateUser]);
+  }, [clearMistakesMutation]);
 
   const saveAnnotation = useCallback(
     async (annotation: Annotation) => {
       if (!user) return;
-
-      // Optimistic update
-      const updatedAnnotations = [...(user.annotations || [])];
-      const index = updatedAnnotations.findIndex(a => a.id === annotation.id);
-
-      if (index !== -1) {
-        if (!annotation.color && (!annotation.note || annotation.note.trim() === '')) {
-          updatedAnnotations.splice(index, 1);
-        } else {
-          updatedAnnotations[index] = annotation;
-        }
-      } else {
-        updatedAnnotations.push(annotation);
-      }
-      updateUser({ annotations: updatedAnnotations });
 
       try {
         await saveAnnotationMutation({
@@ -176,55 +149,41 @@ export const useUserActions = () => {
         console.error('Failed to save annotation to server:', apiError);
       }
     },
-    [user, updateUser, saveAnnotationMutation]
+    [user, saveAnnotationMutation]
   );
 
   const saveExamAttempt = useCallback(
     async (attempt: ExamAttempt) => {
       if (!user) return;
 
-      updateUser({ examHistory: [...(user.examHistory || []), attempt] });
-
       try {
         await saveExamAttemptMutation({
           examId: attempt.examId,
           score: attempt.score,
-          totalQuestions: attempt.maxScore,
-          sectionScores: attempt.userAnswers,
+          answers: attempt.userAnswers,
         });
       } catch (e) {
         console.error('Failed to save exam attempt', toErrorMessage(e));
       }
     },
-    [user, updateUser, saveExamAttemptMutation]
+    [user, saveExamAttemptMutation]
   );
 
   const deleteExamAttempt = useCallback(
     async (attemptId: string) => {
       if (!user) return;
-      const updatedHistory = (user.examHistory || []).filter(h => h.id !== attemptId);
-      updateUser({ examHistory: updatedHistory });
-
       try {
         await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
       } catch (e) {
         console.error('Failed to delete exam attempt', toErrorMessage(e));
       }
     },
-    [user, updateUser, deleteExamAttemptMutation]
+    [user, deleteExamAttemptMutation]
   );
 
   const updateLearningProgress = useCallback(
     async (institute: string, level: number, unit?: number, module?: string) => {
       if (!user) return;
-
-      // Optimistic update
-      updateUser({
-        lastInstitute: institute,
-        lastLevel: level,
-        lastUnit: unit,
-        lastModule: module,
-      });
 
       try {
         await updateLearningProgressMutation({
@@ -237,7 +196,7 @@ export const useUserActions = () => {
         console.error('Failed to update learning progress', toErrorMessage(e));
       }
     },
-    [user, updateUser, updateLearningProgressMutation]
+    [user, updateLearningProgressMutation]
   );
 
   return {

@@ -215,19 +215,22 @@ export async function updateVocabProgress(
   wordId: string,
   quality: 0 | 5 // 0 = Forgot, 5 = Know
 ): Promise<VocabProgressResponse> {
-  await client.mutation(VOCAB.updateProgress, {
+  const result = await client.mutation(VOCAB.updateProgress, {
     wordId,
     quality,
   });
 
+  const progress = (result as unknown as { progress?: any })?.progress;
+  if (!progress) throw new Error('Missing progress');
+
   return {
     success: true,
     progress: {
-      id: 'mock-id',
-      status: quality >= 4 ? 'REVIEW' : 'LEARNING',
-      interval: 1,
-      streak: 1,
-      nextReviewAt: Date.now(),
+      id: String(progress.id),
+      status: String(progress.status),
+      interval: Number(progress.interval),
+      streak: Number(progress.streak),
+      nextReviewAt: Number(progress.nextReviewAt),
     },
   };
 }

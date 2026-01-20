@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
-import { useMutation, useAction } from 'convex/react';
-import { Language } from '../types';
+import { useMutation, useAction, useQuery } from 'convex/react';
+import { ExamAttempt, Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
-import { aRef, mRef } from '../utils/convexRefs';
+import { aRef, mRef, qRef } from '../utils/convexRefs';
 
 import toast, { Toaster } from 'react-hot-toast';
 import { Loading } from '../components/common/Loading';
@@ -35,6 +35,15 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const labels = getLabels(language);
   const success = toast.success;
   const error = toast.error;
+
+  const savedWordsCount = useQuery(
+    qRef<Record<string, never>, { count: number }>('user:getSavedWordsCount'),
+    user ? {} : 'skip'
+  );
+  const examAttempts = useQuery(
+    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
+    user ? { limit: 200 } : 'skip'
+  );
 
   const [activeTab, setActiveTab] = useState<'info' | 'security' | 'stats' | 'settings'>('info');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -180,14 +189,13 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
   };
 
-  const examsTaken = user.examHistory?.length || 0;
+  const examHistory = examAttempts ?? [];
+  const examsTaken = examHistory.length;
   const averageScore =
     examsTaken > 0
       ? Math.round(
-          (user.examHistory || []).reduce(
-            (sum, exam) => sum + (exam.score / exam.maxScore) * 100,
-            0
-          ) / examsTaken
+          examHistory.reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) /
+            examsTaken
         )
       : 0;
 
@@ -480,7 +488,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 },
                 {
                   label: labels.wordsLearned,
-                  value: (user.savedWords || []).length,
+                  value: savedWordsCount?.count || 0,
                   color: 'text-emerald-500',
                   bg: 'bg-emerald-50',
                 },
@@ -510,13 +518,13 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
               {labels.profile?.recentActivity || 'Recent Activity'}
             </h3>
             <div className="space-y-3">
-              {user.examHistory?.length === 0 ? (
+              {examHistory.length === 0 ? (
                 <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-slate-400">
                   {labels.profile?.noActivity ||
                     'No activity yet. Start a test to see your progress!'}
                 </div>
               ) : (
-                (user.examHistory || []).slice(0, 5).map((exam, i) => (
+                examHistory.slice(0, 5).map((exam, i) => (
                   <div
                     key={i}
                     className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"

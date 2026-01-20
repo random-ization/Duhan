@@ -4,10 +4,13 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useQuery } from 'convex/react';
 import { Target, Clock, ArrowRight, Archive, History, Headphones, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 import BackButton from '../components/ui/BackButton';
 import { useTranslation } from 'react-i18next';
+import { qRef } from '../utils/convexRefs';
+import { Annotation, ExamAttempt } from '../types';
 
 // Use any here to be compatible with the restricted type in routes.tsx (TextbookContent | TopikExam)
 // Defining specific union type here causes circular dependency or tight coupling with AuthContext
@@ -22,6 +25,15 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
+  const examAttempts = useQuery(
+    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
+    user ? {} : 'skip'
+  );
+  const { examId } = useParams();
+  const topikAnnotations = useQuery(
+    qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
+    user && examId ? { prefix: `TOPIK-${examId}`, limit: 4000 } : 'skip'
+  );
 
   // Filter exams based on type
   const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);
@@ -38,8 +50,6 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
 
   // Let's just implement the UI. If the user clicks "Start", we can navigate or set state.
   // Assuming the route `/topik/:examId` exists and maps to this page, we can read it.
-  const { examId } = useParams();
-
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -52,9 +62,9 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
       <TopikModule
         exams={topikExams}
         language={language}
-        history={user.examHistory || []}
+        history={examAttempts ?? []}
         onSaveHistory={saveExamAttempt}
-        annotations={user.annotations || []}
+        annotations={topikAnnotations ?? []}
         onSaveAnnotation={saveAnnotation}
         canAccessContent={canAccessContent}
         onShowUpgradePrompt={onShowUpgradePrompt}

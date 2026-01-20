@@ -1,6 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc, TableNames } from './_generated/dataModel';
+import { requireAdmin } from './utils';
 
 // Fix institutes missing isArchived field (migration fix)
 export const fixInstitutesIsArchived = mutation({
@@ -27,10 +28,40 @@ export const importData = mutation({
     data: v.any(), // Array of objects
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { table, data } = args;
-    console.log(`Importing ${data.length} records into ${table} `);
+    const allowedTables: TableNames[] = [
+      'institutes',
+      'textbook_units',
+      'words',
+      'vocabulary_appearances',
+      'grammar_points',
+      'course_grammars',
+      'videos',
+      'podcast_channels',
+      'podcast_episodes',
+      'topik_exams',
+      'topik_questions',
+    ];
 
-    for (const item of data) {
+    if (!allowedTables.includes(table as TableNames)) {
+      throw new Error(`Table not allowed: ${table}`);
+    }
+
+    if (!Array.isArray(data)) {
+      throw new Error('Data must be an array');
+    }
+
+    let inserted = 0;
+    const errors: { index: number; error: string }[] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        errors.push({ index: i, error: 'Item must be an object' });
+        continue;
+      }
+
       // Basic insert
       // You might want to strip 'id' if you want Convex to generate IDs,
       // OR keep it as a custom field (schema defines 'id' for institute/unit?)
@@ -48,9 +79,19 @@ export const importData = mutation({
       // 1. Import Master Words first. Store their `postgresId` -> `convexId` map?
       //    Or add `postgresId` column to `words` table temporarily to look up.
 
-      // For now, simple insert.
-      await ctx.db.insert(table as TableNames, item);
+      const sanitized = { ...(item as Record<string, unknown>) } as Record<string, unknown>;
+      delete sanitized._id;
+      delete sanitized._creationTime;
+
+      try {
+        await ctx.db.insert(table as TableNames, sanitized as Doc<TableNames>);
+        inserted++;
+      } catch (error: unknown) {
+        errors.push({ index: i, error: String(error) });
+      }
     }
+
+    return { success: errors.length === 0, inserted, total: data.length, errors };
   },
 });
 

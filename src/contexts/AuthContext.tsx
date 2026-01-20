@@ -1,12 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useConvex, useMutation, useQuery, useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
@@ -102,27 +94,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!viewer) return null;
     return { ...viewer, ...(userOverride ?? {}) };
   }, [isAuthenticated, viewer, userOverride]);
-
-  // Silent token refresh - proactively keep session alive
-  // The viewer query is reactive and will automatically trigger on the interval
-  // This ensures Convex Auth's automatic token refresh mechanism stays active
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    // Trigger viewer query refresh every 5 minutes
-    // This keeps the Convex session active and allows automatic token refresh
-    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-    const refreshTimer = setInterval(() => {
-      // The viewer query dependency will cause a re-fetch
-      // Convex will automatically refresh tokens as needed during this query
-      console.log('[Auth] Session heartbeat');
-    }, REFRESH_INTERVAL);
-
-    return () => clearInterval(refreshTimer);
-  }, [isAuthenticated, viewer]); // viewer dependency ensures query stays active
 
   // Legacy manual loadUser effect removed
   /*
@@ -243,31 +214,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const saveExamAttempt = useCallback(
     async (attempt: ExamAttempt) => {
-      if (!user) return;
-
-      updateUser({ examHistory: [...(user.examHistory || []), attempt] });
-
       await saveExamAttemptMutation({
         examId: attempt.examId,
         score: attempt.score,
-        totalQuestions: attempt.totalScore ?? attempt.maxScore,
         answers: attempt.userAnswers,
       });
     },
-    [saveExamAttemptMutation, updateUser, user]
+    [saveExamAttemptMutation]
   );
 
   const deleteExamAttempt = useCallback(
     async (attemptId: string) => {
-      if (!user) return;
-
-      updateUser({
-        examHistory: (user.examHistory || []).filter(attempt => attempt.id !== attemptId),
-      });
-
       await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
     },
-    [deleteExamAttemptMutation, updateUser, user]
+    [deleteExamAttemptMutation]
   );
 
   const updateLearningProgress = useCallback(

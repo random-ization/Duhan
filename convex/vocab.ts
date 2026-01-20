@@ -521,6 +521,7 @@ export const updateProgress = mutation({
     let status = 'LEARNING';
     let interval = 1;
     let streak = 0;
+    let nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
 
     // Simple SRS Logic
     if (existingProgress) {
@@ -537,13 +538,26 @@ export const updateProgress = mutation({
         status = 'LEARNING';
       }
 
+      nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
       await ctx.db.patch(existingProgress._id, {
         status,
         interval,
         streak,
         lastReviewedAt: now,
-        nextReviewAt: now + interval * 24 * 60 * 60 * 1000,
+        nextReviewAt,
       });
+
+      return {
+        success: true,
+        progress: {
+          id: existingProgress._id,
+          status,
+          interval,
+          streak,
+          lastReviewedAt: now,
+          nextReviewAt,
+        },
+      };
     } else {
       // Create new
       if (quality >= 4) {
@@ -556,16 +570,46 @@ export const updateProgress = mutation({
         status = 'NEW';
       }
 
-      await ctx.db.insert('user_vocab_progress', {
+      nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
+      const progressId = await ctx.db.insert('user_vocab_progress', {
         userId: userId,
         wordId,
         status,
         interval,
         streak,
         lastReviewedAt: now,
-        nextReviewAt: now + interval * 24 * 60 * 60 * 1000,
+        nextReviewAt,
       });
+
+      return {
+        success: true,
+        progress: {
+          id: progressId,
+          status,
+          interval,
+          streak,
+          lastReviewedAt: now,
+          nextReviewAt,
+        },
+      };
     }
+  },
+});
+
+export const resetProgress = mutation({
+  args: {
+    wordId: v.id('words'),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const existingProgress = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', args.wordId))
+      .unique();
+
+    if (!existingProgress) return { success: true };
+    await ctx.db.delete(existingProgress._id);
+    return { success: true };
   },
 });
 

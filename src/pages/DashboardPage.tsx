@@ -10,6 +10,8 @@ import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../../components/dashboard/DictionarySearchDropdown';
 import { TextbookContent, TopikExam } from '../types';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from 'convex/react';
+import { NoArgs, qRef } from '../utils/convexRefs';
 
 // DnD Kit
 import {
@@ -100,6 +102,10 @@ export default function DashboardPage({
   const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
   const { institutes } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
+  const savedWordsCount = useQuery(
+    qRef<NoArgs, { count: number }>('user:getSavedWordsCount'),
+    user ? {} : 'skip'
+  );
 
   // Sensors
   const sensors = useSensors(
@@ -114,7 +120,7 @@ export default function DashboardPage({
   // Calculate stats
   // const streak = user?.statistics?.dayStreak || 0;
   // const xp = (user?.wordsLearned || 0) * 10 + (user?.examsTaken || 0) * 50;
-  const wordsToReview = user?.savedWords?.length || 0;
+  const wordsToReview = savedWordsCount?.count || 0;
 
   // Calculate Progress (Mock for now, or based on lastUnit)
   const currentUnit = user?.lastUnit || 1;

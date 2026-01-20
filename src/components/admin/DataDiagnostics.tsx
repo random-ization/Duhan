@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { RefreshCw, Database, AlertCircle, Activity, Wifi } from 'lucide-react';
 import { NoArgs, qRef } from '../../utils/convexRefs';
+import RouteAuditPanel from './RouteAuditPanel';
 
 export default function DataDiagnostics() {
   // Convex Query
@@ -35,6 +36,9 @@ export default function DataDiagnostics() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <RouteAuditPanel />
+      </div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <Database className="w-8 h-8 text-blue-600" />
