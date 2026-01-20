@@ -28,6 +28,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
 
@@ -90,6 +91,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
           />
           <Route path="/pricing" element={<SubscriptionPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/preview/mobile" element={<MobilePreviewPage />} />
           {/* === 管理员登录页 (公开) === */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route element={<ProtectedRoute />}>

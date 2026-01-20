@@ -3,9 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 // import { generateReadingPassage } from '../services/geminiService';
 import { CourseSelection, ReadingContent, Language, TextbookContent, Annotation } from '../types';
 import {
-  Play, Pause, Volume2, ChevronRight, Music,
-  ArrowLeft, Languages,
-  SkipBack, SkipForward, Headphones
+  Play,
+  Pause,
+  Volume2,
+  ChevronRight,
+  Music,
+  ArrowLeft,
+  Languages,
+  SkipBack,
+  SkipForward,
+  Headphones,
 } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
 import { useAnnotation } from '../hooks/useAnnotation';
@@ -22,13 +29,13 @@ const generateReadingPassage = async (
   lang: Language,
   content: TextbookContent
 ): Promise<ReadingContent | null> => {
-  console.warn("AI Generation unavailable: geminiService deleted");
+  console.warn('AI Generation unavailable: geminiService deleted');
   // Return basic content if available
   return {
     koreanText: content.readingText || content.listeningScript || '',
     englishTranslation: content.readingTranslation || content.listeningTranslation || '',
     title: content.readingTitle || content.listeningTitle || `Unit ${unit}`,
-    keyVocabulary: [] // Added missing property
+    keyVocabulary: [], // Added missing property
   };
 };
 
@@ -96,7 +103,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     menuPosition,
     selectedColor,
     setSelectedColor,
-    currentSelectionRange
+    currentSelectionRange,
   } = useAnnotation(contextKey, annotations, onSaveAnnotation);
 
   const handleTextSelection = (e: React.MouseEvent) => {
@@ -108,17 +115,25 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     originalHandleTextSelection(e);
   };
 
-  const currentAnnotations = useMemo(() =>
-    annotations
-      .filter(a => a.contextKey === contextKey && a.startOffset !== undefined && a.endOffset !== undefined && a.color)
-      .sort((a, b) => (a.startOffset || 0) - (b.startOffset || 0)),
+  const currentAnnotations = useMemo(
+    () =>
+      annotations
+        .filter(
+          a =>
+            a.contextKey === contextKey &&
+            a.startOffset !== undefined &&
+            a.endOffset !== undefined &&
+            a.color
+        )
+        .sort((a, b) => (a.startOffset || 0) - (b.startOffset || 0)),
     [annotations, contextKey]
   );
 
-  const sidebarAnnotations = useMemo(() =>
-    currentAnnotations.filter(a =>
-      (a.note && a.note.trim().length > 0) || a.id === editingAnnotationId
-    ),
+  const sidebarAnnotations = useMemo(
+    () =>
+      currentAnnotations.filter(
+        a => (a.note && a.note.trim().length > 0) || a.id === editingAnnotationId
+      ),
     [currentAnnotations, editingAnnotationId]
   );
 
@@ -237,7 +252,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       let className = 'relative rounded px-0 py-0.5 box-decoration-clone transition-all ';
 
       if (currentAnn) {
-        const isActive = activeAnnotationId === currentAnn.id || editingAnnotationId === currentAnn.id || hoveredAnnotationId === currentAnn.id;
+        const isActive =
+          activeAnnotationId === currentAnn.id ||
+          editingAnnotationId === currentAnn.id ||
+          hoveredAnnotationId === currentAnn.id;
         const hasNote = isNote(currentAnn);
 
         // specific width/height token or just use text length
@@ -250,7 +268,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             key={i}
             id={`annotation-${currentAnn.id}`}
             className={className}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               e.preventDefault();
               setActiveAnnotationId(currentAnn.id);
@@ -311,9 +329,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
           <div className="grid gap-4">
             {unitsWithAudio.map(u => {
               const c = levelContexts[u];
-              const title = c.listeningTitle || (c.listeningScript
-                ? c.listeningScript.substring(0, 60) + (c.listeningScript.length > 60 ? '...' : '')
-                : `Track ${u}`);
+              const title =
+                c.listeningTitle ||
+                (c.listeningScript
+                  ? c.listeningScript.substring(0, 60) +
+                    (c.listeningScript.length > 60 ? '...' : '')
+                  : `Track ${u}`);
               return (
                 <button
                   key={u}
@@ -360,54 +381,92 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
   // --- 3. Listening Player View ---
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col w-full max-w-[1800px] mx-auto relative bg-slate-50">
-
+    <div className="h-[calc(100vh-100px)] h-[calc(100dvh-100px)] flex flex-col w-full max-w-[1800px] mx-auto relative bg-slate-50">
       {/* Top Navigation */}
       <div className="flex items-center justify-between py-4 px-6 bg-white border-b border-slate-200 shrink-0 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-4">
-          <button onClick={() => setActiveUnit(null)} className="flex items-center gap-2 text-slate-500 hover:text-violet-600 font-bold transition-colors px-3 py-1.5 hover:bg-slate-50 rounded-lg">
+          <button
+            onClick={() => setActiveUnit(null)}
+            className="flex items-center gap-2 text-slate-500 hover:text-violet-600 font-bold transition-colors px-3 py-1.5 hover:bg-slate-50 rounded-lg"
+          >
             <ArrowLeft className="w-4 h-4" /> {labels.backToList}
           </button>
           <div className="h-6 w-px bg-slate-200"></div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{labels.unit} {activeUnit}</span>
-            <h1 className="text-lg font-bold text-slate-800 truncate max-w-md">{passage?.title || labels.listeningExercise}</h1>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {labels.unit} {activeUnit}
+            </span>
+            <h1 className="text-lg font-bold text-slate-800 truncate max-w-md">
+              {passage?.title || labels.listeningExercise}
+            </h1>
           </div>
         </div>
 
-        <button onClick={() => setShowTranslation(!showTranslation)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${showTranslation ? 'bg-violet-600 text-white shadow-md shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+        <button
+          onClick={() => setShowTranslation(!showTranslation)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${showTranslation ? 'bg-violet-600 text-white shadow-md shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+        >
           <Languages className="w-4 h-4" /> {showTranslation ? labels.hideTrans : labels.showTrans}
         </button>
       </div>
 
       {/* Main Layout */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-
         <div className="flex-1 flex flex-col min-h-0 relative">
           {/* Audio Player Bar */}
           <div className="bg-white border-b border-slate-200 p-4 shadow-sm z-10 flex items-center justify-center gap-6">
-            <audio ref={manualAudioRef} src={content?.listeningAudioUrl || ''} onEnded={() => setIsPlaying(false)} onPause={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)} />
+            <audio
+              ref={manualAudioRef}
+              src={content?.listeningAudioUrl || ''}
+              onEnded={() => setIsPlaying(false)}
+              onPause={() => setIsPlaying(false)}
+              onPlay={() => setIsPlaying(true)}
+            />
 
-            <button onClick={() => skipTime(-5)} className="p-2 text-slate-400 hover:text-violet-600 rounded-full hover:bg-violet-50 transition-colors" title="-5s">
+            <button
+              onClick={() => skipTime(-5)}
+              className="p-2 text-slate-400 hover:text-violet-600 rounded-full hover:bg-violet-50 transition-colors"
+              title="-5s"
+            >
               <SkipBack className="w-6 h-6" />
             </button>
 
-            <button onClick={togglePlayback} className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${isPlaying ? 'bg-violet-600 text-white shadow-violet-200' : 'bg-white text-violet-600 border-2 border-violet-100'}`}>
-              {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
+            <button
+              onClick={togglePlayback}
+              className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${isPlaying ? 'bg-violet-600 text-white shadow-violet-200' : 'bg-white text-violet-600 border-2 border-violet-100'}`}
+            >
+              {isPlaying ? (
+                <Pause className="w-6 h-6 fill-current" />
+              ) : (
+                <Play className="w-6 h-6 fill-current ml-1" />
+              )}
             </button>
 
-            <button onClick={() => skipTime(5)} className="p-2 text-slate-400 hover:text-violet-600 rounded-full hover:bg-violet-50 transition-colors" title="+5s">
+            <button
+              onClick={() => skipTime(5)}
+              className="p-2 text-slate-400 hover:text-violet-600 rounded-full hover:bg-violet-50 transition-colors"
+              title="+5s"
+            >
               <SkipForward className="w-6 h-6" />
             </button>
 
             <div className="relative ml-4">
-              <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className="flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">
+              <button
+                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+              >
                 <span className="w-10 text-center">{playbackRate}x</span>
               </button>
               {showSpeedMenu && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg shadow-xl border border-slate-100 py-1 flex flex-col min-w-[80px] z-50">
                   {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(rate => (
-                    <button key={rate} onClick={() => changeSpeed(rate)} className={`px-4 py-2 text-sm text-center hover:bg-violet-50 transition-colors ${playbackRate === rate ? 'text-violet-600 font-bold bg-violet-50' : 'text-slate-600'}`}>{rate}x</button>
+                    <button
+                      key={rate}
+                      onClick={() => changeSpeed(rate)}
+                      className={`px-4 py-2 text-sm text-center hover:bg-violet-50 transition-colors ${playbackRate === rate ? 'text-violet-600 font-bold bg-violet-50' : 'text-slate-600'}`}
+                    >
+                      {rate}x
+                    </button>
                   ))}
                 </div>
               )}
@@ -416,8 +475,14 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
           {/* Script Content */}
           <div className="flex-1 overflow-y-auto p-6 md:p-10">
-            <div className={`flex gap-10 transition-all duration-500 ${showTranslation ? 'max-w-full' : 'max-w-4xl mx-auto'}`}>
-              <div ref={contentRef} className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12" onMouseUp={handleTextSelection}>
+            <div
+              className={`flex gap-10 transition-all duration-500 ${showTranslation ? 'max-w-full' : 'max-w-4xl mx-auto'}`}
+            >
+              <div
+                ref={contentRef}
+                className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12"
+                onMouseUp={handleTextSelection}
+              >
                 <div className="text-lg leading-loose text-slate-800 font-serif whitespace-pre-line select-text">
                   {passage && renderHighlightedText(passage.koreanText)}
                 </div>
@@ -446,7 +511,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             annotate: labels.annotate,
             cancel: labels.cancel,
             save: labels.save,
-            clickToAddNote: labels.clickToAddNote
+            clickToAddNote: labels.clickToAddNote,
           }}
           onActivate={setActiveAnnotationId}
           onHover={setHoveredAnnotationId}
@@ -468,7 +533,6 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
           onSave={handleUpdateNote}
           onDelete={(id: string) => handleDeleteAnnotation(id)}
         />
-
       </div>
 
       <AnnotationMenu
@@ -489,7 +553,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             }, 100);
           }
         }}
-        onHighlight={(color) => saveAnnotation(color, undefined, true)}
+        onHighlight={color => saveAnnotation(color, undefined, true)}
         selectedColor={selectedColor}
         setSelectedColor={setSelectedColor}
         onClose={cancelAnnotation}

@@ -845,7 +845,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
           {/* Sidebar - Annotations */}
           <div className="w-80 shrink-0 hidden lg:block ml-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 sticky top-24 flex flex-col max-h-[calc(100vh-120px)] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 sticky top-24 flex flex-col max-h-[calc(100vh-120px)] max-h-[calc(100dvh-120px)] overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50">
                 <h4 className="font-bold text-slate-700 flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-indigo-500" />

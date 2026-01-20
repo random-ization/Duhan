@@ -772,7 +772,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({
   // --- VIEW: EXAM PAPER ---
   if ((view === 'EXAM' || view === 'REVIEW') && currentExam) {
     return (
-      <div className="flex flex-col h-screen bg-slate-200 overflow-hidden">
+      <div className="flex flex-col h-screen h-[100dvh] bg-slate-200 overflow-hidden">
         {/* Header */}
         <div className="bg-slate-800 text-white h-14 flex items-center justify-between px-6 shadow-md z-20 shrink-0">
           <div className="flex items-center gap-4">
@@ -816,7 +816,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({
           >
             {/* The Paper Sheet */}
             <div
-              className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen relative flex flex-col mb-20`}
+              className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen min-h-[100dvh] relative flex flex-col mb-20`}
             >
               {/* Paper Header (Logo area) */}
               <div className="h-20 border-b-2 border-black flex justify-between items-end px-8 pb-3 mb-8 mx-8 mt-8">
@@ -1118,7 +1118,7 @@ const TopikModule: React.FC<TopikModuleProps> = ({
 
   // Default Result/History View
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-100">
+    <div className="flex items-center justify-center h-screen h-[100dvh] bg-slate-100">
       <div className="bg-white p-12 rounded-2xl shadow-xl text-center">
         <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-6" />
         <h2 className="text-3xl font-bold mb-2">{labels.examCompleted || 'Exam Completed!'}</h2>

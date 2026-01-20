@@ -637,7 +637,7 @@ const PodcastPlayerPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen h-[100dvh] bg-slate-50 text-slate-900 overflow-hidden font-sans">
       {/* Header - Fixed on Mobile, Part of layout on Desktop */}
       <header className="flex-none flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 z-20 md:hidden">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full">

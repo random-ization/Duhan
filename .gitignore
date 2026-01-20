@@ -37,3 +37,10 @@ dist-ssr
 server/bin/
 server/temp_subs/
 server/temp_audio/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Trae IDE artifacts
+.trae/

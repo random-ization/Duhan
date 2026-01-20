@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
 import { qRef } from '../utils/convexRefs';
-// import { BottomSheet } from '../components/common/BottomSheet'; // Import BottomSheet if available, or implement custom
+import { MobileSheet } from '../components/mobile/MobileSheet';
 
 interface TranscriptSegment {
   start: number;
@@ -97,7 +97,6 @@ const VideoPlayerPage: React.FC = () => {
   const { language } = useAuth();
   const labels = getLabels(language);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const transcriptContainerRef = useRef<HTMLDivElement>(null);
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Player state
@@ -212,7 +211,7 @@ const VideoPlayerPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-100">
+      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-zinc-100">
         <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
       </div>
     );
@@ -220,7 +219,7 @@ const VideoPlayerPage: React.FC = () => {
 
   if (error || !video) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-100">
+      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-zinc-100">
         <div className="text-center">
           <p className="text-red-500 font-bold text-lg mb-4">
             {error || getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found'}
@@ -236,9 +235,78 @@ const VideoPlayerPage: React.FC = () => {
     );
   }
 
+  const transcriptBody = (
+    <div className="space-y-3">
+      {!video.transcriptData || video.transcriptData.length === 0 ? (
+        <div className="text-center py-12 text-zinc-400">
+          <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
+          <p className="font-bold">
+            {getLabel(labels, ['dashboard', 'video', 'noSubtitles']) || 'No Subtitles'}
+          </p>
+          <p className="text-sm mt-1">
+            {getLabel(labels, ['dashboard', 'video', 'noSubtitlesDesc']) ||
+              'This video has no subtitles yet'}
+          </p>
+        </div>
+      ) : (
+        video.transcriptData.map((segment, index) => {
+          const isActive = index === activeSegmentIndex;
+
+          return (
+            <div
+              key={index}
+              ref={el => {
+                segmentRefs.current[index] = el;
+              }}
+              onClick={() => seekTo(segment.start)}
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                isActive
+                  ? 'bg-indigo-100 border-indigo-400 shadow-[4px_4px_0px_0px_#6366f1] scale-[1.02]'
+                  : 'bg-white border-zinc-200 hover:border-zinc-400'
+              }`}
+            >
+              <div className="text-xs font-mono text-zinc-400 mb-2">
+                {formatTime(segment.start)} - {formatTime(segment.end)}
+              </div>
+
+              <div
+                className={`text-lg font-medium leading-relaxed ${
+                  isActive ? 'text-zinc-900' : 'text-zinc-700'
+                }`}
+                onClick={handleWordClick}
+              >
+                {segment.text.split(/(\s+)/).map((part, wordIndex) => {
+                  const word = part.trim();
+                  if (!word) return <span key={wordIndex}>{part}</span>;
+                  return (
+                    <span
+                      key={wordIndex}
+                      data-word={word}
+                      className={`cursor-pointer rounded px-0.5 transition-colors ${
+                        isActive ? 'hover:bg-indigo-200' : 'hover:bg-yellow-100'
+                      }`}
+                    >
+                      {word}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {showTranslation && segment.translation && (
+                <div className="text-sm text-zinc-500 mt-2 border-t border-zinc-100 pt-2">
+                  {segment.translation}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen min-h-[100dvh]"
       style={{
         backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
         backgroundSize: '20px 20px',
@@ -293,7 +361,7 @@ const VideoPlayerPage: React.FC = () => {
       </header>
 
       {/* Main Content - Desktop: Side by Side, Mobile: Stacked */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-65px)]">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-65px)] h-[calc(100dvh-65px)]">
         {/* Video Player - 70% on desktop */}
         <div className="lg:w-[70%] bg-black flex items-center justify-center">
           <video
@@ -306,36 +374,8 @@ const VideoPlayerPage: React.FC = () => {
           />
         </div>
 
-        {/* Transcript Panel - 30% on desktop */}
-        {/* Transcript Panel - Responsive: Bottom Sheet on Mobile, Sidebar on Desktop */}
-        <div
-          ref={transcriptContainerRef}
-          className={`
-                        bg-[#FDFBF7] border-zinc-900 flex-col
-                        
-                        /* Desktop Styles */
-                        lg:flex lg:w-[30%] lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none lg:z-auto lg:translate-y-0
-                        
-                        /* Mobile Styles (Bottom Sheet) */
-                        fixed inset-x-0 bottom-0 z-50 w-full h-[60vh] rounded-t-2xl border-t-2 border-x-0 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out
-                        ${isTranscriptOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
-                    `}
-        >
-          {/* Mobile Pull Handle / Header */}
-          <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b-2 border-zinc-100 bg-white rounded-t-2xl">
-            <span className="font-bold text-lg">
-              {getLabel(labels, ['dashboard', 'video', 'subtitleList']) || 'Subtitles'}
-            </span>
-            <button
-              onClick={() => setIsTranscriptOpen(false)}
-              className="p-1 hover:bg-zinc-100 rounded-full"
-            >
-              <X className="w-5 h-5 text-zinc-500" />
-            </button>
-          </div>
-
-          {/* Panel Header (Desktop only or shared?) kept as is but hidden on mobile if needed, or matched */}
-          <div className="hidden lg:block sticky top-0 bg-[#FDFBF7] border-b-2 border-zinc-200 px-4 py-3 z-10">
+        <div className="hidden lg:flex lg:w-[30%] bg-[#FDFBF7] border-zinc-900 flex-col lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none">
+          <div className="sticky top-0 bg-[#FDFBF7] border-b-2 border-zinc-200 px-4 py-3 z-10">
             <h2 className="font-black text-lg flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-indigo-600" />
               {getLabel(labels, ['dashboard', 'video', 'realtimeSubtitles']) ||
@@ -346,87 +386,18 @@ const VideoPlayerPage: React.FC = () => {
                 'Click sentence to jump, click word to look up'}
             </p>
           </div>
-
-          {/* Transcript Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {!video.transcriptData || video.transcriptData.length === 0 ? (
-              <div className="text-center py-12 text-zinc-400">
-                <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p className="font-bold">
-                  {getLabel(labels, ['dashboard', 'video', 'noSubtitles']) || 'No Subtitles'}
-                </p>
-                <p className="text-sm mt-1">
-                  {getLabel(labels, ['dashboard', 'video', 'noSubtitlesDesc']) ||
-                    'This video has no subtitles yet'}
-                </p>
-              </div>
-            ) : (
-              video.transcriptData.map((segment, index) => {
-                const isActive = index === activeSegmentIndex;
-
-                return (
-                  <div
-                    key={index}
-                    ref={el => {
-                      segmentRefs.current[index] = el;
-                    }}
-                    onClick={() => seekTo(segment.start)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
-                      isActive
-                        ? 'bg-indigo-100 border-indigo-400 shadow-[4px_4px_0px_0px_#6366f1] scale-[1.02]'
-                        : 'bg-white border-zinc-200 hover:border-zinc-400'
-                    }`}
-                  >
-                    {/* Timestamp */}
-                    <div className="text-xs font-mono text-zinc-400 mb-2">
-                      {formatTime(segment.start)} - {formatTime(segment.end)}
-                    </div>
-
-                    {/* Korean Text - Clickable Words */}
-                    <div
-                      className={`text-lg font-medium leading-relaxed ${
-                        isActive ? 'text-zinc-900' : 'text-zinc-700'
-                      }`}
-                      onClick={handleWordClick}
-                    >
-                      {segment.text.split(/(\s+)/).map((part, wordIndex) => {
-                        const word = part.trim();
-                        if (!word) return <span key={wordIndex}>{part}</span>;
-                        return (
-                          <span
-                            key={wordIndex}
-                            data-word={word}
-                            className={`cursor-pointer rounded px-0.5 transition-colors ${
-                              isActive ? 'hover:bg-indigo-200' : 'hover:bg-yellow-100'
-                            }`}
-                          >
-                            {word}
-                          </span>
-                        );
-                      })}
-                    </div>
-
-                    {/* Translation */}
-                    {showTranslation && segment.translation && (
-                      <div className="text-sm text-zinc-500 mt-2 border-t border-zinc-100 pt-2">
-                        {segment.translation}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <div className="flex-1 overflow-y-auto p-4">{transcriptBody}</div>
         </div>
       </div>
 
-      {/* Mobile Backdrop */}
-      {isTranscriptOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden animate-in fade-in"
-          onClick={() => setIsTranscriptOpen(false)}
-        />
-      )}
+      <MobileSheet
+        isOpen={isTranscriptOpen}
+        onClose={() => setIsTranscriptOpen(false)}
+        title={getLabel(labels, ['dashboard', 'video', 'subtitleList']) || 'Subtitles'}
+        height="half"
+      >
+        {transcriptBody}
+      </MobileSheet>
 
       {/* Word Popup */}
       {selectedWord && (

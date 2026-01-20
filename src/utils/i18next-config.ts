@@ -9,7 +9,13 @@ i18n
     fallbackLng: 'en',
     lng: 'en', // Default start language, AuthContext updates this
     backend: {
-      loadPath: `${import.meta.env.BASE_URL}locales/{{lng}}.json`,
+      loadPath:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}.json`
+          : `${import.meta.env.BASE_URL}locales/{{lng}}.json`,
+      queryStringParams: {
+        v: import.meta.env.VITE_I18N_VERSION,
+      },
     },
     interpolation: {
       escapeValue: false, // React already safes from xss

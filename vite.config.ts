@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_I18N_VERSION': JSON.stringify(
+      process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || String(Date.now())
+    ),
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
@@ -43,9 +48,9 @@ export default defineConfig({
           // Vendor chunks - split large libraries
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           // Canvas 画板功能 - 懒加载，不阻塞首页
-          'canvas': ['konva', 'react-konva'],
+          canvas: ['konva', 'react-konva'],
           // UI 图标库
-          'ui': ['lucide-react'],
+          ui: ['lucide-react'],
           // Excel 处理
           'vendor-xlsx': ['xlsx'],
         },

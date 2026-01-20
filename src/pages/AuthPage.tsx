@@ -40,16 +40,24 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const safeRedirectPath = (() => {
+    const raw = searchParams.get('redirect');
+    if (!raw) return null;
+    if (!raw.startsWith('/')) return null;
+    if (raw.startsWith('//')) return null;
+    if (raw.includes('://')) return null;
+    return raw;
+  })();
+
   // Determine which page we're on for SEO
   const meta = getRouteMeta(location.pathname);
 
   // Auto-redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      const redirectUrl = searchParams.get('redirect') || '/dashboard';
-      navigate(redirectUrl);
+      navigate(safeRedirectPath || '/dashboard');
     }
-  }, [user, authLoading, navigate, searchParams]);
+  }, [user, authLoading, navigate, safeRedirectPath]);
 
   /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
   // Handle Google OAuth callback
@@ -76,7 +84,7 @@ export default function AuthPage() {
     qRef<{ key: string }, { value?: { url?: string } } | null>('settings:getSetting'),
     { key: 'logo' }
   );
-  const postAuthRedirectPath = getLocalizedPath('/dashboard', currentLanguage);
+  const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
   const postAuthRedirectUrl = `${window.location.origin}${postAuthRedirectPath}`;
 
   const handleGoogleLogin = async () => {

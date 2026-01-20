@@ -830,7 +830,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
   return (
     <div
-      className="h-[calc(100vh-48px)] flex flex-col"
+      className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col"
       style={{
         backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
         backgroundSize: '20px 20px',
