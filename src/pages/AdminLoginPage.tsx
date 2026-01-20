@@ -16,6 +16,7 @@ const AdminLoginPage: React.FC = () => {
   const { user } = useAuth();
   const { signIn } = useAuthActions();
   const navigate = useLocalizedNavigate();
+  const postAuthRedirectUrl = `${window.location.origin}/admin`;
 
   // If already logged in as admin, redirect to admin panel
   useEffect(() => {
@@ -30,7 +31,12 @@ const AdminLoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await signIn('password', { email, password });
+      await signIn('password', {
+        email,
+        password,
+        flow: 'signIn',
+        redirectTo: postAuthRedirectUrl,
+      });
     } catch (err: unknown) {
       console.error('Login error:', toErrorMessage(err));
       setError(toErrorMessage(err) || '服务器内部错误，请稍后再试');
