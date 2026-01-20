@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { useMutation, useAction, useQuery } from 'convex/react';
-import { ExamAttempt, Language } from '../types';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { ExamAttempt, Language, User } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
-import { aRef, mRef, qRef } from '../utils/convexRefs';
+import { aRef, mRef, NoArgs, qRef } from '../utils/convexRefs';
+import { toErrorMessage } from '../utils/errors';
 
 import toast, { Toaster } from 'react-hot-toast';
 import { Loading } from '../components/common/Loading';
@@ -35,6 +37,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const labels = getLabels(language);
   const success = toast.success;
   const error = toast.error;
+  const { signIn } = useAuthActions();
 
   const savedWordsCount = useQuery(
     qRef<Record<string, never>, { count: number }>('user:getSavedWordsCount'),
@@ -65,14 +68,42 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const changePasswordMutation = useMutation(
     mRef<{ currentPassword: string; newPassword: string }, void>('auth:changePassword')
   );
+  const unlinkAuthProviderMutation = useMutation(
+    mRef<{ provider: string }, { success: boolean }>('auth:unlinkAuthProvider')
+  );
   const getUploadUrlAction = useAction(
     aRef<
       { filename: string; contentType: string; folder?: string },
       { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
     >('storage:getUploadUrl')
   );
+  const linkedAccounts = useQuery(
+    qRef<NoArgs, { provider: string }[]>('auth:linkedAuthAccounts'),
+    user ? {} : 'skip'
+  );
 
   if (!user) return <Loading fullScreen size="lg" />;
+
+  const displayName =
+    user.name || user.email?.split('@')[0] || (language === 'zh' ? '未命名用户' : 'Unnamed');
+  const userMeta = user as User & {
+    _id?: string;
+    _creationTime?: number;
+    createdAt?: number;
+    joinDate?: number;
+  };
+  const rawUserId = userMeta.id || userMeta._id || '';
+  const userIdDisplay = rawUserId ? rawUserId.slice(0, 8) : '—';
+  const joinedTimestamp = userMeta.createdAt || userMeta.joinDate || userMeta._creationTime || 0;
+  const joinedDateLabel = joinedTimestamp ? new Date(joinedTimestamp).toLocaleDateString() : '—';
+  const linkedProviders = new Set(linkedAccounts?.map(account => account.provider) ?? []);
+  const linkedCount = linkedAccounts?.length ?? 0;
+  const accountsLoading = linkedAccounts === undefined;
+  const linkLabel = language === 'zh' ? '绑定' : 'Connect';
+  const unlinkLabel = language === 'zh' ? '解绑' : 'Unlink';
+  const linkedLabel = language === 'zh' ? '已连接' : 'Linked';
+  const notLinkedLabel = language === 'zh' ? '未连接' : 'Not linked';
+  const accountSectionTitle = language === 'zh' ? '社交账号绑定' : 'Social Accounts';
 
   const handleNameUpdate = async () => {
     if (!newName.trim() || newName === user.name) {
@@ -241,7 +272,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
               ) : user.avatar ? (
                 <img
                   src={user.avatar}
-                  alt={user.name}
+                  alt={displayName}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
@@ -286,7 +317,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 </button>
               </div>
             ) : (
-              <h1 className="text-3xl font-extrabold text-slate-900">{user.name}</h1>
+              <h1 className="text-3xl font-extrabold text-slate-900">{displayName}</h1>
             )}
             {!isEditingName && (
               <button
@@ -317,8 +348,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
           <div className="mt-4 flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
               <Calendar size={14} className="text-indigo-500" />
-              {labels.profile?.joined || 'Joined'}{' '}
-              {new Date(user.createdAt || 0).toLocaleDateString()}
+              {labels.profile?.joined || 'Joined'} {joinedDateLabel}
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
               <Trophy size={14} className="text-orange-500" />
@@ -349,7 +379,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                   {labels.displayName}
                 </label>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium">
-                  {user.name}
+                  {displayName}
                 </div>
               </div>
               <div>
@@ -367,7 +397,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium flex items-center justify-between">
                   {user.role}
                   <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600">
-                    ID: {(user.id || '').slice(0, 8)}
+                    ID: {userIdDisplay}
                   </span>
                 </div>
               </div>
@@ -471,6 +501,79 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                     </LocalizedLink>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-6 mt-6">
+              <h4 className="font-bold text-slate-800 mb-3">{accountSectionTitle}</h4>
+              <div className="space-y-3">
+                {[
+                  { id: 'google', label: labels.auth?.social?.google || 'Google' },
+                  { id: 'kakao', label: labels.auth?.social?.kakao || 'Kakao' },
+                ].map(provider => {
+                  const isLinked = linkedProviders.has(provider.id);
+                  const disableUnlink = isLinked && linkedCount <= 1;
+                  return (
+                    <div
+                      key={provider.id}
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-800">{provider.label}</span>
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            isLinked
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {isLinked ? linkedLabel : notLinkedLabel}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={accountsLoading || disableUnlink}
+                        onClick={async () => {
+                          if (!isLinked) {
+                            try {
+                              await signIn(provider.id, { redirectTo: window.location.href });
+                            } catch {
+                              error(
+                                language === 'zh'
+                                  ? '绑定失败'
+                                  : `Failed to connect ${provider.label}`
+                              );
+                            }
+                            return;
+                          }
+
+                          try {
+                            await unlinkAuthProviderMutation({ provider: provider.id });
+                            success(language === 'zh' ? '解绑成功' : 'Account unlinked');
+                          } catch (err: unknown) {
+                            const message = toErrorMessage(err);
+                            if (message.includes('LAST_AUTH_METHOD')) {
+                              error(
+                                language === 'zh' ? '至少保留一种登录方式' : 'Keep one login method'
+                              );
+                              return;
+                            }
+                            error(language === 'zh' ? '解绑失败' : 'Failed to unlink account');
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+                          accountsLoading || disableUnlink
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : isLinked
+                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                              : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                        }`}
+                      >
+                        {isLinked ? unlinkLabel : linkLabel}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

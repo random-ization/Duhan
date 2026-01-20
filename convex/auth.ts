@@ -32,9 +32,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           }
           return {
             id: String(profile.id),
-            name: profile?.kakao_account?.profile?.nickname,
             email: email.trim().toLowerCase(),
-            image: profile?.kakao_account?.profile?.profile_image_url,
           };
         },
       }),
@@ -74,7 +72,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   },
 });
 
-import { mutation } from './_generated/server';
+import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
 
@@ -92,6 +90,79 @@ export const updateProfile = mutation({
     if (args.avatar !== undefined) updates.avatar = args.avatar;
 
     await ctx.db.patch(userId, updates);
+  },
+});
+
+export const syncProfileFromIdentity = mutation({
+  args: {},
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Not authenticated');
+
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error('User not found');
+
+    if (user.name && user.avatar) return { updated: false };
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { updated: false };
+
+    const picture =
+      (identity as { pictureUrl?: string; picture?: string }).pictureUrl ??
+      (identity as { picture?: string }).picture;
+
+    const updates: { name?: string; avatar?: string } = {};
+    if (!user.name && identity.name) updates.name = identity.name;
+    if (!user.avatar && picture) updates.avatar = picture;
+
+    if (Object.keys(updates).length === 0) return { updated: false };
+
+    await ctx.db.patch(userId, updates);
+    return { updated: true };
+  },
+});
+
+export const linkedAuthAccounts = query({
+  args: {},
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Not authenticated');
+
+    const accounts = await ctx.db
+      .query('authAccounts')
+      .withIndex('userIdAndProvider', q => q.eq('userId', userId))
+      .collect();
+
+    return accounts.map(account => ({
+      id: account._id,
+      provider: account.provider,
+    }));
+  },
+});
+
+export const unlinkAuthProvider = mutation({
+  args: {
+    provider: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error('Not authenticated');
+
+    const accounts = await ctx.db
+      .query('authAccounts')
+      .withIndex('userIdAndProvider', q => q.eq('userId', userId))
+      .collect();
+
+    const target = accounts.find(account => account.provider === args.provider);
+    if (!target) {
+      throw new Error('ACCOUNT_NOT_FOUND');
+    }
+    if (accounts.length <= 1) {
+      throw new Error('LAST_AUTH_METHOD');
+    }
+
+    await ctx.db.delete(target._id);
+    return { success: true };
   },
 });
 

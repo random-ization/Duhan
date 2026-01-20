@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  ReactNode,
+  useEffect,
+  useRef,
+} from 'react';
 import { useConvex, useMutation, useQuery, useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
@@ -67,6 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Mutations - token argument no longer needed for backend that uses getAuthUserId
 
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const profileSyncAttempted = useRef(false);
 
   const setLanguage = useCallback((lang: Language) => {
     localStorage.setItem('preferredLanguage', lang);
@@ -87,6 +97,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'));
   const loading = !ready || authLoading || (isAuthenticated && viewer === undefined);
+  const syncProfileFromIdentityMutation = useMutation(
+    mRef<NoArgs, { updated: boolean }>('auth:syncProfileFromIdentity')
+  );
 
   const user = useMemo<User | null>(() => {
     if (!isAuthenticated) return null;
@@ -94,6 +107,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!viewer) return null;
     return { ...viewer, ...(userOverride ?? {}) };
   }, [isAuthenticated, viewer, userOverride]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      profileSyncAttempted.current = false;
+      return;
+    }
+    if (!user || profileSyncAttempted.current) return;
+    if (user.name && user.avatar) return;
+
+    profileSyncAttempted.current = true;
+    syncProfileFromIdentityMutation().catch(() => {});
+  }, [isAuthenticated, user, syncProfileFromIdentityMutation]);
 
   // Legacy manual loadUser effect removed
   /*
