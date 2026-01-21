@@ -19,6 +19,7 @@ import type * as dictionary from '../dictionary.js';
 import type * as emails from '../emails.js';
 import type * as errors from '../errors.js';
 import type * as files from '../files.js';
+import type * as fsrs from '../fsrs.js';
 import type * as grammars from '../grammars.js';
 import type * as http from '../http.js';
 import type * as id from '../id.js';
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   errors: typeof errors;
   files: typeof files;
+  fsrs: typeof fsrs;
   grammars: typeof grammars;
   http: typeof http;
   id: typeof id;
