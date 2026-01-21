@@ -975,6 +975,8 @@
     "INSTITUTE_NOT_FOUND": "Сурах бичиг олдсонгүй.",
     "INVALID_CREDENTIALS": "Имэйл эсвэл нууц үг буруу байна.",
     "KAKAO_EMAIL_REQUIRED": "Kakao-р нэвтрэх үед имэйлээ хуваалцахыг зөвшөөрнө үү.",
+    "EMAIL_REQUIRED": "Имэйл дутуу байна. Дахин оролдоно уу.",
+    "ACCOUNT_EXISTS_LINK_REQUIRED": "Энэ имэйлээр бүртгэлтэй байна. Эхлээд нэвтэрч, дараа нь профайл дээрээ Google/Kakao-г холбоно уу.",
     "RSS_PARSE_FAILED": "Подкаст сувгийг уншиж чадсангүй.",
     "SESSION_ALREADY_COMPLETED": "Энэ шалгалтыг аль хэдийн өгсөн байна.",
     "SESSION_EXPIRED": "Шалгалтын хугацаа дууссан байна.",

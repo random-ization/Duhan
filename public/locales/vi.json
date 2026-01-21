@@ -971,6 +971,8 @@
     "INSTITUTE_NOT_FOUND": "Không tìm thấy giáo trình.",
     "INVALID_CREDENTIALS": "Email hoặc mật khẩu không hợp lệ.",
     "KAKAO_EMAIL_REQUIRED": "Vui lòng cho phép chia sẻ email khi đăng nhập Kakao.",
+    "EMAIL_REQUIRED": "Thiếu email. Vui lòng thử lại.",
+    "ACCOUNT_EXISTS_LINK_REQUIRED": "Email này đã có tài khoản. Hãy đăng nhập trước, sau đó liên kết Google/Kakao trong hồ sơ cá nhân.",
     "RSS_PARSE_FAILED": "Lỗi phân tích nguồn cấp podcast.",
     "SESSION_ALREADY_COMPLETED": "Bài thi này đã được nộp.",
     "SESSION_EXPIRED": "Thời gian làm bài thi của bạn đã hết.",

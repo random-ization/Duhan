@@ -880,6 +880,8 @@
     "USER_CREATION_FAILED": "Failed to create user account.",
     "INVALID_CREDENTIALS": "Invalid email or password.",
     "KAKAO_EMAIL_REQUIRED": "Please consent to share your email in Kakao login.",
+    "EMAIL_REQUIRED": "Email is required. Please try again.",
+    "ACCOUNT_EXISTS_LINK_REQUIRED": "This email already has an account. Log in first, then link Google/Kakao in your profile.",
     "INCORRECT_PASSWORD": "The current password is incorrect.",
     "INSTITUTE_NOT_FOUND": "Textbook not found.",
     "CHANNEL_CREATION_FAILED": "Failed to create podcast channel.",

@@ -71,6 +71,9 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const unlinkAuthProviderMutation = useMutation(
     mRef<{ provider: string }, { success: boolean }>('auth:unlinkAuthProvider')
   );
+  const syncProfileFromIdentityMutation = useMutation(
+    mRef<NoArgs, { updated: boolean }>('auth:syncProfileFromIdentity')
+  );
   const getUploadUrlAction = useAction(
     aRef<
       { filename: string; contentType: string; folder?: string },
@@ -104,6 +107,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const linkedLabel = language === 'zh' ? '已连接' : 'Linked';
   const notLinkedLabel = language === 'zh' ? '未连接' : 'Not linked';
   const accountSectionTitle = language === 'zh' ? '社交账号绑定' : 'Social Accounts';
+  const isProfileIncomplete = !user.name?.trim() || !user.avatar;
 
   const handleNameUpdate = async () => {
     if (!newName.trim() || newName === user.name) {
@@ -345,6 +349,39 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
             )}
           </div>
           <p className="text-slate-500 font-medium">{user.email}</p>
+          {isProfileIncomplete && (
+            <div className="mt-3 flex flex-wrap gap-2 justify-center md:justify-start">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const result = await syncProfileFromIdentityMutation();
+                    if (result.updated) {
+                      success(language === 'zh' ? '已导入社交账号资料' : 'Imported social profile');
+                    } else {
+                      error(
+                        language === 'zh'
+                          ? '未能导入资料，请手动设置'
+                          : 'Could not import profile, please set manually'
+                      );
+                    }
+                  } catch {
+                    error(language === 'zh' ? '导入失败' : 'Import failed');
+                  }
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+              >
+                {language === 'zh' ? '导入社交账号资料' : 'Import social profile'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+              >
+                {language === 'zh' ? '自己创建' : 'Create manually'}
+              </button>
+            </div>
+          )}
           <div className="mt-4 flex flex-wrap gap-4 justify-center md:justify-start">
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
               <Calendar size={14} className="text-indigo-500" />

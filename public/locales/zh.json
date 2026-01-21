@@ -958,6 +958,8 @@
     "INSTITUTE_NOT_FOUND": "未找到教材。",
     "INVALID_CREDENTIALS": "邮箱或密码无效。",
     "KAKAO_EMAIL_REQUIRED": "请在 Kakao 授权中同意提供邮箱。",
+    "EMAIL_REQUIRED": "缺少邮箱信息，请重试。",
+    "ACCOUNT_EXISTS_LINK_REQUIRED": "该邮箱已注册。请先用原方式登录，再到个人档案中绑定 Google/Kakao。",
     "RSS_PARSE_FAILED": "解析播客源失败。",
     "SESSION_ALREADY_COMPLETED": "考试已提交。",
     "SESSION_EXPIRED": "考试时间已过期。",

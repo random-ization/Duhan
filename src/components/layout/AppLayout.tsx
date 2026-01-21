@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
 import { isValidLanguage } from '../LanguageRouter';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
+import { useAuth } from '../../contexts/AuthContext';
+import { useMutation } from 'convex/react';
+import { mRef, NoArgs } from '../../utils/convexRefs';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useLocalizedNavigate();
+  const { user, language } = useAuth();
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
+  });
+  const syncProfileFromIdentityMutation = useMutation(
+    mRef<NoArgs, { updated: boolean }>('auth:syncProfileFromIdentity')
+  );
 
   // Hide footer on these pages and their sub-pages
   const hideFooterPaths = [
@@ -31,11 +44,79 @@ export default function AppLayout() {
     pathWithoutLang.startsWith(path)
   );
   const shouldHideMobileNav = hideMobileNavPaths.some(path => pathWithoutLang.startsWith(path));
+  const isProfilePage = pathWithoutLang === '/profile' || pathWithoutLang.startsWith('/profile/');
+  const shouldShowProfileSetupPrompt = useMemo(() => {
+    if (!user) return false;
+    if (profilePromptDismissed) return false;
+    if (isProfilePage) return false;
+    const nameMissing = !user.name || !user.name.trim();
+    const avatarMissing = !user.avatar;
+    return nameMissing || avatarMissing;
+  }, [user, profilePromptDismissed, isProfilePage]);
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
       <Sidebar />
       <main className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth">
+        {shouldShowProfileSetupPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
+              <div className="p-6 sm:p-8">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                  {language === 'zh' ? '完善个人资料' : 'Complete your profile'}
+                </h2>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  {language === 'zh'
+                    ? '你可以选择导入当前登录方式的头像/昵称，或自己创建。'
+                    : 'Import your current login profile (name/avatar) or create your own.'}
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await syncProfileFromIdentityMutation();
+                      } finally {
+                        setProfilePromptDismissed(true);
+                        if (typeof window !== 'undefined') {
+                          window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                        }
+                      }
+                    }}
+                    className="flex-1 rounded-2xl px-5 py-3 font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 active:opacity-90 transition"
+                  >
+                    {language === 'zh' ? '使用社交账号资料' : 'Use social profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfilePromptDismissed(true);
+                      if (typeof window !== 'undefined') {
+                        window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                      }
+                      navigate('/profile');
+                    }}
+                    className="flex-1 rounded-2xl px-5 py-3 font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition"
+                  >
+                    {language === 'zh' ? '自己创建' : 'Create myself'}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfilePromptDismissed(true);
+                    if (typeof window !== 'undefined') {
+                      window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                    }
+                  }}
+                  className="mt-4 w-full text-sm font-bold text-slate-500 hover:text-slate-700 transition"
+                >
+                  {language === 'zh' ? '稍后再说' : 'Maybe later'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {!shouldHideMobileHeader && <MobileHeader />}
 
         <div className="min-h-full flex flex-col p-4 sm:p-6 md:p-10">

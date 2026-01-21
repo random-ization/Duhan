@@ -86,33 +86,56 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         isLinking = false;
       }
 
-      const emailVerified =
-        args.profile.emailVerified === true ||
-        ((args.provider.type === 'oauth' || args.provider.type === 'oidc') &&
-          args.provider.allowDangerousEmailAccountLinking !== false);
-
-      if (!isLinking && !userId && email && emailVerified) {
-        const matches = await ctx.db
-          .query('users')
-          .filter(q => q.eq(q.field('email'), email))
-          .take(2);
-
-        if (matches.length === 1) {
-          userId = matches[0]._id;
-        }
+      if (!email) {
+        throw new Error('EMAIL_REQUIRED');
       }
 
-      const userData = {
-        ...args.profile,
-        ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
-      };
+      const emailVerified = args.profile.emailVerified === true;
 
       if (userId) {
-        await ctx.db.patch(userId, userData);
+        const user = await ctx.db.get(userId);
+        if (!user) {
+          throw new Error('USER_NOT_FOUND');
+        }
+
+        const updates: Record<string, unknown> = {};
+        if (emailVerified && !user.emailVerificationTime) {
+          updates.emailVerificationTime = Date.now();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await ctx.db.patch(userId, updates);
+        }
         return userId;
       }
 
-      return await ctx.db.insert('users', userData);
+      const existingByEmail = await ctx.db
+        .query('users')
+        .filter(q => q.eq(q.field('email'), email))
+        .take(1);
+
+      if (!isLinking && existingByEmail.length > 0) {
+        throw new Error('ACCOUNT_EXISTS_LINK_REQUIRED');
+      }
+
+      const providerId = (args.provider as { id?: string } | undefined)?.id;
+      const isPasswordProvider = providerId === 'password';
+
+      const insertData: Record<string, unknown> = {
+        email,
+        ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
+        createdAt: Date.now(),
+        tier: 'FREE',
+      };
+
+      if (isPasswordProvider && typeof args.profile.name === 'string') {
+        const name = args.profile.name.trim();
+        if (name) {
+          insertData.name = name;
+        }
+      }
+
+      return await ctx.db.insert('users', insertData);
     },
   },
 });
