@@ -328,6 +328,7 @@ export const getAll = query({
 export const getOfCourse = query({
   args: {
     courseId: v.string(),
+    unitId: v.optional(v.number()),
     limit: v.optional(v.number()), // Optional limit
   },
   handler: async (ctx, args): Promise<VocabWordDto[]> => {
@@ -337,7 +338,11 @@ export const getOfCourse = query({
     const limit = args.limit || DEFAULT_VOCAB_LIMIT;
     const appearances = await ctx.db
       .query('vocabulary_appearances')
-      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId))
+      .withIndex('by_course_unit', q =>
+        args.unitId !== undefined
+          ? q.eq('courseId', args.courseId).eq('unitId', args.unitId)
+          : q.eq('courseId', args.courseId)
+      )
       .take(limit);
 
     // 2. OPTIMIZATION: Batch fetch words and progress data

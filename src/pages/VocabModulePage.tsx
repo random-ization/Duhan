@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, Eye, EyeOff, Play, Square, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
-import { VocabQuiz, VocabMatch, FlashcardView } from '../features/vocab';
 // import { updateVocabProgress } from '../services/vocabApi';
 import EmptyState from '../components/common/EmptyState';
 import { useQuery, useMutation, useAction } from 'convex/react';
@@ -17,6 +16,10 @@ import { VocabModuleSkeleton } from '../components/common';
 import { FSRS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import type { Id } from '../../convex/_generated/dataModel';
+
+const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
+const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
+const VocabMatch = lazy(() => import('../features/vocab/components/VocabMatch'));
 
 interface ExtendedVocabItem extends VocabularyItem {
   id: string;
@@ -85,6 +88,7 @@ export default function VocabModulePage() {
   const [redSheetActive, setRedSheetActive] = useState(true); // 默认开启
   const [isAudioLooping, setIsAudioLooping] = useState(false);
   const audioLoopRef = useRef<boolean>(false);
+  const [listVisibleCount, setListVisibleCount] = useState(60);
 
   // Flashcard settings
 
@@ -92,7 +96,9 @@ export default function VocabModulePage() {
   // Pass user ID (token or Convex ID) to ensure progress data is loaded
   const convexWordsQuery = useQuery(
     VOCAB.getOfCourse,
-    instituteId ? { courseId: instituteId } : 'skip'
+    instituteId
+      ? { courseId: instituteId, unitId: selectedUnitId === 'ALL' ? undefined : selectedUnitId }
+      : 'skip'
   );
   const updateProgressMutation = useMutation(VOCAB.updateProgress);
   const updateProgressV2Mutation = useMutation(VOCAB.updateProgressV2);
@@ -152,6 +158,7 @@ export default function VocabModulePage() {
 
   useEffect(() => {
     setViewState(prev => ({ ...prev, cardIndex: 0, isFlipped: false, flashcardComplete: false }));
+    setListVisibleCount(60);
   }, [selectedUnitId]);
 
   const availableUnits = useMemo(() => {
@@ -175,6 +182,10 @@ export default function VocabModulePage() {
       })),
     [filteredWords, language]
   );
+
+  const listWords = useMemo(() => {
+    return filteredWords.slice(0, Math.min(filteredWords.length, listVisibleCount));
+  }, [filteredWords, listVisibleCount]);
 
   const toggleStar = (id: string) => {
     setStarredIds(prev => {
@@ -444,104 +455,98 @@ export default function VocabModulePage() {
               </div>
             </div>
           ) : (
-            <FlashcardView
-              words={filteredWords}
-              language={language}
-              courseId={instituteId}
-              settings={{
-                flashcard: {
-                  batchSize: 200,
-                  random: false,
-                  autoTTS: false,
-                  cardFront: 'KOREAN',
-                },
-                learn: {
-                  batchSize: 20,
-                  random: true,
-                  ratingMode: 'PASS_FAIL',
-                  types: { multipleChoice: true, writing: true },
-                  answers: { korean: true, native: true },
-                },
-              }}
-              onComplete={stats => {
-                setViewState(prev => ({ ...prev, flashcardComplete: true }));
-                const newMastered = new Set(masteredIds);
-                stats.correct.forEach(w => newMastered.add(w.id));
-                setMasteredIds(newMastered);
-              }}
-              onSaveWord={word => {
-                if (!starredIds.has(word.id)) {
-                  toggleStar(word.id);
-                }
-              }}
-              onSpeak={speakWord}
-              onCardReview={async (word, result) => {
-                const isCorrect = typeof result === 'boolean' ? result : result > 1;
+            <Suspense fallback={<VocabModuleSkeleton />}>
+              <FlashcardView
+                words={filteredWords}
+                language={language}
+                courseId={instituteId}
+                settings={{
+                  flashcard: {
+                    batchSize: 200,
+                    random: false,
+                    autoTTS: false,
+                    cardFront: 'KOREAN',
+                  },
+                  learn: {
+                    batchSize: 20,
+                    random: true,
+                    ratingMode: 'PASS_FAIL',
+                    types: { multipleChoice: true, writing: true },
+                    answers: { korean: true, native: true },
+                  },
+                }}
+                onComplete={stats => {
+                  setViewState(prev => ({ ...prev, flashcardComplete: true }));
+                  const newMastered = new Set(masteredIds);
+                  stats.correct.forEach(w => newMastered.add(w.id));
+                  setMasteredIds(newMastered);
+                }}
+                onSaveWord={word => {
+                  if (!starredIds.has(word.id)) {
+                    toggleStar(word.id);
+                  }
+                }}
+                onSpeak={speakWord}
+                onCardReview={async (word, result) => {
+                  const isCorrect = typeof result === 'boolean' ? result : result > 1;
 
-                if (isCorrect) {
-                  setMasteredIds(prev => new Set([...prev, word.id]));
-                } else {
-                  setMasteredIds(prev => {
-                    const next = new Set(prev);
-                    next.delete(word.id);
-                    return next;
-                  });
-                }
-
-                if (user?.id) {
-                  // FSRS Logic
-                  try {
-                    // 1. Determine Rating (1=Again, 3=Good as defaults for boolean)
-                    let rating = 1;
-                    if (typeof result === 'number') {
-                      rating = result;
-                    } else {
-                      rating = result ? 3 : 1;
-                    }
-
-                    // 2. Construct Current FSRS State
-                    const currentCardState =
-                      word.state !== undefined
-                        ? {
-                            state: word.state,
-                            due: word.progress?.nextReviewAt || Date.now(),
-                            stability: word.stability || 0,
-                            difficulty: word.difficulty || 0,
-                            elapsed_days: word.elapsed_days || 0,
-                            scheduled_days: word.scheduled_days || 0,
-                            learning_steps: word.learning_steps || 0,
-                            reps: word.reps || 0,
-                            lapses: word.lapses || 0,
-                            last_review: word.last_review ?? undefined,
-                          }
-                        : undefined; // undefined for NEW cards
-
-                    // 3. Calculate Next Schedule (Server Side)
-                    const nextState = await calculateNextSchedule({
-                      currentCard: currentCardState,
-                      rating,
+                  if (isCorrect) {
+                    setMasteredIds(prev => new Set([...prev, word.id]));
+                  } else {
+                    setMasteredIds(prev => {
+                      const next = new Set(prev);
+                      next.delete(word.id);
+                      return next;
                     });
+                  }
 
-                    // 4. Save to DB
-                    const { review_log: _reviewLog, ...fsrsState } = nextState;
-                    void _reviewLog;
-                    await updateProgressV2Mutation({
-                      wordId: word.id as Id<'words'>,
-                      rating,
-                      fsrsState,
-                    });
-                  } catch (err) {
-                    console.error('FSRS Error:', err);
-                    // Fallback to V1 if FSRS fails? or just log.
-                    // For now, retry with V1 legacy for safety if needed,
-                    // but since we want migration, let's stick to V2 error handling.
-                    if (typeof result === 'boolean') {
-                      updateProgressMutation({ wordId: word.id, quality: result ? 5 : 0 });
+                  if (user?.id) {
+                    try {
+                      let rating = 1;
+                      if (typeof result === 'number') {
+                        rating = result;
+                      } else {
+                        rating = result ? 3 : 1;
+                      }
+
+                      const currentCardState =
+                        word.state !== undefined
+                          ? {
+                              state: word.state,
+                              due: word.progress?.nextReviewAt || Date.now(),
+                              stability: word.stability || 0,
+                              difficulty: word.difficulty || 0,
+                              elapsed_days: word.elapsed_days || 0,
+                              scheduled_days: word.scheduled_days || 0,
+                              learning_steps: word.learning_steps || 0,
+                              reps: word.reps || 0,
+                              lapses: word.lapses || 0,
+                              last_review: word.last_review ?? undefined,
+                            }
+                          : undefined;
+
+                      const nextState = await calculateNextSchedule({
+                        currentCard: currentCardState,
+                        rating,
+                      });
+
+                      const { review_log: _reviewLog, ...fsrsState } = nextState;
+                      void _reviewLog;
+                      await updateProgressV2Mutation({
+                        wordId: word.id as Id<'words'>,
+                        rating,
+                        fsrsState,
+                      });
+                    } catch (err) {
+                      console.error('FSRS Error:', err);
+                      if (typeof result === 'boolean') {
+                        updateProgressMutation({ wordId: word.id, quality: result ? 5 : 0 });
+                      }
                     }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            </Suspense>
           )}
         </div>
       )}
@@ -553,7 +558,7 @@ export default function VocabModulePage() {
             <h3 className="text-2xl font-black text-slate-900">
               {labels.vocab?.quickStudy || 'Quick Study'}{' '}
               <span className="text-slate-400 text-lg font-normal ml-2">
-                ({filteredWords.length})
+                ({listWords.length}/{filteredWords.length})
               </span>
             </h3>
             <div className="flex items-center gap-2">
@@ -585,7 +590,7 @@ export default function VocabModulePage() {
           </div>
 
           <div className="space-y-3">
-            {filteredWords.map(word => {
+            {listWords.map(word => {
               const isRevealed = masteredIds.has(word.id);
 
               // Replace Korean word in example sentence with masked version
@@ -706,47 +711,63 @@ export default function VocabModulePage() {
               );
             })}
           </div>
+          {listWords.length < filteredWords.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() =>
+                  setListVisibleCount(prev => Math.min(filteredWords.length, prev + 60))
+                }
+                className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
+              >
+                {labels.common?.loadMore || 'Load more'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Quiz Mode */}
       {viewState.mode === 'quiz' && filteredWords.length > 0 && (
         <div className="w-full max-w-4xl">
-          <VocabQuiz
-            key={`quiz-${selectedUnitId}-${gameWords.length}`}
-            words={gameWords}
-            onComplete={stats => console.log('Quiz completed:', stats)}
-            hasNextUnit={
-              selectedUnitId !== 'ALL' &&
-              availableUnits.indexOf(selectedUnitId as number) < availableUnits.length - 1
-            }
-            onNextUnit={() => {
-              if (selectedUnitId !== 'ALL') {
-                const currentIdx = availableUnits.indexOf(selectedUnitId as number);
-                if (currentIdx < availableUnits.length - 1) {
-                  setSelectedUnitId(availableUnits[currentIdx + 1]);
-                }
+          <Suspense fallback={<VocabModuleSkeleton />}>
+            <VocabQuiz
+              key={`quiz-${selectedUnitId}-${gameWords.length}`}
+              words={gameWords}
+              onComplete={stats => console.log('Quiz completed:', stats)}
+              hasNextUnit={
+                selectedUnitId !== 'ALL' &&
+                availableUnits.indexOf(selectedUnitId as number) < availableUnits.length - 1
               }
-            }}
-            currentUnitLabel={
-              selectedUnitId === 'ALL'
-                ? labels.vocab?.allUnits || 'All Units'
-                : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`
-            }
-            userId={user?.id}
-            language={language}
-          />
+              onNextUnit={() => {
+                if (selectedUnitId !== 'ALL') {
+                  const currentIdx = availableUnits.indexOf(selectedUnitId as number);
+                  if (currentIdx < availableUnits.length - 1) {
+                    setSelectedUnitId(availableUnits[currentIdx + 1]);
+                  }
+                }
+              }}
+              currentUnitLabel={
+                selectedUnitId === 'ALL'
+                  ? labels.vocab?.allUnits || 'All Units'
+                  : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`
+              }
+              userId={user?.id}
+              language={language}
+            />
+          </Suspense>
         </div>
       )}
 
       {/* Match Mode */}
       {viewState.mode === 'match' && filteredWords.length > 0 && (
         <div className="w-full max-w-4xl">
-          <VocabMatch
-            key={`match-${selectedUnitId}-${gameWords.length}`}
-            words={gameWords}
-            onComplete={(time, moves) => console.log('Match completed:', time, moves)}
-          />
+          <Suspense fallback={<VocabModuleSkeleton />}>
+            <VocabMatch
+              key={`match-${selectedUnitId}-${gameWords.length}`}
+              words={gameWords}
+              onComplete={(time, moves) => console.log('Match completed:', time, moves)}
+            />
+          </Suspense>
         </div>
       )}
 

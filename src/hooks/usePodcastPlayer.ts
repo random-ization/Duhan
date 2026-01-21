@@ -49,6 +49,8 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
   const { onEnded, onTimeUpdate, initialVolume = 1.0, initialSpeed = 1.0 } = options;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timeRafRef = useRef<number | null>(null);
+  const pendingTimeRef = useRef(0);
 
   // Audio state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -162,8 +164,14 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
       return;
     }
 
-    setCurrentTime(curr);
-    onTimeUpdate?.(curr);
+    pendingTimeRef.current = curr;
+    if (timeRafRef.current !== null) return;
+    timeRafRef.current = requestAnimationFrame(() => {
+      timeRafRef.current = null;
+      const nextTime = pendingTimeRef.current;
+      setCurrentTime(nextTime);
+      onTimeUpdate?.(nextTime);
+    });
   }, [abLoop, onTimeUpdate]);
 
   // Set up audio event listeners
@@ -196,6 +204,10 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
+      if (timeRafRef.current !== null) {
+        cancelAnimationFrame(timeRafRef.current);
+        timeRafRef.current = null;
+      }
     };
   }, [handleTimeUpdate, onEnded]);
 

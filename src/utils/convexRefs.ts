@@ -109,7 +109,9 @@ import { VocabStatsDto, VocabWordDto, DailyPhraseDto } from '../../convex/vocab'
 
 export const VOCAB = {
   getStats: qRef<{ courseId?: string }, VocabStatsDto>('vocab:getStats'),
-  getOfCourse: qRef<{ courseId: string; limit?: number }, VocabWordDto[]>('vocab:getOfCourse'),
+  getOfCourse: qRef<{ courseId: string; unitId?: number; limit?: number }, VocabWordDto[]>(
+    'vocab:getOfCourse'
+  ),
   getDailyPhrase: qRef<{ language?: string }, DailyPhraseDto | null>('vocab:getDailyPhrase'),
   // Mutations
   updateProgress: mRef<{ wordId: string; quality: number }, { success: boolean; progress: any }>(

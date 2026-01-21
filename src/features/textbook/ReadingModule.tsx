@@ -555,11 +555,20 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     position: { x: number; y: number };
     range: Range;
   } | null>(null);
+  const popoverStateRef = useRef<{
+    selectedWord: typeof selectedWord;
+    selectionToolbar: typeof selectionToolbar;
+  }>({ selectedWord: null, selectionToolbar: null });
   const [noteModal, setNoteModal] = useState<{
     text: string;
     startOffset: number;
     endOffset: number;
   } | null>(null);
+
+  useEffect(() => {
+    popoverStateRef.current.selectedWord = selectedWord;
+    popoverStateRef.current.selectionToolbar = selectionToolbar;
+  }, [selectedWord, selectionToolbar]);
 
   // Right panel tab
   const [activeTab, setActiveTab] = useState<'notes' | 'grammar' | 'ai'>('grammar');
@@ -696,6 +705,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   // Close popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      const { selectedWord, selectionToolbar } = popoverStateRef.current;
       if (selectedWord || selectionToolbar) {
         const target = e.target as HTMLElement;
         if (!target.closest('[data-popover]') && !target.dataset.word) {
@@ -706,7 +716,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedWord, selectionToolbar]);
+  }, []);
 
   const speak = useCallback(
     (text: string) => {

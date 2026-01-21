@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useQuery } from 'convex/react';
 import {
   Flame,
@@ -10,8 +10,9 @@ import {
   ChevronRight,
   RefreshCw,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { NoArgs, qRef } from '../../utils/convexRefs';
+
+const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
 
 interface LearnerStats {
   streak: number;
@@ -98,23 +99,9 @@ export const LearnerDashboard: React.FC = () => {
         {/* Weekly Chart (2/3) */}
         <div className="lg:col-span-2 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
           <h3 className="font-black text-lg mb-4">📊 本周学习时长</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={stats.weeklyActivity}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-              <XAxis dataKey="day" tick={{ fontSize: 13, fontWeight: 'bold' }} />
-              <YAxis tick={{ fontSize: 11 }} unit="分" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-                formatter={val => [`${val} 分钟`, '学习时长']}
-              />
-              <Bar dataKey="minutes" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<div className="h-[220px]" />}>
+            <WeeklyActivityChart data={stats.weeklyActivity} />
+          </Suspense>
         </div>
 
         {/* Continue Learning Card (1/3) */}

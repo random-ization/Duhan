@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { TopikExam, Language, Annotation } from '../../types';
 import {
   Clock,
@@ -17,10 +17,7 @@ import {
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
-import CanvasLayer, {
-  ToolType,
-  CanvasToolbar,
-} from '../../features/annotation/components/CanvasLayer';
+import type { ToolType } from '../../features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAnnotation';
 import { useMutation } from 'convex/react';
 import toast from 'react-hot-toast';
@@ -431,7 +428,26 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [canvasTool, setCanvasTool] = useState<ToolType>('pen');
     const [canvasColor, setCanvasColor] = useState('#1e293b');
+    const [canvasUi, setCanvasUi] = useState<null | {
+      Layer: React.ComponentType<any>;
+      Toolbar: React.ComponentType<any>;
+    }>(null);
     const paperContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (!isDrawingMode) return;
+      let cancelled = false;
+      void import('../../features/annotation/components/CanvasLayer').then(mod => {
+        if (cancelled) return;
+        setCanvasUi({ Layer: mod.default, Toolbar: mod.CanvasToolbar });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [isDrawingMode]);
+
+    const CanvasLayerComponent = canvasUi?.Layer;
+    const CanvasToolbarComponent = canvasUi?.Toolbar;
 
     // Use persistent canvas annotation hook
     const {
@@ -709,27 +725,38 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             {/* Canvas Layer - Drawing Mode */}
             {isDrawingMode && (
               <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }}>
-                <CanvasLayer
-                  data={canvasData}
-                  onChange={handleCanvasChange}
-                  readOnly={false}
-                  tool={canvasTool}
-                  color={canvasColor}
-                />
+                {CanvasLayerComponent ? (
+                  <CanvasLayerComponent
+                    data={canvasData}
+                    onChange={handleCanvasChange}
+                    readOnly={false}
+                    tool={canvasTool}
+                    color={canvasColor}
+                  />
+                ) : (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  </div>
+                )}
               </div>
             )}
 
             {/* Canvas Toolbar - Bottom Fixed when Drawing */}
             {isDrawingMode && (
               <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <CanvasToolbar
-                  tool={canvasTool}
-                  onToolChange={setCanvasTool}
-                  color={canvasColor}
-                  onColorChange={setCanvasColor}
-                  onUndo={handleCanvasUndo}
-                  onClear={handleCanvasClear}
-                />
+                {CanvasToolbarComponent ? (
+                  <CanvasToolbarComponent
+                    tool={canvasTool}
+                    onToolChange={setCanvasTool}
+                    color={canvasColor}
+                    onColorChange={setCanvasColor}
+                    onUndo={handleCanvasUndo}
+                    onClear={handleCanvasClear}
+                  />
+                ) : null}
               </div>
             )}
 
