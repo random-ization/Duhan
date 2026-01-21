@@ -29,7 +29,12 @@ const SubscriptionPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
+      <SEO
+        title={meta.title}
+        description={meta.description}
+        keywords={meta.keywords}
+        noIndex={meta.noIndex}
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header: Back Button & Language Selector */}
         <div className="mb-8 flex justify-between items-center">

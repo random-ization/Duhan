@@ -64,7 +64,12 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   return (
     <div className="max-w-4xl mx-auto">
-      <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
+      <SEO
+        title={meta.title}
+        description={meta.description}
+        keywords={meta.keywords}
+        noIndex={meta.noIndex}
+      />
       {/* Back Button */}
       <div className="mb-6">
         <BackButton onClick={() => navigate(-1)} />

@@ -3,7 +3,7 @@
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { SUPPORTED_LANGUAGES, PUBLIC_ROUTES, withLang } from './seoConfig.mjs';
+import { SUPPORTED_LANGUAGES, PUBLIC_ROUTES, withLang } from '../src/seo/publicRoutesData.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,11 +12,12 @@ const SITE_URL = 'https://koreanstudy.me';
 
 // Generate sitemap.xml
 function generateSitemap() {
-  const languageRoutes = SUPPORTED_LANGUAGES.flatMap(lang =>
-    PUBLIC_ROUTES.map(route => ({
-      path: withLang(lang, route),
-      changefreq: route === '/' ? 'weekly' : 'monthly',
-      priority: route === '/' ? '1.0' : '0.8',
+  const indexableRoutes = PUBLIC_ROUTES.filter((route) => route.indexable);
+  const languageRoutes = SUPPORTED_LANGUAGES.flatMap((lang) =>
+    indexableRoutes.map((route) => ({
+      path: withLang(lang, route.path),
+      changefreq: route.path === '/' ? 'weekly' : 'monthly',
+      priority: route.path === '/' ? '1.0' : '0.8',
     }))
   );
 
@@ -96,7 +97,7 @@ function main() {
     console.log('✅ Generated robots.txt');
 
     console.log('\n📊 SEO files generated successfully:');
-    console.log(`   - ${PUBLIC_ROUTES.length * SUPPORTED_LANGUAGES.length} routes in sitemap`);
+    console.log(`   - ${PUBLIC_ROUTES.filter((r) => r.indexable).length * SUPPORTED_LANGUAGES.length} routes in sitemap`);
     console.log(`   - Sitemap URL: ${SITE_URL}/sitemap.xml`);
   } catch (error) {
     console.error('❌ Error generating SEO files:', error);

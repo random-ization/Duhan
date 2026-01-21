@@ -1,21 +1,12 @@
-export const SUPPORTED_LANGUAGES = ['en', 'zh', 'vi', 'mn'];
+import {
+  SUPPORTED_LANGUAGES,
+  PUBLIC_ROUTES as PUBLIC_ROUTE_OBJECTS,
+  withLang,
+} from '../src/seo/publicRoutesData.mjs';
 
-export const PUBLIC_ROUTES = [
-  '/',
-  '/login',
-  '/register',
-  '/pricing',
-  '/terms',
-  '/privacy',
-  '/refund',
-  '/forgot-password',
-];
+export { SUPPORTED_LANGUAGES, withLang };
 
-export const withLang = (lang, route) => {
-  if (route === '/') return `/${lang}`;
-  return `/${lang}${route}`;
-};
+export const PUBLIC_ROUTES = PUBLIC_ROUTE_OBJECTS.map((r) => r.path);
 
 export const getLanguageRoutes = () =>
-  SUPPORTED_LANGUAGES.flatMap(lang => PUBLIC_ROUTES.map(route => withLang(lang, route)));
-
+  SUPPORTED_LANGUAGES.flatMap((lang) => PUBLIC_ROUTES.map((route) => withLang(lang, route)));

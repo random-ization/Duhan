@@ -57,7 +57,7 @@ export const useTTS = () => {
 
       try {
         const useFallback = options?.useFallback !== false;
-        const engine = options?.engine ?? 'auto';
+        const engine = options?.engine ?? 'edge';
 
         const playAudio = async (audioUrl: string, shouldRevoke: boolean): Promise<boolean> => {
           const audio = new Audio(audioUrl);

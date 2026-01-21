@@ -1,13 +1,22 @@
 {
-  "rewrites": [
-    {
-      "source": "/((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)",
-      "destination": "/en/$1"
-    }
-  ],
   "redirects": [
     {
+      "source": "/",
+      "destination": "/en",
+      "permanent": true
+    },
+    {
       "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)/",
+      "destination": "/en/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)",
+      "destination": "/en/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path((?!api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)/",
       "destination": "/:path",
       "permanent": true
     }

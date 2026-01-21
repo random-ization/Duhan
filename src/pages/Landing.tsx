@@ -40,7 +40,12 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen text-slate-900 font-sans antialiased overflow-x-hidden bg-[#F0F4F8] bg-[radial-gradient(#cbd5e1_1.5px,transparent_1.5px)] [background-size:24px_24px]">
-      <SEO title={meta.title} description={meta.description} keywords={meta.keywords} />
+      <SEO
+        title={meta.title}
+        description={meta.description}
+        keywords={meta.keywords}
+        noIndex={meta.noIndex}
+      />
 
       {/* JSON-LD Structured Data for SEO */}
       <script

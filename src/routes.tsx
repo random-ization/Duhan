@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -31,6 +31,7 @@ const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Podcast Pages
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
@@ -47,6 +48,11 @@ import { TextbookContent, TopikExam } from './types';
 
 // Loading fallback component with skeleton screen
 const PageLoader = () => <ContentSkeleton />;
+
+const RedirectToDefaultLanguage: React.FC = () => {
+  const location = useLocation();
+  return <Navigate to={`/${DEFAULT_LANGUAGE}${location.pathname}`} replace />;
+};
 
 interface AppRoutesProps {
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
@@ -178,8 +184,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/:tab" element={<AdminPage />} />
           </Route>
-          {/* 404 在当前语言下重定向到首页 */}
-          <Route path="*" element={<Navigate to={`/${lang || DEFAULT_LANGUAGE}`} replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </ErrorBoundary>
@@ -205,8 +210,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         }
       />
 
-      {/* Catch-all: redirect to default language */}
-      <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+      <Route path="*" element={<RedirectToDefaultLanguage />} />
     </Routes>
   );
 };

@@ -10,18 +10,6 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://koreanstudy.me/en/login</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/en/register</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://koreanstudy.me/en/pricing</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
@@ -46,28 +34,10 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://koreanstudy.me/en/forgot-password</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://koreanstudy.me/zh</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/zh/login</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/zh/register</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/pricing</loc>
@@ -94,28 +64,10 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://koreanstudy.me/zh/forgot-password</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://koreanstudy.me/vi</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/vi/login</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/vi/register</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/pricing</loc>
@@ -142,28 +94,10 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://koreanstudy.me/vi/forgot-password</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://koreanstudy.me/mn</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/mn/login</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/mn/register</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/pricing</loc>
@@ -185,12 +119,6 @@
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/refund</loc>
-    <lastmod>2026-01-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://koreanstudy.me/mn/forgot-password</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

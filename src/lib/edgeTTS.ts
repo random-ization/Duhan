@@ -213,10 +213,25 @@ class TTSClient {
       }
     });
   }
+  public async preconnect(): Promise<void> {
+    try {
+      await this.ensureConnection();
+    } catch {
+      // Silently fail - will retry on actual speak
+    }
+  }
 }
 
 // Global Singleton Instance
 const ttsClient = new TTSClient();
+
+/**
+ * Pre-warm the TTS WebSocket connection
+ * Call this on component mount to eliminate first-use connection delay
+ */
+export function preconnectTTS(): void {
+  ttsClient.preconnect().catch(() => {});
+}
 
 /**
  * Synthesize speech using Microsoft Edge TTS

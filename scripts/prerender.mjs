@@ -14,78 +14,15 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { SUPPORTED_LANGUAGES, withLang } from './seoConfig.mjs';
+import {
+  DEFAULT_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  PUBLIC_ROUTES,
+  withLang,
+} from '../src/seo/publicRoutesData.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Public routes under the language prefix (/:lang/*)
-const PUBLIC_ROUTES = [
-  {
-    path: '/',
-    meta: {
-      title: 'DuHan - Learn Korean Online | Interactive Korean Learning Platform',
-      description: "Master Korean with DuHan's interactive learning platform. Study vocabulary, grammar, TOPIK preparation, podcasts, and videos. Start your Korean learning journey today!",
-      keywords: 'Korean learning, learn Korean, Korean language, TOPIK, Korean vocabulary, Korean grammar, Korean courses',
-    },
-  },
-  {
-    path: '/login',
-    meta: {
-      title: 'Login - DuHan Korean Learning',
-      description: 'Sign in to DuHan to continue your Korean learning journey. Access your courses, progress, and personalized learning materials.',
-      keywords: 'login, sign in, Korean learning login',
-    },
-  },
-  {
-    path: '/register',
-    meta: {
-      title: 'Sign Up - DuHan Korean Learning',
-      description: 'Create your free DuHan account and start learning Korean today. Join thousands of students mastering Korean with our interactive platform.',
-      keywords: 'sign up, register, create account, start learning Korean',
-    },
-  },
-  {
-    path: '/pricing',
-    meta: {
-      title: 'Pricing Plans - DuHan Korean Learning',
-      description: 'Choose the perfect plan for your Korean learning journey. Access premium courses, TOPIK preparation, and exclusive content with DuHan.',
-      keywords: 'pricing, plans, subscription, Korean learning courses',
-    },
-  },
-  {
-    path: '/terms',
-    meta: {
-      title: 'Terms of Service - DuHan',
-      description: 'Read the terms of service for DuHan Korean learning platform. Learn about user rights, responsibilities, and platform usage guidelines.',
-      keywords: 'terms of service, legal, user agreement',
-    },
-  },
-  {
-    path: '/privacy',
-    meta: {
-      title: 'Privacy Policy - DuHan',
-      description: 'Learn how DuHan protects your privacy and handles your personal data. Our commitment to user privacy and data security.',
-      keywords: 'privacy policy, data protection, user privacy',
-    },
-  },
-  {
-    path: '/refund',
-    meta: {
-      title: 'Refund Policy - DuHan',
-      description: "Understand DuHan's refund policy for subscriptions and purchases. Learn about our refund process and eligibility requirements.",
-      keywords: 'refund policy, money back, cancellation',
-    },
-  },
-  {
-    path: '/forgot-password',
-    meta: {
-      title: 'Forgot Password - DuHan',
-      description: 'Reset your DuHan account password. Enter your email to receive password reset instructions.',
-      keywords: 'forgot password, reset password, account recovery',
-    },
-  },
-];
 
 const SITE_URL = 'https://koreanstudy.me';
 const DIST_DIR = join(__dirname, '..', 'dist');
@@ -96,6 +33,19 @@ const DIST_DIR = join(__dirname, '..', 'dist');
 function injectMetaTags(html, route) {
   const { title, description, keywords } = route.meta;
   const canonicalUrl = `${SITE_URL}${route.path}`;
+  const hreflangLinks = (() => {
+    const pathWithoutLang = route.path
+      .replace(/^\/(en|zh|vi|mn)(\/|$)/, '/')
+      .replace(/\/+$/, '') || '/';
+
+    const alternates = SUPPORTED_LANGUAGES.map((lng) => {
+      const href = `${SITE_URL}/${lng}${pathWithoutLang === '/' ? '' : pathWithoutLang}`;
+      return `<link rel="alternate" hrefLang="${lng}" href="${href}" />`;
+    }).join('\n');
+
+    const xDefaultHref = `${SITE_URL}/${DEFAULT_LANGUAGE}${pathWithoutLang === '/' ? '' : pathWithoutLang}`;
+    return `${alternates}\n<link rel="alternate" hrefLang="x-default" href="${xDefaultHref}" />`;
+  })();
 
   // Escape special regex characters and HTML entities
   function escapeHtml(text) {
@@ -142,7 +92,7 @@ function injectMetaTags(html, route) {
   html = replaceMetaContent(
     html,
     '<link\\s+rel="canonical"\\s+href="[^"]*"\\s*/?\\s*>',
-    `<link rel="canonical" href="${canonicalUrl}" />`
+    `<link rel="canonical" href="${canonicalUrl}" />\n${hreflangLinks}`
   );
 
   // Replace Open Graph tags
@@ -182,6 +132,19 @@ function injectMetaTags(html, route) {
     '<meta\\s+property="twitter:description"\\s+content="[^"]*"\\s*/?\\s*>',
     `<meta property="twitter:description" content="${escapeHtml(description)}" />`
   );
+
+  if (route.noIndex) {
+    const noIndexTag = '<meta name="robots" content="noindex, nofollow" />';
+    if (/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i.test(html)) {
+      html = replaceMetaContent(
+        html,
+        '<meta\\s+name="robots"\\s+content="[^"]*"\\s*/?\\s*>',
+        noIndexTag
+      );
+    } else {
+      html = html.replace(/<\/head>/i, `${noIndexTag}\n</head>`);
+    }
+  }
 
   return html;
 }
