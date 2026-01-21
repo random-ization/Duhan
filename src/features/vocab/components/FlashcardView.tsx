@@ -718,5 +718,6 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
   }
 );
 FlashcardView.displayName = 'FlashcardView';
+console.log('FlashcardView v2 loaded');
 
 export default FlashcardView;
