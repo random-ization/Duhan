@@ -26,6 +26,7 @@ interface FlashcardViewProps {
   }) => void;
   onSaveWord?: (word: ExtendedVocabularyItem) => void;
   onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void;
+  onSpeak?: (text: string) => void;
   courseId?: string;
 }
 
@@ -162,7 +163,16 @@ const FlashcardSettingsModal: React.FC<{
 };
 
 const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
-  ({ words: initialWords, settings, language, onComplete, onSaveWord, onCardReview, courseId }) => {
+  ({
+    words: initialWords,
+    settings,
+    language,
+    onComplete,
+    onSaveWord,
+    onCardReview,
+    onSpeak,
+    courseId,
+  }) => {
     const labels = useMemo(() => getLabels(language), [language]);
 
     // Local settings state
@@ -352,9 +362,13 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     // Auto TTS
     useEffect(() => {
       if (localSettings.autoTTS && currentCard && !isFlipped) {
-        speak(currentCard.korean);
+        if (onSpeak) {
+          onSpeak(currentCard.korean);
+        } else {
+          speak(currentCard.korean);
+        }
       }
-    }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped]);
+    }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped, onSpeak]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -441,7 +455,11 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
               className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
               onClick={e => {
                 e.stopPropagation();
-                speak(currentCard.korean);
+                if (onSpeak) {
+                  onSpeak(currentCard.korean);
+                } else {
+                  speak(currentCard.korean);
+                }
               }}
               onMouseDown={e => e.stopPropagation()}
             >

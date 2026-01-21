@@ -523,6 +523,7 @@ export default function VocabModulePage() {
                   toggleStar(word.id);
                 }
               }}
+              onSpeak={speakWord}
               onCardReview={async (word, result) => {
                 const isCorrect = typeof result === 'boolean' ? result : result > 1;
 
