@@ -1,5 +1,5 @@
 'use node';
-import { action, internalMutation, internalQuery } from './_generated/server';
+import { action } from './_generated/server';
 import { v } from 'convex/values';
 import crypto from 'crypto';
 import { makeFunctionReference } from 'convex/server';
@@ -17,7 +17,7 @@ const getCacheQuery = makeFunctionReference<
   'query',
   { key: string },
   { url: string; updatedAt: number } | null
->('tts:getCache') as unknown as FunctionReference<
+>('ttsCache:getCache') as unknown as FunctionReference<
   'query',
   'internal',
   { key: string },
@@ -28,7 +28,7 @@ const upsertCacheMutation = makeFunctionReference<
   'mutation',
   { key: string; url: string },
   { success: boolean }
->('tts:upsertCache') as unknown as FunctionReference<
+>('ttsCache:upsertCache') as unknown as FunctionReference<
   'mutation',
   'internal',
   { key: string; url: string },
@@ -334,37 +334,5 @@ export const getVoices = action({
         { id: 'zh-CN-XiaoyiNeural', name: 'Xiaoyi', gender: 'Female' },
       ],
     };
-  },
-});
-
-export const getCache = internalQuery({
-  args: { key: v.string() },
-  handler: async (ctx, args) => {
-    const row = await ctx.db
-      .query('tts_cache')
-      .withIndex('by_key', q => q.eq('key', args.key))
-      .first();
-    if (!row) return null;
-    return { url: row.url, updatedAt: row.updatedAt };
-  },
-});
-
-export const upsertCache = internalMutation({
-  args: { key: v.string(), url: v.string() },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query('tts_cache')
-      .withIndex('by_key', q => q.eq('key', args.key))
-      .first();
-    if (existing) {
-      await ctx.db.patch(existing._id, { url: args.url, updatedAt: Date.now() });
-    } else {
-      await ctx.db.insert('tts_cache', {
-        key: args.key,
-        url: args.url,
-        updatedAt: Date.now(),
-      });
-    }
-    return { success: true };
   },
 });
