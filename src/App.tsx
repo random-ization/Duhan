@@ -10,10 +10,6 @@ import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
-import { preconnectTTS } from './lib/edgeTTS';
-
-// Pre-warm TTS connection on app load
-preconnectTTS();
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({

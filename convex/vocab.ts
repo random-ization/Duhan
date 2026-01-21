@@ -328,26 +328,53 @@ export const getAll = query({
 export const getOfCourse = query({
   args: {
     courseId: v.string(),
-    unitId: v.optional(v.number()),
+    unitId: v.optional(v.union(v.number(), v.string())),
     limit: v.optional(v.number()), // Optional limit
   },
   handler: async (ctx, args): Promise<VocabWordDto[]> => {
     const userId = await getOptionalAuthUserId(ctx);
+    let effectiveCourseId = args.courseId;
+    const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+    if (instituteId) {
+      const institute = await ctx.db.get(instituteId);
+      if (institute) {
+        effectiveCourseId = institute.id || institute._id;
+      }
+    }
 
     // 1. Get appearances with optional limit
     const limit = args.limit || DEFAULT_VOCAB_LIMIT;
+    const normalizedUnitId =
+      args.unitId === undefined
+        ? undefined
+        : typeof args.unitId === 'number'
+          ? args.unitId
+          : Number(args.unitId);
+    if (normalizedUnitId !== undefined && Number.isNaN(normalizedUnitId)) {
+      return [];
+    }
+
     const appearances = await ctx.db
       .query('vocabulary_appearances')
       .withIndex('by_course_unit', q =>
-        args.unitId !== undefined
-          ? q.eq('courseId', args.courseId).eq('unitId', args.unitId)
-          : q.eq('courseId', args.courseId)
+        normalizedUnitId !== undefined
+          ? q.eq('courseId', effectiveCourseId).eq('unitId', normalizedUnitId)
+          : q.eq('courseId', effectiveCourseId)
       )
       .take(limit);
+    if (appearances.length === 0) {
+      return [];
+    }
 
     // 2. OPTIMIZATION: Batch fetch words and progress data
     // Get unique word IDs and batch fetch
-    const wordIds = [...new Set(appearances.map(a => a.wordId))];
+    const wordIds = [
+      ...new Set(
+        appearances
+          .map(a => ctx.db.normalizeId('words', a.wordId))
+          .filter((id): id is Id<'words'> => id !== null)
+      ),
+    ];
     const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
     const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
@@ -363,10 +390,12 @@ export const getOfCourse = query({
 
     // 3. Assemble data in memory
     const wordsWithData: (VocabWordDto | null)[] = appearances.map(app => {
-      const word = wordsMap.get(app.wordId.toString());
+      const wordId = ctx.db.normalizeId('words', app.wordId);
+      if (!wordId) return null;
+      const word = wordsMap.get(wordId.toString());
       if (!word) return null;
 
-      const progress = progressMap.get(app.wordId.toString());
+      const progress = progressMap.get(wordId.toString());
 
       return {
         _id: word._id,

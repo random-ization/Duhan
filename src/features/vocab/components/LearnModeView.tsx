@@ -34,7 +34,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
     const { speak: speakTTS } = useTTS();
     const speakKorean = useCallback(
       (text: string) => {
-        void speakTTS(text, { engine: 'edge' });
+        void speakTTS(text);
       },
       [speakTTS]
     );

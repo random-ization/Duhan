@@ -18,7 +18,7 @@ const ListView: React.FC<ListViewProps> = React.memo(({ words, settings, languag
   const { speak: speakTTS } = useTTS();
   const speakKorean = useCallback(
     (text: string) => {
-      void speakTTS(text, { engine: 'edge' });
+      void speakTTS(text);
     },
     [speakTTS]
   );

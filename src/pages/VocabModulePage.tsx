@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, Eye, EyeOff, Play, Square, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
-import { preconnectTTS } from '../lib/edgeTTS';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
 // import { updateVocabProgress } from '../services/vocabApi';
@@ -58,11 +57,6 @@ export default function VocabModulePage() {
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const { language } = useApp();
   const labels = getLabels(language);
-
-  // Pre-warm TTS WebSocket connection on mount for faster first speak
-  useEffect(() => {
-    preconnectTTS();
-  }, []);
 
   // Sync instituteId to context - only run when instituteId changes
   useEffect(() => {
@@ -204,7 +198,7 @@ export default function VocabModulePage() {
 
   const speakWord = useCallback(
     (text: string) => {
-      void speakTTS(text, { engine: 'edge' });
+      void speakTTS(text);
     },
     [speakTTS]
   );
@@ -225,7 +219,7 @@ export default function VocabModulePage() {
       if (!audioLoopRef.current) break;
 
       // Speak word
-      await speakTTS(word.korean, { engine: 'edge' });
+      await speakTTS(word.korean);
 
       if (!audioLoopRef.current) break;
 

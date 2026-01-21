@@ -203,7 +203,7 @@ const VideoPlayerPage: React.FC = () => {
 
   const speak = useCallback(
     (text: string) => {
-      void speakTTS(text, { engine: 'edge' });
+      void speakTTS(text);
     },
     [speakTTS]
   );

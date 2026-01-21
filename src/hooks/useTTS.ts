@@ -1,15 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
-import { synthesizeSpeech } from '../lib/edgeTTS';
 
 /**
- * Hook for Text-to-Speech using Edge TTS
+ * Hook for Text-to-Speech using Convex Azure TTS
  *
  * Features:
- * - Connects to Microsoft Edge TTS WebSocket API
- * - Falls back to Convex Azure TTS action as backup
- * - NO browser speechSynthesis fallback (intentionally disabled)
+ * - Uses Convex Azure TTS action
+ * - NO browser speechSynthesis fallback
  *
  * Usage:
  * const { speak, stop, isLoading } = useTTS();
@@ -23,6 +21,8 @@ export const useTTS = () => {
     >('tts:speak')
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cacheRef = useRef<Map<string, string> | null>(null);
+  const cacheReadyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const stop = useCallback(() => {
@@ -38,6 +38,17 @@ export const useTTS = () => {
     setIsLoading(false);
   }, []);
 
+  const getCache = useCallback(() => {
+    if (!cacheReadyRef.current) {
+      cacheRef.current = loadPersistedCache();
+      cacheReadyRef.current = true;
+    }
+    if (!cacheRef.current) {
+      cacheRef.current = new Map();
+    }
+    return cacheRef.current;
+  }, []);
+
   const speak = useCallback(
     async (
       text: string,
@@ -45,22 +56,19 @@ export const useTTS = () => {
         voice?: string;
         rate?: string;
         pitch?: string;
-        useFallback?: boolean;
-        engine?: 'auto' | 'convex' | 'edge' | 'browser';
       }
     ) => {
-      if (!text || text.trim().length === 0) return false;
+      const normalizedText = text?.trim();
+      if (!normalizedText) return false;
 
       // Stop any current audio
       stop();
       setIsLoading(true);
 
       try {
-        const useFallback = options?.useFallback !== false;
-        const engine = options?.engine ?? 'edge';
-
         const playAudio = async (audioUrl: string, shouldRevoke: boolean): Promise<boolean> => {
           const audio = new Audio(audioUrl);
+          audio.preload = 'auto';
           audioRef.current = audio;
           return new Promise<boolean>(resolve => {
             audio.onended = () => {
@@ -84,39 +92,19 @@ export const useTTS = () => {
           });
         };
 
-        // Browser TTS fallback intentionally disabled
-        const tryBrowserTTS = async (): Promise<boolean> => {
-          console.warn('TTS: Edge TTS failed, browser fallback is disabled');
-          setIsLoading(false);
-          return false;
-        };
-
-        const tryEdgeTTS = async (retries: number = 2): Promise<boolean> => {
-          for (let attempt = 0; attempt <= retries; attempt++) {
-            try {
-              const audioBlob = await synthesizeSpeech(text.trim(), {
-                voice: options?.voice,
-                rate: options?.rate,
-                pitch: options?.pitch,
-              });
-              const audioUrl = URL.createObjectURL(audioBlob);
-              return await playAudio(audioUrl, true);
-            } catch {
-              if (attempt < retries) {
-                // Brief delay before retry
-                await new Promise(r => setTimeout(r, 200));
-                continue;
-              }
-            }
-          }
-          setIsLoading(false);
-          return false;
-        };
-
         const tryConvexTTS = async (): Promise<boolean> => {
+          const voice = options?.voice || 'ko-KR-SunHiNeural';
+          const cacheKey = buildCacheKey(normalizedText, voice);
+          const cache = getCache();
+          const cachedUrl = touchCache(cache, cacheKey);
+          if (cachedUrl) {
+            persistCache(cache);
+            return await playAudio(cachedUrl, false);
+          }
+
           const result = (await speakAction({
-            text: text.trim(),
-            voice: options?.voice,
+            text: normalizedText,
+            voice,
             rate: options?.rate,
             pitch: options?.pitch,
           })) as {
@@ -133,6 +121,8 @@ export const useTTS = () => {
           }
 
           if (result.url) {
+            writeCache(cache, cacheKey, result.url);
+            persistCache(cache);
             return await playAudio(result.url, false);
           }
 
@@ -146,42 +136,84 @@ export const useTTS = () => {
           return false;
         };
 
-        if (engine === 'browser') {
-          return await tryBrowserTTS();
-        }
-
-        if (engine === 'edge') {
-          const ok = await tryEdgeTTS();
-          if (ok) return true;
-          return useFallback ? await tryBrowserTTS() : false;
-        }
-
-        if (engine === 'convex') {
-          const ok = await tryConvexTTS();
-          if (ok) return true;
-          if (!useFallback) return false;
-          const edgeOk = await tryEdgeTTS();
-          if (edgeOk) return true;
-          return await tryBrowserTTS();
-        }
-
-        const ok = await tryConvexTTS();
-        if (ok) return true;
-        const edgeOk = await tryEdgeTTS();
-        if (edgeOk) return true;
-        return useFallback ? await tryBrowserTTS() : false;
+        return await tryConvexTTS();
       } catch (error) {
         console.error('TTS error:', error);
         setIsLoading(false);
-        // Browser TTS fallback intentionally disabled
         return false;
       }
     },
-    [speakAction, stop]
+    [getCache, speakAction, stop]
   );
 
   return { speak, stop, isLoading };
 };
+
+const CACHE_KEY = 'ttsCacheV1';
+const MAX_CACHE_SIZE = 200;
+
+function buildCacheKey(text: string, voice: string): string {
+  return `${voice}|${text}`;
+}
+
+function loadPersistedCache(): Map<string, string> {
+  if (typeof window === 'undefined') return new Map();
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return new Map();
+    const entries = JSON.parse(raw);
+    if (!Array.isArray(entries)) return new Map();
+    const map = new Map<string, string>();
+    for (const entry of entries) {
+      if (Array.isArray(entry) && entry.length === 2) {
+        const [key, value] = entry;
+        if (typeof key === 'string' && typeof value === 'string') {
+          map.set(key, value);
+        }
+      }
+    }
+    while (map.size > MAX_CACHE_SIZE) {
+      const oldestKey = map.keys().next().value;
+      if (!oldestKey) break;
+      map.delete(oldestKey);
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+function persistCache(cache: Map<string, string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    const entries = Array.from(cache.entries());
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
+  } catch {
+    return;
+  }
+}
+
+function touchCache(cache: Map<string, string>, key: string): string | undefined {
+  const value = cache.get(key);
+  if (value) {
+    cache.delete(key);
+    cache.set(key, value);
+  }
+  return value;
+}
+
+function writeCache(cache: Map<string, string>, key: string, value: string) {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, value);
+  if (cache.size > MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+}
 
 // Helper: Convert base64 to Blob
 function base64ToBlob(base64: string, mimeType: string): Blob {

@@ -598,6 +598,13 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_identifier', ['identifier']),
 
+  // TTS Cache Index
+  tts_cache: defineTable({
+    key: v.string(),
+    url: v.string(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
   // Global Site Settings
   site_settings: defineTable({
     key: v.string(), // "logo", "theme", "meta"

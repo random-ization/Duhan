@@ -184,7 +184,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           onSpeak(text);
           return;
         }
-        void speakTTS(text, { engine: 'edge' });
+        void speakTTS(text);
       },
       [onSpeak, speakTTS]
     );

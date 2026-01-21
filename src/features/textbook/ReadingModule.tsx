@@ -720,7 +720,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
   const speak = useCallback(
     (text: string) => {
-      void speakTTS(text, { engine: 'edge' });
+      void speakTTS(text);
     },
     [speakTTS]
   );
