@@ -1,11 +1,12 @@
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
-import { useMutation } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useTTS } from '../../../hooks/useTTS';
 import { getLabels } from '../../../utils/i18n';
 import { Language } from '../../../types';
-import { mRef } from '../../../utils/convexRefs';
+import { mRef, aRef } from '../../../utils/convexRefs';
+import { Rating } from '../../../utils/srsAlgorithm';
 
 interface VocabItem {
   id: string;
@@ -273,9 +274,67 @@ function VocabQuizComponent({
     return generated;
   };
 
-  // Convex Mutation
-  const updateProgressMutation = useMutation(
-    mRef<{ wordId: Id<'words'>; quality: number }, void>('vocab:updateProgress')
+  // FSRS Action for calculating next schedule
+  const calculateNextSchedule = useAction(
+    aRef<
+      { currentCard?: Record<string, unknown>; rating: number; now?: number },
+      Record<string, unknown>
+    >('fsrs:calculateNextSchedule')
+  );
+
+  // FSRS Mutation for saving progress
+  const updateProgressV2 = useMutation(
+    mRef<
+      {
+        wordId: Id<'words'>;
+        rating: number;
+        fsrsState: {
+          state: number;
+          due: number;
+          stability: number;
+          difficulty: number;
+          elapsed_days: number;
+          scheduled_days: number;
+          learning_steps: number;
+          reps: number;
+          lapses: number;
+          last_review: number | null;
+        };
+      },
+      { success: boolean; progress: Record<string, unknown> }
+    >('vocab:updateProgressV2')
+  );
+
+  // Helper to record progress using FSRS
+  const recordProgress = useCallback(
+    async (wordId: string, isCorrect: boolean) => {
+      try {
+        const rating = isCorrect ? Rating.Good : Rating.Again;
+        const fsrsResult = await calculateNextSchedule({
+          rating,
+          now: Date.now(),
+        });
+        await updateProgressV2({
+          wordId: wordId as Id<'words'>,
+          rating,
+          fsrsState: fsrsResult as {
+            state: number;
+            due: number;
+            stability: number;
+            difficulty: number;
+            elapsed_days: number;
+            scheduled_days: number;
+            learning_steps: number;
+            reps: number;
+            lapses: number;
+            last_review: number | null;
+          },
+        });
+      } catch (error) {
+        console.warn('[FSRS] Failed to record progress:', error);
+      }
+    },
+    [calculateNextSchedule, updateProgressV2]
   );
 
   // Initial load
@@ -311,12 +370,9 @@ function VocabQuizComponent({
         setOptionStates(prev => prev.map((_, i) => (i === index ? 'correct' : 'normal')));
         setCorrectCount(c => c + 1);
         playCorrectSound();
-        // Record progress (quality 5 = correct)
+        // Record progress using FSRS
         if (userId && currentQuestion.targetWord.id) {
-          updateProgressMutation({
-            wordId: currentQuestion.targetWord.id as Id<'words'>,
-            quality: 5,
-          }).catch(console.warn);
+          recordProgress(currentQuestion.targetWord.id, true);
         }
         // Mark as mastered
         setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
@@ -329,12 +385,9 @@ function VocabQuizComponent({
           })
         );
         playWrongSound();
-        // Record progress (quality 0 = wrong)
+        // Record progress using FSRS
         if (userId && currentQuestion.targetWord.id) {
-          updateProgressMutation({
-            wordId: currentQuestion.targetWord.id as Id<'words'>,
-            quality: 0,
-          }).catch(console.warn);
+          recordProgress(currentQuestion.targetWord.id, false);
         }
         // Add to wrong words for retry
         setWrongWords(prev => {
@@ -367,24 +420,18 @@ function VocabQuizComponent({
       setWritingState('CORRECT');
       setCorrectCount(c => c + 1);
       playCorrectSound();
-      // Record progress (quality 5 = correct)
+      // Record progress using FSRS
       if (userId && currentQuestion.targetWord.id) {
-        updateProgressMutation({
-          wordId: currentQuestion.targetWord.id as Id<'words'>,
-          quality: 5,
-        }).catch(console.warn);
+        recordProgress(currentQuestion.targetWord.id, true);
       }
       // Mark as mastered
       setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
     } else {
       setWritingState('WRONG');
       playWrongSound();
-      // Record progress (quality 0 = wrong)
+      // Record progress using FSRS
       if (userId && currentQuestion.targetWord.id) {
-        updateProgressMutation({
-          wordId: currentQuestion.targetWord.id as Id<'words'>,
-          quality: 0,
-        }).catch(console.warn);
+        recordProgress(currentQuestion.targetWord.id, false);
       }
       // Add to wrong words for retry
       setWrongWords(prev => {

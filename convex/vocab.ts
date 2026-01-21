@@ -528,8 +528,8 @@ export const updateProgress = mutation({
       // Update existing
       if (quality >= 4) {
         // Correct
-        streak = existingProgress.streak + 1;
-        interval = existingProgress.interval * 2; // Simple exponential
+        streak = (existingProgress.streak ?? 0) + 1;
+        interval = (existingProgress.interval ?? 1) * 2; // Simple exponential
         status = interval > 30 ? 'MASTERED' : 'REVIEW';
       } else {
         // Wrong
@@ -590,6 +590,98 @@ export const updateProgress = mutation({
           streak,
           lastReviewedAt: now,
           nextReviewAt,
+        },
+      };
+    }
+  },
+});
+
+// Update User Progress using FSRS Algorithm (V2)
+// Rating: 1=Again, 2=Hard, 3=Good, 4=Easy
+export const updateProgressV2 = mutation({
+  args: {
+    wordId: v.id('words'),
+    rating: v.number(), // 1-4 (FSRS Rating enum)
+    // FSRS card state from action calculation
+    fsrsState: v.object({
+      state: v.number(),
+      due: v.number(),
+      stability: v.number(),
+      difficulty: v.number(),
+      elapsed_days: v.number(),
+      scheduled_days: v.number(),
+      learning_steps: v.number(),
+      reps: v.number(),
+      lapses: v.number(),
+      last_review: v.union(v.number(), v.null()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const { wordId, fsrsState } = args;
+    const now = Date.now();
+
+    // Map FSRS state to legacy status for backward compatibility
+    const stateToStatus = (state: number): string => {
+      switch (state) {
+        case 0:
+          return 'NEW';
+        case 1:
+          return 'LEARNING';
+        case 2:
+          return fsrsState.stability > 30 ? 'MASTERED' : 'REVIEW';
+        case 3:
+          return 'LEARNING'; // Relearning → LEARNING
+        default:
+          return 'LEARNING';
+      }
+    };
+
+    const existingProgress = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
+      .unique();
+
+    const progressData = {
+      // FSRS fields
+      state: fsrsState.state,
+      due: fsrsState.due,
+      stability: fsrsState.stability,
+      difficulty: fsrsState.difficulty,
+      elapsed_days: fsrsState.elapsed_days,
+      scheduled_days: fsrsState.scheduled_days,
+      learning_steps: fsrsState.learning_steps,
+      reps: fsrsState.reps,
+      lapses: fsrsState.lapses,
+      last_review: fsrsState.last_review ?? now,
+      // Legacy fields for backward compatibility
+      status: stateToStatus(fsrsState.state),
+      interval: fsrsState.scheduled_days,
+      streak: fsrsState.reps,
+      nextReviewAt: fsrsState.due,
+      lastReviewedAt: now,
+    };
+
+    if (existingProgress) {
+      await ctx.db.patch(existingProgress._id, progressData);
+      return {
+        success: true,
+        progress: {
+          id: existingProgress._id,
+          ...progressData,
+        },
+      };
+    } else {
+      const progressId = await ctx.db.insert('user_vocab_progress', {
+        userId,
+        wordId,
+        ...progressData,
+      });
+      return {
+        success: true,
+        progress: {
+          id: progressId,
+          ...progressData,
         },
       };
     }
@@ -856,9 +948,9 @@ export const getDueForReview = query({
         audioUrl: word.audioUrl,
         progress: {
           id: progress._id,
-          status: progress.status,
-          interval: progress.interval,
-          streak: progress.streak,
+          status: progress.status ?? 'LEARNING',
+          interval: progress.interval ?? 1,
+          streak: progress.streak ?? 0,
           nextReviewAt: progress.nextReviewAt ?? null,
           lastReviewedAt: progress.lastReviewedAt ?? null,
         },

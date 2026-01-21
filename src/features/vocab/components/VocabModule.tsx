@@ -58,6 +58,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     learn: {
       batchSize: 20,
       random: true,
+      ratingMode: 'PASS_FAIL', // Default: 2-button mode (Pass/Fail)
       types: {
         multipleChoice: true,
         writing: false,

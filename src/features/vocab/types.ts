@@ -18,6 +18,7 @@ export interface VocabSettings {
   learn: {
     batchSize: number;
     random: boolean;
+    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS'; // FSRS rating button mode
     types: {
       multipleChoice: boolean;
       writing: boolean;

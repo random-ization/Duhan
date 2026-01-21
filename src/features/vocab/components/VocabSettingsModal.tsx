@@ -255,6 +255,52 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
 
                 <hr className="border-slate-100" />
 
+                {/* Rating Mode Selection (FSRS) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                    {labels.ratingMode || '评分模式'}
+                  </label>
+                  <div className="flex bg-slate-100 p-1 rounded-lg">
+                    <button
+                      onClick={() =>
+                        setLocalSettings(s => ({
+                          ...s,
+                          learn: { ...s.learn, ratingMode: 'PASS_FAIL' },
+                        }))
+                      }
+                      className={`flex-1 px-3 py-2 text-sm font-bold rounded-md transition-all ${
+                        localSettings.learn.ratingMode === 'PASS_FAIL'
+                          ? 'bg-white shadow text-indigo-600'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      ✓/✗ {labels.passFail || '对/错'}
+                    </button>
+                    <button
+                      onClick={() =>
+                        setLocalSettings(s => ({
+                          ...s,
+                          learn: { ...s.learn, ratingMode: 'FOUR_BUTTONS' },
+                        }))
+                      }
+                      className={`flex-1 px-3 py-2 text-sm font-bold rounded-md transition-all ${
+                        localSettings.learn.ratingMode === 'FOUR_BUTTONS'
+                          ? 'bg-white shadow text-indigo-600'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      🎚️ {labels.fourButtons || '4级评分'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {localSettings.learn.ratingMode === 'PASS_FAIL'
+                      ? labels.passFailDesc || '简单模式：对或错'
+                      : labels.fourButtonsDesc || '详细模式：忘记/困难/正常/轻松'}
+                  </p>
+                </div>
+
+                <hr className="border-slate-100" />
+
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
                     {labels.questionTypes}

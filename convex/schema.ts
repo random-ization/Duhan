@@ -202,18 +202,35 @@ export default defineSchema({
     .index('by_word_course_unit', ['wordId', 'courseId', 'unitId'])
     .index('by_unit', ['unitId']),
 
-  // User Vocab Progress (SRS)
+  // User Vocab Progress (SRS + FSRS)
   user_vocab_progress: defineTable({
     userId: v.id('users'),
     wordId: v.id('words'),
-    status: v.string(), // "NEW", "LEARNING", "REVIEW", "MASTERED"
-    nextReviewAt: v.optional(v.number()),
-    interval: v.number(),
-    streak: v.number(),
-    lastReviewedAt: v.number(),
+
+    // Legacy fields (kept for backward compatibility during migration)
+    status: v.optional(v.string()), // "NEW", "LEARNING", "REVIEW", "MASTERED"
+    interval: v.optional(v.number()),
+    streak: v.optional(v.number()),
+
+    // FSRS Core Fields
+    state: v.optional(v.number()), // 0=New, 1=Learning, 2=Review, 3=Relearning
+    due: v.optional(v.number()), // Next review timestamp
+    stability: v.optional(v.number()), // Memory stability (days)
+    difficulty: v.optional(v.number()), // Card difficulty (1-10)
+    elapsed_days: v.optional(v.number()), // Days since last review
+    scheduled_days: v.optional(v.number()), // Days until next review
+    learning_steps: v.optional(v.number()), // Current learning step
+    reps: v.optional(v.number()), // Total review count
+    lapses: v.optional(v.number()), // Forgot count
+
+    // Shared fields
+    nextReviewAt: v.optional(v.number()), // Legacy alias for due
+    lastReviewedAt: v.optional(v.number()), // Last review timestamp
+    last_review: v.optional(v.number()), // FSRS alias for lastReviewedAt
   })
     .index('by_user_word', ['userId', 'wordId'])
     .index('by_user_next_review', ['userId', 'nextReviewAt'])
+    .index('by_user_due', ['userId', 'due'])
     .index('by_user', ['userId']),
 
   // Grammar Points (Master Library)
