@@ -10,6 +10,8 @@ import PricingSection from '../components/PricingSection';
 import { aRef } from '../utils/convexRefs';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { notify } from '../utils/notify';
+import { logger } from '../utils/logger';
 
 const SubscriptionPage: React.FC = () => {
   const { user } = useAuth();
@@ -260,9 +262,9 @@ const SubscriptionPage: React.FC = () => {
               window.location.href = checkoutUrl;
             } catch (error) {
               const err = error as Error;
-              console.error('Checkout failed:', err);
+              logger.error('Checkout failed:', err);
               const msg = err.message || 'Unknown error';
-              alert(`Failed to start checkout session: ${msg}`);
+              notify.error(`Failed to start checkout session: ${msg}`);
             }
           }}
         />

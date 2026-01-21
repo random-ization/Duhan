@@ -66,14 +66,7 @@ export const useApp = () => {
 
     // Data context
     institutes: data.institutes,
-    textbookContexts: data.textbookContexts,
     topikExams: data.topikExams,
-    fetchInitialData: data.fetchInitialData,
-    addInstitute: data.addInstitute,
-    deleteInstitute: data.deleteInstitute,
-    saveTextbookContext: data.saveTextbookContext,
-    saveTopikExam: data.saveTopikExam,
-    deleteTopikExam: data.deleteTopikExam,
 
     // Layout context
     isEditing: layout.isEditing,

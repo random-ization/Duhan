@@ -23,6 +23,7 @@ import {
 import BackButton from '../components/ui/BackButton';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { logger } from '../utils/logger';
 
 // Types
 interface TranscriptLine {
@@ -301,7 +302,7 @@ const PodcastPlayerPage: React.FC = () => {
                     })
                   );
                 } catch (storageError) {
-                  console.warn('Failed to cache transcript locally', storageError);
+                  logger.warn('Failed to cache transcript locally', storageError);
                 }
               }
               return;
@@ -334,7 +335,7 @@ const PodcastPlayerPage: React.FC = () => {
                 );
               }
             } catch (storageError) {
-              console.warn('Failed to cache generated transcript', storageError);
+              logger.warn('Failed to cache generated transcript', storageError);
             }
           } else {
             throw new Error(result?.error || 'Invalid transcript response');

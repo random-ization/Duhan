@@ -4,6 +4,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useUserActions } from '../hooks/useUserActions';
 import { useQuery } from 'convex/react';
 import { Target, Clock, ArrowRight, Archive, History, Headphones, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -20,7 +21,8 @@ interface TopikPageProps {
 }
 
 const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { user, language, saveExamAttempt, saveAnnotation, deleteExamAttempt } = useAuth();
+  const { user, language } = useAuth();
+  const { saveExamAttempt, saveAnnotation, deleteExamAttempt } = useUserActions();
   const { topikExams } = useData();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();

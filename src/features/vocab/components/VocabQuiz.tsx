@@ -7,6 +7,7 @@ import { getLabels } from '../../../utils/i18n';
 import { Language } from '../../../types';
 import { mRef, aRef } from '../../../utils/convexRefs';
 import { Rating } from '../../../utils/srsAlgorithm';
+import { logger } from '../../../utils/logger';
 
 interface VocabItem {
   id: string;
@@ -118,7 +119,7 @@ function VocabQuizComponent({
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + 0.3);
     } catch (e) {
-      console.warn('Sound effect failed:', e);
+      logger.warn('Sound effect failed:', e);
     }
   };
 
@@ -143,7 +144,7 @@ function VocabQuizComponent({
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + 0.25);
     } catch (e) {
-      console.warn('Sound effect failed:', e);
+      logger.warn('Sound effect failed:', e);
     }
   };
 
@@ -331,7 +332,7 @@ function VocabQuizComponent({
           },
         });
       } catch (error) {
-        console.warn('[FSRS] Failed to record progress:', error);
+        logger.warn('[FSRS] Failed to record progress:', error);
       }
     },
     [calculateNextSchedule, updateProgressV2]

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { notify } from '../utils/notify';
 
 interface PricingSectionProps {
   onSubscribe?: (planId: string) => void;
@@ -60,7 +61,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
       onSubscribe(planId);
     } else {
       // Fallback default behavior
-      alert(t('pricing.paymentUpgrading'));
+      notify.info(t('pricing.paymentUpgrading'));
     }
   };
 

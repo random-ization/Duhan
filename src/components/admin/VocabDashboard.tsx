@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
-import { Id } from '../../convex/_generated/dataModel';
+import { Id } from '../../../convex/_generated/dataModel';
 import * as XLSX from 'xlsx';
-import { makeFunctionReference } from 'convex/server';
+import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
+import { notify } from '../../utils/notify';
+import { logger } from '../../utils/logger';
 import {
   BarChart3,
   BookOpen,
@@ -45,25 +47,19 @@ interface InstituteRow {
 const ITEMS_PER_PAGE = 20;
 
 const VocabDashboard: React.FC = () => {
-  const institutes = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
-    makeFunctionReference('institutes:getAll'),
-    {}
-  ) as InstituteRow[] | undefined;
+  const institutes = useQuery(INSTITUTES.getAll, {}) as unknown as InstituteRow[] | undefined;
   const [selectedCourse, setSelectedCourse] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [editingWord, setEditingWord] = useState<WordRow | null>(null);
   const [editForm, setEditForm] = useState<Partial<WordRow>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Field filters
   const [meaningFilter, setMeaningFilter] = useState<'all' | 'filled' | 'empty'>('all');
   const [posFilter, setPosFilter] = useState<string>('ALL');
   const [unitFrom, setUnitFrom] = useState<string>('');
   const [unitTo, setUnitTo] = useState<string>('');
 
-  const updateVocab = (
-    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('vocab:updateVocab'));
+  const updateVocab = useMutation(VOCAB.updateVocab);
 
   const resolvedCourse =
     selectedCourse === 'ALL' ? institutes?.[0]?.id || institutes?.[0]?._id || '' : selectedCourse;
@@ -73,18 +69,13 @@ const VocabDashboard: React.FC = () => {
     status,
     loadMore,
   } = (usePaginatedQuery as unknown as (...args: any[]) => any)(
-    makeFunctionReference('vocab:getAllPaginated'),
-    // Provide clean args without limit, let hook manage pagination
+    VOCAB.getAllPaginated,
     selectedCourse === 'ALL' ? {} : { courseId: selectedCourse },
     { initialNumItems: ITEMS_PER_PAGE }
   );
 
-  const stats = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
-    makeFunctionReference('vocab:getStats'),
-    { courseId: resolvedCourse || '' }
-  ) as any;
+  const stats = useQuery(VOCAB.getStats, { courseId: resolvedCourse || '' }) as any;
 
-  // Get unique POS values for filter dropdown
   const posOptions = useMemo(() => {
     if (!words) return [];
     const posSet = new Set((words as WordRow[]).map(w => w.partOfSpeech || '').filter(Boolean));
@@ -95,7 +86,6 @@ const VocabDashboard: React.FC = () => {
     if (!words) return [];
     let result = words as WordRow[];
 
-    // Search filter
     if (search.trim()) {
       const term = search.toLowerCase();
       result = result.filter(
@@ -106,19 +96,16 @@ const VocabDashboard: React.FC = () => {
       );
     }
 
-    // Meaning status filter
     if (meaningFilter === 'filled') {
       result = result.filter(w => w.meaning && w.meaning.trim() !== '');
     } else if (meaningFilter === 'empty') {
       result = result.filter(w => !w.meaning || w.meaning.trim() === '');
     }
 
-    // POS filter
     if (posFilter !== 'ALL') {
       result = result.filter(w => w.partOfSpeech === posFilter);
     }
 
-    // Unit range filter
     const fromUnit = unitFrom ? parseInt(unitFrom) : null;
     const toUnit = unitTo ? parseInt(unitTo) : null;
     if (fromUnit !== null || toUnit !== null) {
@@ -133,15 +120,7 @@ const VocabDashboard: React.FC = () => {
     return result;
   }, [words, search, meaningFilter, posFilter, unitFrom, unitTo]);
 
-  // Pagination (Frontend - Removed, using Infinite Scroll)
-  // We display all filtered words from the loaded set
-  const paginatedWords = filteredWords; // No client slicing
-
-  // No page reset needed for infinite scroll list
-  // React.useEffect(() => {
-  //   setCurrentPage(1);
-  // }, [search, selectedCourse, meaningFilter, posFilter, unitFrom, unitTo]);
-
+  const paginatedWords = filteredWords;
   const totalWords = words?.length ?? 0;
 
   const openEditModal = (word: WordRow) => {
@@ -189,8 +168,8 @@ const VocabDashboard: React.FC = () => {
       });
       closeEditModal();
     } catch (error) {
-      console.error('Failed to update:', error);
-      alert('保存失败: ' + (error as Error).message);
+      logger.error('Failed to update:', error);
+      notify.error('保存失败: ' + (error as Error).message);
     } finally {
       setIsSaving(false);
     }
@@ -198,11 +177,10 @@ const VocabDashboard: React.FC = () => {
 
   const handleExport = () => {
     if (!filteredWords.length) {
-      alert('没有可导出的数据');
+      notify.error('没有可导出的数据');
       return;
     }
 
-    // Prepare data with headers
     const exportData = filteredWords.map(w => ({
       单元: w.unitId || '',
       韩语: w.word,
@@ -223,7 +201,6 @@ const VocabDashboard: React.FC = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '词汇');
 
-    // Generate filename with date
     const date = new Date().toISOString().slice(0, 10);
     const courseName =
       selectedCourse === 'ALL'
@@ -256,7 +233,6 @@ const VocabDashboard: React.FC = () => {
           >
             <option value="ALL">全部教材</option>
             {(institutes || []).map(inst => {
-              // Build display name with level and volume
               let displayName = inst.name || '';
               if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
               if (inst.volume) displayName += ` ${inst.volume}`;
@@ -277,11 +253,9 @@ const VocabDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Row */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
         <span className="text-xs font-bold text-zinc-500 uppercase">筛选：</span>
 
-        {/* Meaning Status */}
         <div className="flex items-center gap-1 bg-white rounded-lg border border-zinc-200 p-0.5">
           <button
             onClick={() => setMeaningFilter('all')}
@@ -303,7 +277,6 @@ const VocabDashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* POS Filter */}
         <select
           value={posFilter}
           onChange={e => setPosFilter(e.target.value)}
@@ -317,7 +290,6 @@ const VocabDashboard: React.FC = () => {
           ))}
         </select>
 
-        {/* Unit Range */}
         <div className="flex items-center gap-1 text-xs">
           <span className="text-zinc-500">课数：</span>
           <input
@@ -337,7 +309,6 @@ const VocabDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Result count */}
         <span className="ml-auto text-xs text-zinc-500">
           筛选结果：<span className="font-bold text-zinc-900">{filteredWords.length}</span> 条
         </span>
@@ -387,7 +358,6 @@ const VocabDashboard: React.FC = () => {
             <span>
               已加载 {words?.length || 0} 条 · 当前显示 {filteredWords.length} 条
             </span>
-            {/* Previous/Next buttons removed for infinite scroll */}
           </div>
         </div>
 
@@ -474,8 +444,6 @@ const VocabDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Pagination Footer */}
-        {/* Infinite Scroll Footer */}
         <div className="flex flex-col items-center justify-center gap-2 py-4 border-t border-zinc-200 bg-zinc-50">
           <div className="text-xs text-zinc-500 mb-2">
             已加载 {words?.length || 0} 个词条 ({filteredWords.length} 显示)
@@ -499,7 +467,6 @@ const VocabDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Edit Modal */}
       {editingWord && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">

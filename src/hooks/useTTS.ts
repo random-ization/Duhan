@@ -1,6 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
+import { synthesizeSpeech } from '../lib/edgeTTS';
 
 /**
  * Hook for Text-to-Speech using Azure Cognitive Services with S3 caching
@@ -22,7 +23,7 @@ export const useTTS = () => {
     >('tts:speak')
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isLoadingRef = useRef<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -34,6 +35,7 @@ export const useTTS = () => {
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
     }
+    setIsLoading(false);
   }, []);
 
   const speak = useCallback(
@@ -44,67 +46,140 @@ export const useTTS = () => {
         rate?: string;
         pitch?: string;
         useFallback?: boolean;
+        engine?: 'auto' | 'convex' | 'edge' | 'browser';
       }
     ) => {
       if (!text || text.trim().length === 0) return false;
 
       // Stop any current audio
       stop();
-      isLoadingRef.current = true;
+      setIsLoading(true);
 
       try {
-        const result = (await speakAction({
-          text: text.trim(),
-          voice: options?.voice,
-          rate: options?.rate,
-          pitch: options?.pitch,
-        })) as { success: boolean; url?: string; audio?: string; format?: string; error?: string };
+        const useFallback = options?.useFallback !== false;
+        const engine = options?.engine ?? 'auto';
 
-        if (result.success) {
-          let audioUrl: string;
-
-          // Prefer URL (S3 CDN) over base64
-          if (result.url) {
-            audioUrl = result.url;
-          } else if (result.audio) {
-            const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
-            audioUrl = URL.createObjectURL(audioBlob);
-          } else {
-            throw new Error('No audio data received');
-          }
-
+        const playAudio = async (audioUrl: string, shouldRevoke: boolean): Promise<boolean> => {
           const audio = new Audio(audioUrl);
           audioRef.current = audio;
-
           return new Promise<boolean>(resolve => {
             audio.onended = () => {
-              // Only revoke if it was a blob URL
-              if (!result.url) {
-                URL.revokeObjectURL(audioUrl);
-              }
+              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
               audioRef.current = null;
-              isLoadingRef.current = false;
+              setIsLoading(false);
               resolve(true);
             };
             audio.onerror = () => {
-              if (!result.url) {
-                URL.revokeObjectURL(audioUrl);
-              }
+              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
               audioRef.current = null;
-              isLoadingRef.current = false;
+              setIsLoading(false);
               resolve(false);
             };
             audio.play().catch(() => {
-              isLoadingRef.current = false;
+              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+              audioRef.current = null;
+              setIsLoading(false);
               resolve(false);
             });
           });
-        } else {
-          throw new Error(result.error || 'TTS failed');
+        };
+
+        const tryBrowserTTS = async (): Promise<boolean> => {
+          if ('speechSynthesis' in window) {
+            return new Promise<boolean>(resolve => {
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = 'ko-KR';
+              utterance.rate = 0.9;
+              utterance.onend = () => {
+                setIsLoading(false);
+                resolve(true);
+              };
+              utterance.onerror = () => {
+                setIsLoading(false);
+                resolve(false);
+              };
+              speechSynthesis.speak(utterance);
+            });
+          }
+          setIsLoading(false);
+          return false;
+        };
+
+        const tryEdgeTTS = async (): Promise<boolean> => {
+          try {
+            const audioBlob = await synthesizeSpeech(text.trim(), {
+              voice: options?.voice,
+              rate: options?.rate,
+              pitch: options?.pitch,
+            });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            return await playAudio(audioUrl, true);
+          } catch {
+            setIsLoading(false);
+            return false;
+          }
+        };
+
+        const tryConvexTTS = async (): Promise<boolean> => {
+          const result = (await speakAction({
+            text: text.trim(),
+            voice: options?.voice,
+            rate: options?.rate,
+            pitch: options?.pitch,
+          })) as {
+            success: boolean;
+            url?: string;
+            audio?: string;
+            format?: string;
+            error?: string;
+          };
+
+          if (!result.success) {
+            setIsLoading(false);
+            return false;
+          }
+
+          if (result.url) {
+            return await playAudio(result.url, false);
+          }
+
+          if (result.audio) {
+            const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
+            const audioUrl = URL.createObjectURL(audioBlob);
+            return await playAudio(audioUrl, true);
+          }
+
+          setIsLoading(false);
+          return false;
+        };
+
+        if (engine === 'browser') {
+          return await tryBrowserTTS();
         }
+
+        if (engine === 'edge') {
+          const ok = await tryEdgeTTS();
+          if (ok) return true;
+          return useFallback ? await tryBrowserTTS() : false;
+        }
+
+        if (engine === 'convex') {
+          const ok = await tryConvexTTS();
+          if (ok) return true;
+          if (!useFallback) return false;
+          const edgeOk = await tryEdgeTTS();
+          if (edgeOk) return true;
+          return await tryBrowserTTS();
+        }
+
+        const ok = await tryConvexTTS();
+        if (ok) return true;
+        const edgeOk = await tryEdgeTTS();
+        if (edgeOk) return true;
+        return useFallback ? await tryBrowserTTS() : false;
       } catch (error) {
         console.error('Azure TTS error:', error);
-        isLoadingRef.current = false;
+        setIsLoading(false);
 
         // Fallback to browser TTS if enabled
         if (options?.useFallback !== false && 'speechSynthesis' in window) {
@@ -112,8 +187,14 @@ export const useTTS = () => {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ko-KR';
             utterance.rate = 0.9;
-            utterance.onend = () => resolve(true);
-            utterance.onerror = () => resolve(false);
+            utterance.onend = () => {
+              setIsLoading(false);
+              resolve(true);
+            };
+            utterance.onerror = () => {
+              setIsLoading(false);
+              resolve(false);
+            };
             speechSynthesis.speak(utterance);
           });
         }
@@ -123,7 +204,7 @@ export const useTTS = () => {
     [speakAction, stop]
   );
 
-  return { speak, stop, isLoading: isLoadingRef.current };
+  return { speak, stop, isLoading };
 };
 
 // Helper: Convert base64 to Blob

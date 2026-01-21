@@ -7,6 +7,8 @@ import BackButton from '../components/ui/BackButton';
 import { getLabels } from '../utils/i18n';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { notify } from '../utils/notify';
+import { logger } from '../utils/logger';
 
 interface Episode {
   title: string;
@@ -123,13 +125,13 @@ const PodcastChannelPage: React.FC = () => {
 
   const handleToggleSubscribe = async () => {
     if (!user) {
-      alert(labels.podcast?.loginRequired || 'Please login first');
+      notify.error(labels.podcast?.loginRequired || 'Please login first');
       return;
     }
 
     const channelInfo = data?.channel || stateChannel;
     if (!channelId || !channelInfo) {
-      console.error('Cannot subscribe: Missing channel info');
+      logger.error('Cannot subscribe: Missing channel info');
       return;
     }
 
@@ -148,8 +150,8 @@ const PodcastChannelPage: React.FC = () => {
       });
     } catch (err: unknown) {
       setIsSubscribed(oldState);
-      console.error('Failed to toggle subscription:', err);
-      alert(
+      logger.error('Failed to toggle subscription:', err);
+      notify.error(
         (labels.podcast?.subscribeFailed || 'Subscription failed: ') +
           (err instanceof Error ? err.message : 'Please try again later')
       );

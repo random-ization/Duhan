@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
-import { useConvex, useMutation, useQuery, useConvexAuth } from 'convex/react';
+import { useConvex, useQuery, useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
-import type { Id } from '../../convex/_generated/dataModel';
-import { User, Language, Annotation, ExamAttempt, TextbookContent, TopikExam } from '../types';
-import { mRef, NoArgs, qRef } from '../utils/convexRefs';
+import { User, Language, TextbookContent, TopikExam } from '../types';
+import { NoArgs, qRef } from '../utils/convexRefs';
+import { logger } from '../utils/logger';
 
 import i18n from '../utils/i18next-config';
 
@@ -28,18 +28,6 @@ interface AuthContextType {
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
   showUpgradePrompt: boolean;
   setShowUpgradePrompt: (show: boolean) => void;
-
-  // Missing methods used by TopikPage
-  saveExamAttempt: (attempt: ExamAttempt) => Promise<void>;
-  deleteExamAttempt: (attemptId: string) => Promise<void>;
-  saveAnnotation: (annotation: Annotation) => Promise<void>;
-  deleteAnnotation: (annotationId: string) => Promise<void>;
-  updateLearningProgress: (
-    institute: string,
-    level: number,
-    unit?: number,
-    module?: string
-  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Compatibility mode: if this is called, it might be from legacy manual login.
     // For Google Auth, we use signIn directly.
     // For manual email/pass, we should also use signIn if migrated.
-    console.warn('Manual login() called. Prefer useAuthActions().signIn()');
+    logger.warn('Manual login() called. Prefer useAuthActions().signIn()');
     // We can't easily "force" a session from client side with Convex Auth like this.
     // But if loggedInUser is passed, we can set state locally.
     setUserOverride(loggedInUser);
@@ -131,9 +119,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = useCallback(async (_email: string) => {
     try {
       // await requestPasswordResetMutation({ email });
-      console.warn('Reset password not yet implemented with Convex Auth');
+      logger.warn('Reset password not yet implemented with Convex Auth');
     } catch (err: unknown) {
-      console.error('Failed to request password reset:', err);
+      logger.error('Failed to request password reset:', err);
       throw err;
     }
   }, []);
@@ -146,108 +134,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return false; // Default safe
     },
     [user]
-  );
-
-  const saveAnnotationMutation = useMutation(
-    mRef<
-      {
-        contextKey: string;
-        text: string;
-        note?: string;
-        color?: string;
-        startOffset?: number;
-        endOffset?: number;
-      },
-      { id: Id<'annotations'>; success: boolean }
-    >('annotations:save')
-  );
-  const deleteAnnotationMutation = useMutation(
-    mRef<{ annotationId: Id<'annotations'> }, { success: boolean }>('annotations:remove')
-  );
-  const saveExamAttemptMutation = useMutation(
-    mRef<
-      {
-        examId: string;
-        score: number;
-        totalQuestions?: number;
-        sectionScores?: unknown;
-        duration?: number;
-        answers?: unknown;
-      },
-      { success: boolean; attemptId: Id<'exam_attempts'> }
-    >('user:saveExamAttempt')
-  );
-  const deleteExamAttemptMutation = useMutation(
-    mRef<{ attemptId: Id<'exam_attempts'> }, { success: boolean; error?: string }>(
-      'user:deleteExamAttempt'
-    )
-  );
-  const updateLearningProgressMutation = useMutation(
-    mRef<
-      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
-      { success: boolean }
-    >('user:updateLearningProgress')
-  );
-
-  const saveAnnotation = useCallback(
-    async (annotation: Annotation) => {
-      // Adapter for Annotation object to mutation args
-      await saveAnnotationMutation({
-        contextKey: annotation.contextKey,
-        text: annotation.text,
-        note: annotation.note,
-        color: annotation.color || undefined,
-        startOffset: annotation.startOffset,
-        endOffset: annotation.endOffset,
-      });
-      // Optimistic update or refetch should happen automatically if using live queries
-    },
-    [saveAnnotationMutation]
-  );
-
-  const deleteAnnotation = useCallback(
-    async (annotationId: string) => {
-      await deleteAnnotationMutation({ annotationId: annotationId as Id<'annotations'> });
-    },
-    [deleteAnnotationMutation]
-  );
-
-  const saveExamAttempt = useCallback(
-    async (attempt: ExamAttempt) => {
-      await saveExamAttemptMutation({
-        examId: attempt.examId,
-        score: attempt.score,
-        answers: attempt.userAnswers,
-      });
-    },
-    [saveExamAttemptMutation]
-  );
-
-  const deleteExamAttempt = useCallback(
-    async (attemptId: string) => {
-      await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
-    },
-    [deleteExamAttemptMutation]
-  );
-
-  const updateLearningProgress = useCallback(
-    async (institute: string, level: number, unit?: number, module?: string) => {
-      // Optimistic update
-      updateUser({
-        lastInstitute: institute,
-        lastLevel: level,
-        lastUnit: unit,
-        lastModule: module,
-      });
-
-      await updateLearningProgressMutation({
-        lastInstitute: institute,
-        lastLevel: level,
-        lastUnit: unit,
-        lastModule: module,
-      });
-    },
-    [updateUser, updateLearningProgressMutation]
   );
 
   const value = useMemo<AuthContextType>(
@@ -265,12 +151,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       canAccessContent,
       showUpgradePrompt,
       setShowUpgradePrompt,
-
-      saveExamAttempt,
-      deleteExamAttempt,
-      saveAnnotation,
-      deleteAnnotation,
-      updateLearningProgress,
     }),
     [
       user,
@@ -284,11 +164,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLanguage,
       canAccessContent,
       showUpgradePrompt,
-      saveExamAttempt,
-      deleteExamAttempt,
-      saveAnnotation,
-      deleteAnnotation,
-      updateLearningProgress,
     ]
   );
 

@@ -5,11 +5,10 @@ import { useQuery } from 'convex/react';
 import { VocabModule } from '../features/vocab';
 import ReadingModule from '../features/textbook/ReadingModule';
 import ListeningModule from '../features/textbook/ListeningModule';
-import GrammarModule from '../components/GrammarModule';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
-import { LearningModuleType, TextbookContent, VocabularyItem, Mistake } from '../types';
+import { LearningModuleType, VocabularyItem, Mistake } from '../types';
 import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 import { getLocalizedContent } from '../utils/languageUtils';
@@ -29,7 +28,7 @@ const ModulePage: React.FC = () => {
     setSelectedInstitute,
     setSelectedLevel,
   } = useLearning();
-  const { institutes, textbookContexts } = useData();
+  const { institutes } = useData();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
 
@@ -124,23 +123,6 @@ const ModulePage: React.FC = () => {
     }
   }, [currentModule, setActiveModule]);
 
-  const currentLevelContexts = useMemo(() => {
-    if (!effectiveInstitute || !effectiveLevel) return {};
-    const prefix = `${effectiveInstitute}-${effectiveLevel}-`;
-    const contexts: Record<number, TextbookContent> = {};
-
-    Object.keys(textbookContexts).forEach(key => {
-      if (key.startsWith(prefix)) {
-        const unitStr = key.slice(prefix.length);
-        const unit = parseInt(unitStr, 10);
-        if (!isNaN(unit)) {
-          contexts[unit] = textbookContexts[key];
-        }
-      }
-    });
-    return contexts;
-  }, [textbookContexts, effectiveInstitute, effectiveLevel]);
-
   const currentCourse = useMemo(
     () => ({
       instituteId: effectiveInstitute || '',
@@ -223,17 +205,28 @@ const ModulePage: React.FC = () => {
     ? getLocalizedContent(institute, 'name', language) || institute.name || 'Korean'
     : 'Korean';
 
+  const isCustomList = listParam === 'saved' || listParam === 'mistakes';
+  const courseBase = effectiveInstitute ? `/course/${effectiveInstitute}` : '/courses';
+
+  if (currentModule === LearningModuleType.VOCABULARY && !isCustomList) {
+    return <Navigate to={`${courseBase}/vocab`} replace />;
+  }
+
+  if (currentModule === LearningModuleType.GRAMMAR) {
+    return <Navigate to={`${courseBase}/grammar`} replace />;
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6">
         <BackButton onClick={handleBack} />
       </div>
-      {currentModule === LearningModuleType.VOCABULARY && (
+      {currentModule === LearningModuleType.VOCABULARY && isCustomList && (
         <VocabModule
           course={currentCourse}
           instituteName={instituteName}
           language={language}
-          levelContexts={currentLevelContexts}
+          levelContexts={{}}
           customWordList={derivedCustomList}
           customListType={derivedListType}
           onRecordMistake={recordMistake}
@@ -256,14 +249,6 @@ const ModulePage: React.FC = () => {
           unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
           language={language}
           onBack={handleBack}
-        />
-      )}
-      {currentModule === LearningModuleType.GRAMMAR && (
-        <GrammarModule
-          course={currentCourse}
-          instituteName={instituteName}
-          language={language}
-          levelContexts={currentLevelContexts}
         />
       )}
     </div>

@@ -1,11 +1,3 @@
-export const speak = (text: string) => {
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ko-KR';
-  u.rate = 0.9;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(u);
-};
-
 export const getPosStyle = (pos: string | undefined) => {
   if (!pos) return 'hidden';
   const lower = pos.toLowerCase();

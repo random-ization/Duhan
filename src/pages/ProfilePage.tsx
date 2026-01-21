@@ -26,6 +26,10 @@ import {
 } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
+import { ProfileTabButton } from './profile/components/ProfileTabButton';
+import { ProfileInfoTab } from './profile/tabs/ProfileInfoTab';
+import { ProfileStatsTab } from './profile/tabs/ProfileStatsTab';
+import { useExamStats } from './profile/hooks/useExamStats';
 
 interface ProfileProps {
   language: Language;
@@ -47,6 +51,8 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
     user ? { limit: 200 } : 'skip'
   );
+  const examHistory = examAttempts ?? [];
+  const { examsTaken, averageScore } = useExamStats(examHistory);
 
   const [activeTab, setActiveTab] = useState<'info' | 'security' | 'stats' | 'settings'>('info');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -224,39 +230,6 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
   };
 
-  const examHistory = examAttempts ?? [];
-  const examsTaken = examHistory.length;
-  const averageScore =
-    examsTaken > 0
-      ? Math.round(
-          examHistory.reduce((sum, exam) => sum + (exam.score / exam.maxScore) * 100, 0) /
-            examsTaken
-        )
-      : 0;
-
-  // Custom Tab Button Component
-  const TabButton = ({
-    id,
-    icon: Icon,
-    label,
-  }: {
-    id: typeof activeTab;
-    icon: React.ElementType;
-    label: string;
-  }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all ${
-        activeTab === id
-          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-          : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent hover:border-slate-200'
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  );
-
   return (
     <div className="max-w-[1000px] mx-auto pb-20">
       <Toaster position="bottom-center" />
@@ -397,49 +370,45 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
       {/* Tabs Navigation */}
       <div className="flex justify-center md:justify-start gap-4 mb-8 overflow-x-auto pb-2">
-        <TabButton id="info" icon={UserIcon} label={labels.personalInfo} />
-        <TabButton id="stats" icon={BarChart3} label={labels.learningStats} />
-        <TabButton id="security" icon={Lock} label={labels.securitySettings} />
-        <TabButton id="settings" icon={Settings} label={labels.generalSettings || 'General'} />
+        <ProfileTabButton
+          id="info"
+          icon={UserIcon}
+          label={labels.personalInfo}
+          active={activeTab === 'info'}
+          onSelect={setActiveTab}
+        />
+        <ProfileTabButton
+          id="stats"
+          icon={BarChart3}
+          label={labels.learningStats}
+          active={activeTab === 'stats'}
+          onSelect={setActiveTab}
+        />
+        <ProfileTabButton
+          id="security"
+          icon={Lock}
+          label={labels.securitySettings}
+          active={activeTab === 'security'}
+          onSelect={setActiveTab}
+        />
+        <ProfileTabButton
+          id="settings"
+          icon={Settings}
+          label={labels.generalSettings || 'General'}
+          active={activeTab === 'settings'}
+          onSelect={setActiveTab}
+        />
       </div>
 
       {/* Content Area */}
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[400px]">
         {activeTab === 'info' && (
-          <div className="max-w-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">
-              {labels.profile?.accountTitle || 'Account Details'}
-            </h3>
-            <div className="grid gap-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {labels.displayName}
-                </label>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium">
-                  {displayName}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {labels.email}
-                </label>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium">
-                  {user.email}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {labels.role}
-                </label>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-medium flex items-center justify-between">
-                  {user.role}
-                  <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600">
-                    ID: {userIdDisplay}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ProfileInfoTab
+            labels={labels}
+            user={user}
+            displayName={displayName}
+            userIdDisplay={userIdDisplay}
+          />
         )}
 
         {activeTab === 'security' && (
@@ -617,79 +586,14 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         )}
 
         {activeTab === 'stats' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {[
-                {
-                  label: labels.dayStreak,
-                  value: user.statistics?.dayStreak || 0,
-                  color: 'text-orange-500',
-                  bg: 'bg-orange-50',
-                },
-                {
-                  label: labels.wordsLearned,
-                  value: savedWordsCount?.count || 0,
-                  color: 'text-emerald-500',
-                  bg: 'bg-emerald-50',
-                },
-                {
-                  label: labels.examsTaken,
-                  value: examsTaken,
-                  color: 'text-purple-500',
-                  bg: 'bg-purple-50',
-                },
-                {
-                  label: labels.averageScore,
-                  value: `${averageScore}%`,
-                  color: 'text-blue-500',
-                  bg: 'bg-blue-50',
-                },
-              ].map((stat, i) => (
-                <div key={i} className={`p-4 rounded-2xl ${stat.bg} border border-transparent`}>
-                  <div className={`text-2xl font-black ${stat.color} mb-1`}>{stat.value}</div>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <h3 className="text-lg font-bold text-slate-800 mb-4">
-              {labels.profile?.recentActivity || 'Recent Activity'}
-            </h3>
-            <div className="space-y-3">
-              {examHistory.length === 0 ? (
-                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-slate-400">
-                  {labels.profile?.noActivity ||
-                    'No activity yet. Start a test to see your progress!'}
-                </div>
-              ) : (
-                examHistory.slice(0, 5).map((exam, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"
-                  >
-                    <div>
-                      <div className="font-bold text-slate-800">{exam.examTitle}</div>
-                      <div className="text-xs text-slate-500">
-                        {new Date(exam.timestamp).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className={`font-bold text-lg ${exam.score / exam.maxScore >= 0.6 ? 'text-green-600' : 'text-slate-600'}`}
-                      >
-                        {Math.round((exam.score / exam.maxScore) * 100)}%
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {exam.score}/{exam.maxScore}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <ProfileStatsTab
+            labels={labels}
+            dayStreak={user.statistics?.dayStreak || 0}
+            savedWordsCount={savedWordsCount?.count || 0}
+            examsTaken={examsTaken}
+            averageScore={averageScore}
+            examHistory={examHistory}
+          />
         )}
 
         {activeTab === 'settings' && (

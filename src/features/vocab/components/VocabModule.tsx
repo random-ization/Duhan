@@ -11,6 +11,7 @@ import VocabSettingsModal from './VocabSettingsModal';
 import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from '../types';
 import { shuffleArray } from '../utils';
+import { logger } from '../../../utils/logger';
 
 interface VocabModuleProps {
   course: CourseSelection;
@@ -91,7 +92,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               combined.push({ ...item, unit, id: `${unit}-${idx}` });
             });
           } catch (e) {
-            console.warn(`Failed to parse vocab for unit ${unit}`, e);
+            logger.warn(`Failed to parse vocab for unit ${unit}`, e);
           }
         }
       });

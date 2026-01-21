@@ -14,7 +14,7 @@ import { ExtendedVocabularyItem, VocabSettings } from '../types';
 import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
-import { speak } from '../utils';
+import { useTTS } from '../../../hooks/useTTS';
 
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
@@ -174,6 +174,20 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     courseId,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
+    const { speak: speakTTS, stop: stopTTS } = useTTS();
+
+    useEffect(() => stopTTS, [stopTTS]);
+
+    const speakKorean = useCallback(
+      (text: string) => {
+        if (onSpeak) {
+          onSpeak(text);
+          return;
+        }
+        void speakTTS(text, { engine: 'edge' });
+      },
+      [onSpeak, speakTTS]
+    );
 
     // Local settings state
     const [localSettings, setLocalSettings] = useState({
@@ -365,10 +379,10 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
         if (onSpeak) {
           onSpeak(currentCard.korean);
         } else {
-          speak(currentCard.korean);
+          speakKorean(currentCard.korean);
         }
       }
-    }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped, onSpeak]);
+    }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped, onSpeak, speakKorean]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -458,7 +472,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
                 if (onSpeak) {
                   onSpeak(currentCard.korean);
                 } else {
-                  speak(currentCard.korean);
+                  speakKorean(currentCard.korean);
                 }
               }}
               onMouseDown={e => e.stopPropagation()}
@@ -483,7 +497,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
               className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
               onClick={e => {
                 e.stopPropagation();
-                speak(currentCard.korean);
+                speakKorean(currentCard.korean);
               }}
               onMouseDown={e => e.stopPropagation()}
             >

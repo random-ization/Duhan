@@ -14,11 +14,12 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { SUPPORTED_LANGUAGES, withLang } from './seoConfig.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Public routes configuration
+// Public routes under the language prefix (/:lang/*)
 const PUBLIC_ROUTES = [
   {
     path: '/',
@@ -201,7 +202,14 @@ function preRenderRoutes() {
   const baseHtml = readFileSync(indexPath, 'utf-8');
   let successCount = 0;
 
-  for (const route of PUBLIC_ROUTES) {
+  const routesToRender = SUPPORTED_LANGUAGES.flatMap(lang =>
+    PUBLIC_ROUTES.map(route => ({
+      ...route,
+      path: withLang(lang, route.path),
+    }))
+  );
+
+  for (const route of routesToRender) {
     try {
       console.log(`📄 Pre-rendering: ${route.path}`);
 
@@ -209,15 +217,10 @@ function preRenderRoutes() {
       const html = injectMetaTags(baseHtml, route);
 
       // Determine output path
-      let outputPath;
-      if (route.path === '/') {
-        outputPath = indexPath;
-      } else {
-        const routePath = route.path.slice(1); // Remove leading slash
-        const routeDir = join(DIST_DIR, routePath);
-        mkdirSync(routeDir, { recursive: true });
-        outputPath = join(routeDir, 'index.html');
-      }
+      const routePath = route.path.slice(1); // Remove leading slash
+      const routeDir = join(DIST_DIR, routePath);
+      mkdirSync(routeDir, { recursive: true });
+      const outputPath = join(routeDir, 'index.html');
 
       // Write the pre-rendered HTML
       writeFileSync(outputPath, html, 'utf-8');
@@ -230,7 +233,7 @@ function preRenderRoutes() {
   }
 
   console.log('\n📊 Pre-rendering Summary:');
-  console.log(`   ✅ Successfully pre-rendered: ${successCount}/${PUBLIC_ROUTES.length} routes`);
+  console.log(`   ✅ Successfully pre-rendered: ${successCount}/${routesToRender.length} routes`);
   console.log('\n✨ SSG pre-rendering complete!');
 }
 

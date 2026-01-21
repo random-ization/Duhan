@@ -9,7 +9,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { makeFunctionReference } from 'convex/server';
+import { TOPIK } from '../../utils/convexRefs';
 
 interface ExamMetadata {
   id: string;
@@ -46,24 +46,17 @@ interface ParsedExam {
   errors: string[];
 }
 
-// ============================================
-// Fixed TOPIK Exam Structures
-// Each question has fixed instruction, question text, and score
-// ============================================
-
 interface QuestionConfig {
   instruction: string;
   question: string;
   score: number;
   grouped?: boolean;
   hasBox?: boolean;
-  fixedOptions?: string[]; // 固定选项 (如 ㉠㉡㉢㉣)
-  needsQuestionInput?: boolean; // 是否允许Excel覆盖问题
+  fixedOptions?: string[];
+  needsQuestionInput?: boolean;
 }
 
-// Reading Section (읽기) - Questions 1-50
 const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
-  // 1-2: Fill in the blank - 问题需从Excel填写
   1: {
     instruction: '※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)',
     question: '',
@@ -76,7 +69,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
     needsQuestionInput: true,
   },
-  // 3-4: Similar meaning - 问题需从Excel填写
   3: {
     instruction: '※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)',
     question: '',
@@ -89,7 +81,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
     needsQuestionInput: true,
   },
-  // 5-8: What is this about
   5: {
     instruction: '※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)',
     question: '',
@@ -110,7 +101,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 9-12: Content matching
   9: {
     instruction: '※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)',
     question: '',
@@ -131,7 +121,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 13-15: Ordering
   13: {
     instruction: '※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)',
     question: '',
@@ -150,7 +139,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
     hasBox: true,
   },
-  // 16-18: Fill in content
   16: {
     instruction:
       '※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
@@ -169,7 +157,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 19-20: Grouped questions - 问题可编辑
   19: {
     instruction: '※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: '글쓴이가 말하는 방식으로 가장 알맞은 것을 고르십시오.',
@@ -184,7 +171,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     grouped: true,
     needsQuestionInput: true,
   },
-  // 21-22 - 问题可编辑
   21: {
     instruction: '※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: "밑줄 친 부분에 나타난 '나'의 심정으로 알맞은 것을 고르십시오.",
@@ -199,7 +185,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     grouped: true,
     needsQuestionInput: true,
   },
-  // 23-24 - 问题可编辑
   23: {
     instruction: '※ [23～24] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: '이 글을 쓴 목적을 고르십시오.',
@@ -214,7 +199,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     grouped: true,
     needsQuestionInput: true,
   },
-  // 25-27: Newspaper headlines
   25: {
     instruction: '※ [25～27] 다음 신문 기사의 제목을 가장 잘 설명한 것을 고르십시오. (각 2점)',
     question: '',
@@ -230,7 +214,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 28-31: Fill in content (advanced)
   28: {
     instruction:
       '※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
@@ -255,7 +238,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 32-34: Content matching (advanced)
   32: {
     instruction: '※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)',
     question: '',
@@ -271,7 +253,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 35-38: Main topic
   35: {
     instruction: '※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)',
     question: '',
@@ -292,7 +273,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     question: '',
     score: 2,
   },
-  // 39-41: Insert sentence - 固定选项㉠㉡㉢㉣
   39: {
     instruction:
       '※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)',
@@ -317,7 +297,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     hasBox: true,
     fixedOptions: ['㉠', '㉡', '㉢', '㉣'],
   },
-  // 42-43
   42: {
     instruction: '※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: '이 글의 중심 생각을 고르십시오.',
@@ -330,7 +309,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
     grouped: true,
   },
-  // 44-45
   44: {
     instruction: '※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: '위 글의 내용과 같은 것을 고르십시오.',
@@ -343,7 +321,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
     grouped: true,
   },
-  // 46-47: 分组阅读（新样式：普通阅读理解）
   46: {
     instruction: '※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: '윗글에 나타난 필자의 태도로 가장 알맞은 것을 고르십시오.',
@@ -358,7 +335,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
     grouped: true,
     needsQuestionInput: true,
   },
-  // 48-50
   48: {
     instruction: '※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)',
     question: "밑줄 친 부분에 나타난 '나'의 심정으로 알맞은 것을 고르십시오.",
@@ -379,7 +355,6 @@ const TOPIK_READING_QUESTIONS: Record<number, QuestionConfig> = {
   },
 };
 
-// Listening Section (듣기) - Questions 1-50
 const TOPIK_LISTENING_QUESTIONS: Record<number, QuestionConfig> = {
   1: {
     instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)',
@@ -392,7 +367,7 @@ const TOPIK_LISTENING_QUESTIONS: Record<number, QuestionConfig> = {
     score: 2,
   },
   3: {
-    instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)',
+    instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2点)',
     question: '',
     score: 2,
   },
@@ -667,9 +642,6 @@ const TOPIK_LISTENING_QUESTIONS: Record<number, QuestionConfig> = {
   },
 };
 
-/**
- * Get fixed config for a question number
- */
 function getQuestionConfig(
   questionNum: number,
   type: 'READING' | 'LISTENING'
@@ -678,23 +650,17 @@ function getQuestionConfig(
   return config[questionNum] || null;
 }
 
-/**
- * Parse sheet name to extract exam metadata
- * Examples: "第93届阅读A", "93 Reading A", "TOPIK 93 Listening"
- */
 function parseSheetName(sheetName: string): Partial<ExamMetadata> {
   const result: Partial<ExamMetadata> = {
-    timeLimit: 70, // Default
+    timeLimit: 70,
     isPaid: false,
   };
 
-  // Extract round number
   const roundMatch = sheetName.match(/(\d+)/);
   if (roundMatch) {
     result.round = parseInt(roundMatch[1], 10);
   }
 
-  // Determine type
   const upperName = sheetName.toUpperCase();
   if (upperName.includes('阅读') || upperName.includes('READING') || upperName.includes('읽기')) {
     result.type = 'READING';
@@ -708,14 +674,12 @@ function parseSheetName(sheetName: string): Partial<ExamMetadata> {
     result.timeLimit = 60;
   }
 
-  // Paper type (A/B)
   if (upperName.includes('A') || upperName.includes('A卷')) {
     result.paperType = 'A';
   } else if (upperName.includes('B') || upperName.includes('B卷')) {
     result.paperType = 'B';
   }
 
-  // Generate title - use Korean format
   if (result.round && result.type) {
     const typeLabel = result.type === 'READING' ? '읽기' : '듣기';
     result.title = `제${result.round}회 한국어능력시험 TOPIK II ${typeLabel}${result.paperType ? ` (${result.paperType})` : ''}`;
@@ -724,15 +688,11 @@ function parseSheetName(sheetName: string): Partial<ExamMetadata> {
   return result;
 }
 
-/**
- * Parse a single row into a question, using fixed structure for instruction/score
- */
 function parseQuestionRow(
   row: Record<string, any>,
   rowIndex: number,
   examType: 'READING' | 'LISTENING'
 ): { question: ParsedQuestion | null; error: string | null } {
-  // Get values with flexible column names
   const getValue = (keys: string[]): string => {
     for (const key of keys) {
       const val = row[key];
@@ -749,13 +709,11 @@ function parseQuestionRow(
     return isNaN(num) ? defaultVal : num;
   };
 
-  // Question number (required)
   const questionNum = getNumber(['题号', 'number', 'id', 'No', '序号', '번호'], rowIndex);
   if (questionNum <= 0) {
     return { question: null, error: `第${rowIndex}行: 缺少有效题号` };
   }
 
-  // Options (required) - support both 选项A/B/C/D and 选项1/2/3/4
   const optionA = getValue(['选项A', '选项1', 'A', 'optionA', 'option1', '①']);
   const optionB = getValue(['选项B', '选项2', 'B', 'optionB', 'option2', '②']);
   const optionC = getValue(['选项C', '选项3', 'C', 'optionC', 'option3', '③']);
@@ -765,7 +723,6 @@ function parseQuestionRow(
     return { question: null, error: `第${questionNum}题: 选项不完整` };
   }
 
-  // Correct answer (required)
   const answerRaw = getValue(['正确答案', '答案', 'answer', 'correct', '정답']);
   let correctAnswer = 0;
   if (answerRaw) {
@@ -780,14 +737,11 @@ function parseQuestionRow(
     }
   }
 
-  // Get fixed config for this question number
   const config = getQuestionConfig(questionNum, examType);
 
-  // Handle fixed options (Q39-41, Q46 use ㉠㉡㉢㉣)
   const useFixedOptions = config?.fixedOptions && config.fixedOptions.length === 4;
   const finalOptions = useFixedOptions ? config.fixedOptions : [optionA, optionB, optionC, optionD];
 
-  // Handle question text - allow Excel to override for needsQuestionInput questions
   const excelQuestion = getValue(['问题', 'question', '질문']);
   const finalQuestion =
     config?.needsQuestionInput && excelQuestion ? excelQuestion : config?.question || '';
@@ -795,26 +749,21 @@ function parseQuestionRow(
   const question: ParsedQuestion = {
     id: questionNum,
     number: questionNum,
-    // Variable content (from Excel) - only passage and contextBox
     passage: getValue(['阅读文段', 'passage', '지문', '文段']),
     contextBox: getValue(['보기', 'contextBox', '보기内容', 'context']),
     options: finalOptions as [string, string, string, string],
     correctAnswer,
-    // Fixed content (from config - automatically filled)
     question: finalQuestion,
     score: config?.score || 2,
     instruction: config?.instruction || '',
   };
 
-  // Optional: image URL
   const imageUrl = getValue(['图片URL', 'image', 'imageUrl', '图片']);
   if (imageUrl) question.image = imageUrl;
 
-  // Optional: explanation
   const explanation = getValue(['解析', 'explanation', '해설']);
   if (explanation) question.explanation = explanation;
 
-  // Handle option images (listening section 1-3)
   const optImgA = getValue(['选项A图片', 'optionImageA']);
   const optImgB = getValue(['选项B图片', 'optionImageB']);
   const optImgC = getValue(['选项C图片', 'optionImageC']);
@@ -827,15 +776,12 @@ function parseQuestionRow(
 }
 
 const TopikImporter: React.FC = () => {
-  const saveExamMutation = (
-    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('topik:saveExam'));
+  const saveExamMutation = useMutation(TOPIK.saveExam);
 
   const [parsedExams, setParsedExams] = useState<ParsedExam[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Handle Excel file upload
   const handleExcelFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = event => {
@@ -846,7 +792,6 @@ const TopikImporter: React.FC = () => {
         const exams: ParsedExam[] = [];
 
         for (const sheetName of workbook.SheetNames) {
-          // Skip common non-exam sheets
           const lowerName = sheetName.toLowerCase();
           if (
             lowerName.includes('说明') ||
@@ -868,29 +813,22 @@ const TopikImporter: React.FC = () => {
           const questions: ParsedQuestion[] = [];
           const errors: string[] = [];
 
-          // Validate required metadata
           if (!metadata.round || !metadata.type) {
             errors.push(`无法从表名"${sheetName}"解析届数和类型，请手动设置`);
           }
 
-          // Determine exam type for structure lookup
           const examType: 'READING' | 'LISTENING' = metadata.type || 'READING';
 
-          // Parse each row
           jsonData.forEach((row, idx) => {
             const { question, error } = parseQuestionRow(row, idx + 1, examType);
-            if (question) {
-              questions.push(question);
-            }
-            if (error) {
-              errors.push(error);
-            }
+            if (question) questions.push(question);
+            if (error) errors.push(error);
           });
 
           if (questions.length > 0) {
             exams.push({
               metadata: {
-                id: `exam-${Date.now()}-${sheetName.replace(/\s/g, '_')}`,
+                id: `exam-${Date.now()}-${sheetName.replace(/\\s/g, '_')}`,
                 title: metadata.title || sheetName,
                 round: metadata.round || 0,
                 type: metadata.type || 'READING',
@@ -917,7 +855,6 @@ const TopikImporter: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // Import a single exam
   const handleImportExam = async (exam: ParsedExam) => {
     setSubmitting(true);
     try {
@@ -949,7 +886,6 @@ const TopikImporter: React.FC = () => {
       });
 
       setStatus(`✅ 成功导入: ${exam.metadata.title} (${exam.questions.length} 道题)`);
-      // Remove from list
       setParsedExams(prev => prev.filter(e => e.metadata.id !== exam.metadata.id));
     } catch (e: any) {
       console.error('Import error:', e);
@@ -959,7 +895,6 @@ const TopikImporter: React.FC = () => {
     }
   };
 
-  // Import all exams
   const handleImportAll = async () => {
     if (parsedExams.length === 0) return;
 
@@ -1003,9 +938,7 @@ const TopikImporter: React.FC = () => {
     }
 
     setStatus(`导入完成：成功 ${successCount} 套，失败 ${failCount} 套`);
-    if (successCount > 0) {
-      setParsedExams([]);
-    }
+    if (successCount > 0) setParsedExams([]);
     setSubmitting(false);
   };
 
@@ -1019,7 +952,6 @@ const TopikImporter: React.FC = () => {
         <p className="text-sm text-zinc-500">上传 Excel 文件，每个工作表 = 一套试卷</p>
       </div>
 
-      {/* Upload Area */}
       <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] p-5 space-y-4">
         <div className="flex items-center gap-2 font-bold text-zinc-800">
           <Upload className="w-4 h-4" />
@@ -1046,7 +978,6 @@ const TopikImporter: React.FC = () => {
           </div>
         </div>
 
-        {/* Format Guide */}
         <div className="bg-zinc-50 rounded-lg p-3 text-xs space-y-2 border border-zinc-100">
           <div className="font-bold text-zinc-700">Excel 列格式说明：</div>
           <div className="text-zinc-500 space-y-1">
@@ -1070,7 +1001,6 @@ const TopikImporter: React.FC = () => {
         </div>
       </div>
 
-      {/* Parsed Exams Preview */}
       {parsedExams.length > 0 && (
         <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -1162,7 +1092,6 @@ const TopikImporter: React.FC = () => {
                   </div>
                 )}
 
-                {/* Question Preview */}
                 <div className="mt-2 text-xs text-zinc-600">
                   <details>
                     <summary className="cursor-pointer hover:text-zinc-900">查看题目预览</summary>
@@ -1192,7 +1121,6 @@ const TopikImporter: React.FC = () => {
         </div>
       )}
 
-      {/* Status */}
       {status && (
         <div className="px-4 py-3 rounded-xl border-2 border-zinc-900 bg-amber-50 text-sm text-zinc-800 whitespace-pre-wrap">
           {status}

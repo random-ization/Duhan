@@ -5,9 +5,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 
 import { useAction } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
 import { toErrorMessage } from '../utils/errors';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { PASSWORD_RESET } from '../utils/convexRefs';
 
 const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -24,13 +24,7 @@ const ResetPasswordPage: React.FC = () => {
   const [status, setStatus] = useState<'form' | 'success' | 'error'>('form');
   const [error, setError] = useState('');
 
-  const resetPassword = useAction(
-    makeFunctionReference<
-      'action',
-      { email: string; token: string; newPassword: string },
-      { success: boolean; error?: string }
-    >('passwordReset:resetPassword')
-  );
+  const resetPassword = useAction(PASSWORD_RESET.resetPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

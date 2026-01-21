@@ -7,7 +7,7 @@ import { useLearning } from '../contexts/LearningContext';
 import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
-import DictionarySearchDropdown from '../../components/dashboard/DictionarySearchDropdown';
+import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
 import { TextbookContent, TopikExam } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';

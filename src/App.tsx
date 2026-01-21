@@ -9,6 +9,7 @@ import { useAuth } from './contexts/AuthContext';
 import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { useUserActions } from './hooks/useUserActions';
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -24,7 +25,8 @@ const queryClient = new QueryClient({
 
 function App() {
   const { t } = useTranslation();
-  const { user, loading, language, canAccessContent, updateLearningProgress } = useAuth();
+  const { user, loading, language, canAccessContent } = useAuth();
+  const { updateLearningProgress } = useUserActions();
   const { selectedInstitute, selectedLevel } = useLearning();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 

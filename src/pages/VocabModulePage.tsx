@@ -9,14 +9,14 @@ import { VocabQuiz, VocabMatch, FlashcardView } from '../features/vocab';
 // import { updateVocabProgress } from '../services/vocabApi';
 import EmptyState from '../components/common/EmptyState';
 import { useQuery, useMutation, useAction } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { useTTS } from '../hooks/useTTS';
 import { useApp } from '../contexts/AppContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
-import { VOCAB } from '../utils/convexRefs';
+import { FSRS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import type { Id } from '../../convex/_generated/dataModel';
 
 interface ExtendedVocabItem extends VocabularyItem {
   id: string;
@@ -50,7 +50,7 @@ export default function VocabModulePage() {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user } = useAuth();
   const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();
-  const { institutes, textbookContexts } = useData();
+  const { institutes } = useData();
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const { language } = useApp();
   const labels = getLabels(language);
@@ -88,12 +88,6 @@ export default function VocabModulePage() {
 
   // Flashcard settings
 
-  // Use ref to prevent parseWords from depending on textbookContexts object
-  const textbookContextsRef = useRef(textbookContexts);
-  useEffect(() => {
-    textbookContextsRef.current = textbookContexts;
-  }, [textbookContexts]);
-
   // Convex Integration
   // Pass user ID (token or Convex ID) to ensure progress data is loaded
   const convexWordsQuery = useQuery(
@@ -101,14 +95,8 @@ export default function VocabModulePage() {
     instituteId ? { courseId: instituteId } : 'skip'
   );
   const updateProgressMutation = useMutation(VOCAB.updateProgress);
-  // Cast to any to avoid "Type instantiation is excessively deep" error
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const updateProgressV2Mutation = useMutation((api as any).vocab.updateProgressV2);
-  // Cast to any to avoid "Type instantiation is excessively deep" error
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const calculateNextSchedule = useAction((api as any).fsrs.calculateNextSchedule);
+  const updateProgressV2Mutation = useMutation(VOCAB.updateProgressV2);
+  const calculateNextSchedule = useAction(FSRS.calculateNextSchedule);
 
   // Derive loading state and allWords directly from query - no extra state needed
   const isLoading = convexWordsQuery === undefined;
@@ -188,36 +176,6 @@ export default function VocabModulePage() {
     [filteredWords, language]
   );
 
-  /*
-    const handleRating = async (rating: number) => {
-        const currentWord = filteredWords[viewState.cardIndex];
-        if (currentWord && user?.id) {
-            try {
-                await updateProgressMutation({
-                    wordId: currentWord.id,
-                    quality: rating
-                });
-            } catch (err) {
-                console.warn('Failed to update progress:', err);
-            }
-        }
-        goToNext();
-    };
-    */
-
-  // Use handleRating to avoid unused variable warning if it's meant to be used.
-  // However, looking at the code, it seems unused. If so, remove it.
-  // But Step Id 725 says: "handleRating" is assigned a value but never used
-  // Let's remove it if it's truly unused.
-  // Wait, let's check if it's used in the code I viewed.
-  // I don't see handleRating used in the render.
-  // I'll comment it out or remove it.
-  /*
-    const handleRating = async (rating: number) => {
-       ...
-    };
-    */
-
   const toggleStar = (id: string) => {
     setStarredIds(prev => {
       const next = new Set(prev);
@@ -229,7 +187,7 @@ export default function VocabModulePage() {
 
   const speakWord = useCallback(
     (text: string) => {
-      speakTTS(text);
+      void speakTTS(text, { engine: 'edge' });
     },
     [speakTTS]
   );
@@ -250,14 +208,7 @@ export default function VocabModulePage() {
       if (!audioLoopRef.current) break;
 
       // Speak word
-      await new Promise<void>(resolve => {
-        const u = new SpeechSynthesisUtterance(word.korean);
-        u.lang = 'ko-KR';
-        u.rate = 0.8;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        speechSynthesis.speak(u);
-      });
+      await speakTTS(word.korean, { engine: 'edge' });
 
       if (!audioLoopRef.current) break;
 
@@ -561,7 +512,7 @@ export default function VocabModulePage() {
                             learning_steps: word.learning_steps || 0,
                             reps: word.reps || 0,
                             lapses: word.lapses || 0,
-                            last_review: word.last_review || undefined,
+                            last_review: word.last_review ?? undefined,
                           }
                         : undefined; // undefined for NEW cards
 
@@ -572,10 +523,12 @@ export default function VocabModulePage() {
                     });
 
                     // 4. Save to DB
+                    const { review_log: _reviewLog, ...fsrsState } = nextState;
+                    void _reviewLog;
                     await updateProgressV2Mutation({
-                      wordId: word.id as any,
+                      wordId: word.id as Id<'words'>,
                       rating,
-                      fsrsState: nextState,
+                      fsrsState,
                     });
                   } catch (err) {
                     console.error('FSRS Error:', err);

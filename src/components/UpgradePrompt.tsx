@@ -2,7 +2,7 @@ import React from 'react';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { Sparkles, X, Check } from 'lucide-react';
-
+import { notify } from '../utils/notify';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -11,11 +11,7 @@ interface UpgradePromptProps {
   contentType?: 'textbook' | 'exam';
 }
 
-const UpgradePrompt: React.FC<UpgradePromptProps> = ({
-  isOpen,
-  onClose,
-  language,
-}) => {
+const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language }) => {
   const labels = getLabels(language);
 
   if (!isOpen) return null;
@@ -27,9 +23,9 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({
   ];
 
   const handleUpgrade = () => {
-    // TODO: Implement payment flow
-    // For now, just show alert
-    alert(labels.upgradeComingSoon || 'Payment integration coming soon! Please contact support.');
+    notify.info(
+      labels.upgradeComingSoon || 'Payment integration coming soon! Please contact support.'
+    );
     onClose();
   };
 
@@ -81,7 +77,10 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({
           </div>
 
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
+            >
               {labels.maybeLater || labels.cancel}
             </button>
             <button

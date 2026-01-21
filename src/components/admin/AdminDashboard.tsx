@@ -11,7 +11,7 @@ import {
   BarChart3,
   RefreshCw,
 } from 'lucide-react';
-import { AdminDashboardSkeleton } from '../../../components/common';
+import { AdminDashboardSkeleton } from '../common';
 import { NoArgs, qRef } from '../../utils/convexRefs';
 
 export const AdminDashboard: React.FC = () => {

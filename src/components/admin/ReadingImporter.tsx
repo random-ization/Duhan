@@ -11,7 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { makeFunctionReference } from 'convex/server';
+import { INSTITUTES, STORAGE, UNITS } from '../../utils/convexRefs';
 
 interface FormState {
   courseId: string;
@@ -40,9 +40,6 @@ type BulkImportResult = {
   };
 };
 
-/**
- * Parse a CSV line correctly, handling quoted fields that may contain commas.
- */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -72,13 +69,8 @@ function parseCSVLine(line: string): string[] {
 }
 
 const ReadingImporter: React.FC = () => {
-  const institutes = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
-    makeFunctionReference('institutes:getAll'),
-    {}
-  ) as any[] | undefined;
-  const bulkImportMutation = (
-    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('units:bulkImport'));
+  const institutes = useQuery(INSTITUTES.getAll, {});
+  const bulkImportMutation = useMutation(UNITS.bulkImport);
 
   const [form, setForm] = useState<FormState>({ courseId: '' });
   const [bulkText, setBulkText] = useState('');
@@ -86,7 +78,6 @@ const ReadingImporter: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [parsedItems, setParsedItems] = useState<BulkImportItem[]>([]);
 
-  // Audio upload state
   const [audioFiles, setAudioFiles] = useState<
     {
       file: File;
@@ -97,9 +88,7 @@ const ReadingImporter: React.FC = () => {
     }[]
   >([]);
   const [audioUploading, setAudioUploading] = useState(false);
-  const getUploadUrl = (
-    useAction as unknown as (a: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('storage:getUploadUrl'));
+  const getUploadUrl = useAction(STORAGE.getUploadUrl);
 
   useEffect(() => {
     if (!form.courseId && institutes && institutes.length > 0) {
@@ -108,7 +97,6 @@ const ReadingImporter: React.FC = () => {
     }
   }, [institutes, form.courseId]);
 
-  // Parse bulk text into items when it changes
   useEffect(() => {
     if (!bulkText.trim()) {
       setParsedItems([]);
@@ -125,13 +113,11 @@ const ReadingImporter: React.FC = () => {
       return;
     }
 
-    // Parse headers from first row
     const headerLine = lines[0];
     const headers = headerLine.includes('\t')
       ? headerLine.split('\t').map(h => h.trim().toLowerCase())
       : parseCSVLine(headerLine).map(h => h.toLowerCase());
 
-    // Map header keywords to column indices
     const findColumn = (keywords: string[]): number => {
       return headers.findIndex(h => keywords.some(k => h.includes(k)));
     };
@@ -154,7 +140,6 @@ const ReadingImporter: React.FC = () => {
       audioUrl: findColumn(['音频', 'audio', 'url']),
     };
 
-    // Parse data rows (skip header)
     const items: BulkImportItem[] = lines
       .slice(1)
       .map(line => {
@@ -163,7 +148,6 @@ const ReadingImporter: React.FC = () => {
           : parseCSVLine(line);
 
         const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
-        // Convert placeholder back to real newlines
         const restoreNewlines = (val?: string) => val?.replace(/⏎/g, '\n');
 
         const unitIndex = Number(getValue(colMap.unit));
@@ -203,12 +187,10 @@ const ReadingImporter: React.FC = () => {
       if (jsonData.length > 0) {
         const headers = Object.keys(jsonData[0] as Record<string, unknown>);
         const headerLine = headers.join('\t');
-        // Use placeholder ⏎ for newlines to preserve them in TSV format
         const dataLines = jsonData.map((row: any) =>
           headers
             .map(h => {
               const val = String(row[h] || '');
-              // Replace newlines with placeholder to preserve them
               return val.replace(/[\r\n]+/g, '⏎');
             })
             .join('\t')
@@ -263,15 +245,12 @@ const ReadingImporter: React.FC = () => {
     }
   };
 
-  // Handle audio files selection
   const handleAudioFiles = (files: FileList) => {
     const newAudioFiles: typeof audioFiles = [];
 
     for (const file of Array.from(files)) {
-      // Parse filename for unit-article pattern: "1-1.mp3", "1.mp3", "unit1-article1.mp3", etc.
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
 
-      // Try patterns: "1-1", "1_1", "unit1-1", "1"
       let unitIndex = 0,
         articleIndex = 1;
 
@@ -300,7 +279,6 @@ const ReadingImporter: React.FC = () => {
     setAudioFiles(prev => [...prev, ...newAudioFiles]);
   };
 
-  // Upload all audio files
   const uploadAllAudio = async () => {
     if (audioFiles.length === 0) return;
 
@@ -315,14 +293,12 @@ const ReadingImporter: React.FC = () => {
         updatedFiles[i] = { ...af, status: 'uploading' };
         setAudioFiles([...updatedFiles]);
 
-        // Get presigned URL
         const { uploadUrl, publicUrl } = (await getUploadUrl({
           filename: af.file.name,
           contentType: af.file.type || 'audio/mpeg',
           folder: `reading-audio/${form.courseId}`,
         })) as { uploadUrl: string; publicUrl: string };
 
-        // Upload to storage
         const uploadRes = await fetch(uploadUrl, {
           method: 'PUT',
           body: af.file,
@@ -337,7 +313,6 @@ const ReadingImporter: React.FC = () => {
         updatedFiles[i] = { ...af, status: 'done', url: publicUrl };
         setAudioFiles([...updatedFiles]);
 
-        // Update parsed items with audio URL
         setParsedItems(prev =>
           prev.map(item => {
             if (item.unitIndex === af.unitIndex && item.articleIndex === af.articleIndex) {
@@ -358,7 +333,6 @@ const ReadingImporter: React.FC = () => {
     setStatus(`音频上传完成：${doneCount}/${updatedFiles.length} 个文件`);
   };
 
-  // Get selected course name for display
   const selectedCourse = useMemo(() => {
     if (!form.courseId || !institutes) return null;
     return institutes.find((inst: any) => (inst.id || inst._id) === form.courseId);
@@ -404,7 +378,6 @@ const ReadingImporter: React.FC = () => {
             批量导入阅读文章
           </div>
 
-          {/* File Upload Area */}
           <div className="relative">
             <input
               type="file"
@@ -441,7 +414,6 @@ const ReadingImporter: React.FC = () => {
 
           <div className="text-xs text-zinc-500 text-center">— 或手动从表格中复制并粘贴 —</div>
 
-          {/* Format Guide */}
           <div className="bg-zinc-50 rounded-lg p-3 text-xs space-y-2 border border-zinc-100">
             <div className="flex items-center justify-between">
               <div className="font-bold text-zinc-700">列格式说明（支持多语言翻译）：</div>
@@ -470,7 +442,6 @@ const ReadingImporter: React.FC = () => {
             placeholder="粘贴区域：&#10;单元&#9;文章序号&#9;标题&#9;正文&#9;翻译(中)&#9;翻译(英)&#10;1&#9;1&#9;제목&#9;본문 내용...&#9;中文翻译...&#9;English...&#10;..."
           />
 
-          {/* Preview */}
           {parsedItems.length > 0 && (
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
               <div className="text-sm font-bold text-blue-800 mb-2">
@@ -495,7 +466,6 @@ const ReadingImporter: React.FC = () => {
             </div>
           )}
 
-          {/* Audio Upload Section */}
           <div className="border-t-2 border-zinc-200 pt-4 mt-4">
             <div className="flex items-center gap-2 font-bold text-zinc-800 mb-3">
               <Music className="w-4 h-4" />
@@ -520,7 +490,6 @@ const ReadingImporter: React.FC = () => {
               </div>
             </div>
 
-            {/* Audio files list */}
             {audioFiles.length > 0 && (
               <div className="space-y-2 mb-3">
                 {audioFiles.map((af, idx) => (

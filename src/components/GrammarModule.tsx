@@ -4,6 +4,7 @@ import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../typ
 import { BookOpen, Search, X } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
+import { logger } from '../utils/logger';
 
 // Stub for deleted service
 const generateGrammarLesson = async (
@@ -13,7 +14,7 @@ const generateGrammarLesson = async (
   _lang: Language,
   _content: TextbookContent
 ): Promise<GrammarPoint[]> => {
-  console.warn("AI Generation unavailable: geminiService deleted");
+  logger.warn('AI Generation unavailable: geminiService deleted');
   return [];
 };
 

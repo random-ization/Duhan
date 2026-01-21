@@ -10,6 +10,8 @@ import { TopikQuestionDto } from '../../../convex/topik';
 import { useApp } from '../../contexts/AppContext';
 import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { notify } from '../../utils/notify';
+import { logger } from '../../utils/logger';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -204,7 +206,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       // 如果还是空的，给个默认空数组防止白屏
       if (!fullQuestions) {
         fullQuestions = [];
-        console.warn('Warning: No questions found for this exam');
+        logger.warn('No questions found for this exam');
       }
 
       // 组装完整的考试对象
@@ -220,8 +222,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       setViewState('COVER');
       navigate(`/topik/${exam.id}`);
     } catch (error) {
-      console.error('Failed to load exam content:', error);
-      alert(labels.dashboard?.topik?.examLoadError || 'Failed to load exam content.');
+      logger.error('Failed to load exam content:', error);
+      notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam content.');
     } finally {
       setLoading(false); // 结束加载
     }
@@ -249,8 +251,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           setViewState('REVIEW');
           navigate(`/topik/${exam.id}/review`);
         } catch (error) {
-          console.error('Failed to load exam for review:', error);
-          alert(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
+          logger.error('Failed to load exam for review:', error);
+          notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
         } finally {
           setLoading(false);
         }

@@ -19,6 +19,7 @@ import type { Language } from '../types';
 import { qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useTTS } from '../hooks/useTTS';
 
 interface TranscriptSegment {
   start: number;
@@ -97,8 +98,11 @@ const VideoPlayerPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
+  const { speak: speakTTS, stop: stopTTS } = useTTS();
   const videoRef = useRef<HTMLVideoElement>(null);
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => stopTTS, [stopTTS]);
 
   // Player state
   const [currentTime, setCurrentTime] = useState(0);
@@ -197,12 +201,12 @@ const VideoPlayerPage: React.FC = () => {
     [setSelectedWord]
   );
 
-  // TTS
-  const speak = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    speechSynthesis.speak(utterance);
-  };
+  const speak = useCallback(
+    (text: string) => {
+      void speakTTS(text, { engine: 'edge' });
+    },
+    [speakTTS]
+  );
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

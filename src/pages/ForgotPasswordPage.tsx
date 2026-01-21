@@ -8,14 +8,10 @@ import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { useAction } from 'convex/react';
-import { makeFunctionReference } from 'convex/server';
+import { PASSWORD_RESET } from '../utils/convexRefs';
 
 export default function ForgotPasswordPage() {
-  const requestPasswordReset = useAction(
-    makeFunctionReference<'action', { email: string }, { success: boolean }>(
-      'passwordReset:requestPasswordReset'
-    )
-  );
+  const requestPasswordReset = useAction(PASSWORD_RESET.requestPasswordReset);
   const { language } = useAuth();
   const navigate = useLocalizedNavigate();
   const location = useLocation();

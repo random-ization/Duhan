@@ -21,6 +21,8 @@ import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import { getLabels } from '../../utils/i18n';
 import { ListeningModuleSkeleton } from '../../components/common';
+import { useTTS } from '../../hooks/useTTS';
+import { notify } from '../../utils/notify';
 
 // Legacy API removed - using Convex
 
@@ -400,6 +402,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   onBack,
 }) => {
   const labels = getLabels(language);
+  const { speak: speakTTS, stop: stopTTS } = useTTS();
+
+  useEffect(() => stopTTS, [stopTTS]);
   // State for selected unit (allows changing within the component)
   const [selectedUnitIndexOverride, setSelectedUnitIndexOverride] = useState(initialUnitIndex);
 
@@ -703,12 +708,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedWord, selectionToolbar]);
 
-  // TTS function
-  const speak = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    speechSynthesis.speak(utterance);
-  };
+  const speak = useCallback(
+    (text: string) => {
+      void speakTTS(text, { engine: 'edge' });
+    },
+    [speakTTS]
+  );
 
   // Save word to vocab
   const saveWordToVocab = (word: string, meaning: string) => {
@@ -1001,7 +1006,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       try {
                         await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
                         // Show success feedback
-                        alert(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
+                        notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
                       } catch (e) {
                         console.error('Failed to mark unit complete:', e);
                       }
@@ -1186,7 +1191,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
               <SelectionToolbar
                 position={selectionToolbar.position}
                 onTranslate={() => {
-                  alert(`翻译：${selectionToolbar.text}`);
+                  notify.info(`翻译：${selectionToolbar.text}`);
                   setSelectionToolbar(null);
                 }}
                 onSpeak={() => {

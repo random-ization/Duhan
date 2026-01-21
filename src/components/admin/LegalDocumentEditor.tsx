@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { FileText, Loader2, Save } from 'lucide-react';
-import { mRef, qRef } from '../../src/utils/convexRefs';
+import { mRef, qRef } from '../../utils/convexRefs';
 
 type DocType = 'terms' | 'privacy' | 'refund';
 

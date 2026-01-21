@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { CheckCircle2, Loader2, Upload, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { makeFunctionReference } from 'convex/server';
+import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
 
 interface FormState {
   word: string;
@@ -34,11 +34,9 @@ type BulkImportItem = Pick<
 > & {
   exampleSentence?: string;
   exampleMeaning?: string;
-  // Multi-language meanings
   meaningEn?: string;
   meaningVi?: string;
   meaningMn?: string;
-  // Multi-language example translations
   exampleMeaningEn?: string;
   exampleMeaningVi?: string;
   exampleMeaningMn?: string;
@@ -56,10 +54,6 @@ type BulkImportResult = {
   };
 };
 
-/**
- * Parse a CSV line correctly, handling quoted fields that may contain commas.
- * Supports both double quotes (") and handles escaped quotes ("").
- */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -71,15 +65,12 @@ function parseCSVLine(line: string): string[] {
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote ("")
         current += '"';
-        i++; // Skip next quote
+        i++;
       } else {
-        // Toggle quote mode
         inQuotes = !inQuotes;
       }
     } else if (char === ',' && !inQuotes) {
-      // Field separator - push current field and reset
       result.push(current.trim());
       current = '';
     } else {
@@ -87,23 +78,14 @@ function parseCSVLine(line: string): string[] {
     }
   }
 
-  // Push the last field
   result.push(current.trim());
-
   return result;
 }
 
 const VocabImporter: React.FC = () => {
-  const institutes = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
-    makeFunctionReference('institutes:getAll'),
-    {}
-  ) as any[] | undefined;
-  const saveWord = (useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>)(
-    makeFunctionReference('vocab:saveWord')
-  );
-  const bulkImportMutation = (
-    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('vocab:bulkImport'));
+  const institutes = useQuery(INSTITUTES.getAll, {});
+  const saveWord = useMutation(VOCAB.saveWord);
+  const bulkImportMutation = useMutation(VOCAB.bulkImport);
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [bulkText, setBulkText] = useState('');
@@ -173,14 +155,11 @@ const VocabImporter: React.FC = () => {
         .map(l => l.trim())
         .filter(Boolean);
 
-      // === Dynamic Header Parsing ===
-      // Step 1: Parse headers from first row
       const headerLine = lines[0];
       const headers = headerLine.includes('\t')
         ? headerLine.split('\t').map(h => h.trim().toLowerCase())
         : parseCSVLine(headerLine).map(h => h.toLowerCase());
 
-      // Step 2: Map header keywords to column indices
       const findColumn = (keywords: string[]): number => {
         return headers.findIndex(h => keywords.some(k => h.includes(k)));
       };
@@ -189,7 +168,6 @@ const VocabImporter: React.FC = () => {
         unit: findColumn(['单元', 'unit', 'lesson', '课']),
         word: findColumn(['韩语', 'word', '单词', 'korean']),
         pos: findColumn(['词性', 'pos', 'part']),
-        // Support both "释义(CH)" and "释义 (CH)" formats
         meaningCh: findColumn(['释义 (ch)', '释义(中)', '释义(ch)', '中文', 'chinese', 'meaning']),
         meaningEn: findColumn(['释义 (en)', '释义(英)', '释义(en)', '英文', 'english']),
         meaningMn: findColumn(['释义 (mn)', '释义(蒙)', '释义(mn)', '蒙古', 'mongolian']),
@@ -201,16 +179,14 @@ const VocabImporter: React.FC = () => {
         exampleVi: findColumn(['例句翻译 (v', '例句翻译(vn)', '例句越翻']),
       };
 
-      // Validate required columns
       if (colMap.word === -1) {
         setStatus(`错误：未找到"韩语"或"Word"列，请检查表头`);
         setSubmitting(false);
         return;
       }
 
-      // Step 3: Parse data rows (skip header)
       const items: BulkImportItem[] = lines
-        .slice(1) // Skip header row
+        .slice(1)
         .map(line => {
           const parts = line.includes('\t')
             ? line.split('\t').map(p => p.trim())
@@ -222,7 +198,6 @@ const VocabImporter: React.FC = () => {
           const word = getValue(colMap.word);
           if (!word) return null;
 
-          // Get meaning - use CH first, fallback to first available
           let meaning = getValue(colMap.meaningCh);
           if (!meaning) {
             meaning =
@@ -232,12 +207,11 @@ const VocabImporter: React.FC = () => {
               '';
           }
 
-          // Pass actual values - let backend handle empty strings vs undefined
           return {
             word,
             meaning,
             partOfSpeech: getValue(colMap.pos) || 'NOUN',
-            meaningEn: getValue(colMap.meaningEn), // Keep value as-is (string or undefined)
+            meaningEn: getValue(colMap.meaningEn),
             meaningVi: getValue(colMap.meaningVi),
             meaningMn: getValue(colMap.meaningMn),
             courseId: form.courseId,
@@ -257,7 +231,6 @@ const VocabImporter: React.FC = () => {
         return;
       }
 
-      // === Batch Processing ===
       const BATCH_SIZE = 50;
       const totalItems = items.length;
       const batches = [];
@@ -276,7 +249,6 @@ const VocabImporter: React.FC = () => {
         setStatus(`正在处理第 ${i + 1}/${batches.length} 批次 (${batch.length} 条)...`);
 
         try {
-          // Pass token implicitly via Convex client, or if needed by schema (args doesn't ask for token, so removed)
           const result = (await bulkImportMutation({ items: batch })) as BulkImportResult;
           const r = result?.results;
 
@@ -294,7 +266,6 @@ const VocabImporter: React.FC = () => {
         }
       }
 
-      // Final Summary
       if (allErrors.length > 0) {
         setStatus(
           `部分导入完成。成功: ${successCount}, 失败: ${failedCount}。错误: ${allErrors.slice(0, 3).join('; ')}...`
@@ -329,7 +300,6 @@ const VocabImporter: React.FC = () => {
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
             {(institutes || []).map((inst: any) => {
-              // Build display name with level and volume
               let displayName = inst.name || '';
               if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
               if (inst.volume) displayName += ` ${inst.volume}`;
@@ -475,8 +445,6 @@ const VocabImporter: React.FC = () => {
             批量导入
           </div>
 
-          {/* File Upload Area */}
-          {/* File Upload Area */}
           <div className="relative">
             <input
               type="file"
@@ -494,7 +462,6 @@ const VocabImporter: React.FC = () => {
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    // Convert to TSV (Tab Separated Values) - naturally avoids comma issues
                     const text = XLSX.utils.sheet_to_csv(worksheet, { FS: '\t' });
                     setBulkText(text);
                     setStatus(
@@ -513,7 +480,7 @@ const VocabImporter: React.FC = () => {
                   };
                   reader.readAsText(file, 'UTF-8');
                 }
-                e.target.value = ''; // Reset for re-upload
+                e.target.value = '';
               }}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
@@ -526,7 +493,6 @@ const VocabImporter: React.FC = () => {
 
           <div className="text-xs text-zinc-500 text-center">— 或手动从表格中复制并粘贴 —</div>
 
-          {/* Format Guide */}
           <div className="bg-zinc-50 rounded-lg p-3 text-xs space-y-2 border border-zinc-100">
             <div className="flex items-center justify-between">
               <div className="font-bold text-zinc-700">列格式说明（按顺序）：</div>
@@ -549,7 +515,7 @@ const VocabImporter: React.FC = () => {
             onChange={e => setBulkText(e.target.value)}
             rows={8}
             className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900 font-mono text-xs bg-zinc-50/50"
-            placeholder="粘贴区域：&#10;1	가수	NOUN	Дуучин	Ca sĩ	Singer	歌手	저는 노래를 잘하는 가수가 되고 싶어요.	我想成为唱歌好的歌手...&#10;..."
+            placeholder="粘贴区域：&#10;1\t가수\tNOUN\tДуучин\tCa sĩ\tSinger\t歌手\t저는 노래를 잘하는 가수가 되고 싶어요.\t我想成为唱歌好的歌手...&#10;..."
           />
 
           {bulkText && (

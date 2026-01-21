@@ -11,7 +11,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { makeFunctionReference } from 'convex/server';
+import { GRAMMARS, INSTITUTES } from '../../utils/convexRefs';
 
 interface FormState {
   title: string;
@@ -35,17 +35,14 @@ const DEFAULT_FORM: FormState = {
 
 type BulkImportItem = {
   title: string;
-  // Chinese (default)
   summary?: string;
   explanation?: string;
-  // Multi-language
   summaryEn?: string;
   summaryVi?: string;
   summaryMn?: string;
   explanationEn?: string;
   explanationVi?: string;
   explanationMn?: string;
-  // Examples and course context
   examples?: unknown;
   courseId: string;
   unitId: number;
@@ -61,7 +58,6 @@ type BulkImportResult = {
   };
 };
 
-// Multi-sheet types
 type SheetData = {
   sheetName: string;
   rows: Record<string, unknown>[];
@@ -80,9 +76,6 @@ type Institute = {
   publisher?: string;
 };
 
-/**
- * Parse a CSV line correctly, handling quoted fields that may contain commas.
- */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -111,19 +104,14 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-/**
- * Auto-match sheet name to an institute/textbook
- */
 function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute | null {
   const normalized = sheetName.trim().toLowerCase();
 
-  // Skip common non-content sheet names
   const skipPatterns = ['说明', 'readme', 'info', 'sheet', '目录', 'index', 'template'];
   if (skipPatterns.some(p => normalized.includes(p))) {
     return null;
   }
 
-  // 1. Exact match with display name
   for (const inst of institutes) {
     const displayName = `${inst.name || ''} ${inst.displayLevel || ''} ${inst.volume || ''}`
       .trim()
@@ -133,7 +121,6 @@ function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute 
     }
   }
 
-  // 2. Extract level and volume numbers (e.g., "延世1-1" → level=1, volume=1)
   const numMatch = normalized.match(/(\d+)[^\d]*(\d+)?/);
   if (numMatch) {
     const level = numMatch[1];
@@ -158,7 +145,6 @@ function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute 
     }
   }
 
-  // 3. Partial match - sheet name contains institute name or vice versa
   for (const inst of institutes) {
     const instName = inst.name?.toLowerCase() || '';
     if (instName && (normalized.includes(instName) || instName.includes(normalized))) {
@@ -169,9 +155,6 @@ function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute 
   return null;
 }
 
-/**
- * Get display name for an institute
- */
 function getInstituteDisplayName(inst: Institute): string {
   let displayName = inst.name || '';
   if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
@@ -180,20 +163,14 @@ function getInstituteDisplayName(inst: Institute): string {
 }
 
 const GrammarImporter: React.FC = () => {
-  const institutes = (useQuery as unknown as (q: unknown, args: unknown) => unknown)(
-    makeFunctionReference('institutes:getAll'),
-    {}
-  ) as any[] | undefined;
-  const bulkImportMutation = (
-    useMutation as unknown as (m: unknown) => (args: unknown) => Promise<unknown>
-  )(makeFunctionReference('grammars:bulkImport'));
+  const institutes = useQuery(INSTITUTES.getAll, {});
+  const bulkImportMutation = useMutation(GRAMMARS.bulkImport);
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [bulkText, setBulkText] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Multi-sheet states
   const [sheetDataList, setSheetDataList] = useState<SheetData[]>([]);
   const [showSheetMapping, setShowSheetMapping] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(
@@ -207,9 +184,6 @@ const GrammarImporter: React.FC = () => {
     }
   }, [institutes, form.courseId]);
 
-  /**
-   * Parse rows from a sheet into BulkImportItems
-   */
   const parseSheetRows = (
     rows: Record<string, unknown>[],
     courseId: string,
@@ -291,16 +265,12 @@ const GrammarImporter: React.FC = () => {
       .filter((item): item is NonNullable<typeof item> => Boolean(item));
   };
 
-  /**
-   * Handle Excel file with multiple sheets
-   */
   const handleExcelFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = event => {
       const data = new Uint8Array(event.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
 
-      // If only one sheet, use existing single-sheet flow
       if (workbook.SheetNames.length === 1) {
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
@@ -317,7 +287,6 @@ const GrammarImporter: React.FC = () => {
         return;
       }
 
-      // Multiple sheets - parse all and attempt auto-matching
       const sheets: SheetData[] = workbook.SheetNames.map(sheetName => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<
@@ -350,9 +319,6 @@ const GrammarImporter: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  /**
-   * Handle multi-sheet import
-   */
   const handleMultiSheetImport = async () => {
     const validSheets = sheetDataList.filter(
       s => !s.skip && (s.matchedCourseId || s.manualCourseId)
@@ -384,9 +350,7 @@ const GrammarImporter: React.FC = () => {
       }
 
       try {
-        const result = (await bulkImportMutation({
-          items,
-        })) as BulkImportResult;
+        const result = (await bulkImportMutation({ items })) as BulkImportResult;
 
         totalSuccess += result.results?.success || 0;
         totalFailed += result.results?.failed || 0;
@@ -401,7 +365,6 @@ const GrammarImporter: React.FC = () => {
       }
     }
 
-    // Show summary
     let statusMsg = `批量导入完成：成功 ${totalSuccess} 条`;
     if (totalNew > 0) statusMsg += `，新增 ${totalNew} 条`;
     if (totalFailed > 0) statusMsg += `，失败 ${totalFailed} 条`;
@@ -414,9 +377,6 @@ const GrammarImporter: React.FC = () => {
     setSheetDataList([]);
   };
 
-  /**
-   * Update sheet mapping
-   */
   const updateSheetMapping = (index: number, updates: Partial<SheetData>) => {
     setSheetDataList(prev =>
       prev.map((sheet, i) => (i === index ? { ...sheet, ...updates } : sheet))
@@ -437,27 +397,22 @@ const GrammarImporter: React.FC = () => {
         .map(l => l.trim())
         .filter(Boolean);
 
-      // Parse headers from first row
       const headerLine = lines[0];
       const headers = headerLine.includes('\t')
         ? headerLine.split('\t').map(h => h.trim().toLowerCase())
         : parseCSVLine(headerLine).map(h => h.toLowerCase());
 
-      // Map header keywords to column indices
       const findColumn = (keywords: string[]): number => {
         return headers.findIndex(h => keywords.some(k => h.includes(k)));
       };
 
       const colMap = {
         title: findColumn(['标题', 'title', '语法', 'grammar']),
-        // Chinese (default)
         summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
         explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
-        // Multi-language summaries
         summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
         summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
         summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
-        // Multi-language explanations
         explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
         explanationVi: findColumn([
           '解释 (vn)',
@@ -467,24 +422,20 @@ const GrammarImporter: React.FC = () => {
           'explanation_vn',
         ]),
         explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
-        // Examples (multi-language columns)
         exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
         exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
         exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
         exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
         exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
-        // Unit
         unit: findColumn(['单元', 'unit', '课']),
       };
 
-      // Validate required columns
       if (colMap.title === -1) {
-        setStatus(`错误：未找到"标题"或"Title"列，请检查表头`);
+        setStatus('错误：未找到"标题"或"Title"列，请检查表头');
         setSubmitting(false);
         return;
       }
 
-      // Parse data rows (skip header)
       const items: BulkImportItem[] = lines
         .slice(1)
         .map(line => {
@@ -498,14 +449,12 @@ const GrammarImporter: React.FC = () => {
           const title = getValue(colMap.title);
           if (!title) return null;
 
-          // Build example object from separate columns
           const exampleKr = getValue(colMap.exampleKr);
           const exampleCn = getValue(colMap.exampleCn);
           const exampleEn = getValue(colMap.exampleEn);
           const exampleVi = getValue(colMap.exampleVi);
           const exampleMn = getValue(colMap.exampleMn);
 
-          // Only create example if at least Korean example exists
           const examples = exampleKr
             ? [
                 {
@@ -520,17 +469,14 @@ const GrammarImporter: React.FC = () => {
 
           return {
             title,
-            // Chinese (default)
             summary: getValue(colMap.summary),
             explanation: getValue(colMap.explanation),
-            // Multi-language
             summaryEn: getValue(colMap.summaryEn),
             summaryVi: getValue(colMap.summaryVi),
             summaryMn: getValue(colMap.summaryMn),
             explanationEn: getValue(colMap.explanationEn),
             explanationVi: getValue(colMap.explanationVi),
             explanationMn: getValue(colMap.explanationMn),
-            // Examples
             examples,
             courseId: form.courseId,
             unitId: Number(getValue(colMap.unit)) || form.unitId || 1,
@@ -544,9 +490,7 @@ const GrammarImporter: React.FC = () => {
         return;
       }
 
-      const result = (await bulkImportMutation({
-        items,
-      })) as BulkImportResult;
+      const result = (await bulkImportMutation({ items })) as BulkImportResult;
 
       const r = result?.results;
       if (r?.errors?.length) {
@@ -570,7 +514,6 @@ const GrammarImporter: React.FC = () => {
     }
   };
 
-  // Sheet Mapping Modal
   const SheetMappingModal = () => {
     if (!showSheetMapping) return null;
 
@@ -582,7 +525,6 @@ const GrammarImporter: React.FC = () => {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-          {/* Header */}
           <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-black text-zinc-900">工作表映射</h3>
@@ -601,7 +543,6 @@ const GrammarImporter: React.FC = () => {
             </button>
           </div>
 
-          {/* Sheet List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {sheetDataList.map((sheet, index) => (
               <div
@@ -615,7 +556,6 @@ const GrammarImporter: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Status Icon */}
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       sheet.skip
@@ -634,7 +574,6 @@ const GrammarImporter: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Sheet Name */}
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-zinc-900 truncate">{sheet.sheetName}</div>
                     <div className="text-xs text-zinc-500">
@@ -644,7 +583,6 @@ const GrammarImporter: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Course Selector or Skip */}
                   <div className="flex items-center gap-2">
                     {!sheet.skip ? (
                       <div className="relative">
@@ -688,7 +626,6 @@ const GrammarImporter: React.FC = () => {
             ))}
           </div>
 
-          {/* Footer */}
           <div className="p-4 border-t border-zinc-200 bg-zinc-50">
             <div className="flex items-center justify-between">
               <div className="text-sm text-zinc-600">
@@ -780,7 +717,6 @@ const GrammarImporter: React.FC = () => {
             批量导入
           </div>
 
-          {/* Default Unit Selection */}
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium text-zinc-700">
               默认单元（表格中未指定时使用）:
@@ -794,7 +730,6 @@ const GrammarImporter: React.FC = () => {
             </label>
           </div>
 
-          {/* File Upload Area */}
           <div className="relative">
             <input
               type="file"
@@ -832,7 +767,6 @@ const GrammarImporter: React.FC = () => {
 
           <div className="text-xs text-zinc-500 text-center">— 或手动从表格中复制并粘贴 —</div>
 
-          {/* Format Guide */}
           <div className="bg-zinc-50 rounded-lg p-3 text-xs space-y-2 border border-zinc-100">
             <div className="flex items-center justify-between">
               <div className="font-bold text-zinc-700">列格式说明（支持多语言）：</div>
@@ -882,7 +816,6 @@ const GrammarImporter: React.FC = () => {
         </div>
       )}
 
-      {/* Multi-sheet Mapping Modal */}
       <SheetMappingModal />
     </div>
   );

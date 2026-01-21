@@ -3,7 +3,8 @@ import { Pencil, AlignLeft, Check, X, Volume2, ArrowRight } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings, QuestionType, SessionStats } from '../types';
 import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
-import { speak, shuffleArray } from '../utils';
+import { shuffleArray } from '../utils';
+import { useTTS } from '../../../hooks/useTTS';
 
 interface LearnModeViewProps {
   words: ExtendedVocabularyItem[];
@@ -30,6 +31,13 @@ const pickQuestionType = (settings: VocabSettings): QuestionType => {
 const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
   ({ words, settings, language, allWords, onComplete, onRecordMistake }) => {
     const labels = useMemo(() => getLabels(language), [language]);
+    const { speak: speakTTS } = useTTS();
+    const speakKorean = useCallback(
+      (text: string) => {
+        void speakTTS(text, { engine: 'edge' });
+      },
+      [speakTTS]
+    );
     const [learnQueue] = useState<ExtendedVocabularyItem[]>(() => {
       const queue = settings.learn.random ? shuffleArray([...words]) : [...words];
       return queue.slice(0, settings.learn.batchSize);
@@ -153,7 +161,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
                 <h2 className="text-5xl font-bold text-slate-800 text-center">{prompt}</h2>
                 {currentQuestionType.includes('K_TO_N') && (
                   <button
-                    onClick={() => speak(prompt)}
+                    onClick={() => speakKorean(prompt)}
                     className="p-2 rounded-full bg-white hover:bg-slate-100 text-indigo-600 transition-colors"
                   >
                     <Volume2 className="w-6 h-6" />

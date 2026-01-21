@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { TopikQuestion, TopikExam } from '../types';
+import { logger } from '../utils/logger';
 
 /**
  * 考试数据（扩展类型）
@@ -120,7 +121,7 @@ export const prefetchQuestions = async (url: string): Promise<void> => {
     // 使用 fetch 预加载到浏览器缓存
     await fetch(url, { cache: 'default' });
   } catch (e) {
-    console.warn('[prefetchQuestions] Failed to prefetch:', e);
+    logger.warn('[prefetchQuestions] Failed to prefetch:', e);
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Settings, Volume2, Plus, Languages, Headphones, X } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { qRef } from '../../utils/convexRefs';
@@ -7,6 +7,7 @@ import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import { getLabels } from '../../utils/i18n';
 import { ListeningModuleSkeleton } from '../../components/common';
+import { useTTS } from '../../hooks/useTTS';
 
 // =========================================
 // Types
@@ -180,6 +181,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   onBack,
 }) => {
   const labels = getLabels(language);
+  const { speak: speakTTS, stop: stopTTS } = useTTS();
+
+  useEffect(() => stopTTS, [stopTTS]);
 
   // UI State
   const [fontSize, setFontSize] = useState(20);
@@ -311,12 +315,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     }
   };
 
-  // TTS function
-  const speak = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    speechSynthesis.speak(utterance);
-  };
+  const speak = useCallback(
+    (text: string) => {
+      void speakTTS(text, { engine: 'edge' });
+    },
+    [speakTTS]
+  );
 
   // Close popup on outside click
   useEffect(() => {
