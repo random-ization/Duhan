@@ -1,27 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  ChevronLeft,
-  ChevronDown,
-  ChevronRight,
-  Volume2,
-  X,
-  Star,
-  Eye,
-  EyeOff,
-  Play,
-  Square,
-  BookOpen,
-  Settings,
-} from 'lucide-react';
+import { ChevronLeft, ChevronDown, Eye, EyeOff, Play, Square, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
-import { VocabQuiz, VocabMatch } from '../features/vocab';
+import { VocabQuiz, VocabMatch, FlashcardView } from '../features/vocab';
 // import { updateVocabProgress } from '../services/vocabApi';
 import EmptyState from '../components/common/EmptyState';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useTTS } from '../hooks/useTTS';
 import { useApp } from '../contexts/AppContext';
 import { getLabel, getLabels } from '../utils/i18n';
@@ -35,6 +23,16 @@ interface ExtendedVocabItem extends VocabularyItem {
   unit: number;
   mastered?: boolean;
   exampleTranslation?: string;
+  // FSRS Fields
+  state?: number;
+  stability?: number;
+  difficulty?: number;
+  elapsed_days?: number;
+  scheduled_days?: number;
+  reps?: number;
+  learning_steps?: number;
+  lapses?: number;
+  last_review?: number | null;
 }
 
 type ViewMode = 'flashcard' | 'quiz' | 'match' | 'list';
@@ -89,11 +87,6 @@ export default function VocabModulePage() {
   const audioLoopRef = useRef<boolean>(false);
 
   // Flashcard settings
-  const [showFlashcardSettings, setShowFlashcardSettings] = useState(false);
-  const [flashcardSettings, setFlashcardSettings] = useState({
-    autoPlayTTS: false,
-    cardFront: 'KOREAN' as 'KOREAN' | 'MEANING',
-  });
 
   // Use ref to prevent parseWords from depending on textbookContexts object
   const textbookContextsRef = useRef(textbookContexts);
@@ -108,6 +101,14 @@ export default function VocabModulePage() {
     instituteId ? { courseId: instituteId } : 'skip'
   );
   const updateProgressMutation = useMutation(VOCAB.updateProgress);
+  // Cast to any to avoid "Type instantiation is excessively deep" error
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const updateProgressV2Mutation = useMutation((api as any).vocab.updateProgressV2);
+  // Cast to any to avoid "Type instantiation is excessively deep" error
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const calculateNextSchedule = useAction((api as any).fsrs.calculateNextSchedule);
 
   // Derive loading state and allWords directly from query - no extra state needed
   const isLoading = convexWordsQuery === undefined;
@@ -170,13 +171,10 @@ export default function VocabModulePage() {
     return Array.from({ length: total }, (_, i) => i + 1);
   }, [course]);
 
-  const currentCard = filteredWords[viewState.cardIndex];
   const masteryCount = useMemo(
     () => filteredWords.filter(w => masteredIds.has(w.id)).length,
     [filteredWords, masteredIds]
   );
-  const progressPercent =
-    filteredWords.length > 0 ? ((viewState.cardIndex + 1) / filteredWords.length) * 100 : 0;
 
   // Memoized words for Quiz/Match to prevent re-renders
   const gameWords = useMemo(
@@ -189,47 +187,6 @@ export default function VocabModulePage() {
       })),
     [filteredWords, language]
   );
-
-  const handleKnow = async () => {
-    if (currentCard) {
-      setMasteredIds(prev => new Set([...prev, currentCard.id]));
-      // Call Convex Mutation
-      if (user?.id && currentCard.id) {
-        try {
-          await updateProgressMutation({
-            wordId: currentCard.id,
-            quality: 5,
-          });
-        } catch (err) {
-          console.warn('Failed to update progress:', err);
-        }
-      }
-    }
-    goToNext();
-  };
-  const handleDontKnow = async () => {
-    if (user?.id && currentCard?.id) {
-      try {
-        // Remove from mastered locally if forgot
-        setMasteredIds(prev => {
-          const next = new Set(prev);
-          next.delete(currentCard.id);
-          return next;
-        });
-
-        await updateProgressMutation({
-          wordId: currentCard.id,
-          quality: 0,
-        });
-      } catch (err) {
-        console.warn('Failed to update progress:', err);
-      }
-    }
-    goToNext();
-  };
-  const flipCard = useCallback(() => {
-    setViewState(prev => ({ ...prev, isFlipped: !prev.isFlipped }));
-  }, []);
 
   /*
     const handleRating = async (rating: number) => {
@@ -261,22 +218,6 @@ export default function VocabModulePage() {
     };
     */
 
-  const goToNext = useCallback(() => {
-    setViewState(prev => {
-      if (prev.cardIndex < filteredWords.length - 1) {
-        return { ...prev, cardIndex: prev.cardIndex + 1, isFlipped: false };
-      } else {
-        // At last card, show completion
-        return { ...prev, flashcardComplete: true, isFlipped: false };
-      }
-    });
-  }, [filteredWords.length]);
-
-  const goToPrev = useCallback(() => {
-    setViewState(prev =>
-      prev.cardIndex > 0 ? { ...prev, cardIndex: prev.cardIndex - 1, isFlipped: false } : prev
-    );
-  }, []);
   const toggleStar = (id: string) => {
     setStarredIds(prev => {
       const next = new Set(prev);
@@ -285,28 +226,13 @@ export default function VocabModulePage() {
       return next;
     });
   };
+
   const speakWord = useCallback(
     (text: string) => {
       speakTTS(text);
     },
     [speakTTS]
   );
-
-  // Auto-play TTS when card changes (if enabled)
-  useEffect(() => {
-    if (flashcardSettings.autoPlayTTS && currentCard && viewState.mode === 'flashcard') {
-      const textToSpeak =
-        flashcardSettings.cardFront === 'KOREAN' ? currentCard.korean : currentCard.korean;
-      speakWord(textToSpeak);
-    }
-  }, [
-    viewState.cardIndex,
-    flashcardSettings.autoPlayTTS,
-    flashcardSettings.cardFront,
-    viewState.mode,
-    currentCard,
-    speakWord,
-  ]);
 
   // Audio loop for Quick Study mode (1.5s gap between words)
   const playAudioLoop = async () => {
@@ -342,18 +268,6 @@ export default function VocabModulePage() {
     audioLoopRef.current = false;
     setIsAudioLooping(false);
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        flipCard();
-      } else if (e.code === 'ArrowLeft') goToPrev();
-      else if (e.code === 'ArrowRight') goToNext();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [viewState.cardIndex, filteredWords.length, flipCard, goToNext, goToPrev]);
 
   const tabs = [
     { id: 'flashcard', label: labels.vocab?.flashcard || 'Flashcard', emoji: '🎴' },
@@ -520,113 +434,12 @@ export default function VocabModulePage() {
         </div>
       )}
 
-      {/* Flashcard */}
+      {/* Flashcard View */}
       {viewState.mode === 'flashcard' && filteredWords.length > 0 && (
         <div className="w-full max-w-4xl mb-10 z-0">
-          {/* Flashcard Settings Modal */}
-          {showFlashcardSettings && (
-            <div
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-              onClick={() => setShowFlashcardSettings(false)}
-            >
-              <div
-                className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-black text-slate-900">
-                    ⚙️ {labels.vocab?.settings || 'Settings'}
-                  </h2>
-                  <button
-                    onClick={() => setShowFlashcardSettings(false)}
-                    className="p-2 hover:bg-slate-100 rounded-lg"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Auto-play TTS */}
-                <div className="mb-5">
-                  <label className="flex items-center justify-between p-4 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-                    <div>
-                      <span className="font-bold text-slate-700 block">
-                        🔊 {labels.vocab?.autoPlay || 'Auto Play Audio'}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {labels.vocab?.autoPlay || 'Auto play when changing cards'}
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={flashcardSettings.autoPlayTTS}
-                      onChange={e =>
-                        setFlashcardSettings(s => ({ ...s, autoPlayTTS: e.target.checked }))
-                      }
-                      className="w-5 h-5 accent-green-500"
-                    />
-                  </label>
-                </div>
-
-                {/* Card Front */}
-                <div className="mb-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
-                    {labels.vocab?.cardFront || 'Card Front'}
-                  </h3>
-                  <div className="space-y-2">
-                    <label
-                      className={`flex items-center p-4 rounded-xl cursor-pointer ${flashcardSettings.cardFront === 'KOREAN' ? 'bg-green-50 border-2 border-green-300' : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'}`}
-                    >
-                      <input
-                        type="radio"
-                        name="card-front"
-                        checked={flashcardSettings.cardFront === 'KOREAN'}
-                        onChange={() => setFlashcardSettings(s => ({ ...s, cardFront: 'KOREAN' }))}
-                        className="mr-3"
-                      />
-                      <div>
-                        <span className="font-bold">
-                          🇰🇷 {labels.vocab?.koreanFront || 'Korean Front'}
-                        </span>
-                        <span className="text-xs text-slate-400 block">
-                          {labels.vocab?.koreanFront || 'View Korean'}
-                        </span>
-                      </div>
-                    </label>
-                    <label
-                      className={`flex items-center p-4 rounded-xl cursor-pointer ${flashcardSettings.cardFront === 'MEANING' ? 'bg-green-50 border-2 border-green-300' : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'}`}
-                    >
-                      <input
-                        type="radio"
-                        name="card-front"
-                        checked={flashcardSettings.cardFront === 'MEANING'}
-                        onChange={() => setFlashcardSettings(s => ({ ...s, cardFront: 'MEANING' }))}
-                        className="mr-3"
-                      />
-                      <div>
-                        <span className="font-bold">
-                          🇨🇳 {labels.vocab?.meaningFront || 'Meaning Front'}
-                        </span>
-                        <span className="text-xs text-slate-400 block">
-                          {labels.vocab?.meaningFront || 'View Meaning'}
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowFlashcardSettings(false)}
-                  className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800"
-                >
-                  {labels.done || 'Done'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-[1.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden h-[450px] flex flex-col relative perspective-1000">
-            {viewState.flashcardComplete ? (
-              /* Completion Card */
+          {viewState.flashcardComplete ? (
+            /* Completion Card */
+            <div className="bg-white rounded-[1.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden min-h-[500px] flex flex-col relative z-0">
               <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-green-50 to-white">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                   <span className="text-4xl">🎉</span>
@@ -678,220 +491,103 @@ export default function VocabModulePage() {
                   🔄 {labels.vocab?.restart || 'Restart'}
                 </button>
               </div>
-            ) : (
-              <>
-                {/* Top Right: Unit + Star */}
-                <div className="absolute top-4 right-4 z-20 flex gap-2">
-                  <span className="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-400">
-                    {labels.vocab?.unit || 'Unit'} {currentCard?.unit}
-                  </span>
-                  <button
-                    onClick={() => toggleStar(currentCard?.id || '')}
-                    className={`w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center ${starredIds.has(currentCard?.id || '') ? 'text-yellow-500' : 'text-slate-300'}`}
-                  >
-                    <Star
-                      className="w-5 h-5"
-                      fill={starredIds.has(currentCard?.id || '') ? 'currentColor' : 'none'}
-                    />
-                  </button>
-                </div>
-
-                {/* Card Content */}
-                <div onClick={flipCard} className="flex-1 relative cursor-pointer">
-                  <div
-                    className={`card-content w-full h-full relative transition-transform duration-500 transform-style-3d ${viewState.isFlipped ? 'rotate-y-180' : ''}`}
-                  >
-                    {/* Front */}
-                    <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center backface-hidden bg-white">
-                      <h2 className="text-6xl font-black text-slate-900 mb-6">
-                        {flashcardSettings.cardFront === 'KOREAN'
-                          ? currentCard?.korean
-                          : getLocalizedContent(currentCard, 'meaning', language)}
-                      </h2>
-                      {flashcardSettings.cardFront === 'KOREAN' && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            speakWord(currentCard?.korean || '');
-                          }}
-                          className="mt-2 p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                        >
-                          <Volume2 className="w-6 h-6" />
-                        </button>
-                      )}
-                    </div>
-                    {/* Back */}
-                    <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center backface-hidden rotate-y-180 bg-green-50/50 p-6 overflow-y-auto">
-                      {/* Show Korean word with speaker if front is meaning */}
-                      {flashcardSettings.cardFront === 'MEANING' && (
-                        <div className="flex items-center gap-3 mb-4">
-                          <h2 className="text-5xl font-black text-green-600">
-                            {currentCard?.korean}
-                          </h2>
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              speakWord(currentCard?.korean || '');
-                            }}
-                            className="p-2 rounded-full bg-green-100 hover:bg-green-200 text-green-600 transition-colors"
-                          >
-                            <Volume2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* POS Badge */}
-                      {currentCard?.partOfSpeech && (
-                        <div
-                          className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                            currentCard.partOfSpeech === 'VERB_T'
-                              ? 'bg-red-100 text-red-700'
-                              : currentCard.partOfSpeech === 'VERB_I'
-                                ? 'bg-orange-100 text-orange-700'
-                                : currentCard.partOfSpeech === 'ADJ'
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : currentCard.partOfSpeech === 'NOUN'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : currentCard.partOfSpeech === 'ADV'
-                                      ? 'bg-green-100 text-green-700'
-                                      : currentCard.partOfSpeech === 'PARTICLE'
-                                        ? 'bg-gray-100 text-gray-700'
-                                        : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {currentCard.partOfSpeech === 'VERB_T'
-                            ? `${labels.vocab?.pos?.verb_t_short || 'v.t.'} ${labels.vocab?.pos?.verb_t || 'Transitive Verb'}`
-                            : currentCard.partOfSpeech === 'VERB_I'
-                              ? `${labels.vocab?.pos?.verb_i_short || 'v.i.'} ${labels.vocab?.pos?.verb_i || 'Intransitive Verb'}`
-                              : currentCard.partOfSpeech === 'ADJ'
-                                ? `${labels.vocab?.pos?.adj_short || 'adj.'} ${labels.vocab?.pos?.adj || 'Adjective'}`
-                                : currentCard.partOfSpeech === 'NOUN'
-                                  ? `${labels.vocab?.pos?.noun_short || 'n.'} ${labels.vocab?.pos?.noun || 'Noun'}`
-                                  : currentCard.partOfSpeech === 'ADV'
-                                    ? `${labels.vocab?.pos?.adv_short || 'adv.'} ${labels.vocab?.pos?.adv || 'Adverb'}`
-                                    : currentCard.partOfSpeech === 'PARTICLE'
-                                      ? labels.vocab?.pos?.particle || 'Particle'
-                                      : currentCard.partOfSpeech}
-                        </div>
-                      )}
-
-                      {/* Main Content */}
-                      {flashcardSettings.cardFront === 'KOREAN' && (
-                        <h3 className="font-bold text-4xl text-slate-900 mb-2">
-                          {getLocalizedContent(currentCard, 'meaning', language)}
-                        </h3>
-                      )}
-
-                      {/* Hanja */}
-                      {currentCard?.hanja && (
-                        <p className="text-lg text-slate-500 mb-3">
-                          {labels.vocab?.hanja || 'Hanja'}: {currentCard.hanja}
-                        </p>
-                      )}
-
-                      {/* Tips Section (Yellow Background) */}
-                      {currentCard?.tips &&
-                        (currentCard.tips.synonyms ||
-                          currentCard.tips.antonyms ||
-                          currentCard.tips.nuance) && (
-                          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg w-full max-w-md mb-3">
-                            {currentCard.tips.synonyms && currentCard.tips.synonyms.length > 0 && (
-                              <p className="text-sm text-yellow-800 mb-1">
-                                <span className="font-bold">≈</span>{' '}
-                                {currentCard.tips.synonyms.join(', ')}
-                              </p>
-                            )}
-                            {currentCard.tips.antonyms && currentCard.tips.antonyms.length > 0 && (
-                              <p className="text-sm text-yellow-800 mb-1">
-                                <span className="font-bold">≠</span>{' '}
-                                {currentCard.tips.antonyms.join(', ')}
-                              </p>
-                            )}
-                            {currentCard.tips.nuance && (
-                              <p className="text-sm text-yellow-700">
-                                <span className="mr-1">💡</span>
-                                {currentCard.tips.nuance}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                      {/* Example Sentence (Slate Background) */}
-                      {currentCard?.exampleSentence && (
-                        <div className="bg-slate-100 p-3 rounded-lg w-full max-w-md">
-                          <p className="text-slate-700 text-base">{currentCard.exampleSentence}</p>
-                          <p className="text-slate-500 text-sm mt-1 font-medium text-slate-400">
-                            {getLocalizedContent(currentCard, 'exampleMeaning', language) ||
-                              currentCard.exampleTranslation}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Navigation Bar */}
-                <div className="bg-slate-100 border-t-2 border-slate-200 py-3 px-6 flex justify-between items-center text-xs font-bold text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <span>Space {labels.vocab?.flip || 'Flip'}</span>
-                    <button
-                      onClick={() => setShowFlashcardSettings(true)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg transition-colors"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={goToPrev}
-                      disabled={viewState.cardIndex === 0}
-                      className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <span className="font-black text-slate-900">
-                      {viewState.cardIndex + 1} / {filteredWords.length}
-                    </span>
-                    <button
-                      onClick={goToNext}
-                      disabled={viewState.cardIndex === filteredWords.length - 1}
-                      className="w-8 h-8 bg-white border border-slate-300 rounded-full hover:border-slate-900 disabled:opacity-30 flex items-center justify-center"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>{labels.vocab?.shortcuts || 'Shortcuts'}</span>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-slate-200">
-                  <div
-                    className="h-full bg-[#4ADE80] transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Action Buttons - SRS (only show when not complete) */}
-          {!viewState.flashcardComplete && (
-            <div className="flex justify-center gap-6 mt-6 px-8">
-              <button
-                onClick={handleDontKnow}
-                className="flex-1 max-w-[180px] py-4 bg-red-50 border-2 border-red-500 text-red-600 rounded-2xl font-black text-lg shadow-[4px_4px_0px_0px_rgba(220,38,38,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(220,38,38,0.5)] active:translate-y-0 active:shadow-none transition-all"
-              >
-                ✕ {labels.vocab?.forgot || 'Forgot'}
-              </button>
-              <button
-                onClick={handleKnow}
-                className="flex-1 max-w-[180px] py-4 bg-green-50 border-2 border-green-500 text-green-600 rounded-2xl font-black text-lg shadow-[4px_4px_0px_0px_rgba(34,197,94,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(34,197,94,0.5)] active:translate-y-0 active:shadow-none transition-all"
-              >
-                ✓ {labels.vocab?.remembered || 'Remembered'}
-              </button>
             </div>
+          ) : (
+            <FlashcardView
+              words={filteredWords}
+              language={language}
+              courseId={instituteId}
+              settings={{
+                flashcard: {
+                  batchSize: 200,
+                  random: false,
+                  autoTTS: false,
+                  cardFront: 'KOREAN',
+                },
+                learn: {
+                  batchSize: 20,
+                  random: true,
+                  ratingMode: 'PASS_FAIL',
+                  types: { multipleChoice: true, writing: true },
+                  answers: { korean: true, native: true },
+                },
+              }}
+              onComplete={stats => {
+                setViewState(prev => ({ ...prev, flashcardComplete: true }));
+                const newMastered = new Set(masteredIds);
+                stats.correct.forEach(w => newMastered.add(w.id));
+                setMasteredIds(newMastered);
+              }}
+              onSaveWord={word => {
+                if (!starredIds.has(word.id)) {
+                  toggleStar(word.id);
+                }
+              }}
+              onCardReview={async (word, result) => {
+                const isCorrect = typeof result === 'boolean' ? result : result > 1;
+
+                if (isCorrect) {
+                  setMasteredIds(prev => new Set([...prev, word.id]));
+                } else {
+                  setMasteredIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(word.id);
+                    return next;
+                  });
+                }
+
+                if (user?.id) {
+                  // FSRS Logic
+                  try {
+                    // 1. Determine Rating (1=Again, 3=Good as defaults for boolean)
+                    let rating = 1;
+                    if (typeof result === 'number') {
+                      rating = result;
+                    } else {
+                      rating = result ? 3 : 1;
+                    }
+
+                    // 2. Construct Current FSRS State
+                    const currentCardState =
+                      word.state !== undefined
+                        ? {
+                            state: word.state,
+                            due: word.progress?.nextReviewAt || Date.now(),
+                            stability: word.stability || 0,
+                            difficulty: word.difficulty || 0,
+                            elapsed_days: word.elapsed_days || 0,
+                            scheduled_days: word.scheduled_days || 0,
+                            learning_steps: word.learning_steps || 0,
+                            reps: word.reps || 0,
+                            lapses: word.lapses || 0,
+                            last_review: word.last_review || undefined,
+                          }
+                        : undefined; // undefined for NEW cards
+
+                    // 3. Calculate Next Schedule (Server Side)
+                    const nextState = await calculateNextSchedule({
+                      currentCard: currentCardState,
+                      rating,
+                    });
+
+                    // 4. Save to DB
+                    await updateProgressV2Mutation({
+                      wordId: word.id as any,
+                      rating,
+                      fsrsState: nextState,
+                    });
+                  } catch (err) {
+                    console.error('FSRS Error:', err);
+                    // Fallback to V1 if FSRS fails? or just log.
+                    // For now, retry with V1 legacy for safety if needed,
+                    // but since we want migration, let's stick to V2 error handling.
+                    if (typeof result === 'boolean') {
+                      updateProgressMutation({ wordId: word.id, quality: result ? 5 : 0 });
+                    }
+                  }
+                }
+              }}
+            />
           )}
         </div>
       )}
@@ -1105,6 +801,7 @@ export default function VocabModulePage() {
                 .transform-style-3d { transform-style: preserve-3d; }
                 .backface-hidden { backface-visibility: hidden; }
                 .rotate-y-180 { transform: rotateY(180deg); }
+                .card-content { transform-origin: center center; }
             `}</style>
     </div>
   );

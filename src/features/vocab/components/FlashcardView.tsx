@@ -25,10 +25,11 @@ interface FlashcardViewProps {
     incorrect: ExtendedVocabularyItem[];
   }) => void;
   onSaveWord?: (word: ExtendedVocabularyItem) => void;
+  onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void;
   courseId?: string;
 }
 
-// Settings Modal Component
+// ... Settings Modal Component (unchanged) ...
 const FlashcardSettingsModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +45,7 @@ const FlashcardSettingsModal: React.FC<{
   }) => void;
   labels: ReturnType<typeof getLabels>;
 }> = ({ isOpen, onClose, settings, onUpdate, labels }) => {
+  // ... (keep logic same)
   if (!isOpen) return null;
 
   return (
@@ -160,7 +162,7 @@ const FlashcardSettingsModal: React.FC<{
 };
 
 const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
-  ({ words: initialWords, settings, language, onComplete, onSaveWord, courseId }) => {
+  ({ words: initialWords, settings, language, onComplete, onSaveWord, onCardReview, courseId }) => {
     const labels = useMemo(() => getLabels(language), [language]);
 
     // Local settings state
@@ -272,15 +274,25 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     };
 
     const handleCardRate = useCallback(
-      (know: boolean) => {
+      (result: boolean | number) => {
         if (!currentCard) return;
+
+        // Notify parent about the review
+        if (onCardReview) {
+          onCardReview(currentCard, result);
+        }
+
+        // Determine Pass/Fail for UI stats
+        // If number (1-4): 1=Again(Fail), 2=Hard(Pass), 3=Good(Pass), 4=Easy(Pass)
+        const isPass = typeof result === 'boolean' ? result : result > 1;
+
         setHistory(prev => [...prev, cardIndex]);
         const updatedStats = {
-          correct: know ? [...sessionStats.correct, currentCard] : sessionStats.correct,
-          incorrect: !know ? [...sessionStats.incorrect, currentCard] : sessionStats.incorrect,
+          correct: isPass ? [...sessionStats.correct, currentCard] : sessionStats.correct,
+          incorrect: !isPass ? [...sessionStats.incorrect, currentCard] : sessionStats.incorrect,
         };
         setSessionStats(updatedStats);
-        if (!know && onSaveWord) {
+        if (!isPass && onSaveWord) {
           onSaveWord(currentCard);
         }
         if (cardIndex + 1 < words.length) {
@@ -293,7 +305,16 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           onComplete(updatedStats);
         }
       },
-      [cardIndex, currentCard, courseId, onComplete, onSaveWord, sessionStats, words.length]
+      [
+        cardIndex,
+        currentCard,
+        courseId,
+        onComplete,
+        onSaveWord,
+        sessionStats,
+        words.length,
+        onCardReview,
+      ]
     );
 
     const handleUndo = useCallback(() => {
@@ -344,13 +365,23 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
             setIsFlipped(true);
           }
         } else {
-          if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            handleCardRate(false);
+          // Standard Mode (Left/Right)
+          if (localSettings.ratingMode === 'PASS_FAIL') {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              handleCardRate(false);
+            }
+            if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              handleCardRate(true);
+            }
           }
-          if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            handleCardRate(true);
+          // FSRS Mode (1-4)
+          else {
+            if (e.key === '1') handleCardRate(1); // Again
+            if (e.key === '2') handleCardRate(2); // Hard
+            if (e.key === '3') handleCardRate(3); // Good
+            if (e.key === '4') handleCardRate(4); // Easy
           }
         }
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -363,7 +394,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFlipped, handleCardRate, handleUndo, isFullscreen]);
+    }, [isFlipped, handleCardRate, handleUndo, isFullscreen, localSettings.ratingMode]);
 
     if (!currentCard) {
       return <div className="text-center text-slate-500">{labels.noWords}</div>;
@@ -516,21 +547,62 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
         {/* Center: Rating Buttons + Counter */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleCardRate(false)}
-            className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
-          >
-            <XCircle className="w-6 h-6" />
-          </button>
-          <span className="px-4 py-2 text-slate-600 font-medium">
-            {cardIndex + 1} / {words.length}
-          </span>
-          <button
-            onClick={() => handleCardRate(true)}
-            className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
-          >
-            <CheckCircle className="w-6 h-6" />
-          </button>
+          {localSettings.ratingMode === 'PASS_FAIL' ? (
+            <>
+              <button
+                onClick={() => handleCardRate(false)}
+                className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                title="Forgot (Left Arrow)"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+              <span className="px-4 py-2 text-slate-600 font-medium">
+                {cardIndex + 1} / {words.length}
+              </span>
+              <button
+                onClick={() => handleCardRate(true)}
+                className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
+                title="Remembered (Right Arrow)"
+              >
+                <CheckCircle className="w-6 h-6" />
+              </button>
+            </>
+          ) : (
+            // FSRS 4 Buttons
+            <div className="flex items-center gap-2">
+              <span className="mr-2 text-slate-400 font-medium text-sm">
+                {cardIndex + 1} / {words.length}
+              </span>
+              <button
+                onClick={() => handleCardRate(1)}
+                className="px-3 py-2 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                title="Again (1)"
+              >
+                1. Again
+              </button>
+              <button
+                onClick={() => handleCardRate(2)}
+                className="px-3 py-2 rounded-lg bg-orange-50 text-orange-600 font-bold hover:bg-orange-100 transition-colors"
+                title="Hard (2)"
+              >
+                2. Hard
+              </button>
+              <button
+                onClick={() => handleCardRate(3)}
+                className="px-3 py-2 rounded-lg bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                title="Good (3)"
+              >
+                3. Good
+              </button>
+              <button
+                onClick={() => handleCardRate(4)}
+                className="px-3 py-2 rounded-lg bg-green-50 text-green-600 font-bold hover:bg-green-100 transition-colors"
+                title="Easy (4)"
+              >
+                4. Easy
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: Actions */}

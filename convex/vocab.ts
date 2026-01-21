@@ -50,7 +50,16 @@ export type VocabWordDto = {
     interval: number;
     streak: number;
     nextReviewAt: number | null;
-    lastReviewedAt?: number | null; // Changed to match VocabRefernce
+    lastReviewedAt?: number | null;
+    // FSRS Fields
+    state?: number;
+    stability?: number;
+    difficulty?: number;
+    elapsed_days?: number;
+    scheduled_days?: number;
+    reps?: number;
+    lapses?: number;
+    last_review?: number | null;
   } | null;
   mastered?: boolean;
   tips?: VocabTips;
@@ -389,6 +398,15 @@ export const getOfCourse = query({
               streak: progress.streak,
               nextReviewAt: progress.nextReviewAt,
               lastReviewedAt: progress.lastReviewedAt,
+              // FSRS Fields (Optional, may be undefined for legacy data)
+              state: progress.state,
+              stability: progress.stability,
+              difficulty: progress.difficulty,
+              elapsed_days: progress.elapsed_days,
+              scheduled_days: progress.scheduled_days,
+              reps: progress.reps,
+              lapses: progress.lapses,
+              last_review: progress.last_review,
             }
           : null,
         mastered: progress?.status === 'MASTERED' || false,

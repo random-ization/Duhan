@@ -3,3 +3,4 @@ export { default as VocabQuiz } from './components/VocabQuiz';
 export { default as VocabMatch } from './components/VocabMatch';
 export * from './hooks/useVocabProgress';
 export * from './types';
+export { default as FlashcardView } from './components/FlashcardView';

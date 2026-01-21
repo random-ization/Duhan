@@ -3,6 +3,16 @@ import { VocabularyItem } from '../../types';
 export interface ExtendedVocabularyItem extends VocabularyItem {
   unit: number;
   id: string;
+  // FSRS Fields
+  state?: number;
+  stability?: number;
+  difficulty?: number;
+  elapsed_days?: number;
+  scheduled_days?: number;
+  reps?: number;
+  learning_steps?: number;
+  lapses?: number;
+  last_review?: number | null;
 }
 
 export type LearningMode = 'CARDS' | 'LEARN' | 'LIST';
