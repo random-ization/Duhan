@@ -59,7 +59,10 @@ class TTSClient {
     }
   >();
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly INACTIVITY_TIMEOUT_MS = 30000;
+  private readonly INACTIVITY_TIMEOUT_MS = 120000; // 2 minutes - keep connection alive longer
+  private retryCount = 0;
+  private readonly MAX_RETRIES = 3;
+  private isConnecting = false;
 
   private resetInactivityTimer() {
     if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
@@ -68,7 +71,6 @@ class TTSClient {
 
   private disconnect() {
     if (this.ws) {
-      console.log('EdgeTTS: Disconnecting due to inactivity');
       this.ws.close();
       this.ws = null;
       this.connectPromise = null;
@@ -92,44 +94,46 @@ class TTSClient {
     return new Blob([audioBuffer], { type: 'audio/mp3' });
   }
 
-  private async ensureConnection(): Promise<void> {
-    this.resetInactivityTimer();
-
-    if (this.ws?.readyState === WebSocket.OPEN) return;
-
-    // If connecting, return existing promise
-    if (this.connectPromise) return this.connectPromise;
-
-    this.connectPromise = new Promise((resolve, reject) => {
+  private async createConnection(): Promise<void> {
+    return new Promise((resolve, reject) => {
       const connectionId = generateUUID();
       const url = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}&ConnectionId=${connectionId}`;
+
+      // Set connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (this.ws?.readyState !== WebSocket.OPEN) {
+          this.ws?.close();
+          reject(new Error('Connection timeout'));
+        }
+      }, 10000); // 10s connection timeout
+
       const ws = new WebSocket(url);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         this.ws = ws;
+        this.retryCount = 0; // Reset retry count on successful connection
         // Send configuration message
         const configMessage = `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`;
         ws.send(configMessage);
         resolve();
       };
 
-      ws.onerror = e => {
-        console.error('EdgeTTS Connection Error', e);
+      ws.onerror = () => {
+        clearTimeout(connectionTimeout);
         if (this.ws !== ws) {
-          // Only reject if this specific connection attempt failed
           this.connectPromise = null;
           reject(new Error('WebSocket connection failed'));
         }
       };
 
       ws.onclose = () => {
-        // If this was our active connection, cleanup
+        clearTimeout(connectionTimeout);
         if (this.ws === ws) {
           this.ws = null;
           this.connectPromise = null;
         }
-        // Fail all pending requests
         for (const [, req] of this.pendingRequests) {
           clearTimeout(req.timer);
           req.reject(new Error('Connection closed unexpectedly'));
@@ -139,8 +143,46 @@ class TTSClient {
 
       ws.onmessage = event => this.handleMessage(event);
     });
+  }
 
-    return this.connectPromise;
+  private async ensureConnection(): Promise<void> {
+    this.resetInactivityTimer();
+
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+
+    // If connecting, return existing promise
+    if (this.connectPromise && this.isConnecting) return this.connectPromise;
+
+    this.isConnecting = true;
+    this.connectPromise = this.connectWithRetry();
+
+    try {
+      await this.connectPromise;
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
+  private async connectWithRetry(): Promise<void> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        await this.createConnection();
+        return; // Success
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        this.retryCount = attempt + 1;
+
+        if (attempt < this.MAX_RETRIES) {
+          // Exponential backoff: 100ms, 300ms, 700ms
+          const delay = Math.min(100 * Math.pow(2, attempt), 1000);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+    }
+
+    throw lastError || new Error('Failed to connect after retries');
   }
 
   private handleMessage(event: MessageEvent) {
@@ -166,7 +208,7 @@ class TTSClient {
       if (event.data.includes('Path:turn.end')) {
         if (requestId && this.pendingRequests.has(requestId)) {
           const req = this.pendingRequests.get(requestId)!;
-          clearTimeout(req.timer); // Clear request timeout
+          clearTimeout(req.timer);
           const blob = this.combineChunks(req.chunks);
           req.resolve(blob);
           this.pendingRequests.delete(requestId);
@@ -180,13 +222,12 @@ class TTSClient {
     const requestId = generateUUID();
 
     return new Promise<Blob>((resolve, reject) => {
-      // Set 30s timeout for this specific request
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
           reject(new Error('TTS synthesis timeout'));
         }
-      }, 30000);
+      }, 15000); // Reduced from 30s to 15s for faster failure detection
 
       this.pendingRequests.set(requestId, { resolve, reject, chunks: [], timer });
 
@@ -195,14 +236,15 @@ class TTSClient {
       const pitch = options.pitch || '+0Hz';
 
       const ssml = createSSML(text, voice, rate, pitch);
-      // NOTE: Key fix - we must include X-RequestId in the SSML message headers so the server echoes it back!
       const ssmlMessage = `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`;
 
       try {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
           clearTimeout(timer);
           this.pendingRequests.delete(requestId);
-          reject(new Error('Connection lost before sending'));
+          // Try to reconnect and retry once
+          this.connectPromise = null;
+          reject(new Error('Connection lost, please retry'));
           return;
         }
         this.ws.send(ssmlMessage);
@@ -213,12 +255,18 @@ class TTSClient {
       }
     });
   }
+
   public async preconnect(): Promise<void> {
     try {
       await this.ensureConnection();
     } catch {
-      // Silently fail - will retry on actual speak
+      // Silently retry after delay
+      setTimeout(() => this.preconnect(), 2000);
     }
+  }
+
+  public isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
   }
 }
 
@@ -263,20 +311,9 @@ export async function speakText(text: string, options: EdgeTTSOptions = {}): Pro
       audio.play().catch(reject);
     });
   } catch (error) {
-    console.error('Edge TTS failed, falling back to browser TTS:', error);
-    // Fallback to browser TTS
-    return new Promise(resolve => {
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR';
-        utterance.rate = 0.9;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
-        speechSynthesis.speak(utterance);
-      } else {
-        resolve();
-      }
-    });
+    console.error('Edge TTS failed:', error);
+    // Browser TTS fallback intentionally disabled - throw error to caller
+    throw error;
   }
 }
 

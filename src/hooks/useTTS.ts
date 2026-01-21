@@ -4,12 +4,12 @@ import { aRef } from '../utils/convexRefs';
 import { synthesizeSpeech } from '../lib/edgeTTS';
 
 /**
- * Hook for Text-to-Speech using Azure Cognitive Services with S3 caching
+ * Hook for Text-to-Speech using Edge TTS
  *
  * Features:
- * - Calls Convex action which uses Azure TTS REST API
- * - S3 caching to reduce API costs (audio served from CDN)
- * - Falls back to browser speechSynthesis if Azure TTS fails
+ * - Connects to Microsoft Edge TTS WebSocket API
+ * - Falls back to Convex Azure TTS action as backup
+ * - NO browser speechSynthesis fallback (intentionally disabled)
  *
  * Usage:
  * const { speak, stop, isLoading } = useTTS();
@@ -84,40 +84,33 @@ export const useTTS = () => {
           });
         };
 
+        // Browser TTS fallback intentionally disabled
         const tryBrowserTTS = async (): Promise<boolean> => {
-          if ('speechSynthesis' in window) {
-            return new Promise<boolean>(resolve => {
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = 'ko-KR';
-              utterance.rate = 0.9;
-              utterance.onend = () => {
-                setIsLoading(false);
-                resolve(true);
-              };
-              utterance.onerror = () => {
-                setIsLoading(false);
-                resolve(false);
-              };
-              speechSynthesis.speak(utterance);
-            });
-          }
+          console.warn('TTS: Edge TTS failed, browser fallback is disabled');
           setIsLoading(false);
           return false;
         };
 
-        const tryEdgeTTS = async (): Promise<boolean> => {
-          try {
-            const audioBlob = await synthesizeSpeech(text.trim(), {
-              voice: options?.voice,
-              rate: options?.rate,
-              pitch: options?.pitch,
-            });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            return await playAudio(audioUrl, true);
-          } catch {
-            setIsLoading(false);
-            return false;
+        const tryEdgeTTS = async (retries: number = 2): Promise<boolean> => {
+          for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+              const audioBlob = await synthesizeSpeech(text.trim(), {
+                voice: options?.voice,
+                rate: options?.rate,
+                pitch: options?.pitch,
+              });
+              const audioUrl = URL.createObjectURL(audioBlob);
+              return await playAudio(audioUrl, true);
+            } catch {
+              if (attempt < retries) {
+                // Brief delay before retry
+                await new Promise(r => setTimeout(r, 200));
+                continue;
+              }
+            }
           }
+          setIsLoading(false);
+          return false;
         };
 
         const tryConvexTTS = async (): Promise<boolean> => {
@@ -178,26 +171,9 @@ export const useTTS = () => {
         if (edgeOk) return true;
         return useFallback ? await tryBrowserTTS() : false;
       } catch (error) {
-        console.error('Azure TTS error:', error);
+        console.error('TTS error:', error);
         setIsLoading(false);
-
-        // Fallback to browser TTS if enabled
-        if (options?.useFallback !== false && 'speechSynthesis' in window) {
-          return new Promise<boolean>(resolve => {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ko-KR';
-            utterance.rate = 0.9;
-            utterance.onend = () => {
-              setIsLoading(false);
-              resolve(true);
-            };
-            utterance.onerror = () => {
-              setIsLoading(false);
-              resolve(false);
-            };
-            speechSynthesis.speak(utterance);
-          });
-        }
+        // Browser TTS fallback intentionally disabled
         return false;
       }
     },
@@ -218,14 +194,10 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-// Simple speak function for direct use (not a hook)
-// Uses browser TTS only - for backward compatibility
-export const speakBrowser = (text: string, lang: string = 'ko-KR', rate: number = 0.9) => {
-  if ('speechSynthesis' in window) {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = rate;
-    speechSynthesis.speak(utterance);
-  }
+/**
+ * @deprecated Browser TTS is disabled. This function does nothing.
+ * Use the useTTS hook's speak() function instead which uses Edge TTS.
+ */
+export const speakBrowser = (_text: string, _lang: string = 'ko-KR', _rate: number = 0.9) => {
+  console.warn('speakBrowser is deprecated and disabled. Use useTTS hook instead.');
 };
