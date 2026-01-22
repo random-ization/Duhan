@@ -200,6 +200,7 @@ export default defineSchema({
   })
     .index('by_course_unit', ['courseId', 'unitId'])
     .index('by_word_course_unit', ['wordId', 'courseId', 'unitId'])
+    .index('by_word_createdAt', ['wordId', 'createdAt'])
     .index('by_unit', ['unitId']),
 
   // User Vocab Progress (SRS + FSRS)

@@ -16,6 +16,15 @@ interface VocabItem {
   unit: number;
 }
 
+interface QuizSettings {
+  multipleChoice: boolean;
+  writingMode: boolean;
+  mcDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  writingDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  autoTTS: boolean;
+  soundEffects: boolean;
+}
+
 interface VocabQuizProps {
   words: VocabItem[];
   onComplete?: (stats: { correct: number; total: number }) => void;
@@ -25,15 +34,8 @@ interface VocabQuizProps {
   userId?: string; // For recording progress
   language?: Language;
   variant?: 'quiz' | 'learn';
-}
-
-interface QuizSettings {
-  multipleChoice: boolean;
-  writingMode: boolean;
-  mcDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
-  writingDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
-  autoTTS: boolean;
-  soundEffects: boolean;
+  presetSettings?: Partial<QuizSettings>;
+  settingsLocked?: boolean;
 }
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
@@ -69,6 +71,8 @@ function VocabQuizComponent({
   userId,
   language = 'zh',
   variant = 'quiz',
+  presetSettings,
+  settingsLocked = false,
 }: VocabQuizProps) {
   const labels = getLabels(language);
   const isLearn = variant === 'learn';
@@ -86,6 +90,7 @@ function VocabQuizComponent({
     writingDirection: 'NATIVE_TO_KR',
     autoTTS: true,
     soundEffects: true,
+    ...presetSettings,
   });
   const [showSettings, setShowSettings] = useState(false);
   const { speak: speakTTS } = useTTS();
@@ -586,7 +591,7 @@ function VocabQuizComponent({
   }
 
   // Settings Modal - inline JSX instead of nested component
-  const settingsModalContent = showSettings && (
+  const settingsModalContent = !settingsLocked && showSettings && (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       onClick={() => setShowSettings(false)}
@@ -877,12 +882,14 @@ function VocabQuizComponent({
               <span>
                 {questionIndex + 1} / {totalQuestions}
               </span>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              {!settingsLocked && (
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

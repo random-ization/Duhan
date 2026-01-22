@@ -31,7 +31,12 @@ const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const VocabBookImmersivePage = lazy(() => import('./pages/VocabBookImmersivePage'));
+const VocabBookListenPage = lazy(() => import('./pages/VocabBookListenPage'));
+const VocabBookDictationPage = lazy(() => import('./pages/VocabBookDictationPage'));
+const VocabBookSpellingPage = lazy(() => import('./pages/VocabBookSpellingPage'));
+const VocabBookExportPdfPage = lazy(() => import('./pages/VocabBookExportPdfPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage.tsx'));
 
 // Podcast Pages
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
@@ -158,6 +163,11 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
               />
               <Route path="/notebook" element={<NotebookPage />} />
               <Route path="/vocab-book" element={<VocabBookPage />} />
+              <Route path="/vocab-book/immerse" element={<VocabBookImmersivePage />} />
+              <Route path="/vocab-book/listen" element={<VocabBookListenPage />} />
+              <Route path="/vocab-book/dictation" element={<VocabBookDictationPage />} />
+              <Route path="/vocab-book/spelling" element={<VocabBookSpellingPage />} />
+              <Route path="/vocab-book/export-pdf" element={<VocabBookExportPdfPage />} />
 
               {/* Podcast Learning */}
               <Route path="/podcasts" element={<PodcastDashboard />} />

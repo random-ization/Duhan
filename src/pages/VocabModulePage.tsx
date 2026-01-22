@@ -102,6 +102,7 @@ export default function VocabModulePage() {
   );
   const updateProgressMutation = useMutation(VOCAB.updateProgress);
   const updateProgressV2Mutation = useMutation(VOCAB.updateProgressV2);
+  const addToReviewMutation = useMutation(VOCAB.addToReview);
   const calculateNextSchedule = useAction(FSRS.calculateNextSchedule);
 
   // Derive loading state and allWords directly from query - no extra state needed
@@ -151,6 +152,13 @@ export default function VocabModulePage() {
         allWords.filter(w => w.mastered || w.progress?.status === 'MASTERED').map(w => w.id)
       );
       setMasteredIds(mastered);
+    }
+  }, [allWords]);
+
+  useEffect(() => {
+    if (allWords.length > 0) {
+      const starred = new Set(allWords.filter(w => w.progress != null).map(w => w.id));
+      setStarredIds(starred);
     }
   }, [allWords]);
 
@@ -208,14 +216,26 @@ export default function VocabModulePage() {
     return new Map(filteredWords.map(w => [w.id, w]));
   }, [filteredWords]);
 
-  const toggleStar = (id: string) => {
-    setStarredIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const toggleStar = useCallback(
+    (id: string) => {
+      if (starredIds.has(id)) return;
+      setStarredIds(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+
+      const w = wordById.get(id);
+      if (!w) return;
+      void addToReviewMutation({
+        word: w.korean,
+        meaning: w.meaning || w.english,
+        partOfSpeech: w.partOfSpeech,
+        source: 'TEXTBOOK',
+      });
+    },
+    [addToReviewMutation, starredIds, wordById]
+  );
 
   const speakWord = useCallback(
     (text: string) => {

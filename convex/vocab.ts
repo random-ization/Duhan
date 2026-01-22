@@ -90,6 +90,42 @@ export type VocabReviewItemDto = {
   };
 };
 
+export type VocabBookItemDto = {
+  id: Id<'words'>;
+  word: string;
+  meaning: string;
+  partOfSpeech: string;
+  hanja?: string;
+  pronunciation?: string;
+  audioUrl?: string;
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+  progress: {
+    id: Id<'user_vocab_progress'>;
+    status: string;
+    interval: number;
+    streak: number;
+    nextReviewAt: number | null;
+    lastReviewedAt: number | null;
+    state?: number;
+    due?: number;
+    stability?: number;
+    difficulty?: number;
+    elapsed_days?: number;
+    scheduled_days?: number;
+    learning_steps?: number;
+    reps?: number;
+    lapses?: number;
+    last_review?: number | null;
+  };
+};
+
 // Get Vocabulary Stats (Dashboard)
 // Get Vocabulary Stats (Dashboard)
 export const getStats = query({
@@ -1013,6 +1049,108 @@ export const getDueForReview = query({
   },
 });
 
+export const getVocabBook = query({
+  args: {
+    search: v.optional(v.string()),
+    includeMastered: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<VocabBookItemDto[]> => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return [];
+
+    const progressItems = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+
+    const filteredProgress = args.includeMastered
+      ? progressItems
+      : progressItems.filter(p => p.status !== 'MASTERED');
+
+    const wordIds = [...new Set(filteredProgress.map(p => p.wordId))];
+    const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+    const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
+
+    const latestAppearances = await Promise.all(
+      wordIds.map(async wordId => {
+        const app = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_word_createdAt', q => q.eq('wordId', wordId))
+          .order('desc')
+          .first();
+        return [wordId.toString(), app] as const;
+      })
+    );
+    const appearanceMap = new Map(latestAppearances);
+
+    const searchQuery = args.search?.trim().toLowerCase();
+    const items = filteredProgress
+      .map(progress => {
+        const word = wordsMap.get(progress.wordId.toString());
+        if (!word) return null;
+
+        const app = appearanceMap.get(progress.wordId.toString());
+
+        const meaning = app?.meaning || word.meaning;
+        const meaningEn = app?.meaningEn || word.meaningEn;
+        const meaningVi = app?.meaningVi || word.meaningVi;
+        const meaningMn = app?.meaningMn || word.meaningMn;
+
+        const item: VocabBookItemDto = {
+          id: word._id,
+          word: word.word,
+          meaning,
+          meaningEn,
+          meaningVi,
+          meaningMn,
+          partOfSpeech: word.partOfSpeech,
+          hanja: word.hanja,
+          pronunciation: word.pronunciation,
+          audioUrl: word.audioUrl,
+          exampleSentence: app?.exampleSentence,
+          exampleMeaning: app?.exampleMeaning,
+          exampleMeaningEn: app?.exampleMeaningEn,
+          exampleMeaningVi: app?.exampleMeaningVi,
+          exampleMeaningMn: app?.exampleMeaningMn,
+          progress: {
+            id: progress._id,
+            status: progress.status ?? 'LEARNING',
+            interval: progress.interval ?? progress.scheduled_days ?? 1,
+            streak: progress.streak ?? progress.reps ?? 0,
+            nextReviewAt: progress.nextReviewAt ?? progress.due ?? null,
+            lastReviewedAt: progress.lastReviewedAt ?? progress.last_review ?? null,
+            state: progress.state,
+            due: progress.due,
+            stability: progress.stability,
+            difficulty: progress.difficulty,
+            elapsed_days: progress.elapsed_days,
+            scheduled_days: progress.scheduled_days,
+            learning_steps: progress.learning_steps,
+            reps: progress.reps,
+            lapses: progress.lapses,
+            last_review: progress.last_review ?? null,
+          },
+        };
+
+        if (searchQuery) {
+          const w = item.word.toLowerCase();
+          const m = (item.meaning || '').toLowerCase();
+          const ex = (item.exampleSentence || '').toLowerCase();
+          if (!w.includes(searchQuery) && !m.includes(searchQuery) && !ex.includes(searchQuery)) {
+            return null;
+          }
+        }
+
+        return item;
+      })
+      .filter((x): x is VocabBookItemDto => x !== null);
+
+    const limit = args.limit && args.limit > 0 ? Math.min(args.limit, 2000) : undefined;
+    return limit ? items.slice(0, limit) : items;
+  },
+});
+
 // Add word to review list (Manual add to SRS)
 export const addToReview = mutation({
   args: {
@@ -1077,6 +1215,73 @@ export const addToReview = mutation({
     });
 
     return { success: true, wordId, action: 'created' };
+  },
+});
+
+export const setMastery = mutation({
+  args: {
+    wordId: v.id('words'),
+    mastered: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    const existingProgress = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', args.wordId))
+      .unique();
+
+    if (args.mastered) {
+      const due = now + 365 * oneDay;
+      const patch = {
+        status: 'MASTERED',
+        interval: 365,
+        streak: existingProgress?.streak ?? existingProgress?.reps ?? 0,
+        nextReviewAt: due,
+        lastReviewedAt: now,
+        state: 2,
+        due,
+        stability: Math.max(existingProgress?.stability ?? 0, 31),
+        scheduled_days: 365,
+        reps: (existingProgress?.reps ?? 0) + 1,
+        last_review: now,
+      };
+
+      if (existingProgress) {
+        await ctx.db.patch(existingProgress._id, patch);
+        return { success: true, action: 'updated' as const };
+      }
+
+      await ctx.db.insert('user_vocab_progress', {
+        userId,
+        wordId: args.wordId,
+        ...patch,
+      });
+      return { success: true, action: 'created' as const };
+    }
+
+    if (!existingProgress) {
+      return { success: true, action: 'noop' as const };
+    }
+
+    await ctx.db.patch(existingProgress._id, {
+      status: 'LEARNING',
+      interval: 1,
+      streak: 0,
+      nextReviewAt: now + oneDay,
+      lastReviewedAt: now,
+      state: 1,
+      due: now + oneDay,
+      stability: 1,
+      scheduled_days: 1,
+      learning_steps: 0,
+      lapses: existingProgress.lapses ?? 0,
+      last_review: now,
+    });
+
+    return { success: true, action: 'updated' as const };
   },
 });
 

@@ -176,9 +176,13 @@ export default function VocabProgressSections({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => onToggleStar?.(w.id)}
+              onClick={() => {
+                if (isStarred) return;
+                onToggleStar?.(w.id);
+              }}
+              disabled={isStarred}
               className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center"
-              aria-label={language === 'zh' ? '收藏' : 'Star'}
+              aria-label={language === 'zh' ? (isStarred ? '已收藏' : '收藏') : 'Star'}
             >
               <Star className={`w-4 h-4 ${isStarred ? 'text-yellow-500' : 'text-slate-400'}`} />
             </button>

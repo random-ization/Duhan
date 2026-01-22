@@ -4,126 +4,186 @@ import {
   BookOpen,
   Loader2,
   ArrowLeft,
-  Clock,
   Zap,
-  Flame,
-  Star,
-  TrendingUp,
+  FileDown,
+  CheckCircle2,
+  Circle,
+  Layers,
+  Headphones,
+  PencilLine,
+  SpellCheck,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
-import { VOCAB } from '../utils/convexRefs';
+import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
+import { notify } from '../utils/notify';
+type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
-// ... (VocabWord interface can be kept or replaced by inferred type, but let's keep it simple for now or usage might break if DTO is different)
-// Actually DTO is compatible. Let's use the query.
+type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 
 const VocabBookPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
-  const { language } = useAuth();
+  const { language, user } = useAuth();
   const labels = getLabels(language);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<VocabBookCategory>('DUE');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<ExportMode>('A4_DICTATION');
+  const [exportShuffle, setExportShuffle] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // Use state for 'now' to ensure purity during render
   const [now] = useState(() => Date.now());
 
-  // 从SRS系统获取待复习词汇（不包含MASTERED）
-  const srsWordsResult = useQuery(VOCAB.getDueForReview);
-  const loading = srsWordsResult === undefined;
-  const words = useMemo(() => srsWordsResult ?? [], [srsWordsResult]);
+  const setMastery = useMutation(VOCAB.setMastery);
+  const exportPdf = useAction(VOCAB_PDF.exportVocabBookPdf);
 
-  // 按搜索和状态过滤
-  const filteredWords = useMemo(() => {
-    let result = words;
+  const trimmedSearch = searchQuery.trim();
+  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+    includeMastered: true,
+    search: trimmedSearch ? trimmedSearch : undefined,
+  });
+  const loading = vocabBookResult === undefined;
+  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
 
-    // Filter by status
-    if (activeFilter !== 'all') {
-      result = result.filter(w => w.progress.status === activeFilter);
-    }
+  const categorized = useMemo(() => {
+    return items.map(item => {
+      const progress = item.progress;
+      const isMastered = progress.status === 'MASTERED';
+      const isUnlearned = progress.state === 0 || progress.status === 'NEW';
+      const category: VocabBookCategory = isMastered
+        ? 'MASTERED'
+        : isUnlearned
+          ? 'UNLEARNED'
+          : 'DUE';
+      const dueNow = !!progress.nextReviewAt && progress.nextReviewAt <= now && !isMastered;
+      return { item, category, dueNow };
+    });
+  }, [items, now]);
 
-    // Filter by search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        w => w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q)
-      );
-    }
-
-    return result;
-  }, [words, searchQuery, activeFilter]);
+  const visibleItems = useMemo(() => {
+    return categorized.filter(x => x.category === activeCategory);
+  }, [categorized, activeCategory]);
 
   // 统计
   const stats = useMemo(() => {
-    const dueNow = words.filter(
-      w => w.progress.nextReviewAt && w.progress.nextReviewAt <= now
-    ).length;
-    const newWords = words.filter(w => w.progress.status === 'NEW').length;
-    const learning = words.filter(w => w.progress.status === 'LEARNING').length;
-    const review = words.filter(w => w.progress.status === 'REVIEW').length;
-    return { dueNow, newWords, learning, review, total: words.length };
-  }, [words, now]);
+    const dueNow = categorized.filter(x => x.category === 'DUE' && x.dueNow).length;
+    const unlearned = categorized.filter(x => x.category === 'UNLEARNED').length;
+    const due = categorized.filter(x => x.category === 'DUE').length;
+    const mastered = categorized.filter(x => x.category === 'MASTERED').length;
+    const total = categorized.length;
+    return { dueNow, unlearned, due, mastered, total };
+  }, [categorized]);
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'NEW':
-        return {
-          bgClass: 'bg-blue-100',
-          textClass: 'text-blue-600',
-          borderClass: 'border-blue-200',
-          label: labels.vocab?.newBadge || 'NEW',
-          icon: Star,
-        };
-      case 'LEARNING':
-        return {
-          bgClass: 'bg-amber-100',
-          textClass: 'text-amber-600',
-          borderClass: 'border-amber-200',
-          label: labels.vocab?.learningBadge || 'Learning',
-          icon: Flame,
-        };
-      case 'REVIEW':
-        return {
-          bgClass: 'bg-purple-100',
-          textClass: 'text-purple-600',
-          borderClass: 'border-purple-200',
-          label: labels.vocab?.reviewBadge || 'Review',
-          icon: TrendingUp,
-        };
-      default:
-        return null;
+  const filterButtons: Array<{
+    key: VocabBookCategory;
+    label: string;
+    count: number;
+    color: 'blue' | 'amber' | 'emerald';
+  }> = useMemo(
+    () => [
+      {
+        key: 'UNLEARNED',
+        label: labels.vocab?.unlearned || '未学习',
+        count: stats.unlearned,
+        color: 'blue',
+      },
+      { key: 'DUE', label: labels.vocab?.due || '待复习', count: stats.due, color: 'amber' },
+      {
+        key: 'MASTERED',
+        label: labels.vocab?.mastered || '已掌握',
+        count: stats.mastered,
+        color: 'emerald',
+      },
+    ],
+    [
+      labels.vocab?.due,
+      labels.vocab?.mastered,
+      labels.vocab?.unlearned,
+      stats.due,
+      stats.mastered,
+      stats.unlearned,
+    ]
+  );
+
+  const exportSubtitle = useMemo(() => {
+    const catLabel = filterButtons.find(b => b.key === activeCategory)?.label || activeCategory;
+    return trimmedSearch ? `生词本 · ${catLabel} · ${trimmedSearch}` : `生词本 · ${catLabel}`;
+  }, [activeCategory, filterButtons, trimmedSearch]);
+
+  const langListLabel = useMemo(() => {
+    if (language === 'zh') return '中文词表';
+    if (language === 'vi') return 'Từ vựng tiếng Việt';
+    if (language === 'mn') return 'Монгол үгийн жагсаалт';
+    return 'English List';
+  }, [language]);
+
+  const langListDesc = useMemo(() => {
+    if (language === 'zh') return '默写单词';
+    if (language === 'vi') return 'Viết từ';
+    if (language === 'mn') return 'Үгийг бичих';
+    return 'Write the word';
+  }, [language]);
+
+  const onExport = async () => {
+    if (exporting) return;
+    try {
+      setExporting(true);
+      if (!user) {
+        notify.error(language === 'zh' ? '请先登录后再导出' : 'Please sign in to export');
+        return;
+      }
+      const { url } = await exportPdf({
+        origin: window.location.origin,
+        language,
+        mode: exportMode,
+        shuffle: exportShuffle,
+        category: activeCategory,
+        q: trimmedSearch ? trimmedSearch : undefined,
+      });
+      const categoryLabel =
+        activeCategory === 'UNLEARNED'
+          ? 'unlearned'
+          : activeCategory === 'DUE'
+            ? 'due'
+            : 'mastered';
+      const modeLabel =
+        exportMode === 'A4_DICTATION' ? 'dictation' : exportMode === 'KO_LIST' ? 'ko' : 'lang';
+      const filename = `vocab-book-${categoryLabel}-${modeLabel}.pdf`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('download_failed');
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+      setExportOpen(false);
+    } catch {
+      notify.error(language === 'zh' ? '导出失败，请稍后重试' : 'Export failed. Please try again.');
+    } finally {
+      window.setTimeout(() => setExporting(false), 250);
     }
   };
 
-  const formatRelativeTime = (timestamp: number | null) => {
-    if (!timestamp) return '';
-    const diff = timestamp - now;
-    if (diff <= 0) return labels.dashboard?.topik?.startNow || 'Now';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    if (days > 0) return (labels.vocab?.daysLater || '{count}d').replace('{count}', String(days));
-    if (hours > 0)
-      return (labels.vocab?.hoursLater || '{count}h').replace('{count}', String(hours));
-    return labels.vocab?.soon || 'Soon';
+  const startLearning = (mode: 'immerse' | 'listen' | 'dictation' | 'spelling') => {
+    const params = new URLSearchParams();
+    params.set('category', activeCategory);
+    if (trimmedSearch) params.set('q', trimmedSearch);
+    navigate(`/vocab-book/${mode}?${params.toString()}`);
   };
-
-  const filterButtons = [
-    { key: 'all', label: labels.vocab?.filterAll || 'All', count: stats.total, color: 'slate' },
-    { key: 'NEW', label: labels.vocab?.filterNew || 'New', count: stats.newWords, color: 'blue' },
-    {
-      key: 'LEARNING',
-      label: labels.vocab?.filterLearning || 'Learning',
-      count: stats.learning,
-      color: 'amber',
-    },
-    {
-      key: 'REVIEW',
-      label: labels.vocab?.filterReview || 'Review',
-      count: stats.review,
-      color: 'purple',
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -153,20 +213,29 @@ const VocabBookPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Due Now Badge - Claymorphism */}
-            {stats.dueNow > 0 && (
-              <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-[3px] border-red-200 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)]">
-                <div className="p-2 bg-red-500 rounded-xl">
-                  <Zap className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              {stats.dueNow > 0 && (
+                <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-[3px] border-red-200 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)]">
+                  <div className="p-2 bg-red-500 rounded-xl">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
+                    <p className="text-xs font-bold text-red-400">
+                      {labels.dashboard?.vocab?.dueNow || '已到期'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
-                  <p className="text-xs font-bold text-red-400">
-                    {labels.dashboard?.vocab?.dueNow || 'Due Now'}
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
+              <button
+                onClick={() => setExportOpen(true)}
+                disabled={visibleItems.length === 0 || loading}
+                className="px-4 py-3 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 font-black text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                <FileDown className="w-5 h-5 text-indigo-600" />
+                {language === 'zh' ? '导出PDF' : 'Export PDF'}
+              </button>
+            </div>
           </div>
 
           {/* Search & Filters */}
@@ -190,23 +259,21 @@ const VocabBookPage: React.FC = () => {
               {filterButtons.map(btn => (
                 <button
                   key={btn.key}
-                  onClick={() => setActiveFilter(btn.key)}
+                  onClick={() => setActiveCategory(btn.key)}
                   className={`px-4 py-2.5 rounded-xl font-bold text-sm border-[3px] transition-all duration-200 ${
-                    activeFilter === btn.key
+                    activeCategory === btn.key
                       ? btn.color === 'blue'
                         ? 'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]'
                         : btn.color === 'amber'
                           ? 'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]'
-                          : btn.color === 'purple'
-                            ? 'bg-purple-500 text-white border-purple-400 shadow-[0_4px_12px_rgba(139,92,246,0.3)]'
-                            : 'bg-slate-700 text-white border-slate-600 shadow-[0_4px_12px_rgba(51,65,85,0.3)]'
+                          : 'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
                   }`}
                 >
                   {btn.label}
                   <span
                     className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
-                      activeFilter === btn.key ? 'bg-white/20' : 'bg-slate-100'
+                      activeCategory === btn.key ? 'bg-white/20' : 'bg-slate-100'
                     }`}
                   >
                     {btn.count}
@@ -219,7 +286,7 @@ const VocabBookPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8 pb-28">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4 animate-pulse">
@@ -227,7 +294,7 @@ const VocabBookPage: React.FC = () => {
             </div>
             <p className="text-slate-400 font-bold">{labels.common?.loading || 'Loading...'}</p>
           </div>
-        ) : filteredWords.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -237,96 +304,254 @@ const VocabBookPage: React.FC = () => {
               <BookOpen className="w-12 h-12 text-indigo-400" />
             </div>
             <p className="text-xl font-black text-slate-700 mb-2">
-              {searchQuery
+              {trimmedSearch
                 ? labels.dashboard?.vocab?.noMatch || 'No results found'
-                : labels.dashboard?.vocab?.noDueNow || 'No words due for review'}
+                : labels.dashboard?.vocab?.noDueNow || '暂无单词'}
             </p>
             <p className="text-slate-400 font-medium text-center max-w-md">
-              {searchQuery
+              {trimmedSearch
                 ? ''
                 : labels.dashboard?.vocab?.srsDesc ||
                   "Words you mark as 'Don't know' will appear here for spaced repetition learning"}
             </p>
           </motion.div>
         ) : (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+            {visibleItems.map(({ item: word }) => {
+              const id = String(word.id);
+              const isExpanded = expandedId === id;
+              const isMastered = word.progress.status === 'MASTERED';
+
+              return (
+                <div
+                  key={id}
+                  className="bg-white rounded-2xl border-[3px] border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
+                >
+                  <div className="flex items-center justify-between gap-3 px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(prev => (prev === id ? null : id))}
+                      className="flex-1 text-left min-w-0"
+                    >
+                      <div className="text-xl font-black text-slate-900 truncate">{word.word}</div>
+                    </button>
+
+                    <button
+                      onClick={async e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        await setMastery({ wordId: word.id, mastered: !isMastered });
+                      }}
+                      className="p-2 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                      aria-label={isMastered ? '取消已掌握' : '标记已掌握'}
+                    >
+                      {isMastered ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-slate-400" />
+                      )}
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-5">
+                      <div className="pt-3 border-t-2 border-dashed border-slate-100">
+                        <div className="text-slate-700 font-bold leading-relaxed">
+                          {word.meaning}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {exportOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-4"
+            onClick={() => {
+              if (exporting) return;
+              setExportOpen(false);
+            }}
           >
-            <AnimatePresence mode="popLayout">
-              {filteredWords.map((word, index) => {
-                const statusConfig = getStatusConfig(word.progress.status);
-                const StatusIcon = statusConfig?.icon || Star;
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+              className="w-full max-w-xl bg-white rounded-[28px] border-[3px] border-slate-200 shadow-2xl p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
+                    {language === 'zh' ? '导出PDF词表' : 'Export PDF'}
+                  </p>
+                  <h2 className="text-2xl font-black text-slate-900">
+                    {language === 'zh' ? '单词学习表' : 'Word Sheet'}
+                  </h2>
+                  <p className="text-sm font-bold text-slate-500 mt-1">{exportSubtitle}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (exporting) return;
+                    setExportOpen(false);
+                  }}
+                  className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-40"
+                  aria-label="关闭"
+                  disabled={exporting}
+                >
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
 
-                return (
-                  <motion.div
-                    key={word.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.03 }}
-                    className={`relative overflow-hidden rounded-[24px] p-5 border-[3px] ${statusConfig?.borderClass || 'border-slate-200'} bg-white cursor-pointer group transition-all duration-200 hover:-translate-y-1 shadow-[0_8px_30px_rgba(0,0,0,0.06),inset_0_-4px_10px_rgba(255,255,255,0.6),inset_0_4px_10px_rgba(255,255,255,0.9)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.1),inset_0_-4px_10px_rgba(255,255,255,0.6),inset_0_4px_10px_rgba(255,255,255,0.9)]`}
-                  >
-                    {/* Status Badge */}
-                    {statusConfig && (
-                      <div
-                        className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${statusConfig.bgClass} border-2 ${statusConfig.borderClass}`}
-                      >
-                        <StatusIcon className={`w-3.5 h-3.5 ${statusConfig.textClass}`} />
-                        <span className={`text-xs font-black ${statusConfig.textClass}`}>
-                          {statusConfig.label}
-                        </span>
-                      </div>
-                    )}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  onClick={() => setExportMode('A4_DICTATION')}
+                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                    exportMode === 'A4_DICTATION'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <p className="font-black text-slate-900">
+                    {language === 'zh' ? 'A4 默写' : 'A4 Dictation'}
+                  </p>
+                  <p className="text-xs font-bold text-slate-500 mt-1">
+                    {language === 'zh' ? '单词、释义双向测试' : 'Two-way test'}
+                  </p>
+                </button>
 
-                    {/* Word & Meaning */}
-                    <div className="pr-24">
-                      <h3 className="text-2xl font-black text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
-                        {word.word}
-                      </h3>
-                      {word.pronunciation && (
-                        <p className="text-sm text-slate-400 font-medium mb-2">
-                          {word.pronunciation}
-                        </p>
-                      )}
-                      <p className="text-slate-600 font-medium leading-relaxed">{word.meaning}</p>
-                    </div>
+                <button
+                  onClick={() => setExportMode('LANG_LIST')}
+                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                    exportMode === 'LANG_LIST'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <p className="font-black text-slate-900">{langListLabel}</p>
+                  <p className="text-xs font-bold text-slate-500 mt-1">{langListDesc}</p>
+                </button>
 
-                    {/* Meta Info */}
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t-2 border-dashed border-slate-100">
-                      <div className="flex items-center gap-3">
-                        {word.partOfSpeech && (
-                          <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-500">
-                            {word.partOfSpeech}
-                          </span>
-                        )}
-                        {word.hanja && (
-                          <span className="text-sm text-slate-400 font-medium">{word.hanja}</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="flex items-center gap-1 text-slate-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span className="font-bold">
-                            {formatRelativeTime(word.progress.nextReviewAt)}
-                          </span>
-                        </div>
-                        {word.progress.streak > 0 && (
-                          <div className="flex items-center gap-1 text-orange-500">
-                            <Flame className="w-3.5 h-3.5" />
-                            <span className="font-bold">{word.progress.streak}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                <button
+                  onClick={() => setExportMode('KO_LIST')}
+                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                    exportMode === 'KO_LIST'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <p className="font-black text-slate-900">
+                    {language === 'zh' ? '韩语词表' : 'Korean List'}
+                  </p>
+                  <p className="text-xs font-bold text-slate-500 mt-1">
+                    {language === 'zh' ? '默写释义' : 'Write the meaning'}
+                  </p>
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-2xl border-2 border-slate-100 bg-slate-50 p-4 flex items-center justify-between">
+                <span className="font-black text-slate-800">
+                  {language === 'zh' ? '乱序导出' : 'Shuffle'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setExportShuffle(v => !v)}
+                  className={`w-12 h-7 rounded-full transition-all ${exportShuffle ? 'bg-orange-500' : 'bg-slate-300'}`}
+                  aria-label="shuffle"
+                >
+                  <span
+                    className={`block w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                      exportShuffle ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <button
+                onClick={onExport}
+                disabled={exporting || visibleItems.length === 0}
+                className="mt-6 w-full py-4 rounded-2xl bg-orange-500 text-white font-black border-[3px] border-orange-400 shadow-[0_12px_35px_rgba(249,115,22,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {exporting
+                  ? language === 'zh'
+                    ? '正在导出...'
+                    : 'Exporting...'
+                  : language === 'zh'
+                    ? '导出 PDF 词表'
+                    : 'Export PDF'}
+              </button>
+            </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <div className="fixed inset-x-0 bottom-4 z-[70] px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white/90 backdrop-blur-xl border-[3px] border-slate-200 rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => startLearning('immerse')}
+                disabled={stats.total === 0}
+                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Layers className="w-5 h-5 text-indigo-600" />
+                  <span className="text-xs font-black text-slate-800">
+                    {labels.vocab?.modeImmersive || '沉浸刷词'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => startLearning('listen')}
+                disabled={stats.total === 0}
+                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Headphones className="w-5 h-5 text-amber-700" />
+                  <span className="text-xs font-black text-slate-800">
+                    {labels.vocab?.modeListen || '随身听'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => startLearning('dictation')}
+                disabled={stats.total === 0}
+                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <PencilLine className="w-5 h-5 text-rose-600" />
+                  <span className="text-xs font-black text-slate-800">
+                    {labels.vocab?.modeDictation || '听写'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => startLearning('spelling')}
+                disabled={stats.total === 0}
+                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <SpellCheck className="w-5 h-5 text-emerald-700" />
+                  <span className="text-xs font-black text-slate-800">
+                    {labels.vocab?.modeSpelling || '拼写'}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

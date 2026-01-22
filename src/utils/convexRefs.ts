@@ -105,7 +105,7 @@ export const GRAMMARS = {
 /**
  * VOCAB REFS
  */
-import { VocabStatsDto, VocabWordDto, DailyPhraseDto } from '../../convex/vocab';
+import { VocabStatsDto, VocabWordDto, DailyPhraseDto, VocabBookItemDto } from '../../convex/vocab';
 
 export const VOCAB = {
   getStats: qRef<{ courseId?: string }, VocabStatsDto>('vocab:getStats'),
@@ -113,6 +113,10 @@ export const VOCAB = {
     'vocab:getOfCourse'
   ),
   getDailyPhrase: qRef<{ language?: string }, DailyPhraseDto | null>('vocab:getDailyPhrase'),
+  getVocabBook: qRef<
+    { search?: string; includeMastered?: boolean; limit?: number },
+    VocabBookItemDto[]
+  >('vocab:getVocabBook'),
   // Mutations
   updateProgress: mRef<{ wordId: string; quality: number }, { success: boolean; progress: any }>(
     'vocab:updateProgress'
@@ -189,6 +193,24 @@ export const VOCAB = {
     },
     void
   >('vocab:addToReview'),
+  setMastery: mRef<
+    { wordId: Id<'words'>; mastered: boolean },
+    { success: boolean; action: string }
+  >('vocab:setMastery'),
+};
+
+export const VOCAB_PDF = {
+  exportVocabBookPdf: aRef<
+    {
+      origin: string;
+      language: string;
+      mode: 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
+      shuffle: boolean;
+      category: 'UNLEARNED' | 'DUE' | 'MASTERED';
+      q?: string;
+    },
+    { url: string }
+  >('vocabPdf:exportVocabBookPdf'),
 };
 
 /**

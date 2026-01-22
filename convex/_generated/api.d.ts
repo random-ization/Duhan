@@ -51,6 +51,8 @@ import type * as utils from '../utils.js';
 import type * as validation from '../validation.js';
 import type * as videos from '../videos.js';
 import type * as vocab from '../vocab.js';
+import type * as vocabPdf from '../vocabPdf.js';
+import type * as vocabPdfQueries from '../vocabPdfQueries.js';
 
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 
@@ -98,6 +100,8 @@ declare const fullApi: ApiFromModules<{
   validation: typeof validation;
   videos: typeof videos;
   vocab: typeof vocab;
+  vocabPdf: typeof vocabPdf;
+  vocabPdfQueries: typeof vocabPdfQueries;
 }>;
 
 /**
