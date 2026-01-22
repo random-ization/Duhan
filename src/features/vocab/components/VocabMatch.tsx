@@ -269,7 +269,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
 
       {/* Card Grid */}
       <div className="grid grid-cols-4 gap-3 md:gap-5">
-        {cards.map(card => {
+        {cards.map((card, idx) => {
           const state = cardStates[card.id] || 'normal';
           let cardClass =
             'aspect-square rounded-2xl border-2 flex items-center justify-center cursor-pointer transition-all text-center p-2';
@@ -288,7 +288,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
 
           return (
             <button
-              key={card.id}
+              key={`${card.id}:${idx}`}
               onClick={() => handleCardClick(card.id)}
               disabled={state === 'matched' || isLocked}
               className={cardClass}

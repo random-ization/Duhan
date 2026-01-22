@@ -24,6 +24,7 @@ interface VocabQuizProps {
   currentUnitLabel?: string;
   userId?: string; // For recording progress
   language?: Language;
+  variant?: 'quiz' | 'learn';
 }
 
 interface QuizSettings {
@@ -67,8 +68,16 @@ function VocabQuizComponent({
   currentUnitLabel: _currentUnitLabel,
   userId,
   language = 'zh',
+  variant = 'quiz',
 }: VocabQuizProps) {
   const labels = getLabels(language);
+  const isLearn = variant === 'learn';
+  const modeLabel =
+    variant === 'learn'
+      ? language === 'zh'
+        ? '学习'
+        : labels.learn || 'Learn'
+      : labels.vocab?.quiz || 'Quiz';
   // Settings
   const [settings, setSettings] = useState<QuizSettings>({
     multipleChoice: true,
@@ -169,6 +178,9 @@ function VocabQuizComponent({
   ]);
   const [isLocked, setIsLocked] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
+  const [pendingAdvanceReason, setPendingAdvanceReason] = useState<'WRONG' | 'DONT_KNOW' | null>(
+    null
+  );
 
   // Writing mode
   const [writingInput, setWritingInput] = useState('');
@@ -183,6 +195,7 @@ function VocabQuizComponent({
 
   // Timer cleanup
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const nextQuestionRef = useRef<() => void>(() => {});
   useEffect(() => {
     return () => {
       timersRef.current.forEach(timer => clearTimeout(timer));
@@ -202,6 +215,8 @@ function VocabQuizComponent({
       }
     }
   }, [questionIndex, questions, settings.autoTTS, gameState, speakWord, currentQuestion]);
+
+  const pendingAdvance = isLearn && pendingAdvanceReason !== null;
 
   // Generate questions
   const generateQuestions = useCallback(
@@ -354,15 +369,79 @@ function VocabQuizComponent({
     setCorrectCount(0);
     setOptionStates(['normal', 'normal', 'normal', 'normal']);
     setIsLocked(false);
+    setPendingAdvanceReason(null);
     setWritingInput('');
     setWritingState('INPUT');
     setGameState('PLAYING');
   };
 
+  const nextQuestion = () => {
+    setTotalQuestionsAnswered(t => t + 1);
+    setPendingAdvanceReason(null);
+
+    if (questionIndex >= totalQuestions - 1) {
+      const remainingNewWords = words.filter(
+        w => !masteredWordIds.has(w.id) && !wrongWords.find(ww => ww.id === w.id)
+      );
+
+      if (wrongWords.length > 0 || remainingNewWords.length > 0) {
+        const batchSize = 20;
+        const wrongToInclude = [...wrongWords];
+        const newWordsNeeded = Math.max(0, batchSize - wrongToInclude.length);
+        const newWordsToAdd = shuffleArray(remainingNewWords).slice(0, newWordsNeeded);
+
+        const nextBatchWords = shuffleArray([...wrongToInclude, ...newWordsToAdd]);
+
+        if (nextBatchWords.length > 0) {
+          const nextQuestions = generateQuestionsFromWords(nextBatchWords, settings);
+          setQuestions(nextQuestions);
+          setQuestionIndex(0);
+          setOptionStates(['normal', 'normal', 'normal', 'normal']);
+          setIsLocked(false);
+          setPendingAdvanceReason(null);
+          setWritingInput('');
+          setWritingState('INPUT');
+          setWrongWords([]);
+          setCurrentBatchNum(b => b + 1);
+          return;
+        }
+      }
+
+      setGameState('COMPLETE');
+      onComplete?.({ correct: correctCount, total: totalQuestionsAnswered + 1 });
+    } else {
+      setQuestionIndex(q => q + 1);
+      setOptionStates(['normal', 'normal', 'normal', 'normal']);
+      setIsLocked(false);
+      setPendingAdvanceReason(null);
+      setWritingInput('');
+      setWritingState('INPUT');
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  useEffect(() => {
+    nextQuestionRef.current = nextQuestion;
+  });
+
+  useEffect(() => {
+    if (!pendingAdvance) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+      e.preventDefault();
+      setPendingAdvanceReason(null);
+      nextQuestionRef.current();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pendingAdvance]);
+
   // Multiple choice handler
   const handleOptionClick = (index: number) => {
     if (isLocked || !currentQuestion || currentQuestion.type !== 'MULTIPLE_CHOICE') return;
     setIsLocked(true);
+    setPendingAdvanceReason(null);
     const isCorrect = index === currentQuestion.correctIndex;
     setOptionStates(prev => prev.map((_, i) => (i === index ? 'selected' : 'normal')));
 
@@ -378,6 +457,7 @@ function VocabQuizComponent({
         // Mark as mastered
         setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
       } else {
+        if (isLearn) setPendingAdvanceReason('WRONG');
         setOptionStates(prev =>
           prev.map((_, i) => {
             if (i === index) return 'wrong';
@@ -398,15 +478,38 @@ function VocabQuizComponent({
           return prev;
         });
       }
-      const timer2 = setTimeout(() => nextQuestion(), 1000);
-      timersRef.current.push(timer2);
+      if (!isLearn || isCorrect) {
+        const timer2 = setTimeout(() => nextQuestion(), 1000);
+        timersRef.current.push(timer2);
+      }
     }, 400);
     timersRef.current.push(timer1);
+  };
+
+  const handleDontKnow = () => {
+    if (isLocked || !currentQuestion || currentQuestion.type !== 'MULTIPLE_CHOICE') return;
+    if (!isLearn) return;
+    setIsLocked(true);
+    setPendingAdvanceReason('DONT_KNOW');
+    const correctIndex = currentQuestion.correctIndex ?? -1;
+    setOptionStates(prev => prev.map((_, i) => (i === correctIndex ? 'correct' : 'normal')));
+    if (userId && currentQuestion.targetWord.id) {
+      recordProgress(currentQuestion.targetWord.id, false);
+    }
+    setWrongWords(prev => {
+      if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
+        return [...prev, currentQuestion.targetWord];
+      }
+      return prev;
+    });
   };
 
   // Writing handler
   const handleWritingSubmit = () => {
     if (!currentQuestion || currentQuestion.type !== 'WRITING') return;
+    if (writingState !== 'INPUT') return;
+    setIsLocked(true);
+    setPendingAdvanceReason(null);
     const correctAnswer =
       currentQuestion.direction === 'KR_TO_NATIVE'
         ? currentQuestion.targetWord.english
@@ -442,53 +545,11 @@ function VocabQuizComponent({
         return prev;
       });
     }
-    const timer = setTimeout(() => nextQuestion(), 1500);
-    timersRef.current.push(timer);
-  };
-
-  const nextQuestion = () => {
-    // Increment total answered count
-    setTotalQuestionsAnswered(t => t + 1);
-
-    if (questionIndex >= totalQuestions - 1) {
-      // End of current batch - check for wrong words and remaining words
-      const remainingNewWords = words.filter(
-        w => !masteredWordIds.has(w.id) && !wrongWords.find(ww => ww.id === w.id)
-      );
-
-      if (wrongWords.length > 0 || remainingNewWords.length > 0) {
-        // Mix wrong words with new unseen words for next batch
-        const batchSize = 20;
-        const wrongToInclude = [...wrongWords];
-        const newWordsNeeded = Math.max(0, batchSize - wrongToInclude.length);
-        const newWordsToAdd = shuffleArray(remainingNewWords).slice(0, newWordsNeeded);
-
-        const nextBatchWords = shuffleArray([...wrongToInclude, ...newWordsToAdd]);
-
-        if (nextBatchWords.length > 0) {
-          const nextQuestions = generateQuestionsFromWords(nextBatchWords, settings);
-          setQuestions(nextQuestions);
-          setQuestionIndex(0);
-          setOptionStates(['normal', 'normal', 'normal', 'normal']);
-          setIsLocked(false);
-          setWritingInput('');
-          setWritingState('INPUT');
-          setWrongWords([]); // Clear wrong words for fresh tracking
-          setCurrentBatchNum(b => b + 1);
-          return;
-        }
-      }
-
-      // All words mastered!
-      setGameState('COMPLETE');
-      onComplete?.({ correct: correctCount, total: totalQuestionsAnswered + 1 });
+    if (!isLearn || isCorrect) {
+      const timer = setTimeout(() => nextQuestion(), 1500);
+      timersRef.current.push(timer);
     } else {
-      setQuestionIndex(q => q + 1);
-      setOptionStates(['normal', 'normal', 'normal', 'normal']);
-      setIsLocked(false);
-      setWritingInput('');
-      setWritingState('INPUT');
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setPendingAdvanceReason('WRONG');
     }
   };
 
@@ -499,6 +560,7 @@ function VocabQuizComponent({
     setTotalQuestionsAnswered(0);
     setOptionStates(['normal', 'normal', 'normal', 'normal']);
     setIsLocked(false);
+    setPendingAdvanceReason(null);
     setWritingInput('');
     setWritingState('INPUT');
     setWrongWords([]);
@@ -512,7 +574,12 @@ function VocabQuizComponent({
     return (
       <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
         <p className="text-slate-500 font-medium">
-          {labels.dashboard?.quiz?.minWords || 'Need at least 4 words to start quiz'}
+          {labels.dashboard?.quiz?.minWords ||
+            (variant === 'learn'
+              ? language === 'zh'
+                ? '至少需要 4 个单词才能开始学习'
+                : 'Need at least 4 words to start learning'
+              : 'Need at least 4 words to start quiz')}
         </p>
       </div>
     );
@@ -530,7 +597,7 @@ function VocabQuizComponent({
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-black text-slate-900">
-            🎯 {labels.dashboard?.quiz?.quizSettings || 'Quiz Settings'}
+            🎯 {labels.dashboard?.quiz?.quizSettings || `${modeLabel} Settings`}
           </h2>
           <button
             onClick={() => setShowSettings(false)}
@@ -715,10 +782,20 @@ function VocabQuizComponent({
             <Trophy className="w-12 h-12 text-green-600" />
           </div>
           <h2 className="text-4xl font-black text-slate-900 mb-2">
-            {labels.dashboard?.quiz?.complete || '🎉 Quiz Complete!'}
+            {labels.dashboard?.quiz?.complete ||
+              (variant === 'learn'
+                ? language === 'zh'
+                  ? '🎉 学习完成！'
+                  : '🎉 Learning Complete!'
+                : '🎉 Quiz Complete!')}
           </h2>
           <p className="text-slate-500 mb-6">
-            {labels.dashboard?.quiz?.youFinished || 'You finished all questions!'}
+            {labels.dashboard?.quiz?.youFinished ||
+              (variant === 'learn'
+                ? language === 'zh'
+                  ? '你已完成本轮学习。'
+                  : 'You finished this learning round!'
+                : 'You finished all questions!')}
           </p>
           <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
             <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
@@ -777,9 +854,15 @@ function VocabQuizComponent({
   return (
     <>
       {settingsModalContent}
-      <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8">
+      <div
+        className={`bg-white ${
+          isLearn
+            ? 'rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
+            : 'rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8'
+        }`}
+      >
         {/* Progress with Settings Button */}
-        <div className="mb-8">
+        <div className={isLearn ? 'mb-6' : 'mb-8'}>
           <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-1">
             <div className="flex items-center gap-2">
               <span>{labels.dashboard?.quiz?.progress || 'Progress'}</span>
@@ -811,7 +894,9 @@ function VocabQuizComponent({
         </div>
 
         {/* Score Badge */}
-        <div className="text-center mb-4 flex items-center justify-center gap-3">
+        <div
+          className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}
+        >
           <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">
             ✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}
           </span>
@@ -825,20 +910,27 @@ function VocabQuizComponent({
         </div>
 
         {/* Question */}
-        <div className="text-center mb-10">
-          <p className="text-sm text-slate-400 font-bold uppercase mb-4">{promptText}</p>
-          <h2 className="text-6xl font-black text-slate-900">{questionText}</h2>
+        <div className={`text-center ${isLearn ? 'mb-8' : 'mb-10'}`}>
+          <p className={`text-sm text-slate-400 font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
+            {promptText}
+          </p>
+          <h2
+            className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-slate-900`}
+          >
+            {questionText}
+          </h2>
         </div>
 
         {/* MC Options */}
         {!isWriting && currentQuestion.options && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${isLearn ? 'gap-3' : 'gap-4'} mb-6`}>
             {currentQuestion.options.map((option, index) => {
               const state = optionStates[index];
               const displayText =
                 currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
-              let btnClass =
-                'w-full bg-white border-2 border-slate-900 border-b-[6px] rounded-2xl p-5 flex items-center gap-4 text-left transition-all';
+              let btnClass = `w-full bg-white border-2 border-slate-900 border-b-[6px] rounded-2xl ${
+                isLearn ? 'p-4' : 'p-5'
+              } flex items-center gap-4 text-left transition-all`;
               if (state === 'normal')
                 btnClass += ' hover:bg-slate-50 active:border-b-2 active:translate-y-1';
               else if (state === 'selected') btnClass += ' bg-yellow-50 border-yellow-400';
@@ -849,7 +941,7 @@ function VocabQuizComponent({
 
               return (
                 <button
-                  key={option.id}
+                  key={`${option.id}:${index}`}
                   onClick={() => handleOptionClick(index)}
                   disabled={isLocked}
                   className={btnClass}
@@ -859,7 +951,9 @@ function VocabQuizComponent({
                   >
                     {String.fromCharCode(65 + index)}
                   </div>
-                  <span className="font-bold text-lg">{displayText}</span>
+                  <span className={`font-bold ${isLearn ? 'text-base' : 'text-lg'}`}>
+                    {displayText}
+                  </span>
                   {state === 'correct' && <span className="ml-auto text-2xl">✓</span>}
                   {state === 'wrong' && <span className="ml-auto text-2xl">✕</span>}
                 </button>
@@ -868,11 +962,51 @@ function VocabQuizComponent({
           </div>
         )}
 
+        {isLearn && !pendingAdvance && !isWriting && currentQuestion.options ? (
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleDontKnow}
+              disabled={isLocked}
+              className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
+            >
+              {language === 'zh' ? '不知道？' : "I don't know"}
+            </button>
+          </div>
+        ) : null}
+
+        {pendingAdvance ? (
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm font-black text-slate-700">
+                {language === 'zh' ? '没关系，您仍在学习！' : "No worries — you're learning!"}
+              </div>
+              <div className="text-xs font-bold text-slate-500 mt-1">
+                {language === 'zh'
+                  ? '稍后再试此问题。单击继续或按任意键继续。'
+                  : 'We’ll practice this again later. Click Continue or press any key.'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingAdvanceReason(null);
+                nextQuestionRef.current();
+              }}
+              className="px-6 py-3 rounded-full bg-blue-600 text-white font-black hover:bg-blue-700"
+            >
+              {language === 'zh' ? '继续' : 'Continue'}
+            </button>
+          </div>
+        ) : null}
+
         {/* Writing Input */}
         {isWriting && (
           <div className="mb-6">
             <div
-              className={`p-6 rounded-2xl border-2 ${writingState === 'CORRECT' ? 'bg-green-50 border-green-400' : writingState === 'WRONG' ? 'bg-red-50 border-red-400' : 'bg-slate-50 border-slate-200'}`}
+              className={`rounded-2xl border-2 ${
+                isLearn ? 'p-5' : 'p-6'
+              } ${writingState === 'CORRECT' ? 'bg-green-50 border-green-400' : writingState === 'WRONG' ? 'bg-red-50 border-red-400' : 'bg-slate-50 border-slate-200'}`}
             >
               <input
                 ref={inputRef}
@@ -888,7 +1022,7 @@ function VocabQuizComponent({
                     : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
                 }
                 disabled={writingState !== 'INPUT'}
-                className="w-full text-2xl font-bold text-center bg-transparent outline-none"
+                className={`w-full ${isLearn ? 'text-xl' : 'text-2xl'} font-bold text-center bg-transparent outline-none`}
                 autoFocus
               />
               {writingState === 'CORRECT' && (

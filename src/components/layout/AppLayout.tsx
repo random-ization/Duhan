@@ -9,11 +9,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useMutation } from 'convex/react';
 import { mRef, NoArgs } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { useLayout } from '../../contexts/LayoutContext';
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
+  const { sidebarHidden } = useLayout();
   const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
@@ -40,10 +42,10 @@ export default function AppLayout() {
   const shouldHideFooter = hideFooterPaths.some(path => pathWithoutLang.startsWith(path));
   const hideMobileHeaderPaths = ['/video/', '/podcasts/player'];
   const hideMobileNavPaths = ['/video/', '/podcasts/player'];
-  const shouldHideMobileHeader = hideMobileHeaderPaths.some(path =>
-    pathWithoutLang.startsWith(path)
-  );
-  const shouldHideMobileNav = hideMobileNavPaths.some(path => pathWithoutLang.startsWith(path));
+  const shouldHideMobileHeader =
+    sidebarHidden || hideMobileHeaderPaths.some(path => pathWithoutLang.startsWith(path));
+  const shouldHideMobileNav =
+    sidebarHidden || hideMobileNavPaths.some(path => pathWithoutLang.startsWith(path));
   const isProfilePage = pathWithoutLang === '/profile' || pathWithoutLang.startsWith('/profile/');
   const shouldShowProfileSetupPrompt = useMemo(() => {
     if (!user) return false;

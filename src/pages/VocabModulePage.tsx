@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Eye, EyeOff, Play, Square, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
@@ -16,6 +16,9 @@ import { VocabModuleSkeleton } from '../components/common';
 import { FSRS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import type { Id } from '../../convex/_generated/dataModel';
+import VocabProgressSections from '../features/vocab/components/VocabProgressSections';
+import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
+import VocabTest from '../features/vocab/components/VocabTest';
 
 const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
@@ -38,7 +41,8 @@ interface ExtendedVocabItem extends VocabularyItem {
   last_review?: number | null;
 }
 
-type ViewMode = 'flashcard' | 'quiz' | 'match' | 'list';
+type ViewMode = 'flashcard' | 'match';
+type TabId = ViewMode | 'learn' | 'test';
 
 // Extracted constants for styles to prevent recreation on every render
 const BACKGROUND_STYLE = {
@@ -54,7 +58,7 @@ export default function VocabModulePage() {
   const { user } = useAuth();
   const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();
   const { institutes } = useData();
-  const { speak: speakTTS, stop: stopTTS } = useTTS();
+  const { speak: speakTTS } = useTTS();
   const { language } = useApp();
   const labels = getLabels(language);
 
@@ -84,11 +88,9 @@ export default function VocabModulePage() {
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Quick Study (速记) mode states
-  const [redSheetActive, setRedSheetActive] = useState(true); // 默认开启
-  const [isAudioLooping, setIsAudioLooping] = useState(false);
-  const audioLoopRef = useRef<boolean>(false);
-  const [listVisibleCount, setListVisibleCount] = useState(60);
+  const [redSheetActive, setRedSheetActive] = useState(true);
+  const [learnOpen, setLearnOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
 
   // Flashcard settings
 
@@ -96,9 +98,7 @@ export default function VocabModulePage() {
   // Pass user ID (token or Convex ID) to ensure progress data is loaded
   const convexWordsQuery = useQuery(
     VOCAB.getOfCourse,
-    instituteId
-      ? { courseId: instituteId, unitId: selectedUnitId === 'ALL' ? undefined : selectedUnitId }
-      : 'skip'
+    instituteId ? { courseId: instituteId } : 'skip'
   );
   const updateProgressMutation = useMutation(VOCAB.updateProgress);
   const updateProgressV2Mutation = useMutation(VOCAB.updateProgressV2);
@@ -108,37 +108,40 @@ export default function VocabModulePage() {
   const isLoading = convexWordsQuery === undefined;
   const allWords = useMemo<ExtendedVocabItem[]>(() => {
     if (!convexWordsQuery) return [];
-    return convexWordsQuery.map(w => ({
-      id: w._id,
-      korean: w.word,
-      english: w.meaning,
-      word: w.word,
-      meaning: w.meaning,
-      meaningEn: w.meaningEn,
-      meaningVi: w.meaningVi,
-      meaningMn: w.meaningMn,
-      pronunciation: w.pronunciation,
-      hanja: w.hanja,
-      partOfSpeech: w.partOfSpeech as VocabularyItem['partOfSpeech'],
-      tips: w.tips as VocabularyItem['tips'],
-      exampleSentence: w.exampleSentence,
-      exampleMeaning: w.exampleMeaning,
-      // Map DTO fields to Component fields
-      exampleTranslation: w.exampleMeaning,
-      exampleTranslationEn: w.exampleMeaningEn,
-      exampleTranslationVi: w.exampleMeaningVi,
-      exampleTranslationMn: w.exampleMeaningMn,
-      unit: w.unitId,
-      courseId: instituteId,
-      unitId: String(w.unitId),
-      progress: w.progress
-        ? {
-            ...w.progress,
-            status: w.progress.status as UserWordProgress['status'],
-          }
-        : null,
-      mastered: w.mastered || false,
-    }));
+    return convexWordsQuery.map(w => {
+      const unit = typeof w.unitId === 'number' ? w.unitId : Number(w.unitId);
+      const normalizedUnit = Number.isNaN(unit) ? 0 : unit;
+      return {
+        id: w._id,
+        korean: w.word,
+        english: w.meaning,
+        word: w.word,
+        meaning: w.meaning,
+        meaningEn: w.meaningEn,
+        meaningVi: w.meaningVi,
+        meaningMn: w.meaningMn,
+        pronunciation: w.pronunciation,
+        hanja: w.hanja,
+        partOfSpeech: w.partOfSpeech as VocabularyItem['partOfSpeech'],
+        tips: w.tips as VocabularyItem['tips'],
+        exampleSentence: w.exampleSentence,
+        exampleMeaning: w.exampleMeaning,
+        exampleTranslation: w.exampleMeaning,
+        exampleTranslationEn: w.exampleMeaningEn,
+        exampleTranslationVi: w.exampleMeaningVi,
+        exampleTranslationMn: w.exampleMeaningMn,
+        unit: normalizedUnit,
+        courseId: instituteId,
+        unitId: String(normalizedUnit),
+        progress: w.progress
+          ? {
+              ...w.progress,
+              status: w.progress.status as UserWordProgress['status'],
+            }
+          : null,
+        mastered: w.mastered || false,
+      };
+    });
   }, [convexWordsQuery, instituteId]);
 
   // Initialize Mastered IDs when data arrives
@@ -151,6 +154,16 @@ export default function VocabModulePage() {
     }
   }, [allWords]);
 
+  const unitCounts = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const w of allWords) {
+      const u = typeof w.unit === 'number' ? w.unit : Number(w.unit);
+      if (Number.isNaN(u)) continue;
+      map.set(u, (map.get(u) || 0) + 1);
+    }
+    return map;
+  }, [allWords]);
+
   const filteredWords = useMemo(() => {
     if (selectedUnitId === 'ALL') return allWords;
     return allWords.filter(w => w.unit === selectedUnitId);
@@ -158,18 +171,26 @@ export default function VocabModulePage() {
 
   useEffect(() => {
     setViewState(prev => ({ ...prev, cardIndex: 0, isFlipped: false, flashcardComplete: false }));
-    setListVisibleCount(60);
   }, [selectedUnitId]);
 
   const availableUnits = useMemo(() => {
     const total = course?.totalUnits || 20;
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }, [course]);
+    const base = Array.from({ length: total }, (_, i) => i + 1);
+    if (unitCounts.has(0)) base.unshift(0);
+    return base;
+  }, [course?.totalUnits, unitCounts]);
 
-  const masteryCount = useMemo(
-    () => filteredWords.filter(w => masteredIds.has(w.id)).length,
-    [filteredWords, masteredIds]
-  );
+  const masteryCount = useMemo(() => {
+    return filteredWords.filter(w => {
+      const p = w.progress as (UserWordProgress & { state?: number; stability?: number }) | null;
+      if (!p) return false;
+      if (typeof p.state === 'number') {
+        if (p.state !== 2) return false;
+        if (typeof p.stability === 'number') return p.stability > 30;
+      }
+      return w.mastered || p.status === 'MASTERED';
+    }).length;
+  }, [filteredWords]);
 
   // Memoized words for Quiz/Match to prevent re-renders
   const gameWords = useMemo(
@@ -183,9 +204,9 @@ export default function VocabModulePage() {
     [filteredWords, language]
   );
 
-  const listWords = useMemo(() => {
-    return filteredWords.slice(0, Math.min(filteredWords.length, listVisibleCount));
-  }, [filteredWords, listVisibleCount]);
+  const wordById = useMemo(() => {
+    return new Map(filteredWords.map(w => [w.id, w]));
+  }, [filteredWords]);
 
   const toggleStar = (id: string) => {
     setStarredIds(prev => {
@@ -203,39 +224,39 @@ export default function VocabModulePage() {
     [speakTTS]
   );
 
-  // Audio loop for Quick Study mode (1.5s gap between words)
-  const playAudioLoop = async () => {
-    if (isAudioLooping) {
-      audioLoopRef.current = false;
-      setIsAudioLooping(false);
-      stopTTS();
-      return;
+  const scopeTitle = useMemo(() => {
+    if (selectedUnitId === 'ALL') {
+      return (
+        course?.nameZh || course?.nameEn || course?.name || labels.vocab?.allUnits || 'All Units'
+      );
     }
-
-    audioLoopRef.current = true;
-    setIsAudioLooping(true);
-
-    for (const word of filteredWords) {
-      if (!audioLoopRef.current) break;
-
-      // Speak word
-      await speakTTS(word.korean);
-
-      if (!audioLoopRef.current) break;
-
-      // Wait 1.5 seconds
-      await new Promise(r => setTimeout(r, 1500));
+    if (selectedUnitId === 0) {
+      return language === 'zh' ? '未分单元' : 'Unassigned';
     }
+    return `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`;
+  }, [
+    course?.name,
+    course?.nameEn,
+    course?.nameZh,
+    labels.vocab?.unit,
+    labels.vocab?.allUnits,
+    language,
+    selectedUnitId,
+  ]);
 
-    audioLoopRef.current = false;
-    setIsAudioLooping(false);
-  };
-
-  const tabs = [
-    { id: 'flashcard', label: labels.vocab?.flashcard || 'Flashcard', emoji: '🎴' },
-    { id: 'quiz', label: labels.vocab?.quiz || 'Quiz', emoji: '🎯' },
+  const tabs: { id: TabId; label: string; emoji: string }[] = [
+    {
+      id: 'flashcard',
+      label: language === 'zh' ? '单词卡' : labels.vocab?.flashcard || 'Flashcard',
+      emoji: '🎴',
+    },
+    { id: 'learn', label: language === 'zh' ? '学习模式' : labels.learn || 'Learn', emoji: '🧠' },
+    {
+      id: 'test',
+      label: language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test',
+      emoji: '📝',
+    },
     { id: 'match', label: getLabel(labels, ['vocab', 'match']) || 'Match', emoji: '🧩' },
-    { id: 'list', label: labels.vocab?.quickStudy || 'Quick Study', emoji: '⚡' },
   ];
 
   if (isLoading) {
@@ -301,18 +322,30 @@ export default function VocabModulePage() {
                     </button>
                     <div className="h-px bg-slate-100 my-1" />
                     {availableUnits.map(u => {
-                      const count = allWords.filter(w => w.unit === u).length;
+                      const count = unitCounts.get(u) || 0;
+                      const disabled = count === 0;
                       return (
                         <button
                           key={u}
                           onClick={() => {
+                            if (disabled) return;
                             setSelectedUnitId(u);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${selectedUnitId === u ? 'bg-green-50 text-green-800 border border-green-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
+                          className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${
+                            selectedUnitId === u
+                              ? 'bg-green-50 text-green-800 border border-green-200'
+                              : disabled
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                          }`}
                         >
                           <span>
-                            {labels.vocab?.unit || 'Unit'} {u}
+                            {u === 0
+                              ? language === 'zh'
+                                ? '未分单元'
+                                : 'Unassigned'
+                              : `${labels.vocab?.unit || 'Unit'} ${u}`}
                           </span>
                           <span className="text-slate-300 text-xs">{count}</span>
                         </button>
@@ -353,24 +386,46 @@ export default function VocabModulePage() {
 
         {/* Mode Tabs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {tabs.map(mode => (
-            <button
-              key={mode.id}
-              onClick={() => setViewState(prev => ({ ...prev, mode: mode.id as ViewMode }))}
-              className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${viewState.mode === mode.id ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]' : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'}`}
-            >
-              {viewState.mode === mode.id && <div className="absolute inset-0 bg-green-50 z-0" />}
-              {viewState.mode === mode.id && (
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />
-              )}
-              <span className="relative z-10 text-xl">{mode.emoji}</span>
-              <span
-                className={`relative z-10 font-black text-sm ${viewState.mode === mode.id ? 'text-slate-900' : 'text-slate-500'}`}
+          {tabs.map(tab => {
+            const isActive =
+              tab.id === 'learn'
+                ? learnOpen
+                : tab.id === 'test'
+                  ? testOpen
+                  : viewState.mode === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id === 'learn') {
+                    setLearnOpen(true);
+                    return;
+                  }
+                  if (tab.id === 'test') {
+                    setTestOpen(true);
+                    return;
+                  }
+                  setViewState(prev => ({ ...prev, mode: tab.id as ViewMode }));
+                }}
+                className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${
+                  isActive
+                    ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                    : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                }`}
               >
-                {mode.label}
-              </span>
-            </button>
-          ))}
+                {isActive && <div className="absolute inset-0 bg-green-50 z-0" />}
+                {isActive && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />}
+                <span className="relative z-10 text-xl">{tab.emoji}</span>
+                <span
+                  className={`relative z-10 font-black text-sm ${
+                    isActive ? 'text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -422,10 +477,10 @@ export default function VocabModulePage() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
-                    onClick={() => setViewState(prev => ({ ...prev, mode: 'quiz' }))}
+                    onClick={() => setLearnOpen(true)}
                     className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
                   >
-                    ⚡️ {labels.vocab?.quiz || 'Quiz'}
+                    🧠 {language === 'zh' ? '学习模式' : labels.learn || 'Learn'}
                   </button>
                   {selectedUnitId !== 'ALL' &&
                     availableUnits.indexOf(selectedUnitId as number) <
@@ -457,9 +512,11 @@ export default function VocabModulePage() {
           ) : (
             <Suspense fallback={<VocabModuleSkeleton />}>
               <FlashcardView
+                key={`${instituteId}:${selectedUnitId}`}
                 words={filteredWords}
                 language={language}
                 courseId={instituteId}
+                progressKey={`${instituteId}:${selectedUnitId}`}
                 settings={{
                   flashcard: {
                     batchSize: 200,
@@ -485,6 +542,17 @@ export default function VocabModulePage() {
                   if (!starredIds.has(word.id)) {
                     toggleStar(word.id);
                   }
+                }}
+                onRequestNavigate={target => {
+                  if (target === 'learn') {
+                    setLearnOpen(true);
+                    return;
+                  }
+                  if (target === 'test') {
+                    setTestOpen(true);
+                    return;
+                  }
+                  setViewState(prev => ({ ...prev, mode: target as ViewMode }));
                 }}
                 onSpeak={speakWord}
                 onCardReview={async (word, result) => {
@@ -551,189 +619,33 @@ export default function VocabModulePage() {
         </div>
       )}
 
-      {/* Quick Learn List Mode (速记) */}
-      {viewState.mode === 'list' && filteredWords.length > 0 && (
-        <div className="w-full max-w-4xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-black text-slate-900">
-              {labels.vocab?.quickStudy || 'Quick Study'}{' '}
-              <span className="text-slate-400 text-lg font-normal ml-2">
-                ({listWords.length}/{filteredWords.length})
-              </span>
-            </h3>
-            <div className="flex items-center gap-2">
-              {/* Red Sheet Toggle */}
-              <button
-                onClick={() => setRedSheetActive(!redSheetActive)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
-                  redSheetActive
-                    ? 'bg-red-50 border-red-400 text-red-600'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
-                }`}
-              >
-                {redSheetActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {labels.vocab?.redSheet || 'Red Sheet'}
-              </button>
-              {/* Audio Loop */}
-              <button
-                onClick={playAudioLoop}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
-                  isAudioLooping
-                    ? 'bg-green-50 border-green-400 text-green-600 animate-pulse'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
-                }`}
-              >
-                {isAudioLooping ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                {isAudioLooping ? labels.vocab?.stop || 'Stop' : labels.vocab?.loop || 'Loop'}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {listWords.map(word => {
-              const isRevealed = masteredIds.has(word.id);
-
-              // Replace Korean word in example sentence with masked version
-              const maskedSentence =
-                word.exampleSentence?.replace(
-                  word.korean,
-                  isRevealed ? word.korean : '█'.repeat(word.korean.length)
-                ) || '';
-
-              const handleReveal = () => {
-                if (!isRevealed) {
-                  setMasteredIds(prev => new Set([...prev, word.id]));
-                  // TTS: speak word first, then sentence
-                  speakWord(word.korean);
-                  setTimeout(() => {
-                    speakWord(word.exampleSentence || '');
-                  }, 800);
-                }
-              };
-
-              return (
-                <div
-                  key={word.id}
-                  onClick={handleReveal}
-                  className={`bg-white rounded-2xl border-2 p-5 cursor-pointer transition-all ${
-                    isRevealed
-                      ? 'border-green-300 bg-green-50/50'
-                      : 'border-slate-200 hover:border-slate-400 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 md:gap-4">
-                    <div className="flex-1">
-                      {/* Word + Meaning Row */}
-                      <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-3 md:gap-3">
-                        <span
-                          className={`text-2xl font-black transition-all ${
-                            isRevealed ? 'text-green-600' : 'text-slate-900'
-                          }`}
-                        >
-                          {word.korean}
-                        </span>
-                        {/* Meaning with red sheet support */}
-                        <span
-                          className={`text-slate-500 text-lg transition-all ${
-                            redSheetActive && !isRevealed
-                              ? 'blur-sm hover:blur-none select-none'
-                              : ''
-                          }`}
-                        >
-                          {getLocalizedContent(word, 'meaning', language) || word.english}
-                        </span>
-                        {word.partOfSpeech && isRevealed && (
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                              word.partOfSpeech === 'VERB_T'
-                                ? 'bg-red-100 text-red-700'
-                                : word.partOfSpeech === 'VERB_I'
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : word.partOfSpeech === 'ADJ'
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : word.partOfSpeech === 'NOUN'
-                                      ? 'bg-blue-100 text-blue-700'
-                                      : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {word.partOfSpeech === 'VERB_T'
-                              ? labels.vocab?.pos?.verb_t_short || 'v.t.'
-                              : word.partOfSpeech === 'VERB_I'
-                                ? labels.vocab?.pos?.verb_i_short || 'v.i.'
-                                : word.partOfSpeech === 'ADJ'
-                                  ? labels.vocab?.pos?.adj_short || 'adj.'
-                                  : word.partOfSpeech === 'NOUN'
-                                    ? labels.vocab?.pos?.noun_short || 'n.'
-                                    : word.partOfSpeech}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Example Sentence with Masked Word */}
-                      <div
-                        className={`p-3 rounded-xl transition-all ${
-                          isRevealed ? 'bg-slate-100' : 'bg-slate-50'
-                        }`}
-                      >
-                        <p
-                          className={`text-lg leading-relaxed ${
-                            isRevealed ? 'text-slate-800' : 'text-slate-600'
-                          }`}
-                        >
-                          {maskedSentence || labels.vocab?.noExample || 'Example pending'}
-                        </p>
-                        {isRevealed && word.exampleTranslation && (
-                          <p className="text-sm text-slate-500 mt-1">
-                            {getLocalizedContent(word, 'exampleMeaning', language) ||
-                              word.exampleTranslation}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Status Indicator */}
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
-                        isRevealed ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'
-                      }`}
-                    >
-                      {isRevealed ? '✓' : '?'}
-                    </div>
-                  </div>
-
-                  {/* Hint */}
-                  {!isRevealed && (
-                    <p className="text-xs text-slate-400 mt-3 text-center">
-                      {labels.vocab?.reval || 'Click to reveal'}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {listWords.length < filteredWords.length && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() =>
-                  setListVisibleCount(prev => Math.min(filteredWords.length, prev + 60))
-                }
-                className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
-              >
-                {labels.common?.loadMore || 'Load more'}
-              </button>
-            </div>
-          )}
+      {viewState.mode === 'flashcard' && filteredWords.length > 0 && (
+        <div className="w-full max-w-4xl mb-10">
+          <VocabProgressSections
+            words={filteredWords}
+            language={language}
+            redEyeEnabled={redSheetActive}
+            onRedEyeEnabledChange={setRedSheetActive}
+            starredIds={starredIds}
+            onToggleStar={toggleStar}
+            onSpeak={speakWord}
+          />
         </div>
       )}
 
-      {/* Quiz Mode */}
-      {viewState.mode === 'quiz' && filteredWords.length > 0 && (
-        <div className="w-full max-w-4xl">
+      <VocabLearnOverlay
+        open={learnOpen}
+        onClose={() => setLearnOpen(false)}
+        language={language}
+        title={language === 'zh' ? '学习模式' : labels.learn || 'Learn'}
+        variant="fullscreen"
+      >
+        <div className="p-4 sm:p-6">
           <Suspense fallback={<VocabModuleSkeleton />}>
             <VocabQuiz
-              key={`quiz-${selectedUnitId}-${gameWords.length}`}
+              key={`learn-${selectedUnitId}-${gameWords.length}`}
               words={gameWords}
-              onComplete={stats => console.log('Quiz completed:', stats)}
+              onComplete={stats => console.log('Learn completed:', stats)}
               hasNextUnit={
                 selectedUnitId !== 'ALL' &&
                 availableUnits.indexOf(selectedUnitId as number) < availableUnits.length - 1
@@ -753,10 +665,63 @@ export default function VocabModulePage() {
               }
               userId={user?.id}
               language={language}
+              variant="learn"
             />
           </Suspense>
         </div>
-      )}
+      </VocabLearnOverlay>
+
+      <VocabLearnOverlay
+        open={testOpen}
+        onClose={() => setTestOpen(false)}
+        language={language}
+        title={language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test'}
+        variant="fullscreen"
+      >
+        <VocabTest
+          words={filteredWords}
+          language={language}
+          scopeTitle={scopeTitle}
+          onClose={() => setTestOpen(false)}
+          showCloseButton={false}
+          onFsrsReview={(wordId, isCorrect) => {
+            if (!user?.id) return;
+            const w = wordById.get(wordId);
+            if (!w) return;
+            const rating = isCorrect ? 3 : 1;
+            const currentCardState =
+              w.state !== undefined
+                ? {
+                    state: w.state,
+                    due: w.progress?.nextReviewAt || Date.now(),
+                    stability: w.stability || 0,
+                    difficulty: w.difficulty || 0,
+                    elapsed_days: w.elapsed_days || 0,
+                    scheduled_days: w.scheduled_days || 0,
+                    learning_steps: w.learning_steps || 0,
+                    reps: w.reps || 0,
+                    lapses: w.lapses || 0,
+                    last_review: w.last_review ?? undefined,
+                  }
+                : undefined;
+
+            void calculateNextSchedule({ currentCard: currentCardState, rating })
+              .then(nextState => {
+                const { review_log: _reviewLog, ...fsrsState } = nextState;
+                void _reviewLog;
+                return updateProgressV2Mutation({
+                  wordId: w.id as Id<'words'>,
+                  rating,
+                  fsrsState,
+                });
+              })
+              .catch(err => {
+                console.error('FSRS Error:', err);
+                updateProgressMutation({ wordId: w.id, quality: isCorrect ? 5 : 0 });
+              });
+          }}
+        />
+      </VocabLearnOverlay>
 
       {/* Match Mode */}
       {viewState.mode === 'match' && filteredWords.length > 0 && (

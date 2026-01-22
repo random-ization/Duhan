@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Volume2,
   CheckCircle,
@@ -15,6 +16,7 @@ import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import { useTTS } from '../../../hooks/useTTS';
+import { useApp } from '../../../contexts/AppContext';
 
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
@@ -26,8 +28,10 @@ interface FlashcardViewProps {
   }) => void;
   onSaveWord?: (word: ExtendedVocabularyItem) => void;
   onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void;
+  onRequestNavigate?: (target: 'flashcard' | 'learn' | 'test' | 'match') => void;
   onSpeak?: (text: string) => void;
   courseId?: string;
+  progressKey?: string;
 }
 
 // ... Settings Modal Component (unchanged) ...
@@ -170,11 +174,15 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     onComplete,
     onSaveWord,
     onCardReview,
+    onRequestNavigate,
     onSpeak,
     courseId,
+    progressKey,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
+    const { sidebarHidden, setSidebarHidden } = useApp();
+    const sidebarHiddenRef = useRef(sidebarHidden);
 
     useEffect(() => stopTTS, [stopTTS]);
 
@@ -200,6 +208,11 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
     // Shuffle words if random mode is on
     const [isRandom, setIsRandom] = useState(settings.flashcard.random);
+    const storageKey = useMemo(() => {
+      if (progressKey) return `flashcard_progress_${progressKey}`;
+      if (courseId) return `flashcard_progress_${courseId}`;
+      return null;
+    }, [courseId, progressKey]);
     const [words, setWords] = useState<ExtendedVocabularyItem[]>(() => {
       if (settings.flashcard.random) {
         return [...initialWords].sort(() => Math.random() - 0.5);
@@ -209,8 +222,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
     // Core state - initialize from localStorage if available
     const [cardIndex, setCardIndex] = useState(() => {
-      if (courseId) {
-        const saved = localStorage.getItem(`flashcard_progress_${courseId}`);
+      if (storageKey) {
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
           try {
             const { index } = JSON.parse(saved);
@@ -229,13 +242,44 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     const [trackProgress, setTrackProgress] = useState(true);
     const [showSettings, setShowSettings] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [fullscreenMenuOpen, setFullscreenMenuOpen] = useState(false);
+
+    useEffect(() => {
+      if (!isFullscreen) {
+        sidebarHiddenRef.current = sidebarHidden;
+        return;
+      }
+      const previous = sidebarHiddenRef.current;
+      setSidebarHidden(true);
+      return () => setSidebarHidden(previous);
+    }, [isFullscreen, setSidebarHidden, sidebarHidden]);
+
+    useEffect(() => {
+      if (!isFullscreen) return;
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }, [isFullscreen]);
+
+    useEffect(() => {
+      if (!isFullscreen || !fullscreenMenuOpen) return;
+      const handler = (e: MouseEvent) => {
+        const el = e.target as HTMLElement | null;
+        if (el?.closest?.('[data-flashcard-fullscreen-menu]')) return;
+        setFullscreenMenuOpen(false);
+      };
+      window.addEventListener('mousedown', handler);
+      return () => window.removeEventListener('mousedown', handler);
+    }, [fullscreenMenuOpen, isFullscreen]);
 
     const [sessionStats, setSessionStats] = useState<{
       correct: ExtendedVocabularyItem[];
       incorrect: ExtendedVocabularyItem[];
     }>(() => {
-      if (courseId) {
-        const saved = localStorage.getItem(`flashcard_progress_${courseId}`);
+      if (storageKey) {
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
           try {
             const { stats } = JSON.parse(saved);
@@ -260,13 +304,10 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
     // Save progress to localStorage
     useEffect(() => {
-      if (courseId && trackProgress && cardIndex > 0) {
-        localStorage.setItem(
-          `flashcard_progress_${courseId}`,
-          JSON.stringify({ index: cardIndex, stats: sessionStats })
-        );
+      if (storageKey && trackProgress && cardIndex > 0) {
+        localStorage.setItem(storageKey, JSON.stringify({ index: cardIndex, stats: sessionStats }));
       }
-    }, [courseId, trackProgress, cardIndex, sessionStats]);
+    }, [storageKey, trackProgress, cardIndex, sessionStats]);
 
     const resetDrag = useCallback(() => {
       setDragStart(null);
@@ -323,16 +364,14 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           setCardIndex(cardIndex + 1);
           setIsFlipped(false);
         } else {
-          if (courseId) {
-            localStorage.removeItem(`flashcard_progress_${courseId}`);
-          }
+          if (storageKey) localStorage.removeItem(storageKey);
           onComplete(updatedStats);
         }
       },
       [
         cardIndex,
         currentCard,
-        courseId,
+        storageKey,
         onComplete,
         onSaveWord,
         sessionStats,
@@ -557,7 +596,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
     // Toolbar render helper
     const renderToolbar = () => (
-      <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 p-3 flex items-center justify-between">
+      <div className="w-full max-w-4xl bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
         {/* Left: Track Progress */}
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <span className="text-sm font-medium text-slate-600">
@@ -682,8 +721,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
     // Fullscreen mode
     if (isFullscreen) {
-      return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      const content = (
+        <div className="fixed inset-0 z-[95] bg-white flex flex-col">
           <FlashcardSettingsModal
             isOpen={showSettings}
             onClose={() => setShowSettings(false)}
@@ -695,17 +734,58 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           {/* Top Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 font-bold text-slate-700">
-                📘 {labels.flashcards || '单词卡'}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
+              <div className="relative" data-flashcard-fullscreen-menu>
+                <button
+                  type="button"
+                  onClick={() => setFullscreenMenuOpen(v => !v)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 font-bold text-slate-700"
+                >
+                  📘 {language === 'zh' ? '单词卡' : labels.flashcards || 'Flashcards'}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {fullscreenMenuOpen ? (
+                  <div className="absolute left-0 top-full mt-2 w-44 bg-white border-2 border-slate-200 rounded-xl shadow-lg overflow-hidden z-[96]">
+                    {(
+                      [
+                        {
+                          id: 'flashcard' as const,
+                          label: language === 'zh' ? '单词卡' : labels.flashcards || 'Flashcards',
+                        },
+                        {
+                          id: 'learn' as const,
+                          label: language === 'zh' ? '学习模式' : labels.learn || 'Learn',
+                        },
+                        {
+                          id: 'test' as const,
+                          label: language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test',
+                        },
+                        { id: 'match' as const, label: language === 'zh' ? '配对' : 'Match' },
+                      ] as const
+                    ).map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setFullscreenMenuOpen(false);
+                          setIsFullscreen(false);
+                          onRequestNavigate?.(item.id);
+                        }}
+                        className="w-full text-left px-3 py-2 font-black text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="text-center">
               <div className="font-bold text-slate-800">
@@ -735,7 +815,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
               {sessionStats.incorrect.length} {labels.stillLearning || '仍在学'}
             </span>
             <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-50 text-green-600 font-bold text-sm">
-              {labels.mastered || '已了解'} {sessionStats.correct.length}
+              {language === 'zh' ? '本次记住' : 'Remembered'} {sessionStats.correct.length}
               <span className="w-2 h-2 rounded-full bg-green-500" />
             </span>
           </div>
@@ -754,7 +834,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
 
           {/* Bottom Toolbar */}
           <div className="px-6 py-4 border-t border-slate-100">
-            <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <div className="flex items-center justify-between max-w-4xl mx-auto">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <span className="text-sm font-medium text-slate-600">
                   {labels.trackProgress || '跟踪进度'}
@@ -803,6 +883,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           </div>
         </div>
       );
+      if (typeof document === 'undefined') return content;
+      return createPortal(content, document.body);
     }
 
     // Normal mode

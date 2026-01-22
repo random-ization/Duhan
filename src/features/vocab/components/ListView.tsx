@@ -60,7 +60,7 @@ const ListView: React.FC<ListViewProps> = React.memo(({ words, settings, languag
 
           return (
             <div
-              key={word.id}
+              key={`${word.id}:${idx}`}
               className={`p-6 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors ${
                 idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
               }`}

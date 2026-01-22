@@ -385,7 +385,7 @@ const VocabDashboard: React.FC = () => {
               <tbody>
                 {paginatedWords.map(word => (
                   <tr
-                    key={word._id}
+                    key={(word as { appearanceId?: string }).appearanceId ?? word._id}
                     className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors"
                   >
                     <td className="px-3 py-2 text-zinc-600">{word.unitId ?? '-'}</td>

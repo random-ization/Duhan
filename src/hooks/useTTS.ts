@@ -21,11 +21,12 @@ export const useTTS = () => {
     >('tts:speak')
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const requestIdRef = useRef(0);
   const cacheRef = useRef<Map<string, string> | null>(null);
   const cacheReadyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const stop = useCallback(() => {
+  const stopCurrentAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -35,8 +36,13 @@ export const useTTS = () => {
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
     }
-    setIsLoading(false);
   }, []);
+
+  const stop = useCallback(() => {
+    requestIdRef.current += 1;
+    stopCurrentAudio();
+    setIsLoading(false);
+  }, [stopCurrentAudio]);
 
   const getCache = useCallback(() => {
     if (!cacheReadyRef.current) {
@@ -61,34 +67,31 @@ export const useTTS = () => {
       const normalizedText = text?.trim();
       if (!normalizedText) return false;
 
-      // Stop any current audio
-      stop();
+      const myRequestId = (requestIdRef.current += 1);
+      stopCurrentAudio();
       setIsLoading(true);
 
       try {
         const playAudio = async (audioUrl: string, shouldRevoke: boolean): Promise<boolean> => {
+          if (myRequestId !== requestIdRef.current) {
+            if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+            return false;
+          }
           const audio = new Audio(audioUrl);
           audio.preload = 'auto';
           audioRef.current = audio;
           return new Promise<boolean>(resolve => {
-            audio.onended = () => {
+            const cleanup = (ok: boolean) => {
               if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-              audioRef.current = null;
-              setIsLoading(false);
-              resolve(true);
+              if (myRequestId === requestIdRef.current) {
+                audioRef.current = null;
+                setIsLoading(false);
+              }
+              resolve(ok);
             };
-            audio.onerror = () => {
-              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-              audioRef.current = null;
-              setIsLoading(false);
-              resolve(false);
-            };
-            audio.play().catch(() => {
-              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-              audioRef.current = null;
-              setIsLoading(false);
-              resolve(false);
-            });
+            audio.onended = () => cleanup(true);
+            audio.onerror = () => cleanup(false);
+            audio.play().catch(() => cleanup(false));
           });
         };
 
@@ -115,8 +118,12 @@ export const useTTS = () => {
             error?: string;
           };
 
+          if (myRequestId !== requestIdRef.current) {
+            return false;
+          }
+
           if (!result.success) {
-            setIsLoading(false);
+            if (myRequestId === requestIdRef.current) setIsLoading(false);
             return false;
           }
 
@@ -132,18 +139,18 @@ export const useTTS = () => {
             return await playAudio(audioUrl, true);
           }
 
-          setIsLoading(false);
+          if (myRequestId === requestIdRef.current) setIsLoading(false);
           return false;
         };
 
         return await tryConvexTTS();
       } catch (error) {
         console.error('TTS error:', error);
-        setIsLoading(false);
+        if (myRequestId === requestIdRef.current) setIsLoading(false);
         return false;
       }
     },
-    [getCache, speakAction, stop]
+    [getCache, speakAction, stopCurrentAudio]
   );
 
   return { speak, stop, isLoading };
