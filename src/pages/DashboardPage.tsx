@@ -443,9 +443,9 @@ export default function DashboardPage({
           <DictionarySearchDropdown />
 
           {/* Simplified Premium Badge */}
-          {(user?.tier === 'PAID' || user?.subscriptionType) && (
+          {(user?.tier === 'PAID' || user?.tier === 'PREMIUM' || user?.subscriptionType) && (
             <div
-              onClick={() => navigate('/pricing')}
+              onClick={() => navigate('/pricing/details')}
               className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 hover:scale-110 transition cursor-pointer"
             >
               <span className="text-lg">👑</span>

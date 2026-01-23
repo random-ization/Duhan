@@ -27,6 +27,7 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const PricingDetailsPage = lazy(() => import('./pages/PricingDetailsPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
@@ -56,7 +57,16 @@ const PageLoader = () => <ContentSkeleton />;
 
 const RedirectToDefaultLanguage: React.FC = () => {
   const location = useLocation();
-  return <Navigate to={`/${DEFAULT_LANGUAGE}${location.pathname}`} replace />;
+  return (
+    <Navigate
+      to={{
+        pathname: `/${DEFAULT_LANGUAGE}${location.pathname}`,
+        search: location.search,
+        hash: location.hash,
+      }}
+      replace
+    />
+  );
 };
 
 interface AppRoutesProps {
@@ -81,35 +91,36 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* === 公开路由 (无需登录) === */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<AuthPage />} />
-          <Route path="/register" element={<AuthPage />} />
-          <Route path="/auth" element={<AuthPage />} /> {/* Google OAuth callback */}
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route index element={<Landing />} />
+          <Route path="login" element={<AuthPage />} />
+          <Route path="register" element={<AuthPage />} />
+          <Route path="auth" element={<AuthPage />} /> {/* Google OAuth callback */}
+          <Route path="verify-email" element={<VerifyEmailPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route
-            path="/terms"
+            path="terms"
             element={<LegalDocumentPage language={language} documentType="terms" />}
           />
           <Route
-            path="/privacy"
+            path="privacy"
             element={<LegalDocumentPage language={language} documentType="privacy" />}
           />
           <Route
-            path="/refund"
+            path="refund"
             element={<LegalDocumentPage language={language} documentType="refund" />}
           />
-          <Route path="/pricing" element={<SubscriptionPage />} />
-          <Route path="/payment/success" element={<PaymentSuccessPage />} />
-          <Route path="/preview/mobile" element={<MobilePreviewPage />} />
+          <Route path="pricing" element={<SubscriptionPage />} />
+          <Route path="pricing/details" element={<PricingDetailsPage />} />
+          <Route path="payment/success" element={<PaymentSuccessPage />} />
+          <Route path="preview/mobile" element={<MobilePreviewPage />} />
           {/* === 管理员登录页 (公开) === */}
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="admin/login" element={<AdminLoginPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/profile" element={<ProfilePage language={language} />} />
+              <Route path="profile" element={<ProfilePage language={language} />} />
               <Route
-                path="/dashboard"
+                path="dashboard"
                 element={
                   <DashboardPage
                     _canAccessContent={canAccessContent}
@@ -117,16 +128,16 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
                   />
                 }
               />
-              <Route path="/dashboard/course" element={<CourseDashboard />} />
-              <Route path="/dashboard/:moduleParam" element={<ModulePage />} />
+              <Route path="dashboard/course" element={<CourseDashboard />} />
+              <Route path="dashboard/:moduleParam" element={<ModulePage />} />
               {/* Courses (教材选择) */}
-              <Route path="/courses" element={<CoursesOverview />} />
-              <Route path="/course/:instituteId" element={<CourseDashboard />} />
-              <Route path="/course/:instituteId/vocab" element={<VocabModulePage />} />
-              <Route path="/course/:instituteId/grammar" element={<GrammarModulePage />} />
-              <Route path="/course/:instituteId/:moduleParam" element={<ModulePage />} />
+              <Route path="courses" element={<CoursesOverview />} />
+              <Route path="course/:instituteId" element={<CourseDashboard />} />
+              <Route path="course/:instituteId/vocab" element={<VocabModulePage />} />
+              <Route path="course/:instituteId/grammar" element={<GrammarModulePage />} />
+              <Route path="course/:instituteId/:moduleParam" element={<ModulePage />} />
               <Route
-                path="/topik"
+                path="topik"
                 element={
                   <TopikPage
                     canAccessContent={canAccessContent}
@@ -135,7 +146,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
                 }
               />
               <Route
-                path="/topik/history"
+                path="topik/history"
                 element={
                   <TopikPage
                     canAccessContent={canAccessContent}
@@ -144,7 +155,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
                 }
               />
               <Route
-                path="/topik/:examId"
+                path="topik/:examId"
                 element={
                   <TopikPage
                     canAccessContent={canAccessContent}
@@ -153,7 +164,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
                 }
               />
               <Route
-                path="/topik/:examId/:view"
+                path="topik/:examId/:view"
                 element={
                   <TopikPage
                     canAccessContent={canAccessContent}
@@ -161,25 +172,25 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
                   />
                 }
               />
-              <Route path="/notebook" element={<NotebookPage />} />
-              <Route path="/vocab-book" element={<VocabBookPage />} />
-              <Route path="/vocab-book/immerse" element={<VocabBookImmersivePage />} />
-              <Route path="/vocab-book/listen" element={<VocabBookListenPage />} />
-              <Route path="/vocab-book/dictation" element={<VocabBookDictationPage />} />
-              <Route path="/vocab-book/spelling" element={<VocabBookSpellingPage />} />
-              <Route path="/vocab-book/export-pdf" element={<VocabBookExportPdfPage />} />
+              <Route path="notebook" element={<NotebookPage />} />
+              <Route path="vocab-book" element={<VocabBookPage />} />
+              <Route path="vocab-book/immerse" element={<VocabBookImmersivePage />} />
+              <Route path="vocab-book/listen" element={<VocabBookListenPage />} />
+              <Route path="vocab-book/dictation" element={<VocabBookDictationPage />} />
+              <Route path="vocab-book/spelling" element={<VocabBookSpellingPage />} />
+              <Route path="vocab-book/export-pdf" element={<VocabBookExportPdfPage />} />
 
               {/* Podcast Learning */}
-              <Route path="/podcasts" element={<PodcastDashboard />} />
-              <Route path="/podcasts/subscriptions" element={<PodcastDashboard />} />
-              <Route path="/podcasts/search" element={<PodcastSearchPage />} />
-              <Route path="/podcasts/channel" element={<PodcastChannelPage />} />
-              <Route path="/podcasts/player" element={<PodcastPlayerPage />} />
-              <Route path="/podcasts/history" element={<HistoryPage />} />
+              <Route path="podcasts" element={<PodcastDashboard />} />
+              <Route path="podcasts/subscriptions" element={<PodcastDashboard />} />
+              <Route path="podcasts/search" element={<PodcastSearchPage />} />
+              <Route path="podcasts/channel" element={<PodcastChannelPage />} />
+              <Route path="podcasts/player" element={<PodcastPlayerPage />} />
+              <Route path="podcasts/history" element={<HistoryPage />} />
 
               {/* Video Learning */}
-              <Route path="/videos" element={<VideoLibraryPage />} />
-              <Route path="/video/:id" element={<VideoPlayerPage />} />
+              <Route path="videos" element={<VideoLibraryPage />} />
+              <Route path="video/:id" element={<VideoPlayerPage />} />
             </Route>
           </Route>
           {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}
@@ -191,8 +202,8 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
               />
             }
           >
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/:tab" element={<AdminPage />} />
+            <Route path="admin" element={<AdminPage />} />
+            <Route path="admin/:tab" element={<AdminPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -202,10 +213,19 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
 };
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
+  const location = useLocation();
   return (
     <Routes>
       {/* Redirect root to default language */}
-      <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+      <Route
+        path="/"
+        element={
+          <Navigate
+            to={{ pathname: `/${DEFAULT_LANGUAGE}`, search: location.search, hash: location.hash }}
+            replace
+          />
+        }
+      />
 
       {/* Language-prefixed routes */}
       <Route

@@ -2,7 +2,6 @@ import React from 'react';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { Sparkles, X, Check } from 'lucide-react';
-import { notify } from '../utils/notify';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -23,9 +22,7 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
   ];
 
   const handleUpgrade = () => {
-    notify.info(
-      labels.upgradeComingSoon || 'Payment integration coming soon! Please contact support.'
-    );
+    window.location.href = `/${language}/pricing/details`;
     onClose();
   };
 

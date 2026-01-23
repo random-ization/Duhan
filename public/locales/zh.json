@@ -768,90 +768,185 @@
   },
   "landing": {
     "nav": {
-      "features": "功能特性",
-      "pricing": "会员计划"
+      "topik": "TOPIK",
+      "fsrs": "记忆算法",
+      "ai": "AI私教",
+      "pricing": "价格",
+      "cta": "免费开始",
+      "openMenu": "打开菜单",
+      "closeMenu": "关闭菜单"
     },
     "hero": {
-      "badge": "2.0 上线：视频中心 & 播客功能",
-      "titlePrefix": "别死记硬背了。",
-      "titleSuffix": "语言。",
-      "highlight": "开始活用",
-      "desc": "唯一将沉浸式乐趣（韩剧、播客）与正规学术（大学教材、TOPIK考试）相结合的平台。",
-      "ctaPrimary": "免费开始学习",
-      "ctaSecondary": "查看课程体系"
+      "badge": "已有 2,000+ 留学生加入备考",
+      "titleLine1": "掌握韩语，",
+      "titleGradient": "从来没有捷径。",
+      "desc": "但如果有科学的方法，你可以走得更快。DuHan 将 TOPIK 真题与 AI 算法结合，为你打造最硬核的提分系统。",
+      "ctaPrimary": "开始免费试用",
+      "ctaSecondary": "了解它是如何工作的"
     },
     "stats": {
-      "videos": "视频课程",
-      "levelRange": "1-6级",
-      "curriculum": "完整课程",
-      "ai": "AI 导师",
-      "exam": "模拟考试"
+      "topikCoverageValue": "100%",
+      "topikCoverageLabel": "TOPIK 真题覆盖",
+      "aiValue": "GPT-4",
+      "aiLabel": "语法解析内核",
+      "fsrsValue": "FSRS",
+      "fsrsLabel": "自适应记忆算法",
+      "levelRange": "TOPIK1-6",
+      "levelSupportLabel": "全等级支持"
     },
-    "features": {
-      "video": {
-        "title": "看视频学韩语。",
-        "desc": "导入 K-Pop MV 或韩剧片段，AI 自动生成交互式字幕。",
-        "point1": "点击查词",
-        "point2": "跟读模式",
-        "point3": "AI 讲解"
-      },
-      "institute": {
-        "title": "名校正规课程",
-        "desc": "来自延世、首尔大等顶尖名校的标准课程体系。",
-        "beginner": "初级 (1-2)",
-        "beginnerDesc": "韩语字母、问候、生存短语。",
-        "intermediate": "中级 (3-4)",
-        "intermediateDesc": "复杂语法、社会话题。"
-      },
-      "podcast": {
-        "title": "智能播客",
-        "desc": "导入任意 RSS，我们会生成字幕让你听懂每一个单词。",
-        "point1": "RSS 导入",
-        "point2": "自动字幕",
-        "point3": "离线模式"
-      },
-      "topik": {
-        "title": "冲刺 TOPIK",
-        "desc": "真实考试模拟，AI 即时评分与反馈。",
-        "point1": "写作批改",
-        "point2": "薄弱点分析",
-        "point3": "实时计时"
+    "topik": {
+      "badge": "应试首选",
+      "titleLine1": "全真模拟考试环境，",
+      "titleHighlight": "像在考场一样刷题。",
+      "desc": "这不是简单的 PDF 下载。我们为你重建了 TOPIK 真实的机考体验，包含听力自动播放、阅读限时训练、以及考后智能分析。",
+      "point1Title": "历年真题库 (TOPIK I & II)",
+      "point1Desc": "不再需要去各个论坛找资源，这里都有。",
+      "point2Title": "能力雷达图",
+      "point2Desc": "一眼看出你是听力弱还是阅读弱。",
+      "mockDomain": "secure.topik-exam.com",
+      "mockTitle": "제 64회 한국어능력시험",
+      "mockSubtitle": "TOPIK II - 읽기 (Reading)",
+      "mockQuestion": "1. 다음 ( )에 알맞은 것을 고르십시오.",
+      "mockStem": "비가 오면 우산을 ( ).",
+      "mockChoice1": "쓰다",
+      "mockChoice2": "씁니다",
+      "mockChoice3": "쓰고",
+      "mockChoice4": "썼다"
+    },
+    "fsrs": {
+      "badge": "核心科技",
+      "titleLine1": "比 Anki 更懂你的",
+      "titleHighlight": "FSRS 记忆算法",
+      "desc": "死记硬背是最低效的。DuHan 内置了最新的 Free Spaced Repetition Scheduler：系统会根据每个单词的难度与记忆稳定性预测遗忘时间，只在最该复习的那一刻提醒你。",
+      "stat1Value": "-40%",
+      "stat1Label": "复习时间节省",
+      "stat2Value": "95%",
+      "stat2Label": "长期记忆保留率",
+      "cardBadge": "New Word",
+      "word": "개발자",
+      "wordMeaning": "Developer",
+      "rateAgain": "Again",
+      "rateAgainHint": "1m",
+      "rateHard": "Hard",
+      "rateHardHint": "6m",
+      "rateGood": "Good",
+      "rateGoodHint": "10m",
+      "rateEasy": "Easy",
+      "rateEasyHint": "4d"
+    },
+    "ai": {
+      "badge": "DuHan Intelligence",
+      "titleLine1": "24小时待命的",
+      "titleHighlight": "AI 语法私教",
+      "desc": "遇到看不懂的长难句，或分不清 “-는데 / -니까” 的语境差别？点击任意句子，AI 老师会立刻用你的母语拆解语法结构、分析语境，并给出例句。",
+      "supportTitle": "支持功能",
+      "feature1": "语法拆解",
+      "feature2": "同义词辨析",
+      "feature3": "作文润色",
+      "feature4": "口语纠错",
+      "chatTitle": "Grammar Analysis",
+      "chatSubtitle": "Powered by GPT-4o",
+      "userAlt": "用户",
+      "userQuestion": "这句话里的 -다가 是什么意思？",
+      "userExample": "\"학교에 가다가 친구를 만났어요.\"",
+      "botAnswer": "这里的 -다가 表示动作在进行过程中发生了中途转换：在“去学校”的途中，发生了“遇到朋友”的动作（还没到学校）。"
+    },
+    "toolbox": {
+      "badge": "Interactive Demo",
+      "title": "不仅如此。",
+      "subtitle": "点击下方卡片，探索 DuHan 强大的学习工具箱。",
+      "card1Title": "PDF 导出 & 默写",
+      "card1Desc": "生词本一键转为 A4 默写纸。支持多种排版模式，完美还原线下书写体验。",
+      "card1Cta": "下载此 PDF",
+      "card2Title": "播客 & 智能逐字稿",
+      "card2Desc": "不仅仅是听。每一集播客都配有 AI 生成的时间轴逐字稿。",
+      "card2Point1Title": "高亮同步",
+      "card2Point1Desc": "文字随声音跳动",
+      "card2Point2Title": "点击查词",
+      "card2Point2Desc": "内置 Naver 词典",
+      "card2Cta": "试听这一集",
+      "card3Title": "视频 & AI 深度解析",
+      "card3Desc": "像刷 TikTok 一样学韩语。遇到不懂的语法？AI 老师为你实时拆解。",
+      "card3Tip": "试试将鼠标悬停在紫色单词上",
+      "card3Cta": "观看 AI 演示视频",
+      "demo": {
+        "pdf": {
+          "block1Title": "模式支持",
+          "block1Value": "单词表 / 默写填空 / 拼写测试",
+          "block2Title": "纸张适配",
+          "block2Value": "A4 / B5 / 平板电子手账",
+          "sheetTitle": "单词学习表",
+          "badge1": "未学习",
+          "badge2": "A4默写",
+          "siteTagline": "每天10分钟, 轻松学韩语",
+          "tableWord": "韩语 (Word)",
+          "tableMeaning": "释义 (Meaning)",
+          "tableQuiz": "默写",
+          "meaning1": "热水, 温水",
+          "meaning2": "吃",
+          "meaning3": "学习",
+          "footerLeft": "DuHan - 韩语学习平台",
+          "footerRight": "Page 1 / 5"
+        },
+        "podcast": {
+          "nowPlaying": "正在播放",
+          "episodeTitle": "Talk To Me In Korean Ep.14",
+          "tooltip": "好 (Good)",
+          "translation": "今天天气真的很好。"
+        },
+        "video": {
+          "aiTitle": "AI 语法分析",
+          "baseForm": "原形",
+          "baseFormValue": "먹다 (吃)",
+          "grammar": "语法",
+          "grammarValue": "-아/어서 (表示原因)",
+          "gloss": "“因为吃了泡菜...”",
+          "translation": "因为吃了泡菜，所以很辣。"
+        }
       }
     },
-    "mock": {
-      "videoTitle": "爱的迫降",
-      "videoWord1": "爱",
-      "videoWord2": "的",
-      "videoWord3": "迫降",
-      "subtitle": "李正赫...",
-      "prevSentence": "……上一句。",
-      "lessonTitle": "第一课：自我介绍",
-      "lessonLevel1": "第 1 级",
-      "lessonContent": "你好？我是詹姆斯。",
-      "grammarTitle": "语法点",
-      "grammarDesc": "用于标识主语身份。",
-      "podcastTitle": "TTMIK 播客",
-      "podcastHost": "主持人：贤宇",
-      "examTitle": "TOPIK II (写作)",
-      "questionTitle": "Q53. 图表分析",
-      "feedbackTitle": "AI 反馈",
-      "grammarCheck": "语法检查：",
-      "feedbackContent": "作文请使用正式语尾。"
-    },
     "pricing": {
-      "title": "简单定价",
-      "monthly": "月度",
-      "annual": "年度",
-      "saveBadge": "省40%",
-      "popularBadge": "超值之选",
-      "perMonth": "月",
-      "perYear": "年",
-      "lifetime": "终身",
-      "once": "一次性",
-      "equivalent": "仅 ¥29/月",
-      "ctaMonthly": "选择月度",
-      "ctaAnnual": "开通年度会员",
-      "ctaLifetime": "获取终身会员"
+      "title": "简单的价格，巨大的价值",
+      "subtitle": "比一杯星巴克还便宜，却是你通过 TOPIK 的最佳投资。",
+      "free": {
+        "title": "免费版",
+        "price": "$0",
+        "feature1": "每日 15 个单词",
+        "feature2": "基础阅读材料",
+        "feature3": "社区支持",
+        "cta": "注册账号"
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro 会员",
+        "price": "$6.9",
+        "period": "/ 月 (年付更优惠)",
+        "feature1": "无限量 单词记忆",
+        "feature2": "全套 TOPIK 真题模考",
+        "feature3": "AI 语法私教 (无限次)",
+        "feature4": "PDF 导出功能",
+        "cta": "开始 7 天免费试用"
+      },
+      "lifetime": {
+        "title": "终身买断",
+        "price": "$99",
+        "feature1": "一次付费，永久拥有",
+        "feature2": "包含未来所有更新",
+        "cta": "购买终身版"
+      }
+    },
+    "faq": {
+      "title": "常见问题",
+      "q1": "适合零基础吗？",
+      "a1": "当然。我们提供从 Hangul（发音字母）开始的基础课程，以及 TOPIK1 级别的分级阅读材料。",
+      "q2": "TOPIK 真题是最新的吗？",
+      "a2": "是的。我们收录了公开发布的历年真题，并会随着官方公布持续更新。",
+      "q3": "如果不满意可以退款吗？",
+      "a3": "我们提供 30 天无理由退款保证。如果你觉得 DuHan 没能帮到你，发邮件给我们即可全额退款。"
+    },
+    "footer": {
+      "about": "关于我们",
+      "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     }
   },
   "pricing": {
@@ -879,6 +974,175 @@
         "foreverAccess": "永久解锁所有内容",
         "futureUpdates": "包含未来更新"
       }
+    }
+  },
+  "pricingDetails": {
+    "refundBadge": "30天无理由退款",
+    "errors": {
+      "checkoutFailed": "无法发起支付，请稍后重试。"
+    },
+    "hero": {
+      "titlePrefix": "投资您的",
+      "titleHighlight": "韩语未来",
+      "subtitleLine1": "一杯咖啡的价格，换取 TOPIK 高分和流利的韩语能力。",
+      "subtitleLine2": "无隐藏费用，随时取消。"
+    },
+    "billing": {
+      "monthly": "月付",
+      "quarterly": "季付",
+      "semiannual": "季付",
+      "annual": "年付",
+      "semiannualBadge": "地区价",
+      "annualBadge": "地区价"
+    },
+    "period": {
+      "month": "/月",
+      "quarterly": "/季",
+      "semiannual": "/季",
+      "annual": "/年"
+    },
+    "saving": {
+      "semiannual": "",
+      "annual": ""
+    },
+    "plans": {
+      "free": {
+        "title": "Free 体验版",
+        "subtitle": "适合偶尔学习的用户",
+        "cta": "当前计划",
+        "features": {
+          "f1": "每日限学 20 个单词",
+          "f2": "开放闪卡/拼写/多选模式",
+          "f3": "单词模考 (Test Mode) 每日 1 次",
+          "f4": "视频/播客每日限看 2 篇",
+          "f5": "仅部分精选 TOPIK 真题"
+        }
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro 会员",
+        "subtitle": "适合认真的备考者",
+        "cta": "立即升级 Pro",
+        "unlockTitle": "解锁所有功能",
+        "features": {
+          "f1": "无限量 单词模考 (Test Mode)",
+          "f2": "无限量 新词记忆 (FSRS)",
+          "f3": "完整历年 TOPIK 真题库",
+          "f4": "全量 媒体库访问权限",
+          "f5": "AI 语法私教 (无限提问)"
+        }
+      },
+      "lifetime": {
+        "title": "终身买断",
+        "subtitle": "一次付费，永久拥有",
+        "cta": "获取终身访问权",
+        "features": {
+          "f1": "包含 Pro 所有功能",
+          "f2": "未来功能免费更新",
+          "f3": "优先客服支持"
+        }
+      }
+    },
+    "table": {
+      "title": "详细权益对比",
+      "subtitle": "为什么选择 Pro 会员？一目了然。",
+      "th1": "权益细则",
+      "th2": "Free",
+      "th3": "Pro / Lifetime",
+      "section": {
+        "fsrs": "单词特训 (FSRS)",
+        "topik": "TOPIK 备考",
+        "tools": "内容 & 工具"
+      },
+      "unlimited": "无限",
+      "supported": "支持",
+      "freeOpen": "免费开放",
+      "fullAccess": "完整体验",
+      "fsrs": {
+        "dailyLimit": "每日新词上限",
+        "dailyLimitFree": "20 个/天",
+        "modes": "学习模式 (闪卡/拼写/多选)",
+        "testMode": "全真单词模考 (Test Mode)",
+        "testModeFree": "每日限 1 次",
+        "testModePro": "无限次 & 历史分析"
+      },
+      "topik": {
+        "scope": "真题库范围",
+        "scopeFree": "精选部分公开真题",
+        "scopePro": "完整历年真题库",
+        "exam": "智能模考 (计时/评分)",
+        "examFree": "仅限部分试卷",
+        "examPro": "全试卷支持",
+        "speed": "听力倍速播放"
+      },
+      "tools": {
+        "media": "视频/播客资源库",
+        "mediaFree": "每日试看 2 篇",
+        "mediaPro": "完整媒体库访问",
+        "ai": "AI 语法私教",
+        "aiFree": "每日 3 次体验",
+        "pdf": "PDF 导出 (默写/生词)",
+        "pdfPro": "全格式导出"
+      }
+    },
+    "faq": {
+      "title": "常见问题",
+      "q1": {
+        "q": "如果我不满意可以退款吗？",
+        "a": "当然。我们提供 30天无理由退款保证。如果您觉得 DuHan 没有帮助到您，只需发送邮件给我们，我们将全额退款，没有任何废话。"
+      },
+      "q2": {
+        "q": "我可以随时取消订阅吗？",
+        "a": "是的。您可以在“账户设置”中随时点击“取消订阅”。您的权益将保留至当前计费周期结束，之后不再扣费。"
+      },
+      "q3": {
+        "q": "终身会员包含未来的功能吗？",
+        "a": "是的！购买终身版 (Lifetime) 后，您将免费获得 DuHan 未来发布的所有 Pro 功能更新，包括新的课程、新的 AI 模型升级等。"
+      }
+    },
+    "footer": {
+      "poweredBy": "Secure Payment Powered By",
+      "stripe": "Stripe",
+      "paypal": "PayPal",
+      "copyright": "© 2026 DuHan Inc. All rights reserved."
+    },
+    "originalLabel": "原价",
+    "promo": {
+      "activated": "地区优惠激活",
+      "verifyNow": "立即认证",
+      "subscribe": "以优惠价订阅",
+      "kycReserved": "认证入口已预留，稍后接入 KYC。",
+      "banner": {
+        "prefix": "完成手机号认证，解锁地区优惠价：",
+        "highlight": "$1.9",
+        "suffix": "/月 起",
+        "cta": "立即认证 →"
+      },
+      "card": {
+        "title": "中国地区专属优惠",
+        "badge": "低至 $1.9",
+        "description": "我们为中国地区提供 PPP (购买力平价) 专属价格。完成手机号认证后解锁优惠价。",
+        "cta": "立即认证"
+      }
+    }
+  },
+  "phoneVerifyModal": {
+    "title": "手机号码校验",
+    "subtitle": "仅用于确认您是否符合地区优惠资格。",
+    "disclaimer": "我们不会保存您的手机号明文。提交后仅记录“是否符合优惠资格”与所属地区，用于解锁对应优惠。",
+    "close": "关闭",
+    "tabs": { "cn": "中国", "vn": "越南", "mn": "蒙古" },
+    "placeholder": "输入手机号",
+    "hint": "请输入所选地区的有效手机号。",
+    "formattedLabel": "验证成功",
+    "cta": { "verify": "验证并领取优惠", "login": "登录后验证并领取优惠" },
+    "errors": {
+      "invalid": "手机号格式不正确，或不属于所选地区。",
+      "failed": "验证失败，请稍后重试。"
+    },
+    "toasts": {
+      "eligible": "验证成功，已为你开启地区优惠。",
+      "notEligible": "已完成验证，但不符合地区优惠条件。"
     }
   },
   "generalSettings": "通用设置",

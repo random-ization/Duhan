@@ -38,6 +38,10 @@ export const grantAccess = internalMutation({
       subscriptionExpiry = undefined; // No expiry for lifetime
     } else if (args.plan === 'ANNUAL') {
       subscriptionExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (args.plan === 'QUARTERLY') {
+      subscriptionExpiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (args.plan === 'SEMIANNUAL') {
+      subscriptionExpiry = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
     } else {
       // Monthly
       subscriptionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();

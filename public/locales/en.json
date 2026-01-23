@@ -760,90 +760,185 @@
   },
   "landing": {
     "nav": {
-      "features": "Features",
-      "pricing": "Pricing"
+      "topik": "TOPIK",
+      "fsrs": "Memory Algorithm",
+      "ai": "AI Tutor",
+      "pricing": "Pricing",
+      "cta": "Get Started",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     },
     "hero": {
-      "badge": "v2.0 Live: Video Center & Podcasts",
-      "titlePrefix": "Stop Memorizing.",
-      "titleSuffix": "the Language.",
-      "highlight": "Start Living",
-      "desc": "The only platform that combines fun immersion (K-Dramas, Podcasts) with serious academics (University Textbooks, TOPIK).",
+      "badge": "2,000+ learners preparing for TOPIK",
+      "titleLine1": "Master Korean,",
+      "titleGradient": "there are no shortcuts.",
+      "desc": "But with a scientific method, you can move faster. DuHan combines TOPIK past papers with AI to build a serious score-boosting system.",
       "ctaPrimary": "Start Free Trial",
-      "ctaSecondary": "View Curriculum"
+      "ctaSecondary": "See How It Works"
     },
     "stats": {
-      "videos": "Video Lessons",
-      "levelRange": "Level 1-6",
-      "curriculum": "Full Curriculum",
-      "ai": "AI Tutor",
-      "exam": "Exam Simulation"
+      "topikCoverageValue": "100%",
+      "topikCoverageLabel": "TOPIK Past Papers",
+      "aiValue": "GPT-4",
+      "aiLabel": "Grammar Engine",
+      "fsrsValue": "FSRS",
+      "fsrsLabel": "Adaptive Scheduler",
+      "levelRange": "TOPIK1-6",
+      "levelSupportLabel": "Full Level Support"
     },
-    "features": {
-      "video": {
-        "title": "Watch & Learn.",
-        "desc": "Import K-Pop MVs or K-Drama clips. AI generates interactive subtitles.",
-        "point1": "Click-to-Dictionary",
-        "point2": "Shadowing Mode",
-        "point3": "AI Explanation"
-      },
-      "institute": {
-        "title": "Structured Curriculum",
-        "desc": "Structured classroom-style syllabus designed for comprehensive Korean learning.",
-        "beginner": "Beginner (1-2)",
-        "beginnerDesc": "Hangul, Greetings, Survival Phrases.",
-        "intermediate": "Intermediate (3-4)",
-        "intermediateDesc": "Complex Grammar, Social Issues."
-      },
-      "podcast": {
-        "title": "Smart Podcasts",
-        "desc": "Import any RSS. We generate transcripts so you understand every word.",
-        "point1": "RSS Import",
-        "point2": "Auto Transcript",
-        "point3": "Offline Mode"
-      },
-      "topik": {
-        "title": "TOPIK Mock Exams",
-        "desc": "Mock exam simulation with instant AI grading and feedback.",
-        "point1": "Writing Correction",
-        "point2": "Weakness Analysis",
-        "point3": "Real Timer"
+    "topik": {
+      "badge": "Exam-first",
+      "titleLine1": "Full exam simulation,",
+      "titleHighlight": "practice like test day.",
+      "desc": "Not just a PDF download. We rebuilt the real TOPIK computer-based experience—auto audio, timed reading, and detailed post-test analysis.",
+      "point1Title": "Full past-paper library (TOPIK I & II)",
+      "point1Desc": "No more searching forums. Everything is organized in one place.",
+      "point2Title": "Skill radar",
+      "point2Desc": "See at a glance whether listening or reading is holding you back.",
+      "mockDomain": "secure.topik-exam.com",
+      "mockTitle": "제 64회 한국어능력시험",
+      "mockSubtitle": "TOPIK II - 읽기 (Reading)",
+      "mockQuestion": "1. 다음 ( )에 알맞은 것을 고르십시오.",
+      "mockStem": "비가 오면 우산을 ( ).",
+      "mockChoice1": "쓰다",
+      "mockChoice2": "씁니다",
+      "mockChoice3": "쓰고",
+      "mockChoice4": "썼다"
+    },
+    "fsrs": {
+      "badge": "Core Tech",
+      "titleLine1": "Smarter than Anki,",
+      "titleHighlight": "FSRS scheduling",
+      "desc": "Rote memorization is inefficient. DuHan uses the latest Free Spaced Repetition Scheduler to predict when you’ll forget and prompts you exactly at that moment.",
+      "stat1Value": "-40%",
+      "stat1Label": "Less review time",
+      "stat2Value": "95%",
+      "stat2Label": "Long-term retention",
+      "cardBadge": "New Word",
+      "word": "개발자",
+      "wordMeaning": "Developer",
+      "rateAgain": "Again",
+      "rateAgainHint": "1m",
+      "rateHard": "Hard",
+      "rateHardHint": "6m",
+      "rateGood": "Good",
+      "rateGoodHint": "10m",
+      "rateEasy": "Easy",
+      "rateEasyHint": "4d"
+    },
+    "ai": {
+      "badge": "DuHan Intelligence",
+      "titleLine1": "On-call 24/7,",
+      "titleHighlight": "AI grammar coach",
+      "desc": "Confused by long sentences or subtle endings? Tap any sentence and the AI breaks down grammar, context, and provides examples—in your language.",
+      "supportTitle": "Supported",
+      "feature1": "Grammar breakdown",
+      "feature2": "Synonym nuance",
+      "feature3": "Writing polish",
+      "feature4": "Speaking corrections",
+      "chatTitle": "Grammar Analysis",
+      "chatSubtitle": "Powered by GPT-4o",
+      "userAlt": "User",
+      "userQuestion": "What does -다가 mean in this sentence?",
+      "userExample": "\"학교에 가다가 친구를 만났어요.\"",
+      "botAnswer": "Here, -다가 indicates an action that changes mid-way: while going to school, the second action (meeting a friend) happened before arriving."
+    },
+    "toolbox": {
+      "badge": "Interactive Demo",
+      "title": "Not even close.",
+      "subtitle": "Click a card below to explore DuHan’s powerful learning toolbox.",
+      "card1Title": "PDF Export & Dictation",
+      "card1Desc": "Turn your vocab list into A4 dictation sheets. Multiple layouts designed for real handwriting practice.",
+      "card1Cta": "Download this PDF",
+      "card2Title": "Podcasts & Smart Transcript",
+      "card2Desc": "Not just listening—every episode comes with an AI-generated, time-synced transcript.",
+      "card2Point1Title": "Sync highlight",
+      "card2Point1Desc": "Words follow the audio in real time",
+      "card2Point2Title": "Tap to look up",
+      "card2Point2Desc": "Built-in dictionary lookup",
+      "card2Cta": "Play this episode",
+      "card3Title": "Video & AI Deep Analysis",
+      "card3Desc": "Learn Korean like scrolling TikTok. Don’t understand the grammar? The AI breaks it down instantly.",
+      "card3Tip": "Hover the purple word to see AI analysis",
+      "card3Cta": "Watch AI demo video",
+      "demo": {
+        "pdf": {
+          "block1Title": "Modes",
+          "block1Value": "Word list / Dictation / Spelling",
+          "block2Title": "Paper sizes",
+          "block2Value": "A4 / B5 / Tablet",
+          "sheetTitle": "Vocab Sheet",
+          "badge1": "New",
+          "badge2": "A4 Dictation",
+          "siteTagline": "10 minutes a day, learn Korean easily",
+          "tableWord": "Korean (Word)",
+          "tableMeaning": "Meaning",
+          "tableQuiz": "Write",
+          "meaning1": "Hot water",
+          "meaning2": "Eat",
+          "meaning3": "Study",
+          "footerLeft": "DuHan - Korean learning platform",
+          "footerRight": "Page 1 / 5"
+        },
+        "podcast": {
+          "nowPlaying": "Now playing",
+          "episodeTitle": "Talk To Me In Korean Ep.14",
+          "tooltip": "Good",
+          "translation": "The weather is really good today."
+        },
+        "video": {
+          "aiTitle": "AI Grammar Analysis",
+          "baseForm": "Base form",
+          "baseFormValue": "먹다 (to eat)",
+          "grammar": "Grammar",
+          "grammarValue": "-아/어서 (reason/cause)",
+          "gloss": "\"Because I ate kimchi...\"",
+          "translation": "It's spicy because I ate Kimchi."
+        }
       }
     },
-    "mock": {
-      "videoTitle": "Crash Landing on You",
-      "videoWord1": "Love",
-      "videoWord2": "'s",
-      "videoWord3": "Landing",
-      "subtitle": "Lee Jeong-hyeok...",
-      "prevSentence": "...previous sentence.",
-      "lessonTitle": "Unit 1: Introduction",
-      "lessonLevel1": "Level 1",
-      "lessonContent": "Hello? I am James.",
-      "grammarTitle": "Grammar Point",
-      "grammarDesc": "Used to identify the subject.",
-      "podcastTitle": "TTMIK Podcast",
-      "podcastHost": "Host: Hyun-woo",
-      "examTitle": "TOPIK II (Writing)",
-      "questionTitle": "Q53. Graph Analysis",
-      "feedbackTitle": "AI Feedback",
-      "grammarCheck": "Grammar Check:",
-      "feedbackContent": "Use formal ending for essays."
-    },
     "pricing": {
-      "title": "Simple Pricing",
-      "monthly": "Monthly",
-      "annual": "Annual",
-      "saveBadge": "Save 40%",
-      "popularBadge": "Most Popular",
-      "perMonth": "mo",
-      "perYear": "yr",
-      "lifetime": "Lifetime",
-      "once": "once",
-      "equivalent": "Just $4.08/mo",
-      "ctaMonthly": "Choose Monthly",
-      "ctaAnnual": "Start Annual Plan",
-      "ctaLifetime": "Get Lifetime"
+      "title": "Simple pricing, huge value",
+      "subtitle": "Cheaper than a coffee—better ROI for passing TOPIK.",
+      "free": {
+        "title": "Free",
+        "price": "$0",
+        "feature1": "15 words / day",
+        "feature2": "Basic reading materials",
+        "feature3": "Community support",
+        "cta": "Create account"
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro",
+        "price": "$6.9",
+        "period": "/ month (annual discount)",
+        "feature1": "Unlimited vocab reviews",
+        "feature2": "Full TOPIK mock exams",
+        "feature3": "AI grammar coach (unlimited)",
+        "feature4": "PDF export",
+        "cta": "Start 7-day free trial"
+      },
+      "lifetime": {
+        "title": "Lifetime",
+        "price": "$99",
+        "feature1": "One-time payment",
+        "feature2": "Includes all future updates",
+        "cta": "Buy lifetime"
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "Is it suitable for absolute beginners?",
+      "a1": "Yes. We start from Hangul and provide graded readings aligned with TOPIK1.",
+      "q2": "Are the TOPIK past papers up to date?",
+      "a2": "Yes. We include publicly released papers from earlier rounds to the latest available and keep updating.",
+      "q3": "Can I get a refund?",
+      "a3": "We offer a 30-day refund guarantee. Email support and we’ll refund you."
+    },
+    "footer": {
+      "about": "About",
+      "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     }
   },
   "pricing": {
@@ -871,6 +966,175 @@
         "foreverAccess": "Forever access to everything",
         "futureUpdates": "Future updates included"
       }
+    }
+  },
+  "pricingDetails": {
+    "refundBadge": "30-day refund guarantee",
+    "errors": {
+      "checkoutFailed": "Failed to start checkout. Please try again later."
+    },
+    "hero": {
+      "titlePrefix": "Invest in your ",
+      "titleHighlight": "Korean future",
+      "subtitleLine1": "Coffee price, TOPIK high scores and real fluency.",
+      "subtitleLine2": "No hidden fees. Cancel anytime."
+    },
+    "billing": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semiannual": "6 months",
+      "annual": "Annual",
+      "semiannualBadge": "Save 20%",
+      "annualBadge": "Best -40%"
+    },
+    "period": {
+      "month": "/ month",
+      "quarterly": "/ quarter",
+      "semiannual": "/ 6 months",
+      "annual": "/ year"
+    },
+    "saving": {
+      "semiannual": "Equivalent to $4.98 / month (Save 20%)",
+      "annual": "Equivalent to $4.08 / month (Save 40%)"
+    },
+    "plans": {
+      "free": {
+        "title": "Free",
+        "subtitle": "For casual learners",
+        "cta": "Current plan",
+        "features": {
+          "f1": "Up to 20 new words / day",
+          "f2": "Flashcards / Spelling / Multiple choice",
+          "f3": "Test Mode: 1 time / day",
+          "f4": "Videos/Podcasts: 2 items / day",
+          "f5": "Only selected TOPIK past papers"
+        }
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro",
+        "subtitle": "For serious TOPIK learners",
+        "cta": "Upgrade to Pro",
+        "unlockTitle": "Unlock everything",
+        "features": {
+          "f1": "Unlimited Test Mode",
+          "f2": "Unlimited FSRS vocab training",
+          "f3": "Full TOPIK past paper library",
+          "f4": "Full media library access",
+          "f5": "AI grammar coach (unlimited)"
+        }
+      },
+      "lifetime": {
+        "title": "Lifetime",
+        "subtitle": "Pay once, own forever",
+        "cta": "Get lifetime access",
+        "features": {
+          "f1": "Includes all Pro features",
+          "f2": "Free future updates",
+          "f3": "Priority support"
+        }
+      }
+    },
+    "table": {
+      "title": "Benefits comparison",
+      "subtitle": "Why Pro is worth it—at a glance.",
+      "th1": "Benefit",
+      "th2": "Free",
+      "th3": "Pro / Lifetime",
+      "section": {
+        "fsrs": "Vocab training (FSRS)",
+        "topik": "TOPIK prep",
+        "tools": "Content & tools"
+      },
+      "unlimited": "Unlimited",
+      "supported": "Supported",
+      "freeOpen": "Available",
+      "fullAccess": "Full access",
+      "fsrs": {
+        "dailyLimit": "New words / day",
+        "dailyLimitFree": "20 / day",
+        "modes": "Modes (flashcards/spelling/quiz)",
+        "testMode": "Test Mode",
+        "testModeFree": "1 / day",
+        "testModePro": "Unlimited & history analytics"
+      },
+      "topik": {
+        "scope": "Past paper coverage",
+        "scopeFree": "Selected public papers",
+        "scopePro": "Full past paper library",
+        "exam": "Mock exam (timed/scored)",
+        "examFree": "Selected papers only",
+        "examPro": "All papers supported",
+        "speed": "Listening playback speed"
+      },
+      "tools": {
+        "media": "Video/Podcast library",
+        "mediaFree": "2 items / day",
+        "mediaPro": "Full access",
+        "ai": "AI grammar coach",
+        "aiFree": "3 times / day",
+        "pdf": "PDF export (dictation/vocab)",
+        "pdfPro": "All formats"
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": {
+        "q": "Can I get a refund if I’m not satisfied?",
+        "a": "Yes. We offer a 30-day refund guarantee. Email support and we’ll refund you."
+      },
+      "q2": {
+        "q": "Can I cancel anytime?",
+        "a": "Yes. You can cancel in account settings. Benefits remain until the end of the billing period."
+      },
+      "q3": {
+        "q": "Does Lifetime include future features?",
+        "a": "Yes. Lifetime includes all future Pro updates, including new courses and AI upgrades."
+      }
+    },
+    "footer": {
+      "poweredBy": "Secure payment powered by",
+      "stripe": "Stripe",
+      "paypal": "PayPal",
+      "copyright": "© 2026 DuHan Inc. All rights reserved."
+    },
+    "originalLabel": "Original",
+    "promo": {
+      "activated": "Regional discount active",
+      "verifyNow": "Verify now",
+      "subscribe": "Subscribe with discount",
+      "kycReserved": "KYC button reserved; integration coming soon.",
+      "banner": {
+        "prefix": "",
+        "highlight": "",
+        "suffix": "",
+        "cta": "Verify →"
+      },
+      "card": {
+        "title": "",
+        "badge": "",
+        "description": "",
+        "cta": ""
+      }
+    }
+  },
+  "phoneVerifyModal": {
+    "title": "Phone number check",
+    "subtitle": "Used only to confirm regional discount eligibility.",
+    "disclaimer": "We do not store your phone number. We only record your eligibility status and region.",
+    "close": "Close",
+    "tabs": { "cn": "China", "vn": "Vietnam", "mn": "Mongolia" },
+    "placeholder": "Enter phone number",
+    "hint": "Enter a valid number for the selected region.",
+    "formattedLabel": "Verification successful",
+    "cta": { "verify": "Verify and claim discount", "login": "Log in to verify and claim" },
+    "errors": {
+      "invalid": "Invalid phone number for the selected region.",
+      "failed": "Verification failed. Please try again."
+    },
+    "toasts": {
+      "eligible": "Verified. Regional discount is now enabled.",
+      "notEligible": "Verified, but not eligible for the regional discount."
     }
   },
   "errors": {

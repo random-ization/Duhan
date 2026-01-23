@@ -1,11 +1,14 @@
 export enum UserTier {
   FREE = 'FREE',
   PAID = 'PAID',
+  PREMIUM = 'PREMIUM',
 }
 
 export enum SubscriptionType {
   FREE = 'FREE',
   MONTHLY = 'MONTHLY',
+  SEMIANNUAL = 'SEMIANNUAL',
+  QUARTERLY = 'QUARTERLY',
   ANNUAL = 'ANNUAL',
   LIFETIME = 'LIFETIME',
 }
@@ -87,6 +90,10 @@ export interface User {
   role: UserRole;
   subscriptionType?: SubscriptionType; // New field
   subscriptionExpiry?: string; // New field
+  phoneRegion?: 'CN' | 'VN' | 'MN' | 'OTHER';
+  isRegionalPromoEligible?: boolean;
+  phoneVerifiedAt?: string;
+  kycStatus?: 'NONE' | 'VERIFIED';
   joinDate: number;
   createdAt?: number; // Alias for joinDate
   lastActive: number;

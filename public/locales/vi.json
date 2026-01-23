@@ -723,131 +723,186 @@
     "upgrade": "Nâng cấp ngay"
   },
   "landing": {
-    "heroBadge": "Giáo trình Yonsei, Sogang, SNU mới",
-    "heroTitle1": "Chinh phục tiếng Hàn,",
-    "heroTitle2": "Từng bước vững chắc.",
-    "heroDesc": "Từ sơ cấp đến TOPIK 6. Chương trình học hoàn chỉnh với giáo trình số hóa, đề thi thật và phân tích thông minh.",
-    "startTrial": "Dùng thử miễn phí",
-    "viewBenefits": "Xem quyền lợi thành viên",
-    "viewCourses": "Xem lộ trình",
-    "pricing": {
-      "annual": "Hàng năm",
-      "ctaAnnual": "Bắt đầu gói hàng năm",
-      "ctaLifetime": "Sở hữu trọn đời",
-      "ctaMonthly": "Chọn gói hàng tháng",
-      "equivalent": "Chỉ 4,08 USD/tháng",
-      "lifetime": "Trọn đời",
-      "monthly": "Hàng tháng",
-      "once": "một lần",
-      "perMonth": "tháng",
-      "perYear": "năm",
-      "popularBadge": "Phổ biến nhất",
-      "saveBadge": "Tiết kiệm 40%",
-      "title": "Giá cả đơn giản"
-    },
-    "statTextbooks": "Giáo trình hàng đầu",
-    "statPassRate": "Tỉ lệ đỗ cao",
-    "statRecommend": "Học viên tin dùng",
-    "featureEyebrow": "Trợ lý học tập",
-    "featureTitle": "Hơn cả giáo trình, là Gia sư thông minh",
-    "featureDesc": "Chúng tôi số hóa các giáo trình tiếng Hàn tốt nhất và thêm các tính năng thông minh như dịch tức thì, lặp lại ngắt quãng.",
-    "card1Title": "Chương trình Đại học",
-    "card1Desc": "Giáo trình số hóa từ Yonsei, Sogang. Học song song với lớp học ngay cả khi bạn không ở Hàn Quốc.",
-    "card2Title": "Luyện thi TOPIK",
-    "card2Desc": "Đề thi các năm và phân tích lỗi sai. Đạt cấp 6 và giành học bổng.",
-    "card2List": ["Môi trường thi thật", "Chấm điểm tự động", "Săn học bổng", "Kho đề thi cũ"],
-    "card3Title": "Luyện nghe thực tế",
-    "card3Desc": "Audio chuẩn từ lớp học, nghe từng câu, điều chỉnh tốc độ.",
-    "card4Title": "Theo dõi tiến độ",
-    "card4Desc": "Tự động ghi lại lộ trình học và lên lịch ôn tập hiệu quả.",
-    "stepTitle": "3 Bước thành thạo",
-    "step1Title": "Chọn giáo trình",
-    "step1Desc": "Chọn Yonsei, Sogang... phù hợp với mục tiêu hoặc trường học của bạn.",
-    "step2Title": "Luyện tập & Đồng bộ",
-    "step2Desc": "Xem trước từ vựng và bài khóa, nắm vững kiến thức mới.",
-    "step3Title": "Sẵn sàng lên lớp",
-    "step3Desc": "Quên đi nỗi sợ không hiểu bài. Tự tin tham gia lớp học.",
-    "ctaTitle": "Sẵn sàng bắt đầu?",
-    "ctaDesc": "DuHan đồng hành cùng bạn từ bảng chữ cái đến khi thành thạo. Tham gia ngay!",
-    "ctaBtn": "Tạo tài khoản miễn phí",
-    "ctaNote": "Không cần thẻ tín dụng · Gói miễn phí vĩnh viễn",
-    "footerDesc": "Nền tảng học tiếng Hàn toàn diện của bạn",
-    "contactUs": "Liên hệ",
-    "contactConfirm": "Bạn có muốn gửi email đến support@koreanstudy.me không?",
-    "privacy": "Chính sách quyền riêng tư",
-    "term": "Điều khoản dịch vụ",
-    "refundPolicy": "Chính sách hoàn tiền",
-    "legal": "Pháp lý",
-    "features": {
-      "institute": {
-        "beginner": "Sơ cấp (1-2)",
-        "beginnerDesc": "Hangeul, Chào hỏi, Các câu thông dụng.",
-        "desc": "Chương trình học quy chuẩn theo phong cách lớp công ty nhằm hỗ trợ tối ưu việc học tiếng Hàn.",
-        "intermediate": "Trung cấp (3-4)",
-        "intermediateDesc": "Ngữ pháp phức tạp, Các vấn đề xã hội.",
-        "title": "Chương trình học quy chuẩn"
-      },
-      "podcast": {
-        "desc": "Nhập bất kỳ bản tin RSS nào. Chúng tôi tạo phụ đề để bạn hiểu từng lời.",
-        "point1": "Nhập RSS",
-        "point2": "Phụ đề tự động",
-        "point3": "Chế độ ngoại tuyến",
-        "title": "Podcast thông minh"
-      },
-      "topik": {
-        "desc": "Mô phỏng bài thi thử với đánh giá và phản hồi tức thì từ AI.",
-        "point1": "Chỉnh sửa bài viết",
-        "point2": "Phân tích điểm yếu",
-        "point3": "Thời gian thực",
-        "title": "Thi thử TOPIK"
-      },
-      "video": {
-        "desc": "Nhập các video âm nhạc K-Pop hoặc đoạn phim K-Drama. AI tạo phụ đề tương tác.",
-        "point1": "Click-để-tra-từ",
-        "point2": "Chế độ Shadowing",
-        "point3": "Giải thích bởi AI",
-        "title": "Xem & Học."
-      }
+    "nav": {
+      "topik": "TOPIK",
+      "fsrs": "Thuật toán ghi nhớ",
+      "ai": "Gia sư AI",
+      "pricing": "Giá",
+      "cta": "Bắt đầu miễn phí",
+      "openMenu": "Mở menu",
+      "closeMenu": "Đóng menu"
     },
     "hero": {
-      "badge": "v2.0 Trực tiếp: Trung tâm Video & Podcast",
-      "ctaPrimary": "Bắt đầu dùng thử miễn phí",
-      "ctaSecondary": "Xem chương trình học",
-      "desc": "Nền tảng duy nhất kết hợp các hình thức giải trí (K-Dramas, Podcast) với chương trình học thuật chuyên sâu (Giáo trình Đại học, TOPIK).",
-      "highlight": "Bắt đầu Trải nghiệm",
-      "titlePrefix": "Đừng chỉ ghi nhớ.",
-      "titleSuffix": "ngôn ngữ."
-    },
-    "mock": {
-      "examTitle": "TOPIK II (Viết)",
-      "feedbackContent": "Sử dụng kết thúc trang trọng cho bài luận.",
-      "feedbackTitle": "Phản hồi từ AI",
-      "grammarCheck": "Kiểm tra ngữ pháp:",
-      "grammarDesc": "Dùng để xác định chủ ngữ.",
-      "grammarTitle": "Điểm ngữ pháp",
-      "lessonContent": "Xin chào? Tôi là James.",
-      "lessonTitle": "Bài 1: Giới thiệu",
-      "lessonLevel1": "Cấp 1",
-      "podcastHost": "Người dẫn chương trình: Hyun-woo",
-      "podcastTitle": "TTMIK Podcast",
-      "subtitle": "Lee Jeong-hyeok...",
-      "prevSentence": "...câu trước.",
-      "questionTitle": "Câu 53. Phân tích biểu đồ",
-      "videoTitle": "Hạ cánh nơi anh",
-      "videoWord1": "Tình yêu",
-      "videoWord2": "'s",
-      "videoWord3": "Hạ cánh"
-    },
-    "nav": {
-      "features": "Tính năng",
-      "pricing": "Giá cả"
+      "badge": "Hơn 2.000 người học đang ôn TOPIK",
+      "titleLine1": "Làm chủ tiếng Hàn,",
+      "titleGradient": "không có đường tắt.",
+      "desc": "Nhưng với phương pháp khoa học, bạn sẽ tiến nhanh hơn. DuHan kết hợp đề TOPIK với AI để tạo hệ thống tăng điểm hiệu quả.",
+      "ctaPrimary": "Dùng thử miễn phí",
+      "ctaSecondary": "Xem cách hoạt động"
     },
     "stats": {
-      "ai": "Gia sư AI",
-      "curriculum": "Đầy đủ chương trình",
-      "exam": "Mô phỏng bài thi",
-      "levelRange": "Cấp 1–6",
-      "videos": "Bài học video"
+      "topikCoverageValue": "100%",
+      "topikCoverageLabel": "Đề TOPIK",
+      "aiValue": "GPT-4",
+      "aiLabel": "Máy phân tích ngữ pháp",
+      "fsrsValue": "FSRS",
+      "fsrsLabel": "Lặp lại tối ưu",
+      "levelRange": "TOPIK1-6",
+      "levelSupportLabel": "Hỗ trợ toàn cấp"
+    },
+    "topik": {
+      "badge": "Ưu tiên thi",
+      "titleLine1": "Mô phỏng thi thật,",
+      "titleHighlight": "luyện như ngày thi.",
+      "desc": "Không chỉ tải PDF. Chúng tôi tái tạo trải nghiệm TOPIK trên máy: nghe tự phát, đọc giới hạn thời gian, và phân tích sau bài thi.",
+      "point1Title": "Kho đề (TOPIK I & II)",
+      "point1Desc": "Không cần tìm tài liệu rải rác nữa—tất cả ở đây.",
+      "point2Title": "Biểu đồ năng lực",
+      "point2Desc": "Nhìn nhanh điểm yếu nghe hay đọc của bạn.",
+      "mockDomain": "secure.topik-exam.com",
+      "mockTitle": "제 64회 한국어능력시험",
+      "mockSubtitle": "TOPIK II - 읽기 (Reading)",
+      "mockQuestion": "1. 다음 ( )에 알맞은 것을 고르십시오.",
+      "mockStem": "비가 오면 우산을 ( ).",
+      "mockChoice1": "쓰다",
+      "mockChoice2": "씁니다",
+      "mockChoice3": "쓰고",
+      "mockChoice4": "썼다"
+    },
+    "fsrs": {
+      "badge": "Công nghệ cốt lõi",
+      "titleLine1": "Hiểu bạn hơn Anki,",
+      "titleHighlight": "lập lịch FSRS",
+      "desc": "Học vẹt rất kém hiệu quả. DuHan dùng FSRS để dự đoán khi bạn sắp quên và nhắc đúng thời điểm cần ôn.",
+      "stat1Value": "-40%",
+      "stat1Label": "Giảm thời gian ôn",
+      "stat2Value": "95%",
+      "stat2Label": "Ghi nhớ dài hạn",
+      "cardBadge": "New Word",
+      "word": "개발자",
+      "wordMeaning": "Developer",
+      "rateAgain": "Again",
+      "rateAgainHint": "1m",
+      "rateHard": "Hard",
+      "rateHardHint": "6m",
+      "rateGood": "Good",
+      "rateGoodHint": "10m",
+      "rateEasy": "Easy",
+      "rateEasyHint": "4d"
+    },
+    "ai": {
+      "badge": "DuHan Intelligence",
+      "titleLine1": "Luôn sẵn sàng 24/7,",
+      "titleHighlight": "gia sư ngữ pháp AI",
+      "desc": "Gặp câu dài khó hiểu hay phân vân sắc thái? Chạm vào câu bất kỳ, AI sẽ phân tích ngữ pháp, ngữ cảnh và đưa ví dụ bằng ngôn ngữ của bạn.",
+      "supportTitle": "Hỗ trợ",
+      "feature1": "Phân tích ngữ pháp",
+      "feature2": "So sánh từ đồng nghĩa",
+      "feature3": "Chỉnh sửa bài viết",
+      "feature4": "Sửa phát âm/nói",
+      "chatTitle": "Grammar Analysis",
+      "chatSubtitle": "Powered by GPT-4o",
+      "userAlt": "Người dùng",
+      "userQuestion": "-다가 trong câu này nghĩa là gì?",
+      "userExample": "\"학교에 가다가 친구를 만났어요.\"",
+      "botAnswer": "Ở đây, -다가 diễn tả sự chuyển hành động giữa chừng: trong lúc đang đi đến trường, hành động thứ hai (gặp bạn) xảy ra trước khi tới nơi."
+    },
+    "toolbox": {
+      "badge": "Interactive Demo",
+      "title": "Chưa dừng ở đó.",
+      "subtitle": "Nhấp vào thẻ bên dưới để khám phá bộ công cụ học tập mạnh mẽ của DuHan.",
+      "card1Title": "Xuất PDF & Chép chính tả",
+      "card1Desc": "Chuyển sổ từ vựng thành giấy chép chính tả A4. Nhiều bố cục phù hợp luyện viết.",
+      "card1Cta": "Tải PDF này",
+      "card2Title": "Podcast & Transcript thông minh",
+      "card2Desc": "Không chỉ nghe—mỗi tập có transcript theo thời gian do AI tạo.",
+      "card2Point1Title": "Đồng bộ tô sáng",
+      "card2Point1Desc": "Chữ chạy theo âm thanh",
+      "card2Point2Title": "Nhấp để tra từ",
+      "card2Point2Desc": "Tra cứu từ điển tích hợp",
+      "card2Cta": "Nghe thử tập này",
+      "card3Title": "Video & AI phân tích sâu",
+      "card3Desc": "Học như lướt TikTok. Không hiểu ngữ pháp? AI phân tích tức thì.",
+      "card3Tip": "Thử rê chuột lên từ màu tím",
+      "card3Cta": "Xem video demo AI",
+      "demo": {
+        "pdf": {
+          "block1Title": "Chế độ",
+          "block1Value": "Danh sách từ / Chép chính tả / Chính tả",
+          "block2Title": "Khổ giấy",
+          "block2Value": "A4 / B5 / Tablet",
+          "sheetTitle": "Bảng từ vựng",
+          "badge1": "Mới",
+          "badge2": "Chép A4",
+          "siteTagline": "10 phút mỗi ngày, học tiếng Hàn dễ dàng",
+          "tableWord": "Tiếng Hàn (Word)",
+          "tableMeaning": "Nghĩa (Meaning)",
+          "tableQuiz": "Viết",
+          "meaning1": "Nước nóng",
+          "meaning2": "Ăn",
+          "meaning3": "Học",
+          "footerLeft": "DuHan - nền tảng học tiếng Hàn",
+          "footerRight": "Trang 1 / 5"
+        },
+        "podcast": {
+          "nowPlaying": "Đang phát",
+          "episodeTitle": "Talk To Me In Korean Ep.14",
+          "tooltip": "Tốt (Good)",
+          "translation": "Hôm nay thời tiết thật sự rất đẹp."
+        },
+        "video": {
+          "aiTitle": "Phân tích ngữ pháp AI",
+          "baseForm": "Nguyên thể",
+          "baseFormValue": "먹다 (ăn)",
+          "grammar": "Ngữ pháp",
+          "grammarValue": "-아/어서 (lý do)",
+          "gloss": "\"Vì đã ăn kimchi...\"",
+          "translation": "Cay vì tôi đã ăn kimchi."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Giá đơn giản, giá trị lớn",
+      "subtitle": "Rẻ hơn một ly cà phê—đáng để đỗ TOPIK.",
+      "free": {
+        "title": "Miễn phí",
+        "price": "$0",
+        "feature1": "15 từ / ngày",
+        "feature2": "Tài liệu đọc cơ bản",
+        "feature3": "Hỗ trợ cộng đồng",
+        "cta": "Tạo tài khoản"
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro",
+        "price": "$6.9",
+        "period": "/ tháng (giảm khi trả năm)",
+        "feature1": "Ôn từ vựng không giới hạn",
+        "feature2": "Thi thử TOPIK đầy đủ",
+        "feature3": "Gia sư ngữ pháp AI (không giới hạn)",
+        "feature4": "Xuất PDF",
+        "cta": "Dùng thử miễn phí 7 ngày"
+      },
+      "lifetime": {
+        "title": "Trọn đời",
+        "price": "$99",
+        "feature1": "Thanh toán một lần",
+        "feature2": "Bao gồm mọi cập nhật tương lai",
+        "cta": "Mua trọn đời"
+      }
+    },
+    "faq": {
+      "title": "Câu hỏi thường gặp",
+      "q1": "Phù hợp cho người mới bắt đầu?",
+      "a1": "Có. Bắt đầu từ Hangul và có bài đọc phân cấp theo TOPIK1.",
+      "q2": "Đề TOPIK có cập nhật không?",
+      "a2": "Có. Chúng tôi thu thập đề công khai và cập nhật khi có đợt mới.",
+      "q3": "Có hoàn tiền không?",
+      "a3": "Có bảo đảm hoàn tiền trong 30 ngày. Email hỗ trợ để được hoàn tiền."
+    },
+    "footer": {
+      "about": "Giới thiệu",
+      "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     }
   },
   "pricing": {
@@ -875,6 +930,175 @@
         "foreverAccess": "Truy cập vĩnh viễn mọi thứ",
         "futureUpdates": "Bao gồm các bản cập nhật trong tương lai"
       }
+    }
+  },
+  "pricingDetails": {
+    "refundBadge": "Hoàn tiền trong 30 ngày",
+    "errors": {
+      "checkoutFailed": "Không thể bắt đầu thanh toán. Vui lòng thử lại."
+    },
+    "hero": {
+      "titlePrefix": "Đầu tư cho ",
+      "titleHighlight": "tương lai tiếng Hàn",
+      "subtitleLine1": "Giá một ly cà phê để đạt TOPIK và nói trôi chảy.",
+      "subtitleLine2": "Không phí ẩn. Hủy bất cứ lúc nào."
+    },
+    "billing": {
+      "monthly": "Tháng",
+      "quarterly": "Quý",
+      "semiannual": "Quý",
+      "annual": "Năm",
+      "semiannualBadge": "Giá khu vực",
+      "annualBadge": "Giá khu vực"
+    },
+    "period": {
+      "month": "/tháng",
+      "quarterly": "/quý",
+      "semiannual": "/quý",
+      "annual": "/năm"
+    },
+    "saving": {
+      "semiannual": "",
+      "annual": ""
+    },
+    "plans": {
+      "free": {
+        "title": "Free",
+        "subtitle": "Dành cho học nhẹ nhàng",
+        "cta": "Gói hiện tại",
+        "features": {
+          "f1": "Tối đa 20 từ mới/ngày",
+          "f2": "Flashcard / Chính tả / Trắc nghiệm",
+          "f3": "Test Mode: 1 lần/ngày",
+          "f4": "Video/Podcast: 2 mục/ngày",
+          "f5": "Chỉ một phần đề TOPIK chọn lọc"
+        }
+      },
+      "pro": {
+        "badge": "Most Popular",
+        "title": "Pro",
+        "subtitle": "Dành cho người ôn thi nghiêm túc",
+        "cta": "Nâng cấp Pro",
+        "unlockTitle": "Mở khóa tất cả",
+        "features": {
+          "f1": "Test Mode không giới hạn",
+          "f2": "FSRS không giới hạn",
+          "f3": "Kho đề TOPIK đầy đủ",
+          "f4": "Truy cập media đầy đủ",
+          "f5": "Gia sư ngữ pháp AI (không giới hạn)"
+        }
+      },
+      "lifetime": {
+        "title": "Trọn đời",
+        "subtitle": "Trả một lần, dùng mãi",
+        "cta": "Nhận quyền truy cập trọn đời",
+        "features": {
+          "f1": "Bao gồm mọi tính năng Pro",
+          "f2": "Cập nhật tương lai miễn phí",
+          "f3": "Hỗ trợ ưu tiên"
+        }
+      }
+    },
+    "table": {
+      "title": "So sánh quyền lợi",
+      "subtitle": "Vì sao nên chọn Pro—nhìn là hiểu.",
+      "th1": "Quyền lợi",
+      "th2": "Free",
+      "th3": "Pro / Lifetime",
+      "section": {
+        "fsrs": "Từ vựng (FSRS)",
+        "topik": "TOPIK",
+        "tools": "Nội dung & công cụ"
+      },
+      "unlimited": "Không giới hạn",
+      "supported": "Hỗ trợ",
+      "freeOpen": "Có",
+      "fullAccess": "Đầy đủ",
+      "fsrs": {
+        "dailyLimit": "Từ mới/ngày",
+        "dailyLimitFree": "20/ngày",
+        "modes": "Chế độ học",
+        "testMode": "Test Mode",
+        "testModeFree": "1/ngày",
+        "testModePro": "Không giới hạn & phân tích"
+      },
+      "topik": {
+        "scope": "Phạm vi đề",
+        "scopeFree": "Một phần chọn lọc",
+        "scopePro": "Đầy đủ",
+        "exam": "Thi thử (giờ/điểm)",
+        "examFree": "Một phần",
+        "examPro": "Tất cả",
+        "speed": "Tốc độ nghe"
+      },
+      "tools": {
+        "media": "Thư viện video/podcast",
+        "mediaFree": "2 mục/ngày",
+        "mediaPro": "Đầy đủ",
+        "ai": "AI ngữ pháp",
+        "aiFree": "3 lần/ngày",
+        "pdf": "Xuất PDF",
+        "pdfPro": "Mọi định dạng"
+      }
+    },
+    "faq": {
+      "title": "Câu hỏi thường gặp",
+      "q1": {
+        "q": "Không hài lòng có hoàn tiền không?",
+        "a": "Có. Chúng tôi có bảo đảm hoàn tiền 30 ngày. Hãy email hỗ trợ để được hoàn tiền."
+      },
+      "q2": {
+        "q": "Tôi có thể hủy bất cứ lúc nào không?",
+        "a": "Có. Bạn có thể hủy trong cài đặt tài khoản. Quyền lợi còn đến hết kỳ thanh toán."
+      },
+      "q3": {
+        "q": "Gói trọn đời có bao gồm tính năng tương lai không?",
+        "a": "Có. Gói trọn đời bao gồm mọi cập nhật Pro trong tương lai, kể cả khóa học và nâng cấp AI."
+      }
+    },
+    "footer": {
+      "poweredBy": "Thanh toán an toàn bởi",
+      "stripe": "Stripe",
+      "paypal": "PayPal",
+      "copyright": "© 2026 DuHan Inc. All rights reserved."
+    },
+    "originalLabel": "Giá gốc",
+    "promo": {
+      "activated": "Ưu đãi khu vực đã kích hoạt",
+      "verifyNow": "Xác minh ngay",
+      "subscribe": "Đăng ký giá ưu đãi",
+      "kycReserved": "Đã giữ chỗ nút xác minh, sẽ tích hợp KYC sau.",
+      "banner": {
+        "prefix": "Xác minh số điện thoại để mở giá ưu đãi: ",
+        "highlight": "$1.9",
+        "suffix": "/tháng từ",
+        "cta": "Xác minh ngay →"
+      },
+      "card": {
+        "title": "Ưu đãi đặc biệt cho Việt Nam",
+        "badge": "Từ $1.9",
+        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Hoàn tất xác minh số điện thoại để mở khóa mức giá ưu đãi.",
+        "cta": "Xác minh ngay"
+      }
+    }
+  },
+  "phoneVerifyModal": {
+    "title": "Kiểm tra số điện thoại",
+    "subtitle": "Chỉ dùng để xác nhận bạn có đủ điều kiện ưu đãi theo khu vực.",
+    "disclaimer": "Chúng tôi không lưu số điện thoại của bạn. Sau khi gửi, chúng tôi chỉ ghi lại tình trạng đủ điều kiện và khu vực để áp dụng ưu đãi.",
+    "close": "Đóng",
+    "tabs": { "cn": "Trung Quốc", "vn": "Việt Nam", "mn": "Mông Cổ" },
+    "placeholder": "Nhập số điện thoại",
+    "hint": "Vui lòng nhập số hợp lệ cho khu vực đã chọn.",
+    "formattedLabel": "Xác minh thành công",
+    "cta": { "verify": "Xác minh và nhận ưu đãi", "login": "Đăng nhập để xác minh và nhận ưu đãi" },
+    "errors": {
+      "invalid": "Số điện thoại không hợp lệ hoặc không thuộc khu vực đã chọn.",
+      "failed": "Xác minh thất bại. Vui lòng thử lại."
+    },
+    "toasts": {
+      "eligible": "Xác minh thành công. Ưu đãi khu vực đã được bật.",
+      "notEligible": "Đã xác minh nhưng không đủ điều kiện ưu đãi khu vực."
     }
   },
   "generalSettings": "Cài đặt chung",

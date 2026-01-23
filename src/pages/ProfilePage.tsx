@@ -314,7 +314,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
                 </svg>
               </button>
             )}
-            {user.tier === 'PAID' && (
+            {(user.tier === 'PAID' || user.tier === 'PREMIUM') && (
               <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1">
                 <Crown size={12} className="fill-current" />{' '}
                 {labels.profile?.premiumBadge || 'Premium'}

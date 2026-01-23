@@ -4,12 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import UpgradePrompt from './components/UpgradePrompt';
+import { PhoneVerifyModal } from './components/PhoneVerifyModal';
 import { AppRoutes } from './routes';
 import { useAuth } from './contexts/AuthContext';
 import { useLearning } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
+import { PhoneVerifyModalProvider } from './contexts/PhoneVerifyModalContext';
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -58,24 +60,27 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
-        <Routes>
-          <Route
-            path="/*"
-            element={
-              <AppRoutes
-                canAccessContent={canAccessContent}
-                onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-              />
-            }
-          />
-        </Routes>
+        <PhoneVerifyModalProvider>
+          <Routes>
+            <Route
+              path="/*"
+              element={
+                <AppRoutes
+                  canAccessContent={canAccessContent}
+                  onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+                />
+              }
+            />
+          </Routes>
 
-        <UpgradePrompt
-          isOpen={showUpgradePrompt}
-          onClose={() => setShowUpgradePrompt(false)}
-          language={language}
-          contentType="textbook"
-        />
+          <UpgradePrompt
+            isOpen={showUpgradePrompt}
+            onClose={() => setShowUpgradePrompt(false)}
+            language={language}
+            contentType="textbook"
+          />
+          <PhoneVerifyModal />
+        </PhoneVerifyModalProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   );

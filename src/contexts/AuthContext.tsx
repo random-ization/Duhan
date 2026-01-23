@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const canAccessContent = useCallback(
     (content: TextbookContent | TopikExam): boolean => {
       if (!user) return false;
-      if (user.tier === 'PAID') return true;
+      if (user.tier === 'PAID' || user.tier === 'PREMIUM' || !!user.subscriptionType) return true;
       if (!content.isPaid) return true;
       return false; // Default safe
     },

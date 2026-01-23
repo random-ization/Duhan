@@ -41,6 +41,12 @@ export default defineSchema({
     // Email Verification
     verifyCode: v.optional(v.string()),
 
+    // Regional promo eligibility (CN/VN/MN phone verification)
+    phoneRegion: v.optional(v.string()), // "CN" | "VN" | "MN" | "OTHER"
+    isRegionalPromoEligible: v.optional(v.boolean()),
+    phoneVerifiedAt: v.optional(v.string()), // ISO date string
+    kycStatus: v.optional(v.string()), // "NONE" | "VERIFIED"
+
     createdAt: v.optional(v.number()),
   })
     .index('email', ['email']) // Renamed from by_email for @convex-dev/auth compatibility

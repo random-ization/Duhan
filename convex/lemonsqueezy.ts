@@ -59,6 +59,8 @@ const STORE_ID_ENV = 'LEMONSQUEEZY_STORE_ID';
 // Variant IDs for each plan
 const VARIANT_MAP: Record<string, string> = {
   MONTHLY: process.env.LEMONSQUEEZY_VARIANT_MONTHLY || '',
+  SEMIANNUAL: process.env.LEMONSQUEEZY_VARIANT_SEMIANNUAL || '',
+  QUARTERLY: process.env.LEMONSQUEEZY_VARIANT_QUARTERLY || '',
   ANNUAL: process.env.LEMONSQUEEZY_VARIANT_ANNUAL || '',
   LIFETIME: process.env.LEMONSQUEEZY_VARIANT_LIFETIME || '',
 };

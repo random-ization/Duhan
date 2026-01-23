@@ -55,6 +55,8 @@ async function getCreemClient() {
 
 const PRODUCT_MAP: Record<string, string> = {
   MONTHLY: process.env.CREEM_PRODUCT_MONTHLY || '',
+  SEMIANNUAL: process.env.CREEM_PRODUCT_SEMIANNUAL || '',
+  QUARTERLY: process.env.CREEM_PRODUCT_QUARTERLY || '',
   ANNUAL: process.env.CREEM_PRODUCT_ANNUAL || '',
   LIFETIME: process.env.CREEM_PRODUCT_LIFETIME || '',
 };

@@ -37,11 +37,11 @@ export const LanguageSwitcher = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all font-bold text-sm text-slate-900"
+        aria-label="Language"
+        className="inline-flex items-center justify-center w-10 h-10 bg-white border-2 border-black rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all text-slate-900"
       >
-        <Globe size={16} />
-        <span className="hidden sm:inline">{currentLang.label}</span>
-        <span className="sm:hidden">{currentLang.code.toUpperCase()}</span>
+        <Globe size={18} />
+        <span className="sr-only">{currentLang.label}</span>
       </button>
 
       {isOpen && (

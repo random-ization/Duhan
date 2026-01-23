@@ -53,7 +53,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
 
   const handleSubscribe = (planId: string) => {
     if (!user) {
-      navigate('/auth?redirect=/pricing');
+      navigate('/auth?redirect=/pricing/details');
       return;
     }
 
