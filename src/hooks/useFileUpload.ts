@@ -36,10 +36,12 @@ export const useFileUpload = () => {
       });
 
       // 2. Upload file directly to S3/Spaces
-      console.log('[Upload] Headers:', headers); // Verify headers for user
       const result = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: headers, // Important: Include signed headers
+        headers: {
+          ...headers,
+          'x-amz-acl': 'public-read', // Explicitly set as requested
+        },
         body: file,
       });
 
