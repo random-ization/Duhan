@@ -25,7 +25,7 @@ export const getUploadUrl = action({
 
     const folder = args.folder || 'uploads';
     const key = `${folder}/${Date.now()}-${args.filename}`;
-    const region = process.env.SPACES_REGION || 'us-east-1'; // DigitalOcean Spaces region
+    const region = process.env.SPACES_REGION || 'sgp1'; // DigitalOcean Spaces region (fallback to start-up default)
     const service = 's3';
 
     const now = new Date();
