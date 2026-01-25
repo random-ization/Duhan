@@ -96,6 +96,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // For Google Auth, we use signIn directly.
     // For manual email/pass, we should also use signIn if migrated.
     logger.warn('Manual login() called. Prefer useAuthActions().signIn()');
+
+    // Validate user object
+    if (!loggedInUser || typeof loggedInUser !== 'object') {
+      throw new Error('Invalid user object provided');
+    }
+
+    // Required fields validation
+    const requiredFields = ['email', 'name'];
+    for (const field of requiredFields) {
+      if (!loggedInUser[field as keyof User]) {
+        throw new Error(`Missing required field: ${field}`);
+      }
+    }
+
     // We can't easily "force" a session from client side with Convex Auth like this.
     // But if loggedInUser is passed, we can set state locally.
     setUserOverride(loggedInUser);

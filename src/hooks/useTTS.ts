@@ -25,11 +25,13 @@ export const useTTS = () => {
   const cacheRef = useRef<Map<string, string> | null>(null);
   const cacheReadyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
+  const createdUrlsRef = useRef<string[]>([]);
 
   const stopCurrentAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
       audioRef.current = null;
     }
     // Also stop browser TTS as fallback
@@ -41,6 +43,15 @@ export const useTTS = () => {
   const stop = useCallback(() => {
     requestIdRef.current += 1;
     stopCurrentAudio();
+    // Clean up any created URLs
+    createdUrlsRef.current.forEach(url => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.warn('Failed to revoke URL during stop:', e);
+      }
+    });
+    createdUrlsRef.current = [];
     setIsLoading(false);
   }, [stopCurrentAudio]);
 
@@ -82,15 +93,22 @@ export const useTTS = () => {
           audioRef.current = audio;
           return new Promise<boolean>(resolve => {
             const cleanup = (ok: boolean) => {
-              if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+              try {
+                if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+              } catch (e) {
+                console.warn('Failed to revoke audio URL:', e);
+              }
               if (myRequestId === requestIdRef.current) {
-                audioRef.current = null;
+                if (audioRef.current === audio) {
+                  audioRef.current = null;
+                }
                 setIsLoading(false);
               }
               resolve(ok);
             };
             audio.onended = () => cleanup(true);
             audio.onerror = () => cleanup(false);
+            audio.onabort = () => cleanup(false);
             audio.play().catch(() => cleanup(false));
           });
         };
@@ -136,6 +154,7 @@ export const useTTS = () => {
           if (result.audio) {
             const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
             const audioUrl = URL.createObjectURL(audioBlob);
+            createdUrlsRef.current.push(audioUrl);
             return await playAudio(audioUrl, true);
           }
 

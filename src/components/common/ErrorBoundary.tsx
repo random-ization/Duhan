@@ -88,8 +88,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               {t('errors.loadError', { module: moduleName })}
             </p>
 
-            {/* Dev Mode Error Details - Temporarily enabled for debugging */}
-            {this.state.error && (
+            {/* Error Details - Only in development */}
+            {process.env.NODE_ENV === 'development' && this.state.error && (
               <div className="mb-6 p-4 bg-zinc-100 rounded-xl text-left overflow-auto max-h-40">
                 <p className="text-xs font-mono text-red-600 break-all">
                   {this.state.error.toString()}

@@ -50,6 +50,7 @@ export function useExamSession(examId: string) {
 
   // Debounce timer for saving answers
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<Record<number, number> | null>(null);
 
   // Reset timer during render if needed (avoid useEffect state update)
   if ((!session?.endTime || session.status !== 'IN_PROGRESS') && timeLeft !== null) {
@@ -105,16 +106,25 @@ export function useExamSession(examId: string) {
       setLocalAnswers(prev => {
         const updated = { ...prev, [questionNumber]: selectedOption };
 
+        // Store the latest answers for debounced save
+        pendingSaveRef.current = updated;
+
         // Debounce save to server
         if (saveTimeoutRef.current) {
           clearTimeout(saveTimeoutRef.current);
         }
-        saveTimeoutRef.current = setTimeout(() => {
-          if (session?.sessionId) {
-            updateAnswersMutation({
-              sessionId: session.sessionId,
-              answers: updated,
-            }).catch(console.warn);
+        saveTimeoutRef.current = setTimeout(async () => {
+          if (session?.sessionId && pendingSaveRef.current) {
+            try {
+              await updateAnswersMutation({
+                sessionId: session.sessionId,
+                answers: pendingSaveRef.current,
+              });
+            } catch (error) {
+              console.warn('Failed to save answers:', error);
+            } finally {
+              pendingSaveRef.current = null;
+            }
           }
         }, 1000); // Save after 1 second of inactivity
 
@@ -135,9 +145,12 @@ export function useExamSession(examId: string) {
       clearTimeout(saveTimeoutRef.current);
     }
 
+    // If there's a pending save, wait for it or use the latest answers
+    const answersToSubmit = pendingSaveRef.current || localAnswers;
+
     return submitExamMutation({
       sessionId: session.sessionId,
-      answers: localAnswers,
+      answers: answersToSubmit,
     });
   }, [session, submitExamMutation, localAnswers]);
 
@@ -156,6 +169,7 @@ export function useExamSession(examId: string) {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      pendingSaveRef.current = null;
     };
   }, []);
 
