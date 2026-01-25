@@ -25,7 +25,9 @@ export const getUploadUrl = action({
 
     const folder = args.folder || 'uploads';
     const key = `${folder}/${Date.now()}-${args.filename}`;
-    const region = process.env.SPACES_REGION || 'sgp1'; // DigitalOcean Spaces region (fallback to start-up default)
+    // FORCE SGP1 to debug production issue (User env var showing us-east-1)
+    const region = 'sgp1';
+    console.log(`[Storage] Generating upload URL for ${args.filename} in region: ${region}`);
     const service = 's3';
 
     const now = new Date();
