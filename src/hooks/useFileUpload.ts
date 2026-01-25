@@ -38,10 +38,7 @@ export const useFileUpload = () => {
       // 2. Upload file directly to S3/Spaces
       const result = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: {
-          ...headers,
-          'x-amz-acl': 'public-read', // Explicitly set as requested
-        },
+        headers: headers, // Important: Include signed headers
         body: file,
       });
 

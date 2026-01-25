@@ -48,20 +48,19 @@ export const getUploadUrl = action({
     queryParams.set('X-Amz-Credential', `${accessKeyId}/${credentialScope}`);
     queryParams.set('X-Amz-Date', amzDate);
     queryParams.set('X-Amz-Expires', expires.toString());
-    queryParams.set('X-Amz-SignedHeaders', 'host;x-amz-acl');
+    queryParams.set('X-Amz-SignedHeaders', 'host');
 
     const sortedQuery = Array.from(queryParams.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join('&');
 
-    const acl = 'public-read';
     const canonicalRequest = [
       'PUT',
       uri,
       sortedQuery,
-      `host:${endpointHost}\nx-amz-acl:${acl}\n`,
-      'host;x-amz-acl',
+      `host:${endpointHost}\n`,
+      'host',
       'UNSIGNED-PAYLOAD',
     ].join('\n');
 
@@ -105,7 +104,6 @@ export const getUploadUrl = action({
       publicUrl,
       key,
       headers: {
-        'x-amz-acl': acl,
         'Content-Type': args.contentType,
       },
     };
