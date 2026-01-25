@@ -12,14 +12,15 @@ import {
   BookOpen,
   List, // Added List icon for mobile toggle
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useAction } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
-import { qRef } from '../utils/convexRefs';
+import { aRef, qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTTS } from '../hooks/useTTS';
+import { extractBestMeaning, normalizeLookupWord } from '../utils/dictionaryMeaning';
 
 interface TranscriptSegment {
   start: number;
@@ -42,9 +43,29 @@ interface VideoData {
 
 type ConvexVideoDoc = Omit<VideoData, 'id'> & { _id: string };
 
+interface DictionaryEntry {
+  targetCode: string;
+  word: string;
+  pronunciation?: string;
+  pos?: string;
+  senses: Array<{
+    order: number;
+    definition: string;
+    translation?: { lang: string; word: string; definition: string };
+  }>;
+}
+
+interface SearchResult {
+  total: number;
+  start: number;
+  num: number;
+  entries: DictionaryEntry[];
+}
+
 // Word popup component (similar to ListeningModule)
 interface WordPopupProps {
   word: string;
+  meaning: string;
   position: { x: number; y: number };
   onClose: () => void;
   onSpeak: () => void;
@@ -54,6 +75,7 @@ interface WordPopupProps {
 
 const WordPopup: React.FC<WordPopupProps> = ({
   word,
+  meaning,
   position,
   onClose,
   onSpeak,
@@ -73,6 +95,7 @@ const WordPopup: React.FC<WordPopupProps> = ({
         <X className="w-3 h-3" />
       </button>
       <div className="text-xl font-black text-zinc-900 mb-3">{word}</div>
+      <div className="text-sm text-zinc-600 mb-3">{meaning}</div>
       <div className="flex gap-2">
         <button
           onClick={onSpeak}
@@ -101,6 +124,26 @@ const VideoPlayerPage: React.FC = () => {
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const videoRef = useRef<HTMLVideoElement>(null);
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const searchDictionary = useAction(
+    aRef<
+      {
+        query: string;
+        translationLang?: string;
+        start?: number;
+        num?: number;
+        part?: string;
+        sort?: string;
+      },
+      SearchResult
+    >('dictionary:searchDictionary')
+  );
+  const dictionaryRequestRef = useRef(0);
+  const translationLang = useMemo(() => {
+    if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
+      return language;
+    }
+    return undefined;
+  }, [language]);
 
   useEffect(() => stopTTS, [stopTTS]);
 
@@ -112,6 +155,7 @@ const VideoPlayerPage: React.FC = () => {
   // Word popup state
   const [selectedWord, setSelectedWord] = useState<{
     word: string;
+    meaning: string;
     position: { x: number; y: number };
   } | null>(null);
 
@@ -162,7 +206,7 @@ const VideoPlayerPage: React.FC = () => {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (selectedWord && !target.closest('[data-popup]') && !target.dataset.word) {
+      if (selectedWord && !target.closest('[data-popup]') && !target.closest('[data-word]')) {
         setSelectedWord(null);
       }
     };
@@ -186,20 +230,50 @@ const VideoPlayerPage: React.FC = () => {
   };
 
   // Handle word popup
-  const handleWordClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.dataset.word) {
-        e.stopPropagation();
-        const rect = target.getBoundingClientRect();
-        setSelectedWord({
-          word: target.dataset.word,
-          position: { x: rect.left, y: rect.bottom + 8 },
-        });
-      }
-    },
-    [setSelectedWord]
-  );
+  const handleWordClick = (e: React.MouseEvent) => {
+    const wordEl = (e.target as HTMLElement).closest('[data-word]') as HTMLElement | null;
+    if (wordEl) {
+      const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
+      if (!clickedWord) return;
+      e.stopPropagation();
+      const rect = wordEl.getBoundingClientRect();
+      const fallbackMeaning = labels.dashboard?.common?.noMeaning || '暂无释义';
+      const requestId = dictionaryRequestRef.current + 1;
+      dictionaryRequestRef.current = requestId;
+      const popoverWidth = 260;
+      const popoverHeight = 180;
+      const x = Math.min(
+        Math.max(8, rect.left),
+        Math.max(8, window.innerWidth - popoverWidth - 8)
+      );
+      const y = Math.min(
+        Math.max(8, rect.bottom + 8),
+        Math.max(8, window.innerHeight - popoverHeight - 8)
+      );
+      setSelectedWord({
+        word: clickedWord,
+        meaning: labels.dashboard?.common?.loading || '查询中...',
+        position: { x, y },
+      });
+      void (async () => {
+        try {
+          const res = await searchDictionary({
+            query: clickedWord,
+            translationLang,
+            num: 10,
+            part: 'word',
+            sort: 'dict',
+          });
+          if (dictionaryRequestRef.current !== requestId) return;
+          const meaning = extractBestMeaning(res, clickedWord, fallbackMeaning);
+          setSelectedWord(prev => (prev ? { ...prev, meaning } : prev));
+        } catch {
+          if (dictionaryRequestRef.current !== requestId) return;
+          setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
+        }
+      })();
+    }
+  };
 
   const speak = useCallback(
     (text: string) => {
@@ -409,6 +483,7 @@ const VideoPlayerPage: React.FC = () => {
         <div data-popup>
           <WordPopup
             word={selectedWord.word}
+            meaning={selectedWord.meaning}
             position={selectedWord.position}
             onClose={() => setSelectedWord(null)}
             onSpeak={() => speak(selectedWord.word)}

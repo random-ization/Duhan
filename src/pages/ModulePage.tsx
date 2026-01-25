@@ -64,8 +64,8 @@ const ModulePage: React.FC = () => {
     listParam === 'mistakes' ? { limit: 500 } : 'skip'
   );
 
-  // Determine if we're using the new course route pattern
-  const isCourseRoute = location.pathname.startsWith('/course/');
+  // Determine if we're using the new course route pattern (supports /:lang/course/... too)
+  const isCourseRoute = Boolean(instituteId) && location.pathname.includes('/course/');
 
   // For course routes, extract module from the last path segment
   const effectiveModuleParam = useMemo(() => {
@@ -235,7 +235,7 @@ const ModulePage: React.FC = () => {
       )}
       {currentModule === LearningModuleType.READING && (
         <ReadingModule
-          courseId={effectiveInstitute || 'snu_1a'}
+          courseId={effectiveInstitute}
           unitIndex={effectiveLevel}
           unitTitle={t('module.unitTitle', { unit: effectiveLevel })}
           language={language}
@@ -244,7 +244,7 @@ const ModulePage: React.FC = () => {
       )}
       {currentModule === LearningModuleType.LISTENING && (
         <ListeningModule
-          courseId={effectiveInstitute || 'snu_1a'}
+          courseId={effectiveInstitute}
           unitIndex={effectiveLevel}
           unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
           language={language}

@@ -25,7 +25,7 @@ export const getUploadUrl = action({
 
         const folder = args.folder || "uploads";
         const key = `${folder}/${Date.now()}-${args.filename}`;
-        const region = "us-east-1"; // DigitalOcean Spaces uses this for S3 compat
+        const region = process.env.SPACES_REGION || "us-east-1"; // DigitalOcean Spaces region
         const service = "s3";
 
         const now = new Date();
@@ -46,20 +46,19 @@ export const getUploadUrl = action({
         queryParams.set("X-Amz-Credential", `${accessKeyId}/${credentialScope}`);
         queryParams.set("X-Amz-Date", amzDate);
         queryParams.set("X-Amz-Expires", expires.toString());
-        queryParams.set("X-Amz-SignedHeaders", "host;x-amz-acl");
+        queryParams.set("X-Amz-SignedHeaders", "host"); // Removed x-amz-acl
 
         const sortedQuery = Array.from(queryParams.entries())
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
             .join("&");
 
-        const acl = "public-read";
         const canonicalRequest = [
             "PUT",
             uri,
             sortedQuery,
-            `host:${endpointHost}\nx-amz-acl:${acl}\n`,
-            "host;x-amz-acl",
+            `host:${endpointHost}\n`, // Removed x-amz-acl line
+            "host",
             "UNSIGNED-PAYLOAD",
         ].join("\n");
 
@@ -93,7 +92,7 @@ export const getUploadUrl = action({
             publicUrl,
             key,
             headers: {
-                "x-amz-acl": acl,
+                // "x-amz-acl": acl, // REMOVED
                 "Content-Type": args.contentType,
             },
         };

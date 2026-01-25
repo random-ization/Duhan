@@ -152,16 +152,24 @@ export const getUnitGrammar = query({
       let effectiveUnitId = args.unitId;
 
       const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+      let institute = null;
       if (instituteId) {
-        const institute = await ctx.db.get(instituteId);
+        institute = await ctx.db.get(instituteId);
         if (institute) {
           effectiveCourseId = institute.id || institute._id;
         }
       }
 
-      // SPECIAL HANDLING: Legacy Yonsei 1-2
+      // SPECIAL HANDLING: Legacy Yonsei 1-2 & new Volume 2 courses
       // The grammar data is stored as Unit 11-20, but frontend requests Unit 1-10
-      if (effectiveCourseId === 'course_yonsei_1b_appendix' && args.unitId <= 10) {
+      // Check if it's a Yonsei course and Volume 2
+      const isYonsei = institute?.name.includes('연세') || institute?.publisher?.includes('延世');
+      const isVolume2 = institute?.volume === '2' || institute?.name.includes('2') || institute?.volume === 'II'; // safe checks
+
+      if (
+        (effectiveCourseId === 'course_yonsei_1b_appendix' || (isYonsei && isVolume2)) &&
+        args.unitId <= 10
+      ) {
         effectiveUnitId = args.unitId + 10;
       }
 
@@ -239,12 +247,14 @@ export const getUnitGrammar = query({
 export const updateStatus = mutation({
   args: {
     grammarId: v.id('grammar_points'),
-    status: v.string(), // "LEARNING", "MASTERED"
+    status: v.optional(v.string()), // "LEARNING", "MASTERED" - Optional now
+    proficiency: v.optional(v.number()), // Direct set
+    increment: v.optional(v.number()), // Add to existing
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
 
-    const { grammarId, status } = args;
+    const { grammarId, status, proficiency, increment } = args;
     const now = Date.now();
 
     const existing = await ctx.db
@@ -252,23 +262,51 @@ export const updateStatus = mutation({
       .withIndex('by_user_grammar', q => q.eq('userId', userId).eq('grammarId', grammarId))
       .unique();
 
+    let newProficiency = existing?.proficiency || 0;
+    let newStatus = existing?.status || 'NEW';
+
+    // 1. Calculate Proficiency
+    if (typeof proficiency === 'number') {
+      newProficiency = proficiency;
+    } else if (typeof increment === 'number') {
+      newProficiency = Math.min((existing?.proficiency || 0) + increment, 100);
+    }
+
+    // 2. Determine Status behavior
+    if (status) {
+      // Explicit status change (e.g. manual toggle)
+      newStatus = status;
+      if (status === 'MASTERED') newProficiency = 100;
+      // If manually setting to LEARNING from MASTERED, maybe reset proficiency? 
+      // Existing logic didn't reset, but let's keep simple: manual toggle usually implies 100 or 0? 
+      // The previous logic was: status === 'MASTERED' ? 100 : existing.proficiency.
+      // Let's stick to: if MASTERED -> 100. If LEARNING/NEW -> keep existing unless explicit proficiency is 0?
+    } else {
+      // Implicit check (increment)
+      if (newProficiency >= 100) {
+        newStatus = 'MASTERED';
+      } else if (newProficiency > 0) {
+        newStatus = 'LEARNING';
+      }
+    }
+
     if (existing) {
       await ctx.db.patch(existing._id, {
-        status,
+        status: newStatus,
+        proficiency: newProficiency,
         lastStudiedAt: now,
-        proficiency: status === 'MASTERED' ? 100 : existing.proficiency,
       });
-      return { status, proficiency: status === 'MASTERED' ? 100 : existing.proficiency };
     } else {
       await ctx.db.insert('user_grammar_progress', {
         userId,
         grammarId,
-        status,
-        proficiency: status === 'MASTERED' ? 100 : 0,
+        status: newStatus,
+        proficiency: newProficiency,
         lastStudiedAt: now,
       });
-      return { status, proficiency: status === 'MASTERED' ? 100 : 0 };
     }
+
+    return { status: newStatus, proficiency: newProficiency };
   },
 });
 
@@ -300,6 +338,7 @@ export const create = mutation({
     explanation: v.string(),
     type: v.string(),
     level: v.string(),
+    searchPatterns: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<{ id: Id<'grammar_points'> }> => {
     const id = await ctx.db.insert('grammar_points', {
@@ -310,6 +349,36 @@ export const create = mutation({
       conjugationRules: [],
     });
     return { id };
+  },
+});
+
+export const getAdminById = query({
+  args: {
+    grammarId: v.id('grammar_points'),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const grammar = await ctx.db.get(args.grammarId);
+    if (!grammar) return null;
+    return {
+      id: grammar._id,
+      title: grammar.title,
+      searchPatterns: grammar.searchPatterns ?? [],
+    };
+  },
+});
+
+export const updateSearchPatterns = mutation({
+  args: {
+    grammarId: v.id('grammar_points'),
+    searchPatterns: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.grammarId, {
+      searchPatterns: args.searchPatterns.map(s => s.trim()).filter(Boolean),
+      updatedAt: Date.now(),
+    });
   },
 });
 
@@ -408,6 +477,7 @@ export const bulkImport = mutation({
         // Examples and rules
         examples: v.optional(v.any()), // JSON array or string
         conjugationRules: v.optional(v.any()),
+        searchPatterns: v.optional(v.union(v.string(), v.array(v.string()))),
         // Course context
         courseId: v.string(),
         unitId: v.number(),
@@ -514,6 +584,17 @@ export const bulkImport = mutation({
           }
         }
 
+        let searchPatterns: string[] | undefined = undefined;
+        if (Array.isArray(item.searchPatterns)) {
+          searchPatterns = item.searchPatterns.map(s => s.trim()).filter(Boolean);
+        } else if (typeof item.searchPatterns === 'string') {
+          const parts = item.searchPatterns
+            .split(/[\n,]+/)
+            .map(s => s.trim())
+            .filter(Boolean);
+          if (parts.length > 0) searchPatterns = parts;
+        }
+
         if (shouldCreateNew) {
           // Determine title with suffix if needed
           let finalTitle = item.title;
@@ -542,6 +623,7 @@ export const bulkImport = mutation({
             explanationMn: item.explanationMn,
             examples: examples || [],
             conjugationRules: conjugationRules || [],
+            searchPatterns,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
@@ -564,6 +646,7 @@ export const bulkImport = mutation({
               item.explanationMn !== undefined ? item.explanationMn : reuseGrammar.explanationMn,
             examples: examples || reuseGrammar.examples,
             conjugationRules: conjugationRules || reuseGrammar.conjugationRules,
+            searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
             updatedAt: Date.now(),
           });
         }

@@ -13,8 +13,9 @@ import {
   Video,
   Image,
   FileText,
+  Brain,
 } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { NoArgs, mRef, qRef } from '../../utils/convexRefs';
 
@@ -49,8 +50,8 @@ export default function VideoManager() {
   const updateVideo = useMutation(
     mRef<
       { id: string } & Omit<VideoLesson, 'id' | 'views' | 'createdAt'> & {
-          transcriptData: unknown;
-        },
+        transcriptData: unknown;
+      },
       unknown
     >('videos:update')
   );
@@ -184,7 +185,7 @@ export default function VideoManager() {
       video.src = URL.createObjectURL(file);
     } catch (error) {
       console.error('Video upload failed:', error);
-      alert('视频上传失败');
+      alert(`视频上传失败: ${(error as Error).message}`);
     } finally {
       setUploadingVideo(false);
     }
@@ -232,6 +233,38 @@ export default function VideoManager() {
     }
   };
 
+  // AI Analysis
+  const [analyzing, setAnalyzing] = useState(false);
+  const generateAnalysis = useAction(mRef<{ videoUrl: string; language?: string }, { success: boolean; data?: unknown; error?: string }>('ai:generateVideoAnalysis') as any);
+
+  const handleAIAnalyze = async () => {
+    if (!videoUrl) return;
+
+    if (!confirm('确定要使用 AI 生成字幕吗？这将覆盖当前输入框中的内容。')) return;
+
+    setAnalyzing(true);
+    try {
+      const result = await generateAnalysis({
+        videoUrl,
+        language: 'Chinese'
+      });
+
+      if (result.success && result.data) {
+        setTranscriptJson(JSON.stringify(result.data, null, 2));
+        setTranscriptValid(true);
+        setTranscriptError(null);
+        alert('字幕生成成功！');
+      } else {
+        alert(`生成失败: ${result.error || '未知错误'}`);
+      }
+    } catch (e) {
+      console.error("AI Analysis error:", e);
+      alert('生成请求失败，请检查网络或日志');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !videoUrl) {
       alert('请填写标题并上传视频');
@@ -240,7 +273,7 @@ export default function VideoManager() {
 
     setSaving(true);
     try {
-      let transcriptData = null;
+      let transcriptData: any = undefined;
       if (transcriptJson.trim()) {
         try {
           transcriptData = JSON.parse(transcriptJson);
@@ -346,13 +379,12 @@ export default function VideoManager() {
                   {formatDuration(video.duration)}
                 </div>
                 <div
-                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                    video.level === 'Beginner'
-                      ? 'bg-green-100 text-green-700'
-                      : video.level === 'Intermediate'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                  }`}
+                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${video.level === 'Beginner'
+                    ? 'bg-green-100 text-green-700'
+                    : video.level === 'Intermediate'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700'
+                    }`}
                 >
                   {video.level}
                 </div>
@@ -543,6 +575,18 @@ export default function VideoManager() {
                     className="text-sm px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 transition"
                   >
                     格式校验
+                  </button>
+                  <button
+                    onClick={handleAIAnalyze}
+                    disabled={analyzing || !videoUrl}
+                    className="flex items-center gap-1 text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-bold hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {analyzing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Brain className="w-3 h-3" />
+                    )}
+                    AI 识别字幕
                   </button>
                 </div>
                 <textarea

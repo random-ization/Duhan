@@ -14,24 +14,45 @@ export const isValidLanguage = (lang: string): lang is Language => {
   return SUPPORTED_LANGUAGES.includes(lang as Language);
 };
 
+const getBrowserPreferredLanguage = (): Language | null => {
+  const rawLanguages =
+    typeof navigator !== 'undefined' && navigator.languages?.length
+      ? navigator.languages
+      : typeof navigator !== 'undefined'
+        ? [navigator.language]
+        : [];
+  const normalizedList = rawLanguages
+    .map(raw => raw.split(/[-_]/)[0])
+    .filter((value): value is Language => isValidLanguage(value));
+
+  for (const preferred of ['zh', 'vi', 'mn', 'en'] as const) {
+    if (normalizedList.includes(preferred)) {
+      return preferred;
+    }
+  }
+
+  return null;
+};
+
 // Get language from URL or detect from browser
 export const detectLanguage = async (): Promise<Language> => {
-  // Check localStorage first (user preference)
   const stored = localStorage.getItem('preferredLanguage');
-  if (stored && isValidLanguage(stored)) {
-    return stored;
-  }
 
   const country = await fetchUserCountry();
   if (country === 'CN') return 'zh';
   if (country === 'VN') return 'vi';
   if (country === 'MN') return 'mn';
 
-  // Check browser language
-  const browserLang = navigator.language.split('-')[0];
-  if (isValidLanguage(browserLang)) {
+  const browserLang = getBrowserPreferredLanguage();
+  if (browserLang && (browserLang === 'zh' || browserLang === 'vi' || browserLang === 'mn')) {
     return browserLang;
   }
+
+  if (stored && isValidLanguage(stored)) {
+    return stored;
+  }
+
+  if (browserLang) return browserLang;
 
   return DEFAULT_LANGUAGE;
 };
@@ -73,6 +94,29 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
       };
     }
 
+    let cancelled = false;
+    const syncBrowserLanguage = async () => {
+      const browserLang = getBrowserPreferredLanguage();
+      if (!browserLang || (browserLang !== 'zh' && browserLang !== 'vi' && browserLang !== 'mn')) {
+        return;
+      }
+      const country = await fetchUserCountry();
+      if (cancelled) return;
+      if (country === 'CN' || country === 'VN' || country === 'MN') return;
+      const storedSource = localStorage.getItem('preferredLanguageSource');
+      if (storedSource === 'user') return;
+      if (browserLang === lang) return;
+      const segments = location.pathname.split('/').filter(Boolean);
+      if (segments[0] && isValidLanguage(segments[0])) {
+        segments[0] = browserLang;
+      } else {
+        segments.unshift(browserLang);
+      }
+      const newPath = `/${segments.join('/')}${location.search}${location.hash}`;
+      navigate(newPath, { replace: true });
+    };
+    syncBrowserLanguage();
+
     // Sync i18n with URL language
     if (i18n.language !== lang) {
       i18n.changeLanguage(lang);
@@ -83,6 +127,13 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
 
     // Store preference
     localStorage.setItem('preferredLanguage', lang);
+    const storedSource = localStorage.getItem('preferredLanguageSource');
+    if (storedSource !== 'user') {
+      localStorage.setItem('preferredLanguageSource', 'auto');
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [lang, i18n, navigate, location]);
 
   // Don't render children until we have a valid language

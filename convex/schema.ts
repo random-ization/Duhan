@@ -245,6 +245,7 @@ export default defineSchema({
     title: v.string(),
     slug: v.optional(v.string()),
     searchKey: v.optional(v.string()),
+    searchPatterns: v.optional(v.array(v.string())),
 
     level: v.string(),
     type: v.string(),

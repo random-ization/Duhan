@@ -424,7 +424,7 @@ const CoursesOverview: React.FC = () => {
                       {groupCourses.map(course => (
                         <div
                           key={course._id || course.id}
-                          onClick={() => navigate(`/course/${course.id || course.postgresId}`)}
+                          onClick={() => navigate(`/course/${course.id}`)}
                           className="flex w-full bg-white border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group/card min-h-[104px]"
                         >
                           {/* Left: Level Strip */}

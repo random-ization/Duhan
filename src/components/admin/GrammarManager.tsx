@@ -90,8 +90,22 @@ export const GrammarManager: React.FC = () => {
   const createGrammar = useMutation(GRAMMARS.create);
   const assignToUnit = useMutation(GRAMMARS.assignToUnit);
   const removeFromUnit = useMutation(GRAMMARS.removeFromUnit);
+  const updateSearchPatterns = useMutation(GRAMMARS.updateSearchPatterns);
 
   const [creating, setCreating] = useState(false);
+
+  const [editingGrammarId, setEditingGrammarId] = useState<string | null>(null);
+  const adminGrammar = useQuery(
+    GRAMMARS.getAdminById,
+    editingGrammarId ? { grammarId: editingGrammarId } : 'skip'
+  );
+  const [searchPatternsText, setSearchPatternsText] = useState('');
+  const [savingPatterns, setSavingPatterns] = useState(false);
+
+  useEffect(() => {
+    if (!adminGrammar) return;
+    setSearchPatternsText((adminGrammar.searchPatterns || []).join('\n'));
+  }, [adminGrammar]);
 
   const handleAssign = async (grammarId: string) => {
     try {
@@ -121,6 +135,28 @@ export const GrammarManager: React.FC = () => {
     } catch (_e) {
       console.error('Remove failed', _e);
       toast.error('移除失败');
+    }
+  };
+
+  const handleSavePatterns = async () => {
+    if (!editingGrammarId) return;
+    setSavingPatterns(true);
+    try {
+      const patterns = searchPatternsText
+        .split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+      await updateSearchPatterns({
+        grammarId: editingGrammarId,
+        searchPatterns: patterns,
+      });
+      toast.success('已保存匹配模式');
+      setEditingGrammarId(null);
+    } catch (_e) {
+      console.error('Update patterns failed', _e);
+      toast.error('保存失败');
+    } finally {
+      setSavingPatterns(false);
     }
   };
 
@@ -224,13 +260,22 @@ export const GrammarManager: React.FC = () => {
                   <div className="font-bold text-zinc-900">{g.title}</div>
                   <div className="text-xs text-zinc-500 truncate">{g.summary}</div>
                 </div>
-                <button
-                  onClick={() => handleRemove(g.id)}
-                  className="ml-2 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                  title="从单元移除"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="ml-2 flex flex-col gap-1">
+                  <button
+                    onClick={() => setEditingGrammarId(g.id)}
+                    className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 rounded transition-colors"
+                    title="编辑匹配模式"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleRemove(g.id)}
+                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    title="从单元移除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -381,6 +426,62 @@ export const GrammarManager: React.FC = () => {
           </div>
         )}
       </div>
+
+      {editingGrammarId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl bg-white border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-black text-lg">匹配模式</div>
+              <button
+                onClick={() => setEditingGrammarId(null)}
+                className="p-2 hover:bg-zinc-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!adminGrammar ? (
+              <div className="py-10 text-center text-zinc-500">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                <div className="text-sm">加载中...</div>
+              </div>
+            ) : (
+              <>
+                <div className="text-sm font-bold text-zinc-900 mb-2">{adminGrammar.title}</div>
+                <div className="text-xs text-zinc-500 mb-3">
+                  每行一个 pattern（也支持逗号分隔）。示例：으시, 시, 었, 았
+                </div>
+                <textarea
+                  value={searchPatternsText}
+                  onChange={e => setSearchPatternsText(e.target.value)}
+                  className="w-full h-40 p-3 border-2 border-zinc-900 rounded-lg resize-none"
+                  placeholder="输入 searchPatterns"
+                />
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => setEditingGrammarId(null)}
+                    className="flex-1 py-2 border-2 border-zinc-300 rounded-lg font-bold hover:bg-zinc-50"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleSavePatterns}
+                    disabled={savingPatterns}
+                    className="flex-1 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 disabled:opacity-50"
+                  >
+                    {savingPatterns ? (
+                      <Loader2 className="animate-spin w-4 h-4" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    保存
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

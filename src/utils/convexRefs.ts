@@ -21,6 +21,7 @@ export const aRef = <Args extends DefaultFunctionArgs, Ret>(name: string) =>
  */
 export const INSTITUTES = {
   getAll: qRef<NoArgs, Doc<'institutes'>[]>('institutes:getAll'),
+  get: qRef<{ id: string }, Doc<'institutes'> | null>('institutes:get'),
 };
 
 export const STORAGE = {
@@ -73,6 +74,12 @@ export const GRAMMARS = {
     { title: string; summary: string; explanation: string; type: string; level: string },
     { id: string }
   >('grammars:create'),
+  getAdminById: qRef<{ grammarId: string }, { id: string; title: string; searchPatterns: string[] } | null>(
+    'grammars:getAdminById'
+  ),
+  updateSearchPatterns: mRef<{ grammarId: string; searchPatterns: string[] }, void>(
+    'grammars:updateSearchPatterns'
+  ),
   assignToUnit: mRef<{ courseId: string; unitId: number; grammarId: string }, unknown>(
     'grammars:assignToUnit'
   ),

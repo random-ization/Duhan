@@ -4,6 +4,7 @@ import { GrammarPointData } from '../../types';
 import { useAction, useMutation } from 'convex/react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { aRef, mRef } from '../../utils/convexRefs';
+import { useTranslation } from 'react-i18next';
 
 interface GrammarDetailSheetProps {
   grammar: GrammarPointData | null;
@@ -29,15 +30,16 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
   } | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const { i18n } = useTranslation();
 
   const checkAction = useAction(
-    aRef<{ sentence: string; context: string }, { success?: boolean; data?: { nuance?: unknown } }>(
+    aRef<{ sentence: string; context: string; language?: string }, { success?: boolean; data?: { nuance?: unknown } }>(
       'ai:analyzeSentence'
     )
   );
   const updateStatus = useMutation(
     mRef<
-      { grammarId: Id<'grammar_points'>; status: GrammarPointData['status'] },
+      { grammarId: Id<'grammar_points'>; status?: GrammarPointData['status']; proficiency?: number; increment?: number },
       { status: string; proficiency: number }
     >('grammars:updateStatus')
   );
@@ -59,48 +61,50 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       const response = await checkAction({
         sentence: practiceSentence.trim(),
         context: grammar.title,
+        language: i18n.language,
       });
 
       const res = response as { success?: boolean; data?: { nuance?: unknown } } | null;
       if (res?.success && res.data) {
-        const isCorrect = true;
-        const feedback = typeof res.data.nuance === 'string' ? res.data.nuance : '分析完成';
-        const correctedSentence = undefined;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _isCorrect = true; // Strict checking logic is handled in backend prompt now
+        // Note: Backend might return nuance starting with "Incorrect." if it fails strict check.
+        // Ideally backend should return `isCorrect` flag, but for now we parse nuance or assume prompt follows instructions.
+        // Actually, previous prompt says: Return "nuance": "Correct! ..." or "Incorrect. ..."
+        // We should parse that if possible, but existing frontend logic assumes `isCorrect = true` if success.
+        // Let's rely on the backend prompt to put "Correct!" or "Incorrect." at the start of nuance
+        // and check it here if we want to be strict on frontend UI too.
+
+        let feedback = typeof res.data.nuance === 'string' ? res.data.nuance : '分析完成';
+        const isFeedbackNegative = feedback.toLowerCase().startsWith('incorrect') || feedback.includes('错误') || feedback.includes('Incorrect');
+
+        // Override isCorrect based on feedback content if strict check found errors
+        const finalIsCorrect = !isFeedbackNegative;
+
+        const correctedSentence = undefined; // Backend 'corrected' field support could be added if returned
 
         let progress: { proficiency: number; status: string } | undefined = undefined;
 
         // 2. If correct, update progress via mutation
-        if (isCorrect) {
-          // We mark as "LEARNING" with a bump, or just update generally.
-          // The existing updateStatus mutation takes (id, status).
-          // But here we might just want to increment proficiency?
-          // The mutation `updateStatus` logic: if MASTERED -> 100, else keep existing or set 0.
-          // It doesn't seem to support incremental proficiency bump easily without 'status'.
-          // Let's assume for practice we set/maintain 'LEARNING' which might update 'lastStudiedAt'.
-          // If we want to bump proficiency, we might need a specific 'recordPractice' mutation.
-          // For now, let's call updateStatus('LEARNING') to refresh 'lastStudiedAt'.
-
-          // Actually legacy behavior implies proficiency boost.
-          // The current `updateStatus` sets proficiency to 0 if new learning, or 100 if mastered.
-          // It doesn't handle incremental steps.
-          // I'll stick to updating to "LEARNING" (which refreshes timestamp)
-          // or maybe I should create a `recordPractice` mutation later.
-          // Use `updateStatus` for now, it returns { status, proficiency }.
+        if (finalIsCorrect) {
+          // Use `updateStatus` with increment
           const updateRes = (await updateStatus({
             grammarId: grammar.id as unknown as Id<'grammar_points'>,
-            status: 'LEARNING',
+            increment: 50,
           })) as { status: string; proficiency: number };
           progress = updateRes;
 
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 2000);
+          if (updateRes.proficiency >= 100) {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 2000);
+          }
 
           // Notify parent to refresh local view if needed (though parent might use query)
           if (onProficiencyUpdate) {
             const normalizedStatus: GrammarPointData['status'] =
               updateRes.status === 'NEW' ||
-              updateRes.status === 'LEARNING' ||
-              updateRes.status === 'MASTERED'
+                updateRes.status === 'LEARNING' ||
+                updateRes.status === 'MASTERED'
                 ? (updateRes.status as GrammarPointData['status'])
                 : 'LEARNING';
             onProficiencyUpdate(grammar.id, updateRes.proficiency, normalizedStatus);
@@ -108,7 +112,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
         }
 
         setAiFeedback({
-          isCorrect,
+          isCorrect: finalIsCorrect,
           feedback,
           correctedSentence,
           progress,
@@ -210,13 +214,12 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
           <div className="mt-2 flex items-center gap-2">
             <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
               <div
-                className={`h-full transition-all duration-500 ${
-                  status === 'MASTERED'
-                    ? 'bg-green-500'
-                    : status === 'LEARNING'
-                      ? 'bg-amber-500'
-                      : 'bg-slate-400'
-                }`}
+                className={`h-full transition-all duration-500 ${status === 'MASTERED'
+                  ? 'bg-green-500'
+                  : status === 'LEARNING'
+                    ? 'bg-amber-500'
+                    : 'bg-slate-400'
+                  }`}
                 style={{ width: `${proficiency}%` }}
               />
             </div>
@@ -224,12 +227,108 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
             {status === 'MASTERED' && <Trophy className="w-4 h-4 text-green-600" />}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="w-6 h-6 rounded border-2 border-slate-900 bg-white flex items-center justify-center hover:bg-red-100 text-slate-900 transition-colors ml-2"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const newStatus = status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
+              updateStatus({
+                grammarId: grammar.id as unknown as Id<'grammar_points'>,
+                status: newStatus,
+              }).then((res) => {
+                if (onProficiencyUpdate) {
+                  onProficiencyUpdate(grammar.id, res.proficiency, res.status as GrammarPointData['status']);
+                }
+                if (res.status === 'MASTERED') {
+                  setShowConfetti(true);
+                  setTimeout(() => setShowConfetti(false), 2000);
+                }
+              });
+            }}
+            className={`p-1.5 rounded-lg border-2 ${status === 'MASTERED'
+              ? 'bg-green-100 border-green-500 text-green-700'
+              : 'bg-white border-slate-900 text-slate-400 hover:bg-slate-100'
+              } transition-colors`}
+            title={status === 'MASTERED' ? "已掌握" : "标记为已掌握"}
+          >
+            <Trophy className={`w-4 h-4 ${status === 'MASTERED' ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 rounded border-2 border-slate-900 bg-white flex items-center justify-center hover:bg-red-100 text-slate-900 transition-colors ml-2"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* AI Practice Section - Moved to Top */}
+      <div className="p-4 border-b-2 border-slate-900 bg-slate-50 shrink-0">
+        <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 mb-2">
+          <Sparkles className="w-3 h-3" />
+          AI 陪练
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={practiceSentence}
+            onChange={e => setPracticeSentence(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`用 ${grammar.title} 造个句子...`}
+            className="flex-1 px-3 py-2 border-2 border-slate-900 rounded-lg text-sm font-bold focus:shadow-[2px_2px_0px_0px_#0f172a] outline-none bg-white"
+          />
+          <button
+            onClick={handleCheck}
+            disabled={isChecking || !practiceSentence.trim()}
+            className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg border-2 border-slate-900 text-sm hover:bg-white hover:text-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isChecking ? '...' : '检查'}
+          </button>
+        </div>
+
+        {/* AI Feedback */}
+        {aiFeedback && (
+          <div
+            className={`mt-3 p-3 border-2 border-slate-900 rounded-lg ${aiFeedback.isCorrect ? 'bg-green-50' : 'bg-red-50'
+              }`}
+          >
+            <div className="flex items-start gap-2">
+              {aiFeedback.isCorrect ? (
+                <Trophy className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <p
+                  className={`text-sm font-bold ${aiFeedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}
+                >
+                  {aiFeedback.isCorrect ? '✓ 太棒了!' : '✗ 需要改进'}
+                </p>
+                <p className="text-xs text-slate-600 mt-1">{aiFeedback.feedback}</p>
+                {!aiFeedback.isCorrect && aiFeedback.correctedSentence && (
+                  <div className="mt-2 p-2 bg-white rounded border border-slate-300">
+                    <span className="text-[10px] font-bold text-slate-500 block mb-1">
+                      建议写法:
+                    </span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {aiFeedback.correctedSentence}
+                    </span>
+                  </div>
+                )}
+                {aiFeedback.progress && (
+                  <div className="mt-2 text-[10px] text-slate-500">
+                    熟练度:{' '}
+                    <span className="font-bold text-slate-700">
+                      {aiFeedback.progress.proficiency}%
+                    </span>
+                    {aiFeedback.progress.status === 'MASTERED' && (
+                      <span className="ml-2 text-green-600 font-bold">🎉 已掌握!</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content - Scrollable */}
@@ -292,84 +391,21 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
                   key={i}
                   className="p-2.5 bg-slate-50 border-2 border-slate-900 rounded-lg relative group cursor-pointer hover:bg-white transition-colors"
                 >
-                  <div className="font-bold text-slate-900 text-sm">{kr}</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">{cn}</div>
+                  <div className="font-bold text-slate-900 text-sm">
+                    {kr.split(/(?=\d+\.)/).map((line, idx) => (
+                      <div key={idx}>{line.trim()}</div>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {cn.split(/(?=\d+\.)/).map((line, idx) => (
+                      <div key={idx}>{line.trim()}</div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
-
-      {/* AI Practice Section - Fixed at Bottom */}
-      <div className="p-4 border-t-2 border-slate-900 bg-slate-50">
-        <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 mb-2">
-          <Sparkles className="w-3 h-3" />
-          AI 陪练
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={practiceSentence}
-            onChange={e => setPracticeSentence(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`用 ${grammar.title} 造个句子...`}
-            className="flex-1 px-3 py-2 border-2 border-slate-900 rounded-lg text-sm font-bold focus:shadow-[2px_2px_0px_0px_#0f172a] outline-none bg-white"
-          />
-          <button
-            onClick={handleCheck}
-            disabled={isChecking || !practiceSentence.trim()}
-            className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg border-2 border-slate-900 text-sm hover:bg-white hover:text-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isChecking ? '...' : '检查'}
-          </button>
-        </div>
-
-        {/* AI Feedback */}
-        {aiFeedback && (
-          <div
-            className={`mt-3 p-3 border-2 border-slate-900 rounded-lg ${
-              aiFeedback.isCorrect ? 'bg-green-50' : 'bg-red-50'
-            }`}
-          >
-            <div className="flex items-start gap-2">
-              {aiFeedback.isCorrect ? (
-                <Trophy className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-              )}
-              <div className="flex-1">
-                <p
-                  className={`text-sm font-bold ${aiFeedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}
-                >
-                  {aiFeedback.isCorrect ? '✓ 太棒了!' : '✗ 需要改进'}
-                </p>
-                <p className="text-xs text-slate-600 mt-1">{aiFeedback.feedback}</p>
-                {!aiFeedback.isCorrect && aiFeedback.correctedSentence && (
-                  <div className="mt-2 p-2 bg-white rounded border border-slate-300">
-                    <span className="text-[10px] font-bold text-slate-500 block mb-1">
-                      建议写法:
-                    </span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {aiFeedback.correctedSentence}
-                    </span>
-                  </div>
-                )}
-                {aiFeedback.progress && (
-                  <div className="mt-2 text-[10px] text-slate-500">
-                    熟练度:{' '}
-                    <span className="font-bold text-slate-700">
-                      {aiFeedback.progress.proficiency}%
-                    </span>
-                    {aiFeedback.progress.status === 'MASTERED' && (
-                      <span className="ml-2 text-green-600 font-bold">🎉 已掌握!</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* CSS for confetti animation */}

@@ -225,6 +225,7 @@ export const analyzeSentence = action({
   args: {
     sentence: v.string(),
     context: v.optional(v.string()),
+    language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -241,13 +242,22 @@ export const analyzeSentence = action({
         messages: [
           {
             role: 'system',
-            content: `You are a Korean language teacher. Analyze the given sentence for a language learner.
+            content: `You are a strict Korean language teacher. Analyze the given sentence for a language learner.
+The user is validting a sentence they wrote based on a specific grammar point (Context).
+
+Response Language: ${args.language || 'Chinese'} (Translate the explanation and nuance into this language).
+
+Validation Rules:
+1. Strict Grammar Check: If there are ANY spelling errors, particle errors, or conjugation errors, mark nuances.nuance as "Incorrect" or provide specific correction.
+2. If the sentence is grammatically incorrect, "nuance" must explain the error clearly.
+3. If the sentence meaning is clear but grammar is wrong, isCorrect should be seemingly false (though the JSON structure doesn't support a boolean explicitly, putting the correction in nuance implies it).
 
 Return a JSON object with:
 {
   "vocabulary": [{ "word": string, "root": string, "meaning": string, "type": string }],
   "grammar": [{ "structure": string, "explanation": string }],
-  "nuance": string (cultural or contextual notes)
+  "nuance": string (If correct: "Correct! [Reason]". If incorrect: "Incorrect. [Detailed correction]"),
+  "corrected": string (The corrected sentence if there were errors, otherwise null)
 }`,
           },
           {
@@ -336,6 +346,118 @@ export const analyzeQuestion = action({
     } catch (error) {
       console.error('Question analysis failed:', error);
       return { success: false, data: null };
+    }
+  },
+});
+// Analyze video (transcribe + translate)
+export const generateVideoAnalysis = action({
+  args: {
+    videoUrl: v.string(),
+    language: v.optional(v.string()), // Target language for translation (default: Chinese)
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: 'OPENAI_API_KEY not set' };
+    }
+
+    try {
+      // 1. Fetch file
+      console.log(`[AI] Fetching video: ${args.videoUrl}`);
+      const res = await fetch(args.videoUrl);
+      if (!res.ok) {
+        return { success: false, error: `Failed to fetch video (${res.status})` };
+      }
+
+      const contentType = res.headers.get('content-type') || 'video/mp4';
+      const ext = contentType.includes('mp4') ? 'mp4' : 'mp3'; // Fallback
+      const buffer = await res.arrayBuffer();
+      const file = new File([buffer], `video_temp.${ext}`, { type: contentType });
+
+      console.log(`[AI] Transcribing ${file.size} bytes...`);
+
+      // 2. Transcribe with Whisper
+      const client = new OpenAI({ apiKey });
+      const transcription = await client.audio.transcriptions.create({
+        file,
+        model: 'whisper-1',
+        response_format: 'verbose_json',
+        timestamp_granularities: ['segment'],
+      });
+
+      await ctx.runMutation(logUsageMutation, {
+        feature: 'transcribe_video',
+        model: 'whisper-1',
+      });
+
+      // 3. Process Segments
+      const rawSegments =
+        (transcription as unknown as { segments?: WhisperSegment[] }).segments ?? [];
+
+      const baseSegments = rawSegments
+        .map(s => ({
+          start: typeof s.start === 'number' ? s.start : 0,
+          end: typeof s.end === 'number' ? s.end : 0,
+          text: typeof s.text === 'string' ? s.text.trim() : '',
+          translation: '',
+        }))
+        .filter(s => s.text.length > 0);
+
+      // 4. Translate if needed (Default to Chinese if not specified, or checks args)
+      // For videos, we usually want Chinese translation for this app context
+      const targetLang = args.language || 'Chinese';
+
+      console.log(`[AI] Translating ${baseSegments.length} segments to ${targetLang}...`);
+
+      if (baseSegments.length > 0) {
+        // Limit batch size for translation to avoid context limits
+        // Simple approach: Translate all in one go if small, or just first chunk
+        // For robustness, let's translate the whole thing using GPT-4o-mini which has large context
+
+        const response = await client.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `Translate the following Korean video transcript segments into ${targetLang}. 
+              Return a JSON object with a "translations" array of strings, strictly matching the order and count of the input.
+              Keep the translation concise and natural for subtitles.`,
+            },
+            {
+              role: 'user',
+              content: JSON.stringify({
+                segments: baseSegments.map(s => s.text),
+              }),
+            },
+          ],
+          response_format: { type: 'json_object' },
+        });
+
+        const usage = response.usage;
+        await ctx.runMutation(logUsageMutation, {
+          feature: 'translate_video',
+          model: 'gpt-4o-mini',
+          promptTokens: usage?.prompt_tokens,
+          completionTokens: usage?.completion_tokens,
+          totalTokens: usage?.total_tokens,
+        });
+
+        const content = response.choices[0].message.content;
+        if (content) {
+          const parsed = JSON.parse(content) as { translations?: string[] };
+          const translations = Array.isArray(parsed.translations) ? parsed.translations : [];
+
+          baseSegments.forEach((seg, i) => {
+            if (translations[i]) seg.translation = translations[i];
+          });
+        }
+      }
+
+      return { success: true, data: baseSegments };
+
+    } catch (error) {
+      console.error('[AI] Video analysis failed:', error);
+      return { success: false, error: toErrorMessage(error) };
     }
   },
 });

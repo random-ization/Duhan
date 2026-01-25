@@ -59,6 +59,7 @@ export const LanguageSwitcher = () => {
                 }
                 const nextPath = `/${segments.join('/')}${location.search}${location.hash}`;
                 localStorage.setItem('preferredLanguage', nextLang);
+                localStorage.setItem('preferredLanguageSource', 'user');
                 i18n.changeLanguage(nextLang);
                 navigate(nextPath);
                 setIsOpen(false);

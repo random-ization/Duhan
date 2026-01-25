@@ -10,7 +10,7 @@ import GrammarDetailSheet from '../components/grammar/GrammarDetailSheet';
 import { GrammarPointData } from '../types';
 import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
-import { GRAMMARS } from '../utils/convexRefs';
+import { GRAMMARS, INSTITUTES } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 // Extracted constant for background style
@@ -28,8 +28,11 @@ const GrammarModulePage: React.FC = () => {
   const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
 
   const { user } = useAuth();
-  const instituteName = instituteId || '';
-  const totalUnits = 30;
+
+  const instituteQuery = useQuery(INSTITUTES.get, instituteId ? { id: instituteId } : 'skip');
+  const instituteName = instituteQuery?.name || instituteId || '';
+
+  const totalUnits = instituteQuery?.totalUnits || 30;
 
   const normalizeStatus = (value: unknown): GrammarPointData['status'] => {
     if (value === 'NEW' || value === 'LEARNING' || value === 'MASTERED') return value;

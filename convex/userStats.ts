@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "./utils";
 
 // Get user stats for dashboard
+// Get user stats for dashboard
 export const getStats = query({
     args: {},
     handler: async (ctx) => {
@@ -22,8 +23,19 @@ export const getStats = query({
             };
         }
 
+        const now = Date.now();
+        const startOfDay = new Date(now).setHours(0, 0, 0, 0);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _dayOfWeek = new Date(now).getDay(); // 0 = Sunday, 1 = Monday...
+        // Calculate start of the week (assuming Monday start or just last 7 days? Let's do last 7 days window for "Weekly Activity" chart usually)
+        // Or if the UI expects specific day buckets. Let's assume the UI maps index 0-6 to Mon-Sun or Sun-Sat. 
+        // Based on typical chart usage, usually it's "This Week".
+
+        // Let's fetch activity logs for the last 7 days
+        const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+
         // Fetch all progress stats concurrently
-        const [courseProgress, vocabProgress, grammarProgress] = await Promise.all([
+        const [courseProgress, vocabProgress, grammarProgress, recentLogs] = await Promise.all([
             // Get user's course progress
             ctx.db
                 .query("user_course_progress")
@@ -41,9 +53,15 @@ export const getStats = query({
                 .query("user_grammar_progress")
                 .withIndex("by_user_grammar", (q) => q.eq("userId", userId))
                 .collect(),
+
+            // Get activity logs
+            ctx.db
+                .query("activity_logs")
+                .withIndex("by_user", q => q.eq("userId", userId))
+                .filter(q => q.gte(q.field("createdAt"), sevenDaysAgo))
+                .collect(),
         ]);
 
-        const now = Date.now();
         const dueReviews = vocabProgress.filter((v) => v.nextReviewAt && v.nextReviewAt <= now).length;
         const masteredWords = vocabProgress.filter((v) => v.status === "MASTERED").length;
 
@@ -56,7 +74,40 @@ export const getStats = query({
 
         const oneDayMs = 24 * 60 * 60 * 1000;
         const daysSinceLastAccess = Math.floor((now - lastAccess) / oneDayMs);
-        const streak = daysSinceLastAccess <= 1 ? 1 : 0; // Simplified streak logic
+        const streak = daysSinceLastAccess <= 1 ? (daysSinceLastAccess === 0 ? 1 : 1) : 0; // Simplified streak logic - to be refined with activity logs if needed
+
+        // Calculate Study Time
+        // Daily Minutes
+        const todayLogs = recentLogs.filter(log => log.createdAt >= startOfDay);
+        const todayMinutes = todayLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+        const dailyProgress = Math.min(Math.round((todayMinutes / 30) * 100), 100); // 30 min goal
+
+        // Weekly Minutes (Last 7 days buckets or Mon-Sun?)
+        // Let's do Mon-Sun buckets for consistency with most calendars
+        // Finding start of this week's Monday
+        const date = new Date(now);
+        const day = date.getDay() || 7; // Get current day number, converting Sun. 0 to 7
+        if (day !== 1) date.setHours(-24 * (day - 1)); // Set to Monday
+        else date.setHours(0, 0, 0, 0); // Is Monday
+        const startOfWeek = date.setHours(0, 0, 0, 0);
+
+        const weeklyMinutesArr = [0, 0, 0, 0, 0, 0, 0];
+        recentLogs.forEach(log => {
+            if (log.createdAt >= startOfWeek) {
+                const logDate = new Date(log.createdAt);
+                const logDay = logDate.getDay(); // 0=Sun, 1=Mon
+                // Map to 0=Mon, 6=Sun
+                const index = logDay === 0 ? 6 : logDay - 1;
+                weeklyMinutesArr[index] += log.duration || 0;
+            }
+        });
+
+        // Format for frontend: { day: 'Mon', minutes: 10 }
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const weeklyActivity = weeklyMinutesArr.map((mins, i) => ({
+            day: days[i],
+            minutes: mins
+        }));
 
         // OPTIMIZATION: Batch fetch course details
         const courseIds = [...new Set(courseProgress.map(p => p.courseId))];
@@ -100,17 +151,20 @@ export const getStats = query({
 
         return {
             streak,
-            weeklyMinutes: [0, 0, 0, 0, 0, 0, 0], // Placeholder - would need activity tracking
-            dailyMinutes: 0,
-            dailyGoal: 30,
-            dailyProgress: 0,
+            weeklyActivity,
+            todayMinutes,
+            dailyGoal: 30, // Could be user setting
+            dailyProgress,
             todayActivities: {
                 wordsLearned: masteredWords,
                 readingsCompleted: courseProgress.reduce((sum, p) => sum + (p.completedUnits || []).length, 0),
                 listeningsCompleted: 0,
             },
             courseProgress: courseDetails,
-            currentProgress, // Add this for LearnerDashboard
+            currentProgress,
+            totalWordsLearned: masteredWords,
+            totalGrammarLearned: masteredGrammar,
+            wordsToReview: dueReviews,
             vocabStats: {
                 total: vocabProgress.length,
                 dueReviews,
@@ -135,11 +189,18 @@ export const logActivity = mutation({
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);
 
-        // For now, just update the lastAccessAt in course progress
-        // In a full implementation, would store activity logs
-        const { activityType } = args;
+        const { activityType, duration, itemsStudied, metadata } = args;
 
-        console.log(`[Activity] User ${userId}: ${activityType}`);
+        console.log(`[Activity] User ${userId}: ${activityType}, Duration: ${duration}m`);
+
+        await ctx.db.insert("activity_logs", {
+            userId,
+            activityType,
+            duration: duration || 0,
+            itemsStudied: itemsStudied || 0,
+            metadata,
+            createdAt: Date.now(),
+        });
 
         return { success: true };
     }

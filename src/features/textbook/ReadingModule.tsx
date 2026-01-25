@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
@@ -14,8 +15,8 @@ import {
   ChevronDown,
   Menu,
 } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
-import { mRef, qRef } from '../../utils/convexRefs';
+import { useQuery, useMutation, useAction } from 'convex/react';
+import { aRef, mRef, qRef } from '../../utils/convexRefs';
 import BottomSheet from '../../components/common/BottomSheet';
 import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
@@ -23,6 +24,7 @@ import { getLabels } from '../../utils/i18n';
 import { ListeningModuleSkeleton } from '../../components/common';
 import { useTTS } from '../../hooks/useTTS';
 import { notify } from '../../utils/notify';
+import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 
 // Legacy API removed - using Convex
 
@@ -92,6 +94,41 @@ interface AnnotationItem {
   createdAt: string;
 }
 
+interface DictionaryEntry {
+  targetCode: string;
+  word: string;
+  pronunciation?: string;
+  pos?: string;
+  senses: Array<{
+    order: number;
+    definition: string;
+    translation?: { lang: string; word: string; definition: string };
+  }>;
+}
+
+interface SearchResult {
+  total: number;
+  start: number;
+  num: number;
+  entries: DictionaryEntry[];
+}
+
+interface MorphologyLookupResult {
+  token: { surface: string; lemma: string; pos: string | null; begin: number | null; len: number | null };
+  morphemes: Array<{ form: string; tag: string; begin: number; len: number }>;
+  wordFromDb: null | {
+    word: string;
+    meaning: string;
+    partOfSpeech: string;
+    pronunciation?: string;
+    hanja?: string;
+    audioUrl?: string;
+  };
+  grammarMatches: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+  krdict: SearchResult | null;
+  krdictError: string | null;
+}
+
 // =========================================
 // Sub-Components
 // =========================================
@@ -99,7 +136,10 @@ interface AnnotationItem {
 // Word Flashcard Popover
 interface FlashcardPopoverProps {
   word: string;
+  lemma?: string;
   meaning: string;
+  contextTranslation?: string;
+  grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
   position: { x: number; y: number };
   onClose: () => void;
   onSave: () => void;
@@ -109,7 +149,10 @@ interface FlashcardPopoverProps {
 
 const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
   word,
+  lemma,
   meaning,
+  contextTranslation,
+  grammarMatches,
   position,
   onClose,
   onSave,
@@ -117,6 +160,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
   language,
 }) => {
   const labels = getLabels(language);
+  const headword = lemma || word;
   return (
     <div
       className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[200px]"
@@ -129,8 +173,25 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
         <X className="w-3 h-3" />
       </button>
 
-      <div className="text-xl font-black text-zinc-900 mb-1">{word}</div>
+      <div className="text-xl font-black text-zinc-900 mb-1">{headword}</div>
+      {lemma && lemma !== word && <div className="text-xs text-zinc-500 mb-2">{word}</div>}
       <div className="text-sm text-zinc-600 mb-3">{meaning}</div>
+      {grammarMatches && grammarMatches.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs font-bold text-zinc-900 mb-1">语法</div>
+          <div className="space-y-1">
+            {grammarMatches.slice(0, 5).map(g => (
+              <div key={g.id} className="text-xs text-zinc-700">
+                <span className="font-bold">{g.title}</span>
+                {g.summary ? <span className="text-zinc-500"> · {g.summary}</span> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {contextTranslation && (
+        <div className="text-xs text-zinc-500 mb-3 whitespace-pre-wrap">{contextTranslation}</div>
+      )}
 
       <div className="flex gap-2">
         <button
@@ -285,9 +346,8 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
-                } ${c === 'yellow' ? 'bg-yellow-300' : c === 'green' ? 'bg-green-300' : 'bg-pink-300'} transition-all`}
+                className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
+                  } ${c === 'yellow' ? 'bg-yellow-300' : c === 'green' ? 'bg-green-300' : 'bg-pink-300'} transition-all`}
               />
             ))}
           </div>
@@ -387,7 +447,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 // Main Component
 // =========================================
 interface ReadingModuleProps {
-  courseId?: string;
+  courseId: string;
   unitIndex?: number;
   unitTitle?: string;
   language?: Language;
@@ -395,7 +455,7 @@ interface ReadingModuleProps {
 }
 
 const ReadingModule: React.FC<ReadingModuleProps> = ({
-  courseId = 'snu_1a',
+  courseId,
   unitIndex: initialUnitIndex = 1,
   unitTitle = 'Unit 1: Self-introduction',
   language = 'zh',
@@ -541,12 +601,34 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const [highlightsOverride, setHighlightsOverride] = useState<Highlight[] | null>(null);
   const notes = notesOverride ?? notesFromApi;
   const highlights = highlightsOverride ?? highlightsFromApi;
+  const lookupWithMorphology = useAction(
+    aRef<
+      {
+        surface: string;
+        contextText?: string;
+        charIndexInContext?: number;
+        translationLang?: string;
+        num?: number;
+      },
+      MorphologyLookupResult
+    >('dictionary:lookupWithMorphology')
+  );
+  const dictionaryRequestRef = useRef(0);
+  const translationLang = useMemo(() => {
+    if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
+      return language;
+    }
+    return undefined;
+  }, [language]);
 
   // Selection & Popover state
   const [selectedWord, setSelectedWord] = useState<{
     word: string;
+    lemma?: string;
     meaning: string;
     baseForm?: string;
+    contextTranslation?: string;
+    grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
     position: { x: number; y: number };
     isFromVocabList: boolean;
   } | null>(null);
@@ -649,43 +731,157 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     [vocabList]
   );
 
+  const normalizeLookupWordCb = useCallback((value: string) => normalizeLookupWord(value), []);
+  const translationSentences = useMemo(() => {
+    const translation = unitData ? getLocalizedContent(unitData, 'translation', language) : '';
+    if (!translation) return [];
+
+    const byLine = translation
+      .split(/\n+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (byLine.length > 1) return byLine;
+
+    const byPunctuation = translation.match(/[^。！？.!?]+[。！？.!?]?/g);
+    return (byPunctuation ?? [translation]).map(s => s.trim()).filter(Boolean);
+  }, [language, unitData]);
+
   // ========================================
   // Handle word click - Smart lookup logic
   // ========================================
   const handleWordClick = useCallback(
     (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.dataset.word) {
-        const clickedWord = target.dataset.word;
-        const charIndex = target.dataset.offset ? parseInt(target.dataset.offset, 10) : undefined;
-        const rect = target.getBoundingClientRect();
+      const wordEl = (e.target as HTMLElement).closest('[data-word]') as HTMLElement | null;
+      if (!wordEl) return;
+      const clickedWord = normalizeLookupWordCb(wordEl.dataset.word ?? '');
+      if (!clickedWord) return;
+      const charIndex = wordEl.dataset.offset ? parseInt(wordEl.dataset.offset, 10) : undefined;
+      const sentenceIndex = wordEl.dataset.sentenceIndex
+        ? parseInt(wordEl.dataset.sentenceIndex, 10)
+        : undefined;
+      const contextTranslation =
+        sentenceIndex !== undefined ? translationSentences[sentenceIndex] : undefined;
+      const rect = wordEl.getBoundingClientRect();
 
-        // Step 1: Try to find base form using AI analysis
-        const tokenInfo = findBaseForm(clickedWord, charIndex);
-        const baseForm = tokenInfo?.base || clickedWord;
+      const tokenInfo = findBaseForm(clickedWord, charIndex);
+      const baseForm = tokenInfo?.base || clickedWord;
 
-        // Step 2: Look up in vocab list using base form
-        let vocabMatch = lookupInVocabList(baseForm);
+      let vocabMatch = lookupInVocabList(baseForm);
+      if (!vocabMatch) vocabMatch = lookupInVocabList(clickedWord);
 
-        // Fallback: Try original clicked word
-        if (!vocabMatch) {
-          vocabMatch = lookupInVocabList(clickedWord);
+      const fallbackMeaning = vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+      const requestId = dictionaryRequestRef.current + 1;
+      dictionaryRequestRef.current = requestId;
+      const popoverWidth = 260;
+      const popoverHeight = contextTranslation ? 220 : 180;
+      const x = Math.min(
+        Math.max(8, rect.left),
+        Math.max(8, window.innerWidth - popoverWidth - 8)
+      );
+      const y = Math.min(
+        Math.max(8, rect.bottom + 8),
+        Math.max(8, window.innerHeight - popoverHeight - 8)
+      );
+
+      setSelectedWord({
+        word: clickedWord,
+        lemma: tokenInfo?.base,
+        meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || '查询中...',
+        baseForm: tokenInfo?.base,
+        grammarMatches: [],
+        contextTranslation,
+        position: { x, y },
+        isFromVocabList: !!vocabMatch,
+      });
+      setSelectionToolbar(null);
+
+      void (async () => {
+        try {
+          const fullText = unitData?.readingText;
+          let contextText: string | undefined = undefined;
+          let charIndexInContext: number | undefined = undefined;
+          if (fullText && charIndex !== undefined) {
+            const safeIndex = Math.max(0, Math.min(charIndex, fullText.length - 1));
+            const before = fullText.slice(0, safeIndex);
+            const after = fullText.slice(safeIndex);
+            const startBoundary = Math.max(
+              before.lastIndexOf('\n'),
+              before.lastIndexOf('.'),
+              before.lastIndexOf('?'),
+              before.lastIndexOf('!'),
+              before.lastIndexOf('。'),
+              before.lastIndexOf('！'),
+              before.lastIndexOf('？')
+            );
+            const start = startBoundary >= 0 ? startBoundary + 1 : 0;
+            const endCandidates = [
+              after.indexOf('\n'),
+              after.indexOf('.'),
+              after.indexOf('?'),
+              after.indexOf('!'),
+              after.indexOf('。'),
+              after.indexOf('！'),
+              after.indexOf('？'),
+            ].filter(v => v >= 0);
+            const endOffset = endCandidates.length > 0 ? Math.min(...endCandidates) + 1 : after.length;
+            const end = Math.min(fullText.length, safeIndex + endOffset);
+            contextText = fullText.slice(start, end);
+            charIndexInContext = safeIndex - start;
+          }
+
+          const res = await lookupWithMorphology({
+            surface: clickedWord,
+            contextText,
+            charIndexInContext,
+            translationLang,
+            num: 10,
+          });
+          if (dictionaryRequestRef.current !== requestId) return;
+
+          const lemma = normalizeLookupWordCb(res.token.lemma || tokenInfo?.base || clickedWord) || clickedWord;
+
+          let meaning = fallbackMeaning;
+          if (res.wordFromDb?.meaning) {
+            meaning = res.wordFromDb.meaning;
+          } else if (res.krdict) {
+            meaning = extractBestMeaning(res.krdict, lemma, fallbackMeaning);
+          }
+
+          setSelectedWord(prev =>
+            prev
+              ? {
+                ...prev,
+                lemma,
+                baseForm: lemma,
+                grammarMatches: res.grammarMatches,
+                meaning,
+              }
+              : prev
+          );
+        } catch (error: unknown) {
+          if (dictionaryRequestRef.current !== requestId) return;
+          console.error('[ReadingModule] Dictionary lookup failed:', error);
+          if (typeof error === 'object' && error !== null && 'message' in error) {
+            const msg = (error as { message: string }).message;
+            if (msg.includes('KRDICT Error')) {
+              console.error('[ReadingModule] KRDICT specific error:', msg);
+            }
+          }
+          setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
         }
-
-        // Step 3: Fallback to mock dictionary
-        const meaning = vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
-
-        setSelectedWord({
-          word: clickedWord,
-          meaning,
-          baseForm: tokenInfo?.base,
-          position: { x: rect.left, y: rect.bottom + 8 },
-          isFromVocabList: !!vocabMatch,
-        });
-        setSelectionToolbar(null);
-      }
+      })();
     },
-    [findBaseForm, lookupInVocabList, labels.dashboard?.common?.noMeaning]
+    [
+      findBaseForm,
+      labels.dashboard?.common?.loading,
+      labels.dashboard?.common?.noMeaning,
+      lookupInVocabList,
+      lookupWithMorphology,
+      normalizeLookupWordCb,
+      unitData?.readingText,
+      translationSentences,
+      translationLang,
+    ]
   );
 
   // Handle text selection
@@ -708,7 +904,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       const { selectedWord, selectionToolbar } = popoverStateRef.current;
       if (selectedWord || selectionToolbar) {
         const target = e.target as HTMLElement;
-        if (!target.closest('[data-popover]') && !target.dataset.word) {
+        if (!target.closest('[data-popover]') && !target.closest('[data-word]')) {
           setSelectedWord(null);
           setSelectionToolbar(null);
         }
@@ -773,27 +969,43 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     }
   };
 
-  // Render content with clickable words and auto line breaks at sentence endings
   const renderContent = (content: string) => {
-    // First, add line breaks after Korean sentence endings (다. 요. 까? 습니다. etc.)
-    // Match Korean sentence-ending patterns followed by space
-    const formattedContent = content
-      .replace(/([다요까]\.)\s+/g, '$1\n') // 다. 요. 까.
-      .replace(/(습니다\.)\s+/g, '$1\n') // 습니다.
-      .replace(/(습니까\?)\s+/g, '$1\n') // 습니까?
-      .replace(/(\?)\s+/g, '$1\n') // Any question mark
-      .replace(/(!)\s+/g, '$1\n'); // Any exclamation mark
+    const parts = content.split(/(\s+)/);
+    const isSentenceEnd = (value: string) =>
+      /([다요까]\.|습니다\.|습니까\?|[?!])$/.test(value);
 
-    // Split by spaces and newlines while preserving them
-    const parts = formattedContent.split(/(\s+)/);
+    let offset = 0;
+    let sentenceIndex = 0;
+    let breakNextWhitespace = false;
 
     return parts.map((part, i) => {
+      const startOffset = offset;
+      offset += part.length;
+
       if (/^\s+$/.test(part)) {
-        // Preserve whitespace/newlines
-        return part.includes('\n') ? <br key={i} /> : <span key={i}> </span>;
+        if (part.includes('\n')) {
+          breakNextWhitespace = false;
+          return <br key={i} />;
+        }
+        if (breakNextWhitespace) {
+          breakNextWhitespace = false;
+          return <br key={i} />;
+        }
+        return <span key={i}> </span>;
       }
 
-      // Check if this word is highlighted or has a note
+      const normalizedWord = normalizeLookupWord(part);
+      const currentSentenceIndex = sentenceIndex;
+      const endsSentence = isSentenceEnd(part);
+      if (endsSentence) {
+        sentenceIndex += 1;
+        breakNextWhitespace = true;
+      }
+
+      if (!normalizedWord) {
+        return <span key={i}>{part}</span>;
+      }
+
       const hasHighlight = highlights.find(h => h.text.includes(part));
       const hasNote = notes.find(n => n.text.includes(part));
 
@@ -808,7 +1020,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       return (
         <span
           key={i}
-          data-word={part}
+          data-word={normalizedWord}
+          data-offset={String(startOffset)}
+          data-sentence-index={String(currentSentenceIndex)}
           className={className}
           style={{
             backgroundColor: hasHighlight
@@ -921,11 +1135,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       <button
                         key={articleIndex}
                         onClick={() => setActiveArticleIndex(articleIndex)}
-                        className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${
-                          activeArticleIndex === article.articleIndex
-                            ? 'bg-zinc-900 text-white'
-                            : 'hover:bg-zinc-50'
-                        }`}
+                        className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${activeArticleIndex === article.articleIndex
+                          ? 'bg-zinc-900 text-white'
+                          : 'hover:bg-zinc-50'
+                          }`}
                       >
                         {(labels.dashboard?.reading?.article || '文章').replace(
                           '{index}',
@@ -1055,9 +1268,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${
-                      activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
-                    }`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
+                      }`}
                   >
                     <tab.icon className="w-4 h-4" />
                     {tab.label}
@@ -1151,9 +1363,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       {aiMessages.map((msg, i) => (
                         <div
                           key={i}
-                          className={`p-3 rounded-lg border-2 border-zinc-900 ${
-                            msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
-                          }`}
+                          className={`p-3 rounded-lg border-2 border-zinc-900 ${msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
+                            }`}
                         >
                           <p className="text-sm">{msg.content}</p>
                         </div>
@@ -1186,7 +1397,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             <div data-popover>
               <FlashcardPopover
                 word={selectedWord.word}
+                lemma={selectedWord.lemma}
                 meaning={selectedWord.meaning}
+                contextTranslation={selectedWord.contextTranslation}
+                grammarMatches={selectedWord.grammarMatches}
                 position={selectedWord.position}
                 onClose={() => setSelectedWord(null)}
                 onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
@@ -1261,11 +1475,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${
-                    activeTab === tab.key
-                      ? 'border-lime-500 text-lime-600'
-                      : 'border-transparent text-zinc-400'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${activeTab === tab.key
+                    ? 'border-lime-500 text-lime-600'
+                    : 'border-transparent text-zinc-400'
+                    }`}
                 >
                   <tab.icon className="w-4 h-4" />
                   {tab.label}
