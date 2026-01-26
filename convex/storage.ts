@@ -14,11 +14,11 @@ export const getUploadUrl = action({
     folder: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // FORCE endpoint to match hardcoded region sgp1
-    const endpoint = 'https://sgp1.digitaloceanspaces.com';
+    const endpoint = process.env.SPACES_ENDPOINT;
     const bucket = process.env.SPACES_BUCKET;
     const accessKeyId = process.env.SPACES_KEY;
     const secretAccessKey = process.env.SPACES_SECRET;
+    const region = process.env.SPACES_REGION || 'sgp1'; // Use env var with fallback
 
     if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
       throw new ConvexError({ code: 'STORAGE_CONFIG_MISSING' });
@@ -26,8 +26,7 @@ export const getUploadUrl = action({
 
     const folder = args.folder || 'uploads';
     const key = `${folder}/${Date.now()}-${args.filename}`;
-    // FORCE SGP1 to debug production issue (User env var showing us-east-1)
-    const region = 'sgp1';
+
     console.log(`[Storage] Generating upload URL for ${args.filename} in region: ${region}`);
     const service = 's3';
 
@@ -97,6 +96,11 @@ export const getUploadUrl = action({
     const uploadUrl = `https://${endpointHost}${uri}?${sortedQuery}&X-Amz-Signature=${signature}`;
 
     // CDN URL for reading
+    // Use cdn.digitaloceanspaces.com as requested
+    // Logic: ${bucket}.${region}.cdn.digitaloceanspaces.com OR using replacement 
+    // User asked to "set cdnUrl to use cdn.digitaloceanspaces.com" based on existing host
+    // If endpoint is https://sgp1.digitaloceanspaces.com -> host is sgp1.digitaloceanspaces.com
+    // Replaced: sgp1.cdn.digitaloceanspaces.com
     const cdnUrl =
       process.env.SPACES_CDN_URL ||
       `https://${bucket}.${host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com')}`;
