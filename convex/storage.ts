@@ -14,7 +14,8 @@ export const getUploadUrl = action({
     folder: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const endpoint = process.env.SPACES_ENDPOINT;
+    // FORCE endpoint to match hardcoded region sgp1
+    const endpoint = 'https://sgp1.digitaloceanspaces.com';
     const bucket = process.env.SPACES_BUCKET;
     const accessKeyId = process.env.SPACES_KEY;
     const secretAccessKey = process.env.SPACES_SECRET;
