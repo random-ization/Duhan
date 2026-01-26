@@ -36,7 +36,9 @@ export const getUploadUrl = action({
 
     const host = new URL(endpoint).host;
     const endpointHost = `${bucket}.${host}`;
-    const uri = `/${key}`;
+
+    // Encode the URI path components (required for S3 signing of special characters)
+    const uri = '/' + key.split('/').map(encodeURIComponent).join('/');
 
     const algorithm = 'AWS4-HMAC-SHA256';
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
@@ -97,7 +99,7 @@ export const getUploadUrl = action({
     const cdnUrl =
       process.env.SPACES_CDN_URL ||
       `https://${bucket}.${host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com')}`;
-    const publicUrl = `${cdnUrl}/${key}`;
+    const publicUrl = `${cdnUrl}${uri}`; // Use encoded URI for public URL as well
 
     return {
       uploadUrl,
