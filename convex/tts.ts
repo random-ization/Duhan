@@ -74,32 +74,38 @@ function createSSML(
 /**
  * Generate AWS Signature V4 for S3 upload
  */
+/**
+ * Generate AWS Signature V4 for S3 upload
+ */
 async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string> {
   const endpoint = process.env.SPACES_ENDPOINT;
   const bucket = process.env.SPACES_BUCKET;
   const accessKeyId = process.env.SPACES_KEY;
   const secretAccessKey = process.env.SPACES_SECRET;
+  const region = process.env.SPACES_REGION;
 
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey || !region) {
     throw new Error('Storage config missing');
   }
 
-  const region = 'us-east-1'; // DigitalOcean Spaces uses this for S3 compat
   const service = 's3';
   const contentType = 'audio/mpeg';
 
   const now = new Date();
-  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  // Fix: Remove milliseconds strict AWS ISO8601BasicFormat (YYYYMMDD'T'HHMMSS'Z')
+  const amzDate = now.toISOString().split('.')[0].replace(/[:-]/g, '') + 'Z';
   const dateStamp = amzDate.slice(0, 8);
 
   const host = new URL(endpoint).host;
   const endpointHost = `${bucket}.${host}`;
-  const uri = `/${key}`;
+  // Encode key for special characters
+  const uri = '/' + key.split('/').map(encodeURIComponent).join('/');
 
   const payloadHash = crypto.createHash('sha256').update(audioBuffer).digest('hex');
 
-  const canonicalHeaders = `host:${endpointHost}\nx-amz-acl:public-read\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = 'host;x-amz-acl;x-amz-content-sha256;x-amz-date';
+  // Removed x-amz-acl to avoid mismatch issues
+  const canonicalHeaders = `host:${endpointHost}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
   const canonicalRequest = ['PUT', uri, '', canonicalHeaders, signedHeaders, payloadHash].join(
     '\n'
@@ -141,7 +147,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
     method: 'PUT',
     headers: {
       Host: endpointHost,
-      'x-amz-acl': 'public-read',
+      // Removed x-amz-acl header
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
       Authorization: authorization,
@@ -159,7 +165,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
 
   // Return CDN URL
   const cdnHost = host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com');
-  return `https://${bucket}.${cdnHost}/${key}`;
+  return `https://${bucket}.${cdnHost}${uri}`; // Use encoded URI
 }
 
 /**
