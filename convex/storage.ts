@@ -31,7 +31,9 @@ export const getUploadUrl = action({
     const service = 's3';
 
     const now = new Date();
-    const amzDate = now.toISOString().replace(/[:-]|\\.\\d{3}/g, '');
+    // Fix: Remove milliseconds strict AWS ISO8601BasicFormat (YYYYMMDD'T'HHMMSS'Z')
+    // Previous regex was failing to stripping milliseconds
+    const amzDate = now.toISOString().split('.')[0].replace(/[:-]/g, '') + 'Z';
     const dateStamp = amzDate.slice(0, 8);
 
     const host = new URL(endpoint).host;
