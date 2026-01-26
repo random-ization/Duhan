@@ -18,9 +18,9 @@ export const getUploadUrl = action({
     const bucket = process.env.SPACES_BUCKET;
     const accessKeyId = process.env.SPACES_KEY;
     const secretAccessKey = process.env.SPACES_SECRET;
-    const region = process.env.SPACES_REGION || 'sgp1'; // Use env var with fallback
+    const region = process.env.SPACES_REGION;
 
-    if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+    if (!endpoint || !bucket || !accessKeyId || !secretAccessKey || !region) {
       throw new ConvexError({ code: 'STORAGE_CONFIG_MISSING' });
     }
 
