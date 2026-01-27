@@ -50,8 +50,8 @@ export default function VideoManager() {
   const updateVideo = useMutation(
     mRef<
       { id: string } & Omit<VideoLesson, 'id' | 'views' | 'createdAt'> & {
-        transcriptData: unknown;
-      },
+          transcriptData: unknown;
+        },
       unknown
     >('videos:update')
   );
@@ -235,7 +235,12 @@ export default function VideoManager() {
 
   // AI Analysis
   const [analyzing, setAnalyzing] = useState(false);
-  const generateAnalysis = useAction(mRef<{ videoUrl: string; language?: string }, { success: boolean; data?: unknown; error?: string }>('ai:generateVideoAnalysis') as any);
+  const generateAnalysis = useAction(
+    mRef<
+      { videoUrl: string; language?: string },
+      { success: boolean; data?: unknown; error?: string }
+    >('ai:generateVideoAnalysis') as any
+  );
 
   const handleAIAnalyze = async () => {
     if (!videoUrl) return;
@@ -246,7 +251,7 @@ export default function VideoManager() {
     try {
       const result = await generateAnalysis({
         videoUrl,
-        language: 'Chinese'
+        language: 'Chinese',
       });
 
       if (result.success && result.data) {
@@ -258,7 +263,7 @@ export default function VideoManager() {
         alert(`生成失败: ${result.error || '未知错误'}`);
       }
     } catch (e) {
-      console.error("AI Analysis error:", e);
+      console.error('AI Analysis error:', e);
       alert('生成请求失败，请检查网络或日志');
     } finally {
       setAnalyzing(false);
@@ -379,12 +384,13 @@ export default function VideoManager() {
                   {formatDuration(video.duration)}
                 </div>
                 <div
-                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${video.level === 'Beginner'
-                    ? 'bg-green-100 text-green-700'
-                    : video.level === 'Intermediate'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-red-100 text-red-700'
-                    }`}
+                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
+                    video.level === 'Beginner'
+                      ? 'bg-green-100 text-green-700'
+                      : video.level === 'Intermediate'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                  }`}
                 >
                   {video.level}
                 </div>
@@ -570,24 +576,60 @@ export default function VideoManager() {
                     <FileText className="w-4 h-4" />
                     字幕数据 (JSON)
                   </label>
-                  <button
-                    onClick={validateTranscript}
-                    className="text-sm px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 transition"
-                  >
-                    格式校验
-                  </button>
-                  <button
-                    onClick={handleAIAnalyze}
-                    disabled={analyzing || !videoUrl}
-                    className="flex items-center gap-1 text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-bold hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {analyzing ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Brain className="w-3 h-3" />
-                    )}
-                    AI 识别字幕
-                  </button>
+                  <div className="flex gap-2">
+                    <label className="text-sm px-3 py-1 bg-zinc-100 text-zinc-700 rounded-lg font-medium hover:bg-zinc-200 transition cursor-pointer flex items-center gap-1">
+                      <Upload className="w-3 h-3" />
+                      导入 SRT
+                      <input
+                        type="file"
+                        accept=".srt"
+                        className="hidden"
+                        onChange={async e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          try {
+                            const text = await file.text();
+                            const { parseSRT } = await import('../../utils/srtParser');
+                            const segments = parseSRT(text);
+
+                            if (segments.length === 0) {
+                              alert('未能解析出有效的字幕片段，请检查 SRT 文件格式');
+                              return;
+                            }
+
+                            setTranscriptJson(JSON.stringify(segments, null, 2));
+                            setTranscriptValid(true);
+                            setTranscriptError(null);
+
+                            // Reset input value to allow re-uploading same file if needed
+                            e.target.value = '';
+                          } catch (err) {
+                            console.error('SRT Parse Error', err);
+                            alert('解析 SRT 文件失败');
+                          }
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={validateTranscript}
+                      className="text-sm px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 transition"
+                    >
+                      格式校验
+                    </button>
+                    <button
+                      onClick={handleAIAnalyze}
+                      disabled={analyzing || !videoUrl}
+                      className="flex items-center gap-1 text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-bold hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {analyzing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Brain className="w-3 h-3" />
+                      )}
+                      AI 识别字幕
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   value={transcriptJson}
@@ -596,7 +638,7 @@ export default function VideoManager() {
                     setTranscriptValid(false);
                     setTranscriptError(null);
                   }}
-                  placeholder={`请粘贴由 Whisper 生成的 JSON 数据...\n\n格式示例：\n[\n  { "start": 0, "end": 2.5, "text": "안녕하세요", "translation": "你好" },\n  { "start": 2.5, "end": 5.0, "text": "반갑습니다", "translation": "很高兴见到你" }\n]`}
+                  placeholder={`请粘贴 JSON 数据，或点击上方“导入 SRT”上传字幕文件...\n\n格式示例：\n[\n  { "start": 0, "end": 2.5, "text": "안녕하세요", "translation": "你好" }\n]`}
                   rows={8}
                   className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition font-mono text-sm resize-none"
                 />
