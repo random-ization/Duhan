@@ -26,8 +26,6 @@ console.log('Configuration:');
 console.log('Endpoint:', endpoint);
 console.log('Bucket:', bucket);
 console.log('Region:', region);
-console.log('AccessKey:', accessKeyId ? '***' : 'MISSING');
-console.log('Secret:', secretAccessKey ? '***' : 'MISSING');
 
 if (!accessKeyId || !secretAccessKey) {
     console.error('Missing keys in .env.local');
@@ -35,7 +33,7 @@ if (!accessKeyId || !secretAccessKey) {
 }
 
 // Logic from convex/storage.ts
-const filename = 'test-upload.txt';
+const filename = 'test-upload-acl.txt';
 const folder = 'debug';
 const key = `${folder}/${Date.now()}-${filename}`;
 const service = 's3';
@@ -54,12 +52,17 @@ const algorithm = 'AWS4-HMAC-SHA256';
 const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
 const expires = 300;
 
+// HEADERS
+const acl = 'public-read';
+const canonicalHeaders = `host:${endpointHost}\nx-amz-acl:${acl}\n`;
+const signedHeaders = 'host;x-amz-acl';
+
 const queryParams = new URLSearchParams();
 queryParams.set('X-Amz-Algorithm', algorithm);
 queryParams.set('X-Amz-Credential', `${accessKeyId}/${credentialScope}`);
 queryParams.set('X-Amz-Date', amzDate);
 queryParams.set('X-Amz-Expires', expires.toString());
-queryParams.set('X-Amz-SignedHeaders', 'host');
+queryParams.set('X-Amz-SignedHeaders', signedHeaders);
 
 const sortedQuery = Array.from(queryParams.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -70,8 +73,8 @@ const canonicalRequest = [
     'PUT',
     uri,
     sortedQuery,
-    `host:${endpointHost}\n`,
-    'host',
+    canonicalHeaders,
+    signedHeaders,
     'UNSIGNED-PAYLOAD',
 ].join('\n');
 
@@ -97,6 +100,6 @@ const uploadUrl = `https://${endpointHost}${uri}?${sortedQuery}&X-Amz-Signature=
 console.log('\nGenerated Presigned URL:', uploadUrl);
 
 // Generate Curl Command
-console.log('\n=== CURL COMMAND TO TEST UPLOAD ===');
-console.log(`curl -v -X PUT "${uploadUrl}" -H "Content-Type: text/plain" -d "Hello DigitalOcean"`);
+console.log('\n=== CURL COMMAND TO TEST UPLOAD (WITH ACL) ===');
+console.log(`curl -v -X PUT "${uploadUrl}" -H "Content-Type: text/plain" -H "x-amz-acl: public-read" -d "Hello DigitalOcean with ACL"`);
 console.log('===================================\n');

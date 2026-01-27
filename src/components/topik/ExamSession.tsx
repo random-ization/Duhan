@@ -1,8 +1,8 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
 import type { TopikExam, Language, Annotation } from '../../types';
-import { Clock, ArrowLeft } from 'lucide-react';
+
 import { QuestionRenderer } from './QuestionRenderer';
-import { AudioPlayer } from './AudioPlayer';
+import { ExamController } from './ExamController';
 
 interface ExamSessionProps {
   exam: TopikExam;
@@ -208,6 +208,7 @@ const TOPIK_LISTENING_STRUCTURE: {
 export const ExamSession: React.FC<ExamSessionProps> = React.memo(
   ({ exam, language, userAnswers, timeLeft, onAnswerChange, onSubmit, onExit }) => {
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
     const examContextPrefix = useMemo(() => `TOPIK-${exam.id}`, [exam.id]);
 
@@ -215,17 +216,38 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
     const structure =
       exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
 
-    // Format time
-    const formatTime = (seconds: number) => {
-      const m = Math.floor(seconds / 60);
-      const s = seconds % 60;
-      return `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
     // Scroll to question
     const scrollToQuestion = (index: number) => {
-      questionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      questionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setCurrentQuestionIndex(index);
     };
+
+    // Intersection Observer to track visible question
+    useEffect(() => {
+      const observer = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const index = Number(entry.target.getAttribute('data-index'));
+              if (!isNaN(index)) {
+                setCurrentQuestionIndex(index);
+              }
+            }
+          });
+        },
+        {
+          rootMargin: '-40% 0px -40% 0px', // Trigger when question is in the middle 20% of viewport
+          threshold: 0,
+        }
+      );
+
+      // Observe all question elements
+      Object.entries(questionRefs.current).forEach(([_, el]) => {
+        if (el) observer.observe(el);
+      });
+
+      return () => observer.disconnect();
+    }, [exam.questions.length]);
 
     // 获取当前题目所属的 section
     const getSectionForQuestion = (qIndex: number) => {
@@ -265,28 +287,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
     };
 
     return (
-      <div className="min-h-screen bg-slate-200 flex flex-col">
-        {/* 顶部工具栏 */}
-        <div className="sticky top-0 z-30 bg-slate-800 text-white shadow-lg shrink-0">
-          <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="font-bold text-lg tracking-wide">{exam.title}</span>
-              <span className="text-xs bg-slate-700 px-2 py-1 rounded">
-                제 {exam.round || '?'} 회
-              </span>
-            </div>
-            {onExit && (
-              <button
-                onClick={onExit}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                结束考试
-              </button>
-            )}
-          </div>
-        </div>
-
+      <div className="min-h-screen flex flex-col">
         {/* 主内容区域 */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
           {/* PDF 试卷纸张 */}
@@ -361,6 +362,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
               {exam.questions.map((question, idx) => (
                 <div
                   key={idx}
+                  data-index={idx} // For InteractionObserver
                   ref={el => {
                     questionRefs.current[idx] = el;
                   }}
@@ -400,53 +402,18 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
           </div>
         </div>
 
-        {/* 右侧导航栏 - 移到右侧避免被侧边栏遮挡 */}
-        <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200 p-3 flex flex-col items-center gap-3 max-h-[85vh] overflow-y-auto">
-            {/* 计时器 */}
-            <div
-              className={`text-xl font-mono font-bold flex items-center ${timeLeft < 300 ? 'text-red-500' : 'text-emerald-600'}`}
-            >
-              <Clock className="w-4 h-4 mr-1" />
-              {formatTime(timeLeft)}
-            </div>
-
-            {/* 提交按钮 */}
-            <button
-              onClick={onSubmit}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 transition-colors"
-            >
-              제출
-            </button>
-
-            <div className="border-t border-slate-200 w-full pt-2"></div>
-
-            {/* 题目导航 */}
-            <div className="grid grid-cols-5 gap-1">
-              {exam.questions.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => scrollToQuestion(idx)}
-                  className={`
-                    w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                    ${
-                      userAnswers[idx] !== undefined
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }
-                  `}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Audio Player (if listening exam) */}
-        {exam.type === 'LISTENING' && exam.audioUrl && (
-          <AudioPlayer audioUrl={exam.audioUrl} language={language} />
-        )}
+        {/* New Exam Controller & Audio Player Combo */}
+        <ExamController
+          exam={exam}
+          questions={exam.questions}
+          userAnswers={userAnswers}
+          currentQuestionIndex={currentQuestionIndex}
+          onQuestionSelect={scrollToQuestion}
+          onSubmit={onSubmit}
+          timeLeft={timeLeft}
+          audioUrl={exam.type === 'LISTENING' ? exam.audioUrl : undefined}
+          onExit={onExit}
+        />
       </div>
     );
   }

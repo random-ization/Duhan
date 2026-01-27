@@ -197,6 +197,9 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       return;
     }
 
+    // Hide sidebar for full page experience
+    setSidebarHidden(true);
+
     setLoading(true); // 开始加载
     try {
       console.log('[selectExam] Fetching fresh questions from Convex...');
@@ -224,6 +227,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     } catch (error) {
       logger.error('Failed to load exam content:', error);
       notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam content.');
+      setSidebarHidden(false); // Restore sidebar if loading fails
     } finally {
       setLoading(false); // 结束加载
     }

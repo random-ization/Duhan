@@ -10,9 +10,13 @@ import {
   Plus,
   X,
   BookOpen,
-  List, // Added List icon for mobile toggle
+  List,
 } from 'lucide-react';
 import { useQuery, useAction } from 'convex/react';
+import { MediaPlayer, MediaProvider, MediaPlayerInstance } from '@vidstack/react';
+import { DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
+import '@vidstack/react/player/styles/default/theme.css';
+import '@vidstack/react/player/styles/default/layouts/video.css';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
@@ -122,7 +126,7 @@ const VideoPlayerPage: React.FC = () => {
   const { language } = useAuth();
   const labels = getLabels(language);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<MediaPlayerInstance>(null);
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const searchDictionary = useAction(
     aRef<
@@ -215,17 +219,17 @@ const VideoPlayerPage: React.FC = () => {
   }, [selectedWord]);
 
   // Handle video time update
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+  const handleTimeUpdate = (detail: any) => {
+    if (detail?.currentTime !== undefined) {
+      setCurrentTime(detail.currentTime);
     }
   };
 
   // Seek to specific time
   const seekTo = (time: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      videoRef.current.play();
+    if (playerRef.current) {
+      playerRef.current.currentTime = time;
+      playerRef.current.play();
     }
   };
 
@@ -242,10 +246,7 @@ const VideoPlayerPage: React.FC = () => {
       dictionaryRequestRef.current = requestId;
       const popoverWidth = 260;
       const popoverHeight = 180;
-      const x = Math.min(
-        Math.max(8, rect.left),
-        Math.max(8, window.innerWidth - popoverWidth - 8)
-      );
+      const x = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - popoverWidth - 8));
       const y = Math.min(
         Math.max(8, rect.bottom + 8),
         Math.max(8, window.innerHeight - popoverHeight - 8)
@@ -443,14 +444,22 @@ const VideoPlayerPage: React.FC = () => {
       <div className="flex flex-col lg:flex-row h-[calc(100vh-65px)] h-[calc(100dvh-65px)]">
         {/* Video Player - 70% on desktop */}
         <div className="lg:w-[70%] bg-black flex items-center justify-center">
-          <video
-            ref={videoRef}
+          <MediaPlayer
+            ref={playerRef}
             src={video.videoUrl}
-            controls
-            className="w-full h-full max-h-[50vh] lg:max-h-full object-contain"
-            onTimeUpdate={handleTimeUpdate}
+            viewType="video"
+            streamType="on-demand"
+            logLevel="warn"
+            crossOrigin
+            playsInline
+            title={video.title}
             poster={video.thumbnailUrl}
-          />
+            className="w-full h-full"
+            onTimeUpdate={handleTimeUpdate}
+          >
+            <MediaProvider />
+            <DefaultVideoLayout icons={defaultLayoutIcons} />
+          </MediaPlayer>
         </div>
 
         <div className="hidden lg:flex lg:w-[30%] bg-[#FDFBF7] border-zinc-900 flex-col lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none">
