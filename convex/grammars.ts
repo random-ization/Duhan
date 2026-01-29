@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { toErrorMessage } from './errors';
@@ -488,196 +488,13 @@ export const bulkImport = mutation({
     const errors: string[] = [];
 
     for (const item of args.items) {
-      try {
-        // 1. Get current course's publisher
-        const currentCourse = await ctx.db
-          .query('institutes')
-          .withIndex('by_legacy_id', q => q.eq('id', item.courseId))
-          .unique();
-        const currentPublisher = currentCourse?.publisher || currentCourse?.name || 'unknown';
-
-        // 2. Find all grammars with similar titles (base title without #N suffix)
-        const baseTitle = item.title.replace(/ #\d+$/, '').trim();
-        const allGrammars = await ctx.db.query('grammar_points').collect();
-
-        // Filter grammars that match the base title
-        const matchingGrammars = allGrammars.filter(g => {
-          const gBaseTitle = g.title.replace(/ #\d+$/, '').trim();
-          return gBaseTitle === baseTitle;
-        });
-
-        let grammarId: Id<'grammar_points'> | null = null;
-        let shouldCreateNew = false;
-        let reuseGrammar = null;
-
-        if (matchingGrammars.length === 0) {
-          // No existing grammar with this title - create new
-          shouldCreateNew = true;
-        } else {
-          // Check if any matching grammar is used by the same publisher
-          for (const grammar of matchingGrammars) {
-            // Get all courses using this grammar
-            const links = await ctx.db
-              .query('course_grammars')
-              .filter(q => q.eq(q.field('grammarId'), grammar._id))
-              .collect();
-
-            let usedBySamePublisher = false;
-            let usedByDifferentPublisher = false;
-
-            for (const link of links) {
-              const linkedCourse = await ctx.db
-                .query('institutes')
-                .withIndex('by_legacy_id', q => q.eq('id', link.courseId))
-                .unique();
-              const linkedPublisher = linkedCourse?.publisher || linkedCourse?.name || 'unknown';
-
-              if (linkedPublisher === currentPublisher) {
-                usedBySamePublisher = true;
-              } else {
-                usedByDifferentPublisher = true;
-              }
-            }
-
-            // If this grammar is only used by different publishers, we can reuse it
-            if (!usedBySamePublisher && usedByDifferentPublisher && !reuseGrammar) {
-              reuseGrammar = grammar;
-            }
-
-            // If grammar not used by anyone yet, we can reuse it
-            if (links.length === 0 && !reuseGrammar) {
-              reuseGrammar = grammar;
-            }
-          }
-
-          // If we found a reusable grammar from different publisher
-          if (!reuseGrammar) {
-            // Same publisher already has a grammar with this title - create new with suffix
-            shouldCreateNew = true;
-          }
-        }
-
-        // Parse examples if it's a string
-        let examples = item.examples;
-        if (typeof examples === 'string') {
-          try {
-            examples = JSON.parse(examples);
-          } catch {
-            examples = examples ? [{ kr: examples, cn: '' }] : [];
-          }
-        }
-
-        // Parse conjugationRules if it's a string
-        let conjugationRules = item.conjugationRules;
-        if (typeof conjugationRules === 'string') {
-          try {
-            conjugationRules = JSON.parse(conjugationRules);
-          } catch {
-            conjugationRules = [];
-          }
-        }
-
-        let searchPatterns: string[] | undefined = undefined;
-        if (Array.isArray(item.searchPatterns)) {
-          searchPatterns = item.searchPatterns.map(s => s.trim()).filter(Boolean);
-        } else if (typeof item.searchPatterns === 'string') {
-          const parts = item.searchPatterns
-            .split(/[\n,]+/)
-            .map(s => s.trim())
-            .filter(Boolean);
-          if (parts.length > 0) searchPatterns = parts;
-        }
-
-        if (shouldCreateNew) {
-          // Determine title with suffix if needed
-          let finalTitle = item.title;
-          if (matchingGrammars.length > 0) {
-            // Find the highest existing suffix number
-            const suffixNumbers = matchingGrammars.map(g => {
-              const match = / #(\d+)$/.exec(g.title);
-              return match ? Number.parseInt(match[1], 10) : 1;
-            });
-            const maxNumber = Math.max(...suffixNumbers, 1);
-            finalTitle = `${baseTitle} #${maxNumber + 1}`;
-          }
-
-          // Create new grammar
-          grammarId = await ctx.db.insert('grammar_points', {
-            title: finalTitle,
-            level: 'Beginner',
-            type: 'GRAMMAR',
-            summary: item.summary || '',
-            summaryEn: item.summaryEn,
-            summaryVi: item.summaryVi,
-            summaryMn: item.summaryMn,
-            explanation: item.explanation || '',
-            explanationEn: item.explanationEn,
-            explanationVi: item.explanationVi,
-            explanationMn: item.explanationMn,
-            examples: examples || [],
-            conjugationRules: conjugationRules || [],
-            searchPatterns,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-          newGrammarCount++;
-        } else if (reuseGrammar) {
-          // Reuse existing grammar from different publisher
-          grammarId = reuseGrammar._id;
-          // Optionally update with new content if provided
-          await ctx.db.patch(grammarId, {
-            summary: item.summary || reuseGrammar.summary,
-            summaryEn: item.summaryEn ?? reuseGrammar.summaryEn,
-            summaryVi: item.summaryVi ?? reuseGrammar.summaryVi,
-            summaryMn: item.summaryMn ?? reuseGrammar.summaryMn,
-            explanation: item.explanation || reuseGrammar.explanation,
-            explanationEn: item.explanationEn ?? reuseGrammar.explanationEn,
-            explanationVi: item.explanationVi ?? reuseGrammar.explanationVi,
-            explanationMn: item.explanationMn ?? reuseGrammar.explanationMn,
-            examples: examples || reuseGrammar.examples,
-            conjugationRules: conjugationRules || reuseGrammar.conjugationRules,
-            searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
-            updatedAt: Date.now(),
-          });
-        }
-
-        if (!grammarId) {
-          failedCount++;
-          errors.push(`${item.title}: Failed to resolve grammarId`);
-          continue;
-        }
-
-        // 2. Link to course unit (upsert)
-        const existingLink = await ctx.db
-          .query('course_grammars')
-          .withIndex('by_course_unit', q =>
-            q.eq('courseId', item.courseId).eq('unitId', item.unitId)
-          )
-          .filter(q => q.eq(q.field('grammarId'), grammarId))
-          .unique();
-
-        if (!existingLink) {
-          // Get max display order for this unit
-          const unitGrammars = await ctx.db
-            .query('course_grammars')
-            .withIndex('by_course_unit', q =>
-              q.eq('courseId', item.courseId).eq('unitId', item.unitId)
-            )
-            .collect();
-          const maxOrder = unitGrammars.reduce((max, g) => Math.max(max, g.displayOrder || 0), 0);
-
-          await ctx.db.insert('course_grammars', {
-            courseId: item.courseId,
-            unitId: item.unitId,
-            grammarId,
-            displayOrder: maxOrder + 1,
-          });
-        }
-
+      const result = await processImportItem(ctx, item);
+      if (result.success) {
         successCount++;
-      } catch (e: unknown) {
+        if (result.isNew) newGrammarCount++;
+      } else {
         failedCount++;
-        errors.push(`${item.title}: ${toErrorMessage(e)}`);
+        if (result.error) errors.push(`${item.title}: ${result.error}`);
       }
     }
 
@@ -692,3 +509,218 @@ export const bulkImport = mutation({
     };
   },
 });
+
+// --- Helper Functions ---
+
+interface ImportGrammarItem {
+  title: string;
+  courseId: string;
+  unitId: number;
+  summary?: string;
+  explanation?: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
+  examples?: unknown;
+  conjugationRules?: unknown;
+  searchPatterns?: string | string[];
+}
+
+interface ImportResult {
+  success: boolean;
+  isNew: boolean;
+  error?: string;
+}
+
+// Extracted helper function to reduce Cognitive Complexity of bulkImport
+async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Promise<ImportResult> {
+  try {
+    // 1. Get current course's publisher
+    const currentCourse = await ctx.db
+      .query('institutes')
+      .withIndex('by_legacy_id', q => q.eq('id', item.courseId))
+      .unique();
+    const currentPublisher = currentCourse?.publisher || currentCourse?.name || 'unknown';
+
+    // 2. Find all grammars with similar titles (base title without #N suffix)
+    const baseTitle = item.title.replace(/ #\d+$/, '').trim();
+    const allGrammars = await ctx.db.query('grammar_points').collect();
+
+    // Filter grammars that match the base title
+    const matchingGrammars = allGrammars.filter(g => {
+      const gBaseTitle = g.title.replace(/ #\d+$/, '').trim();
+      return gBaseTitle === baseTitle;
+    });
+
+    let grammarId: Id<'grammar_points'> | null = null;
+    let shouldCreateNew = false;
+    let reuseGrammar = null;
+
+    if (matchingGrammars.length === 0) {
+      // No existing grammar with this title - create new
+      shouldCreateNew = true;
+    } else {
+      // Check if any matching grammar is used by the same publisher
+      for (const grammar of matchingGrammars) {
+        // Get all courses using this grammar
+        const links = await ctx.db
+          .query('course_grammars')
+          .filter(q => q.eq(q.field('grammarId'), grammar._id))
+          .collect();
+
+        let usedBySamePublisher = false;
+        let usedByDifferentPublisher = false;
+
+        for (const link of links) {
+          const linkedCourse = await ctx.db
+            .query('institutes')
+            .withIndex('by_legacy_id', q => q.eq('id', link.courseId))
+            .unique();
+          const linkedPublisher = linkedCourse?.publisher || linkedCourse?.name || 'unknown';
+
+          if (linkedPublisher === currentPublisher) {
+            usedBySamePublisher = true;
+          } else {
+            usedByDifferentPublisher = true;
+          }
+        }
+
+        // If this grammar is only used by different publishers, we can reuse it
+        if (!usedBySamePublisher && usedByDifferentPublisher && !reuseGrammar) {
+          reuseGrammar = grammar;
+        }
+
+        // If grammar not used by anyone yet, we can reuse it
+        if (links.length === 0 && !reuseGrammar) {
+          reuseGrammar = grammar;
+        }
+      }
+
+      // If we found a reusable grammar from different publisher
+      if (!reuseGrammar) {
+        // Same publisher already has a grammar with this title - create new with suffix
+        shouldCreateNew = true;
+      }
+    }
+
+    // Parse examples if it's a string
+    let examples = item.examples;
+    if (typeof examples === 'string') {
+      try {
+        examples = JSON.parse(examples);
+      } catch {
+        examples = examples ? [{ kr: examples, cn: '' }] : [];
+      }
+    }
+
+    // Parse conjugationRules if it's a string
+    let conjugationRules = item.conjugationRules;
+    if (typeof conjugationRules === 'string') {
+      try {
+        conjugationRules = JSON.parse(conjugationRules);
+      } catch {
+        conjugationRules = [];
+      }
+    }
+
+    let searchPatterns: string[] | undefined = undefined;
+    if (Array.isArray(item.searchPatterns)) {
+      searchPatterns = item.searchPatterns.map(s => s.trim()).filter(Boolean);
+    } else if (typeof item.searchPatterns === 'string') {
+      const parts = item.searchPatterns
+        .split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (parts.length > 0) searchPatterns = parts;
+    }
+
+    let isNew = false;
+
+    if (shouldCreateNew) {
+      // Determine title with suffix if needed
+      let finalTitle = item.title;
+      if (matchingGrammars.length > 0) {
+        // Find the highest existing suffix number
+        const suffixNumbers = matchingGrammars.map(g => {
+          const match = / #(\d+)$/.exec(g.title);
+          return match ? Number.parseInt(match[1], 10) : 1;
+        });
+        const maxNumber = Math.max(...suffixNumbers, 1);
+        finalTitle = `${baseTitle} #${maxNumber + 1}`;
+      }
+
+      // Create new grammar
+      grammarId = await ctx.db.insert('grammar_points', {
+        title: finalTitle,
+        level: 'Beginner',
+        type: 'GRAMMAR',
+        summary: item.summary || '',
+        summaryEn: item.summaryEn,
+        summaryVi: item.summaryVi,
+        summaryMn: item.summaryMn,
+        explanation: item.explanation || '',
+        explanationEn: item.explanationEn,
+        explanationVi: item.explanationVi,
+        explanationMn: item.explanationMn,
+        examples: examples || [],
+        conjugationRules: conjugationRules || [],
+        searchPatterns,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      isNew = true;
+    } else if (reuseGrammar) {
+      // Reuse existing grammar from different publisher
+      grammarId = reuseGrammar._id;
+      // Optionally update with new content if provided
+      await ctx.db.patch(grammarId, {
+        summary: item.summary || reuseGrammar.summary,
+        summaryEn: item.summaryEn ?? reuseGrammar.summaryEn,
+        summaryVi: item.summaryVi ?? reuseGrammar.summaryVi,
+        summaryMn: item.summaryMn ?? reuseGrammar.summaryMn,
+        explanation: item.explanation || reuseGrammar.explanation,
+        explanationEn: item.explanationEn ?? reuseGrammar.explanationEn,
+        explanationVi: item.explanationVi ?? reuseGrammar.explanationVi,
+        explanationMn: item.explanationMn ?? reuseGrammar.explanationMn,
+        examples: examples || reuseGrammar.examples,
+        conjugationRules: conjugationRules || reuseGrammar.conjugationRules,
+        searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
+        updatedAt: Date.now(),
+      });
+    }
+
+    if (!grammarId) {
+      return { success: false, isNew: false, error: 'Failed to resolve grammarId' };
+    }
+
+    // 2. Link to course unit (upsert)
+    const existingLink = await ctx.db
+      .query('course_grammars')
+      .withIndex('by_course_unit', q => q.eq('courseId', item.courseId).eq('unitId', item.unitId))
+      .filter(q => q.eq(q.field('grammarId'), grammarId))
+      .unique();
+
+    if (!existingLink) {
+      // Get max display order for this unit
+      const unitGrammars = await ctx.db
+        .query('course_grammars')
+        .withIndex('by_course_unit', q => q.eq('courseId', item.courseId).eq('unitId', item.unitId))
+        .collect();
+      const maxOrder = unitGrammars.reduce((max, g) => Math.max(max, g.displayOrder || 0), 0);
+
+      await ctx.db.insert('course_grammars', {
+        courseId: item.courseId,
+        unitId: item.unitId,
+        grammarId,
+        displayOrder: maxOrder + 1,
+      });
+    }
+
+    return { success: true, isNew };
+  } catch (e: unknown) {
+    return { success: false, isNew: false, error: toErrorMessage(e) };
+  }
+}
