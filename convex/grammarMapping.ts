@@ -1,7 +1,7 @@
 import type { TokenInfo } from 'kiwi-nlp';
 
 export function expandPattern(raw: string): string[] {
-  const cleaned = raw.trim().replace(/-+/g, '').replaceAll(/\s+/g, '');
+  const cleaned = raw.trim().replaceAll(/-+/g, '').replaceAll(/\s+/g, '');
   if (!cleaned) return [];
 
   const slashParts = cleaned
