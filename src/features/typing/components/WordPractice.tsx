@@ -293,12 +293,6 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
       className="flex-1 flex flex-col w-full h-full relative font-sans overflow-hidden focus:outline-none"
       style={{ touchAction: 'none', userSelect: 'none' }}
       onClick={() => inputRef.current?.focus()}
-      tabIndex={0}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          inputRef.current?.focus();
-        }
-      }}
     >
       {/* Word Carousel - V6 Separated Layout */}
       <div className="w-full max-w-5xl flex flex-col items-center justify-center relative -mt-8 flex-1">

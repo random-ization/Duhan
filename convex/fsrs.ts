@@ -88,8 +88,7 @@ export const calculateNextSchedule = action({
       state: newCard.state,
       due: newCard.due.getTime(),
       stability: newCard.stability,
-      difficulty: newCard.difficulty,
-      elapsed_days: newCard.elapsed_days,
+
       scheduled_days: newCard.scheduled_days,
       learning_steps: newCard.learning_steps,
       reps: newCard.reps,
@@ -101,8 +100,7 @@ export const calculateNextSchedule = action({
         state: result.log.state,
         due: result.log.due.getTime(),
         stability: result.log.stability,
-        difficulty: result.log.difficulty,
-        elapsed_days: result.log.elapsed_days,
+
         scheduled_days: result.log.scheduled_days,
         review: result.log.review.getTime(),
       },
