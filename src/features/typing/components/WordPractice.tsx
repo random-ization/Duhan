@@ -284,15 +284,30 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
     }, 0);
   }, [currentIndex]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Click anywhere to focus input (Accessibility: handled via event listener instead of onClick on div)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleClick = () => {
+      inputRef.current?.focus();
+    };
+
+    container.addEventListener('click', handleClick);
+    return () => container.removeEventListener('click', handleClick);
+  }, []);
+
   if (!currentWord) {
     return <div className="text-slate-500">No words available</div>;
   }
 
   return (
     <div
+      ref={containerRef}
       className="flex-1 flex flex-col w-full h-full relative font-sans overflow-hidden focus:outline-none"
       style={{ touchAction: 'none', userSelect: 'none' }}
-      onClick={() => inputRef.current?.focus()}
     >
       {/* Word Carousel - V6 Separated Layout */}
       <div className="w-full max-w-5xl flex flex-col items-center justify-center relative -mt-8 flex-1">
