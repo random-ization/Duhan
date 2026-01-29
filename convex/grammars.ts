@@ -164,7 +164,8 @@ export const getUnitGrammar = query({
       // The grammar data is stored as Unit 11-20, but frontend requests Unit 1-10
       // Check if it's a Yonsei course and Volume 2
       const isYonsei = institute?.name.includes('연세') || institute?.publisher?.includes('延世');
-      const isVolume2 = institute?.volume === '2' || institute?.name.includes('2') || institute?.volume === 'II'; // safe checks
+      const isVolume2 =
+        institute?.volume === '2' || institute?.name.includes('2') || institute?.volume === 'II'; // safe checks
 
       if (
         (effectiveCourseId === 'course_yonsei_1b_appendix' || (isYonsei && isVolume2)) &&
@@ -273,21 +274,15 @@ export const updateStatus = mutation({
     }
 
     // 2. Determine Status behavior
+    // 2. Determine Status behavior
     if (status) {
       // Explicit status change (e.g. manual toggle)
       newStatus = status;
       if (status === 'MASTERED') newProficiency = 100;
-      // If manually setting to LEARNING from MASTERED, maybe reset proficiency? 
-      // Existing logic didn't reset, but let's keep simple: manual toggle usually implies 100 or 0? 
-      // The previous logic was: status === 'MASTERED' ? 100 : existing.proficiency.
-      // Let's stick to: if MASTERED -> 100. If LEARNING/NEW -> keep existing unless explicit proficiency is 0?
-    } else {
-      // Implicit check (increment)
-      if (newProficiency >= 100) {
-        newStatus = 'MASTERED';
-      } else if (newProficiency > 0) {
-        newStatus = 'LEARNING';
-      }
+    } else if (newProficiency >= 100) {
+      newStatus = 'MASTERED';
+    } else if (newProficiency > 0) {
+      newStatus = 'LEARNING';
     }
 
     if (existing) {
@@ -556,9 +551,7 @@ export const bulkImport = mutation({
           }
 
           // If we found a reusable grammar from different publisher
-          if (reuseGrammar) {
-            shouldCreateNew = false;
-          } else {
+          if (!reuseGrammar) {
             // Same publisher already has a grammar with this title - create new with suffix
             shouldCreateNew = true;
           }
@@ -601,8 +594,8 @@ export const bulkImport = mutation({
           if (matchingGrammars.length > 0) {
             // Find the highest existing suffix number
             const suffixNumbers = matchingGrammars.map(g => {
-              const match = g.title.match(/ #(\d+)$/);
-              return match ? parseInt(match[1], 10) : 1;
+              const match = / #(\d+)$/.exec(g.title);
+              return match ? Number.parseInt(match[1], 10) : 1;
             });
             const maxNumber = Math.max(...suffixNumbers, 1);
             finalTitle = `${baseTitle} #${maxNumber + 1}`;
@@ -634,16 +627,13 @@ export const bulkImport = mutation({
           // Optionally update with new content if provided
           await ctx.db.patch(grammarId, {
             summary: item.summary || reuseGrammar.summary,
-            summaryEn: item.summaryEn !== undefined ? item.summaryEn : reuseGrammar.summaryEn,
-            summaryVi: item.summaryVi !== undefined ? item.summaryVi : reuseGrammar.summaryVi,
-            summaryMn: item.summaryMn !== undefined ? item.summaryMn : reuseGrammar.summaryMn,
+            summaryEn: item.summaryEn ?? reuseGrammar.summaryEn,
+            summaryVi: item.summaryVi ?? reuseGrammar.summaryVi,
+            summaryMn: item.summaryMn ?? reuseGrammar.summaryMn,
             explanation: item.explanation || reuseGrammar.explanation,
-            explanationEn:
-              item.explanationEn !== undefined ? item.explanationEn : reuseGrammar.explanationEn,
-            explanationVi:
-              item.explanationVi !== undefined ? item.explanationVi : reuseGrammar.explanationVi,
-            explanationMn:
-              item.explanationMn !== undefined ? item.explanationMn : reuseGrammar.explanationMn,
+            explanationEn: item.explanationEn ?? reuseGrammar.explanationEn,
+            explanationVi: item.explanationVi ?? reuseGrammar.explanationVi,
+            explanationMn: item.explanationMn ?? reuseGrammar.explanationMn,
             examples: examples || reuseGrammar.examples,
             conjugationRules: conjugationRules || reuseGrammar.conjugationRules,
             searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
