@@ -1,21 +1,22 @@
 import type { TokenInfo } from 'kiwi-nlp';
 
 export function expandPattern(raw: string): string[] {
-  const cleaned = raw.trim().replace(/[-]+/, '').replace(/\s+/g, '');
+  const cleaned = raw.trim().replace(/-+/g, '').replaceAll(/\s+/g, '');
   if (!cleaned) return [];
 
-  const slashParts = cleaned.split('/').map(s => s.trim()).filter(Boolean);
+  const slashParts = cleaned
+    .split('/')
+    .map(s => s.trim())
+    .filter(Boolean);
   const out: string[] = [];
   for (const part of slashParts.length > 0 ? slashParts : [cleaned]) {
-    const withParensRemoved = part.replace(/[()]/g, '');
+    const withParensRemoved = part.replaceAll(/[()]/g, '');
     if (withParensRemoved.includes('으시')) {
-      out.push(withParensRemoved);
-      out.push(withParensRemoved.replace(/^으/, ''));
+      out.push(withParensRemoved, withParensRemoved.replace(/^으/, ''));
       continue;
     }
     if (withParensRemoved.includes('으')) {
-      out.push(withParensRemoved);
-      out.push(withParensRemoved.replace(/^으/, ''));
+      out.push(withParensRemoved, withParensRemoved.replace(/^으/, ''));
       continue;
     }
     out.push(withParensRemoved);
@@ -73,4 +74,3 @@ export function inferLemma(
   if (content.tag.startsWith('N')) return { lemma: content.str, pos: content.tag };
   return { lemma: content.str, pos: content.tag };
 }
-
