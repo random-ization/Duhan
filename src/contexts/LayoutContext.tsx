@@ -10,6 +10,7 @@ export const DEFAULT_CARD_ORDER = [
   'podcast',
   'vocab', // 生词本
   'notes', // 笔记本
+  'typing', // 打字练习
 ];
 
 interface LayoutContextType {
@@ -22,6 +23,8 @@ interface LayoutContextType {
   toggleMobileMenu: () => void;
   sidebarHidden: boolean;
   setSidebarHidden: (hidden: boolean) => void;
+  footerHidden: boolean;
+  setFooterHidden: (hidden: boolean) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -68,6 +71,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
   const [sidebarHidden, setSidebarHidden] = useState(false);
+  const [footerHidden, setFooterHidden] = useState(false);
 
   return (
     <LayoutContext.Provider
@@ -81,6 +85,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         toggleMobileMenu,
         sidebarHidden,
         setSidebarHidden,
+        footerHidden,
+        setFooterHidden,
       }}
     >
       {children}

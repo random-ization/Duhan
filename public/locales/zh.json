@@ -502,7 +502,6 @@
       "mistakes_desc": "查漏补缺"
     },
     "welcome": "下午好, {name}!",
-    "subtitle": "准备好击败今天的 Boss 了吗？",
     "streak": "连续打卡",
     "days": "{count} 天",
     "premium": "Premium",
@@ -1131,11 +1130,18 @@
     "subtitle": "仅用于确认您是否符合地区优惠资格。",
     "disclaimer": "我们不会保存您的手机号明文。提交后仅记录“是否符合优惠资格”与所属地区，用于解锁对应优惠。",
     "close": "关闭",
-    "tabs": { "cn": "中国", "vn": "越南", "mn": "蒙古" },
+    "tabs": {
+      "cn": "中国",
+      "vn": "越南",
+      "mn": "蒙古"
+    },
     "placeholder": "输入手机号",
     "hint": "请输入所选地区的有效手机号。",
     "formattedLabel": "验证成功",
-    "cta": { "verify": "验证并领取优惠", "login": "登录后验证并领取优惠" },
+    "cta": {
+      "verify": "验证并领取优惠",
+      "login": "登录后验证并领取优惠"
+    },
     "errors": {
       "invalid": "手机号格式不正确，或不属于所选地区。",
       "failed": "验证失败，请稍后重试。"
@@ -1311,6 +1317,13 @@
       "TIME_DAYS_AGO": "天前"
     }
   },
+  "typing": {
+    "label": "打字练习",
+    "title": "韩语打字",
+    "subtitle": "单词/句子/长文",
+    "speed": "词/分",
+    "unit": "WPM"
+  },
   "vocabLabel": "词汇学习",
   "vocab": {
     "flashcard": "单词卡",
@@ -1428,5 +1441,31 @@
     "noActivity": "暂无活动。开始一次测试以查看进度！",
     "updatePassword": "更新密码",
     "recentActivity": "最近活动"
+  },
+  "typingLobby": {
+    "title": "韩语打字练习",
+    "subtitle": "选择您喜欢的练习模式",
+    "volumeWithLevel": "{{level}}级 {{volume}}册",
+    "volumeOnly": "{{volume}}册",
+    "word": {
+      "title": "单词",
+      "desc": "积累词汇量，\n一次一个单词。",
+      "tag": "基础练习"
+    },
+    "sentence": {
+      "title": "句子",
+      "desc": "通过实用例句\n掌握流畅输入。",
+      "tag": "推荐"
+    },
+    "paragraph": {
+      "title": "长文",
+      "desc": "挑战长篇文章\n和歌词输入。",
+      "tag": "进阶"
+    },
+    "footer": {
+      "press": "按",
+      "switch": "切换模式"
+    },
+    "back": "返回主页"
   }
 }

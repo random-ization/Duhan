@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Disc, GripVertical, BookMarked, FileText } from 'lucide-react';
+import { GripVertical, FileText } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,7 +43,9 @@ const ASSETS = {
   trophy: '/emojis/Trophy.png',
   tv: '/emojis/Television.png',
   headphone: '/emojis/Headphone.png',
-  memo: '/emojis/Memo.png',
+  memo: '/emojis/Spiral_Calendar.png',
+  typing: '/emojis/keyboard_icon_3d_1769658200654.png',
+  vocabBook: '/emojis/flashcards_icon_3d_1769658215552.png',
 };
 
 // Sortable Item Wrapper
@@ -73,7 +75,7 @@ const SortableItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative ${className} ${isEditing ? 'cursor-move' : ''}`}
+      className={`relative ${className} ${isEditing ? 'cursor-move' : ''} `}
       {...attributes}
       {...(isEditing ? listeners : {})}
     >
@@ -222,7 +224,7 @@ export default function DashboardPage({
                 <div className="w-full bg-white h-3 rounded-full border-2 border-blue-100 overflow-hidden">
                   <div
                     className="bg-blue-500 h-full border-r-2 border-blue-600"
-                    style={{ width: `${progressPercent}%` }}
+                    style={{ width: `${progressPercent}% ` }}
                   ></div>
                 </div>
               </div>
@@ -289,9 +291,6 @@ export default function DashboardPage({
             borderClass="border-violet-200"
             className="h-full"
           >
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:opacity-20 transition duration-700 group-hover:rotate-45">
-              <Disc size={120} className="text-violet-500" />
-            </div>
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
                 <div className="inline-block bg-violet-500 text-white border-2 border-violet-400 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
@@ -314,6 +313,11 @@ export default function DashboardPage({
                 </span>
               </div>
             </div>
+            <img
+              src={ASSETS.headphone}
+              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
+              alt="podcast"
+            />
           </BentoCard>
         );
       case 'vocab':
@@ -324,9 +328,6 @@ export default function DashboardPage({
             borderClass="border-indigo-200"
             className="h-full"
           >
-            <div className="absolute -right-4 -bottom-4 opacity-10">
-              <BookMarked size={80} className="text-indigo-600 rotate-12" />
-            </div>
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
                 <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
@@ -346,6 +347,11 @@ export default function DashboardPage({
                 )}
               </div>
             </div>
+            <img
+              src={ASSETS.vocabBook}
+              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-12 transition duration-300"
+              alt="vocab"
+            />
           </BentoCard>
         );
       case 'notes':
@@ -380,6 +386,44 @@ export default function DashboardPage({
                 </div>
               </div>
             </div>
+            <img
+              src={ASSETS.memo}
+              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
+              alt="notebook"
+            />
+          </BentoCard>
+        );
+      case 'typing':
+        return (
+          <BentoCard
+            onClickPath="/typing"
+            bgClass="bg-emerald-50"
+            borderClass="border-emerald-200"
+            className="h-full"
+          >
+            <div className="relative z-10 h-full flex flex-col justify-between">
+              <div>
+                <div className="inline-block bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                  {t('typing.label', { defaultValue: 'Typing' })}
+                </div>
+                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                  {t('typing.title', { defaultValue: 'Typing' })}
+                </h3>
+                <p className="text-slate-500 font-bold text-sm mt-1">
+                  {t('typing.subtitle', { defaultValue: 'Practice' })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white/80 px-2 py-1 rounded text-[10px] font-bold text-emerald-600 border border-emerald-100">
+                  {t('typing.unit', { defaultValue: 'WPM' })}
+                </div>
+              </div>
+            </div>
+            <img
+              src={ASSETS.typing}
+              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
+              alt="typing"
+            />
           </BentoCard>
         );
       default:
@@ -461,7 +505,7 @@ export default function DashboardPage({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
           <div
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''}`}
+            className={`grid grid - cols - 1 md: grid - cols - 2 lg: grid - cols - 4 gap - 6 auto - rows - [minmax(220px, auto)] transition - all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''} `}
           >
             {cardOrder.map(id => (
               <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>

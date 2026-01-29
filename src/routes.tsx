@@ -50,6 +50,9 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const VideoLibraryPage = lazy(() => import('./pages/VideoLibraryPage'));
 const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
 
+// Typing
+const TypingPage = lazy(() => import('./pages/TypingPage'));
+
 import { TextbookContent, TopikExam } from './types';
 
 // Loading fallback component with skeleton screen
@@ -191,6 +194,9 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
               {/* Video Learning */}
               <Route path="videos" element={<VideoLibraryPage />} />
               <Route path="video/:id" element={<VideoPlayerPage />} />
+
+              {/* Typing Practice */}
+              <Route path="typing" element={<TypingPage />} />
             </Route>
           </Route>
           {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}

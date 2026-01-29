@@ -4,10 +4,24 @@
 
 @layer base {
   body {
-    /* Dot Grid Pattern */
-    background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
-    background-size: 24px 24px;
+    background-color: #f8fafc;
   }
+}
+
+/* Cursor Blink Animation for Typing */
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.cursor-block {
+  animation: cursor-blink 1s infinite;
 }
 
 /* Custom Utilities */
@@ -29,4 +43,39 @@
 .bouncy:hover {
   transform: translateY(-4px) scale(1.01);
   box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Keyboard Hints - Dark/Cyberpunk Theme */
+.simple-keyboard {
+  @apply rounded-xl bg-slate-800 p-2 shadow-xl;
+  background-color: #2d3748 !important;
+  /* Dark Gray */
+  font-family: 'Noto Sans KR', system-ui, sans-serif !important;
+}
+
+.simple-keyboard .hg-button {
+  background-color: #4a5568 !important;
+  /* Key Gray */
+  color: white !important;
+  border-bottom: 3px solid #2d3748 !important;
+  /* Depth */
+  border-radius: 8px !important;
+  margin: 3px !important;
+  height: 48px !important;
+  transition: all 0.1s ease !important;
+}
+
+.simple-keyboard .hg-button:active {
+  transform: translateY(2px) !important;
+  border-bottom: 1px solid #2d3748 !important;
+}
+
+.simple-keyboard .active-key-highlight {
+  background-color: #ecc94b !important;
+  /* Bright Yellow */
+  color: #1a202c !important;
+  /* Dark Text */
+  border-bottom: 1px solid #b7791f !important;
+  transform: translateY(2px) !important;
+  box-shadow: 0 0 10px rgba(236, 201, 75, 0.5) !important;
 }

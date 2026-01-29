@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
+import { useConvexAuth } from 'convex/react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO } from '../seo/SEO';
@@ -39,6 +40,7 @@ export default function Landing() {
   const navigate = useLocalizedNavigate();
   const { open } = usePhoneVerifyModal();
   const location = useLocation();
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [expandedFeatureCards, setExpandedFeatureCards] = useState({
@@ -47,12 +49,10 @@ export default function Landing() {
     video: false,
   });
 
-  const meta = getRouteMeta(location.pathname);
-  const showLocalizedPromo =
-    i18n.language === 'zh' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn' ||
-    i18n.language.startsWith('zh-');
+  // Redirect authenticated users to dashboard moved to bottom to avoid conditional hooks
+  // if (!authLoading && isAuthenticated) {
+  //   return <Navigate to="dashboard" replace />;
+  // }
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 50);
@@ -69,6 +69,14 @@ export default function Landing() {
     };
   }, []);
 
+  // Condition return AFTER hooks
+  const meta = getRouteMeta(location.pathname);
+  const showLocalizedPromo =
+    i18n.language === 'zh' ||
+    i18n.language === 'vi' ||
+    i18n.language === 'mn' ||
+    i18n.language.startsWith('zh-');
+
   const demoAssets = {
     userAvatar: '/landing/avatar-user.svg',
   } as const;
@@ -76,6 +84,10 @@ export default function Landing() {
   const toggleFeatureCard = (key: keyof typeof expandedFeatureCards) => {
     setExpandedFeatureCards(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  if (!authLoading && isAuthenticated) {
+    return <Navigate to="dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen font-landing antialiased text-slate-900 overflow-x-hidden bg-[#FAFAFA] selection:bg-[#FFDE59] selection:text-black">

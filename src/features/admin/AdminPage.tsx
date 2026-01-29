@@ -13,7 +13,7 @@ import { UserManagement } from '../../components/admin/UserManagement';
 import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import LegalDocumentEditor from '../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
-import DataDiagnostics from '../../components/admin/DataDiagnostics';
+import { TypingManager } from './TypingManager';
 import {
   Book,
   Database,
@@ -29,6 +29,7 @@ import {
   Video,
   Activity,
   BookOpen,
+  Type,
 } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
@@ -44,6 +45,7 @@ const AdminPage: React.FC = () => {
     | 'legal'
     | 'video'
     | 'diagnostics'
+    | 'typing'
   >('dashboard');
   const [vocabSubTab, setVocabSubTab] = useState<'dashboard' | 'import'>('dashboard');
   const [grammarSubTab, setGrammarSubTab] = useState<'manage' | 'import'>('manage');
@@ -180,6 +182,17 @@ const AdminPage: React.FC = () => {
           <Activity size={16} />
           诊断
         </button>
+        <button
+          onClick={() => setActiveTab('typing')}
+          className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'typing'
+              ? 'border-zinc-900 text-zinc-900'
+              : 'border-transparent text-zinc-400 hover:text-zinc-600'
+          }`}
+        >
+          <Type size={16} />
+          打字
+        </button>
       </div>
 
       {/* Content Area */}
@@ -295,8 +308,8 @@ const AdminPage: React.FC = () => {
           <LegalDocumentEditor />
         ) : activeTab === 'video' ? (
           <VideoManager />
-        ) : activeTab === 'diagnostics' ? (
-          <DataDiagnostics />
+        ) : activeTab === 'typing' ? (
+          <TypingManager />
         ) : (
           <div>
             {/* Vocab Sub-tabs */}

@@ -15,7 +15,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
-  const { sidebarHidden } = useLayout();
+  const { sidebarHidden, footerHidden } = useLayout();
   const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
@@ -39,7 +39,8 @@ export default function AppLayout() {
     pathSegments[0] && isValidLanguage(pathSegments[0])
       ? `/${pathSegments.slice(1).join('/')}`
       : location.pathname;
-  const shouldHideFooter = hideFooterPaths.some(path => pathWithoutLang.startsWith(path));
+  const shouldHideFooter =
+    footerHidden || hideFooterPaths.some(path => pathWithoutLang.startsWith(path));
   const hideMobileHeaderPaths = ['/video/', '/podcasts/player'];
   const hideMobileNavPaths = ['/video/', '/podcasts/player'];
   const shouldHideMobileHeader =
@@ -58,8 +59,14 @@ export default function AppLayout() {
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
-      <Sidebar />
-      <main className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth">
+      {!pathWithoutLang.startsWith('/typing') && <Sidebar />}
+      <main
+        className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth"
+        style={{
+          backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
+        }}
+      >
         {shouldShowProfileSetupPrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
@@ -121,8 +128,12 @@ export default function AppLayout() {
         )}
         {!shouldHideMobileHeader && <MobileHeader />}
 
-        <div className="min-h-full flex flex-col p-4 sm:p-6 md:p-10">
-          <div className="flex-1 w-full max-w-[1400px] mx-auto">
+        <div
+          className={`min-h-full flex flex-col ${pathWithoutLang.startsWith('/typing') ? 'p-0' : 'p-4 sm:p-6 md:p-10'}`}
+        >
+          <div
+            className={`flex-1 w-full ${pathWithoutLang.startsWith('/typing') ? '' : 'max-w-[1400px] mx-auto'}`}
+          >
             <Outlet />
           </div>
           {!shouldHideFooter && <Footer />}

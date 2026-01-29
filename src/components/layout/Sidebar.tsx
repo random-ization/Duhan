@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { Settings, LogOut, ChevronLeft, ChevronRight, Check, X, Keyboard } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 import { useTranslation } from 'react-i18next';
@@ -66,6 +66,14 @@ export default function Sidebar() {
         label: t('sidebar.podcasts'),
         icon: <EmojiIcon src="/emojis/Headphone.png" grayscale />,
         activeClass: 'bg-purple-100 text-purple-700 border-purple-100',
+      },
+      {
+        path: '/typing',
+        label: t('sidebar.typing', 'Typing'),
+        icon: (
+          <Keyboard className="w-6 h-6 shrink-0 transition text-slate-400 group-hover:text-slate-600" />
+        ),
+        activeClass: 'bg-indigo-100 text-indigo-700 border-indigo-100',
       },
     ];
 

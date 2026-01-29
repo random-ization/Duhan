@@ -390,7 +390,7 @@ export const getOfCourse = query({
       return [];
     }
 
-    const appearances = await ctx.db
+    let appearances = await ctx.db
       .query('vocabulary_appearances')
       .withIndex('by_course_unit', q =>
         normalizedUnitId !== undefined
@@ -398,6 +398,23 @@ export const getOfCourse = query({
           : q.eq('courseId', effectiveCourseId)
       )
       .take(limit);
+
+    // Fallback: If no appearances found and we are querying a specific unit, try offset +10
+    // This handles cases where Vol 2 is stored as Unit 11-20 but requested as Unit 1-10
+    if (appearances.length === 0 && normalizedUnitId !== undefined && normalizedUnitId <= 20) {
+      const offsetUnitId = normalizedUnitId + 10;
+      const fallbackAppearances = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q =>
+          q.eq('courseId', effectiveCourseId).eq('unitId', offsetUnitId)
+        )
+        .take(limit);
+
+      if (fallbackAppearances.length > 0) {
+        appearances = fallbackAppearances;
+      }
+    }
+
     if (appearances.length === 0) {
       return [];
     }

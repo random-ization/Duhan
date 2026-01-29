@@ -504,7 +504,6 @@
       "mistakes_desc": "Review Weakness"
     },
     "welcome": "Good afternoon, {name}!",
-    "subtitle": "Ready to beat today's boss?",
     "streak": "Streak",
     "days": "{count} Days",
     "premium": "Premium",
@@ -1123,11 +1122,18 @@
     "subtitle": "Used only to confirm regional discount eligibility.",
     "disclaimer": "We do not store your phone number. We only record your eligibility status and region.",
     "close": "Close",
-    "tabs": { "cn": "China", "vn": "Vietnam", "mn": "Mongolia" },
+    "tabs": {
+      "cn": "China",
+      "vn": "Vietnam",
+      "mn": "Mongolia"
+    },
     "placeholder": "Enter phone number",
     "hint": "Enter a valid number for the selected region.",
     "formattedLabel": "Verification successful",
-    "cta": { "verify": "Verify and claim discount", "login": "Log in to verify and claim" },
+    "cta": {
+      "verify": "Verify and claim discount",
+      "login": "Log in to verify and claim"
+    },
     "errors": {
       "invalid": "Invalid phone number for the selected region.",
       "failed": "Verification failed. Please try again."
@@ -1300,8 +1306,15 @@
       "HISTORY_TITLE": "播放历史",
       "TIME_TODAY": "今天",
       "TIME_YESTERDAY": "昨天",
-      "TIME_DAYS_AGO": "天前"
+      "TIME_DAYS_AGO": "days ago"
     }
+  },
+  "typing": {
+    "label": "Typing Practice",
+    "title": "Korean Typing",
+    "subtitle": "Word / Sentence / Article",
+    "speed": "Speed",
+    "unit": "WPM"
   },
   "vocabLabel": "Vocabulary",
   "vocab": {
@@ -1420,5 +1433,31 @@
     "noActivity": "No activity yet. Start a test to see your progress!",
     "updatePassword": "Update Password",
     "recentActivity": "Recent Activity"
+  },
+  "typingLobby": {
+    "title": "Duhan Typing",
+    "subtitle": "Choose your practice mode",
+    "volumeWithLevel": "Level {{level}} Vol {{volume}}",
+    "volumeOnly": "Vol {{volume}}",
+    "word": {
+      "title": "Word",
+      "desc": "Build your vocabulary.\nOne word at a time.",
+      "tag": "Basic Practice"
+    },
+    "sentence": {
+      "title": "Sentence",
+      "desc": "Master fluid typing with\nreal-world phrases.",
+      "tag": "Recommended"
+    },
+    "paragraph": {
+      "title": "Paragraph",
+      "desc": "Challenge yourself with\nlong articles & lyrics.",
+      "tag": "Advanced"
+    },
+    "footer": {
+      "press": "Press",
+      "switch": "to switch modes"
+    },
+    "back": "Back to Dashboard"
   }
 }

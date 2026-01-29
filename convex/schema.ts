@@ -619,4 +619,55 @@ export default defineSchema({
     value: v.any(),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
+
+  // Typing Practice Records
+  typing_records: defineTable({
+    userId: v.id('users'),
+
+    // Practice details
+    practiceMode: v.string(), // "sentence" | "word" | "article"
+    categoryId: v.string(), // Category identifier
+
+    // Performance metrics
+    wpm: v.number(), // Words/characters per minute
+    accuracy: v.number(), // Percentage (0-100)
+    errorCount: v.number(), // Total errors made
+
+    // Time tracking
+    duration: v.number(), // Total time in seconds
+    charactersTyped: v.number(), // Total characters typed
+    sentencesCompleted: v.number(), // Number of sentences completed
+
+    // Challenge level
+    targetWpm: v.number(), // Target WPM for challenge (e.g., 200)
+    isTargetAchieved: v.boolean(), // Did user meet the target?
+
+    createdAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_mode', ['userId', 'practiceMode'])
+    .index('by_user_createdAt', ['userId', 'createdAt']),
+
+  // Typing Practice Texts (Admin Managed)
+  typing_texts: defineTable({
+    title: v.string(),
+    content: v.string(), // Full text or line-separated
+    type: v.string(), // "WORD" | "SENTENCE" | "ARTICLE"
+    description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    difficulty: v.optional(v.number()),
+    isPublic: v.boolean(),
+
+    // Metadata
+    author: v.optional(v.string()),
+    source: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_type', ['type'])
+    .index('by_category', ['category'])
+    .index('by_public', ['isPublic'])
+    .index('by_createdAt', ['createdAt']),
 });
