@@ -37,18 +37,13 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
 
   // Stats tracking
   const [startTime, setStartTime] = useState<number | null>(null);
-  // const [errorCount, setErrorCount] = useState(0); // Unused
+  const [errorCount, setErrorCount] = useState(0);
   const [totalTypedChars, setTotalTypedChars] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const prevInputLen = useRef(0); // Track previous input length to detect backspaces
 
   // Current target word
   const currentWord = words[currentIndex];
-
-  // Visible words range (show 2 prev + current + 2 next) - Unused locally but good for logic ref
-  /* const visibleRange = {
-        start: Math.max(0, currentIndex - 2),
-        end: Math.min(words.length - 1, currentIndex + 2),
-    }; */
 
   // Start timer on first input
   useEffect(() => {
@@ -68,19 +63,23 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
         // Sync stats to parent
         if (onStatsUpdate) {
           const wpm = duration > 0 ? Math.round(totalTypedChars / (duration / 60)) : 0;
-          const accuracy = 100; // Placeholder as errorCount is removed
+
+          const accuracy =
+            totalTypedChars > 0
+              ? Math.round((totalTypedChars / (totalTypedChars + errorCount)) * 100)
+              : 100;
 
           onStatsUpdate({
             wpm,
             accuracy: Math.min(100, Math.max(0, accuracy)),
-            errorCount: 0, // Always 0 as errorCount is removed
+            errorCount,
             duration,
           });
         }
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [startTime, totalTypedChars, onStatsUpdate]);
+  }, [startTime, totalTypedChars, errorCount, onStatsUpdate]);
 
   // Focus input on mount
   useEffect(() => {
@@ -101,7 +100,6 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
   }, []);
 
   // Check if input is a valid prefix of target (for visual feedback)
-  // Now handles consonant migration (e.g., "함" is valid for "하며")
   const isValidPrefix = useCallback((input: string, target: string): boolean => {
     if (!input) return true;
     if (!target) return false;
@@ -109,22 +107,11 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
       const targetJamo = disassemble(target);
       const inputJamo = disassemble(input);
 
-      // Case 1: Simple prefix match
       if (targetJamo.startsWith(inputJamo)) {
         return true;
       }
 
-      // Case 2: Consonant migration - input has extra trailing consonants
-      // that could be the start of remaining characters
-      if (inputJamo.startsWith(targetJamo.substring(0, inputJamo.length))) {
-        // Check if extra jamos in input match remaining target
-        // This is too strict, let's check a different way
-      }
-
-      // Case 2 (better): Check if inputJamo contains targetJamo prefix + extra consonants
-      // that match the start of the next part of target
       if (inputJamo.length > 0 && targetJamo.length > 0) {
-        // Find where input diverges from target
         let matchLen = 0;
         while (
           matchLen < inputJamo.length &&
@@ -134,11 +121,9 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
           matchLen++;
         }
 
-        // If input has extra chars after the common prefix
         if (matchLen > 0 && matchLen < inputJamo.length) {
           const extraInput = inputJamo.substring(matchLen);
           const remainingTarget = targetJamo.substring(matchLen);
-          // Check if extra input matches start of remaining target
           if (remainingTarget.startsWith(extraInput)) {
             return true;
           }
@@ -151,75 +136,17 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
     }
   }, []);
 
-  // Handle completion of all words
-  const handleAllComplete = useCallback(() => {
-    const duration = elapsedTime || 1;
-    const wpm = Math.round(totalTypedChars / (duration / 60));
-    const accuracy = 100; // Placeholder
-
-    onComplete({
-      wpm,
-      accuracy: Math.min(100, Math.max(0, accuracy)),
-      errorCount: 0,
-      duration,
-      wordsCompleted: words.length,
-    });
-  }, [elapsedTime, totalTypedChars, words.length, onComplete]);
-
-  // Use native event listener like useKoreanTyping does
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-
-    const handleInput = () => {
-      const newValue = el.value;
-      setUserInput(newValue);
-
-      // Check for word completion
-      if (currentWord && isComplete(newValue, currentWord.word)) {
-        // Word completed successfully
-        setTotalTypedChars(prev => prev + currentWord.word.length);
-
-        if (currentIndex < words.length - 1) {
-          // Move to next word
-          setCurrentIndex(prev => prev + 1);
-          setUserInput('');
-          el.value = '';
-        } else {
-          // All done - need to call this after state updates
-          setTimeout(() => handleAllComplete(), 0);
-        }
-      }
-    };
-
-    el.addEventListener('input', handleInput);
-    return () => el.removeEventListener('input', handleInput);
-  }, [currentWord, currentIndex, words.length, isComplete, handleAllComplete]);
-
-  // Reset input when word changes
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.value = '';
-      inputRef.current.focus();
-    }
-    setTimeout(() => setUserInput(''), 0);
-  }, [currentIndex]);
-
   // Calculate next jamo for hints
-  // Now handles consonant migration (e.g., when typing "하며" and input shows "함")
   const getNextJamo = useCallback(() => {
     if (!currentWord) return null;
     try {
       const tJamo = disassemble(currentWord.word);
       const iJamo = disassemble(userInput);
 
-      // Case 1: Simple prefix match
       if (tJamo.startsWith(iJamo)) {
         return tJamo[iJamo.length] || null;
       }
 
-      // Case 2: Consonant migration - input has extra consonants
-      // Find where input diverges from target
       let matchLen = 0;
       while (
         matchLen < iJamo.length &&
@@ -229,13 +156,11 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
         matchLen++;
       }
 
-      // If input has extra chars that match remaining target
       if (matchLen > 0 && matchLen < iJamo.length) {
         const extraInput = iJamo.substring(matchLen);
         const remainingTarget = tJamo.substring(matchLen);
 
         if (remainingTarget.startsWith(extraInput)) {
-          // Return the next jamo after the migrated consonants
           return remainingTarget[extraInput.length] || null;
         }
       }
@@ -249,7 +174,6 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
   const nextJamo = getNextJamo();
 
   // Calculate how many complete characters have been typed
-  // This compares cumulative jamo counts to determine completed chars
   const getCompletedChars = useCallback((): number => {
     if (!currentWord || !userInput) return 0;
 
@@ -258,13 +182,11 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
       let completedChars = 0;
       let jamoCount = 0;
 
-      // Count jamos for each character and see how many are fully completed
       for (let i = 0; i < currentWord.word.length; i++) {
         const charJamos = disassemble(currentWord.word[i]);
         jamoCount += charJamos.length;
 
         if (inputJamo.length >= jamoCount) {
-          // Check if the input jamos match for this character
           const targetJamosUpToChar = disassemble(currentWord.word.substring(0, i + 1));
           const inputJamosUpToChar = inputJamo.substring(0, targetJamosUpToChar.length);
 
@@ -286,14 +208,76 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
 
   const completedChars = getCompletedChars();
 
-  // Check if current input has an error (for display purposes only)
   const isError = currentWord && userInput ? !isValidPrefix(userInput, currentWord.word) : false;
 
-  // Progress indicator
-  // const progress = `${currentIndex + 1} / ${words.length}`;
+  // Handle completion of all words
+  const handleAllComplete = useCallback(() => {
+    const duration = elapsedTime || 1;
+    const wpm = Math.round(totalTypedChars / (duration / 60));
 
-  // Note: currentWpm and currentAccuracy calculations removed as they were unused vars
-  // but the logic is preserved in useEffect for stats sync
+    const accuracy =
+      totalTypedChars > 0
+        ? Math.round((totalTypedChars / (totalTypedChars + errorCount)) * 100)
+        : 100;
+
+    onComplete({
+      wpm,
+      accuracy: Math.min(100, Math.max(0, accuracy)),
+      errorCount,
+      duration,
+      wordsCompleted: words.length,
+    });
+  }, [elapsedTime, totalTypedChars, errorCount, words.length, onComplete]);
+
+  // Use native event listener
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+
+    const handleInput = () => {
+      const newValue = el.value;
+      const isBackspace = newValue.length < prevInputLen.current;
+      prevInputLen.current = newValue.length;
+
+      setUserInput(newValue);
+
+      // Check for errors
+      if (!isBackspace && newValue.length > 0 && currentWord) {
+        if (!isValidPrefix(newValue, currentWord.word)) {
+          setErrorCount(prev => prev + 1);
+        }
+      }
+
+      // Check for word completion
+      if (currentWord && isComplete(newValue, currentWord.word)) {
+        setTotalTypedChars(prev => prev + currentWord.word.length);
+
+        if (currentIndex < words.length - 1) {
+          setCurrentIndex(prev => prev + 1);
+          setUserInput('');
+          el.value = '';
+          prevInputLen.current = 0; // Reset input length tracking
+        } else {
+          setTimeout(() => handleAllComplete(), 0);
+        }
+      }
+    };
+
+    el.addEventListener('input', handleInput);
+    return () => el.removeEventListener('input', handleInput);
+  }, [currentWord, currentIndex, words.length, isComplete, handleAllComplete, isValidPrefix]);
+
+  // Reset input when word changes (safety check)
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.focus();
+    }
+    setTimeout(() => {
+      setUserInput('');
+      prevInputLen.current = 0;
+    }, 0);
+  }, [currentIndex]);
 
   if (!currentWord) {
     return <div className="text-slate-500">No words available</div>;
@@ -341,10 +325,10 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
                   <span className="relative inline-block">
                     <span
                       className={`text-6xl font-black transition-colors duration-150 leading-tight block
-                                            ${isCompleted ? 'text-slate-800' : ''}
-                                            ${isCurrent ? 'text-blue-600 scale-110' : ''} 
-                                            ${isRemaining ? 'text-slate-300 opacity-100' : ''}
-                                        `}
+                                      ${isCompleted ? 'text-slate-800' : ''}
+                                      ${isCurrent ? 'text-blue-600 scale-110' : ''} 
+                                      ${isRemaining ? 'text-slate-300 opacity-100' : ''}
+                                  `}
                     >
                       {/* Show actual user input if current, otherwise target char */}
                       {isCurrent && userInput[idx] ? userInput[idx] : char}
@@ -354,9 +338,9 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
                     {isCurrent && isFocused && (
                       <div
                         className={`
-                                                absolute top-1 bottom-1 w-1 bg-blue-500 rounded-full animate-pulse
-                                                ${userInput[idx] ? '-right-2' : '-left-2'}
-                                            `}
+                                          absolute top-1 bottom-1 w-1 bg-blue-500 rounded-full animate-pulse
+                                          ${userInput[idx] ? '-right-2' : '-left-2'}
+                                      `}
                       ></div>
                     )}
                   </span>
