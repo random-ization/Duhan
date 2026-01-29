@@ -293,7 +293,6 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
       className="flex-1 flex flex-col w-full h-full relative font-sans overflow-hidden focus:outline-none"
       style={{ touchAction: 'none', userSelect: 'none' }}
       onClick={() => inputRef.current?.focus()}
-      role="button"
       tabIndex={0}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
