@@ -27,7 +27,12 @@ interface WordPracticeProps {
   onBack: () => void;
 }
 
-export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, onStatsUpdate }) => {
+export const WordPractice: React.FC<WordPracticeProps> = ({
+  words,
+  onComplete,
+  onStatsUpdate,
+  onBack,
+}) => {
   const inputRef = useRef<HTMLInputElement>(null!);
 
   // Current word index
@@ -285,9 +290,16 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
 
   return (
     <div
-      className="flex-1 flex flex-col w-full h-full relative font-sans overflow-hidden"
+      className="flex-1 flex flex-col w-full h-full relative font-sans overflow-hidden focus:outline-none"
       style={{ touchAction: 'none', userSelect: 'none' }}
       onClick={() => inputRef.current?.focus()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          inputRef.current?.focus();
+        }
+      }}
     >
       {/* Word Carousel - V6 Separated Layout */}
       <div className="w-full max-w-5xl flex flex-col items-center justify-center relative -mt-8 flex-1">
@@ -318,7 +330,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
 
               return (
                 <div
-                  key={idx}
+                  key={`${char}-${idx}`}
                   className="relative flex flex-col items-center justify-end mx-0 leading-none min-w-[3.5rem]"
                 >
                   {/* Character Wrapper for Cursor Positioning */}
@@ -403,7 +415,12 @@ export const WordPractice: React.FC<WordPracticeProps> = ({ words, onComplete, o
         <div className="w-full max-w-[90rem] mx-auto">
           <div className="flex justify-between items-center mb-2 px-3">
             <div className="flex items-center gap-4 text-slate-500 text-xs font-medium">
-              <span className="flex items-center gap-1.5">📝 낱말연습</span>
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 hover:text-slate-800 transition-colors"
+              >
+                ← <span className="flex items-center gap-1.5">📝 낱말연습</span>
+              </button>
             </div>
             <div className="flex gap-1.5">
               <div className="w-2 h-2 rounded-full bg-orange-500 shadow-sm"></div>

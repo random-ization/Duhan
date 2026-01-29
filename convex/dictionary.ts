@@ -60,7 +60,7 @@ const POSTPOSITION_SUFFIXES = [
 ];
 
 function normalizeLookupWord(value: string): string {
-  return value.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim();
+  return value.replaceAll(/[^\p{L}\p{N}]+/gu, '').trim();
 }
 
 function stripPostposition(value: string): string {
@@ -104,13 +104,13 @@ export interface SearchResult {
 function parseSearchXML(xmlText: string): SearchResult {
   // Simple XML parsing without external dependencies
   const getTagContent = (xml: string, tag: string): string => {
-    const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'i');
-    const match = xml.match(regex);
+    const regex = new RegExp(String.raw`<${tag}>([\s\S]*?)</${tag}>`, 'i');
+    const match = regex.exec(xml);
     return match ? match[1].trim() : '';
   };
 
   const getAllTagContents = (xml: string, tag: string): string[] => {
-    const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'gi');
+    const regex = new RegExp(String.raw`<${tag}>([\s\S]*?)</${tag}>`, 'gi');
     const matches = [];
     let match;
     while ((match = regex.exec(xml)) !== null) {
@@ -119,9 +119,9 @@ function parseSearchXML(xmlText: string): SearchResult {
     return matches;
   };
 
-  const total = parseInt(getTagContent(xmlText, 'total')) || 0;
-  const start = parseInt(getTagContent(xmlText, 'start')) || 1;
-  const num = parseInt(getTagContent(xmlText, 'num')) || 10;
+  const total = Number.parseInt(getTagContent(xmlText, 'total'), 10) || 0;
+  const start = Number.parseInt(getTagContent(xmlText, 'start'), 10) || 1;
+  const num = Number.parseInt(getTagContent(xmlText, 'num'), 10) || 10;
 
   const items = getAllTagContents(xmlText, 'item');
   const entries: DictionaryEntry[] = items.map(item => {
@@ -139,14 +139,14 @@ function parseSearchXML(xmlText: string): SearchResult {
         const firstTranslation = translations[0] || '';
 
         return {
-          order: parseInt(getTagContent(sense, 'sense_order')) || index + 1,
+          order: Number.parseInt(getTagContent(sense, 'sense_order'), 10) || index + 1,
           definition: getTagContent(sense, 'definition'),
           translation: firstTranslation
             ? {
-              lang: getTagContent(firstTranslation, 'trans_lang'),
-              word: getTagContent(firstTranslation, 'trans_word'),
-              definition: getTagContent(firstTranslation, 'trans_dfn'),
-            }
+                lang: getTagContent(firstTranslation, 'trans_lang'),
+                word: getTagContent(firstTranslation, 'trans_word'),
+                definition: getTagContent(firstTranslation, 'trans_dfn'),
+              }
             : undefined,
         };
       }),
@@ -193,8 +193,8 @@ async function fetchKrdictSearch(args: {
 
   const xmlText = await response.text();
   if (xmlText.includes('<error>')) {
-    const errorCode = xmlText.match(/<error_code>(\d+)<\/error_code>/)?.[1];
-    const errorMsg = xmlText.match(/<message>([^<]+)<\/message>/)?.[1];
+    const errorCode = /<error_code>(\d+)<\/error_code>/.exec(xmlText)?.[1];
+    const errorMsg = /<message>([^<]+)<\/message>/.exec(xmlText)?.[1];
     throw new Error(`KRDICT Error ${errorCode}: ${errorMsg}`);
   }
   return parseSearchXML(xmlText);
@@ -236,10 +236,7 @@ const getGrammarPointsForMatchingQueryRef = makeFunctionReference<
   Array<GrammarMatch & { searchPatterns: string[] }>
 >;
 
-
-let cachedGrammarPoints:
-  | Array<GrammarMatch & { searchPatterns: string[] }>
-  | null = null;
+let cachedGrammarPoints: Array<GrammarMatch & { searchPatterns: string[] }> | null = null;
 let cachedGrammarPointsAt = 0;
 
 async function getGrammarPointsForMatching(
@@ -253,7 +250,12 @@ async function getGrammarPointsForMatching(
   return all;
 }
 
-function pickWordTokens(tokens: TokenInfo[], text: string, charIndex?: number, surfaceHint?: string) {
+function pickWordTokens(
+  tokens: TokenInfo[],
+  text: string,
+  charIndex?: number,
+  surfaceHint?: string
+) {
   let anchor: TokenInfo | undefined;
   if (charIndex !== undefined) {
     anchor = tokens.find(t => charIndex >= t.position && charIndex < t.position + t.length);
@@ -265,14 +267,15 @@ function pickWordTokens(tokens: TokenInfo[], text: string, charIndex?: number, s
 
   const group = tokens.filter(
     t =>
-      t.wordPosition === anchor!.wordPosition &&
-      t.sentPosition === anchor!.sentPosition &&
-      t.lineNumber === anchor!.lineNumber
+      t.wordPosition === anchor.wordPosition &&
+      t.sentPosition === anchor.sentPosition &&
+      t.lineNumber === anchor.lineNumber
   );
 
   const begin = Math.min(...group.map(t => t.position));
   const end = Math.max(...group.map(t => t.position + t.length));
-  const surface = begin >= 0 && end <= text.length ? text.slice(begin, end) : surfaceHint || anchor.str;
+  const surface =
+    begin >= 0 && end <= text.length ? text.slice(begin, end) : surfaceHint || anchor.str;
   return { group, begin, end, surface };
 }
 
@@ -323,7 +326,13 @@ export const lookupWithMorphology = action({
           .filter(g => g.score > 0)
           .sort((a, b) => b.score - a.score)
           .slice(0, 5)
-          .map(g => ({ id: g.id, title: g.title, summary: g.summary, type: g.type, level: g.level }));
+          .map(g => ({
+            id: g.id,
+            title: g.title,
+            summary: g.summary,
+            type: g.type,
+            level: g.level,
+          }));
         grammarMatches = scored;
       }
     } catch {
@@ -368,7 +377,13 @@ export const lookupWithMorphology = action({
 
     return {
       token: tokenGroup
-        ? { surface: surfaceFromContext, lemma, pos: pos ?? null, begin: tokenGroup.begin, len: tokenGroup.end - tokenGroup.begin }
+        ? {
+            surface: surfaceFromContext,
+            lemma,
+            pos: pos ?? null,
+            begin: tokenGroup.begin,
+            len: tokenGroup.end - tokenGroup.begin,
+          }
         : { surface: args.surface, lemma, pos: pos ?? null, begin: null, len: null },
       morphemes: morphemes.map(t => ({
         form: t.str,
@@ -378,13 +393,13 @@ export const lookupWithMorphology = action({
       })),
       wordFromDb: wordFromDb
         ? {
-          word: wordFromDb.word,
-          meaning: wordFromDb.meaning,
-          partOfSpeech: wordFromDb.partOfSpeech,
-          pronunciation: wordFromDb.pronunciation,
-          hanja: wordFromDb.hanja,
-          audioUrl: wordFromDb.audioUrl,
-        }
+            word: wordFromDb.word,
+            meaning: wordFromDb.meaning,
+            partOfSpeech: wordFromDb.partOfSpeech,
+            pronunciation: wordFromDb.pronunciation,
+            hanja: wordFromDb.hanja,
+            audioUrl: wordFromDb.audioUrl,
+          }
         : null,
       grammarMatches,
       krdict,
@@ -448,8 +463,8 @@ export const searchDictionary = action({
 
       // Check for error response
       if (xmlText.includes('<error>')) {
-        const errorCode = xmlText.match(/<error_code>(\d+)<\/error_code>/)?.[1];
-        const errorMsg = xmlText.match(/<message>([^<]+)<\/message>/)?.[1];
+        const errorCode = /<error_code>(\d+)<\/error_code>/.exec(xmlText)?.[1];
+        const errorMsg = /<message>([^<]+)<\/message>/.exec(xmlText)?.[1];
         throw new Error(`KRDICT Error ${errorCode}: ${errorMsg}`);
       }
 
@@ -506,8 +521,8 @@ export const getWordDetail = action({
 
       // Check for error response
       if (xmlText.includes('<error>')) {
-        const errorCode = xmlText.match(/<error_code>(\d+)<\/error_code>/)?.[1];
-        const errorMsg = xmlText.match(/<message>([^<]+)<\/message>/)?.[1];
+        const errorCode = /<error_code>(\d+)<\/error_code>/.exec(xmlText)?.[1];
+        const errorMsg = /<message>([^<]+)<\/message>/.exec(xmlText)?.[1];
         throw new Error(`KRDICT Error ${errorCode}: ${errorMsg}`);
       }
 
