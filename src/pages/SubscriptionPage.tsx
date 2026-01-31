@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import { useAction } from 'convex/react';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
@@ -15,21 +15,33 @@ import { logger } from '../utils/logger';
 
 const SubscriptionPage: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);
   const createCheckoutSession = useAction(
     aRef<
-      { plan: 'basic' | 'premium' | 'lifetime'; userId: string; userEmail: string },
+      {
+        plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
+        userId?: string;
+        userEmail?: string;
+        userName?: string;
+        region?: string;
+      },
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
   );
 
+  const showLocalizedPromo =
+    i18n.language === 'zh' ||
+    i18n.language === 'vi' ||
+    i18n.language === 'mn' ||
+    i18n.language.startsWith('zh-');
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <SEO
+      <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
@@ -85,9 +97,9 @@ const SubscriptionPage: React.FC = () => {
                 t('coursesOverview.feature1List1'),
                 t('coursesOverview.feature1List2'),
                 t('coursesOverview.feature1List3'),
-              ].map((item, i) => (
+              ].map((item) => (
                 <li
-                  key={i}
+                  key={item}
                   className="flex items-start gap-3 text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
                   <svg
@@ -131,8 +143,8 @@ const SubscriptionPage: React.FC = () => {
                 t('coursesOverview.feature2List1'),
                 t('coursesOverview.feature2List2'),
                 t('coursesOverview.feature2List3'),
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm font-medium text-slate-200">
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm font-medium text-slate-200">
                   <svg
                     className="w-5 h-5 text-indigo-400 shrink-0"
                     fill="none"
@@ -236,9 +248,9 @@ const SubscriptionPage: React.FC = () => {
                     free: '—',
                     premium: <span className="text-green-500">✔</span>,
                   },
-                ].map((row, i) => (
+                ].map((row) => (
                   <tr
-                    key={i}
+                    key={row.label}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <td className="p-4 pl-8 font-bold text-slate-700 dark:text-slate-200">
@@ -260,11 +272,12 @@ const SubscriptionPage: React.FC = () => {
           onSubscribe={async plan => {
             try {
               const { checkoutUrl } = await createCheckoutSession({
-                plan: plan as 'basic' | 'premium' | 'lifetime',
+                plan: plan as 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME',
                 userId: user?.id?.toString() || '',
                 userEmail: user?.email || '',
+                region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
               });
-              window.location.href = checkoutUrl;
+              globalThis.location.href = checkoutUrl;
             } catch (error) {
               const err = error as Error;
               logger.error('Checkout failed:', err);

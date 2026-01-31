@@ -6,16 +6,15 @@ import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
 import { notify } from '../../utils/notify';
 import { logger } from '../../utils/logger';
 import {
-  BarChart3,
-  BookOpen,
   Database,
   Loader2,
   Search,
-  Edit2,
-  X,
-  Save,
   Download,
 } from 'lucide-react';
+import VocabWordRow from './VocabWordRow';
+import VocabEditModal from './VocabEditModal';
+import VocabStats from './VocabStats';
+import VocabFilters from './VocabFilters';
 
 interface WordRow {
   _id: string;
@@ -79,7 +78,7 @@ const VocabDashboard: React.FC = () => {
   const posOptions = useMemo(() => {
     if (!words) return [];
     const posSet = new Set((words as WordRow[]).map(w => w.partOfSpeech || '').filter(Boolean));
-    return Array.from(posSet).sort();
+    return Array.from(posSet).sort((a, b) => a.localeCompare(b));
   }, [words]);
 
   const filteredWords = useMemo(() => {
@@ -92,7 +91,7 @@ const VocabDashboard: React.FC = () => {
         w =>
           w.word.toLowerCase().includes(term) ||
           w.meaning.toLowerCase().includes(term) ||
-          (w.meaningEn && w.meaningEn.toLowerCase().includes(term))
+          w.meaningEn?.toLowerCase().includes(term)
       );
     }
 
@@ -106,8 +105,8 @@ const VocabDashboard: React.FC = () => {
       result = result.filter(w => w.partOfSpeech === posFilter);
     }
 
-    const fromUnit = unitFrom ? parseInt(unitFrom) : null;
-    const toUnit = unitTo ? parseInt(unitTo) : null;
+    const fromUnit = unitFrom ? Number.parseInt(unitFrom, 10) : null;
+    const toUnit = unitTo ? Number.parseInt(unitTo, 10) : null;
     if (fromUnit !== null || toUnit !== null) {
       result = result.filter(w => {
         const unit = w.unitId || 0;
@@ -209,6 +208,35 @@ const VocabDashboard: React.FC = () => {
     XLSX.writeFile(wb, `词汇导出_${courseName}_${date}.xlsx`);
   };
 
+  const currentCourseName = useMemo(() => {
+    if (selectedCourse === 'ALL') return '全部';
+    return institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || '未选择';
+  }, [selectedCourse, institutes]);
+
+  const paginationStatus = useMemo(() => {
+    if (status === 'CanLoadMore') {
+      return (
+        <button
+          onClick={() => loadMore(ITEMS_PER_PAGE)}
+          className="px-6 py-2 bg-white border border-zinc-300 rounded-lg shadow-sm text-sm font-medium hover:bg-zinc-50 text-zinc-700 transition-colors flex items-center gap-2"
+          aria-label="加载更多词条"
+        >
+          <Download className="w-4 h-4" />
+          加载更多
+        </button>
+      );
+    }
+    if (status === 'LoadingMore') {
+      return (
+        <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          加载中...
+        </div>
+      );
+    }
+    return <div className="text-sm text-zinc-400 font-medium">没有更多数据了</div>;
+  }, [status, loadMore]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -224,12 +252,14 @@ const VocabDashboard: React.FC = () => {
               onChange={e => setSearch(e.target.value)}
               placeholder="搜索单词或释义"
               className="pl-9 pr-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900"
+              aria-label="搜索单词或释义"
             />
           </div>
           <select
             value={selectedCourse}
             onChange={e => setSelectedCourse(e.target.value)}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
+            aria-label="选择教材"
           >
             <option value="ALL">全部教材</option>
             {(institutes || []).map(inst => {
@@ -246,6 +276,7 @@ const VocabDashboard: React.FC = () => {
           <button
             onClick={handleExport}
             className="px-3 py-2 rounded-lg bg-zinc-900 text-white text-sm font-bold flex items-center gap-2 hover:bg-zinc-800 transition-colors"
+            aria-label="导出 Excel"
           >
             <Download className="w-4 h-4" />
             导出 Excel
@@ -253,100 +284,24 @@ const VocabDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
-        <span className="text-xs font-bold text-zinc-500 uppercase">筛选：</span>
+      <VocabFilters
+        meaningFilter={meaningFilter}
+        setMeaningFilter={setMeaningFilter}
+        posFilter={posFilter}
+        setPosFilter={setPosFilter}
+        posOptions={posOptions}
+        unitFrom={unitFrom}
+        setUnitFrom={setUnitFrom}
+        unitTo={unitTo}
+        setUnitTo={setUnitTo}
+        filteredCount={filteredWords.length}
+      />
 
-        <div className="flex items-center gap-1 bg-white rounded-lg border border-zinc-200 p-0.5">
-          <button
-            onClick={() => setMeaningFilter('all')}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'all' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
-          >
-            全部
-          </button>
-          <button
-            onClick={() => setMeaningFilter('filled')}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'filled' ? 'bg-emerald-600 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
-          >
-            已填充
-          </button>
-          <button
-            onClick={() => setMeaningFilter('empty')}
-            className={`px-2 py-1 text-xs font-medium rounded ${meaningFilter === 'empty' ? 'bg-amber-500 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
-          >
-            未填充
-          </button>
-        </div>
-
-        <select
-          value={posFilter}
-          onChange={e => setPosFilter(e.target.value)}
-          className="px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium"
-        >
-          <option value="ALL">全部词性</option>
-          {posOptions.map(pos => (
-            <option key={pos} value={pos}>
-              {pos}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-zinc-500">课数：</span>
-          <input
-            type="number"
-            value={unitFrom}
-            onChange={e => setUnitFrom(e.target.value)}
-            placeholder="从"
-            className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
-          />
-          <span className="text-zinc-400">-</span>
-          <input
-            type="number"
-            value={unitTo}
-            onChange={e => setUnitTo(e.target.value)}
-            placeholder="到"
-            className="w-14 px-2 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs"
-          />
-        </div>
-
-        <span className="ml-auto text-xs text-zinc-500">
-          筛选结果：<span className="font-bold text-zinc-900">{filteredWords.length}</span> 条
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(24,24,27,0.25)] flex items-center gap-3">
-          <div className="p-3 bg-zinc-900 text-white rounded-lg">
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">词条总数</p>
-            <p className="text-2xl font-black text-zinc-900">{totalWords}</p>
-          </div>
-        </div>
-        <div className="p-4 bg-white border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(24,24,27,0.25)] flex items-center gap-3">
-          <div className="p-3 bg-emerald-600 text-white rounded-lg">
-            <BarChart3 className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">精通词汇</p>
-            <p className="text-2xl font-black text-zinc-900">{stats?.mastered ?? 0}</p>
-          </div>
-        </div>
-        <div className="p-4 bg-white border-2 border-zinc-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(24,24,27,0.25)] flex items-center gap-3">
-          <div className="p-3 bg-indigo-600 text-white rounded-lg">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">当前教材</p>
-            <p className="text-sm font-black text-zinc-900">
-              {selectedCourse === 'ALL'
-                ? '全部'
-                : institutes?.find(i => (i.id || i._id) === selectedCourse)?.name || '未选择'}
-            </p>
-          </div>
-        </div>
-      </div>
+      <VocabStats
+        totalWords={totalWords}
+        mastered={stats?.mastered ?? 0}
+        currentCourseName={currentCourseName}
+      />
 
       <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-zinc-50">
@@ -361,12 +316,7 @@ const VocabDashboard: React.FC = () => {
           </div>
         </div>
 
-        {!words ? (
-          <div className="flex items-center justify-center py-10 text-zinc-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
-            正在从 Convex 读取数据...
-          </div>
-        ) : (
+        {words ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-zinc-100 text-zinc-600 uppercase text-xs">
@@ -384,53 +334,11 @@ const VocabDashboard: React.FC = () => {
               </thead>
               <tbody>
                 {paginatedWords.map(word => (
-                  <tr
+                  <VocabWordRow
                     key={(word as { appearanceId?: string }).appearanceId ?? word._id}
-                    className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors"
-                  >
-                    <td className="px-3 py-2 text-zinc-600">{word.unitId ?? '-'}</td>
-                    <td className="px-3 py-2 font-bold text-zinc-900">{word.word}</td>
-                    <td className="px-3 py-2 text-zinc-500 text-xs">{word.partOfSpeech || '-'}</td>
-                    <td
-                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
-                      title={word.meaningMn}
-                    >
-                      {word.meaningMn || '-'}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
-                      title={word.meaningVi}
-                    >
-                      {word.meaningVi || '-'}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
-                      title={word.meaningEn}
-                    >
-                      {word.meaningEn || '-'}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-zinc-600 max-w-[120px] truncate"
-                      title={word.meaning}
-                    >
-                      {word.meaning}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-zinc-500 text-xs max-w-[150px] truncate"
-                      title={word.exampleSentence}
-                    >
-                      {word.exampleSentence || '-'}
-                    </td>
-                    <td className="px-3 py-2">
-                      <button
-                        onClick={() => openEditModal(word)}
-                        className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors"
-                        title="编辑"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
+                    word={word}
+                    onEdit={openEditModal}
+                  />
                 ))}
                 {paginatedWords.length === 0 && (
                   <tr>
@@ -442,206 +350,29 @@ const VocabDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="flex items-center justify-center py-10 text-zinc-500">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            正在从 Convex 读取数据...
+          </div>
         )}
 
         <div className="flex flex-col items-center justify-center gap-2 py-4 border-t border-zinc-200 bg-zinc-50">
           <div className="text-xs text-zinc-500 mb-2">
             已加载 {words?.length || 0} 个词条 ({filteredWords.length} 显示)
           </div>
-          {status === 'CanLoadMore' ? (
-            <button
-              onClick={() => loadMore(ITEMS_PER_PAGE)}
-              className="px-6 py-2 bg-white border border-zinc-300 rounded-lg shadow-sm text-sm font-medium hover:bg-zinc-50 text-zinc-700 transition-colors flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              加载更多
-            </button>
-          ) : status === 'LoadingMore' ? (
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              加载中...
-            </div>
-          ) : (
-            <div className="text-sm text-zinc-400 font-medium">没有更多数据了</div>
-          )}
+          {paginationStatus}
         </div>
       </div>
 
-      {editingWord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
-              <h3 className="text-lg font-bold text-zinc-900">编辑词汇: {editingWord.word}</h3>
-              <button onClick={closeEditModal} className="p-2 rounded-lg hover:bg-zinc-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">韩语</label>
-                  <input
-                    value={editForm.word || ''}
-                    onChange={e => setEditForm({ ...editForm, word: e.target.value })}
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">词性</label>
-                  <input
-                    value={editForm.partOfSpeech || ''}
-                    onChange={e => setEditForm({ ...editForm, partOfSpeech: e.target.value })}
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">单元</label>
-                  <input
-                    type="number"
-                    value={editForm.unitId ?? ''}
-                    onChange={e =>
-                      setEditForm({
-                        ...editForm,
-                        unitId: e.target.value ? Number(e.target.value) : undefined,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                  />
-                </div>
-              </div>
-              <div className="border-t border-zinc-200 pt-4">
-                <h4 className="text-sm font-bold text-zinc-800 mb-3">多语言释义</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                      释义(CH) 中文
-                    </label>
-                    <input
-                      value={editForm.meaning || ''}
-                      onChange={e => setEditForm({ ...editForm, meaning: e.target.value })}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                      释义(EN) English
-                    </label>
-                    <input
-                      value={editForm.meaningEn || ''}
-                      onChange={e => setEditForm({ ...editForm, meaningEn: e.target.value })}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                      释义(VN) Tiếng Việt
-                    </label>
-                    <input
-                      value={editForm.meaningVi || ''}
-                      onChange={e => setEditForm({ ...editForm, meaningVi: e.target.value })}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                      释义(MN) Монгол
-                    </label>
-                    <input
-                      value={editForm.meaningMn || ''}
-                      onChange={e => setEditForm({ ...editForm, meaningMn: e.target.value })}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="border-t border-zinc-200 pt-4">
-                <h4 className="text-sm font-bold text-zinc-800 mb-3">例句</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">韩语例句</label>
-                    <textarea
-                      value={editForm.exampleSentence || ''}
-                      onChange={e => setEditForm({ ...editForm, exampleSentence: e.target.value })}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 mb-1">
-                        例句翻译(CH)
-                      </label>
-                      <input
-                        value={editForm.exampleMeaning || ''}
-                        onChange={e => setEditForm({ ...editForm, exampleMeaning: e.target.value })}
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 mb-1">
-                        例句翻译(EN)
-                      </label>
-                      <input
-                        value={editForm.exampleMeaningEn || ''}
-                        onChange={e =>
-                          setEditForm({ ...editForm, exampleMeaningEn: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 mb-1">
-                        例句翻译(VN)
-                      </label>
-                      <input
-                        value={editForm.exampleMeaningVi || ''}
-                        onChange={e =>
-                          setEditForm({ ...editForm, exampleMeaningVi: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 mb-1">
-                        例句翻译(MN)
-                      </label>
-                      <input
-                        value={editForm.exampleMeaningMn || ''}
-                        onChange={e =>
-                          setEditForm({ ...editForm, exampleMeaningMn: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-200 bg-zinc-50">
-              <button
-                onClick={closeEditModal}
-                className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <VocabEditModal
+        editingWord={editingWord}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        isSaving={isSaving}
+        onClose={closeEditModal}
+        onSave={handleSave}
+      />
     </div>
   );
 };

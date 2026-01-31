@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAction } from 'convex/react';
 import { ShieldCheck, Play, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { aRef } from '../../utils/convexRefs';
@@ -88,25 +88,40 @@ export default function RouteAuditPanel() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {checks.map(([name, c]) => {
-                  const status = c.skipped ? 'SKIPPED' : c.ok ? 'PASS' : 'FAIL';
+                  let status: 'PASS' | 'FAIL' | 'SKIPPED';
+                  if (c.skipped) {
+                    status = 'SKIPPED';
+                  } else if (c.ok) {
+                    status = 'PASS';
+                  } else {
+                    status = 'FAIL';
+                  }
+
+                  let statusBadge;
+                  if (status === 'PASS') {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-black">
+                        <CheckCircle2 className="w-3 h-3" /> PASS
+                      </span>
+                    );
+                  } else if (status === 'SKIPPED') {
+                    statusBadge = (
+                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-black">
+                        SKIPPED
+                      </span>
+                    );
+                  } else {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-black">
+                        <AlertCircle className="w-3 h-3" /> FAIL
+                      </span>
+                    );
+                  }
+
                   return (
                     <tr key={name} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-mono text-xs text-slate-600">{name}</td>
-                      <td className="px-4 py-3">
-                        {status === 'PASS' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-black">
-                            <CheckCircle2 className="w-3 h-3" /> PASS
-                          </span>
-                        ) : status === 'SKIPPED' ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-black">
-                            SKIPPED
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-black">
-                            <AlertCircle className="w-3 h-3" /> FAIL
-                          </span>
-                        )}
-                      </td>
+                      <td className="px-4 py-3">{statusBadge}</td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-600">
                         {c.durationMs}ms
                       </td>

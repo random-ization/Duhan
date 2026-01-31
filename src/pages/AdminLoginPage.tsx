@@ -16,7 +16,7 @@ const AdminLoginPage: React.FC = () => {
   const { user } = useAuth();
   const { signIn } = useAuthActions();
   const navigate = useLocalizedNavigate();
-  const postAuthRedirectUrl = `${window.location.origin}/admin`;
+  const postAuthRedirectUrl = `${globalThis.location.origin}/admin`;
 
   // If already logged in as admin, redirect to admin panel
   useEffect(() => {
@@ -77,8 +77,11 @@ const AdminLoginPage: React.FC = () => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">邮箱地址</label>
+              <label htmlFor="admin-email" className="block text-sm font-bold text-zinc-700 mb-2">
+                邮箱地址
+              </label>
               <input
+                id="admin-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -90,9 +93,12 @@ const AdminLoginPage: React.FC = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">密码</label>
+              <label htmlFor="admin-password" className="block text-sm font-bold text-zinc-700 mb-2">
+                密码
+              </label>
               <div className="relative">
                 <input
+                  id="admin-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}

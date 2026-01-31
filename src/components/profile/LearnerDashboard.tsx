@@ -116,13 +116,7 @@ export const LearnerDashboard: React.FC = () => {
                 </div>
                 <div className="text-sm text-zinc-500 mb-4">
                   第 {stats.currentProgress.unit} 课 ·{' '}
-                  {stats.currentProgress.module === 'vocab'
-                    ? '词汇'
-                    : stats.currentProgress.module === 'reading'
-                      ? '阅读'
-                      : stats.currentProgress.module === 'grammar'
-                        ? '语法'
-                        : stats.currentProgress.module}
+                  {getModuleName(stats.currentProgress.module)}
                 </div>
               </div>
               <button className="w-full py-3 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all">
@@ -178,6 +172,19 @@ export const LearnerDashboard: React.FC = () => {
       )}
     </div>
   );
+};
+
+const getModuleName = (module: string) => {
+  switch (module) {
+    case 'vocab':
+      return '词汇';
+    case 'reading':
+      return '阅读';
+    case 'grammar':
+      return '语法';
+    default:
+      return module;
+  }
 };
 
 export default LearnerDashboard;

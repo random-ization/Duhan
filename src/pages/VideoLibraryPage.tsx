@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { Video, Play, Eye, Clock, Loader2 } from 'lucide-react';
+import { Video, Play, Eye, Clock } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
@@ -53,28 +53,6 @@ const VideoLibraryPage: React.FC = () => {
   const videos = videoData;
   const loading = convexVideos === undefined;
 
-  // Early return for loading state - MUST be after all hooks
-  if (loading) {
-    return <VideoLibrarySkeleton />;
-  }
-
-  // Legacy fetch removed
-  /*
-    const fetchVideos = async () => {
-        try {
-            setLoading(true);
-            const response = await api.video.list(activeLevel || undefined);
-            if (response.success) {
-                setVideos(response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch videos:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    */
-
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '--:--';
     const mins = Math.floor(seconds / 60);
@@ -106,6 +84,104 @@ const VideoLibraryPage: React.FC = () => {
       default:
         return level;
     }
+  };
+
+  const getLocale = (lang: string) => {
+    if (lang === 'zh') return 'zh-CN';
+    if (lang === 'en') return 'en-US';
+    if (lang === 'vi') return 'vi-VN';
+    return 'mn-MN';
+  };
+
+  if (loading) {
+    return <VideoLibrarySkeleton />;
+  }
+
+  const renderContent = () => {
+    if (videos.length === 0) {
+      return (
+        <div className="text-center py-20">
+          <Video className="w-20 h-20 mx-auto mb-4 text-zinc-300" />
+          <p className="text-xl font-bold text-zinc-400">
+            {labels.dashboard?.video?.noVideos || 'No Videos'}
+          </p>
+          <p className="text-zinc-400 mt-2">
+            {activeLevel
+              ? labels.dashboard?.video?.noVideosLevel || 'No videos in this level'
+              : labels.dashboard?.video?.preparing || 'Content is being prepared...'}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {videos.map(video => (
+          <button
+            key={video.id}
+            onClick={() => navigate(`/video/${video.id}`)}
+            className="bg-[#FDFBF7] rounded-2xl border-2 border-zinc-900 overflow-hidden cursor-pointer hover:shadow-[6px_6px_0px_0px_#18181B] transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-left w-full p-0 block"
+          >
+            {/* Thumbnail */}
+            <div className="aspect-video bg-zinc-200 relative overflow-hidden">
+              {video.thumbnailUrl ? (
+                <img
+                  src={video.thumbnailUrl}
+                  alt={video.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                  <Video className="w-16 h-16 text-indigo-300" />
+                </div>
+              )}
+
+              {/* Play Button Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
+                  <Play className="w-7 h-7 text-indigo-600 ml-1" />
+                </div>
+              </div>
+
+              {/* Duration Badge */}
+              <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 text-white text-xs font-mono rounded-lg">
+                {formatDuration(video.duration)}
+              </div>
+
+              {/* Level Badge */}
+              <div
+                className={`absolute top-3 left-3 px-3 py-1 text-xs font-bold rounded-lg border ${getLevelStyle(video.level)}`}
+              >
+                {getLevelLabel(video.level)}
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-5">
+              <h3 className="font-black text-lg text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                {video.title}
+              </h3>
+              {video.description && (
+                <p className="text-sm text-zinc-500 mt-2 line-clamp-2">{video.description}</p>
+              )}
+              <div className="flex items-center gap-4 mt-4 text-sm text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <Eye className="w-4 h-4" />
+                  {(labels.dashboard?.video?.views || '{count} views').replace(
+                    '{count}',
+                    String(video.views)
+                  )}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {new Date(video.createdAt).toLocaleDateString(getLocale(language))}
+                </span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -154,100 +230,7 @@ const VideoLibraryPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 pb-12">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          </div>
-        ) : videos.length === 0 ? (
-          <div className="text-center py-20">
-            <Video className="w-20 h-20 mx-auto mb-4 text-zinc-300" />
-            <p className="text-xl font-bold text-zinc-400">
-              {labels.dashboard?.video?.noVideos || 'No Videos'}
-            </p>
-            <p className="text-zinc-400 mt-2">
-              {activeLevel
-                ? labels.dashboard?.video?.noVideosLevel || 'No videos in this level'
-                : labels.dashboard?.video?.preparing || 'Content is being prepared...'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {videos.map(video => (
-              <div
-                key={video.id}
-                onClick={() => navigate(`/video/${video.id}`)}
-                className="bg-[#FDFBF7] rounded-2xl border-2 border-zinc-900 overflow-hidden cursor-pointer hover:shadow-[6px_6px_0px_0px_#18181B] transition-all group"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-video bg-zinc-200 relative overflow-hidden">
-                  {video.thumbnailUrl ? (
-                    <img
-                      src={video.thumbnailUrl}
-                      alt={video.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                      <Video className="w-16 h-16 text-indigo-300" />
-                    </div>
-                  )}
-
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
-                      <Play className="w-7 h-7 text-indigo-600 ml-1" />
-                    </div>
-                  </div>
-
-                  {/* Duration Badge */}
-                  <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 text-white text-xs font-mono rounded-lg">
-                    {formatDuration(video.duration)}
-                  </div>
-
-                  {/* Level Badge */}
-                  <div
-                    className={`absolute top-3 left-3 px-3 py-1 text-xs font-bold rounded-lg border ${getLevelStyle(video.level)}`}
-                  >
-                    {getLevelLabel(video.level)}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                  <h3 className="font-black text-lg text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                    {video.title}
-                  </h3>
-                  {video.description && (
-                    <p className="text-sm text-zinc-500 mt-2 line-clamp-2">{video.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 mt-4 text-sm text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-4 h-4" />
-                      {(labels.dashboard?.video?.views || '{count} views').replace(
-                        '{count}',
-                        String(video.views)
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {new Date(video.createdAt).toLocaleDateString(
-                        language === 'zh'
-                          ? 'zh-CN'
-                          : language === 'en'
-                            ? 'en-US'
-                            : language === 'vi'
-                              ? 'vi-VN'
-                              : 'mn-MN'
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <div className="max-w-6xl mx-auto px-6 pb-12">{renderContent()}</div>
     </div>
   );
 };

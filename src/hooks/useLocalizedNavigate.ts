@@ -3,6 +3,24 @@ import { useCallback } from 'react';
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, isValidLanguage } from '../components/LanguageRouter';
 
 /**
+ * getLocalizedPath - Helper function to add language prefix to a path
+ */
+export const getLocalizedPath = (path: string, lang: string): string => {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+    // Check if already has language prefix
+    const hasLangPrefix = SUPPORTED_LANGUAGES.some(l =>
+        normalizedPath === `/${l}` || normalizedPath.startsWith(`/${l}/`)
+    );
+
+    if (hasLangPrefix) {
+        return normalizedPath;
+    }
+
+    return `/${lang}${normalizedPath}`;
+};
+
+/**
  * useLocalizedNavigate - Custom hook for navigation with language prefix
  * 
  * Automatically prepends the current language to navigation paths.
@@ -20,45 +38,26 @@ export const useLocalizedNavigate = () => {
 
     const localizedNavigate = useCallback(
         (to: To | number, options?: NavigateOptions) => {
-            // Handle numeric navigation (back/forward)
+            // 1. Handle numeric navigation (back/forward)
             if (typeof to === 'number') {
                 navigate(to);
                 return;
             }
 
-            // Handle string paths
+            // 2. Handle string paths
             if (typeof to === 'string') {
-                // Don't modify if already has language prefix
-                const hasLangPrefix = SUPPORTED_LANGUAGES.some(l =>
-                    to === `/${l}` || to.startsWith(`/${l}/`)
-                );
-
-                if (hasLangPrefix) {
-                    navigate(to, options);
-                } else {
-                    // Prepend language prefix
-                    const normalizedPath = to.startsWith('/') ? to : `/${to}`;
-                    navigate(`/${currentLang}${normalizedPath}`, options);
-                }
+                navigate(getLocalizedPath(to, currentLang), options);
                 return;
             }
 
-            // Handle object navigation (To type with pathname)
+            // 3. Handle object navigation (To type with pathname)
             if (typeof to === 'object' && to.pathname) {
-                const hasLangPrefix = SUPPORTED_LANGUAGES.some(l =>
-                    to.pathname === `/${l}` || to.pathname?.startsWith(`/${l}/`)
-                );
-
-                if (hasLangPrefix) {
-                    navigate(to, options);
-                } else {
-                    const normalizedPath = to.pathname.startsWith('/') ? to.pathname : `/${to.pathname}`;
-                    navigate({ ...to, pathname: `/${currentLang}${normalizedPath}` }, options);
-                }
+                const localizedPath = getLocalizedPath(to.pathname, currentLang);
+                navigate({ ...to, pathname: localizedPath }, options);
                 return;
             }
 
-            // Fallback
+            // 4. Fallback
             navigate(to, options);
         },
         [navigate, currentLang]
@@ -73,24 +72,6 @@ export const useLocalizedNavigate = () => {
 export const useCurrentLanguage = () => {
     const { lang } = useParams<{ lang: string }>();
     return lang && isValidLanguage(lang) ? lang : DEFAULT_LANGUAGE;
-};
-
-/**
- * getLocalizedPath - Helper function to add language prefix to a path
- */
-export const getLocalizedPath = (path: string, lang: string): string => {
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-    // Check if already has language prefix
-    const hasLangPrefix = SUPPORTED_LANGUAGES.some(l =>
-        normalizedPath === `/${l}` || normalizedPath.startsWith(`/${l}/`)
-    );
-
-    if (hasLangPrefix) {
-        return normalizedPath;
-    }
-
-    return `/${lang}${normalizedPath}`;
 };
 
 export default useLocalizedNavigate;

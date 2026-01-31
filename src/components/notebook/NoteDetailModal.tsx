@@ -30,6 +30,89 @@ interface NoteDetailModalProps {
   onDelete: (id: string) => void;
 }
 
+const NoteDetailHeader = ({
+  loading,
+  note,
+  config,
+  Icon,
+  deleting,
+  handleDelete,
+  onClose,
+}: {
+  loading: boolean;
+  note?: { title?: string };
+  config: { color: string; label: string };
+  Icon: React.ComponentType<{ className?: string }>;
+  deleting: boolean;
+  handleDelete: () => void;
+  onClose: () => void;
+}) => (
+  <div className="flex items-center justify-between p-5 border-b border-slate-100">
+    <div className="flex items-center gap-3">
+      {loading ? (
+        <div className="w-10 h-10 rounded-lg bg-slate-100 animate-pulse" />
+      ) : (
+        <div className={`w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center`}>
+          <Icon className={`w-5 h-5 ${config.color}`} />
+        </div>
+      )}
+      <div>
+        {loading ? (
+          <div className="h-6 w-48 bg-slate-100 rounded animate-pulse" />
+        ) : (
+          <h2 className="text-xl font-bold text-slate-800">{note?.title}</h2>
+        )}
+        <span className={`text-xs font-medium ${config.color} uppercase`}>
+          {loading ? '' : config.label}
+        </span>
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleDelete}
+        disabled={deleting || loading}
+        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+      >
+        {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+      </button>
+      <button
+        onClick={onClose}
+        className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+    </div>
+  </div>
+);
+
+const NoteDetailFooter = ({
+  note,
+}: {
+  note: { tags?: string[]; createdAt: number };
+}) => (
+  <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+    <div className="flex gap-2">
+      {note.tags?.map((tag: string, idx: number) => (
+        <span
+          key={`${tag}-${idx}`}
+          className="px-2 py-1 bg-white border border-slate-200 text-xs text-slate-500 rounded-full"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+    <span className="text-xs text-slate-400">
+      {new Date(note.createdAt).toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
+    </span>
+  </div>
+);
+
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDelete }) => {
   const [deleting, setDeleting] = useState(false);
 
@@ -68,6 +151,34 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
   const config = note ? TYPE_CONFIG[note.type] || TYPE_CONFIG.GENERAL : TYPE_CONFIG.GENERAL;
   const Icon = config.icon;
 
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse" />
+          <div className="h-4 bg-slate-100 rounded w-full animate-pulse" />
+          <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse" />
+          <div className="h-20 bg-slate-100 rounded animate-pulse mt-6" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <AlertTriangle className="w-12 h-12 mb-3" />
+          <p>{error}</p>
+        </div>
+      );
+    }
+
+    if (!note) {
+      return <p className="text-slate-400">暂无内容</p>;
+    }
+
+    return <NoteContent type={note.type} content={note.content} />;
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -88,95 +199,19 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              {loading ? (
-                <div className="w-10 h-10 rounded-lg bg-slate-100 animate-pulse" />
-              ) : (
-                <div
-                  className={`w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center`}
-                >
-                  <Icon className={`w-5 h-5 ${config.color}`} />
-                </div>
-              )}
-              <div>
-                {loading ? (
-                  <div className="h-6 w-48 bg-slate-100 rounded animate-pulse" />
-                ) : (
-                  <h2 className="text-xl font-bold text-slate-800">{note?.title}</h2>
-                )}
-                <span className={`text-xs font-medium ${config.color} uppercase`}>
-                  {loading ? '' : config.label}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDelete}
-                disabled={deleting || loading}
-                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-              >
-                {deleting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Trash2 className="w-5 h-5" />
-                )}
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+          <NoteDetailHeader
+            loading={loading}
+            note={note}
+            config={config}
+            Icon={Icon}
+            deleting={deleting}
+            handleDelete={handleDelete}
+            onClose={onClose}
+          />
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-5">
-            {loading ? (
-              <div className="space-y-4">
-                <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse" />
-                <div className="h-4 bg-slate-100 rounded w-full animate-pulse" />
-                <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse" />
-                <div className="h-20 bg-slate-100 rounded animate-pulse mt-6" />
-              </div>
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                <AlertTriangle className="w-12 h-12 mb-3" />
-                <p>{error}</p>
-              </div>
-            ) : !note ? (
-              <p className="text-slate-400">暂无内容</p>
-            ) : (
-              <NoteContent type={note.type} content={note.content} />
-            )}
-          </div>
+          <div className="flex-1 overflow-y-auto p-5">{renderContent()}</div>
 
-          {/* Footer */}
-          {!loading && note && (
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="flex gap-2">
-                {note.tags?.map((tag: string, idx: number) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-1 bg-white border border-slate-200 text-xs text-slate-500 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <span className="text-xs text-slate-400">
-                {new Date(note.createdAt).toLocaleDateString('zh-CN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-          )}
+          {!loading && note && <NoteDetailFooter note={note} />}
         </motion.div>
       </div>
     </AnimatePresence>
@@ -184,142 +219,145 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
 };
 
 // Content renderer based on type
+const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
+  <div className="space-y-5">
+    {/* Word */}
+    {typeof record.word === 'string' && (
+      <div className="bg-indigo-50 rounded-xl p-5">
+        <span className="text-3xl font-bold text-indigo-700">{record.word}</span>
+        {typeof record.pronunciation === 'string' && (
+          <span className="ml-3 text-indigo-500 text-lg">[{record.pronunciation}]</span>
+        )}
+      </div>
+    )}
+
+    {/* Meaning */}
+    {typeof record.meaning === 'string' && record.meaning.trim() !== '' && (
+      <Section title="释义">
+        <p className="text-slate-700">{record.meaning}</p>
+      </Section>
+    )}
+
+    {/* Context / Original Sentence */}
+    {typeof record.context === 'string' && record.context.trim() !== '' && (
+      <Section title="原句">
+        <p className="text-slate-600 italic bg-slate-50 p-3 rounded-lg border-l-4 border-indigo-200">
+          {record.context}
+        </p>
+      </Section>
+    )}
+
+    {/* Analysis */}
+    {typeof record.analysis === 'string' && record.analysis.trim() !== '' && (
+      <Section title="语法分析">
+        <p className="text-slate-700">{record.analysis}</p>
+      </Section>
+    )}
+
+    {/* Extra info */}
+    {typeof record.examTitle === 'string' && record.examTitle.trim() !== '' && (
+      <div className="text-xs text-slate-400 pt-4 border-t border-slate-100">
+        来源：{record.examTitle}
+      </div>
+    )}
+  </div>
+);
+
+const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
+  const questionText = typeof record.questionText === 'string' ? record.questionText : undefined;
+  const question = typeof record.question === 'string' ? record.question : undefined;
+  const imageUrl = typeof record.imageUrl === 'string' ? record.imageUrl : undefined;
+  const options = Array.isArray(record.options) ? record.options : undefined;
+  const correctAnswer =
+    typeof record.correctAnswer === 'number' ? record.correctAnswer : undefined;
+  const aiAnalysis = record.aiAnalysis;
+  const analysis = typeof record.analysis === 'string' ? record.analysis : undefined;
+
+  return (
+    <div className="space-y-6">
+      {/* Question */}
+      <div className="space-y-4">
+        {(questionText || question) && (
+          <div>
+            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+              题目
+            </h4>
+            <div className="text-lg font-medium text-slate-800 leading-relaxed mb-4">
+              {questionText || question}
+            </div>
+          </div>
+        )}
+
+        {/* Image */}
+        {imageUrl && (
+          <div className="mb-4">
+            <img
+              src={imageUrl}
+              alt="Question"
+              className="rounded-lg border border-slate-200 shadow-sm max-h-60 object-contain"
+            />
+          </div>
+        )}
+
+        {/* Options */}
+        {options && (
+          <div className="grid gap-2">
+            {options.map((option, idx: number) => {
+              // Determine status
+              const isCorrect = correctAnswer !== undefined && idx + 1 === correctAnswer;
+              const optionText = safeString(option) || '';
+
+              return (
+                <div
+                  key={`${idx}-${typeof option === 'string' ? option.slice(0, 10) : 'opt'}`}
+                  className={`p-3 rounded-lg border flex items-center gap-3 ${isCorrect
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                >
+                  <span
+                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${isCorrect
+                      ? 'bg-emerald-200 text-emerald-700'
+                      : 'bg-slate-100 text-slate-500'
+                      }`}
+                  >
+                    {idx + 1}
+                  </span>
+                  <span className="text-sm">{optionText}</span>
+                  {isCorrect && (
+                    <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      正确答案
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* AI Analysis Section */}
+      {!!aiAnalysis && <SanitizedAIAnalysisContent analysis={aiAnalysis} />}
+      {!aiAnalysis && analysis && (
+        /* Legacy analysis support */
+        <Section title="AI 解析">
+          <p className="text-slate-700">{analysis}</p>
+        </Section>
+      )}
+    </div>
+  );
+};
+
 const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, content }) => {
   if (!content) return <p className="text-slate-400">暂无内容</p>;
   const record = content as Record<string, unknown>;
 
   if (type === 'VOCAB') {
-    return (
-      <div className="space-y-5">
-        {/* Word */}
-        {typeof record.word === 'string' && (
-          <div className="bg-indigo-50 rounded-xl p-5">
-            <span className="text-3xl font-bold text-indigo-700">{record.word}</span>
-            {typeof record.pronunciation === 'string' && (
-              <span className="ml-3 text-indigo-500 text-lg">[{record.pronunciation}]</span>
-            )}
-          </div>
-        )}
-
-        {/* Meaning */}
-        {typeof record.meaning === 'string' && record.meaning.trim() !== '' && (
-          <Section title="释义">
-            <p className="text-slate-700">{record.meaning}</p>
-          </Section>
-        )}
-
-        {/* Context / Original Sentence */}
-        {typeof record.context === 'string' && record.context.trim() !== '' && (
-          <Section title="原句">
-            <p className="text-slate-600 italic bg-slate-50 p-3 rounded-lg border-l-4 border-indigo-200">
-              {record.context}
-            </p>
-          </Section>
-        )}
-
-        {/* Analysis */}
-        {typeof record.analysis === 'string' && record.analysis.trim() !== '' && (
-          <Section title="语法分析">
-            <p className="text-slate-700">{record.analysis}</p>
-          </Section>
-        )}
-
-        {/* Extra info */}
-        {typeof record.examTitle === 'string' && record.examTitle.trim() !== '' && (
-          <div className="text-xs text-slate-400 pt-4 border-t border-slate-100">
-            来源：{record.examTitle}
-          </div>
-        )}
-      </div>
-    );
+    return <VocabContent record={record} />;
   }
 
   if (type === 'MISTAKE') {
-    const questionText = typeof record.questionText === 'string' ? record.questionText : undefined;
-    const question = typeof record.question === 'string' ? record.question : undefined;
-    const imageUrl = typeof record.imageUrl === 'string' ? record.imageUrl : undefined;
-    const options = Array.isArray(record.options) ? record.options : undefined;
-    const correctAnswer =
-      typeof record.correctAnswer === 'number' ? record.correctAnswer : undefined;
-    const aiAnalysis = record.aiAnalysis;
-    const analysis = typeof record.analysis === 'string' ? record.analysis : undefined;
-
-    return (
-      <div className="space-y-6">
-        {/* Question */}
-        <div className="space-y-4">
-          {(questionText || question) && (
-            <div>
-              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-                题目
-              </h4>
-              <div className="text-lg font-medium text-slate-800 leading-relaxed mb-4">
-                {questionText || question}
-              </div>
-            </div>
-          )}
-
-          {/* Image */}
-          {imageUrl && (
-            <div className="mb-4">
-              <img
-                src={imageUrl}
-                alt="Question"
-                className="rounded-lg border border-slate-200 shadow-sm max-h-60 object-contain"
-              />
-            </div>
-          )}
-
-          {/* Options */}
-          {options && (
-            <div className="grid gap-2">
-              {options.map((option, idx: number) => {
-                // Determine status
-                const isCorrect = correctAnswer !== undefined && idx + 1 === correctAnswer;
-                const optionText = safeString(option) || '';
-
-                return (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-lg border flex items-center gap-3 ${
-                      isCorrect
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        : 'bg-white border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                        isCorrect
-                          ? 'bg-emerald-200 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {idx + 1}
-                    </span>
-                    <span className="text-sm">{optionText}</span>
-                    {isCorrect && (
-                      <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
-                        正确答案
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* AI Analysis Section */}
-        {aiAnalysis ? (
-          <SanitizedAIAnalysisContent analysis={aiAnalysis} />
-        ) : analysis ? (
-          /* Legacy analysis support */
-          <Section title="AI 解析">
-            <p className="text-slate-700">{analysis}</p>
-          </Section>
-        ) : null}
-      </div>
-    );
+    return <MistakeContent record={record} />;
   }
 
   // Default: GENERAL or GRAMMAR
@@ -370,7 +408,7 @@ const safeString = (val: unknown): string | null => {
       return '[Complex Data]';
     }
   }
-  return String(val);
+  return '';
 };
 
 // Helper to safely extract wrong options

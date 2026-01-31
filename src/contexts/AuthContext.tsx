@@ -15,12 +15,12 @@ interface AuthContextType {
   language: Language;
 
   // Auth Actions
-  login: (user: User, token?: string) => void;
-  logout: () => void;
+  login: (user: User, token?: string) => Promise<void>;
+  logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   refreshUser: () => Promise<void>;
   setLanguage: (lang: Language) => void;
-  resetPassword: (email: string) => Promise<void>; // Added
+  resetPassword: (email: string) => Promise<void>;
 
   // User Actions
 
@@ -42,7 +42,6 @@ export const useAuth = () => {
 
 interface AuthProviderProps {
   children: ReactNode;
-  onLoginSuccess?: () => void;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -64,9 +63,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const language: Language =
     i18n.language === 'zh' ||
-    i18n.language === 'en' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn'
+      i18n.language === 'en' ||
+      i18n.language === 'vi' ||
+      i18n.language === 'mn'
       ? i18n.language
       : 'en';
 
@@ -80,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!isAuthenticated) return null;
     if (viewer === undefined) return null;
     if (!viewer) return null;
-    return { ...viewer, ...(userOverride ?? {}) };
+    return userOverride ? { ...viewer, ...userOverride } : viewer;
   }, [isAuthenticated, viewer, userOverride]);
 
   // Legacy manual loadUser effect removed
@@ -127,12 +126,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
-    setUserOverride(prev => ({ ...(prev ?? {}), ...updates }));
+    setUserOverride(prev => (prev ? { ...prev, ...updates } : updates));
   }, []);
 
   const resetPassword = useCallback(async (_email: string) => {
     try {
-      // await requestPasswordResetMutation({ email });
       logger.warn('Reset password not yet implemented with Convex Auth');
     } catch (err: unknown) {
       logger.error('Failed to request password reset:', err);

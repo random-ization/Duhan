@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useQuery } from 'convex/react';
@@ -212,10 +211,10 @@ export default function CourseDashboard() {
         {/* 4-Grid Modules */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
           {modules.map(m => (
-            <div
+            <button
               key={m.id}
               onClick={() => navigate(m.path)}
-              className="group cursor-pointer h-[320px] bg-white rounded-[2rem] border-4 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative transition-all duration-200 hover:-translate-y-1.5 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              className="group h-[320px] bg-white rounded-[2rem] border-4 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative transition-all duration-200 hover:-translate-y-1.5 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-left"
             >
               {/* Top Color Stripe */}
               <div className={`h-3 w-full ${m.stripeColor} border-b-4 border-slate-900`} />
@@ -258,7 +257,7 @@ export default function CourseDashboard() {
                   {m.hoverText}
                 </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -279,21 +278,25 @@ export default function CourseDashboard() {
           </div>
 
           <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory">
-            {loadingGrammar ? (
-              // Loading skeleton
-              [...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse"
-                >
+            {loadingGrammar &&
+               // Loading skeleton
+               ['sk1', 'sk2', 'sk3', 'sk4'].map((id) => (
+                 <div
+                   key={id}
+                   className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse"
+                 >
                   <div className="h-8 bg-slate-100 rounded mb-2 w-32"></div>
                   <div className="h-4 bg-slate-100 rounded mb-1 w-24"></div>
                   <div className="h-3 bg-slate-100 rounded w-full"></div>
                 </div>
-              ))
-            ) : grammarPoints.length === 0 ? (
+              ))}
+
+            {!loadingGrammar && grammarPoints.length === 0 && (
               <div className="text-slate-400 text-sm py-4">{t('courseDashboard.noGrammar')}</div>
-            ) : (
+            )}
+
+            {!loadingGrammar &&
+              grammarPoints.length > 0 &&
               grammarPoints.map(gp => (
                 <div
                   key={gp.id}
@@ -312,15 +315,17 @@ export default function CourseDashboard() {
 
                   {/* Status & Arrow */}
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    {gp.status === 'MASTERED' ? (
+                    {gp.status === 'MASTERED' && (
                       <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">
                         {t('courseDashboard.status.mastered')}
                       </span>
-                    ) : gp.status === 'LEARNING' ? (
+                    )}
+                    {gp.status === 'LEARNING' && (
                       <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
                         {t('courseDashboard.status.learning')}
                       </span>
-                    ) : (
+                    )}
+                    {gp.status !== 'MASTERED' && gp.status !== 'LEARNING' && (
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
                         {t('courseDashboard.status.notStarted')}
                       </span>
@@ -330,17 +335,16 @@ export default function CourseDashboard() {
                     </span>
                   </div>
                 </div>
-              ))
-            )}
+              ))}
 
             {/* More Arrow Card */}
             {grammarPoints.length > 0 && (
-              <div
+              <button
                 onClick={() => navigate(`/course/${instituteId}/grammar`)}
-                className="snap-start flex-shrink-0 w-24 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-slate-400"
+                className="snap-start flex-shrink-0 w-24 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:border-slate-400"
               >
                 <span className="text-2xl text-slate-300">➜</span>
-              </div>
+              </button>
             )}
           </div>
         </div>

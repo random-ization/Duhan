@@ -66,7 +66,7 @@ export function useVocabProgress(courseId: string) {
       const currentVocab = localStore.getQuery(getOfCourseRef, { courseId });
       if (!Array.isArray(currentVocab)) return;
 
-      const currentVocabRows = currentVocab as VocabWordRow[];
+      const currentVocabRows = currentVocab;
       const updatedVocab = currentVocabRows.map(word => {
         if (word._id !== wordId) return word;
         const currentProgress = word.progress

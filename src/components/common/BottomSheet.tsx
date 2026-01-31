@@ -19,7 +19,7 @@ export function BottomSheet({
     title,
     children,
     height = 'half'
-}: BottomSheetProps) {
+}: Readonly<BottomSheetProps>) {
     const sheetRef = useRef<HTMLDivElement>(null);
 
     // Close on escape key
@@ -41,17 +41,20 @@ export function BottomSheet({
 
     if (!isOpen) return null;
 
-    const heightClass = height === 'full'
-        ? 'h-[90vh]'
-        : height === 'half'
-            ? 'h-[60vh]'
-            : 'max-h-[80vh]';
+    let heightClass = 'max-h-[80vh]';
+    if (height === 'full') {
+        heightClass = 'h-[90vh]';
+    } else if (height === 'half') {
+        heightClass = 'h-[60vh]';
+    }
 
     return (
         <>
             {/* Backdrop */}
-            <div
-                className="fixed inset-0 bg-black/40 z-40 md:hidden animate-in fade-in duration-200"
+            <button
+                type="button"
+                aria-label="Close"
+                className="fixed inset-0 bg-black/40 z-40 md:hidden animate-in fade-in duration-200 w-full h-full border-0 cursor-default"
                 onClick={onClose}
             />
 

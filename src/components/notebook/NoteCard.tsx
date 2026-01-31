@@ -27,7 +27,6 @@ const formatRelativeTime = (dateString: string): string => {
 };
 
 interface NoteCardProps {
-    id: string;
     type: string;
     title: string;
     preview: string | null;
@@ -88,7 +87,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                 <div className="flex flex-wrap gap-1.5">
                     {tags.slice(0, 3).map((tag, idx) => (
                         <span
-                            key={idx}
+                            key={`${tag}-${idx}`}
                             className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-medium rounded-full"
                         >
                             {tag}

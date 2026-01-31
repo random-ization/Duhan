@@ -43,30 +43,21 @@ type BulkImportItem = Pick<
   tips?: unknown;
 };
 
-type BulkImportResult = {
-  success: boolean;
-  results?: {
-    success: number;
-    failed: number;
-    smartFilled: number;
-    newWords: number;
-    errors: string[];
-  };
-};
-
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
+  let i = 0;
+  while (i < line.length) {
     const char = line[i];
     const nextChar = line[i + 1];
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
         current += '"';
-        i++;
+        i += 2; // Skip both quotes
+        continue;
       } else {
         inQuotes = !inQuotes;
       }
@@ -76,10 +67,137 @@ function parseCSVLine(line: string): string[] {
     } else {
       current += char;
     }
+    i++;
   }
 
   result.push(current.trim());
   return result;
+}
+
+const COLUMN_KEYWORDS = {
+  unit: ['单元', 'unit', 'lesson', '课'],
+  word: ['韩语', 'word', '单词', 'korean'],
+  pos: ['词性', 'pos', 'part'],
+  meaningCh: ['释义 (ch)', '释义(中)', '释义(ch)', '中文', 'chinese', 'meaning'],
+  meaningEn: ['释义 (en)', '释义(英)', '释义(en)', '英文', 'english'],
+  meaningMn: ['释义 (mn)', '释义(蒙)', '释义(mn)', '蒙古', 'mongolian'],
+  meaningVi: ['释义 (vn)', '释义(越)', '释义(vn)', '越南', 'vietnamese'],
+  example: ['例句 (kr)', '例句(kr)', '例句', 'example', '韩语例句'],
+  exampleCh: ['例句翻译 (c', '例句翻译(ch)', '例句中翻', '例句翻译'],
+  exampleEn: ['例句翻译 (e', '例句翻译(en)', '例句英翻'],
+  exampleMn: ['例句翻译 (n', '例句翻译 (m', '例句翻译(mn)', '例句蒙翻'],
+  exampleVi: ['例句翻译 (v', '例句翻译(vn)', '例句越翻'],
+};
+
+function getColMap(headers: string[]) {
+  const findColumn = (keywords: string[]): number => {
+    return headers.findIndex(h => keywords.some(k => h.includes(k)));
+  };
+
+  const map: Record<string, number> = {};
+  (Object.keys(COLUMN_KEYWORDS) as Array<keyof typeof COLUMN_KEYWORDS>).forEach(key => {
+    map[key] = findColumn(COLUMN_KEYWORDS[key]);
+  });
+  return map;
+}
+
+function parseHeaders(bulkText: string): { headers: string[]; lines: string[] } {
+  const lines = bulkText
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return { headers: [], lines: [] };
+
+  const headerLine = lines[0];
+  const headers = headerLine.includes('\t')
+    ? headerLine.split('\t').map(h => h.trim().toLowerCase())
+    : parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+  return { headers, lines };
+}
+
+function processLine(
+  line: string,
+  colMap: Record<string, number>,
+  courseId: string,
+  defaultUnitId: number
+): BulkImportItem | null {
+  const parts = line.includes('\t') ? line.split('\t').map(p => p.trim()) : parseCSVLine(line);
+  const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
+  const word = getValue(colMap.word);
+  if (!word) return null;
+
+  return {
+    word,
+    meaning:
+      getValue(colMap.meaningCh) ||
+      getValue(colMap.meaningEn) ||
+      getValue(colMap.meaningMn) ||
+      getValue(colMap.meaningVi) ||
+      '',
+    partOfSpeech: getValue(colMap.pos) || 'NOUN',
+    meaningEn: getValue(colMap.meaningEn),
+    meaningVi: getValue(colMap.meaningVi),
+    meaningMn: getValue(colMap.meaningMn),
+    courseId,
+    unitId: Number(getValue(colMap.unit)) || defaultUnitId || 1,
+    exampleSentence: getValue(colMap.example),
+    exampleMeaning: getValue(colMap.exampleCh),
+    exampleMeaningEn: getValue(colMap.exampleEn),
+    exampleMeaningVi: getValue(colMap.exampleVi),
+    exampleMeaningMn: getValue(colMap.exampleMn),
+  };
+}
+
+interface BulkImportResult {
+  success: boolean;
+  results?: {
+    success: number;
+    failed: number;
+    smartFilled: number;
+    newWords: number;
+    errors: string[];
+  };
+}
+
+async function processBatches(
+  items: BulkImportItem[],
+  bulkImportMutation: any,
+  setStatus: (msg: string | null) => void
+) {
+  const BATCH_SIZE = 50;
+  let successCount = 0;
+  let failedCount = 0;
+  let newWordsCount = 0;
+  let smartFilledCount = 0;
+  const allErrors: string[] = [];
+
+  const numBatches = Math.ceil(items.length / BATCH_SIZE);
+
+  for (let i = 0; i < numBatches; i++) {
+    const batch = items.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+    setStatus(`正在处理第 ${i + 1}/${numBatches} 批次 (${batch.length} 条)...`);
+
+    try {
+      const result = (await bulkImportMutation({ items: batch })) as BulkImportResult;
+      const r = result?.results;
+
+      if (r) {
+        successCount += r.success;
+        failedCount += r.failed;
+        newWordsCount += r.newWords;
+        smartFilledCount += r.smartFilled;
+        if (r.errors) allErrors.push(...r.errors);
+      }
+    } catch (err: any) {
+      console.error(`Batch ${i + 1} failed:`, err);
+      failedCount += batch.length;
+      allErrors.push(`Batch ${i + 1} Error: ${err.message}`);
+    }
+  }
+
+  return { successCount, failedCount, newWordsCount, smartFilledCount, allErrors };
 }
 
 const VocabImporter: React.FC = () => {
@@ -142,136 +260,43 @@ const VocabImporter: React.FC = () => {
   };
 
   const handleBulkImport = async () => {
-    if (!bulkText.trim()) return;
-    if (!form.courseId) {
-      setStatus('请选择教材后再导入');
+    if (!bulkText.trim() || !form.courseId) {
+      if (!form.courseId) setStatus('请选择教材后再导入');
       return;
     }
+
     setSubmitting(true);
     setStatus(null);
+
     try {
-      const lines = bulkText
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean);
+      const { headers, lines } = parseHeaders(bulkText);
+      if (headers.length === 0) return;
 
-      const headerLine = lines[0];
-      const headers = headerLine.includes('\t')
-        ? headerLine.split('\t').map(h => h.trim().toLowerCase())
-        : parseCSVLine(headerLine).map(h => h.toLowerCase());
-
-      const findColumn = (keywords: string[]): number => {
-        return headers.findIndex(h => keywords.some(k => h.includes(k)));
-      };
-
-      const colMap = {
-        unit: findColumn(['单元', 'unit', 'lesson', '课']),
-        word: findColumn(['韩语', 'word', '单词', 'korean']),
-        pos: findColumn(['词性', 'pos', 'part']),
-        meaningCh: findColumn(['释义 (ch)', '释义(中)', '释义(ch)', '中文', 'chinese', 'meaning']),
-        meaningEn: findColumn(['释义 (en)', '释义(英)', '释义(en)', '英文', 'english']),
-        meaningMn: findColumn(['释义 (mn)', '释义(蒙)', '释义(mn)', '蒙古', 'mongolian']),
-        meaningVi: findColumn(['释义 (vn)', '释义(越)', '释义(vn)', '越南', 'vietnamese']),
-        example: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example', '韩语例句']),
-        exampleCh: findColumn(['例句翻译 (c', '例句翻译(ch)', '例句中翻', '例句翻译']),
-        exampleEn: findColumn(['例句翻译 (e', '例句翻译(en)', '例句英翻']),
-        exampleMn: findColumn(['例句翻译 (n', '例句翻译 (m', '例句翻译(mn)', '例句蒙翻']),
-        exampleVi: findColumn(['例句翻译 (v', '例句翻译(vn)', '例句越翻']),
-      };
-
+      const colMap = getColMap(headers);
       if (colMap.word === -1) {
         setStatus(`错误：未找到"韩语"或"Word"列，请检查表头`);
-        setSubmitting(false);
         return;
       }
 
-      const items: BulkImportItem[] = lines
+      const items = lines
         .slice(1)
-        .map(line => {
-          const parts = line.includes('\t')
-            ? line.split('\t').map(p => p.trim())
-            : parseCSVLine(line);
-
-          const getValue = (idx: number) =>
-            idx >= 0 && idx < parts.length ? parts[idx] : undefined;
-
-          const word = getValue(colMap.word);
-          if (!word) return null;
-
-          let meaning = getValue(colMap.meaningCh);
-          if (!meaning) {
-            meaning =
-              getValue(colMap.meaningEn) ||
-              getValue(colMap.meaningMn) ||
-              getValue(colMap.meaningVi) ||
-              '';
-          }
-
-          return {
-            word,
-            meaning,
-            partOfSpeech: getValue(colMap.pos) || 'NOUN',
-            meaningEn: getValue(colMap.meaningEn),
-            meaningVi: getValue(colMap.meaningVi),
-            meaningMn: getValue(colMap.meaningMn),
-            courseId: form.courseId,
-            unitId: Number(getValue(colMap.unit)) || form.unitId || 1,
-            exampleSentence: getValue(colMap.example),
-            exampleMeaning: getValue(colMap.exampleCh),
-            exampleMeaningEn: getValue(colMap.exampleEn),
-            exampleMeaningVi: getValue(colMap.exampleVi),
-            exampleMeaningMn: getValue(colMap.exampleMn),
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+        .map(line => processLine(line, colMap, form.courseId, form.unitId))
+        .filter((item): item is BulkImportItem => item !== null);
 
       if (items.length === 0) {
         setStatus('未解析到有效的词条');
-        setSubmitting(false);
         return;
       }
 
-      const BATCH_SIZE = 50;
-      const totalItems = items.length;
-      const batches = [];
-      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
-        batches.push(items.slice(i, i + BATCH_SIZE));
-      }
-
-      let successCount = 0;
-      let failedCount = 0;
-      let newWordsCount = 0;
-      let smartFilledCount = 0;
-      const allErrors: string[] = [];
-
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        setStatus(`正在处理第 ${i + 1}/${batches.length} 批次 (${batch.length} 条)...`);
-
-        try {
-          const result = (await bulkImportMutation({ items: batch })) as BulkImportResult;
-          const r = result?.results;
-
-          if (r) {
-            successCount += r.success;
-            failedCount += r.failed;
-            newWordsCount += r.newWords;
-            smartFilledCount += r.smartFilled;
-            if (r.errors) allErrors.push(...r.errors);
-          }
-        } catch (err: any) {
-          console.error(`Batch ${i + 1} failed:`, err);
-          failedCount += batch.length;
-          allErrors.push(`Batch ${i + 1} Error: ${err.message}`);
-        }
-      }
+      const { successCount, failedCount, newWordsCount, smartFilledCount, allErrors } =
+        await processBatches(items, bulkImportMutation, setStatus);
 
       if (allErrors.length > 0) {
         setStatus(
           `部分导入完成。成功: ${successCount}, 失败: ${failedCount}。错误: ${allErrors.slice(0, 3).join('; ')}...`
         );
       } else {
-        const parts: string[] = [`全部完成！成功导入 ${successCount} 条`];
+        const parts = [`全部完成！成功导入 ${successCount} 条`];
         if (smartFilledCount > 0) parts.push(`智能填充 ${smartFilledCount} 条`);
         if (newWordsCount > 0) parts.push(`新增词汇 ${newWordsCount} 条`);
         setStatus(parts.join('，'));
@@ -293,8 +318,9 @@ const VocabImporter: React.FC = () => {
           <p className="text-sm text-zinc-500">支持单条录入与快速批量导入</p>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-500 mb-1">选择教材</label>
+          <label htmlFor="course-select" className="block text-xs font-bold text-zinc-500 mb-1">选择教材</label>
           <select
+            id="course-select"
             value={form.courseId}
             onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
@@ -325,7 +351,7 @@ const VocabImporter: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              单词 *
+              <span>单词 *</span>
               <input
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
                 value={form.word}
@@ -334,7 +360,7 @@ const VocabImporter: React.FC = () => {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              释义 *
+              <span>释义 *</span>
               <input
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
                 value={form.meaning}
@@ -343,7 +369,7 @@ const VocabImporter: React.FC = () => {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              词性
+              <span>词性</span>
               <select
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200"
                 value={form.partOfSpeech}
@@ -362,7 +388,7 @@ const VocabImporter: React.FC = () => {
               </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              课次
+              <span>课次</span>
               <input
                 type="number"
                 min={1}
@@ -377,7 +403,7 @@ const VocabImporter: React.FC = () => {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              读音
+              <span>读音</span>
               <input
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
                 value={form.pronunciation}
@@ -390,7 +416,7 @@ const VocabImporter: React.FC = () => {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-zinc-700">
-              汉字
+              <span>汉字</span>
               <input
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
                 value={form.hanja}
@@ -400,7 +426,7 @@ const VocabImporter: React.FC = () => {
           </div>
 
           <label className="space-y-1 text-sm font-medium text-zinc-700 block">
-            例句
+            <span>例句</span>
             <textarea
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
               rows={2}
@@ -415,7 +441,7 @@ const VocabImporter: React.FC = () => {
           </label>
 
           <label className="space-y-1 text-sm font-medium text-zinc-700 block">
-            译文
+            <span>译文</span>
             <textarea
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-zinc-900"
               rows={2}
@@ -456,9 +482,8 @@ const VocabImporter: React.FC = () => {
                 const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
                 if (isExcel) {
-                  const reader = new FileReader();
-                  reader.onload = event => {
-                    const data = new Uint8Array(event.target?.result as ArrayBuffer);
+                  file.arrayBuffer().then(buffer => {
+                    const data = new Uint8Array(buffer);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
@@ -467,18 +492,20 @@ const VocabImporter: React.FC = () => {
                     setStatus(
                       `已加载 Excel 文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
                     );
-                  };
-                  reader.readAsArrayBuffer(file);
+                  }).catch(err => {
+                    console.error('Excel load failed:', err);
+                    setStatus('加载 Excel 文件失败');
+                  });
                 } else {
-                  const reader = new FileReader();
-                  reader.onload = event => {
-                    const text = event.target?.result as string;
+                  file.text().then(text => {
                     setBulkText(text);
                     setStatus(
                       `已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
                     );
-                  };
-                  reader.readAsText(file, 'UTF-8');
+                  }).catch(err => {
+                    console.error('Text file load failed:', err);
+                    setStatus('加载文本文件失败');
+                  });
                 }
                 e.target.value = '';
               }}

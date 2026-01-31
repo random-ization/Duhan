@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
@@ -38,11 +37,13 @@ interface SavedWord {
   timestamp: number;
 }
 
+type HighlightColor = 'yellow' | 'green' | 'pink';
+
 interface Note {
   id: string;
   text: string;
   comment: string;
-  color: 'yellow' | 'green' | 'pink';
+  color: HighlightColor;
   startOffset: number;
   endOffset: number;
   timestamp: number;
@@ -51,7 +52,7 @@ interface Note {
 interface Highlight {
   id: string;
   text: string;
-  color: 'yellow' | 'green' | 'pink';
+  color: HighlightColor;
   startOffset: number;
   endOffset: number;
 }
@@ -82,6 +83,14 @@ interface GrammarItem {
   type: string;
   summary: string;
   explanation: string;
+}
+
+interface GrammarMatch {
+  id: string;
+  title: string;
+  summary: string;
+  type: string;
+  level: string;
 }
 
 interface AnnotationItem {
@@ -128,6 +137,21 @@ interface MorphologyLookupResult {
   krdict: SearchResult | null;
   krdictError: string | null;
 }
+
+// =========================================
+// Constants & Utils
+// =========================================
+const HIGHLIGHT_COLORS: Record<HighlightColor, string> = {
+  yellow: '#FEF08A',
+  green: '#BBF7D0',
+  pink: '#FBCFE8',
+};
+
+const HIGHLIGHT_CLASSES: Record<HighlightColor, string> = {
+  yellow: 'bg-yellow-200',
+  green: 'bg-green-200',
+  pink: 'bg-pink-200',
+};
 
 // =========================================
 // Sub-Components
@@ -213,13 +237,54 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
   );
 };
 
+// Text Word Component
+interface WordEntryProps {
+  part: string;
+  normalizedWord: string;
+  offset: number;
+  sentenceIndex: number;
+  hasHighlight?: Highlight;
+  hasNote?: Note;
+}
+
+const WordEntry: React.FC<WordEntryProps> = ({
+  part,
+  normalizedWord,
+  offset,
+  sentenceIndex,
+  hasHighlight,
+  hasNote,
+}) => {
+  let className = 'cursor-pointer hover:bg-yellow-100 rounded px-0.5 transition-colors';
+  if (hasHighlight) {
+    className += ` ${HIGHLIGHT_CLASSES[hasHighlight.color]}`;
+  }
+  if (hasNote) {
+    className += ' underline decoration-wavy decoration-amber-500';
+  }
+
+  return (
+    <span
+      data-word={normalizedWord}
+      data-offset={String(offset)}
+      data-sentence-index={String(sentenceIndex)}
+      className={className}
+      style={{
+        backgroundColor: hasHighlight ? HIGHLIGHT_COLORS[hasHighlight.color] : undefined,
+      }}
+    >
+      {part}
+    </span>
+  );
+};
+
 // Selection Toolbar
 interface SelectionToolbarProps {
   position: { x: number; y: number };
   onTranslate: () => void;
   onSpeak: () => void;
   onNote: () => void;
-  onHighlight: (color: 'yellow' | 'green' | 'pink') => void;
+  onHighlight: (color: HighlightColor) => void;
   language: Language;
 }
 
@@ -301,7 +366,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 // Note Input Modal
 interface NoteInputModalProps {
   selectedText: string;
-  onSave: (comment: string, color: 'yellow' | 'green' | 'pink') => void;
+  onSave: (comment: string, color: HighlightColor) => void;
   onClose: () => void;
   language: Language;
 }
@@ -314,7 +379,7 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
 }) => {
   const labels = getLabels(language);
   const [comment, setComment] = useState('');
-  const [color, setColor] = useState<'yellow' | 'green' | 'pink'>('yellow');
+  const [color, setColor] = useState<HighlightColor>('yellow');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -342,12 +407,13 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
             {labels.dashboard?.reading?.color || '颜色：'}
           </span>
           <div className="flex gap-2">
-            {(['yellow', 'green', 'pink'] as const).map(c => (
+            {(['yellow', 'green', 'pink'] as HighlightColor[]).map(c => (
               <button
                 key={c}
                 onClick={() => setColor(c)}
                 className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
-                  } ${c === 'yellow' ? 'bg-yellow-300' : c === 'green' ? 'bg-green-300' : 'bg-pink-300'} transition-all`}
+                  } ${HIGHLIGHT_CLASSES[c]} transition-all`}
+                aria-label={c}
               />
             ))}
           </div>
@@ -571,7 +637,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         id: a.id,
         text: a.text,
         comment: a.note || '',
-        color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+        color: (a.color || 'yellow') as HighlightColor,
         startOffset: a.startOffset || 0,
         endOffset: a.endOffset || 0,
         timestamp: new Date(a.createdAt).getTime(),
@@ -582,7 +648,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       .map((a: AnnotationItem) => ({
         id: a.id,
         text: a.text,
-        color: (a.color || 'yellow') as 'yellow' | 'green' | 'pink',
+        color: (a.color || 'yellow') as HighlightColor,
         startOffset: a.startOffset || 0,
         endOffset: a.endOffset || 0,
       }));
@@ -628,7 +694,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     meaning: string;
     baseForm?: string;
     contextTranslation?: string;
-    grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+    grammarMatches?: GrammarMatch[];
     position: { x: number; y: number };
     isFromVocabList: boolean;
   } | null>(null);
@@ -749,39 +815,129 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   // ========================================
   // Handle word click - Smart lookup logic
   // ========================================
+  const getPopoverPosition = (rect: DOMRect, popoverWidth: number, popoverHeight: number) => {
+    const x = Math.min(
+      Math.max(8, rect.left),
+      Math.max(8, globalThis.window.innerWidth - popoverWidth - 8)
+    );
+    const y = Math.min(
+      Math.max(8, rect.bottom + 8),
+      Math.max(8, globalThis.window.innerHeight - popoverHeight - 8)
+    );
+    return { x, y };
+  };
+
+  const performDictionaryLookup = useCallback(
+    async (
+      clickedWord: string,
+      query: string,
+      fallbackMeaning: string,
+      requestId: number,
+      charIndex?: number
+    ) => {
+      try {
+        const fullText = unitData?.readingText;
+        let contextText: string | undefined;
+        let charIndexInContext: number | undefined;
+
+        if (fullText && charIndex !== undefined) {
+          const safeIndex = Math.max(0, Math.min(charIndex, fullText.length - 1));
+          const before = fullText.slice(0, safeIndex);
+          const after = fullText.slice(safeIndex);
+          const startBoundary = Math.max(
+            before.lastIndexOf('\n'),
+            before.lastIndexOf('.'),
+            before.lastIndexOf('?'),
+            before.lastIndexOf('!'),
+            before.lastIndexOf('。'),
+            before.lastIndexOf('！'),
+            before.lastIndexOf('？')
+          );
+          const start = startBoundary >= 0 ? startBoundary + 1 : 0;
+          const endCandidates = [
+            after.indexOf('\n'),
+            after.indexOf('.'),
+            after.indexOf('?'),
+            after.indexOf('!'),
+            after.indexOf('。'),
+            after.indexOf('！'),
+            after.indexOf('？'),
+          ].filter(v => v >= 0);
+          const endOffset = endCandidates.length > 0 ? Math.min(...endCandidates) + 1 : after.length;
+          const end = Math.min(fullText.length, safeIndex + endOffset);
+          contextText = fullText.slice(start, end);
+          charIndexInContext = safeIndex - start;
+        }
+
+        const res = await lookupWithMorphology({
+          surface: clickedWord,
+          contextText,
+          charIndexInContext,
+          translationLang,
+          num: 10,
+        });
+
+        if (dictionaryRequestRef.current !== requestId) return;
+
+        const lemma = normalizeLookupWordCb(res.token.lemma || query) || query;
+
+        let meaning = fallbackMeaning;
+        if (res.wordFromDb?.meaning) {
+          meaning = res.wordFromDb.meaning;
+        } else if (res.krdict) {
+          meaning = extractBestMeaning(res.krdict, lemma, fallbackMeaning);
+        }
+
+        setSelectedWord(prev =>
+          prev
+            ? {
+              ...prev,
+              lemma,
+              baseForm: lemma,
+              grammarMatches: res.grammarMatches,
+              meaning,
+            }
+            : prev
+        );
+      } catch (error: unknown) {
+        if (dictionaryRequestRef.current !== requestId) return;
+        console.error('[ReadingModule] Dictionary lookup failed:', error);
+        setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
+      }
+    },
+    [lookupWithMorphology, translationLang, unitData, normalizeLookupWordCb]
+  );
+
+  // ========================================
+  // Handle word click - Smart lookup logic
+  // ========================================
   const handleWordClick = useCallback(
-    (e: React.MouseEvent) => {
-      const wordEl = (e.target as HTMLElement).closest('[data-word]') as HTMLElement | null;
+    (e: React.MouseEvent | MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const wordEl = target.closest<HTMLElement>('[data-word]');
       if (!wordEl) return;
+
       const clickedWord = normalizeLookupWordCb(wordEl.dataset.word ?? '');
       if (!clickedWord) return;
-      const charIndex = wordEl.dataset.offset ? parseInt(wordEl.dataset.offset, 10) : undefined;
-      const sentenceIndex = wordEl.dataset.sentenceIndex
-        ? parseInt(wordEl.dataset.sentenceIndex, 10)
-        : undefined;
+
+      const charIndexStr = wordEl.dataset.offset;
+      const charIndex = charIndexStr ? Number.parseInt(charIndexStr, 10) : undefined;
+      const sentenceIndexStr = wordEl.dataset.sentenceIndex;
+      const sentenceIndex = sentenceIndexStr ? Number.parseInt(sentenceIndexStr, 10) : undefined;
       const contextTranslation =
-        sentenceIndex !== undefined ? translationSentences[sentenceIndex] : undefined;
-      const rect = wordEl.getBoundingClientRect();
+        sentenceIndex === undefined ? undefined : translationSentences[sentenceIndex];
 
       const tokenInfo = findBaseForm(clickedWord, charIndex);
-      const baseForm = tokenInfo?.base || clickedWord;
+      const query = tokenInfo?.base || clickedWord;
 
-      let vocabMatch = lookupInVocabList(baseForm);
-      if (!vocabMatch) vocabMatch = lookupInVocabList(clickedWord);
-
+      const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
       const fallbackMeaning = vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+
       const requestId = dictionaryRequestRef.current + 1;
       dictionaryRequestRef.current = requestId;
-      const popoverWidth = 260;
-      const popoverHeight = contextTranslation ? 220 : 180;
-      const x = Math.min(
-        Math.max(8, rect.left),
-        Math.max(8, window.innerWidth - popoverWidth - 8)
-      );
-      const y = Math.min(
-        Math.max(8, rect.bottom + 8),
-        Math.max(8, window.innerHeight - popoverHeight - 8)
-      );
+
+      const rect = wordEl.getBoundingClientRect();
+      const position = getPopoverPosition(rect, 260, contextTranslation ? 220 : 180);
 
       setSelectedWord({
         word: clickedWord,
@@ -790,103 +946,27 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         baseForm: tokenInfo?.base,
         grammarMatches: [],
         contextTranslation,
-        position: { x, y },
+        position,
         isFromVocabList: !!vocabMatch,
       });
       setSelectionToolbar(null);
 
-      void (async () => {
-        try {
-          const fullText = unitData?.readingText;
-          let contextText: string | undefined = undefined;
-          let charIndexInContext: number | undefined = undefined;
-          if (fullText && charIndex !== undefined) {
-            const safeIndex = Math.max(0, Math.min(charIndex, fullText.length - 1));
-            const before = fullText.slice(0, safeIndex);
-            const after = fullText.slice(safeIndex);
-            const startBoundary = Math.max(
-              before.lastIndexOf('\n'),
-              before.lastIndexOf('.'),
-              before.lastIndexOf('?'),
-              before.lastIndexOf('!'),
-              before.lastIndexOf('。'),
-              before.lastIndexOf('！'),
-              before.lastIndexOf('？')
-            );
-            const start = startBoundary >= 0 ? startBoundary + 1 : 0;
-            const endCandidates = [
-              after.indexOf('\n'),
-              after.indexOf('.'),
-              after.indexOf('?'),
-              after.indexOf('!'),
-              after.indexOf('。'),
-              after.indexOf('！'),
-              after.indexOf('？'),
-            ].filter(v => v >= 0);
-            const endOffset = endCandidates.length > 0 ? Math.min(...endCandidates) + 1 : after.length;
-            const end = Math.min(fullText.length, safeIndex + endOffset);
-            contextText = fullText.slice(start, end);
-            charIndexInContext = safeIndex - start;
-          }
-
-          const res = await lookupWithMorphology({
-            surface: clickedWord,
-            contextText,
-            charIndexInContext,
-            translationLang,
-            num: 10,
-          });
-          if (dictionaryRequestRef.current !== requestId) return;
-
-          const lemma = normalizeLookupWordCb(res.token.lemma || tokenInfo?.base || clickedWord) || clickedWord;
-
-          let meaning = fallbackMeaning;
-          if (res.wordFromDb?.meaning) {
-            meaning = res.wordFromDb.meaning;
-          } else if (res.krdict) {
-            meaning = extractBestMeaning(res.krdict, lemma, fallbackMeaning);
-          }
-
-          setSelectedWord(prev =>
-            prev
-              ? {
-                ...prev,
-                lemma,
-                baseForm: lemma,
-                grammarMatches: res.grammarMatches,
-                meaning,
-              }
-              : prev
-          );
-        } catch (error: unknown) {
-          if (dictionaryRequestRef.current !== requestId) return;
-          console.error('[ReadingModule] Dictionary lookup failed:', error);
-          if (typeof error === 'object' && error !== null && 'message' in error) {
-            const msg = (error as { message: string }).message;
-            if (msg.includes('KRDICT Error')) {
-              console.error('[ReadingModule] KRDICT specific error:', msg);
-            }
-          }
-          setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
-        }
-      })();
+      void performDictionaryLookup(clickedWord, query, fallbackMeaning, requestId, charIndex);
     },
     [
       findBaseForm,
       labels.dashboard?.common?.loading,
       labels.dashboard?.common?.noMeaning,
       lookupInVocabList,
-      lookupWithMorphology,
       normalizeLookupWordCb,
-      unitData?.readingText,
       translationSentences,
-      translationLang,
+      performDictionaryLookup,
     ]
   );
 
   // Handle text selection
   const handleMouseUp = useCallback(() => {
-    const selection = window.getSelection();
+    const selection = globalThis.getSelection();
     if (selection && selection.toString().trim().length > 0 && !selectedWord) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
@@ -898,11 +978,38 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     }
   }, [selectedWord]);
 
+  // Attach event listeners manually to avoid cyclical accessibility lint warnings
+  useEffect(() => {
+    const reader = readerRef.current;
+    if (!reader) return;
+
+    const onMouseUp = () => handleMouseUp();
+    const onClick = (e: MouseEvent) => handleWordClick(e);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-word]')) {
+          handleWordClick(e as unknown as MouseEvent);
+        }
+      }
+    };
+
+    reader.addEventListener('mouseup', onMouseUp);
+    reader.addEventListener('click', onClick);
+    reader.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      reader.removeEventListener('mouseup', onMouseUp);
+      reader.removeEventListener('click', onClick);
+      reader.removeEventListener('keydown', onKeyDown);
+    };
+  }, [handleMouseUp, handleWordClick]);
+
   // Close popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const { selectedWord, selectionToolbar } = popoverStateRef.current;
-      if (selectedWord || selectionToolbar) {
+      const { selectedWord: currentSelectedWord, selectionToolbar: currentSelectionToolbar } = popoverStateRef.current;
+      if (currentSelectedWord || currentSelectionToolbar) {
         const target = e.target as HTMLElement;
         if (!target.closest('[data-popover]') && !target.closest('[data-word]')) {
           setSelectedWord(null);
@@ -923,7 +1030,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
   // Save word to vocab
   const saveWordToVocab = (word: string, meaning: string) => {
-    if (!savedWords.find(w => w.word === word)) {
+    if (!savedWords.some(w => w.word === word)) {
       setSavedWords(prev => [
         ...prev,
         { id: Date.now().toString(), word, meaning, timestamp: Date.now() },
@@ -946,7 +1053,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         },
       ]);
       setSelectionToolbar(null);
-      window.getSelection()?.removeAllRanges();
+      globalThis.getSelection()?.removeAllRanges();
     }
   };
 
@@ -974,68 +1081,48 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const isSentenceEnd = (value: string) =>
       /([다요까]\.|습니다\.|습니까\?|[?!])$/.test(value);
 
-    let offset = 0;
+    let currentOffset = 0;
     let sentenceIndex = 0;
     let breakNextWhitespace = false;
 
     return parts.map((part, i) => {
-      const startOffset = offset;
-      offset += part.length;
+      const startOffset = currentOffset;
+      currentOffset += part.length;
 
       if (/^\s+$/.test(part)) {
-        if (part.includes('\n')) {
+        const hasNewline = part.includes('\n');
+        if (hasNewline || breakNextWhitespace) {
           breakNextWhitespace = false;
-          return <br key={i} />;
+          return <br key={`br-${startOffset}-${i}`} />;
         }
-        if (breakNextWhitespace) {
-          breakNextWhitespace = false;
-          return <br key={i} />;
-        }
-        return <span key={i}> </span>;
+        return <span key={`ws-${startOffset}-${i}`}> </span>;
       }
 
       const normalizedWord = normalizeLookupWord(part);
       const currentSentenceIndex = sentenceIndex;
-      const endsSentence = isSentenceEnd(part);
-      if (endsSentence) {
+
+      if (isSentenceEnd(part)) {
         sentenceIndex += 1;
         breakNextWhitespace = true;
       }
 
       if (!normalizedWord) {
-        return <span key={i}>{part}</span>;
+        return <span key={`text-${startOffset}-${i}`}>{part}</span>;
       }
 
       const hasHighlight = highlights.find(h => h.text.includes(part));
       const hasNote = notes.find(n => n.text.includes(part));
 
-      let className = 'cursor-pointer hover:bg-yellow-100 rounded px-0.5 transition-colors';
-      if (hasHighlight) {
-        className += ` bg-${hasHighlight.color}-200`;
-      }
-      if (hasNote) {
-        className += ' underline decoration-wavy decoration-amber-500';
-      }
-
       return (
-        <span
-          key={i}
-          data-word={normalizedWord}
-          data-offset={String(startOffset)}
-          data-sentence-index={String(currentSentenceIndex)}
-          className={className}
-          style={{
-            backgroundColor: hasHighlight
-              ? hasHighlight.color === 'yellow'
-                ? '#FEF08A'
-                : hasHighlight.color === 'green'
-                  ? '#BBF7D0'
-                  : '#FBCFE8'
-              : undefined,
-          }}
-        >
-          {part}
-        </span>
+        <WordEntry
+          key={`word-${startOffset}-${normalizedWord}-${i}`}
+          part={part}
+          normalizedWord={normalizedWord}
+          offset={startOffset}
+          sentenceIndex={currentSentenceIndex}
+          hasHighlight={hasHighlight}
+          hasNote={hasNote}
+        />
       );
     });
   };
@@ -1188,10 +1275,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             <div className="w-full md:w-[65%] md:border-r-2 border-zinc-900 overflow-y-auto p-4 md:p-8">
               <div
                 ref={readerRef}
-                onClick={handleWordClick}
-                onMouseUp={handleMouseUp}
                 className={`bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+                aria-label={labels.dashboard?.reading?.readerLabel || '文章阅读器'}
               >
                 <h2 className="text-2xl font-black mb-6 text-zinc-900">
                   {unitData?.title || labels.dashboard?.reading?.noArticles || '暂无文章'}
@@ -1297,12 +1383,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                           key={note.id}
                           className="bg-white border-2 border-zinc-900 rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
                           style={{
-                            borderLeftColor:
-                              note.color === 'yellow'
-                                ? '#FDE047'
-                                : note.color === 'green'
-                                  ? '#86EFAC'
-                                  : '#F9A8D4',
+                            borderLeftColor: HIGHLIGHT_COLORS[note.color],
                             borderLeftWidth: 4,
                           }}
                         >
@@ -1360,9 +1441,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 {activeTab === 'ai' && (
                   <div className="flex flex-col h-full">
                     <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
-                      {aiMessages.map((msg, i) => (
+                      {aiMessages.map((msg) => (
                         <div
-                          key={i}
+                          key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
                           className={`p-3 rounded-lg border-2 border-zinc-900 ${msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
                             }`}
                         >

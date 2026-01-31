@@ -109,7 +109,7 @@ const ROWS_PER_PAGE = ROWS_PER_COL * 2;
 const VocabBookExportPdfPage: React.FC = () => {
   const { language } = useAuth();
   const [params] = useSearchParams();
-  const origin = window.location.origin;
+  const origin = globalThis.location.origin;
   const labels = useMemo(() => getPdfLabels(language, origin), [language, origin]);
 
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
@@ -153,36 +153,28 @@ const VocabBookExportPdfPage: React.FC = () => {
       const p = item.progress;
       const isMastered = p.status === 'MASTERED';
       const isUnlearned = p.state === 0 || p.status === 'NEW';
-      const c: VocabBookCategory = isMastered ? 'MASTERED' : isUnlearned ? 'UNLEARNED' : 'DUE';
-      return c === category;
+      if (isMastered) return category === 'MASTERED';
+      if (isUnlearned) return category === 'UNLEARNED';
+      return category === 'DUE';
     });
     return shuffle ? shuffleCopy(base) : base;
   }, [items, category, shuffle]);
 
   const subtitle = useMemo(() => {
-    const cat =
-      category === 'DUE'
-        ? language === 'zh'
-          ? '待复习'
-          : 'Due'
-        : category === 'UNLEARNED'
-          ? language === 'zh'
-            ? '未学习'
-            : 'Unlearned'
-          : language === 'zh'
-            ? '已掌握'
-            : 'Mastered';
+    const getCategoryLabel = () => {
+      if (category === 'DUE') return language === 'zh' ? '待复习' : 'Due';
+      if (category === 'UNLEARNED') return language === 'zh' ? '未学习' : 'Unlearned';
+      return language === 'zh' ? '已掌握' : 'Mastered';
+    };
 
-    const modeLabel =
-      mode === 'A4_DICTATION'
-        ? language === 'zh'
-          ? 'A4 默写'
-          : 'A4 Dictation'
-        : mode === 'LANG_LIST'
-          ? getLanguageListTitle(language)
-          : language === 'zh'
-            ? '韩语词表'
-            : 'Korean List';
+    const getModeLabel = () => {
+      if (mode === 'A4_DICTATION') return language === 'zh' ? 'A4 默写' : 'A4 Dictation';
+      if (mode === 'LANG_LIST') return getLanguageListTitle(language);
+      return language === 'zh' ? '韩语词表' : 'Korean List';
+    };
+
+    const cat = getCategoryLabel();
+    const modeLabel = getModeLabel();
     const base = `${cat} · ${modeLabel}`;
     return q ? `${base} · ${q}` : base;
   }, [category, language, mode, q]);
@@ -201,14 +193,14 @@ const VocabBookExportPdfPage: React.FC = () => {
 
   useEffect(() => {
     if (loading) return;
-    const timer = window.setTimeout(() => window.print(), 250);
+    const timer = globalThis.setTimeout(() => globalThis.print(), 250);
     const onAfterPrint = () => {
-      window.close();
+      globalThis.close();
     };
-    window.addEventListener('afterprint', onAfterPrint);
+    globalThis.addEventListener('afterprint', onAfterPrint);
     return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('afterprint', onAfterPrint);
+      globalThis.clearTimeout(timer);
+      globalThis.removeEventListener('afterprint', onAfterPrint);
     };
   }, [loading]);
 

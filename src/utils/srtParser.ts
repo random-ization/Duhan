@@ -21,7 +21,7 @@ export interface ParsedTranscriptSegment {
  */
 export const parseSRT = (content: string): ParsedTranscriptSegment[] => {
   // Normalize line endings
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
   // Split by double newlines (blocks)
   const blocks = normalized.trim().split(/\n\n+/);

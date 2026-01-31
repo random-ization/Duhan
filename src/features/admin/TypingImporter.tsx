@@ -88,6 +88,7 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
           <button
             onClick={onClose}
             className="p-2 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition"
+            aria-label="关闭"
           >
             <X size={24} />
           </button>
@@ -98,8 +99,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
           <form id="typing-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">标题</label>
+                <label htmlFor="title" className="text-sm font-bold text-zinc-700">标题</label>
                 <input
+                  id="title"
                   type="text"
                   required
                   value={formData.title}
@@ -110,8 +112,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">类型</label>
+                <label htmlFor="type" className="text-sm font-bold text-zinc-700">类型</label>
                 <select
+                  id="type"
                   value={formData.type}
                   onChange={e => setFormData({ ...formData, type: e.target.value as any })}
                   className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 focus:border-zinc-900 focus:outline-none transition font-medium bg-white"
@@ -125,9 +128,10 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">分类 (可选)</label>
+                <label htmlFor="category" className="text-sm font-bold text-zinc-700">分类 (可选)</label>
                 <div className="relative">
                   <input
+                    id="category"
                     type="text"
                     list="category-suggestions"
                     value={formData.category}
@@ -146,8 +150,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">难度 (1-5)</label>
+                <label htmlFor="difficulty" className="text-sm font-bold text-zinc-700">难度 (1-5)</label>
                 <input
+                  id="difficulty"
                   type="number"
                   min="1"
                   max="5"
@@ -158,7 +163,7 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">状态</label>
+                <p className="text-sm font-bold text-zinc-700">状态</p>
                 <div className="flex items-center gap-4 px-1 py-1">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -183,8 +188,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-bold text-zinc-700">描述 (可选)</label>
+              <label htmlFor="description" className="text-sm font-bold text-zinc-700">描述 (可选)</label>
               <input
+                id="description"
                 type="text"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -195,9 +201,8 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
 
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <label className="text-sm font-bold text-zinc-700">
-                  内容
-                  <span className="text-zinc-400 font-normal ml-2 text-xs">
+                <label htmlFor="content" className="text-sm font-bold text-zinc-700">
+                  内容 <span className="text-zinc-400 font-normal ml-2 text-xs">
                     {formData.type === 'ARTICLE' ? '(完整文章文本)' : '(每行一个，空行会被忽略)'}
                   </span>
                 </label>
@@ -208,6 +213,7 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
                 )}
               </div>
               <textarea
+                id="content"
                 required
                 value={formData.content}
                 onChange={e => setFormData({ ...formData, content: e.target.value })}

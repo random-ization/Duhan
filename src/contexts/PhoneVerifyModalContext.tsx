@@ -8,7 +8,7 @@ type PhoneVerifyModalContextType = {
 
 const PhoneVerifyModalContext = createContext<PhoneVerifyModalContextType | null>(null);
 
-export function PhoneVerifyModalProvider({ children }: { children: React.ReactNode }) {
+export function PhoneVerifyModalProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const [isOpen, setIsOpen] = useState(false);
 
   const open = useCallback(() => {

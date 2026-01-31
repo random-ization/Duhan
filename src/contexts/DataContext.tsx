@@ -29,23 +29,23 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Maps Convex data to legacy state shape
   const institutes = useMemo(() => {
     if (!institutesData) return [];
-    return (institutesData as unknown as Array<Record<string, unknown>>).map(inst => {
+    return institutesData.map(inst => {
       const levelsRaw = inst.levels;
       const levels =
         typeof levelsRaw === 'string'
           ? (() => {
-              try {
-                return JSON.parse(levelsRaw);
-              } catch {
-                return [];
-              }
-            })()
+            try {
+              return JSON.parse(levelsRaw);
+            } catch {
+              return [];
+            }
+          })()
           : levelsRaw;
 
       return {
         ...(inst as unknown as Institute),
         levels: (levels as Institute['levels']) ?? [],
-        id: (inst as { id?: string }).id || String((inst as { _id?: unknown })._id || ''),
+        id: (inst as { id?: string }).id || String(inst._id),
       };
     });
   }, [institutesData]);
@@ -55,22 +55,25 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
     const examsList = Array.isArray(topikExamsData)
       ? topikExamsData
-      : (topikExamsData as unknown as { page?: unknown[] })?.page || [];
+      : (topikExamsData as { page?: unknown[] }).page || [];
 
-    return (examsList as unknown[]).map(e => {
-      const item = e as unknown as TopikExam;
+    return examsList.map(e => {
+      const item = e as TopikExam;
       return {
         ...item,
-        id: item.id || String((e as { _id?: unknown })._id || ''),
+        id: item.id || String((e as { _id: unknown })._id),
         questions: [],
       };
     });
   }, [topikExamsData]);
 
-  const value: DataContextType = {
-    institutes,
-    topikExams,
-  };
+  const value = useMemo(
+    () => ({
+      institutes,
+      topikExams,
+    }),
+    [institutes, topikExams]
+  );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

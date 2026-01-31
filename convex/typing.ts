@@ -1,6 +1,7 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
+import { requireAdmin } from './utils';
 
 // --- Queries ---
 
@@ -68,7 +69,7 @@ export const listCategories = query({
     texts.forEach(t => {
       if (t.category) categories.add(t.category);
     });
-    return Array.from(categories).sort();
+    return Array.from(categories).sort((a, b) => a.localeCompare(b));
   },
 });
 
@@ -87,9 +88,8 @@ export const createText = mutation({
     source: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Basic permissions check (TODO: Replace with actual Admin check)
-    // const identity = await ctx.auth.getUserIdentity();
-    // if (!identity) throw new Error("Unauthorized");
+    // Basic permissions check
+    await requireAdmin(ctx);
 
     const textId = await ctx.db.insert('typing_texts', {
       ...args,

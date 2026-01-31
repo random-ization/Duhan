@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Lock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 
@@ -8,6 +8,8 @@ import { useAction } from 'convex/react';
 import { toErrorMessage } from '../utils/errors';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { PASSWORD_RESET } from '../utils/convexRefs';
+import { ResetPasswordForm } from './reset-password/components/ResetPasswordForm';
+import { ResetPasswordStatus } from './reset-password/components/ResetPasswordStatus';
 
 const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -123,121 +125,26 @@ const ResetPasswordPage: React.FC = () => {
 
       <div className="w-full max-w-md p-6 relative z-10">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10">
-          {status === 'form' && (
-            <>
-              {/* Header */}
-              <div className="text-center mb-8">
-                <Lock className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
-                <h1 className="text-2xl font-bold text-white mb-2">
-                  {labels.auth?.setNewPassword ||
-                    (language === 'zh' ? '设置新密码' : 'Set New Password')}
-                </h1>
-                <p className="text-indigo-200 text-sm">
-                  {labels.auth?.enterNewPassword ||
-                    (language === 'zh' ? '请输入您的新密码' : 'Enter your new password below')}
-                </p>
-              </div>
-
-              {error && (
-                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-100 rounded-xl text-sm">
-                  {error}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-                    {language === 'zh' ? '新密码' : 'New Password'}
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-indigo-300 group-focus-within:text-white transition-colors" />
-                    </div>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="block w-full pl-11 pr-4 py-3.5 bg-slate-800/50 border border-indigo-500/30 rounded-xl text-white placeholder-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-                    {labels.auth?.confirmPasswordLabel ||
-                      (language === 'zh' ? '确认密码' : 'Confirm Password')}
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-indigo-300 group-focus-within:text-white transition-colors" />
-                    </div>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-11 pr-4 py-3.5 bg-slate-800/50 border border-indigo-500/30 rounded-xl text-white placeholder-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    labels.auth?.recoverPassword ||
-                    (language === 'zh' ? '重置密码' : 'Reset Password')
-                  )}
-                </button>
-              </form>
-            </>
-          )}
-
-          {status === 'success' && (
-            <div className="text-center">
-              <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {labels.auth?.resetSuccess ||
-                  (language === 'zh' ? '密码重置成功！' : 'Password Reset!')}
-              </h1>
-              <p className="text-indigo-200 text-sm mb-8">
-                {labels.auth?.resetSuccessDesc ||
-                  (language === 'zh'
-                    ? '您已退出登录，请使用新密码重新登录'
-                    : 'You have been logged out. Please log in with your new password.')}
-              </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-              >
-                {labels.login || 'Log In'}
-              </button>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="text-center">
-              <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {labels.auth?.invalidLink || (language === 'zh' ? '链接已失效' : 'Link Expired')}
-              </h1>
-              <p className="text-red-200 text-sm mb-8">{error}</p>
-              <button
-                onClick={() => navigate('/forgot-password')}
-                className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-              >
-                {labels.auth?.requestAgain || (language === 'zh' ? '重新请求' : 'Request New Link')}
-              </button>
-            </div>
+          {status === 'form' ? (
+            <ResetPasswordForm
+              labels={labels}
+              language={language}
+              newPassword={newPassword}
+              setNewPassword={setNewPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
+              handleSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+            />
+          ) : (
+            <ResetPasswordStatus
+              status={status}
+              labels={labels}
+              language={language}
+              error={error}
+              navigate={navigate}
+            />
           )}
         </div>
       </div>

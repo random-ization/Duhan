@@ -25,7 +25,7 @@ mn_keys = get_keys(mn)
 def report_missing(lang_name, lang_keys, en_keys):
     missing = en_keys - lang_keys
     print(f"--- Missing keys in {lang_name} ({len(missing)}) ---")
-    for k in sorted(list(missing)):
+    for k in sorted(missing):
         print(k)
 
 report_missing('zh', zh_keys, en_keys)

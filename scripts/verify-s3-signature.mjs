@@ -1,7 +1,7 @@
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Load .env.local manually since we are in a standalone script
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,7 +39,7 @@ const key = `${folder}/${Date.now()}-${filename}`;
 const service = 's3';
 
 const now = new Date();
-const amzDate = now.toISOString().split('.')[0].replace(/[:-]/g, '') + 'Z';
+const amzDate = now.toISOString().split('.')[0].replaceAll(/[:-]/g, '') + 'Z';
 const dateStamp = amzDate.slice(0, 8);
 
 const host = new URL(endpoint).host;

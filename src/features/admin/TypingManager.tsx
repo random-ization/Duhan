@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
-import { Type, Trash2, Plus, Search, Edit2, ChevronDown, Loader2, Globe, Lock } from 'lucide-react';
+import { Type, Plus, Search, ChevronDown, Loader2 } from 'lucide-react';
 import { TypingImporter, TypingTextData } from './TypingImporter';
+import { TypingList } from './TypingList';
 
 export const TypingManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'WORD' | 'SENTENCE' | 'ARTICLE'>('WORD');
@@ -29,8 +30,8 @@ export const TypingManager: React.FC = () => {
     categories.length > 0
       ? categories
       : Array.from(
-          new Set(textsResult?.page.map((t: any) => t.category).filter(Boolean) as string[])
-        );
+        new Set(textsResult?.page.map((t: any) => t.category).filter(Boolean) as string[])
+      );
 
   // Filtered data
   const filteredTexts = textsResult?.page.filter((text: any) => {
@@ -67,6 +68,33 @@ export const TypingManager: React.FC = () => {
     }
   };
 
+  const renderContent = () => {
+    if (textsResult === undefined) {
+      return (
+        <div className="p-12 flex justify-center text-zinc-400">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      );
+    }
+
+    if (filteredTexts?.length === 0) {
+      return (
+        <div className="p-12 text-center text-zinc-400 italic">暂无内容，点击右上角新建</div>
+      );
+    }
+
+    return (
+      <TypingList
+        texts={filteredTexts || []}
+        onEdit={text => {
+          setEditingText(text);
+          setIsImporterOpen(true);
+        }}
+        onDelete={handleDelete}
+      />
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -91,31 +119,28 @@ export const TypingManager: React.FC = () => {
         <div className="flex border-b-2 border-zinc-900 bg-zinc-50">
           <button
             onClick={() => setActiveTab('WORD')}
-            className={`flex - 1 py - 4 text - center font - bold text - sm uppercase tracking - wide transition - colors ${
-              activeTab === 'WORD' ? 'bg-white text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'
-            } `}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'WORD' ? 'bg-white text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'
+              }`}
           >
             单词 (Word)
           </button>
           <div className="w-[2px] bg-zinc-900" />
           <button
             onClick={() => setActiveTab('SENTENCE')}
-            className={`flex - 1 py - 4 text - center font - bold text - sm uppercase tracking - wide transition - colors ${
-              activeTab === 'SENTENCE'
-                ? 'bg-white text-zinc-900'
-                : 'text-zinc-500 hover:text-zinc-700'
-            } `}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'SENTENCE'
+              ? 'bg-white text-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-700'
+              }`}
           >
             句子 (Sentence)
           </button>
           <div className="w-[2px] bg-zinc-900" />
           <button
             onClick={() => setActiveTab('ARTICLE')}
-            className={`flex - 1 py - 4 text - center font - bold text - sm uppercase tracking - wide transition - colors ${
-              activeTab === 'ARTICLE'
-                ? 'bg-white text-zinc-900'
-                : 'text-zinc-500 hover:text-zinc-700'
-            } `}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'ARTICLE'
+              ? 'bg-white text-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-700'
+              }`}
           >
             长文 (Article)
           </button>
@@ -131,6 +156,7 @@ export const TypingManager: React.FC = () => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-lg border-2 border-zinc-200 focus:border-zinc-900 focus:outline-none transition-colors"
+              aria-label="搜索标题或内容"
             />
           </div>
           <div className="relative">
@@ -138,6 +164,7 @@ export const TypingManager: React.FC = () => {
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
               className="appearance-none pl-4 pr-10 py-2 rounded-lg border-2 border-zinc-200 focus:border-zinc-900 focus:outline-none bg-white transition-colors"
+              aria-label="选择分类"
             >
               <option value="">所有分类</option>
               {availableCategories.map(cat => (
@@ -151,86 +178,7 @@ export const TypingManager: React.FC = () => {
         </div>
 
         {/* List */}
-        <div className="overflow-x-auto">
-          {textsResult === undefined ? (
-            <div className="p-12 flex justify-center text-zinc-400">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : filteredTexts?.length === 0 ? (
-            <div className="p-12 text-center text-zinc-400 italic">暂无内容，点击右上角新建</div>
-          ) : (
-            <table className="w-full text-left">
-              <thead className="bg-zinc-50 border-b-2 border-zinc-900">
-                <tr>
-                  <th className="px-6 py-3 font-black text-xs uppercase text-zinc-500 tracking-wider">
-                    标题
-                  </th>
-                  <th className="px-6 py-3 font-black text-xs uppercase text-zinc-500 tracking-wider">
-                    分类
-                  </th>
-                  <th className="px-6 py-3 font-black text-xs uppercase text-zinc-500 tracking-wider">
-                    状态
-                  </th>
-                  <th className="px-6 py-3 font-black text-xs uppercase text-zinc-500 tracking-wider text-right">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {filteredTexts?.map(text => (
-                  <tr key={text._id} className="group hover:bg-zinc-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-zinc-900">{text.title}</div>
-                      <div className="text-xs text-zinc-500 mt-0.5 truncate max-w-[300px]">
-                        {text.description ||
-                          (text.type !== 'ARTICLE' ? text.content : 'No description')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {text.category ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">
-                          {text.category}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400 text-xs">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {text.isPublic ? (
-                        <span className="inline-flex items-center gap-1 text-green-600 text-xs font-bold">
-                          <Globe size={12} /> 公开
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-zinc-400 text-xs font-bold">
-                          <Lock size={12} /> 私密
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            setEditingText(text);
-                            setIsImporterOpen(true);
-                          }}
-                          className="p-2 rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:border-zinc-900 hover:text-zinc-900 shadow-sm"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(text._id)}
-                          className="p-2 rounded-lg bg-white border border-zinc-200 text-red-500 hover:border-red-500 hover:bg-red-50 shadow-sm"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <div className="overflow-x-auto">{renderContent()}</div>
       </div>
 
       {/* Import/Edit Modal */}

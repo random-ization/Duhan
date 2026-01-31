@@ -4,7 +4,6 @@ import {
   Plus,
   Loader2,
   Search,
-  Trash2,
   Check,
   X,
   Sparkles,
@@ -14,6 +13,7 @@ import {
 import toast from 'react-hot-toast';
 import { NoArgs, qRef, GRAMMARS } from '../../utils/convexRefs';
 import { Institute } from '../../types';
+import { GrammarListItem } from './GrammarListItem';
 
 interface UnitInfo {
   unitIndex: number;
@@ -21,7 +21,6 @@ interface UnitInfo {
 }
 
 export const GrammarManager: React.FC = () => {
-  // 1. Fetch Institutes (Convex)
   // 1. Fetch Institutes (Convex)
   const institutesData = useQuery(qRef<NoArgs, Institute[]>('institutes:getAll'));
   const institutes = useMemo(() => institutesData ?? [], [institutesData]);
@@ -37,32 +36,27 @@ export const GrammarManager: React.FC = () => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
 
   // 2. Fetch Unit Titles (Convex)
-  // Using api.units.getByCourse to get metadata including titles
   const unitList = useQuery(
     qRef<{ courseId: string }, { unitIndex: number; title: string }[]>('units:getByCourse'),
     selectedCourseId ? { courseId: selectedCourseId } : 'skip'
   );
 
-  // 3. Generate Full Unit List (combining totalUnits + fetched titles)
-  const units = useMemo(() => {
-    const institute = institutes.find(i => i.id === selectedCourseId);
-    const total = institute?.totalUnits || 20; // Default
+  // 3. Generate Full Unit List
+   const units = useMemo<UnitInfo[]>(() => {
+     const institute = institutes.find(i => i.id === selectedCourseId);
+     const total = institute?.totalUnits || 20;
+ 
+     return Array.from({ length: total }, (_, i) => {
+       const unitIndex = i + 1;
+       const matchingUnit = unitList?.find(u => u.unitIndex === unitIndex);
+       return {
+         unitIndex,
+         title: matchingUnit?.title || '',
+       };
+     });
+   }, [institutes, selectedCourseId, unitList]);
 
-    const allUnits: UnitInfo[] = Array.from({ length: total }, (_, i) => ({
-      unitIndex: i + 1,
-      title: '',
-    }));
-
-    if (unitList) {
-      unitList.forEach(u => {
-        const target = allUnits.find(item => item.unitIndex === u.unitIndex);
-        if (target) target.title = u.title;
-      });
-    }
-    return allUnits;
-  }, [institutes, selectedCourseId, unitList]);
-
-  // 4. Fetch Grammars for Unit (Convex)
+  // 4. Fetch Grammars for Unit
   const grammarsData = useQuery(
     GRAMMARS.getUnitGrammar,
     selectedCourseId ? { courseId: selectedCourseId, unitId: selectedUnit } : 'skip'
@@ -74,7 +68,7 @@ export const GrammarManager: React.FC = () => {
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 5. Search Query (Convex)
+  // 5. Search Query
   const searchData = useQuery(GRAMMARS.search, searchQuery ? { query: searchQuery } : 'skip');
   const searchResults = searchData || [];
   const searching = searchQuery && searchData === undefined;
@@ -117,8 +111,8 @@ export const GrammarManager: React.FC = () => {
       setShowAddPanel(false);
       setSearchQuery('');
       toast.success('已关联语法点');
-    } catch (_e) {
-      console.error('Assign failed', _e);
+    } catch (e) {
+      console.error('Assign failed', e);
       toast.error('关联失败');
     }
   };
@@ -132,8 +126,8 @@ export const GrammarManager: React.FC = () => {
         grammarId,
       });
       toast.success('已移除');
-    } catch (_e) {
-      console.error('Remove failed', _e);
+    } catch (e) {
+      console.error('Remove failed', e);
       toast.error('移除失败');
     }
   };
@@ -152,8 +146,8 @@ export const GrammarManager: React.FC = () => {
       });
       toast.success('已保存匹配模式');
       setEditingGrammarId(null);
-    } catch (_e) {
-      console.error('Update patterns failed', _e);
+    } catch (e) {
+      console.error('Update patterns failed', e);
       toast.error('保存失败');
     } finally {
       setSavingPatterns(false);
@@ -189,8 +183,8 @@ export const GrammarManager: React.FC = () => {
       setShowNewForm(false);
       setShowAddPanel(false);
       toast.success('创建并关联成功');
-    } catch (_e) {
-      console.error('Create failed', _e);
+    } catch (e) {
+      console.error('Create failed', e);
       toast.error('创建失败');
     } finally {
       setCreating(false);
@@ -202,11 +196,15 @@ export const GrammarManager: React.FC = () => {
       {/* Left Panel: Course/Unit Selection */}
       <div className="w-1/3 bg-white border-2 border-zinc-900 rounded-xl p-4 flex flex-col shadow-[4px_4px_0px_0px_#18181B]">
         <div className="mb-4">
-          <label className="block text-sm font-bold mb-2">选择教材</label>
+          <label htmlFor="course-select" className="block text-sm font-bold mb-2">
+            选择教材
+          </label>
           <select
+            id="course-select"
             className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
             value={selectedCourseId}
             onChange={e => setSelectedCourseId(e.target.value)}
+            aria-label="选择教材"
           >
             {institutes.map(i => (
               <option key={i.id} value={i.id}>
@@ -219,11 +217,15 @@ export const GrammarManager: React.FC = () => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-bold mb-2">选择单元</label>
+          <label htmlFor="unit-select" className="block text-sm font-bold mb-2">
+            选择单元
+          </label>
           <select
+            id="unit-select"
             className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
             value={selectedUnit}
-            onChange={e => setSelectedUnit(parseInt(e.target.value))}
+            onChange={e => setSelectedUnit(Number.parseInt(e.target.value, 10))}
+            aria-label="选择单元"
           >
             {units.length === 0 ? (
               <option value={1}>第 1 课</option>
@@ -241,44 +243,31 @@ export const GrammarManager: React.FC = () => {
           <h3 className="font-black text-sm text-zinc-500 mb-2">
             本单元语法 ({grammars?.length || 0})
           </h3>
-          {grammarsLoading ? (
-            <div className="text-center py-4">
-              <Loader2 className="animate-spin mx-auto" />
-            </div>
-          ) : grammars.length === 0 ? (
-            <div className="text-center text-zinc-400 py-10">
-              <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">暂无语法点</p>
-            </div>
-          ) : (
-            grammars.map(g => (
-              <div
+          {(() => {
+            if (grammarsLoading) {
+              return (
+                <div className="text-center py-4">
+                  <Loader2 className="animate-spin mx-auto" />
+                </div>
+              );
+            }
+            if (grammars.length === 0) {
+              return (
+                <div className="text-center text-zinc-400 py-10">
+                  <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">暂无语法点</p>
+                </div>
+              );
+            }
+            return grammars.map(g => (
+              <GrammarListItem
                 key={g.id}
-                className="p-3 border-2 border-zinc-200 rounded-lg flex items-start justify-between hover:border-zinc-400 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="font-bold text-zinc-900">{g.title}</div>
-                  <div className="text-xs text-zinc-500 truncate">{g.summary}</div>
-                </div>
-                <div className="ml-2 flex flex-col gap-1">
-                  <button
-                    onClick={() => setEditingGrammarId(g.id)}
-                    className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 rounded transition-colors"
-                    title="编辑匹配模式"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleRemove(g.id)}
-                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                    title="从单元移除"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+                g={g}
+                onEdit={setEditingGrammarId}
+                onRemove={handleRemove}
+              />
+            ));
+          })()}
         </div>
 
         <button
@@ -308,10 +297,13 @@ export const GrammarManager: React.FC = () => {
 
             {/* Search existing */}
             <div className="mb-6">
-              <label className="block text-sm font-bold mb-2">搜索已有语法</label>
+              <label htmlFor="grammar-search" className="block text-sm font-bold mb-2">
+                搜索已有语法
+              </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
+                  id="grammar-search"
                   type="text"
                   placeholder="输入语法名称，如：-고 싶다"
                   value={searchQuery}
@@ -322,52 +314,59 @@ export const GrammarManager: React.FC = () => {
             </div>
 
             {/* Search Results */}
-            {searching ? (
-              <div className="text-center py-4">
-                <Loader2 className="animate-spin mx-auto" />
-              </div>
-            ) : searchResults.length > 0 ? (
-              <div className="space-y-2 mb-6">
-                <h3 className="text-sm font-bold text-zinc-500">搜索结果</h3>
-                {searchResults.map(r => (
-                  <div
-                    key={r.id}
-                    className="flex items-center justify-between p-3 border-2 border-zinc-200 rounded-lg hover:border-lime-400 cursor-pointer transition-colors"
-                    onClick={() => handleAssign(r.id)}
-                  >
-                    <div>
-                      <div className="font-bold">{r.title}</div>
-                      <div className="text-xs text-zinc-500">{r.summary}</div>
-                    </div>
-                    <div className="flex items-center gap-2 text-lime-600">
-                      <span className="text-xs font-bold">点击添加</span>
-                      <Plus className="w-4 h-4" />
-                    </div>
+            {(() => {
+              if (searching) {
+                return (
+                  <div className="text-center py-4">
+                    <Loader2 className="animate-spin mx-auto" />
                   </div>
-                ))}
-              </div>
-            ) : searchQuery.trim() ? (
-              <div className="text-center py-6 text-zinc-400 mb-6">
-                <p>未找到 &quot;{searchQuery}&quot; 相关的语法</p>
-              </div>
-            ) : null}
+                );
+              }
+              if (searchResults.length > 0) {
+                return (
+                  <div className="space-y-2 mb-6">
+                    <h3 className="text-sm font-bold text-zinc-500">搜索结果</h3>
+                    {searchResults.map(r => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className="w-full flex items-center justify-between p-3 border-2 border-zinc-200 rounded-lg hover:border-lime-400 cursor-pointer transition-colors text-left"
+                        onClick={() => handleAssign(r.id)}
+                      >
+                        <div>
+                          <div className="font-bold">{r.title}</div>
+                          <div className="text-xs text-zinc-500">{r.summary}</div>
+                        </div>
+                        <div className="flex items-center gap-2 text-lime-600">
+                          <span className="text-xs font-bold">点击添加</span>
+                          <Plus className="w-4 h-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+              if (searchQuery.trim()) {
+                return (
+                  <div className="text-center py-6 text-zinc-400 mb-6">
+                    <p>未找到 &quot;{searchQuery}&quot; 相关的语法</p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Create New */}
             <div className="border-t-2 border-zinc-100 pt-6">
-              {!showNewForm ? (
-                <button
-                  onClick={() => setShowNewForm(true)}
-                  className="w-full py-3 border-2 border-dashed border-zinc-300 rounded-lg text-zinc-500 font-bold flex items-center justify-center gap-2 hover:border-zinc-500 hover:text-zinc-700 transition-colors"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  创建新语法点
-                </button>
-              ) : (
+              {showNewForm ? (
                 <div className="space-y-4">
                   <h3 className="font-black">新建语法</h3>
                   <div>
-                    <label className="block text-xs font-bold mb-1">语法标题 *</label>
+                    <label htmlFor="new-grammar-title" className="block text-xs font-bold mb-1">
+                      语法标题 *
+                    </label>
                     <input
+                      id="new-grammar-title"
                       type="text"
                       placeholder="如：-고 싶다"
                       value={newTitle}
@@ -376,8 +375,11 @@ export const GrammarManager: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">简要释义</label>
+                    <label htmlFor="new-grammar-summary" className="block text-xs font-bold mb-1">
+                      简要释义
+                    </label>
                     <input
+                      id="new-grammar-summary"
                       type="text"
                       placeholder="如：表示愿望，想做..."
                       value={newSummary}
@@ -386,8 +388,11 @@ export const GrammarManager: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">详细解释</label>
+                    <label htmlFor="new-grammar-explanation" className="block text-xs font-bold mb-1">
+                      详细解释
+                    </label>
                     <textarea
+                      id="new-grammar-explanation"
                       placeholder="Markdown 格式"
                       value={newExplanation}
                       onChange={e => setNewExplanation(e.target.value)}
@@ -396,12 +401,14 @@ export const GrammarManager: React.FC = () => {
                   </div>
                   <div className="flex gap-3">
                     <button
+                      type="button"
                       onClick={() => setShowNewForm(false)}
                       className="flex-1 py-2 border-2 border-zinc-300 rounded-lg font-bold hover:bg-zinc-50"
                     >
                       取消
                     </button>
                     <button
+                      type="button"
                       onClick={handleCreateAndAssign}
                       disabled={creating || !newTitle.trim()}
                       className="flex-1 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 disabled:opacity-50"
@@ -415,6 +422,16 @@ export const GrammarManager: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowNewForm(true)}
+                  className="w-full py-3 border-2 border-dashed border-zinc-300 rounded-lg text-zinc-500 font-bold flex items-center justify-center gap-2 hover:border-zinc-500 hover:text-zinc-700 transition-colors"
+                  aria-label="创建并添加新语法点"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  创建新语法点
+                </button>
               )}
             </div>
           </div>
@@ -435,23 +452,23 @@ export const GrammarManager: React.FC = () => {
               <button
                 onClick={() => setEditingGrammarId(null)}
                 className="p-2 hover:bg-zinc-100 rounded-lg"
+                aria-label="关闭编辑弹窗"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {!adminGrammar ? (
-              <div className="py-10 text-center text-zinc-500">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                <div className="text-sm">加载中...</div>
-              </div>
-            ) : (
+            {adminGrammar ? (
               <>
                 <div className="text-sm font-bold text-zinc-900 mb-2">{adminGrammar.title}</div>
                 <div className="text-xs text-zinc-500 mb-3">
                   每行一个 pattern（也支持逗号分隔）。示例：으시, 시, 었, 았
                 </div>
+                <label htmlFor="patterns-editor" className="sr-only">
+                  编辑匹配模式
+                </label>
                 <textarea
+                  id="patterns-editor"
                   value={searchPatternsText}
                   onChange={e => setSearchPatternsText(e.target.value)}
                   className="w-full h-40 p-3 border-2 border-zinc-900 rounded-lg resize-none"
@@ -459,12 +476,14 @@ export const GrammarManager: React.FC = () => {
                 />
                 <div className="flex gap-3 mt-4">
                   <button
+                    type="button"
                     onClick={() => setEditingGrammarId(null)}
                     className="flex-1 py-2 border-2 border-zinc-300 rounded-lg font-bold hover:bg-zinc-50"
                   >
                     取消
                   </button>
                   <button
+                    type="button"
                     onClick={handleSavePatterns}
                     disabled={savingPatterns}
                     className="flex-1 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 disabled:opacity-50"
@@ -478,6 +497,11 @@ export const GrammarManager: React.FC = () => {
                   </button>
                 </div>
               </>
+            ) : (
+              <div className="py-10 text-center text-zinc-500">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                <div className="text-sm">加载中...</div>
+              </div>
             )}
           </div>
         </div>

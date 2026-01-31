@@ -28,7 +28,7 @@ export type VocabProgressWord = {
   mastered?: boolean;
 };
 
-type Props = {
+type Props = Readonly<{
   words: VocabProgressWord[];
   language: Language;
   redEyeEnabled: boolean;
@@ -36,9 +36,34 @@ type Props = {
   starredIds?: Set<string>;
   onToggleStar?: (id: string) => void;
   onSpeak?: (text: string) => void;
-};
+}>;
 
 type GroupKey = 'UNLEARNED' | 'LEARNING' | 'MASTERED';
+
+// Helper to determine group based on FSRS state
+const getGroupFromState = (
+  state: number,
+  stability: number | undefined,
+  progress: FsrsProgress,
+  mastered: boolean | undefined
+): GroupKey => {
+  if (state === 0) return 'UNLEARNED';
+  if (state === 1 || state === 3) return 'LEARNING';
+  if (state === 2) {
+    if (typeof stability === 'number') {
+      return stability > 30 ? 'MASTERED' : 'LEARNING';
+    }
+    return progress.status === 'MASTERED' || mastered ? 'MASTERED' : 'LEARNING';
+  }
+  return 'UNLEARNED';
+};
+
+// Helper to determine group based on status string
+const getGroupFromStatus = (status: string | undefined): GroupKey => {
+  if (status === 'MASTERED') return 'MASTERED';
+  if (status === 'LEARNING' || status === 'REVIEW') return 'LEARNING';
+  return 'UNLEARNED';
+};
 
 const deriveGroupKey = (w: VocabProgressWord): GroupKey => {
   const progress = w.progress;
@@ -47,19 +72,13 @@ const deriveGroupKey = (w: VocabProgressWord): GroupKey => {
   const state = progress.state;
   const stability = progress.stability;
 
+  // Try state-based classification first
   if (typeof state === 'number') {
-    if (state === 0) return 'UNLEARNED';
-    if (state === 1 || state === 3) return 'LEARNING';
-    if (state === 2) {
-      if (typeof stability === 'number') return stability > 30 ? 'MASTERED' : 'LEARNING';
-      return progress.status === 'MASTERED' || w.mastered ? 'MASTERED' : 'LEARNING';
-    }
+    return getGroupFromState(state, stability, progress, w.mastered);
   }
 
-  const status = progress.status;
-  if (status === 'MASTERED') return 'MASTERED';
-  if (status === 'LEARNING' || status === 'REVIEW') return 'LEARNING';
-  return 'UNLEARNED';
+  // Fall back to status-based classification
+  return getGroupFromStatus(progress.status);
 };
 
 export default function VocabProgressSections({
@@ -143,6 +162,12 @@ export default function VocabProgressSections({
     const exampleMeaning =
       getLocalizedContent(w as never, 'exampleMeaning', language) || w.exampleMeaning || '';
 
+    // Helper to get star button aria-label
+    const getStarLabel = (): string => {
+      if (isStarred) return language === 'zh' ? '已收藏' : 'Starred';
+      return language === 'zh' ? '收藏' : 'Star';
+    };
+
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-4">
         <div className="flex items-start justify-between gap-3">
@@ -155,17 +180,15 @@ export default function VocabProgressSections({
             </div>
             <div className="min-w-0">
               <div
-                className={`text-slate-700 text-sm font-bold transition-all ${
-                  redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
-                }`}
+                className={`text-slate-700 text-sm font-bold transition-all ${redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
+                  }`}
               >
                 {meaning}
               </div>
               {exampleMeaning && (
                 <div
-                  className={`text-slate-500 text-xs mt-1 transition-all ${
-                    redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
-                  }`}
+                  className={`text-slate-500 text-xs mt-1 transition-all ${redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
+                    }`}
                 >
                   {exampleMeaning}
                 </div>
@@ -182,7 +205,7 @@ export default function VocabProgressSections({
               }}
               disabled={isStarred}
               className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center"
-              aria-label={language === 'zh' ? (isStarred ? '已收藏' : '收藏') : 'Star'}
+              aria-label={getStarLabel()}
             >
               <Star className={`w-4 h-4 ${isStarred ? 'text-yellow-500' : 'text-slate-400'}`} />
             </button>
@@ -219,11 +242,10 @@ export default function VocabProgressSections({
         <button
           type="button"
           onClick={() => onRedEyeEnabledChange(!redEyeEnabled)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
-            redEyeEnabled
-              ? 'bg-red-50 border-red-400 text-red-600'
-              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
-          }`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${redEyeEnabled
+            ? 'bg-red-50 border-red-400 text-red-600'
+            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
+            }`}
         >
           {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {language === 'zh' ? '红眼模式' : labels.vocab?.redSheet || 'Red Eye'}
@@ -277,11 +299,10 @@ export default function VocabProgressSections({
                     onRedEyeEnabledChange(true);
                     setShowPicker(false);
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                    redEyeEnabled
-                      ? 'bg-red-50 border-red-400 text-red-700'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${redEyeEnabled
+                    ? 'bg-red-50 border-red-400 text-red-700'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                    }`}
                 >
                   <span>{language === 'zh' ? '开启红眼模式' : 'Enable'}</span>
                   <span className="text-xs font-bold text-slate-500">
@@ -294,11 +315,10 @@ export default function VocabProgressSections({
                     onRedEyeEnabledChange(false);
                     setShowPicker(false);
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                    !redEyeEnabled
-                      ? 'bg-green-50 border-green-400 text-green-700'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${redEyeEnabled
+                    ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                    : 'bg-green-50 border-green-400 text-green-700'
+                    }`}
                 >
                   <span>{language === 'zh' ? '关闭红眼模式' : 'Disable'}</span>
                   <span className="text-xs font-bold text-slate-500">

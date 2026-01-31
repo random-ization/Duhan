@@ -6,11 +6,11 @@ function IconButton({
   children,
   ariaLabel,
   onClick,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   ariaLabel: string;
   onClick?: () => void;
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -23,7 +23,7 @@ function IconButton({
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <span className="inline-flex items-center h-6 px-2.5 rounded-full border-2 border-slate-900 bg-slate-50 shadow-pop-sm text-xs font-extrabold text-slate-900">
       {children}
@@ -31,7 +31,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PrimaryButton({ children }: { children: React.ReactNode }) {
+function PrimaryButton({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <button
       type="button"
@@ -45,10 +45,10 @@ function PrimaryButton({ children }: { children: React.ReactNode }) {
 function SecondaryButton({
   children,
   className = '',
-}: {
+}: Readonly<{
   children: React.ReactNode;
   className?: string;
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -64,12 +64,12 @@ function MobileBottomTab({
   label,
   active,
   onClick,
-}: {
+}: Readonly<{
   tab: TabKey;
   label: string;
   active: boolean;
   onClick: (tab: TabKey) => void;
-}) {
+}>) {
   const icon = useMemo(() => {
     switch (tab) {
       case 'home':
@@ -258,16 +258,15 @@ export default function MobilePreviewPage() {
         />
       </nav>
 
-      <div
+      <button
+        type="button"
+        aria-label="Close panel overlay"
         className={`fixed inset-0 z-[80] bg-slate-900/35 transition-opacity ${
           isSheetOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsSheetOpen(false)}
       />
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Panel"
+      <div
         className={`fixed inset-x-0 bottom-0 z-[90] px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] transition-transform duration-300 ease-out ${
           isSheetOpen ? 'translate-y-0' : 'translate-y-[105%]'
         }`}
@@ -312,7 +311,7 @@ export default function MobilePreviewPage() {
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

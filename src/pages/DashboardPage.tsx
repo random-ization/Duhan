@@ -94,10 +94,10 @@ const SortableItem = ({
 export default function DashboardPage({
   _canAccessContent,
   _onShowUpgradePrompt,
-}: {
+}: Readonly<{
   _canAccessContent: (content: TextbookContent | TopikExam) => boolean;
   _onShowUpgradePrompt: () => void;
-}) {
+}>) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearning();
@@ -119,14 +119,10 @@ export default function DashboardPage({
     })
   );
 
-  // Calculate stats
-  // const streak = user?.statistics?.dayStreak || 0;
-  // const xp = (user?.wordsLearned || 0) * 10 + (user?.examsTaken || 0) * 50;
   const wordsToReview = savedWordsCount?.count || 0;
 
   // Calculate Progress (Mock for now, or based on lastUnit)
   const currentUnit = user?.lastUnit || 1;
-  // const totalUnits = 10; // Mock total
   const progressPercent = Math.min(100, Math.round((currentUnit / 10) * 100));
 
   // Determine top score
@@ -202,9 +198,9 @@ export default function DashboardPage({
                   <br />
                   {selectedLevel
                     ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
-                        '{level}',
-                        String(selectedLevel)
-                      )
+                      '{level}',
+                      String(selectedLevel)
+                    )
                     : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
                 </h3>
                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">
@@ -433,14 +429,10 @@ export default function DashboardPage({
 
   // Card styling mapping (for spans)
   const getCardStyle = (id: string) => {
-    switch (id) {
-      case 'tiger':
-        // Orig: md:col-span-1 row-span-2
-        return 'md:col-span-1 md:row-span-2';
-      default:
-        // Default 1x1
-        return 'md:col-span-1';
+    if (id === 'tiger') {
+      return 'md:col-span-1 md:row-span-2';
     }
+    return 'md:col-span-1';
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -488,7 +480,7 @@ export default function DashboardPage({
 
           {/* Simplified Premium Badge */}
           {(user?.tier === 'PAID' || user?.tier === 'PREMIUM' || user?.subscriptionType) && (
-            <div
+            <button
               onClick={() => navigate('/pricing/details')}
               className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 hover:scale-110 transition cursor-pointer"
             >
@@ -496,7 +488,7 @@ export default function DashboardPage({
               <span className="font-bold text-white text-sm">
                 {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
               </span>
-            </div>
+            </button>
           )}
         </div>
       </header>
@@ -505,7 +497,7 @@ export default function DashboardPage({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
           <div
-            className={`grid grid - cols - 1 md: grid - cols - 2 lg: grid - cols - 4 gap - 6 auto - rows - [minmax(220px, auto)] transition - all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''} `}
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''} `}
           >
             {cardOrder.map(id => (
               <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>

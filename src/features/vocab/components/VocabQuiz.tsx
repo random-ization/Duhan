@@ -3,49 +3,49 @@ import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-reac
 import { useMutation, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useTTS } from '../../../hooks/useTTS';
-import { getLabels } from '../../../utils/i18n';
+import { getLabels, Labels } from '../../../utils/i18n';
 import { Language } from '../../../types';
 import { mRef, aRef } from '../../../utils/convexRefs';
 import { Rating } from '../../../utils/srsAlgorithm';
 import { logger } from '../../../utils/logger';
 
 interface VocabItem {
-  id: string;
-  korean: string;
-  english: string;
-  unit: number;
+  readonly id: string;
+  readonly korean: string;
+  readonly english: string;
+  readonly unit: number;
 }
 
 interface QuizSettings {
-  multipleChoice: boolean;
-  writingMode: boolean;
-  mcDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
-  writingDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
-  autoTTS: boolean;
-  soundEffects: boolean;
+  readonly multipleChoice: boolean;
+  readonly writingMode: boolean;
+  readonly mcDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  readonly writingDirection: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  readonly autoTTS: boolean;
+  readonly soundEffects: boolean;
 }
 
 interface VocabQuizProps {
-  words: VocabItem[];
-  onComplete?: (stats: { correct: number; total: number }) => void;
-  hasNextUnit?: boolean;
-  onNextUnit?: () => void;
-  currentUnitLabel?: string;
-  userId?: string; // For recording progress
-  language?: Language;
-  variant?: 'quiz' | 'learn';
-  presetSettings?: Partial<QuizSettings>;
-  settingsLocked?: boolean;
+  readonly words: readonly VocabItem[];
+  readonly onComplete?: (stats: { readonly correct: number; readonly total: number }) => void;
+  readonly hasNextUnit?: boolean;
+  readonly onNextUnit?: () => void;
+  readonly currentUnitLabel?: string;
+  readonly userId?: string; // For recording progress
+  readonly language?: Language;
+  readonly variant?: 'quiz' | 'learn';
+  readonly presetSettings?: Partial<QuizSettings>;
+  readonly settingsLocked?: boolean;
 }
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
 
 interface QuizQuestion {
-  type: QuestionType;
-  targetWord: VocabItem;
-  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
-  options?: VocabItem[];
-  correctIndex?: number;
+  readonly type: QuestionType;
+  readonly targetWord: VocabItem;
+  readonly direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  readonly options?: readonly VocabItem[];
+  readonly correctIndex?: number;
 }
 
 type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
@@ -53,7 +53,7 @@ type GameState = 'PLAYING' | 'COMPLETE';
 type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
 
 // Shuffle helper
-const shuffleArray = <T,>(array: T[]): T[] => {
+const shuffleArray = <T,>(array: readonly T[]): T[] => {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -62,120 +62,624 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return arr;
 };
 
-function VocabQuizComponent({
-  words,
-  onComplete,
+interface SettingsModalProps {
+  readonly showSettings: boolean;
+  readonly settingsLocked: boolean;
+  readonly setShowSettings: (show: boolean) => void;
+  readonly labels: Labels;
+  readonly modeLabel: string;
+  readonly settings: QuizSettings;
+  readonly setSettings: React.Dispatch<React.SetStateAction<QuizSettings>>;
+  readonly applySettings: () => void;
+}
+
+const SettingsModal: React.FC<SettingsModalProps> = ({
+  showSettings,
+  settingsLocked,
+  setShowSettings,
+  labels,
+  modeLabel,
+  settings,
+  setSettings,
+  applySettings,
+}) => {
+  if (settingsLocked || !showSettings) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 cursor-default"
+        onClick={() => setShowSettings(false)}
+        aria-label="Close settings"
+      />
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-slate-900">
+            🎯 {labels.dashboard?.quiz?.quizSettings || `${modeLabel} Settings`}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowSettings(false)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Question Type */}
+        <div className="mb-5">
+          <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
+            {labels.dashboard?.quiz?.questionType || 'Question Type'}
+          </h3>
+          <div className="space-y-2">
+            <label
+              htmlFor="mc-toggle"
+              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100"
+            >
+              <span className="font-bold text-slate-700">
+                {labels.dashboard?.quiz?.multipleChoice || '📝 Multiple Choice'}
+              </span>
+              <input
+                id="mc-toggle"
+                type="checkbox"
+                checked={settings.multipleChoice}
+                onChange={e => setSettings(s => ({ ...s, multipleChoice: e.target.checked }))}
+                className="w-5 h-5 accent-blue-500"
+              />
+            </label>
+            <label
+              htmlFor="writing-toggle"
+              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100"
+            >
+              <span className="font-bold text-slate-700">
+                {labels.dashboard?.quiz?.writingFill || '✏️ Writing Fill'}
+              </span>
+              <input
+                id="writing-toggle"
+                type="checkbox"
+                checked={settings.writingMode}
+                onChange={e => setSettings(s => ({ ...s, writingMode: e.target.checked }))}
+                className="w-5 h-5 accent-blue-500"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* MC Direction */}
+        {settings.multipleChoice && (
+          <div className="mb-5">
+            <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
+              {labels.dashboard?.quiz?.mcDirection || 'MC Direction'}
+            </h3>
+            <div className="space-y-2">
+              <label
+                htmlFor="mc-dir-kr-native"
+                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'KR_TO_NATIVE' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}
+              >
+                <input
+                  id="mc-dir-kr-native"
+                  type="radio"
+                  name="mc-dir"
+                  checked={settings.mcDirection === 'KR_TO_NATIVE'}
+                  onChange={() => setSettings(s => ({ ...s, mcDirection: 'KR_TO_NATIVE' }))}
+                  className="mr-3"
+                />
+                <span className="font-medium">
+                  {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
+                </span>
+              </label>
+              <label
+                htmlFor="mc-dir-native-kr"
+                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'NATIVE_TO_KR' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}
+              >
+                <input
+                  id="mc-dir-native-kr"
+                  type="radio"
+                  name="mc-dir"
+                  checked={settings.mcDirection === 'NATIVE_TO_KR'}
+                  onChange={() => setSettings(s => ({ ...s, mcDirection: 'NATIVE_TO_KR' }))}
+                  className="mr-3"
+                />
+                <span className="font-medium">
+                  {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Writing Direction */}
+        {settings.writingMode && (
+          <div className="mb-5">
+            <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
+              {labels.dashboard?.quiz?.writingDirection || 'Writing Direction'}
+            </h3>
+            <div className="space-y-2">
+              <label
+                htmlFor="writing-dir-kr-native"
+                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'KR_TO_NATIVE' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}
+              >
+                <input
+                  id="writing-dir-kr-native"
+                  type="radio"
+                  name="writing-dir"
+                  checked={settings.writingDirection === 'KR_TO_NATIVE'}
+                  onChange={() => setSettings(s => ({ ...s, writingDirection: 'KR_TO_NATIVE' }))}
+                  className="mr-3"
+                />
+                <span className="font-medium">
+                  {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
+                </span>
+              </label>
+              <label
+                htmlFor="writing-dir-native-kr"
+                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'NATIVE_TO_KR' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}
+              >
+                <input
+                  id="writing-dir-native-kr"
+                  type="radio"
+                  name="writing-dir"
+                  checked={settings.writingDirection === 'NATIVE_TO_KR'}
+                  onChange={() => setSettings(s => ({ ...s, writingDirection: 'NATIVE_TO_KR' }))}
+                  className="mr-3"
+                />
+                <span className="font-medium">
+                  {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Audio Settings */}
+        <div className="mb-5">
+          <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
+            {labels.dashboard?.quiz?.audioSettings || 'Audio Settings'}
+          </h3>
+          <div className="space-y-2">
+            <label
+              htmlFor="auto-read-toggle"
+              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100"
+              aria-label={labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
+            >
+              <span className="flex flex-col">
+                <span className="font-bold text-slate-700">
+                  {labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {labels.dashboard?.quiz?.autoReadDesc ||
+                    'Auto play Korean pronunciation each question'}
+                </span>
+              </span>
+              <input
+                id="auto-read-toggle"
+                type="checkbox"
+                checked={settings.autoTTS}
+                onChange={e => setSettings(s => ({ ...s, autoTTS: e.target.checked }))}
+                className="w-5 h-5 accent-green-500"
+                aria-label={labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
+              />
+            </label>
+            <label
+              htmlFor="sound-effects-toggle"
+              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100"
+              aria-label={labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
+            >
+              <span className="flex flex-col">
+                <span className="font-bold text-slate-700">
+                  {labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {labels.dashboard?.quiz?.soundEffectsDesc || 'Correct/incorrect feedback sounds'}
+                </span>
+              </span>
+              <input
+                id="sound-effects-toggle"
+                type="checkbox"
+                checked={settings.soundEffects}
+                onChange={e => setSettings(s => ({ ...s, soundEffects: e.target.checked }))}
+                className="w-5 h-5 accent-green-500"
+                aria-label={labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
+              />
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={applySettings}
+          disabled={!settings.multipleChoice && !settings.writingMode}
+          className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50"
+        >
+          {labels.dashboard?.quiz?.applyRestart || 'Apply & Restart'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+interface WritingInputProps {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  writingInput: string;
+  setWritingInput: (value: string) => void;
+  writingState: WritingState;
+  handleWritingSubmit: () => void;
+  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  targetWord: VocabItem;
+  labels: any;
+  isLearn: boolean;
+}
+
+const WritingInput: React.FC<WritingInputProps> = ({
+  inputRef,
+  writingInput,
+  setWritingInput,
+  writingState,
+  handleWritingSubmit,
+  direction,
+  targetWord,
+  labels,
+  isLearn,
+}) => {
+  const getWritingStateClass = (state: WritingState) => {
+    if (state === 'CORRECT') return 'bg-green-50 border-green-400';
+    if (state === 'WRONG') return 'bg-red-50 border-red-400';
+    return 'bg-slate-50 border-slate-200';
+  };
+
+  return (
+    <div className="mb-6">
+      <div
+        className={`rounded-2xl border-2 ${isLearn ? 'p-5' : 'p-6'} ${getWritingStateClass(writingState)}`}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={writingInput}
+          onChange={e => setWritingInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
+          placeholder={
+            direction === 'KR_TO_NATIVE'
+              ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
+              : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
+          }
+          disabled={writingState !== 'INPUT'}
+          className={`w-full ${isLearn ? 'text-xl' : 'text-2xl'} font-bold text-center bg-transparent outline-none`}
+          autoFocus
+        />
+        {writingState === 'CORRECT' && (
+          <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2">
+            <Check className="w-6 h-6" /> {labels.dashboard?.quiz?.correct || 'Correct'}!
+          </div>
+        )}
+        {writingState === 'WRONG' && (
+          <div className="mt-4 text-center">
+            <p className="text-red-600 font-bold mb-2">
+              ✕ {labels.dashboard?.quiz?.wrong || 'Wrong'}
+            </p>
+            <p className="text-slate-600">
+              {labels.dashboard?.quiz?.correctAnswer || 'Correct Answer'}:{' '}
+              <strong className="text-green-600">
+                {direction === 'KR_TO_NATIVE' ? targetWord.english : targetWord.korean}
+              </strong>
+            </p>
+          </div>
+        )}
+      </div>
+      {writingState === 'INPUT' && (
+        <button
+          type="button"
+          onClick={handleWritingSubmit}
+          disabled={!writingInput.trim()}
+          className="w-full mt-4 py-4 bg-slate-900 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50"
+        >
+          {labels.dashboard?.quiz?.submit || 'Submit Answer'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface MCOptionsProps {
+  options: readonly VocabItem[];
+  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  optionStates: readonly OptionState[];
+  handleOptionClick: (index: number) => void;
+  isLocked: boolean;
+  isLearn: boolean;
+}
+
+const MCOptions: React.FC<MCOptionsProps> = ({
+  options,
+  direction,
+  optionStates,
+  handleOptionClick,
+  isLocked,
+  isLearn,
+}) => {
+  const getOptionStateClass = (state: OptionState) => {
+    if (state === 'correct') return 'bg-green-200 text-green-700';
+    if (state === 'wrong') return 'bg-red-200 text-red-600';
+    return 'bg-slate-100 text-slate-400';
+  };
+
+  return (
+    <div className={`grid grid-cols-1 md:grid-cols-2 ${isLearn ? 'gap-3' : 'gap-4'} mb-6`}>
+      {options.map((option, index) => {
+        const state = optionStates[index];
+        const displayText = direction === 'KR_TO_NATIVE' ? option.english : option.korean;
+        let btnClass = `w-full bg-white border-2 border-slate-900 border-b-[6px] rounded-2xl ${
+          isLearn ? 'p-4' : 'p-5'
+        } flex items-center gap-4 text-left transition-all`;
+        if (state === 'normal')
+          btnClass += ' hover:bg-slate-50 active:border-b-2 active:translate-y-1';
+        else if (state === 'selected') btnClass += ' bg-yellow-50 border-yellow-400';
+        else if (state === 'correct') btnClass += ' bg-green-50 border-green-500 text-green-700';
+        else if (state === 'wrong')
+          btnClass += ' bg-red-50 border-red-500 text-red-600 animate-shake';
+
+        return (
+          <button
+            key={`${option.id}:${index}`}
+            onClick={() => handleOptionClick(index)}
+            disabled={isLocked}
+            className={btnClass}
+          >
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${getOptionStateClass(state)}`}
+            >
+              {String.fromCodePoint(65 + index)}
+            </div>
+            <span className={`font-bold ${isLearn ? 'text-base' : 'text-lg'}`}>{displayText}</span>
+            {state === 'correct' && <span className="ml-auto text-2xl">✓</span>}
+            {state === 'wrong' && <span className="ml-auto text-2xl">✕</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+interface PendingAdvanceBannerProps {
+  language: string;
+  onContinue: () => void;
+}
+
+const PendingAdvanceBanner: React.FC<PendingAdvanceBannerProps> = ({ language, onContinue }) => (
+  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+    <div className="min-w-0">
+      <div className="text-sm font-black text-slate-700">
+        {language === 'zh' ? '没关系，您仍在学习！' : "No worries — you're learning!"}
+      </div>
+      <div className="text-xs font-bold text-slate-500 mt-1">
+        {language === 'zh'
+          ? '稍后再试此问题。单击继续或按任意键继续。'
+          : 'We’ll practice this again later. Click Continue or press any key.'}
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onContinue}
+      className="px-6 py-3 rounded-full bg-blue-600 text-white font-black hover:bg-blue-700"
+    >
+      {language === 'zh' ? '继续' : 'Continue'}
+    </button>
+  </div>
+);
+
+interface QuestionDisplayProps {
+  promptText: string;
+  questionText: string;
+  isLearn: boolean;
+}
+
+const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
+  promptText,
+  questionText,
+  isLearn,
+}) => (
+  <div className={`text-center ${isLearn ? 'mb-8' : 'mb-10'}`}>
+    <p className={`text-sm text-slate-400 font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
+      {promptText}
+    </p>
+    <h2 className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-slate-900`}>
+      {questionText}
+    </h2>
+  </div>
+);
+
+interface ScoreBadgeProps {
+  correctCount: number;
+  labels: any;
+  isWriting: boolean;
+  isLearn: boolean;
+}
+
+const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting, isLearn }) => (
+  <div className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}>
+    <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">
+      ✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}
+    </span>
+    <span
+      className={`px-3 py-1 rounded-full font-bold text-xs ${isWriting ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}
+    >
+      {isWriting
+        ? `✏️ ${labels.dashboard?.quiz?.writing || 'Writing'}`
+        : `📝 ${labels.dashboard?.quiz?.select || 'Select'}`}
+    </span>
+  </div>
+);
+
+interface ProgressHeaderProps {
+  labels: any;
+  currentBatchNum: number;
+  questionIndex: number;
+  totalQuestions: number;
+  settingsLocked: boolean;
+  setShowSettings: (show: boolean) => void;
+  isLearn: boolean;
+}
+
+const ProgressHeader: React.FC<ProgressHeaderProps> = ({
+  labels,
+  currentBatchNum,
+  questionIndex,
+  totalQuestions,
+  settingsLocked,
+  setShowSettings,
+  isLearn,
+}) => (
+  <div className={isLearn ? 'mb-6' : 'mb-8'}>
+    <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-1">
+      <div className="flex items-center gap-2">
+        <span>{labels.dashboard?.quiz?.progress || 'Progress'}</span>
+        {currentBatchNum > 1 && (
+          <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-[10px]">
+            {labels.dashboard?.quiz?.round?.replace('{n}', currentBatchNum.toString()) ||
+              `Round ${currentBatchNum}`}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span>
+          {questionIndex + 1} / {totalQuestions}
+        </span>
+        {!settingsLocked && (
+          <button
+            type="button"
+            onClick={() => setShowSettings(true)}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-[#4ADE80] transition-all"
+        style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
+      />
+    </div>
+  </div>
+);
+
+interface CompleteScreenProps {
+  correctCount: number;
+  totalQuestionsAnswered: number;
+  totalQuestions: number;
+  labels: any;
+  variant: 'quiz' | 'learn';
+  language: string;
+  hasNextUnit?: boolean;
+  onNextUnit?: () => void;
+  restartGame: () => void;
+}
+
+const CompleteScreen: React.FC<CompleteScreenProps> = ({
+  correctCount,
+  totalQuestionsAnswered,
+  totalQuestions,
+  labels,
+  variant,
+  language,
   hasNextUnit,
   onNextUnit,
-  currentUnitLabel: _currentUnitLabel,
-  userId,
-  language = 'zh',
-  variant = 'quiz',
-  presetSettings,
-  settingsLocked = false,
-}: VocabQuizProps) {
-  const labels = getLabels(language);
-  const isLearn = variant === 'learn';
-  const modeLabel =
-    variant === 'learn'
-      ? language === 'zh'
-        ? '学习'
-        : labels.learn || 'Learn'
-      : labels.vocab?.quiz || 'Quiz';
-  // Settings
-  const [settings, setSettings] = useState<QuizSettings>({
-    multipleChoice: true,
-    writingMode: false,
-    mcDirection: 'KR_TO_NATIVE',
-    writingDirection: 'NATIVE_TO_KR',
-    autoTTS: true,
-    soundEffects: true,
-    ...presetSettings,
-  });
-  const [showSettings, setShowSettings] = useState(false);
-  const { speak: speakTTS } = useTTS();
+  restartGame,
+}) => {
+  // Use totalQuestionsAnswered for accurate percentage across all rounds
+  const finalTotal = totalQuestionsAnswered > 0 ? totalQuestionsAnswered : totalQuestions;
+  const percentage = Math.round((correctCount / finalTotal) * 100);
 
-  // Audio context for sound effects
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  // Initialize audio context on first interaction
-  const getAudioContext = () => {
-    if (!audioContextRef.current) {
-      const w = window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-      const Ctor = window.AudioContext ?? w.webkitAudioContext;
-      if (!Ctor) {
-        throw new Error('AudioContext not supported');
-      }
-      audioContextRef.current = new Ctor();
+  let completeTitle: string = (labels.dashboard?.quiz?.complete as unknown as string) || '';
+  if (!completeTitle) {
+    if (variant === 'learn') {
+      completeTitle = language === 'zh' ? '🎉 学习完成！' : '🎉 Learning Complete!';
+    } else {
+      completeTitle = '🎉 Quiz Complete!';
     }
-    return audioContextRef.current;
-  };
+  }
 
-  // Duolingo-style sound effects
-  const playCorrectSound = () => {
-    if (!settings.soundEffects) return;
-    try {
-      const ctx = getAudioContext();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      // Pleasant "ding" sound - two notes ascending
-      oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-      oscillator.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
-    } catch (e) {
-      logger.warn('Sound effect failed:', e);
+  let finishedText: string = (labels.dashboard?.quiz?.youFinished as unknown as string) || '';
+  if (!finishedText) {
+    if (variant === 'learn') {
+      finishedText = language === 'zh' ? '你已完成本轮学习。' : 'You finished this learning round!';
+    } else {
+      finishedText = 'You finished all questions!';
     }
-  };
+  }
 
-  const playWrongSound = () => {
-    if (!settings.soundEffects) return;
-    try {
-      const ctx = getAudioContext();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      // Low "buzz" sound
-      oscillator.frequency.setValueAtTime(200, ctx.currentTime);
-      oscillator.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
-      oscillator.type = 'sawtooth';
-
-      gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.25);
-    } catch (e) {
-      logger.warn('Sound effect failed:', e);
-    }
-  };
-
-  // TTS function (always speaks, setting checked at call site)
-  const speakWord = useCallback(
-    (text: string, force: boolean = false) => {
-      if (!force && !settings.autoTTS) return;
-      speakTTS(text);
-    },
-    [settings.autoTTS, speakTTS]
+  return (
+    <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
+      <div className="absolute inset-0 bg-green-50" />
+      <div className="relative z-10">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+          <Trophy className="w-12 h-12 text-green-600" />
+        </div>
+        <h2 className="text-4xl font-black text-slate-900 mb-2">{completeTitle}</h2>
+        <p className="text-slate-500 mb-6">{finishedText}</p>
+        <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
+          <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
+            <div className="text-3xl font-black text-slate-900">
+              {correctCount}/{finalTotal}
+            </div>
+            <div className="text-xs text-slate-400 font-bold">
+              {labels.dashboard?.quiz?.correctCount || 'Correct'}
+            </div>
+          </div>
+          <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
+            <div className="text-3xl font-black text-slate-900">{percentage}%</div>
+            <div className="text-xs text-slate-400 font-bold">
+              {labels.dashboard?.quiz?.accuracy || 'Accuracy'}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={restartGame}
+            className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
+          >
+            <RefreshCw className="w-5 h-5" /> {labels.dashboard?.quiz?.again || 'Try Again'}
+          </button>
+          {hasNextUnit && onNextUnit && (
+            <button
+              onClick={onNextUnit}
+              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
+            >
+              {labels.dashboard?.quiz?.nextUnit || 'Next Unit'}{' '}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
+};
 
-  // Quiz state
+const useQuizGame = ({
+  words,
+  settings,
+  isLearn,
+  onComplete,
+  recordProgress,
+  playCorrectSound,
+  playWrongSound,
+  userId,
+}: {
+  words: readonly VocabItem[];
+  settings: QuizSettings;
+  isLearn: boolean;
+  onComplete?: (stats: { correct: number; total: number }) => void;
+  recordProgress: (wordId: string, isCorrect: boolean) => Promise<void>;
+  playCorrectSound: () => void;
+  playWrongSound: () => void;
+  userId?: string;
+}) => {
   const [gameState, setGameState] = useState<GameState>('PLAYING');
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<readonly QuizQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [optionStates, setOptionStates] = useState<OptionState[]>([
+  const [optionStates, setOptionStates] = useState<readonly OptionState[]>([
     'normal',
     'normal',
     'normal',
@@ -187,20 +691,17 @@ function VocabQuizComponent({
     null
   );
 
-  // Writing mode
   const [writingInput, setWritingInput] = useState('');
   const [writingState, setWritingState] = useState<WritingState>('INPUT');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Wrong words tracking for session retry
-  const [wrongWords, setWrongWords] = useState<VocabItem[]>([]);
-  const [masteredWordIds, setMasteredWordIds] = useState<Set<string>>(new Set()); // Words answered correctly
+  const [wrongWords, setWrongWords] = useState<readonly VocabItem[]>([]);
+  const [masteredWordIds, setMasteredWordIds] = useState<Set<string>>(new Set());
   const [currentBatchNum, setCurrentBatchNum] = useState(1);
-  const [totalQuestionsAnswered, setTotalQuestionsAnswered] = useState(0); // Track total across all rounds
+  const [totalQuestionsAnswered, setTotalQuestionsAnswered] = useState(0);
 
-  // Timer cleanup
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
   const nextQuestionRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     return () => {
       timersRef.current.forEach(timer => clearTimeout(timer));
@@ -208,22 +709,6 @@ function VocabQuizComponent({
     };
   }, []);
 
-  // Auto-speak Korean word when question changes (if direction is KR_TO_NATIVE)
-  const currentQuestion = questions[questionIndex];
-  const totalQuestions = questions.length;
-
-  useEffect(() => {
-    if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {
-      // Speak Korean word if it's on the question side
-      if (currentQuestion.direction === 'KR_TO_NATIVE') {
-        speakWord(currentQuestion.targetWord.korean);
-      }
-    }
-  }, [questionIndex, questions, settings.autoTTS, gameState, speakWord, currentQuestion]);
-
-  const pendingAdvance = isLearn && pendingAdvanceReason !== null;
-
-  // Generate questions
   const generateQuestions = useCallback(
     (currentSettings: QuizSettings) => {
       if (words.length < 4) return [];
@@ -260,133 +745,53 @@ function VocabQuizComponent({
     [words]
   );
 
-  // Generate questions from specific word list (for retry round)
-  const generateQuestionsFromWords = (retryWords: VocabItem[], currentSettings: QuizSettings) => {
-    if (retryWords.length === 0) return [];
-    const shuffledWords = shuffleArray(retryWords);
-    const generated: QuizQuestion[] = [];
+  const generateQuestionsFromWords = useCallback(
+    (retryWords: readonly VocabItem[], currentSettings: QuizSettings) => {
+      if (retryWords.length === 0) return [];
+      const shuffledWords = shuffleArray(retryWords);
+      const generated: QuizQuestion[] = [];
 
-    shuffledWords.forEach((targetWord, idx) => {
-      let questionType: QuestionType;
-      if (currentSettings.multipleChoice && currentSettings.writingMode) {
-        questionType = idx % 2 === 0 ? 'MULTIPLE_CHOICE' : 'WRITING';
-      } else if (currentSettings.writingMode) {
-        questionType = 'WRITING';
-      } else {
-        questionType = 'MULTIPLE_CHOICE';
-      }
+      shuffledWords.forEach((targetWord, idx) => {
+        let questionType: QuestionType;
+        if (currentSettings.multipleChoice && currentSettings.writingMode) {
+          questionType = idx % 2 === 0 ? 'MULTIPLE_CHOICE' : 'WRITING';
+        } else if (currentSettings.writingMode) {
+          questionType = 'WRITING';
+        } else {
+          questionType = 'MULTIPLE_CHOICE';
+        }
 
-      const direction =
-        questionType === 'MULTIPLE_CHOICE'
-          ? currentSettings.mcDirection
-          : currentSettings.writingDirection;
+        const direction =
+          questionType === 'MULTIPLE_CHOICE'
+            ? currentSettings.mcDirection
+            : currentSettings.writingDirection;
 
-      if (questionType === 'MULTIPLE_CHOICE') {
-        // Use all words as pool for distractors
-        const others = words.filter(w => w.id !== targetWord.id);
-        const distractors = shuffleArray(others).slice(0, 3);
-        const options = shuffleArray([targetWord, ...distractors]);
-        const correctIndex = options.findIndex(o => o.id === targetWord.id);
-        generated.push({ type: 'MULTIPLE_CHOICE', targetWord, direction, options, correctIndex });
-      } else {
-        generated.push({ type: 'WRITING', targetWord, direction });
-      }
-    });
-    return generated;
-  };
-
-  // FSRS Action for calculating next schedule
-  const calculateNextSchedule = useAction(
-    aRef<
-      { currentCard?: Record<string, unknown>; rating: number; now?: number },
-      Record<string, unknown>
-    >('fsrs:calculateNextSchedule')
-  );
-
-  // FSRS Mutation for saving progress
-  const updateProgressV2 = useMutation(
-    mRef<
-      {
-        wordId: Id<'words'>;
-        rating: number;
-        fsrsState: {
-          state: number;
-          due: number;
-          stability: number;
-          difficulty: number;
-          elapsed_days: number;
-          scheduled_days: number;
-          learning_steps: number;
-          reps: number;
-          lapses: number;
-          last_review: number | null;
-        };
-      },
-      { success: boolean; progress: Record<string, unknown> }
-    >('vocab:updateProgressV2')
-  );
-
-  // Helper to record progress using FSRS
-  const recordProgress = useCallback(
-    async (wordId: string, isCorrect: boolean) => {
-      try {
-        const rating = isCorrect ? Rating.Good : Rating.Again;
-        const fsrsResult = await calculateNextSchedule({
-          rating,
-          now: Date.now(),
-        });
-        await updateProgressV2({
-          wordId: wordId as Id<'words'>,
-          rating,
-          fsrsState: fsrsResult as {
-            state: number;
-            due: number;
-            stability: number;
-            difficulty: number;
-            elapsed_days: number;
-            scheduled_days: number;
-            learning_steps: number;
-            reps: number;
-            lapses: number;
-            last_review: number | null;
-          },
-        });
-      } catch (error) {
-        logger.warn('[FSRS] Failed to record progress:', error);
-      }
+        if (questionType === 'MULTIPLE_CHOICE') {
+          const others = words.filter(w => w.id !== targetWord.id);
+          const distractors = shuffleArray(others).slice(0, 3);
+          const options = shuffleArray([targetWord, ...distractors]);
+          const correctIndex = options.findIndex(o => o.id === targetWord.id);
+          generated.push({ type: 'MULTIPLE_CHOICE', targetWord, direction, options, correctIndex });
+        } else {
+          generated.push({ type: 'WRITING', targetWord, direction });
+        }
+      });
+      return generated;
     },
-    [calculateNextSchedule, updateProgressV2]
+    [words]
   );
 
-  // Initial load
-  const [hasInit, setHasInit] = useState(false);
-  // Initial load (adjust state during render if logical)
-  if (!hasInit && words.length >= 4) {
-    setHasInit(true);
-    setQuestions(generateQuestions(settings));
-  }
+  const currentQuestion = questions[questionIndex];
+  const totalQuestions = questions.length;
+  const pendingAdvance = isLearn && pendingAdvanceReason !== null;
 
-  // Apply settings and restart
-  const applySettings = () => {
-    setShowSettings(false);
-    setQuestions(generateQuestions(settings));
-    setQuestionIndex(0);
-    setCorrectCount(0);
-    setOptionStates(['normal', 'normal', 'normal', 'normal']);
-    setIsLocked(false);
-    setPendingAdvanceReason(null);
-    setWritingInput('');
-    setWritingState('INPUT');
-    setGameState('PLAYING');
-  };
-
-  const nextQuestion = () => {
+  const nextQuestion = useCallback(() => {
     setTotalQuestionsAnswered(t => t + 1);
     setPendingAdvanceReason(null);
 
     if (questionIndex >= totalQuestions - 1) {
       const remainingNewWords = words.filter(
-        w => !masteredWordIds.has(w.id) && !wrongWords.find(ww => ww.id === w.id)
+        w => !masteredWordIds.has(w.id) && !wrongWords.some(ww => ww.id === w.id)
       );
 
       if (wrongWords.length > 0 || remainingNewWords.length > 0) {
@@ -423,76 +828,96 @@ function VocabQuizComponent({
       setWritingState('INPUT');
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  };
+  }, [
+    questionIndex,
+    totalQuestions,
+    words,
+    masteredWordIds,
+    wrongWords,
+    generateQuestionsFromWords,
+    settings,
+    onComplete,
+    correctCount,
+    totalQuestionsAnswered,
+  ]);
 
   useEffect(() => {
     nextQuestionRef.current = nextQuestion;
   });
 
-  useEffect(() => {
-    if (!pendingAdvance) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
-      e.preventDefault();
+  const handleCorrectMC = useCallback(
+    (index: number) => {
+      if (!currentQuestion) return;
+      setOptionStates(prev => prev.map((_, i) => (i === index ? 'correct' : 'normal')));
+      setCorrectCount(c => c + 1);
+      playCorrectSound();
+      if (userId && currentQuestion.targetWord.id) {
+        recordProgress(currentQuestion.targetWord.id, true);
+      }
+      setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
+    },
+    [currentQuestion, playCorrectSound, userId, recordProgress]
+  );
+
+  const handleWrongMC = useCallback(
+    (index: number) => {
+      if (!currentQuestion) return;
+      if (isLearn) setPendingAdvanceReason('WRONG');
+      setOptionStates(prev =>
+        prev.map((_, i) => {
+          if (i === index) return 'wrong';
+          if (i === currentQuestion.correctIndex) return 'correct';
+          return 'normal';
+        })
+      );
+      playWrongSound();
+      if (userId && currentQuestion.targetWord.id) {
+        recordProgress(currentQuestion.targetWord.id, false);
+      }
+      setWrongWords(prev => {
+        if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
+          return [...prev, currentQuestion.targetWord];
+        }
+        return prev;
+      });
+    },
+    [currentQuestion, isLearn, playWrongSound, userId, recordProgress]
+  );
+
+  const handleOptionClick = useCallback(
+    (index: number) => {
+      if (isLocked || currentQuestion?.type !== 'MULTIPLE_CHOICE') return;
+      setIsLocked(true);
       setPendingAdvanceReason(null);
-      nextQuestionRef.current();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [pendingAdvance]);
+      const isCorrect = index === currentQuestion.correctIndex;
+      setOptionStates(prev => prev.map((_, i) => (i === index ? 'selected' : 'normal')));
 
-  // Multiple choice handler
-  const handleOptionClick = (index: number) => {
-    if (isLocked || !currentQuestion || currentQuestion.type !== 'MULTIPLE_CHOICE') return;
-    setIsLocked(true);
-    setPendingAdvanceReason(null);
-    const isCorrect = index === currentQuestion.correctIndex;
-    setOptionStates(prev => prev.map((_, i) => (i === index ? 'selected' : 'normal')));
-
-    const timer1 = setTimeout(() => {
-      if (isCorrect) {
-        setOptionStates(prev => prev.map((_, i) => (i === index ? 'correct' : 'normal')));
-        setCorrectCount(c => c + 1);
-        playCorrectSound();
-        // Record progress using FSRS
-        if (userId && currentQuestion.targetWord.id) {
-          recordProgress(currentQuestion.targetWord.id, true);
+      const timer1 = setTimeout(() => {
+        if (isCorrect) {
+          handleCorrectMC(index);
+        } else {
+          handleWrongMC(index);
         }
-        // Mark as mastered
-        setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
-      } else {
-        if (isLearn) setPendingAdvanceReason('WRONG');
-        setOptionStates(prev =>
-          prev.map((_, i) => {
-            if (i === index) return 'wrong';
-            if (i === currentQuestion.correctIndex) return 'correct';
-            return 'normal';
-          })
-        );
-        playWrongSound();
-        // Record progress using FSRS
-        if (userId && currentQuestion.targetWord.id) {
-          recordProgress(currentQuestion.targetWord.id, false);
+        if (!isLearn || isCorrect) {
+          const timer2 = setTimeout(() => nextQuestion(), 1000);
+          timersRef.current.push(timer2);
         }
-        // Add to wrong words for retry
-        setWrongWords(prev => {
-          if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
-            return [...prev, currentQuestion.targetWord];
-          }
-          return prev;
-        });
-      }
-      if (!isLearn || isCorrect) {
-        const timer2 = setTimeout(() => nextQuestion(), 1000);
-        timersRef.current.push(timer2);
-      }
-    }, 400);
-    timersRef.current.push(timer1);
-  };
+      }, 400);
+      timersRef.current.push(timer1);
+    },
+    [
+      isLocked,
+      currentQuestion,
+      handleCorrectMC,
+      handleWrongMC,
+      isLearn,
+      nextQuestion,
+      timersRef,
+    ]
+  );
 
-  const handleDontKnow = () => {
-    if (isLocked || !currentQuestion || currentQuestion.type !== 'MULTIPLE_CHOICE') return;
+  const handleDontKnow = useCallback(() => {
+    if (isLocked || currentQuestion?.type !== 'MULTIPLE_CHOICE') return;
     if (!isLearn) return;
     setIsLocked(true);
     setPendingAdvanceReason('DONT_KNOW');
@@ -502,16 +927,15 @@ function VocabQuizComponent({
       recordProgress(currentQuestion.targetWord.id, false);
     }
     setWrongWords(prev => {
-      if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
+      if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
         return [...prev, currentQuestion.targetWord];
       }
       return prev;
     });
-  };
+  }, [isLocked, currentQuestion, isLearn, userId, recordProgress]);
 
-  // Writing handler
-  const handleWritingSubmit = () => {
-    if (!currentQuestion || currentQuestion.type !== 'WRITING') return;
+  const handleWritingSubmit = useCallback(() => {
+    if (currentQuestion?.type !== 'WRITING') return;
     if (writingState !== 'INPUT') return;
     setIsLocked(true);
     setPendingAdvanceReason(null);
@@ -529,22 +953,18 @@ function VocabQuizComponent({
       setWritingState('CORRECT');
       setCorrectCount(c => c + 1);
       playCorrectSound();
-      // Record progress using FSRS
       if (userId && currentQuestion.targetWord.id) {
         recordProgress(currentQuestion.targetWord.id, true);
       }
-      // Mark as mastered
       setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
     } else {
       setWritingState('WRONG');
       playWrongSound();
-      // Record progress using FSRS
       if (userId && currentQuestion.targetWord.id) {
         recordProgress(currentQuestion.targetWord.id, false);
       }
-      // Add to wrong words for retry
       setWrongWords(prev => {
-        if (!prev.find(w => w.id === currentQuestion.targetWord.id)) {
+        if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
           return [...prev, currentQuestion.targetWord];
         }
         return prev;
@@ -556,9 +976,20 @@ function VocabQuizComponent({
     } else {
       setPendingAdvanceReason('WRONG');
     }
-  };
+  }, [
+    currentQuestion,
+    writingState,
+    writingInput,
+    playCorrectSound,
+    playWrongSound,
+    userId,
+    recordProgress,
+    isLearn,
+    nextQuestion,
+    timersRef,
+  ]);
 
-  const restartGame = () => {
+  const restartGame = useCallback(() => {
     setQuestions(generateQuestions(settings));
     setQuestionIndex(0);
     setCorrectCount(0);
@@ -572,504 +1003,566 @@ function VocabQuizComponent({
     setMasteredWordIds(new Set());
     setCurrentBatchNum(1);
     setGameState('PLAYING');
+  }, [generateQuestions, settings]);
+
+  const applySettings = useCallback(() => {
+    setQuestions(generateQuestions(settings));
+    setQuestionIndex(0);
+    setCorrectCount(0);
+    setOptionStates(['normal', 'normal', 'normal', 'normal']);
+    setIsLocked(false);
+    setPendingAdvanceReason(null);
+    setWritingInput('');
+    setWritingState('INPUT');
+    setGameState('PLAYING');
+  }, [generateQuestions, settings]);
+
+  return {
+    gameState,
+    setGameState,
+    questions,
+    setQuestions,
+    questionIndex,
+    setQuestionIndex,
+    optionStates,
+    setOptionStates,
+    isLocked,
+    setIsLocked,
+    correctCount,
+    setCorrectCount,
+    pendingAdvanceReason,
+    setPendingAdvanceReason,
+    writingInput,
+    setWritingInput,
+    writingState,
+    setWritingState,
+    wrongWords,
+    setWrongWords,
+    masteredWordIds,
+    setMasteredWordIds,
+    currentBatchNum,
+    setCurrentBatchNum,
+    totalQuestionsAnswered,
+    setTotalQuestionsAnswered,
+    timersRef,
+    currentQuestion,
+    totalQuestions,
+    pendingAdvance,
+    generateQuestions,
+    generateQuestionsFromWords,
+    nextQuestion,
+    handleOptionClick,
+    handleDontKnow,
+    handleWritingSubmit,
+    restartGame,
+    applySettings,
+    inputRef,
+    nextQuestionRef,
   };
+};
+
+const useQuizProgress = () => {
+  const calculateNextSchedule = useAction(
+    aRef<
+      { currentCard?: Record<string, unknown>; rating: number; now?: number },
+      Record<string, unknown>
+    >('fsrs:calculateNextSchedule')
+  );
+
+  const updateProgressV2 = useMutation(
+    mRef<
+      {
+        wordId: Id<'words'>;
+        rating: number;
+        fsrsState: {
+          state: number;
+          due: number;
+          stability: number;
+          difficulty: number;
+          elapsed_days: number;
+          scheduled_days: number;
+          learning_steps: number;
+          reps: number;
+          lapses: number;
+          last_review: number | null;
+        };
+      },
+      { success: boolean; progress: Record<string, unknown> }
+    >('vocab:updateProgressV2')
+  );
+
+  const recordProgress = useCallback(
+    async (wordId: string, isCorrect: boolean) => {
+      try {
+        const rating = isCorrect ? Rating.Good : Rating.Again;
+        const fsrsResult = await calculateNextSchedule({
+          rating,
+          now: Date.now(),
+        });
+        await updateProgressV2({
+          wordId: wordId as Id<'words'>,
+          rating,
+          fsrsState: fsrsResult as {
+            state: number;
+            due: number;
+            stability: number;
+            difficulty: number;
+            elapsed_days: number;
+            scheduled_days: number;
+            learning_steps: number;
+            reps: number;
+            lapses: number;
+            last_review: number | null;
+          },
+        });
+      } catch (error) {
+        logger.warn('[FSRS] Failed to record progress:', error);
+      }
+    },
+    [calculateNextSchedule, updateProgressV2]
+  );
+
+  return { recordProgress };
+};
+
+const useQuizSounds = (enabled: boolean) => {
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      const w = globalThis as Window & typeof globalThis & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const Ctor = globalThis.AudioContext ?? w.webkitAudioContext;
+      if (!Ctor) {
+        throw new Error('AudioContext not supported');
+      }
+      audioContextRef.current = new Ctor();
+    }
+    return audioContextRef.current;
+  }, []);
+
+  const playCorrectSound = useCallback(() => {
+    if (!enabled) return;
+    try {
+      const ctx = getAudioContext();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.frequency.setValueAtTime(523.25, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      logger.warn('Sound effect failed:', e);
+    }
+  }, [enabled, getAudioContext]);
+
+  const playWrongSound = useCallback(() => {
+    if (!enabled) return;
+    try {
+      const ctx = getAudioContext();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
+      oscillator.type = 'sawtooth';
+
+      gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.25);
+    } catch (e) {
+      logger.warn('Sound effect failed:', e);
+    }
+  }, [enabled, getAudioContext]);
+
+  return { playCorrectSound, playWrongSound };
+};
+
+const useQuizTTS = (autoTTS: boolean, speakTTS: (text: string) => void) => {
+  const speakWord = useCallback(
+    (text: string, force: boolean = false) => {
+      if (!force && !autoTTS) return;
+      speakTTS(text);
+    },
+    [autoTTS, speakTTS]
+  );
+
+  return { speakWord };
+};
+
+interface NotEnoughWordsProps {
+  wordsCount: number;
+  labels: any;
+  variant: string;
+  language: string;
+}
+
+const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({
+  wordsCount,
+  labels,
+  variant,
+  language,
+}) => {
+  if (wordsCount >= 4) return null;
+
+  let minWordsMessage: string;
+  const minWordsLabel = labels.dashboard?.quiz?.minWords;
+
+  if (typeof minWordsLabel === 'string') {
+    minWordsMessage = minWordsLabel;
+  } else if (variant === 'learn') {
+    minWordsMessage =
+      language === 'zh' ? '至少需要 4 个单词才能开始学习' : 'Need at least 4 words to start learning';
+  } else {
+    minWordsMessage = 'Need at least 4 words to start quiz';
+  }
+
+  return (
+    <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
+      <p className="text-slate-500 font-medium">{minWordsMessage}</p>
+    </div>
+  );
+};
+
+const useQuizKeyboard = (
+  pendingAdvance: boolean,
+  nextQuestionRef: React.RefObject<() => void>,
+  setPendingAdvanceReason: (reason: any) => void
+) => {
+  useEffect(() => {
+    if (!pendingAdvance) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+      e.preventDefault();
+      setPendingAdvanceReason(null);
+      nextQuestionRef.current?.();
+    };
+    globalThis.addEventListener('keydown', handler);
+    return () => globalThis.removeEventListener('keydown', handler);
+  }, [pendingAdvance, nextQuestionRef, setPendingAdvanceReason]);
+};
+
+interface QuizContentProps {
+  currentQuestion: QuizQuestion;
+  labels: any;
+  isLearn: boolean;
+  currentBatchNum: number;
+  questionIndex: number;
+  totalQuestions: number;
+  settingsLocked: boolean;
+  setShowSettings: (show: boolean) => void;
+  correctCount: number;
+  optionStates: readonly OptionState[];
+  handleOptionClick: (index: number) => void;
+  isLocked: boolean;
+  handleDontKnow: () => void;
+  pendingAdvance: boolean;
+  language: string;
+  setPendingAdvanceReason: (reason: any) => void;
+  nextQuestionRef: React.RefObject<() => void>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  writingInput: string;
+  setWritingInput: (value: string) => void;
+  writingState: WritingState;
+  handleWritingSubmit: () => void;
+}
+
+const QuizContent: React.FC<QuizContentProps> = ({
+  currentQuestion,
+  labels,
+  isLearn,
+  currentBatchNum,
+  questionIndex,
+  totalQuestions,
+  settingsLocked,
+  setShowSettings,
+  correctCount,
+  optionStates,
+  handleOptionClick,
+  isLocked,
+  handleDontKnow,
+  pendingAdvance,
+  language,
+  setPendingAdvanceReason,
+  nextQuestionRef,
+  inputRef,
+  writingInput,
+  setWritingInput,
+  writingState,
+  handleWritingSubmit,
+}) => {
+  const isWriting = currentQuestion.type === 'WRITING';
+  const questionText =
+    currentQuestion.direction === 'NATIVE_TO_KR'
+      ? currentQuestion.targetWord.english
+      : currentQuestion.targetWord.korean;
+
+  let promptText = '';
+  if (isWriting) {
+    promptText =
+      currentQuestion.direction === 'KR_TO_NATIVE'
+        ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
+        : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...';
+  } else {
+    promptText =
+      currentQuestion.direction === 'KR_TO_NATIVE'
+        ? labels.dashboard?.quiz?.questionMeaning || 'What does this word mean?'
+        : labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?';
+  }
+
+  return (
+    <div
+      className={`bg-white ${
+        isLearn
+          ? 'rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
+          : 'rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8'
+      }`}
+    >
+      <ProgressHeader
+        labels={labels}
+        currentBatchNum={currentBatchNum}
+        questionIndex={questionIndex}
+        totalQuestions={totalQuestions}
+        settingsLocked={settingsLocked}
+        setShowSettings={setShowSettings}
+        isLearn={isLearn}
+      />
+
+      <ScoreBadge
+        correctCount={correctCount}
+        labels={labels}
+        isWriting={isWriting}
+        isLearn={isLearn}
+      />
+
+      <QuestionDisplay promptText={promptText} questionText={questionText} isLearn={isLearn} />
+
+      {!isWriting && currentQuestion.options && (
+        <MCOptions
+          options={currentQuestion.options}
+          direction={currentQuestion.direction}
+          optionStates={optionStates}
+          handleOptionClick={handleOptionClick}
+          isLocked={isLocked}
+          isLearn={isLearn}
+        />
+      )}
+
+      {isLearn && !pendingAdvance && !isWriting && currentQuestion.options ? (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleDontKnow}
+            disabled={isLocked}
+            className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
+          >
+            {language === 'zh' ? '不知道？' : "I don't know"}
+          </button>
+        </div>
+      ) : null}
+
+      {pendingAdvance ? (
+        <PendingAdvanceBanner
+          language={language}
+          onContinue={() => {
+            setPendingAdvanceReason(null);
+            nextQuestionRef.current?.();
+          }}
+        />
+      ) : null}
+
+      {isWriting && (
+        <WritingInput
+          inputRef={inputRef}
+          writingInput={writingInput}
+          setWritingInput={setWritingInput}
+          writingState={writingState}
+          handleWritingSubmit={handleWritingSubmit}
+          direction={currentQuestion.direction}
+          targetWord={currentQuestion.targetWord}
+          labels={labels}
+          isLearn={isLearn}
+        />
+      )}
+
+      <style>{`
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
+      `}</style>
+    </div>
+  );
+};
+
+function VocabQuizComponent({
+  words,
+  onComplete,
+  hasNextUnit,
+  onNextUnit,
+  currentUnitLabel: _currentUnitLabel,
+  userId,
+  language = 'zh',
+  variant = 'quiz',
+  presetSettings,
+  settingsLocked = false,
+}: VocabQuizProps) {
+  const labels = getLabels(language);
+  const isLearn = variant === 'learn';
+  let modeLabel = labels.vocab?.quiz || 'Quiz';
+  if (variant === 'learn') {
+    modeLabel = language === 'zh' ? '学习' : labels.learn || 'Learn';
+  }
+  // Settings
+  const [settings, setSettings] = useState<QuizSettings>({
+    multipleChoice: true,
+    writingMode: false,
+    mcDirection: 'KR_TO_NATIVE',
+    writingDirection: 'NATIVE_TO_KR',
+    autoTTS: true,
+    soundEffects: true,
+    ...presetSettings,
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const { speak: speakTTS } = useTTS();
+  const { playCorrectSound, playWrongSound } = useQuizSounds(settings.soundEffects);
+  const { recordProgress } = useQuizProgress();
+  const {
+    gameState,
+    questions,
+    questionIndex,
+    optionStates,
+    isLocked,
+    correctCount,
+    writingInput,
+    setWritingInput,
+    writingState,
+    currentBatchNum,
+    totalQuestionsAnswered,
+    currentQuestion,
+    totalQuestions,
+    pendingAdvance,
+    handleOptionClick,
+    handleDontKnow,
+    handleWritingSubmit,
+    restartGame,
+    applySettings,
+    inputRef,
+    nextQuestionRef,
+    setQuestions,
+    setPendingAdvanceReason,
+    generateQuestions,
+  } = useQuizGame({
+    words,
+    settings,
+    isLearn,
+    onComplete,
+    recordProgress,
+    playCorrectSound,
+    playWrongSound,
+    userId,
+  });
+
+  const { speakWord } = useQuizTTS(settings.autoTTS, speakTTS);
+  useQuizKeyboard(pendingAdvance, nextQuestionRef, setPendingAdvanceReason);
+
+  useEffect(() => {
+    if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {
+      if (currentQuestion.direction === 'KR_TO_NATIVE') {
+        speakWord(currentQuestion.targetWord.korean);
+      }
+    }
+  }, [questionIndex, questions, settings.autoTTS, gameState, speakWord, currentQuestion]);
+
+  // Initial load
+  const [hasInit, setHasInit] = useState(false);
+  if (!hasInit && words.length >= 4) {
+    setHasInit(true);
+    setQuestions(generateQuestions(settings));
+  }
 
   // Not enough words
   if (words.length < 4) {
     return (
-      <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
-        <p className="text-slate-500 font-medium">
-          {labels.dashboard?.quiz?.minWords ||
-            (variant === 'learn'
-              ? language === 'zh'
-                ? '至少需要 4 个单词才能开始学习'
-                : 'Need at least 4 words to start learning'
-              : 'Need at least 4 words to start quiz')}
-        </p>
-      </div>
+      <NotEnoughWords
+        wordsCount={words.length}
+        labels={labels}
+        variant={variant}
+        language={language}
+      />
     );
   }
 
-  // Settings Modal - inline JSX instead of nested component
-  const settingsModalContent = !settingsLocked && showSettings && (
-    <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={() => setShowSettings(false)}
-    >
-      <div
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-slate-900">
-            🎯 {labels.dashboard?.quiz?.quizSettings || `${modeLabel} Settings`}
-          </h2>
-          <button
-            onClick={() => setShowSettings(false)}
-            className="p-2 hover:bg-slate-100 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Question Type */}
-        <div className="mb-5">
-          <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
-            {labels.dashboard?.quiz?.questionType || 'Question Type'}
-          </h3>
-          <div className="space-y-2">
-            <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-              <span className="font-bold text-slate-700">
-                {labels.dashboard?.quiz?.multipleChoice || '📝 Multiple Choice'}
-              </span>
-              <input
-                type="checkbox"
-                checked={settings.multipleChoice}
-                onChange={e => setSettings(s => ({ ...s, multipleChoice: e.target.checked }))}
-                className="w-5 h-5 accent-blue-500"
-              />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-              <span className="font-bold text-slate-700">
-                {labels.dashboard?.quiz?.writingFill || '✏️ Writing Fill'}
-              </span>
-              <input
-                type="checkbox"
-                checked={settings.writingMode}
-                onChange={e => setSettings(s => ({ ...s, writingMode: e.target.checked }))}
-                className="w-5 h-5 accent-blue-500"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* MC Direction */}
-        {settings.multipleChoice && (
-          <div className="mb-5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
-              {labels.dashboard?.quiz?.mcDirection || 'MC Direction'}
-            </h3>
-            <div className="space-y-2">
-              <label
-                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'KR_TO_NATIVE' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}
-              >
-                <input
-                  type="radio"
-                  name="mc-dir"
-                  checked={settings.mcDirection === 'KR_TO_NATIVE'}
-                  onChange={() => setSettings(s => ({ ...s, mcDirection: 'KR_TO_NATIVE' }))}
-                  className="mr-3"
-                />
-                <span className="font-medium">
-                  {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
-                </span>
-              </label>
-              <label
-                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'NATIVE_TO_KR' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-slate-50 border-2 border-transparent'}`}
-              >
-                <input
-                  type="radio"
-                  name="mc-dir"
-                  checked={settings.mcDirection === 'NATIVE_TO_KR'}
-                  onChange={() => setSettings(s => ({ ...s, mcDirection: 'NATIVE_TO_KR' }))}
-                  className="mr-3"
-                />
-                <span className="font-medium">
-                  {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
-                </span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Writing Direction */}
-        {settings.writingMode && (
-          <div className="mb-5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
-              {labels.dashboard?.quiz?.writingDirection || 'Writing Direction'}
-            </h3>
-            <div className="space-y-2">
-              <label
-                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'KR_TO_NATIVE' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}
-              >
-                <input
-                  type="radio"
-                  name="writing-dir"
-                  checked={settings.writingDirection === 'KR_TO_NATIVE'}
-                  onChange={() => setSettings(s => ({ ...s, writingDirection: 'KR_TO_NATIVE' }))}
-                  className="mr-3"
-                />
-                <span className="font-medium">
-                  {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
-                </span>
-              </label>
-              <label
-                className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'NATIVE_TO_KR' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-slate-50 border-2 border-transparent'}`}
-              >
-                <input
-                  type="radio"
-                  name="writing-dir"
-                  checked={settings.writingDirection === 'NATIVE_TO_KR'}
-                  onChange={() => setSettings(s => ({ ...s, writingDirection: 'NATIVE_TO_KR' }))}
-                  className="mr-3"
-                />
-                <span className="font-medium">
-                  {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
-                </span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Audio Settings */}
-        <div className="mb-5">
-          <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">
-            {labels.dashboard?.quiz?.audioSettings || 'Audio Settings'}
-          </h3>
-          <div className="space-y-2">
-            <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-              <div>
-                <span className="font-bold text-slate-700 block">
-                  {labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
-                </span>
-                <span className="text-xs text-slate-400">
-                  {labels.dashboard?.quiz?.autoReadDesc ||
-                    'Auto play Korean pronunciation each question'}
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.autoTTS}
-                onChange={e => setSettings(s => ({ ...s, autoTTS: e.target.checked }))}
-                className="w-5 h-5 accent-green-500"
-              />
-            </label>
-            <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-              <div>
-                <span className="font-bold text-slate-700 block">
-                  {labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
-                </span>
-                <span className="text-xs text-slate-400">
-                  {labels.dashboard?.quiz?.soundEffectsDesc || 'Correct/incorrect feedback sounds'}
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.soundEffects}
-                onChange={e => setSettings(s => ({ ...s, soundEffects: e.target.checked }))}
-                className="w-5 h-5 accent-green-500"
-              />
-            </label>
-          </div>
-        </div>
-
-        <button
-          onClick={applySettings}
-          disabled={!settings.multipleChoice && !settings.writingMode}
-          className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50"
-        >
-          {labels.dashboard?.quiz?.applyRestart || 'Apply & Restart'}
-        </button>
-      </div>
-    </div>
-  );
-
   // Complete Screen
   if (gameState === 'COMPLETE') {
-    // Use totalQuestionsAnswered for accurate percentage across all rounds
-    const finalTotal = totalQuestionsAnswered > 0 ? totalQuestionsAnswered : totalQuestions;
-    const percentage = Math.round((correctCount / finalTotal) * 100);
     return (
-      <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-green-50" />
-        <div className="relative z-10">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-            <Trophy className="w-12 h-12 text-green-600" />
-          </div>
-          <h2 className="text-4xl font-black text-slate-900 mb-2">
-            {labels.dashboard?.quiz?.complete ||
-              (variant === 'learn'
-                ? language === 'zh'
-                  ? '🎉 学习完成！'
-                  : '🎉 Learning Complete!'
-                : '🎉 Quiz Complete!')}
-          </h2>
-          <p className="text-slate-500 mb-6">
-            {labels.dashboard?.quiz?.youFinished ||
-              (variant === 'learn'
-                ? language === 'zh'
-                  ? '你已完成本轮学习。'
-                  : 'You finished this learning round!'
-                : 'You finished all questions!')}
-          </p>
-          <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
-            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-              <div className="text-3xl font-black text-slate-900">
-                {correctCount}/{finalTotal}
-              </div>
-              <div className="text-xs text-slate-400 font-bold">
-                {labels.dashboard?.quiz?.correctCount || 'Correct'}
-              </div>
-            </div>
-            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-              <div className="text-3xl font-black text-slate-900">{percentage}%</div>
-              <div className="text-xs text-slate-400 font-bold">
-                {labels.dashboard?.quiz?.accuracy || 'Accuracy'}
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={restartGame}
-              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
-            >
-              <RefreshCw className="w-5 h-5" /> {labels.dashboard?.quiz?.again || 'Try Again'}
-            </button>
-            {hasNextUnit && onNextUnit && (
-              <button
-                onClick={onNextUnit}
-                className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
-              >
-                {labels.dashboard?.quiz?.nextUnit || 'Next Unit'}{' '}
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <CompleteScreen
+        correctCount={correctCount}
+        totalQuestionsAnswered={totalQuestionsAnswered}
+        totalQuestions={totalQuestions}
+        labels={labels}
+        variant={variant}
+        language={language}
+        hasNextUnit={hasNextUnit}
+        onNextUnit={onNextUnit}
+        restartGame={restartGame}
+      />
     );
   }
 
   // Playing
   if (!currentQuestion) return null;
 
-  const isWriting = currentQuestion.type === 'WRITING';
-  const questionText =
-    currentQuestion.direction === 'KR_TO_NATIVE'
-      ? currentQuestion.targetWord.korean
-      : currentQuestion.targetWord.english;
-  const promptText = isWriting
-    ? currentQuestion.direction === 'KR_TO_NATIVE'
-      ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
-      : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
-    : currentQuestion.direction === 'KR_TO_NATIVE'
-      ? labels.dashboard?.quiz?.questionMeaning || 'What does this word mean?'
-      : labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?';
-
   return (
     <>
-      {settingsModalContent}
-      <div
-        className={`bg-white ${
-          isLearn
-            ? 'rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
-            : 'rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8'
-        }`}
-      >
-        {/* Progress with Settings Button */}
-        <div className={isLearn ? 'mb-6' : 'mb-8'}>
-          <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-1">
-            <div className="flex items-center gap-2">
-              <span>{labels.dashboard?.quiz?.progress || 'Progress'}</span>
-              {currentBatchNum > 1 && (
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-[10px]">
-                  {labels.dashboard?.quiz?.round?.replace('{n}', currentBatchNum.toString()) ||
-                    `Round ${currentBatchNum}`}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span>
-                {questionIndex + 1} / {totalQuestions}
-              </span>
-              {!settingsLocked && (
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#4ADE80] transition-all"
-              style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Score Badge */}
-        <div
-          className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}
-        >
-          <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">
-            ✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}
-          </span>
-          <span
-            className={`px-3 py-1 rounded-full font-bold text-xs ${isWriting ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}
-          >
-            {isWriting
-              ? `✏️ ${labels.dashboard?.quiz?.writing || 'Writing'}`
-              : `📝 ${labels.dashboard?.quiz?.select || 'Select'}`}
-          </span>
-        </div>
-
-        {/* Question */}
-        <div className={`text-center ${isLearn ? 'mb-8' : 'mb-10'}`}>
-          <p className={`text-sm text-slate-400 font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
-            {promptText}
-          </p>
-          <h2
-            className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-slate-900`}
-          >
-            {questionText}
-          </h2>
-        </div>
-
-        {/* MC Options */}
-        {!isWriting && currentQuestion.options && (
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${isLearn ? 'gap-3' : 'gap-4'} mb-6`}>
-            {currentQuestion.options.map((option, index) => {
-              const state = optionStates[index];
-              const displayText =
-                currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
-              let btnClass = `w-full bg-white border-2 border-slate-900 border-b-[6px] rounded-2xl ${
-                isLearn ? 'p-4' : 'p-5'
-              } flex items-center gap-4 text-left transition-all`;
-              if (state === 'normal')
-                btnClass += ' hover:bg-slate-50 active:border-b-2 active:translate-y-1';
-              else if (state === 'selected') btnClass += ' bg-yellow-50 border-yellow-400';
-              else if (state === 'correct')
-                btnClass += ' bg-green-50 border-green-500 text-green-700';
-              else if (state === 'wrong')
-                btnClass += ' bg-red-50 border-red-500 text-red-600 animate-shake';
-
-              return (
-                <button
-                  key={`${option.id}:${index}`}
-                  onClick={() => handleOptionClick(index)}
-                  disabled={isLocked}
-                  className={btnClass}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${state === 'correct' ? 'bg-green-200 text-green-700' : state === 'wrong' ? 'bg-red-200 text-red-600' : 'bg-slate-100 text-slate-400'}`}
-                  >
-                    {String.fromCharCode(65 + index)}
-                  </div>
-                  <span className={`font-bold ${isLearn ? 'text-base' : 'text-lg'}`}>
-                    {displayText}
-                  </span>
-                  {state === 'correct' && <span className="ml-auto text-2xl">✓</span>}
-                  {state === 'wrong' && <span className="ml-auto text-2xl">✕</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {isLearn && !pendingAdvance && !isWriting && currentQuestion.options ? (
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={handleDontKnow}
-              disabled={isLocked}
-              className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
-            >
-              {language === 'zh' ? '不知道？' : "I don't know"}
-            </button>
-          </div>
-        ) : null}
-
-        {pendingAdvance ? (
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-black text-slate-700">
-                {language === 'zh' ? '没关系，您仍在学习！' : "No worries — you're learning!"}
-              </div>
-              <div className="text-xs font-bold text-slate-500 mt-1">
-                {language === 'zh'
-                  ? '稍后再试此问题。单击继续或按任意键继续。'
-                  : 'We’ll practice this again later. Click Continue or press any key.'}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setPendingAdvanceReason(null);
-                nextQuestionRef.current();
-              }}
-              className="px-6 py-3 rounded-full bg-blue-600 text-white font-black hover:bg-blue-700"
-            >
-              {language === 'zh' ? '继续' : 'Continue'}
-            </button>
-          </div>
-        ) : null}
-
-        {/* Writing Input */}
-        {isWriting && (
-          <div className="mb-6">
-            <div
-              className={`rounded-2xl border-2 ${
-                isLearn ? 'p-5' : 'p-6'
-              } ${writingState === 'CORRECT' ? 'bg-green-50 border-green-400' : writingState === 'WRONG' ? 'bg-red-50 border-red-400' : 'bg-slate-50 border-slate-200'}`}
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={writingInput}
-                onChange={e => setWritingInput(e.target.value)}
-                onKeyDown={e =>
-                  e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()
-                }
-                placeholder={
-                  currentQuestion.direction === 'KR_TO_NATIVE'
-                    ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
-                    : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
-                }
-                disabled={writingState !== 'INPUT'}
-                className={`w-full ${isLearn ? 'text-xl' : 'text-2xl'} font-bold text-center bg-transparent outline-none`}
-                autoFocus
-              />
-              {writingState === 'CORRECT' && (
-                <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2">
-                  <Check className="w-6 h-6" /> {labels.dashboard?.quiz?.correct || 'Correct'}!
-                </div>
-              )}
-              {writingState === 'WRONG' && (
-                <div className="mt-4 text-center">
-                  <p className="text-red-600 font-bold mb-2">
-                    ✕ {labels.dashboard?.quiz?.wrong || 'Wrong'}
-                  </p>
-                  <p className="text-slate-600">
-                    {labels.dashboard?.quiz?.correctAnswer || 'Correct Answer'}:{' '}
-                    <strong className="text-green-600">
-                      {currentQuestion.direction === 'KR_TO_NATIVE'
-                        ? currentQuestion.targetWord.english
-                        : currentQuestion.targetWord.korean}
-                    </strong>
-                  </p>
-                </div>
-              )}
-            </div>
-            {writingState === 'INPUT' && (
-              <button
-                onClick={handleWritingSubmit}
-                disabled={!writingInput.trim()}
-                className="w-full mt-4 py-4 bg-slate-900 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50"
-              >
-                {labels.dashboard?.quiz?.confirm || 'Confirm'}
-              </button>
-            )}
-          </div>
-        )}
-
-        <style>{`
-                    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-                    .animate-shake { animation: shake 0.3s ease-in-out; }
-                `}</style>
-      </div>
+      <SettingsModal
+        showSettings={showSettings}
+        settingsLocked={settingsLocked}
+        setShowSettings={setShowSettings}
+        labels={labels}
+        modeLabel={modeLabel}
+        settings={settings}
+        setSettings={setSettings}
+        applySettings={applySettings}
+      />
+      <QuizContent
+        currentQuestion={currentQuestion}
+        labels={labels}
+        isLearn={isLearn}
+        currentBatchNum={currentBatchNum}
+        questionIndex={questionIndex}
+        totalQuestions={totalQuestions}
+        settingsLocked={settingsLocked}
+        setShowSettings={setShowSettings}
+        correctCount={correctCount}
+        optionStates={optionStates}
+        handleOptionClick={handleOptionClick}
+        isLocked={isLocked}
+        handleDontKnow={handleDontKnow}
+        pendingAdvance={pendingAdvance}
+        language={language}
+        setPendingAdvanceReason={setPendingAdvanceReason}
+        nextQuestionRef={nextQuestionRef}
+        inputRef={inputRef}
+        writingInput={writingInput}
+        setWritingInput={setWritingInput}
+        writingState={writingState}
+        handleWritingSubmit={handleWritingSubmit}
+      />
     </>
   );
 }

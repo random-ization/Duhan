@@ -53,8 +53,9 @@ const VocabBookDictationPage: React.FC = () => {
       const p = item.progress;
       const isMastered = p.status === 'MASTERED';
       const isUnlearned = p.state === 0 || p.status === 'NEW';
-      const c: VocabBookCategory = isMastered ? 'MASTERED' : isUnlearned ? 'UNLEARNED' : 'DUE';
-      return c === category;
+      if (isMastered) return category === 'MASTERED';
+      if (isUnlearned) return category === 'UNLEARNED';
+      return category === 'DUE';
     });
   }, [items, category]);
 
@@ -165,6 +166,218 @@ const VocabBookDictationPage: React.FC = () => {
     await startPlayback();
   };
 
+  const getStatusText = () => {
+    if (repeatIteration > 0) {
+      return language === 'zh'
+        ? `正在播放第 ${repeatIteration}/${playCount} 遍`
+        : `Playing ${repeatIteration}/${playCount}`;
+    }
+    return language === 'zh' ? '未播放' : 'Idle';
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="py-24 text-center text-slate-500 font-bold">
+          {labels.common?.loading || 'Loading...'}
+        </div>
+      );
+    }
+
+    if (total === 0) {
+      return (
+        <div className="py-24 text-center">
+          <p className="text-xl font-black text-slate-800">
+            {labels.dashboard?.vocab?.noDueNow || '暂无单词'}
+          </p>
+          <p className="text-slate-400 font-medium mt-2">
+            {labels.vocab?.tryAnotherFilter || '换个分类或搜索试试'}
+          </p>
+        </div>
+      );
+    }
+
+    if (started) {
+      return (
+        <div className="space-y-5">
+          <div className="rounded-[28px] bg-white border-[3px] border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
+                  {mode === 'HEAR_PRONUNCIATION'
+                    ? labels.vocab?.dictationHearPron || '听发音'
+                    : labels.vocab?.dictationHearMeaning || '听释义'}
+                </p>
+                <h1 className="text-3xl font-black text-slate-900 mt-1">
+                  {language === 'zh' ? '听写播放' : 'Dictation Player'}
+                </h1>
+                <p className="mt-2 text-slate-600 font-bold">
+                  {language === 'zh' ? '请专注听音并书写' : 'Listen and write'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
+                  {getStatusText()}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <button
+                onClick={prev}
+                className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 inline-flex items-center gap-2"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                {labels.common?.prev || '上一词'}
+              </button>
+
+              {playing ? (
+                <button
+                  onClick={stopAll}
+                  className="px-5 py-3 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400 inline-flex items-center gap-2"
+                >
+                  <Square className="w-5 h-5" />
+                  {labels.vocab?.stop || '停止'}
+                </button>
+              ) : (
+                <button
+                  onClick={startPlayback}
+                  className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black border-[3px] border-slate-800 inline-flex items-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  {labels.vocab?.play || '播放'}
+                </button>
+              )}
+
+              <button
+                onClick={next}
+                className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                {labels.common?.next || '下一词'}
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setMode('HEAR_PRONUNCIATION')}
+            className={`p-5 rounded-3xl border-[3px] text-left transition-all ${
+              mode === 'HEAR_PRONUNCIATION'
+                ? 'border-rose-400 bg-white shadow-[0_10px_30px_rgba(244,63,94,0.12)]'
+                : 'border-slate-200 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-100 flex items-center justify-center">
+                <Mic className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <p className="font-black text-slate-900">
+                  {labels.vocab?.dictationHearPron || '听发音'}
+                </p>
+                <p className="text-xs font-bold text-slate-400">
+                  {labels.vocab?.dictationHearPronDesc || '写单词/释义'}
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setMode('HEAR_MEANING')}
+            className={`p-5 rounded-3xl border-[3px] text-left transition-all ${
+              mode === 'HEAR_MEANING'
+                ? 'border-rose-400 bg-white shadow-[0_10px_30px_rgba(244,63,94,0.12)]'
+                : 'border-slate-200 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                <Type className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="font-black text-slate-900">
+                  {labels.vocab?.dictationHearMeaning || '听释义'}
+                </p>
+                <p className="text-xs font-bold text-slate-400">
+                  {labels.vocab?.dictationHearMeaningDesc || '写单词'}
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="rounded-[28px] bg-white border-[3px] border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6 space-y-6">
+          <div>
+            <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
+              {labels.vocab?.repeatCount || '单词播放次数'}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {([1, 2, 3] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setPlayCount(v)}
+                  className={`py-3 rounded-2xl border-[3px] font-black ${
+                    playCount === v
+                      ? 'border-rose-400 bg-rose-50 text-rose-600'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                >
+                  {v}次
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
+              {labels.vocab?.playGap || '单词播放间隔'}
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {([2, 4, 6, 8] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setGapSeconds(v)}
+                  className={`py-3 rounded-2xl border-[3px] font-black ${
+                    gapSeconds === v
+                      ? 'border-rose-400 bg-rose-50 text-rose-600'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                >
+                  {v}秒
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
+            <span className="font-black text-slate-800">
+              {labels.vocab?.autoNext || '自动播放下一词'}
+            </span>
+            <input
+              type="checkbox"
+              checked={autoNext}
+              onChange={e => setAutoNext(e.target.checked)}
+              className="w-6 h-6 accent-rose-500"
+            />
+          </label>
+
+          <button
+            onClick={start}
+            className="w-full py-4 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400"
+          >
+            {language === 'zh' ? '开始播放' : labels.vocab?.play || 'Play'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50">
       <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b-[3px] border-rose-100">
@@ -196,202 +409,7 @@ const VocabBookDictationPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        {loading ? (
-          <div className="py-24 text-center text-slate-500 font-bold">
-            {labels.common?.loading || 'Loading...'}
-          </div>
-        ) : total === 0 ? (
-          <div className="py-24 text-center">
-            <p className="text-xl font-black text-slate-800">
-              {labels.dashboard?.vocab?.noDueNow || '暂无单词'}
-            </p>
-            <p className="text-slate-400 font-medium mt-2">
-              {labels.vocab?.tryAnotherFilter || '换个分类或搜索试试'}
-            </p>
-          </div>
-        ) : !started ? (
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setMode('HEAR_PRONUNCIATION')}
-                className={`p-5 rounded-3xl border-[3px] text-left transition-all ${
-                  mode === 'HEAR_PRONUNCIATION'
-                    ? 'border-rose-400 bg-white shadow-[0_10px_30px_rgba(244,63,94,0.12)]'
-                    : 'border-slate-200 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-rose-100 flex items-center justify-center">
-                    <Mic className="w-6 h-6 text-rose-600" />
-                  </div>
-                  <div>
-                    <p className="font-black text-slate-900">
-                      {labels.vocab?.dictationHearPron || '听发音'}
-                    </p>
-                    <p className="text-xs font-bold text-slate-400">
-                      {labels.vocab?.dictationHearPronDesc || '写单词/释义'}
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => setMode('HEAR_MEANING')}
-                className={`p-5 rounded-3xl border-[3px] text-left transition-all ${
-                  mode === 'HEAR_MEANING'
-                    ? 'border-rose-400 bg-white shadow-[0_10px_30px_rgba(244,63,94,0.12)]'
-                    : 'border-slate-200 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-100 flex items-center justify-center">
-                    <Type className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="font-black text-slate-900">
-                      {labels.vocab?.dictationHearMeaning || '听释义'}
-                    </p>
-                    <p className="text-xs font-bold text-slate-400">
-                      {labels.vocab?.dictationHearMeaningDesc || '写单词'}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="rounded-[28px] bg-white border-[3px] border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6 space-y-6">
-              <div>
-                <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
-                  {labels.vocab?.repeatCount || '单词播放次数'}
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {([1, 2, 3] as const).map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setPlayCount(v)}
-                      className={`py-3 rounded-2xl border-[3px] font-black ${
-                        playCount === v
-                          ? 'border-rose-400 bg-rose-50 text-rose-600'
-                          : 'border-slate-200 bg-white text-slate-700'
-                      }`}
-                    >
-                      {v}次
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
-                  {labels.vocab?.playGap || '单词播放间隔'}
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {([2, 4, 6, 8] as const).map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setGapSeconds(v)}
-                      className={`py-3 rounded-2xl border-[3px] font-black ${
-                        gapSeconds === v
-                          ? 'border-rose-400 bg-rose-50 text-rose-600'
-                          : 'border-slate-200 bg-white text-slate-700'
-                      }`}
-                    >
-                      {v}秒
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
-                <span className="font-black text-slate-800">
-                  {labels.vocab?.autoNext || '自动播放下一词'}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={autoNext}
-                  onChange={e => setAutoNext(e.target.checked)}
-                  className="w-6 h-6 accent-rose-500"
-                />
-              </label>
-
-              <button
-                onClick={start}
-                className="w-full py-4 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400"
-              >
-                {language === 'zh' ? '开始播放' : labels.vocab?.play || 'Play'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="rounded-[28px] bg-white border-[3px] border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
-                    {mode === 'HEAR_PRONUNCIATION'
-                      ? labels.vocab?.dictationHearPron || '听发音'
-                      : labels.vocab?.dictationHearMeaning || '听释义'}
-                  </p>
-                  <h1 className="text-3xl font-black text-slate-900 mt-1">
-                    {language === 'zh' ? '听写播放' : 'Dictation Player'}
-                  </h1>
-                  <p className="mt-2 text-slate-600 font-bold">
-                    {language === 'zh' ? '请专注听音并书写' : 'Listen and write'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
-                    {repeatIteration > 0
-                      ? language === 'zh'
-                        ? `正在播放第 ${repeatIteration}/${playCount} 遍`
-                        : `Playing ${repeatIteration}/${playCount}`
-                      : language === 'zh'
-                        ? '未播放'
-                        : 'Idle'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex items-center justify-between gap-3">
-                <button
-                  onClick={prev}
-                  className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 inline-flex items-center gap-2"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                  {labels.common?.prev || '上一词'}
-                </button>
-
-                {playing ? (
-                  <button
-                    onClick={stopAll}
-                    className="px-5 py-3 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400 inline-flex items-center gap-2"
-                  >
-                    <Square className="w-5 h-5" />
-                    {labels.vocab?.stop || '停止'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={startPlayback}
-                    className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black border-[3px] border-slate-800 inline-flex items-center gap-2"
-                  >
-                    <Play className="w-5 h-5" />
-                    {labels.vocab?.play || '播放'}
-                  </button>
-                )}
-
-                <button
-                  onClick={next}
-                  className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                >
-                  {labels.common?.next || '下一词'}
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <div className="max-w-3xl mx-auto px-4 py-8">{renderContent()}</div>
 
       <AnimatePresence>
         {settingsOpen && (

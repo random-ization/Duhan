@@ -16,6 +16,7 @@ export default [
             ".next/",
             "node_modules/",
             "coverage/",
+            "stats.html",
         ],
     },
 

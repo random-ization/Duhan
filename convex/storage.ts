@@ -1,7 +1,7 @@
 'use node';
 import { action } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 /**
  * Generate AWS Signature V4 presigned URL for DigitalOcean Spaces
@@ -33,7 +33,7 @@ export const getUploadUrl = action({
     const now = new Date();
     // Fix: Remove milliseconds strict AWS ISO8601BasicFormat (YYYYMMDD'T'HHMMSS'Z')
     // Previous regex was failing to stripping milliseconds
-    const amzDate = now.toISOString().split('.')[0].replace(/[:-]/g, '') + 'Z';
+    const amzDate = now.toISOString().split('.')[0].replaceAll(/[:-]/g, '') + 'Z';
     const dateStamp = amzDate.slice(0, 8);
 
     const host = new URL(endpoint).host;

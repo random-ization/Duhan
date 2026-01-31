@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Settings, Volume2, Plus, Languages, Headphones, X } from 'lucide-react';
-import { useQuery, useAction } from 'convex/react';
-import { aRef, qRef } from '../../utils/convexRefs';
+import { useQuery, useAction, useMutation } from 'convex/react';
+import { aRef, qRef, mRef } from '../../utils/convexRefs';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
 import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
@@ -232,6 +232,105 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     </div>
   );
 };
+// Transcription Segment Component
+interface SegmentViewProps {
+  segment: TranscriptSegment;
+  index: number;
+  isActive: boolean;
+  showTranslation: boolean;
+  language: Language;
+  onClick: (e: React.MouseEvent | React.KeyboardEvent) => void;
+  setRef: (el: HTMLButtonElement | null) => void;
+}
+
+const SegmentView: React.FC<SegmentViewProps> = ({
+  segment,
+  index,
+  isActive,
+  showTranslation,
+  language,
+  onClick,
+  setRef,
+}) => {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const localizedTranslation = getLocalizedContent(segment, 'translation', language) || segment.translation;
+
+  return (
+    <button
+      ref={setRef}
+      onClick={onClick}
+      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onClick(e)}
+      className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left ${isActive
+        ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
+        : 'bg-white border-zinc-200 hover:border-zinc-400'
+        }`}
+    >
+      {/* Timestamp */}
+      <div className="text-xs font-mono text-zinc-400 mb-2">
+        {formatTime(segment.start)} - {formatTime(segment.end)}
+      </div>
+
+      {/* Korean text with word click */}
+      <div className={`font-medium ${isActive ? 'text-zinc-900' : 'text-zinc-700'}`}>
+        {segment.text.split(/\s+/).map((word, wordIndex) => {
+          const normalizedWord = normalizeLookupWord(word);
+          if (!normalizedWord) {
+            return <span key={`text-${index}-${wordIndex}`}>{word} </span>;
+          }
+          const baseForm = segment.tokens?.find(
+            t => normalizeLookupWord(t.surface) === normalizedWord
+          )?.base;
+
+          return (
+            <WordView
+              key={`word-${index}-${wordIndex}`}
+              word={word}
+              normalizedWord={normalizedWord}
+              baseForm={baseForm}
+              segmentIndex={index}
+              isActive={isActive}
+            />
+          );
+        })}
+      </div>
+
+      {/* Translation */}
+      {(showTranslation || isActive) && localizedTranslation && (
+        <div className="mt-2 text-sm text-zinc-500">
+          {localizedTranslation}
+        </div>
+      )}
+    </button>
+  );
+};
+
+// Word Component
+interface WordViewProps {
+  word: string;
+  normalizedWord: string;
+  baseForm?: string;
+  segmentIndex: number;
+  isActive: boolean;
+}
+
+const WordView: React.FC<WordViewProps> = ({ word, normalizedWord, baseForm, segmentIndex, isActive }) => {
+  return (
+    <span
+      data-word={normalizedWord}
+      data-base={baseForm}
+      data-seg-index={segmentIndex}
+      className={`cursor-pointer rounded px-0.5 transition-colors ${isActive ? 'hover:bg-lime-200' : 'hover:bg-yellow-100'
+        }`}
+    >
+      {word}{' '}
+    </span>
+  );
+};
 
 // =========================================
 // Main Component
@@ -264,6 +363,18 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       },
       MorphologyLookupResult
     >('dictionary:lookupWithMorphology')
+  );
+  const addToReview = useMutation(
+    mRef<
+      {
+        word: string;
+        meaning: string;
+        partOfSpeech?: string;
+        context?: string;
+        source?: string;
+      },
+      void
+    >('vocab:addToReview')
   );
   const dictionaryRequestRef = useRef(0);
   const translationLang = useMemo(() => {
@@ -298,7 +409,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     isFromVocabList: boolean;
   } | null>(null);
 
-  const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const segmentRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // ========================================
   // Data Fetching - Use dedicated listening API
@@ -411,105 +522,115 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     setCurrentTime(time);
   };
 
-  const handleSegmentClick = (segment: TranscriptSegment, _index: number) => {
+  const handleSegmentClick = (segment: TranscriptSegment, _index: number, e: React.MouseEvent | React.KeyboardEvent) => {
+    // If a word was clicked, handleWordClick will handle it via bubbling if we want,
+    // but here we can explicitly check to avoid seeking if a word was clicked.
+    const wordEl = (e.target as Element).closest<HTMLElement>('[data-word]');
+    if (wordEl) {
+      handleWordClick(e);
+      return;
+    }
+
     // This will trigger the audio to seek to this time
-    // We need to communicate with the audio player
     setCurrentTime(segment.start);
-    // The actual seek happens via audioRef in parent - we'll need to lift this up
   };
 
-  const handleWordClick = (e: React.MouseEvent) => {
-    const wordEl = (e.target as HTMLElement).closest('[data-word]') as HTMLElement | null;
-    if (wordEl) {
-      const clickedWord = normalizeLookupWordCb(wordEl.dataset.word ?? '');
-      if (!clickedWord) return;
-      const rect = wordEl.getBoundingClientRect();
-      const baseForm = wordEl.dataset.base ? normalizeLookupWordCb(wordEl.dataset.base) : undefined;
-      const query = baseForm || clickedWord;
-      const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
-      const fallbackMeaning = vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
-      const segIndex = wordEl.dataset.segIndex ? parseInt(wordEl.dataset.segIndex, 10) : undefined;
-      const segment =
-        segIndex !== undefined ? unitData?.transcriptData?.[segIndex] : undefined;
-      const contextTranslation = segment ? getLocalizedContent(segment, 'translation', language) : undefined;
-      const requestId = dictionaryRequestRef.current + 1;
-      dictionaryRequestRef.current = requestId;
+  const getPopoverPosition = (rect: DOMRect, popoverWidth: number, popoverHeight: number) => {
+    const x = Math.min(
+      Math.max(8, rect.left),
+      Math.max(8, globalThis.window.innerWidth - popoverWidth - 8)
+    );
+    const y = Math.min(
+      Math.max(8, rect.bottom + 8),
+      Math.max(8, globalThis.window.innerHeight - popoverHeight - 8)
+    );
+    return { x, y };
+  };
 
-      const popoverWidth = 260;
-      const popoverHeight = contextTranslation ? 220 : 180;
-      const x = Math.min(
-        Math.max(8, rect.left),
-        Math.max(8, window.innerWidth - popoverWidth - 8)
-      );
-      const y = Math.min(
-        Math.max(8, rect.bottom + 8),
-        Math.max(8, window.innerHeight - popoverHeight - 8)
-      );
-      setSelectedWord({
-        word: clickedWord,
-        lemma: baseForm,
-        meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || '查询中...',
-        baseForm,
-        grammarMatches: [],
-        contextTranslation,
-        position: { x, y },
-        isFromVocabList: !!vocabMatch,
+  const performDictionaryLookup = async (
+    clickedWord: string,
+    query: string,
+    segment: TranscriptSegment | undefined,
+    requestId: number
+  ) => {
+    try {
+      const res = await lookupWithMorphology({
+        surface: clickedWord,
+        contextText: segment?.text,
+        translationLang,
+        num: 10,
       });
-      void (async () => {
-        try {
-          const contextText = segment?.text;
-          const rawSurface = wordEl.textContent?.trim() || '';
-          let charIndexInContext: number | undefined = undefined;
-          if (contextText) {
-            const rawIndex = rawSurface ? contextText.indexOf(rawSurface) : -1;
-            if (rawIndex >= 0) {
-              charIndexInContext = rawIndex;
-            } else {
-              const normalizedIndex = contextText.indexOf(clickedWord);
-              if (normalizedIndex >= 0) charIndexInContext = normalizedIndex;
-            }
-          }
 
-          const res = await lookupWithMorphology({
-            surface: clickedWord,
-            contextText,
-            charIndexInContext,
-            translationLang,
-            num: 10,
-          });
-          if (dictionaryRequestRef.current !== requestId) return;
-          const lemma = normalizeLookupWordCb(res.token.lemma || query) || query;
+      if (dictionaryRequestRef.current !== requestId) return;
 
-          let meaning = fallbackMeaning;
-          if (res.wordFromDb?.meaning) {
-            meaning = res.wordFromDb.meaning;
-          } else if (res.krdict) {
-            meaning = extractBestMeaning(res.krdict, lemma, fallbackMeaning);
+      const lemma = normalizeLookupWordCb(res.token.lemma || query) || query;
+      let meaning =
+        selectedWord?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+
+      if (res.wordFromDb?.meaning) {
+        meaning = res.wordFromDb.meaning;
+      } else if (res.krdict) {
+        meaning = extractBestMeaning(res.krdict, lemma, meaning);
+      }
+
+      setSelectedWord(prev =>
+        prev
+          ? {
+            ...prev,
+            lemma,
+            baseForm: lemma,
+            grammarMatches: res.grammarMatches,
+            meaning,
           }
-          setSelectedWord(prev =>
-            prev
-              ? {
-                ...prev,
-                lemma,
-                baseForm: lemma,
-                grammarMatches: res.grammarMatches,
-                meaning,
-              }
-              : prev
-          );
-        } catch (error: unknown) {
-          if (dictionaryRequestRef.current !== requestId) return;
-          console.error('[ListeningModule] Dictionary lookup failed:', error);
-          if (typeof error === 'object' && error !== null && 'message' in error) {
-            const msg = (error as { message: string }).message;
-            if (msg.includes('KRDICT Error')) {
-              console.error('[ListeningModule] KRDICT specific error:', msg);
-            }
+          : prev
+      );
+    } catch (error: unknown) {
+      if (dictionaryRequestRef.current !== requestId) return;
+      console.error('[ListeningModule] Dictionary lookup failed:', error);
+      setSelectedWord(prev =>
+        prev
+          ? {
+            ...prev,
+            meaning: prev.meaning === labels.dashboard?.common?.loading ? '查询失败' : prev.meaning,
           }
-          setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
-        }
-      })();
+          : prev
+      );
     }
+  };
+
+  const handleWordClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+    const wordEl = (e.target as Element).closest<HTMLElement>('[data-word]');
+    if (!wordEl) return;
+
+    const clickedWord = normalizeLookupWordCb(wordEl.dataset.word ?? '');
+    if (!clickedWord) return;
+
+    const baseForm = wordEl.dataset.base ? normalizeLookupWordCb(wordEl.dataset.base) : undefined;
+    const query = baseForm || clickedWord;
+    const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
+    const segIndex = wordEl.dataset.segIndex ? Number.parseInt(wordEl.dataset.segIndex, 10) : undefined;
+    const segment =
+      typeof segIndex === 'number' ? unitData?.transcriptData?.[segIndex] : undefined;
+    const contextTranslation = segment ? getLocalizedContent(segment, 'translation', language) : undefined;
+
+    const requestId = dictionaryRequestRef.current + 1;
+    dictionaryRequestRef.current = requestId;
+
+    const rect = wordEl.getBoundingClientRect();
+    const position = getPopoverPosition(rect, 260, contextTranslation ? 220 : 180);
+
+    setSelectedWord({
+      word: clickedWord,
+      lemma: baseForm,
+      meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || '查询中...',
+      baseForm,
+      grammarMatches: [],
+      contextTranslation,
+      position,
+      isFromVocabList: !!vocabMatch,
+    });
+
+    void performDictionaryLookup(clickedWord, query, segment, requestId);
   };
 
   const speak = useCallback(
@@ -538,90 +659,40 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   // ========================================
   const renderTranscript = () => {
     // No listening unit exists yet, or no transcript data
-    if (!unitData || !unitData.transcriptData || unitData.transcriptData.length === 0) {
-      // No transcript data - show empty state
+    if (unitData?.transcriptData && unitData.transcriptData.length > 0) {
+      // Render karaoke-style transcript
       return (
-        <div className="text-center py-12 text-zinc-400">
-          <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p className="font-bold">{labels.dashboard?.listening?.empty || '暂无听力内'}</p>
-          <p className="text-sm mt-2">
-            {labels.dashboard?.listening?.emptyDesc || '请在管理后台添加听力音频和时间戳文稿'}
-          </p>
+        <div className="space-y-4" style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
+          {unitData.transcriptData.map((segment, index) => (
+            <SegmentView
+              key={`seg-${segment.start}-${segment.end}`}
+              segment={segment}
+              index={index}
+              isActive={isKaraokeMode && index === activeSegmentIndex}
+              showTranslation={showTranslation}
+              language={language}
+              onClick={e => handleSegmentClick(segment, index, e)}
+              setRef={el => {
+                segmentRefs.current[index] = el;
+              }}
+            />
+          ))}
         </div>
       );
     }
 
-    // Render karaoke-style transcript
+    // No transcript data - show empty state
     return (
-      <div className="space-y-4" style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
-        {unitData.transcriptData.map((segment, index) => {
-          const isActive = isKaraokeMode && index === activeSegmentIndex;
-
-          return (
-            <div
-              key={index}
-              ref={el => {
-                segmentRefs.current[index] = el;
-              }}
-              onClick={() => handleSegmentClick(segment, index)}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${isActive
-                  ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
-                  : 'bg-white border-zinc-200 hover:border-zinc-400'
-                }`}
-            >
-              {/* Timestamp */}
-              <div className="text-xs font-mono text-zinc-400 mb-2">
-                {formatTime(segment.start)} - {formatTime(segment.end)}
-              </div>
-
-              {/* Korean text with word click */}
-              <div
-                className={`font-medium ${isActive ? 'text-zinc-900' : 'text-zinc-700'}`}
-                onClick={handleWordClick}
-              >
-                {segment.text.split(/\s+/).map((word, wordIndex) => {
-                  const normalizedWord = normalizeLookupWord(word);
-                  if (!normalizedWord) {
-                    return <span key={wordIndex}>{word} </span>;
-                  }
-                  const baseForm = segment.tokens?.find(
-                    t => normalizeLookupWord(t.surface) === normalizedWord
-                  )?.base;
-                  return (
-                    <span
-                      key={wordIndex}
-                      data-word={normalizedWord}
-                      data-base={baseForm}
-                      data-seg-index={index}
-                      className={`cursor-pointer rounded px-0.5 transition-colors ${isActive ? 'hover:bg-lime-200' : 'hover:bg-yellow-100'
-                        }`}
-                    >
-                      {word}{' '}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {/* Translation - show if toggled on or if this is active segment */}
-              {(showTranslation || isActive) &&
-                (getLocalizedContent(segment, 'translation', language) || segment.translation) && (
-                  <div className="mt-2 text-sm text-zinc-500">
-                    {getLocalizedContent(segment, 'translation', language)}
-                  </div>
-                )}
-            </div>
-          );
-        })}
+      <div className="text-center py-12 text-zinc-400">
+        <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
+        <p className="font-bold">{labels.dashboard?.listening?.empty || '暂无听力内'}</p>
+        <p className="text-sm mt-2">
+          {labels.dashboard?.listening?.emptyDesc || '请在管理后台添加听力音频和时间戳文稿'}
+        </p>
       </div>
     );
   };
 
-  // Format time helper
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   return (
     <div
@@ -725,8 +796,19 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             grammarMatches={selectedWord.grammarMatches}
             position={selectedWord.position}
             onClose={() => setSelectedWord(null)}
-            onSave={() => {
-              // TODO: Save to vocab list
+            onSave={async () => {
+              if (selectedWord) {
+                try {
+                  await addToReview({
+                    word: selectedWord.lemma || selectedWord.word,
+                    meaning: selectedWord.meaning,
+                    context: selectedWord.contextTranslation,
+                    source: 'LISTENING',
+                  });
+                } catch (err) {
+                  console.error('Failed to save word:', err);
+                }
+              }
               setSelectedWord(null);
             }}
             onSpeak={() => speak(selectedWord.word)}

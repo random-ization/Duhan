@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
 // Default order of cards on the dashboard
 export const DEFAULT_CARD_ORDER = [
@@ -32,7 +32,7 @@ const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [cardOrder, setCardOrder] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return DEFAULT_CARD_ORDER;
+    if (globalThis.window === undefined) return DEFAULT_CARD_ORDER;
     const savedOrder = localStorage.getItem('dashboard_layout');
     if (!savedOrder) return DEFAULT_CARD_ORDER;
     try {
@@ -49,49 +49,54 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   });
 
-  const toggleEditMode = () => {
-    setIsEditing(prev => {
-      const newState = !prev;
-      // When exiting edit mode, save could be triggered here or in updateCardOrder
-      return newState;
-    });
-  };
+  const toggleEditMode = useCallback(() => {
+    setIsEditing(prev => !prev);
+  }, []);
 
-  const updateCardOrder = (newOrder: string[]) => {
+  const updateCardOrder = useCallback((newOrder: string[]) => {
     setCardOrder(newOrder);
     localStorage.setItem('dashboard_layout', JSON.stringify(newOrder));
-  };
+  }, []);
 
-  const resetLayout = () => {
+  const resetLayout = useCallback(() => {
     setCardOrder(DEFAULT_CARD_ORDER);
     localStorage.setItem('dashboard_layout', JSON.stringify(DEFAULT_CARD_ORDER));
-  };
+  }, []);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
+  const toggleMobileMenu = useCallback(() => setIsMobileMenuOpen(prev => !prev), []);
 
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [footerHidden, setFooterHidden] = useState(false);
 
-  return (
-    <LayoutContext.Provider
-      value={{
-        isEditing,
-        toggleEditMode,
-        cardOrder,
-        updateCardOrder,
-        resetLayout,
-        isMobileMenuOpen,
-        toggleMobileMenu,
-        sidebarHidden,
-        setSidebarHidden,
-        footerHidden,
-        setFooterHidden,
-      }}
-    >
-      {children}
-    </LayoutContext.Provider>
+  const value = useMemo(
+    () => ({
+      isEditing,
+      toggleEditMode,
+      cardOrder,
+      updateCardOrder,
+      resetLayout,
+      isMobileMenuOpen,
+      toggleMobileMenu,
+      sidebarHidden,
+      setSidebarHidden,
+      footerHidden,
+      setFooterHidden,
+    }),
+    [
+      isEditing,
+      toggleEditMode,
+      cardOrder,
+      updateCardOrder,
+      resetLayout,
+      isMobileMenuOpen,
+      toggleMobileMenu,
+      sidebarHidden,
+      footerHidden,
+    ]
   );
+
+  return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
 };
 
 export const useLayout = () => {

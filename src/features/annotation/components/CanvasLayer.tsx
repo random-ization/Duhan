@@ -77,6 +77,7 @@ const DEFAULT_OPACITY = {
  */
 const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
   data,
+  onSave,
   onChange,
   readOnly = false,
   tool = 'pen',
@@ -129,7 +130,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
 
   // 生成唯一 ID
   const generateId = useCallback(
-    () => `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    () => `line-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     []
   );
 
@@ -144,6 +145,24 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     },
     [onChange]
   );
+
+  // 支持 Ctrl+S 保存
+  useEffect(() => {
+    if (readOnly || !onSave) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        onSave({ lines, version: Date.now() });
+      }
+    };
+    globalThis.window.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.window.removeEventListener('keydown', handleKeyDown);
+  }, [onSave, lines, readOnly]);
+
+  const cursorStyle = useMemo(() => {
+    if (readOnly) return 'default';
+    return tool === 'eraser' ? 'cell' : 'crosshair';
+  }, [readOnly, tool]);
 
   // 鼠标按下 - 开始画线
   const handleMouseDown = useCallback(
@@ -260,7 +279,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
         onTouchMove={handleMouseMove}
         onTouchEnd={handleMouseUp}
         style={{
-          cursor: readOnly ? 'default' : tool === 'eraser' ? 'cell' : 'crosshair',
+          cursor: cursorStyle,
         }}
       >
         <Layer ref={layerRef}>
@@ -316,33 +335,30 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         <button
           onClick={() => onToolChange('pen')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-            tool === 'pen'
-              ? 'bg-white shadow-sm text-indigo-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'pen'
+            ? 'bg-white shadow-sm text-indigo-600'
+            : 'text-slate-500 hover:text-slate-700'
+            }`}
         >
           ✏️ 画笔
         </button>
         <button
           onClick={() => onToolChange('highlighter')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-            tool === 'highlighter'
-              ? 'bg-white shadow-sm text-yellow-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'highlighter'
+            ? 'bg-white shadow-sm text-yellow-600'
+            : 'text-slate-500 hover:text-slate-700'
+            }`}
         >
           🖍️ 高亮
         </button>
         <button
           onClick={() => onToolChange('eraser')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-            tool === 'eraser'
-              ? 'bg-white shadow-sm text-red-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'eraser'
+            ? 'bg-white shadow-sm text-red-600'
+            : 'text-slate-500 hover:text-slate-700'
+            }`}
         >
           🧹 橡皮
         </button>
@@ -358,9 +374,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             key={c}
             onClick={() => onColorChange(c)}
             disabled={disabled || tool === 'eraser'}
-            className={`w-6 h-6 rounded-full border-2 transition-all ${
-              color === c ? 'border-indigo-500 scale-110' : 'border-transparent hover:scale-105'
-            } ${tool === 'eraser' ? 'opacity-30' : ''}`}
+            className={`w-6 h-6 rounded-full border-2 transition-all ${color === c ? 'border-indigo-500 scale-110' : 'border-transparent hover:scale-105'
+              } ${tool === 'eraser' ? 'opacity-30' : ''}`}
             style={{ backgroundColor: c }}
           />
         ))}

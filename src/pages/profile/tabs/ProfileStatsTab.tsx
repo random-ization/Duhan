@@ -37,8 +37,8 @@ export const ProfileStatsTab: React.FC<{
             color: 'text-blue-500',
             bg: 'bg-blue-50',
           },
-        ].map((stat, i) => (
-          <div key={i} className={`p-4 rounded-2xl ${stat.bg} border border-transparent`}>
+        ].map((stat) => (
+          <div key={stat.label} className={`p-4 rounded-2xl ${stat.bg} border border-transparent`}>
             <div className={`text-2xl font-black ${stat.color} mb-1`}>{stat.value}</div>
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               {stat.label}
@@ -56,9 +56,9 @@ export const ProfileStatsTab: React.FC<{
             {labels.profile?.noActivity || 'No activity yet. Start a test to see your progress!'}
           </div>
         ) : (
-          examHistory.slice(0, 5).map((exam, i) => (
+          examHistory.slice(0, 5).map((exam) => (
             <div
-              key={i}
+              key={exam.timestamp}
               className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"
             >
               <div>

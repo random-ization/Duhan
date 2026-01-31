@@ -45,28 +45,183 @@ function parseCSVLine(line: string): string[] {
   let current = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
+  let i = 0;
+  while (i < line.length) {
     const char = line[i];
-    const nextChar = line[i + 1];
 
     if (char === '"') {
-      if (inQuotes && nextChar === '"') {
+      if (inQuotes && line[i + 1] === '"') {
         current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
+        i += 2;
+        continue;
       }
+      inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
       result.push(current.trim());
       current = '';
     } else {
       current += char;
     }
+    i++;
   }
 
   result.push(current.trim());
   return result;
 }
+
+function parseBulkText(text: string): BulkImportItem[] {
+  if (!text.trim()) return [];
+
+  const lines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headerLine = lines[0];
+  const headers = headerLine.includes('\t')
+    ? headerLine.split('\t').map(h => h.trim().toLowerCase())
+    : parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+  const findColumn = (keywords: string[]): number =>
+    headers.findIndex(h => keywords.some(k => h.includes(k)));
+
+  const colMap = {
+    unit: findColumn(['单元', 'unit', '课']),
+    article: findColumn(['文章', 'article', '序号', 'index']),
+    title: findColumn(['标题', 'title']),
+    text: findColumn(['正文', 'text', 'reading', '阅读']),
+    translation: findColumn(['翻译(中)', '翻译(ch)', 'translation(ch)', '中文翻译']),
+    translationEn: findColumn(['翻译(英)', '翻译(en)', 'translation(en)', '英文翻译']),
+    translationVi: findColumn([
+      '翻译(越)',
+      '翻译(vn)',
+      '翻译(vi)',
+      'translation(vn)',
+      '越南语翻译',
+    ]),
+    translationMn: findColumn(['翻译(蒙)', '翻译(mn)', 'translation(mn)', '蒙古语翻译']),
+    audioUrl: findColumn(['音频', 'audio', 'url']),
+  };
+
+  return lines
+    .slice(1)
+    .map(line => {
+      const parts = line.includes('\t')
+        ? line.split('\t').map(p => p.trim())
+        : parseCSVLine(line);
+
+      const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
+      const restoreNewlines = (val?: string) => val?.replaceAll('⏎', '\n');
+
+      const val = getValue(colMap.unit);
+      const unitIndex = val ? Number.parseInt(val, 10) : Number.NaN;
+      const articleVal = getValue(colMap.article);
+      const articleIndex = articleVal ? Number.parseInt(articleVal, 10) : 1;
+      const title = getValue(colMap.title);
+      const readingText = restoreNewlines(getValue(colMap.text));
+
+      if (!title || !readingText || Number.isNaN(unitIndex)) return null;
+
+      return {
+        unitIndex,
+        articleIndex,
+        title,
+        readingText,
+        translation: restoreNewlines(getValue(colMap.translation)),
+        translationEn: restoreNewlines(getValue(colMap.translationEn)),
+        translationVi: restoreNewlines(getValue(colMap.translationVi)),
+        translationMn: restoreNewlines(getValue(colMap.translationMn)),
+        audioUrl: getValue(colMap.audioUrl),
+      };
+    })
+    .filter(Boolean) as BulkImportItem[];
+}
+
+// --- Sub-components to reduce complexity ---
+
+const ImportPreview: React.FC<{ items: BulkImportItem[] }> = ({ items }) => {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+      <div className="text-sm font-bold text-blue-800 mb-2">解析预览：{items.length} 篇文章</div>
+      <div className="max-h-40 overflow-y-auto space-y-1">
+        {items.slice(0, 10).map(item => (
+          <div
+            key={`${item.unitIndex}-${item.articleIndex}-${item.title}`}
+            className="text-xs text-blue-700 flex items-center gap-2"
+          >
+            <span className="bg-blue-200 px-1.5 py-0.5 rounded">
+              第{item.unitIndex}课-{item.articleIndex}
+            </span>
+            <span className="font-medium truncate">{item.title}</span>
+            <span className="text-blue-500 truncate flex-shrink">
+              {item.readingText?.substring(0, 30)}...
+            </span>
+          </div>
+        ))}
+        {items.length > 10 && (
+          <div className="text-xs text-blue-500">... 还有 {items.length - 10} 篇</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface AudioFileItem {
+  file: File;
+  unitIndex: number;
+  articleIndex: number;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  url?: string;
+}
+
+const AudioFileList: React.FC<{
+  files: AudioFileItem[];
+  uploading: boolean;
+  onUpload: () => void;
+  onRemove: (file: File) => void;
+}> = ({ files, uploading, onUpload, onRemove }) => {
+  if (files.length === 0) return null;
+
+  const allUploaded = files.every(f => f.status !== 'pending');
+
+  return (
+    <div className="space-y-2 mb-3">
+      {files.map(af => (
+        <div key={af.file.name} className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg text-xs">
+          <span className="bg-green-200 px-1.5 py-0.5 rounded">
+            第{af.unitIndex}课-{af.articleIndex}
+          </span>
+          <span className="flex-1 truncate text-zinc-600">{af.file.name}</span>
+          {af.status === 'pending' && <span className="text-zinc-400">待上传</span>}
+          {af.status === 'uploading' && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+          {af.status === 'done' && <Check className="w-3 h-3 text-green-500" />}
+          {af.status === 'error' && <X className="w-3 h-3 text-red-500" />}
+          <button
+            type="button"
+            onClick={() => onRemove(af.file)}
+            className="text-zinc-400 hover:text-red-500"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={onUpload}
+        disabled={uploading || allUploaded}
+        className="w-full py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {uploading && <Loader2 className="w-3 h-3 animate-spin" />}
+        上传音频到存储
+      </button>
+    </div>
+  );
+};
 
 const ReadingImporter: React.FC = () => {
   const institutes = useQuery(INSTITUTES.getAll, {});
@@ -98,86 +253,13 @@ const ReadingImporter: React.FC = () => {
   }, [institutes, form.courseId]);
 
   useEffect(() => {
-    if (!bulkText.trim()) {
-      setParsedItems([]);
-      return;
-    }
-
-    const lines = bulkText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean);
-
-    if (lines.length < 2) {
-      setParsedItems([]);
-      return;
-    }
-
-    const headerLine = lines[0];
-    const headers = headerLine.includes('\t')
-      ? headerLine.split('\t').map(h => h.trim().toLowerCase())
-      : parseCSVLine(headerLine).map(h => h.toLowerCase());
-
-    const findColumn = (keywords: string[]): number => {
-      return headers.findIndex(h => keywords.some(k => h.includes(k)));
-    };
-
-    const colMap = {
-      unit: findColumn(['单元', 'unit', '课']),
-      article: findColumn(['文章', 'article', '序号', 'index']),
-      title: findColumn(['标题', 'title']),
-      text: findColumn(['正文', 'text', 'reading', '阅读']),
-      translation: findColumn(['翻译(中)', '翻译(ch)', 'translation(ch)', '中文翻译']),
-      translationEn: findColumn(['翻译(英)', '翻译(en)', 'translation(en)', '英文翻译']),
-      translationVi: findColumn([
-        '翻译(越)',
-        '翻译(vn)',
-        '翻译(vi)',
-        'translation(vn)',
-        '越南语翻译',
-      ]),
-      translationMn: findColumn(['翻译(蒙)', '翻译(mn)', 'translation(mn)', '蒙古语翻译']),
-      audioUrl: findColumn(['音频', 'audio', 'url']),
-    };
-
-    const items: BulkImportItem[] = lines
-      .slice(1)
-      .map(line => {
-        const parts = line.includes('\t')
-          ? line.split('\t').map(p => p.trim())
-          : parseCSVLine(line);
-
-        const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
-        const restoreNewlines = (val?: string) => val?.replace(/⏎/g, '\n');
-
-        const unitIndex = Number(getValue(colMap.unit));
-        const articleIndex = Number(getValue(colMap.article)) || 1;
-        const title = getValue(colMap.title);
-        const readingText = restoreNewlines(getValue(colMap.text));
-
-        if (!title || !readingText || isNaN(unitIndex)) return null;
-
-        return {
-          unitIndex,
-          articleIndex,
-          title,
-          readingText,
-          translation: restoreNewlines(getValue(colMap.translation)),
-          translationEn: restoreNewlines(getValue(colMap.translationEn)),
-          translationVi: restoreNewlines(getValue(colMap.translationVi)),
-          translationMn: restoreNewlines(getValue(colMap.translationMn)),
-          audioUrl: getValue(colMap.audioUrl),
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => Boolean(item));
-
-    setParsedItems(items);
+    setParsedItems(parseBulkText(bulkText));
   }, [bulkText]);
 
-  const handleExcelFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = event => {
-      const data = new Uint8Array(event.target?.result as ArrayBuffer);
+  const handleExcelFile = async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const data = new Uint8Array(arrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
@@ -189,10 +271,7 @@ const ReadingImporter: React.FC = () => {
         const headerLine = headers.join('\t');
         const dataLines = jsonData.map((row: any) =>
           headers
-            .map(h => {
-              const val = String(row[h] || '');
-              return val.replace(/[\r\n]+/g, '⏎');
-            })
+            .map(h => String(row[h] || '').replaceAll(/[\r\n]+/g, '⏎'))
             .join('\t')
         );
         setBulkText([headerLine, ...dataLines].join('\n'));
@@ -200,8 +279,10 @@ const ReadingImporter: React.FC = () => {
       } else {
         setStatus(`Excel 文件为空: ${file.name}`);
       }
-    };
-    reader.readAsArrayBuffer(file);
+    } catch (e) {
+      console.error('Excel processing error:', e);
+      setStatus(`处理 Excel 文件失败: ${file.name}`);
+    }
   };
 
   const handleBulkImport = async () => {
@@ -254,15 +335,14 @@ const ReadingImporter: React.FC = () => {
       let unitIndex = 0,
         articleIndex = 1;
 
-      const dashMatch = nameWithoutExt.match(/(\d+)[-_](\d+)/);
+      const dashMatch = /(\d+)[-_](\d+)/.exec(nameWithoutExt);
       if (dashMatch) {
-        unitIndex = parseInt(dashMatch[1], 10);
-        articleIndex = parseInt(dashMatch[2], 10);
+        unitIndex = Number.parseInt(dashMatch[1], 10);
+        articleIndex = Number.parseInt(dashMatch[2], 10);
       } else {
-        const singleMatch = nameWithoutExt.match(/(\d+)/);
+        const singleMatch = /(\d+)/.exec(nameWithoutExt);
         if (singleMatch) {
-          unitIndex = parseInt(singleMatch[1], 10);
-          articleIndex = 1;
+          unitIndex = Number.parseInt(singleMatch[1], 10);
         }
       }
 
@@ -277,6 +357,26 @@ const ReadingImporter: React.FC = () => {
     }
 
     setAudioFiles(prev => [...prev, ...newAudioFiles]);
+  };
+
+  const handleTextFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = event => {
+      const text = event.target?.result as string;
+      setBulkText(text);
+      setStatus(`已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`);
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const updateParsedItemAudioUrl = (unitIndex: number, articleIndex: number, url: string) => {
+    setParsedItems(prev =>
+      prev.map(item =>
+        item.unitIndex === unitIndex && item.articleIndex === articleIndex
+          ? { ...item, audioUrl: url }
+          : item
+      )
+    );
   };
 
   const uploadAllAudio = async () => {
@@ -313,14 +413,8 @@ const ReadingImporter: React.FC = () => {
         updatedFiles[i] = { ...af, status: 'done', url: publicUrl };
         setAudioFiles([...updatedFiles]);
 
-        setParsedItems(prev =>
-          prev.map(item => {
-            if (item.unitIndex === af.unitIndex && item.articleIndex === af.articleIndex) {
-              return { ...item, audioUrl: publicUrl };
-            }
-            return item;
-          })
-        );
+        // 更新解析出的条目中的音频 URL
+        updateParsedItemAudioUrl(af.unitIndex, af.articleIndex, publicUrl);
       } catch (e) {
         console.error('Audio upload error:', e);
         updatedFiles[i] = { ...af, status: 'error' };
@@ -331,6 +425,10 @@ const ReadingImporter: React.FC = () => {
     setAudioUploading(false);
     const doneCount = updatedFiles.filter(f => f.status === 'done').length;
     setStatus(`音频上传完成：${doneCount}/${updatedFiles.length} 个文件`);
+  };
+
+  const removeAudioFile = (file: File) => {
+    setAudioFiles(prev => prev.filter(f => f.file !== file));
   };
 
   const selectedCourse = useMemo(() => {
@@ -356,8 +454,11 @@ const ReadingImporter: React.FC = () => {
           <p className="text-sm text-zinc-500">批量导入阅读文章到指定教材</p>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-500 mb-1">选择教材</label>
+          <label htmlFor="course-select" className="block text-xs font-bold text-zinc-500 mb-1">
+            选择教材
+          </label>
           <select
+            id="course-select"
             value={form.courseId}
             onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
@@ -391,15 +492,7 @@ const ReadingImporter: React.FC = () => {
                 if (isExcel) {
                   handleExcelFile(file);
                 } else {
-                  const reader = new FileReader();
-                  reader.onload = event => {
-                    const text = event.target?.result as string;
-                    setBulkText(text);
-                    setStatus(
-                      `已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
-                    );
-                  };
-                  reader.readAsText(file, 'UTF-8');
+                  handleTextFile(file);
                 }
                 e.target.value = '';
               }}
@@ -442,29 +535,7 @@ const ReadingImporter: React.FC = () => {
             placeholder="粘贴区域：&#10;单元&#9;文章序号&#9;标题&#9;正文&#9;翻译(中)&#9;翻译(英)&#10;1&#9;1&#9;제목&#9;본문 내용...&#9;中文翻译...&#9;English...&#10;..."
           />
 
-          {parsedItems.length > 0 && (
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-              <div className="text-sm font-bold text-blue-800 mb-2">
-                解析预览：{parsedItems.length} 篇文章
-              </div>
-              <div className="max-h-40 overflow-y-auto space-y-1">
-                {parsedItems.slice(0, 10).map((item, idx) => (
-                  <div key={idx} className="text-xs text-blue-700 flex items-center gap-2">
-                    <span className="bg-blue-200 px-1.5 py-0.5 rounded">
-                      第{item.unitIndex}课-{item.articleIndex}
-                    </span>
-                    <span className="font-medium truncate">{item.title}</span>
-                    <span className="text-blue-500 truncate flex-shrink">
-                      {item.readingText?.substring(0, 30)}...
-                    </span>
-                  </div>
-                ))}
-                {parsedItems.length > 10 && (
-                  <div className="text-xs text-blue-500">... 还有 {parsedItems.length - 10} 篇</div>
-                )}
-              </div>
-            </div>
-          )}
+          <ImportPreview items={parsedItems} />
 
           <div className="border-t-2 border-zinc-200 pt-4 mt-4">
             <div className="flex items-center gap-2 font-bold text-zinc-800 mb-3">
@@ -490,42 +561,12 @@ const ReadingImporter: React.FC = () => {
               </div>
             </div>
 
-            {audioFiles.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {audioFiles.map((af, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg text-xs"
-                  >
-                    <span className="bg-green-200 px-1.5 py-0.5 rounded">
-                      第{af.unitIndex}课-{af.articleIndex}
-                    </span>
-                    <span className="flex-1 truncate text-zinc-600">{af.file.name}</span>
-                    {af.status === 'pending' && <span className="text-zinc-400">待上传</span>}
-                    {af.status === 'uploading' && (
-                      <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
-                    )}
-                    {af.status === 'done' && <Check className="w-3 h-3 text-green-500" />}
-                    {af.status === 'error' && <X className="w-3 h-3 text-red-500" />}
-                    <button
-                      onClick={() => setAudioFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-zinc-400 hover:text-red-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={uploadAllAudio}
-                  disabled={audioUploading || audioFiles.every(f => f.status !== 'pending')}
-                  className="w-full py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {audioUploading && <Loader2 className="w-3 h-3 animate-spin" />}
-                  上传音频到存储
-                </button>
-              </div>
-            )}
+            <AudioFileList
+              files={audioFiles}
+              uploading={audioUploading}
+              onUpload={uploadAllAudio}
+              onRemove={removeAudioFile}
+            />
           </div>
 
           <button

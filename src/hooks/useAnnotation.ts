@@ -1,6 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Annotation } from '../types';
 
+type AnnotationColor = 'yellow' | 'green' | 'blue' | 'pink' | null;
+
 interface UseAnnotationReturn {
   contentRef: React.RefObject<HTMLDivElement | null>;
   currentSelectionRange: { start: number; end: number; text: string } | null;
@@ -8,8 +10,8 @@ interface UseAnnotationReturn {
   showAnnotationMenu: boolean;
   setShowAnnotationMenu: (show: boolean) => void;
   menuPosition: { top: number; left: number } | null;
-  selectedColor: 'yellow' | 'green' | 'blue' | 'pink' | null;
-  setSelectedColor: (color: 'yellow' | 'green' | 'blue' | 'pink' | null) => void;
+  selectedColor: AnnotationColor;
+  setSelectedColor: (color: AnnotationColor) => void;
   handleTextSelection: (e?: React.MouseEvent) => void;
   saveAnnotation: (
     colorOverride?: string | null,
@@ -35,7 +37,7 @@ export const useAnnotation = (
 
   const [showAnnotationMenu, setShowAnnotationMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [selectedColor, setSelectedColor] = useState<'yellow' | 'green' | 'blue' | 'pink' | null>(
+  const [selectedColor, setSelectedColor] = useState<AnnotationColor>(
     'yellow'
   );
 
@@ -45,13 +47,13 @@ export const useAnnotation = (
   const handleTextSelection = useCallback(
     (_e?: React.MouseEvent) => {
       // Renamed to handleTextSelection to match return type
-      const selection = window.getSelection();
+      const selection = globalThis.getSelection();
       if (!selection || selection.isCollapsed) {
         setShowAnnotationMenu(false);
         return;
       }
 
-      if (!contentRef.current || !contentRef.current.contains(selection.anchorNode)) {
+      if (!contentRef.current?.contains(selection.anchorNode)) {
         setShowAnnotationMenu(false); // Hide menu if selection is outside contentRef
         return;
       }
@@ -71,8 +73,8 @@ export const useAnnotation = (
         setCurrentSelectionRange({ start, end, text });
 
         setMenuPosition({
-          top: rect.bottom + window.scrollY + 10,
-          left: rect.left + window.scrollX + rect.width / 2,
+          top: rect.bottom + globalThis.scrollY + 10,
+          left: rect.left + globalThis.scrollX + rect.width / 2,
         });
 
         // Check if exact match exists
@@ -81,7 +83,7 @@ export const useAnnotation = (
         );
 
         if (exactMatch) {
-          setSelectedColor((exactMatch.color as 'yellow' | 'green' | 'blue' | 'pink') || 'yellow');
+          setSelectedColor((exactMatch.color as Exclude<AnnotationColor, null>) || 'yellow');
         } else {
           setSelectedColor('yellow');
         }
@@ -102,13 +104,8 @@ export const useAnnotation = (
           Math.abs((a.endOffset || 0) - currentSelectionRange.end) < 2
       );
 
-      const finalColor = (colorOverride !== undefined ? colorOverride : selectedColor) as
-        | 'yellow'
-        | 'green'
-        | 'blue'
-        | 'pink'
-        | null;
-      const finalNote = noteOverride !== undefined ? noteOverride : exactMatch?.note || '';
+      const finalColor = (colorOverride ?? selectedColor) as AnnotationColor;
+      const finalNote = noteOverride ?? (exactMatch?.note ?? '');
 
       const newAnnotation: Annotation = {
         id: exactMatch?.id || Date.now().toString(),
@@ -125,7 +122,7 @@ export const useAnnotation = (
 
       if (shouldCloseMenu) {
         setCurrentSelectionRange(null);
-        window.getSelection()?.removeAllRanges();
+        globalThis.getSelection()?.removeAllRanges();
       }
 
       return newAnnotation.id;
@@ -145,13 +142,13 @@ export const useAnnotation = (
     }
     setShowAnnotationMenu(false);
     setCurrentSelectionRange(null);
-    window.getSelection()?.removeAllRanges();
+    globalThis.getSelection()?.removeAllRanges();
   }, [currentSelectionRange, currentAnnotations, onSaveAnnotation]);
 
   const cancelAnnotation = useCallback(() => {
     setShowAnnotationMenu(false);
     setCurrentSelectionRange(null);
-    window.getSelection()?.removeAllRanges();
+    globalThis.getSelection()?.removeAllRanges();
   }, []);
 
   return {

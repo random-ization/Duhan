@@ -20,13 +20,10 @@ export const getBootstrapData = query({
       .withIndex('by_token', q => q.eq('token', identity.subject))
       .first();
 
-    if (!user) {
-      // Try legacy lookup
-      user = await ctx.db
-        .query('users')
-        .withIndex('by_postgresId', q => q.eq('postgresId', identity.subject))
-        .first();
-    }
+    user ??= await ctx.db
+      .query('users')
+      .withIndex('by_postgresId', q => q.eq('postgresId', identity.subject))
+      .first();
 
     if (!user) {
       return {
@@ -46,31 +43,31 @@ export const getBootstrapData = query({
         // Course progress
         ctx.db
           .query('user_course_progress')
-          .withIndex('by_user', q => q.eq('userId', user!._id))
+          .withIndex('by_user', q => q.eq('userId', user._id))
           .take(MAX_BOOTSTRAP_ITEMS),
 
         // Vocab progress stats
         ctx.db
           .query('user_vocab_progress')
-          .withIndex('by_user', q => q.eq('userId', user!._id))
+          .withIndex('by_user', q => q.eq('userId', user._id))
           .take(MAX_BOOTSTRAP_ITEMS),
 
         // Grammar progress
         ctx.db
           .query('user_grammar_progress')
-          .withIndex('by_user_grammar', q => q.eq('userId', user!._id))
+          .withIndex('by_user_grammar', q => q.eq('userId', user._id))
           .take(MAX_BOOTSTRAP_ITEMS),
 
         // Saved words
         ctx.db
           .query('saved_words')
-          .withIndex('by_user', q => q.eq('userId', user!._id))
+          .withIndex('by_user', q => q.eq('userId', user._id))
           .take(MAX_BOOTSTRAP_ITEMS),
 
         // Mistakes
         ctx.db
           .query('mistakes')
-          .withIndex('by_user', q => q.eq('userId', user!._id))
+          .withIndex('by_user', q => q.eq('userId', user._id))
           .take(MAX_BOOTSTRAP_ITEMS),
       ]);
 

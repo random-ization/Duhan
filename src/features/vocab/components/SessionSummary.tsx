@@ -40,9 +40,9 @@ const SessionSummary: React.FC<SessionSummaryProps> = React.memo(
                 {sessionStats.incorrect.length === 0 ? (
                   <p className="text-sm text-red-400 italic">{labels.noneGreatJob}</p>
                 ) : (
-                  sessionStats.incorrect.map((w, i) => (
+                  sessionStats.incorrect.map((w, _i) => (
                     <div
-                      key={i}
+                      key={w.id}
                       className="flex justify-between bg-white p-3 rounded-lg border border-red-100 text-sm"
                     >
                       <span className="font-bold">{w.korean}</span>
@@ -60,9 +60,9 @@ const SessionSummary: React.FC<SessionSummaryProps> = React.memo(
                 {labels.correct} ({sessionStats.correct.length})
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {sessionStats.correct.map((w, i) => (
+                {sessionStats.correct.map((w, _i) => (
                   <div
-                    key={i}
+                    key={w.id}
                     className="flex justify-between bg-white p-3 rounded-lg border border-emerald-100 text-sm"
                   >
                     <span className="font-bold">{w.korean}</span>

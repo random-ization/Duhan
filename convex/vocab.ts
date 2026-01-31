@@ -4,6 +4,13 @@ import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { DEFAULT_VOCAB_LIMIT } from './queryLimits';
 import type { Id } from './_generated/dataModel';
 import { toErrorMessage } from './errors';
+import {
+  mapFsrsStateToStatus,
+  buildWordUpdates,
+  buildAppearanceUpdates,
+  cleanupUndefinedFields,
+  normalizeUnitIdParam
+} from './vocabHelpers';
 
 export type VocabStatsDto = {
   total: number;
@@ -380,28 +387,34 @@ export const getOfCourse = query({
 
     // 1. Get appearances with optional limit
     const limit = args.limit || DEFAULT_VOCAB_LIMIT;
-    const normalizedUnitId =
-      args.unitId === undefined
-        ? undefined
-        : typeof args.unitId === 'number'
-          ? args.unitId
-          : Number(args.unitId);
-    if (normalizedUnitId !== undefined && Number.isNaN(normalizedUnitId)) {
-      return [];
+    const normalizedUnitId = normalizeUnitIdParam(args.unitId);
+
+    if (args.unitId !== undefined) {
+      if (normalizedUnitId === undefined) {
+        return [];
+      }
     }
 
-    let appearances = await ctx.db
-      .query('vocabulary_appearances')
-      .withIndex('by_course_unit', q =>
-        normalizedUnitId !== undefined
-          ? q.eq('courseId', effectiveCourseId).eq('unitId', normalizedUnitId)
-          : q.eq('courseId', effectiveCourseId)
-      )
-      .take(limit);
+    // Simplified query logic to avoid nested ternaries and complexity
+    // 1. Get appearances with optional limit
+    let appearances;
+    if (typeof normalizedUnitId === 'number') {
+      appearances = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q =>
+          q.eq('courseId', effectiveCourseId).eq('unitId', normalizedUnitId)
+        )
+        .take(limit);
+    } else {
+      appearances = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
+        .take(limit);
+    }
 
-    // Fallback: If no appearances found and we are querying a specific unit, try offset +10
-    // This handles cases where Vol 2 is stored as Unit 11-20 but requested as Unit 1-10
-    if (appearances.length === 0 && normalizedUnitId !== undefined && normalizedUnitId <= 20) {
+    // Fallback logic for Vol 2 units (1-10 -> 11-20)
+    const MAX_VOL_1_UNIT = 20;
+    if (appearances.length === 0 && normalizedUnitId !== undefined && normalizedUnitId <= MAX_VOL_1_UNIT) {
       const offsetUnitId = normalizedUnitId + 10;
       const fallbackAppearances = await ctx.db
         .query('vocabulary_appearances')
@@ -479,22 +492,22 @@ export const getOfCourse = query({
         // Merge progress data (normalized structure for frontend)
         progress: progress
           ? {
-              id: progress._id,
-              status: progress.status,
-              interval: progress.interval,
-              streak: progress.streak,
-              nextReviewAt: progress.nextReviewAt,
-              lastReviewedAt: progress.lastReviewedAt,
-              // FSRS Fields (Optional, may be undefined for legacy data)
-              state: progress.state,
-              stability: progress.stability,
-              difficulty: progress.difficulty,
-              elapsed_days: progress.elapsed_days,
-              scheduled_days: progress.scheduled_days,
-              reps: progress.reps,
-              lapses: progress.lapses,
-              last_review: progress.last_review,
-            }
+            id: progress._id,
+            status: progress.status,
+            interval: progress.interval,
+            streak: progress.streak,
+            nextReviewAt: progress.nextReviewAt,
+            lastReviewedAt: progress.lastReviewedAt,
+            // FSRS Fields (Optional, may be undefined for legacy data)
+            state: progress.state,
+            stability: progress.stability,
+            difficulty: progress.difficulty,
+            elapsed_days: progress.elapsed_days,
+            scheduled_days: progress.scheduled_days,
+            reps: progress.reps,
+            lapses: progress.lapses,
+            last_review: progress.last_review,
+          }
           : null,
         mastered: progress?.status === 'MASTERED' || false,
       };
@@ -637,10 +650,10 @@ export const updateProgress = mutation({
         interval = (existingProgress.interval ?? 1) * 2; // Simple exponential
         status = interval > 30 ? 'MASTERED' : 'REVIEW';
       } else {
-        // Wrong
-        streak = 0;
-        interval = 1;
-        status = 'LEARNING';
+        // Wrong (reset logic)
+        // streak = 0 (default)
+        // interval = 1 (default)
+        // status = 'LEARNING' (default)
       }
 
       nextReviewAt = now + interval * 24 * 60 * 60 * 1000;
@@ -667,10 +680,10 @@ export const updateProgress = mutation({
       // Create new
       if (quality >= 4) {
         streak = 1;
-        interval = 1; // Start with 1 day
-        status = 'LEARNING';
+        // interval is 1 (default)
+        // status is 'LEARNING' (default)
       } else {
-        streak = 0;
+        // streak is 0 (default)
         interval = 0.5; // Half day for immediate fail
         status = 'NEW';
       }
@@ -726,20 +739,8 @@ export const updateProgressV2 = mutation({
     const { wordId, fsrsState } = args;
     const now = Date.now();
 
-    // Map FSRS state to legacy status for backward compatibility
     const stateToStatus = (state: number): string => {
-      switch (state) {
-        case 0:
-          return 'NEW';
-        case 1:
-          return 'LEARNING';
-        case 2:
-          return fsrsState.stability > 30 ? 'MASTERED' : 'REVIEW';
-        case 3:
-          return 'LEARNING'; // Relearning → LEARNING
-        default:
-          return 'LEARNING';
-      }
+      return mapFsrsStateToStatus(state, fsrsState.stability);
     };
 
     const existingProgress = await ctx.db
@@ -811,6 +812,8 @@ export const resetProgress = mutation({
 });
 
 // Bulk Import (Admin) - Optimized for N+1
+
+
 export const bulkImport = mutation({
   args: {
     items: v.array(
@@ -819,22 +822,16 @@ export const bulkImport = mutation({
         meaning: v.string(),
         partOfSpeech: v.string(),
         hanja: v.optional(v.string()),
-
-        // Multi-language meanings
         meaningEn: v.optional(v.string()),
         meaningVi: v.optional(v.string()),
         meaningMn: v.optional(v.string()),
-
         courseId: v.string(),
         unitId: v.number(),
         exampleSentence: v.optional(v.string()),
         exampleMeaning: v.optional(v.string()),
-
-        // Multi-language example translations
         exampleMeaningEn: v.optional(v.string()),
         exampleMeaningVi: v.optional(v.string()),
         exampleMeaningMn: v.optional(v.string()),
-
         tips: v.optional(
           v.object({
             synonyms: v.optional(v.array(v.string())),
@@ -848,64 +845,37 @@ export const bulkImport = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
+    const items = args.items;
     let successCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
     const smartFilledCount = 0;
     let newWordCount = 0;
 
-    const items = args.items;
-
-    // Phase 1: Resolve Words (Concurrent Read & Write)
-    // 1a. Check for existing words concurrently
+    // Phase 1: Resolve Words
     const wordPromises = items.map(item =>
-      ctx.db
-        .query('words')
-        .withIndex('by_word', q => q.eq('word', item.word))
-        .unique()
+      ctx.db.query('words').withIndex('by_word', q => q.eq('word', item.word)).unique()
     );
     const existingWordsResults = await Promise.all(wordPromises);
-
-    // Map word string to Word ID (populated as we go)
     const wordIdMap = new Map<string, Id<'words'>>();
 
-    // Operations to perform
     const wordOps = items.map(async (item, idx) => {
       const existingWord = existingWordsResults[idx];
-
       if (existingWord) {
         wordIdMap.set(item.word, existingWord._id);
-
-        // Smart Fill Data Gathering (if needed) - Note: Doing this inside the map strictly might be complex if we want to batch this too.
-        // For simplicity and speed in this specific logic, we'll keep the Smart Fill logic slightly simplified or
-        // accept that checking "existing appearances" for smart fill might still need a query.
-        // BUT, to truly solve N+1, we should skip smart fill from DB if we want max speed,
-        // OR batch fetch those too.
-        // Let's assume for Bulk Import, speed is priority. If user provided meaning, we skip smart fill.
-        // If user didn't provide meaning, we might need it.
-        // Optimization: Only query for smart fill if absolutely necessary (missing fields).
-
-        // Update word fields
-        const wordUpdates: {
-          meaning?: string;
-          partOfSpeech?: string;
-          hanja?: string;
-          meaningEn?: string;
-          meaningVi?: string;
-          meaningMn?: string;
-        } = {};
-        if (item.meaning) wordUpdates.meaning = item.meaning;
-        if (item.partOfSpeech) wordUpdates.partOfSpeech = item.partOfSpeech;
-        if (item.hanja !== undefined) wordUpdates.hanja = item.hanja;
-        if (item.meaningEn !== undefined) wordUpdates.meaningEn = item.meaningEn;
-        if (item.meaningVi !== undefined) wordUpdates.meaningVi = item.meaningVi;
-        if (item.meaningMn !== undefined) wordUpdates.meaningMn = item.meaningMn;
-
-        if (Object.keys(wordUpdates).length > 0) {
-          await ctx.db.patch(existingWord._id, { ...wordUpdates, updatedAt: Date.now() });
+        const wordUpdates: Record<string, string | undefined> = {
+          meaning: item.meaning,
+          partOfSpeech: item.partOfSpeech,
+          hanja: item.hanja,
+          meaningEn: item.meaningEn,
+          meaningVi: item.meaningVi,
+          meaningMn: item.meaningMn
+        };
+        const cleanUpdates = cleanupUndefinedFields<Record<string, unknown>>(wordUpdates);
+        if (Object.keys(cleanUpdates).length > 0) {
+          await ctx.db.patch(existingWord._id, { ...cleanUpdates, updatedAt: Date.now() });
         }
       } else {
-        // New Word
         const newId = await ctx.db.insert('words', {
           word: item.word,
           meaning: item.meaning || '',
@@ -921,15 +891,13 @@ export const bulkImport = mutation({
       }
     });
 
-    // Wait for all word operations
     try {
       await Promise.all(wordOps);
     } catch (e: unknown) {
-      // If critical failure in word phase
       errors.push(`Critical error in word phase: ${toErrorMessage(e)}`);
     }
 
-    // Phase 2: Resolve Appearances (Concurrent based on resolved IDs)
+    // Phase 2: Resolve Appearances
     const appOps = items.map(async item => {
       const wordId = wordIdMap.get(item.word);
       if (!wordId) {
@@ -939,18 +907,12 @@ export const bulkImport = mutation({
       }
 
       try {
-        // Check existing appearance
         const existingApp = await ctx.db
           .query('vocabulary_appearances')
           .withIndex('by_word_course_unit', q =>
             q.eq('wordId', wordId).eq('courseId', item.courseId).eq('unitId', item.unitId)
           )
           .unique();
-
-        // Build Final Data (Smart Fill Logic Lite - fallback to word meaning if app meaning missing?)
-        // Actually, if we want to do proper smart fill from *other* appearances, we'd need another query.
-        // Let's assume for bulk import, if the user didn't provide it, we leave it blank or use word meaning.
-        // To keep it clean and fast:
 
         const finalData = {
           meaning: item.meaning,
@@ -963,24 +925,7 @@ export const bulkImport = mutation({
           exampleMeaningVi: item.exampleMeaningVi,
           exampleMeaningMn: item.exampleMeaningMn,
         };
-
-        // Filter out undefined
-        const cleanData: {
-          meaning?: string;
-          meaningEn?: string;
-          meaningVi?: string;
-          meaningMn?: string;
-          exampleSentence?: string;
-          exampleMeaning?: string;
-          exampleMeaningEn?: string;
-          exampleMeaningVi?: string;
-          exampleMeaningMn?: string;
-        } = {};
-        Object.entries(finalData).forEach(([k, v]) => {
-          if (v !== undefined) {
-            (cleanData as Record<string, unknown>)[k] = v;
-          }
-        });
+        const cleanData = cleanupUndefinedFields<Record<string, unknown>>(finalData);
 
         if (existingApp) {
           await ctx.db.patch(existingApp._id, cleanData);
@@ -989,8 +934,7 @@ export const bulkImport = mutation({
             wordId,
             courseId: item.courseId,
             unitId: item.unitId,
-            ...finalData, // undefineds are fine in insert? No, usually cleaner to spread exacts or let schema handle optionals.
-            // Convex handles undefined/optional gracefully often, but better to be explicit.
+            ...cleanData,
             createdAt: Date.now(),
           });
         }
@@ -1005,13 +949,7 @@ export const bulkImport = mutation({
 
     return {
       success: true,
-      results: {
-        success: successCount,
-        failed: failedCount,
-        smartFilled: smartFilledCount, // Logic simplified, might be 0 now
-        newWords: newWordCount,
-        errors,
-      },
+      results: { success: successCount, failed: failedCount, smartFilled: smartFilledCount, newWords: newWordCount, errors },
     };
   },
 });
@@ -1328,14 +1266,7 @@ export const updateVocab = mutation({
     const { wordId, appearanceId, ...fields } = args;
 
     // 1. Update word fields
-    const wordFields: Record<string, string | undefined> = {};
-    if (fields.word !== undefined) wordFields.word = fields.word;
-    if (fields.meaning !== undefined) wordFields.meaning = fields.meaning;
-    if (fields.meaningEn !== undefined) wordFields.meaningEn = fields.meaningEn;
-    if (fields.meaningVi !== undefined) wordFields.meaningVi = fields.meaningVi;
-    if (fields.meaningMn !== undefined) wordFields.meaningMn = fields.meaningMn;
-    if (fields.partOfSpeech !== undefined) wordFields.partOfSpeech = fields.partOfSpeech;
-
+    const wordFields = buildWordUpdates(fields);
     if (Object.keys(wordFields).length > 0) {
       await ctx.db.patch(wordId, {
         ...wordFields,
@@ -1345,17 +1276,7 @@ export const updateVocab = mutation({
 
     // 2. Update appearance fields if appearanceId provided
     if (appearanceId) {
-      const appFields: Record<string, string | number | undefined> = {};
-      if (fields.unitId !== undefined) appFields.unitId = fields.unitId;
-      if (fields.exampleSentence !== undefined) appFields.exampleSentence = fields.exampleSentence;
-      if (fields.exampleMeaning !== undefined) appFields.exampleMeaning = fields.exampleMeaning;
-      if (fields.exampleMeaningEn !== undefined)
-        appFields.exampleMeaningEn = fields.exampleMeaningEn;
-      if (fields.exampleMeaningVi !== undefined)
-        appFields.exampleMeaningVi = fields.exampleMeaningVi;
-      if (fields.exampleMeaningMn !== undefined)
-        appFields.exampleMeaningMn = fields.exampleMeaningMn;
-
+      const appFields = buildAppearanceUpdates(fields);
       if (Object.keys(appFields).length > 0) {
         await ctx.db.patch(appearanceId, appFields);
       }

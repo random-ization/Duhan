@@ -41,6 +41,85 @@ interface AnalysisData {
   cached?: boolean;
 }
 
+const AnalysisContent: React.FC<{
+  loading: boolean;
+  data: AnalysisData | null;
+}> = ({ loading, data }) => {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-3">
+        <Sparkles className="w-8 h-8 animate-spin text-indigo-400" />
+        <p className="text-sm">Analyzing context & grammar...</p>
+      </div>
+    );
+  }
+
+  if (data) {
+    return (
+      <>
+        {/* Vocab Grid */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
+            <BookOpen className="w-5 h-5 text-indigo-500" />
+            Core Vocabulary
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.vocabulary.map((v, i) => (
+              <div
+                key={`${v.word}-${v.root}-${i}`}
+                className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-100 hover:shadow-sm transition-all"
+              >
+                <div className="flex justify-between items-start mb-1">
+                  <span className="font-bold text-slate-900">{v.word}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500">
+                    {v.type}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 mb-0.5">Root: {v.root}</div>
+                <div className="text-sm text-slate-700">{v.meaning}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Grammar */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
+            <MessageSquare className="w-5 h-5 text-emerald-500" />
+            Grammar Points
+          </div>
+          <div className="space-y-3">
+            {data.grammar.map((g, i) => (
+              <div
+                key={`${g.structure}-${i}`}
+                className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100"
+              >
+                <div className="font-bold text-emerald-800 mb-1">{g.structure}</div>
+                <div className="text-sm text-emerald-900/80 leading-relaxed">{g.explanation}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Nuance */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
+            <Lightbulb className="w-5 h-5 text-amber-500" />
+            Cultural Nuance
+          </div>
+          <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 text-sm text-amber-900/80 leading-relaxed italic">
+            &quot;{data.nuance}&quot;
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <div className="text-center py-12 text-slate-400">Analysis failed. Please try again.</div>
+  );
+};
+
 interface PodcastEpisode {
   id?: string;
   guid?: string;
@@ -74,19 +153,19 @@ const MOCK_TRANSCRIPT: TranscriptLine[] = [
   },
   {
     start: 8.2,
-    end: 12.0,
+    end: 12,
     text: '이 문장은 조금 빠르니까 다시 들어보세요.',
     translation: '这句话有点快，请再听一遍。',
   },
   {
-    start: 12.0,
+    start: 12,
     end: 16.5,
     text: '오늘은 일상 대화에서 많이 쓰는 표현을 배워볼 거예요.',
     translation: '今天我们来学习日常对话中常用的表达。',
   },
   {
     start: 16.5,
-    end: 21.0,
+    end: 21,
     text: "예를 들어, '어떻게 지내세요?'라는 표현이 있어요.",
     translation: "比如，有'您最近怎么样？'这样的表达。",
   },
@@ -97,11 +176,7 @@ const PodcastPlayerPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
 
-  // 🔥 FIX: Support URL params for page refresh
-  // Priority: state > URL params > fallback
-  const episode: PodcastEpisode = useMemo(() => {
-    if (state?.episode?.audioUrl) return state.episode;
-
+  const getEpisodeFromUrl = useCallback(() => {
     // Try to reconstruct from URL params
     const audioUrl = searchParams.get('audioUrl');
     const title = searchParams.get('title');
@@ -124,7 +199,14 @@ const PodcastPlayerPage: React.FC = () => {
       channelArtwork: '',
       guid: '',
     };
-  }, [state, searchParams]);
+  }, [searchParams]);
+
+  // 🔥 FIX: Support URL params for page refresh
+  // Priority: state > URL params > fallback
+  const episode: PodcastEpisode = useMemo(() => {
+    if (state?.episode?.audioUrl) return state.episode;
+    return getEpisodeFromUrl();
+  }, [state, getEpisodeFromUrl]);
 
   type PodcastChannel = {
     itunesId?: string;
@@ -151,7 +233,7 @@ const PodcastPlayerPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [speed, setSpeed] = useState(1.0);
+  const [speed, setSpeed] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -236,11 +318,89 @@ const PodcastPlayerPage: React.FC = () => {
     let hash = 0;
     const str = `${episode.title}-${episode.audioUrl}`;
     for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0;
+      hash = (hash << 5) - hash + str.codePointAt(i)!;
+      hash = Math.trunc(hash);
     }
     return `ep_${Math.abs(hash).toString(16)}`;
   }, [episode]);
+
+  const loadTranscriptFromLocal = (episodeId: string) => {
+    const localCacheKey = `transcript_${episodeId}`;
+    try {
+      const cachedData = localStorage.getItem(localCacheKey);
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        if (parsed.segments && parsed.segments.length > 0) {
+          console.log('[Transcript] Loaded from localStorage (instant)');
+          return parsed.segments;
+        }
+      }
+    } catch {
+      /* localStorage error */
+    }
+    return null;
+  };
+
+  const loadTranscriptFromS3 = async (episodeId: string) => {
+    if (!CDN_DOMAIN) return null;
+    try {
+      const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
+      const s3Res = await fetch(s3Url);
+      if (s3Res.ok) {
+        const data = await s3Res.json();
+        return data.segments || data;
+      }
+    } catch {
+      /* Fallback to API */
+    }
+    return null;
+  };
+
+  const saveTranscriptToLocal = (episodeId: string, segments: TranscriptLine[]) => {
+    if (!segments || segments.length === 0) return;
+    const localCacheKey = `transcript_${episodeId}`;
+    try {
+      localStorage.setItem(
+        localCacheKey,
+        JSON.stringify({
+          segments,
+          cachedAt: Date.now(),
+        })
+      );
+    } catch (storageError) {
+      logger.warn('Failed to cache transcript locally', storageError);
+    }
+  };
+
+  const fetchTranscript = useCallback(
+    async (episodeId: string, audioUrl: string, isMounted: boolean) => {
+      // Step 0: Check localStorage
+      const localData = loadTranscriptFromLocal(episodeId);
+      if (localData) return localData;
+
+      // Step 1: S3 Cache
+      const s3Data = await loadTranscriptFromS3(episodeId);
+      if (s3Data) {
+        saveTranscriptToLocal(episodeId, s3Data);
+        return s3Data;
+      }
+
+      // Step 2: Generate
+      if (isMounted) setIsGeneratingTranscript(true);
+      const result = await generateTranscript({
+        audioUrl,
+        episodeId,
+        language: 'zh',
+      });
+
+      if (result?.success && result.data?.segments) {
+        saveTranscriptToLocal(episodeId, result.data.segments);
+        return result.data.segments;
+      }
+      throw new Error(result?.error || 'Invalid transcript response');
+    },
+    [generateTranscript]
+  );
 
   // --- Effects ---
 
@@ -263,83 +423,9 @@ const PodcastPlayerPage: React.FC = () => {
       setTranscriptError(null);
 
       try {
-        // 🔥 Step 0: Check localStorage first (instant load for heard episodes)
-        const localCacheKey = `transcript_${episodeId}`;
-        try {
-          const cachedData = localStorage.getItem(localCacheKey);
-          if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            if (parsed.segments && parsed.segments.length > 0) {
-              console.log('[Transcript] Loaded from localStorage (instant)');
-              if (isMounted) {
-                setTranscript(parsed.segments);
-                setTranscriptLoading(false);
-              }
-              return;
-            }
-          }
-        } catch {
-          /* localStorage error, continue */
-        }
-
-        // Step 1: S3 Cache
-        if (CDN_DOMAIN) {
-          try {
-            const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
-            const s3Res = await fetch(s3Url);
-            if (s3Res.ok) {
-              const data = await s3Res.json();
-              if (isMounted) {
-                setTranscript(data.segments || data);
-                setTranscriptLoading(false);
-                // 🔥 Save to localStorage for next time
-                try {
-                  localStorage.setItem(
-                    localCacheKey,
-                    JSON.stringify({
-                      segments: data.segments || data,
-                      cachedAt: Date.now(),
-                    })
-                  );
-                } catch (storageError) {
-                  logger.warn('Failed to cache transcript locally', storageError);
-                }
-              }
-              return;
-            }
-          } catch {
-            /* Fallback to API */
-          }
-        }
-
-        // Step 2: Generate
-        if (isMounted) setIsGeneratingTranscript(true);
-        const result = await generateTranscript({
-          audioUrl: episode.audioUrl,
-          episodeId,
-          language: 'zh',
-        });
-
-        if (isMounted) {
-          if (result?.success && result.data?.segments) {
-            setTranscript(result.data.segments);
-            // 🔥 Save to localStorage for next time
-            try {
-              if (result.data.segments.length > 0) {
-                localStorage.setItem(
-                  localCacheKey,
-                  JSON.stringify({
-                    segments: result.data.segments,
-                    cachedAt: Date.now(),
-                  })
-                );
-              }
-            } catch (storageError) {
-              logger.warn('Failed to cache generated transcript', storageError);
-            }
-          } else {
-            throw new Error(result?.error || 'Invalid transcript response');
-          }
+        const segments = await fetchTranscript(episodeId, episode.audioUrl, isMounted);
+        if (isMounted && segments) {
+          setTranscript(segments);
         }
       } catch (err) {
         console.error('Transcript failed:', err);
@@ -385,23 +471,20 @@ const PodcastPlayerPage: React.FC = () => {
 
     // Track View
     if (episode?.audioUrl) {
-      // Track View
-      if (episode?.audioUrl) {
-        trackView({
-          guid: episode.guid || `${episode.title}-${Date.now()}`,
-          title: episode.title,
-          audioUrl: episode.audioUrl,
-          duration: typeof episode.duration === 'number' ? episode.duration : 0,
-          pubDate: episode.pubDate ? new Date(episode.pubDate).getTime() : Date.now(),
-          channel: {
-            itunesId: channel.itunesId || channel.id || 'unknown',
-            title: channel.title || episode.channelTitle || 'Unknown',
-            author: channel.author || '',
-            feedUrl: channel.feedUrl || undefined,
-            artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork || '',
-          },
-        }).catch(console.error);
-      }
+      trackView({
+        guid: episode.guid || `${episode.title}-${Date.now()}`,
+        title: episode.title,
+        audioUrl: episode.audioUrl,
+        duration: typeof episode.duration === 'number' ? episode.duration : 0,
+        pubDate: episode.pubDate ? new Date(episode.pubDate).getTime() : Date.now(),
+        channel: {
+          itunesId: channel.itunesId || channel.id || 'unknown',
+          title: channel.title || episode.channelTitle || 'Unknown',
+          author: channel.author || '',
+          feedUrl: channel.feedUrl || undefined,
+          artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork || '',
+        },
+      }).catch(console.error);
     }
 
     // Cleanup: prevent updates after unmount
@@ -559,7 +642,7 @@ const PodcastPlayerPage: React.FC = () => {
   const skip = (sec: number) => seekTo(currentTime + sec);
 
   const changeSpeed = () => {
-    const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
     const next = speeds[(speeds.indexOf(speed) + 1) % speeds.length];
     setSpeed(next);
     if (audioRef.current) audioRef.current.playbackRate = next;
@@ -570,6 +653,18 @@ const PodcastPlayerPage: React.FC = () => {
     else if (abLoop.b === null) setAbLoop({ ...abLoop, b: currentTime, active: true });
     else setAbLoop({ a: null, b: null, active: false });
   };
+
+  const getAbLoopLabel = useCallback(() => {
+    if (abLoop.active) return 'Loop Active';
+    if (abLoop.a === null) return 'Loop';
+    return 'Set B';
+  }, [abLoop.active, abLoop.a]);
+
+  const getAbLoopClassName = useCallback(() => {
+    if (abLoop.active) return 'bg-indigo-600 text-white shadow-md shadow-indigo-200';
+    if (abLoop.a === null) return 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300';
+    return 'bg-amber-100 text-amber-700 border border-amber-200';
+  }, [abLoop.active, abLoop.a]);
 
   const regenerateTranscript = async () => {
     if (!confirm('重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？')) return;
@@ -636,6 +731,120 @@ const PodcastPlayerPage: React.FC = () => {
       state: { episode: newEpisode, channel },
       replace: true,
     });
+  };
+
+  const renderTranscriptLine = (line: TranscriptLine, idx: number) => {
+    const isActive = idx === activeLineIndex;
+
+    return (
+      <div
+        key={`${line.start}-${line.text}-${idx}`}
+        id={`line-${idx}`}
+        className={`
+                                        group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
+                                        ${
+                                          isActive
+                                            ? 'bg-white shadow-lg border-indigo-500 scale-[1.01] z-10'
+                                            : 'bg-transparent border-transparent hover:bg-white/60 hover:border-slate-200'
+                                        }
+                                    `}
+      >
+        <div className="flex gap-4 items-start">
+          {/* Timestamp Bubble */}
+          <button
+            type="button"
+            onClick={() => seekTo(line.start)}
+            className={`
+                                                flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-700'
+                                                    : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'
+                                                }
+                                            `}
+          >
+            {formatTime(line.start)}
+          </button>
+
+          {/* Content */}
+          <button
+            type="button"
+            className="flex-1 space-y-2 text-left"
+            onClick={() => seekTo(line.start)}
+          >
+            {/* Text Content with Karaoke Support */}
+            <div
+              className={`
+                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
+                                                    ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
+                                                `}
+            >
+              {line.words && line.words.length > 0 ? (
+                line.words.map((w, i) => {
+                  const isWordActive = currentTime >= w.start && currentTime < w.end;
+                  return (
+                    <span
+                      key={`${w.start}-${w.word}-${i}`}
+                      className={`
+                                                                        rounded px-0.5 transition-all duration-75
+                                                                        ${
+                                                                          isWordActive
+                                                                            ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                                                                            : 'hover:bg-indigo-50'
+                                                                        }
+                                                                    `}
+                    >
+                      {w.word}
+                    </span>
+                  );
+                })
+              ) : (
+                <span>{line.text}</span>
+              )}
+            </div>
+
+            {/* Translation */}
+            {showTranslation && (
+              <p
+                className={`
+                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
+                                                        ${
+                                                          isActive
+                                                            ? 'text-indigo-600/80 border-indigo-200'
+                                                            : 'text-slate-500 border-slate-200'
+                                                        }
+                                                    `}
+              >
+                {line.translation || (
+                  <span className="text-slate-300 italic text-sm">暂无翻译</span>
+                )}
+              </p>
+            )}
+          </button>
+
+          {/* Analyze Button (Visible on Hover/Active) */}
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              analyze(line);
+            }}
+            className={`
+                                                p-2 rounded-full transition-all flex-none
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-600 opacity-100'
+                                                    : 'bg-white text-slate-600 opacity-0 group-hover:opacity-100 shadow-sm border border-slate-100'
+                                                }
+                                                hover:scale-110 hover:bg-indigo-600 hover:text-white
+                                            `}
+            title="Analyze this sentence"
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -803,117 +1012,7 @@ const PodcastPlayerPage: React.FC = () => {
             )}
 
             {/* Transcript List */}
-            {!transcriptLoading &&
-              transcript.map((line, idx) => {
-                const isActive = idx === activeLineIndex;
-
-                return (
-                  <div
-                    key={idx}
-                    id={`line-${idx}`}
-                    className={`
-                                        group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
-                                        ${
-                                          isActive
-                                            ? 'bg-white shadow-lg border-indigo-500 scale-[1.01] z-10'
-                                            : 'bg-transparent border-transparent hover:bg-white/60 hover:border-slate-200'
-                                        }
-                                    `}
-                  >
-                    <div className="flex gap-4 items-start">
-                      {/* Timestamp Bubble */}
-                      <button
-                        onClick={() => seekTo(line.start)}
-                        className={`
-                                                flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
-                                                ${
-                                                  isActive
-                                                    ? 'bg-indigo-100 text-indigo-700'
-                                                    : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'
-                                                }
-                                            `}
-                      >
-                        {formatTime(line.start)}
-                      </button>
-
-                      {/* Content */}
-                      <div
-                        className="flex-1 space-y-2 cursor-pointer"
-                        onClick={() => seekTo(line.start)}
-                      >
-                        {/* Text Content with Karaoke Support */}
-                        <div
-                          className={`
-                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
-                                                    ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
-                                                `}
-                        >
-                          {line.words && line.words.length > 0 ? (
-                            line.words.map((w, i) => {
-                              const isWordActive = currentTime >= w.start && currentTime < w.end;
-                              return (
-                                <span
-                                  key={i}
-                                  className={`
-                                                                        rounded px-0.5 transition-all duration-75
-                                                                        ${
-                                                                          isWordActive
-                                                                            ? 'bg-indigo-600 text-white shadow-sm scale-105'
-                                                                            : 'hover:bg-indigo-50'
-                                                                        }
-                                                                    `}
-                                >
-                                  {w.word}
-                                </span>
-                              );
-                            })
-                          ) : (
-                            <span>{line.text}</span>
-                          )}
-                        </div>
-
-                        {/* Translation */}
-                        {showTranslation && (
-                          <p
-                            className={`
-                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
-                                                        ${
-                                                          isActive
-                                                            ? 'text-indigo-600/80 border-indigo-200'
-                                                            : 'text-slate-500 border-slate-200'
-                                                        }
-                                                    `}
-                          >
-                            {line.translation || (
-                              <span className="text-slate-300 italic text-sm">暂无翻译</span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Analyze Button (Visible on Hover/Active) */}
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          analyze(line);
-                        }}
-                        className={`
-                                                p-2 rounded-full transition-all flex-none
-                                                ${
-                                                  isActive
-                                                    ? 'bg-indigo-100 text-indigo-600 opacity-100'
-                                                    : 'bg-white text-slate-600 opacity-0 group-hover:opacity-100 shadow-sm border border-slate-100'
-                                                }
-                                                hover:scale-110 hover:bg-indigo-600 hover:text-white
-                                            `}
-                        title="Analyze this sentence"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            {!transcriptLoading && transcript.map((line, idx) => renderTranscriptLine(line, idx))}
           </div>
         </main>
       </div>
@@ -923,14 +1022,17 @@ const PodcastPlayerPage: React.FC = () => {
         <div className="max-w-screen-2xl mx-auto px-4 md:px-8 py-3">
           {/* Progress Slider */}
           <div className="relative group mb-2 md:mb-4 pt-2">
-            <div
-              className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10"
+            <button
+              type="button"
+              className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full"
               onClick={e => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pct = (e.clientX - rect.left) / rect.width;
                 seekTo(pct * duration);
               }}
-            />
+            >
+              <span className="sr-only">Seek</span>
+            </button>
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-indigo-600 rounded-full relative"
@@ -957,20 +1059,11 @@ const PodcastPlayerPage: React.FC = () => {
               </button>
               <button
                 onClick={toggleLoop}
-                className={`
-                                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all
-                                    ${
-                                      abLoop.active
-                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                        : abLoop.a !== null
-                                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                          : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'
-                                    }
-                                `}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${getAbLoopClassName()}`}
               >
                 <Repeat className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">
-                  {abLoop.active ? 'Loop Active' : abLoop.a !== null ? 'Set B' : 'Loop'}
+                  {getAbLoopLabel()}
                 </span>
               </button>
             </div>
@@ -1014,7 +1107,7 @@ const PodcastPlayerPage: React.FC = () => {
                   step="0.1"
                   value={volume}
                   onChange={e => {
-                    const v = parseFloat(e.target.value);
+                    const v = Number.parseFloat(e.target.value);
                     setVolume(v);
                     if (audioRef.current) audioRef.current.volume = v;
                   }}
@@ -1045,7 +1138,9 @@ const PodcastPlayerPage: React.FC = () => {
         onEnded={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-      />
+      >
+        <track kind="captions" />
+      </audio>
 
       {/* Playlist Drawer */}
       <div
@@ -1134,20 +1229,26 @@ const PodcastPlayerPage: React.FC = () => {
 
       {/* Backdrop for Playlist */}
       {showPlaylist && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55]"
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] w-full h-full border-none p-0"
           onClick={() => setShowPlaylist(false)}
-        />
+        >
+          <span className="sr-only">Close Playlist</span>
+        </button>
       )}
 
       {/* AI Analysis Modal/Sheet */}
       {showAnalysis && analyzingLine && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center pointer-events-none">
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity"
+          <button
+            type="button"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0"
             onClick={() => setShowAnalysis(false)}
-          />
+          >
+            <span className="sr-only">Close Analysis</span>
+          </button>
 
           {/* Modal Content */}
           <div
@@ -1178,75 +1279,7 @@ const PodcastPlayerPage: React.FC = () => {
 
             {/* Body */}
             <div className="overflow-y-auto p-6 space-y-8 bg-white flex-1">
-              {analysisLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-3">
-                  <Sparkles className="w-8 h-8 animate-spin text-indigo-400" />
-                  <p className="text-sm">Analyzing context & grammar...</p>
-                </div>
-              ) : analysisData ? (
-                <>
-                  {/* Vocab Grid */}
-                  <section>
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-                      <BookOpen className="w-5 h-5 text-indigo-500" />
-                      Core Vocabulary
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {analysisData.vocabulary.map((v, i) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-100 hover:shadow-sm transition-all"
-                        >
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="font-bold text-slate-900">{v.word}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500">
-                              {v.type}
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-500 mb-0.5">Root: {v.root}</div>
-                          <div className="text-sm text-slate-700">{v.meaning}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  {/* Grammar */}
-                  <section>
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-                      <MessageSquare className="w-5 h-5 text-emerald-500" />
-                      Grammar Points
-                    </div>
-                    <div className="space-y-3">
-                      {analysisData.grammar.map((g, i) => (
-                        <div
-                          key={i}
-                          className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100"
-                        >
-                          <div className="font-bold text-emerald-800 mb-1">{g.structure}</div>
-                          <div className="text-sm text-emerald-900/80 leading-relaxed">
-                            {g.explanation}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  {/* Nuance */}
-                  <section>
-                    <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-                      <Lightbulb className="w-5 h-5 text-amber-500" />
-                      Cultural Nuance
-                    </div>
-                    <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 text-sm text-amber-900/80 leading-relaxed italic">
-                      &quot;{analysisData.nuance}&quot;
-                    </div>
-                  </section>
-                </>
-              ) : (
-                <div className="text-center py-12 text-slate-400">
-                  Analysis failed. Please try again.
-                </div>
-              )}
+              <AnalysisContent loading={analysisLoading} data={analysisData} />
             </div>
           </div>
         </div>

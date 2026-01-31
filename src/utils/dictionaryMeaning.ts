@@ -10,11 +10,11 @@ export type DictionarySearchResultLike = {
 };
 
 export function cleanDictionaryText(value: string): string {
-  return value.replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+  return value.replaceAll(/<!\[CDATA\[|\]\]>/g, '').trim();
 }
 
 export function normalizeLookupWord(value: string): string {
-  return value.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim();
+  return value.replaceAll(/(?:^[^\p{L}\p{N}]+)|(?:[^\p{L}\p{N}]+$)/gu, '').trim();
 }
 
 function pickMeaningFromSense(sense: {
@@ -47,7 +47,7 @@ export function extractBestMeaning(
         return ao - bo;
       });
 
-      const meaning = senses.map(pickMeaningFromSense).find(Boolean) ?? '';
+      const meaning = senses.map(s => pickMeaningFromSense(s)).find(Boolean) ?? '';
 
       const score = (exact ? 100 : 0) + (startsWith ? 10 : 0) + (meaning ? 1 : 0);
       return { entry, meaning, score };

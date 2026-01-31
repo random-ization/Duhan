@@ -35,10 +35,50 @@ export const useTTS = () => {
       audioRef.current = null;
     }
     // Also stop browser TTS as fallback
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel();
+    if ('speechSynthesis' in globalThis) {
+      globalThis.speechSynthesis.cancel();
     }
   }, []);
+
+  const handleAudioPlayback = useCallback(
+    async (
+      audioUrl: string,
+      shouldRevoke: boolean,
+      myRequestId: number
+    ): Promise<boolean> => {
+      if (myRequestId !== requestIdRef.current) {
+        if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+        return false;
+      }
+
+      const audio = new Audio(audioUrl);
+      audio.preload = 'auto';
+      audioRef.current = audio;
+
+      return new Promise<boolean>(resolve => {
+        const onPlaybackComplete = (ok: boolean) => {
+          try {
+            if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+          } catch (e) {
+            console.warn('Failed to revoke audio URL:', e);
+          }
+          if (myRequestId === requestIdRef.current) {
+            if (audioRef.current === audio) {
+              audioRef.current = null;
+            }
+            setIsLoading(false);
+          }
+          resolve(ok);
+        };
+
+        audio.onended = () => onPlaybackComplete(true);
+        audio.onerror = () => onPlaybackComplete(false);
+        audio.onabort = () => onPlaybackComplete(false);
+        audio.play().catch(() => onPlaybackComplete(false));
+      });
+    },
+    []
+  );
 
   const stop = useCallback(() => {
     requestIdRef.current += 1;
@@ -60,9 +100,7 @@ export const useTTS = () => {
       cacheRef.current = loadPersistedCache();
       cacheReadyRef.current = true;
     }
-    if (!cacheRef.current) {
-      cacheRef.current = new Map();
-    }
+    cacheRef.current ??= new Map();
     return cacheRef.current;
   }, []);
 
@@ -83,93 +121,60 @@ export const useTTS = () => {
       setIsLoading(true);
 
       try {
-        const playAudio = async (audioUrl: string, shouldRevoke: boolean): Promise<boolean> => {
-          if (myRequestId !== requestIdRef.current) {
-            if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-            return false;
-          }
-          const audio = new Audio(audioUrl);
-          audio.preload = 'auto';
-          audioRef.current = audio;
-          return new Promise<boolean>(resolve => {
-            const cleanup = (ok: boolean) => {
-              try {
-                if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-              } catch (e) {
-                console.warn('Failed to revoke audio URL:', e);
-              }
-              if (myRequestId === requestIdRef.current) {
-                if (audioRef.current === audio) {
-                  audioRef.current = null;
-                }
-                setIsLoading(false);
-              }
-              resolve(ok);
-            };
-            audio.onended = () => cleanup(true);
-            audio.onerror = () => cleanup(false);
-            audio.onabort = () => cleanup(false);
-            audio.play().catch(() => cleanup(false));
-          });
+        const voice = options?.voice || 'ko-KR-SunHiNeural';
+        const cacheKey = buildCacheKey(normalizedText, voice);
+        const cache = getCache();
+        const cachedUrl = touchCache(cache, cacheKey);
+
+        if (cachedUrl) {
+          persistCache(cache);
+          return await handleAudioPlayback(cachedUrl, false, myRequestId);
+        }
+
+        const result = (await speakAction({
+          text: normalizedText,
+          voice,
+          rate: options?.rate,
+          pitch: options?.pitch,
+        })) as {
+          success: boolean;
+          url?: string;
+          audio?: string;
+          format?: string;
+          error?: string;
         };
 
-        const tryConvexTTS = async (): Promise<boolean> => {
-          const voice = options?.voice || 'ko-KR-SunHiNeural';
-          const cacheKey = buildCacheKey(normalizedText, voice);
-          const cache = getCache();
-          const cachedUrl = touchCache(cache, cacheKey);
-          if (cachedUrl) {
-            persistCache(cache);
-            return await playAudio(cachedUrl, false);
-          }
+        if (myRequestId !== requestIdRef.current) {
+          return false;
+        }
 
-          const result = (await speakAction({
-            text: normalizedText,
-            voice,
-            rate: options?.rate,
-            pitch: options?.pitch,
-          })) as {
-            success: boolean;
-            url?: string;
-            audio?: string;
-            format?: string;
-            error?: string;
-          };
-
-          if (myRequestId !== requestIdRef.current) {
-            return false;
-          }
-
-          if (!result.success) {
-            if (myRequestId === requestIdRef.current) setIsLoading(false);
-            return false;
-          }
-
-          if (result.url) {
-            writeCache(cache, cacheKey, result.url);
-            persistCache(cache);
-            return await playAudio(result.url, false);
-          }
-
-          if (result.audio) {
-            const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
-            const audioUrl = URL.createObjectURL(audioBlob);
-            createdUrlsRef.current.push(audioUrl);
-            return await playAudio(audioUrl, true);
-          }
-
+        if (!result.success) {
           if (myRequestId === requestIdRef.current) setIsLoading(false);
           return false;
-        };
+        }
 
-        return await tryConvexTTS();
+        if (result.url) {
+          writeCache(cache, cacheKey, result.url);
+          persistCache(cache);
+          return await handleAudioPlayback(result.url, false, myRequestId);
+        }
+
+        if (result.audio) {
+          const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
+          const audioUrl = URL.createObjectURL(audioBlob);
+          createdUrlsRef.current.push(audioUrl);
+          return await handleAudioPlayback(audioUrl, true, myRequestId);
+        }
+
+        if (myRequestId === requestIdRef.current) setIsLoading(false);
+        return false;
       } catch (error) {
         console.error('TTS error:', error);
         if (myRequestId === requestIdRef.current) setIsLoading(false);
         return false;
       }
     },
-    [getCache, speakAction, stopCurrentAudio]
+    [getCache, handleAudioPlayback, speakAction, stopCurrentAudio]
   );
 
   return { speak, stop, isLoading };
@@ -183,7 +188,7 @@ function buildCacheKey(text: string, voice: string): string {
 }
 
 function loadPersistedCache(): Map<string, string> {
-  if (typeof window === 'undefined') return new Map();
+  if (globalThis.window === undefined) return new Map();
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return new Map();
@@ -210,7 +215,7 @@ function loadPersistedCache(): Map<string, string> {
 }
 
 function persistCache(cache: Map<string, string>) {
-  if (typeof window === 'undefined') return;
+  if (globalThis.window === undefined) return;
   try {
     const entries = Array.from(cache.entries());
     localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
@@ -246,7 +251,7 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   const byteCharacters = atob(base64);
   const byteNumbers = new Array(byteCharacters.length);
   for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+    byteNumbers[i] = byteCharacters.codePointAt(i) || 0;
   }
   const byteArray = new Uint8Array(byteNumbers);
   return new Blob([byteArray], { type: mimeType });

@@ -25,20 +25,26 @@ export const BentoCard: React.FC<BentoCardProps> = ({
     if (onClickPath) navigate(onClickPath);
   };
 
+  const isInteractive = Boolean(onClick || onClickPath);
+  const Component = isInteractive ? 'button' : ('div' as React.ElementType);
+
   return (
-    <div
-      onClick={handleClick}
+    <Component
+      onClick={isInteractive ? handleClick : undefined}
+      type={isInteractive ? 'button' : undefined}
       className={`
-                relative overflow-hidden rounded-3xl border-2 p-6 transition-all duration-300 group
+                relative overflow-hidden rounded-3xl border-2 p-6 transition-all duration-300 group text-left
                 ${bgClass} ${borderClass} ${className}
-                ${onClickPath || onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : ''}
+                w-full h-full
+                ${isInteractive ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : ''}
+                ${isInteractive ? 'hover:bg-gray-50' : ''}
             `}
     >
       {children}
       {/* Hover shine effect */}
-      {(onClickPath || onClick) && (
+      {isInteractive && (
         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
       )}
-    </div>
+    </Component>
   );
 };

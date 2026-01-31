@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
@@ -64,7 +64,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   return (
     <div className="max-w-4xl mx-auto">
-      <SEO
+      <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
@@ -115,7 +115,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, m => map[m]);
+  return text.replaceAll(/[&<>"']/g, m => map[m]);
 }
 
 // Helper function to format plain text content with basic HTML
@@ -124,9 +124,9 @@ function formatContent(content: string): string {
 
   const parseInline = (text: string): string => {
     let parsed = text;
-    parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    parsed = parsed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    parsed = parsed.replace(
+    parsed = parsed.replaceAll(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    parsed = parsed.replaceAll(/\*([^*]+)\*/g, '<em>$1</em>');
+    parsed = parsed.replaceAll(
       /\[([^\]]+)\]\(([^)]+)\)/g,
       '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
     );
@@ -156,11 +156,11 @@ function formatContent(content: string): string {
       }
 
       // Check if it's a list
-      if (para.trim().match(/^[-*]\s/)) {
+      if (/^[-*]\s/.exec(para.trim())) {
         const items = para.split('\n').filter(line => line.trim());
         const listItems = items
           .map(item => {
-            const cleanItem = item.replace(/^[-*]\s/, '').trim();
+            const cleanItem = item.replaceAll(/^[-*]\s/g, '').trim();
             return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
@@ -168,11 +168,11 @@ function formatContent(content: string): string {
       }
 
       // Check if it's a numbered list
-      if (para.trim().match(/^\d+\.\s/)) {
+      if (/^\d+\.\s/.exec(para.trim())) {
         const items = para.split('\n').filter(line => line.trim());
         const listItems = items
           .map(item => {
-            const cleanItem = item.replace(/^\d+\.\s/, '').trim();
+            const cleanItem = item.replaceAll(/^\d+\.\s/g, '').trim();
             return `<li class="mb-2">${parseInline(escapeHtml(cleanItem))}</li>`;
           })
           .join('');
@@ -187,7 +187,7 @@ function formatContent(content: string): string {
       // Regular paragraph
       return `<p class="mb-4 leading-relaxed">${parseInline(escapeHtml(para.trim()))}</p>`;
     })
-    .filter(html => html) // Remove empty strings from skipped content
+    .filter(Boolean) // Remove empty strings from skipped content
     .join('');
 }
 

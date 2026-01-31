@@ -16,7 +16,7 @@ import {
   HelpCircle,
   Loader2,
 } from 'lucide-react';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
@@ -69,23 +69,13 @@ export default function AuthPage() {
   }, [searchParams, user]);
   */
 
-  // const loginMutation = useMutation(api.auth.login);
-  // const registerMutation = useMutation(api.auth.register);
-  // const googleAuthMutation = useMutation(api.auth.googleAuth);
-
-  /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
-  const handleGoogleCallback = async (code: string) => {
-     // ...
-  };
-  */
-
   const { signIn } = useAuthActions();
   const logoSetting = useQuery(
     qRef<{ key: string }, { value?: { url?: string } } | null>('settings:getSetting'),
     { key: 'logo' }
   );
   const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
-  const postAuthRedirectUrl = `${window.location.origin}${postAuthRedirectPath}`;
+  const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {
     const message = err instanceof Error ? err.message : String(err);
@@ -145,7 +135,7 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 flex items-center justify-center font-sans">
-      <SEO
+      <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
@@ -268,13 +258,8 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-black hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isLogin ? (
-                t('auth.loginButton')
-              ) : (
-                t('auth.signupButton')
-              )}
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              {!loading && (isLogin ? t('auth.loginButton') : t('auth.signupButton'))}
               {!loading && <ArrowRight size={20} />}
             </button>
           </form>

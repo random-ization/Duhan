@@ -11,8 +11,8 @@ interface VocabItem {
 }
 
 interface VocabMatchProps {
-  words: VocabItem[];
-  onComplete?: (time: number, moves: number) => void;
+  readonly words: VocabItem[];
+  readonly onComplete?: (time: number, moves: number) => void;
 }
 
 interface MatchCard {
@@ -59,24 +59,23 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
   // Initialize cards
   const initializeCards = useCallback(() => {
     const selectedWords = shuffleArray(words).slice(0, totalPairs);
-    const cardList: MatchCard[] = [];
 
-    selectedWords.forEach((word, idx) => {
-      cardList.push({
+    const cardList: MatchCard[] = selectedWords.flatMap((word, idx) => [
+      {
         id: `korean-${idx}`,
         content: word.korean,
         pairId: word.id,
         type: 'korean',
         isMatched: false,
-      });
-      cardList.push({
+      },
+      {
         id: `english-${idx}`,
         content: word.english,
         pairId: word.id,
         type: 'english',
         isMatched: false,
-      });
-    });
+      },
+    ]);
 
     const shuffledCards = shuffleArray(cardList);
     setCards(shuffledCards);
@@ -120,6 +119,35 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Helper function to handle successful match
+  const handleMatchSuccess = useCallback((firstId: string, secondId: string, currentMoves: number) => {
+    setCardStates(prev => ({
+      ...prev,
+      [firstId]: 'matched',
+      [secondId]: 'matched',
+    }));
+    setCards(prev =>
+      prev.map(c => (c.id === firstId || c.id === secondId ? { ...c, isMatched: true } : c))
+    );
+    setMatchedPairs(p => {
+      const newPairs = p + 1;
+      if (newPairs >= totalPairs) {
+        setGameState('COMPLETE');
+        onComplete?.(timer, currentMoves);
+      }
+      return newPairs;
+    });
+    setSelectedCards([]);
+    setIsLocked(false);
+  }, [onComplete, timer, totalPairs]);
+
+  // Helper function to get text color class based on card state
+  const getTextColorClass = (state: CardState): string => {
+    if (state === 'matched') return 'text-white';
+    if (state === 'wrong') return 'text-red-600';
+    return 'text-slate-900';
+  };
+
   const handleCardClick = (cardId: string) => {
     if (isLocked || gameState !== 'PLAYING') return;
     if (cardStates[cardId] === 'matched' || cardStates[cardId] === 'selected') return;
@@ -143,26 +171,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
         firstCard.type !== secondCard.type
       ) {
         // Match!
-        setTimeout(() => {
-          setCardStates(prev => ({
-            ...prev,
-            [firstId]: 'matched',
-            [secondId]: 'matched',
-          }));
-          setCards(prev =>
-            prev.map(c => (c.id === firstId || c.id === secondId ? { ...c, isMatched: true } : c))
-          );
-          setMatchedPairs(p => {
-            const newPairs = p + 1;
-            if (newPairs >= totalPairs) {
-              setGameState('COMPLETE');
-              onComplete?.(timer, moves + 1);
-            }
-            return newPairs;
-          });
-          setSelectedCards([]);
-          setIsLocked(false);
-        }, 300);
+        setTimeout(() => handleMatchSuccess(firstId, secondId, moves + 1), 300);
       } else {
         // Mismatch
         setCardStates(prev => ({
@@ -294,13 +303,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
               className={cardClass}
             >
               <span
-                className={`font-bold ${card.type === 'korean' ? 'text-lg md:text-xl' : 'text-sm md:text-base'} ${
-                  state === 'matched'
-                    ? 'text-white'
-                    : state === 'wrong'
-                      ? 'text-red-600'
-                      : 'text-slate-900'
-                }`}
+                className={`font-bold ${card.type === 'korean' ? 'text-lg md:text-xl' : 'text-sm md:text-base'} ${getTextColorClass(state)}`}
               >
                 {card.content}
               </span>

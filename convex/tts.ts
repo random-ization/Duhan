@@ -1,7 +1,7 @@
 'use node';
 import { action } from './_generated/server';
 import { v } from 'convex/values';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 
@@ -54,13 +54,18 @@ function createSSML(
   pitch: string = '0%'
 ): string {
   const escapedText = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
 
-  const lang = voice.startsWith('zh-') ? 'zh-CN' : voice.startsWith('ko-') ? 'ko-KR' : 'en-US';
+  let lang = 'en-US';
+  if (voice.startsWith('zh-')) {
+    lang = 'zh-CN';
+  } else if (voice.startsWith('ko-')) {
+    lang = 'ko-KR';
+  }
 
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${lang}">
         <voice name="${voice}">
@@ -93,7 +98,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
 
   const now = new Date();
   // Fix: Remove milliseconds strict AWS ISO8601BasicFormat (YYYYMMDD'T'HHMMSS'Z')
-  const amzDate = now.toISOString().split('.')[0].replace(/[:-]/g, '') + 'Z';
+  const amzDate = now.toISOString().split('.')[0].replaceAll(/[:-]/g, '') + 'Z';
   const dateStamp = amzDate.slice(0, 8);
 
   const host = new URL(endpoint).host;

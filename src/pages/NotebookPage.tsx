@@ -78,6 +78,36 @@ const NotebookPage: React.FC = () => {
     // List will auto-refresh via Convex subscription
   };
 
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+      );
+    }
+
+    if (filteredNotes.length === 0) {
+      return <EmptyState hasFilter={searchQuery.trim().length > 0 || activeTab !== 'ALL'} />;
+    }
+
+    return (
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+      >
+        <AnimatePresence mode="popLayout">
+          {filteredNotes.map(note => (
+            <NoteCard key={note.id} {...note} onClick={() => setSelectedNoteId(note.id)} />
+          ))}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -138,29 +168,7 @@ const NotebookPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-          </div>
-        ) : filteredNotes.length === 0 ? (
-          <EmptyState hasFilter={searchQuery.trim().length > 0 || activeTab !== 'ALL'} />
-        ) : (
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredNotes.map(note => (
-                <NoteCard key={note.id} {...note} onClick={() => setSelectedNoteId(note.id)} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">{renderContent()}</div>
 
       {/* Detail Modal */}
       {selectedNoteId && (

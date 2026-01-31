@@ -50,12 +50,7 @@ const LegalDocumentEditor: React.FC = () => {
         </select>
       </div>
 
-      {!doc ? (
-        <div className="flex items-center justify-center py-10 text-zinc-500">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          正在加载文档...
-        </div>
-      ) : (
+      {doc ? (
         <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] p-5 space-y-4">
           <div className="flex items-center gap-2 font-bold text-zinc-800">
             <FileText className="w-4 h-4" />
@@ -63,7 +58,7 @@ const LegalDocumentEditor: React.FC = () => {
           </div>
 
           <label className="space-y-1 text-sm font-medium text-zinc-700 block">
-            标题
+            <span>标题</span>
             <input
               key={`${docType}-${doc?.title ?? ''}`}
               ref={titleRef}
@@ -73,7 +68,7 @@ const LegalDocumentEditor: React.FC = () => {
           </label>
 
           <label className="space-y-1 text-sm font-medium text-zinc-700 block">
-            正文 (支持 Markdown)
+            <span>正文 (支持 Markdown)</span>
             <textarea
               key={`${docType}-${doc?.content ?? ''}`}
               ref={contentRef}
@@ -91,6 +86,11 @@ const LegalDocumentEditor: React.FC = () => {
             <Save className="w-4 h-4" />
             保存并发布
           </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-10 text-zinc-500">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          正在加载文档...
         </div>
       )}
 

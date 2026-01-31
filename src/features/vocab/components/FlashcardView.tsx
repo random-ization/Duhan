@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Volume2,
   CheckCircle,
@@ -8,7 +7,6 @@ import {
   Shuffle,
   Settings,
   Maximize2,
-  X,
   Minimize2,
 } from 'lucide-react';
 import { ExtendedVocabularyItem, VocabSettings } from '../types';
@@ -17,6 +15,9 @@ import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import { useTTS } from '../../../hooks/useTTS';
 import { useApp } from '../../../contexts/AppContext';
+import { useFlashcardKeyboard } from '../hooks/useFlashcardKeyboard';
+import FlashcardSettingsModal from './FlashcardSettingsModal';
+import FlashcardFullscreenOverlay from './FlashcardFullscreenOverlay';
 
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
@@ -34,132 +35,520 @@ interface FlashcardViewProps {
   progressKey?: string;
 }
 
-// ... Settings Modal Component (unchanged) ...
-const FlashcardSettingsModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  settings: {
-    autoTTS: boolean;
-    cardFront: 'KOREAN' | 'NATIVE';
-    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
+
+const useFlashcardSettings = (settings: VocabSettings) => {
+  const [localSettings, setLocalSettings] = useState(() => ({
+    autoTTS: settings.flashcard.autoTTS,
+    cardFront: settings.flashcard.cardFront,
+    ratingMode: (settings.flashcard as any).ratingMode || 'PASS_FAIL',
+  }));
+  const [showSettings, setShowSettings] = useState(false);
+  return { localSettings, setLocalSettings, showSettings, setShowSettings };
+};
+
+const useFlashcardDrag = (onRate: (result: boolean) => void) => {
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const resetDrag = useCallback(() => {
+    setDragStart(null);
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  }, []);
+
+  const handleDragStart = useCallback((x: number, y: number) => {
+    setDragStart({ x, y });
+    setIsDragging(true);
+  }, []);
+
+  const handleDragMove = useCallback((x: number, y: number) => {
+    if (!dragStart) return;
+    setDragOffset({ x: x - dragStart.x, y: y - dragStart.y });
+  }, [dragStart]);
+
+  const handleDragEnd = useCallback(() => {
+    if (!dragStart) return;
+    const threshold = 100;
+    if (dragOffset.x > threshold) {
+      onRate(true);
+    } else if (dragOffset.x < -threshold) {
+      onRate(false);
+    }
+    resetDrag();
+  }, [dragStart, dragOffset.x, onRate, resetDrag]);
+
+  return { dragOffset, isDragging, handleDragStart, handleDragMove, handleDragEnd };
+};
+
+const useFlashcardFullscreen = (setSidebarHidden: (hidden: boolean) => void, sidebarHidden: boolean) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenMenuOpen, setFullscreenMenuOpen] = useState(false);
+  const sidebarHiddenRef = useRef(sidebarHidden);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      sidebarHiddenRef.current = sidebarHidden;
+      return;
+    }
+    const previous = sidebarHiddenRef.current;
+    setSidebarHidden(true);
+    return () => setSidebarHidden(previous);
+  }, [isFullscreen, setSidebarHidden, sidebarHidden]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen || !fullscreenMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.('[data-flashcard-fullscreen-menu]')) return;
+      setFullscreenMenuOpen(false);
+    };
+    globalThis.addEventListener('mousedown', handler);
+    return () => globalThis.removeEventListener('mousedown', handler);
+  }, [fullscreenMenuOpen, isFullscreen]);
+
+  const toggleFullscreen = useCallback(() => setIsFullscreen(prev => !prev), []);
+
+  return { isFullscreen, setIsFullscreen, fullscreenMenuOpen, setFullscreenMenuOpen, toggleFullscreen };
+};
+
+const useFlashcardStats = (
+  initialWords: ExtendedVocabularyItem[],
+  settings: VocabSettings,
+  storageKey: string | null,
+  onComplete: (stats: { correct: ExtendedVocabularyItem[]; incorrect: ExtendedVocabularyItem[] }) => void,
+  onSaveWord?: (word: ExtendedVocabularyItem) => void,
+  onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void
+) => {
+  const [isRandom, setIsRandom] = useState(settings.flashcard.random);
+  const [words, setWords] = useState<ExtendedVocabularyItem[]>(() =>
+    settings.flashcard.random ? [...initialWords].sort(() => Math.random() - 0.5) : initialWords
+  );
+
+  const [cardIndex, setCardIndex] = useState(() => {
+    if (storageKey) {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const { index } = JSON.parse(saved);
+          if (typeof index === 'number' && index < initialWords.length) {
+            return index;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    return 0;
+  });
+
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [history, setHistory] = useState<number[]>([]);
+  const [trackProgress, setTrackProgress] = useState(true);
+  const [sessionStats, setSessionStats] = useState<{
+    correct: ExtendedVocabularyItem[];
+    incorrect: ExtendedVocabularyItem[];
+  }>(() => {
+    if (storageKey) {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const { stats } = JSON.parse(saved);
+          if (stats) return stats;
+        } catch { /* ignore */ }
+      }
+    }
+    return { correct: [], incorrect: [] };
+  });
+
+  useEffect(() => {
+    if (storageKey && trackProgress && cardIndex > 0) {
+      localStorage.setItem(storageKey, JSON.stringify({ index: cardIndex, stats: sessionStats }));
+    }
+  }, [storageKey, trackProgress, cardIndex, sessionStats]);
+
+  const currentCard = words[cardIndex];
+
+  const handleCardRate = useCallback(
+    (result: boolean | number) => {
+      if (!currentCard) return;
+
+      if (onCardReview) {
+        onCardReview(currentCard, result);
+      }
+
+      const isPass = typeof result === 'boolean' ? result : result > 1;
+      setHistory(prev => [...prev, cardIndex]);
+
+      const nextStats = {
+        correct: isPass ? [...sessionStats.correct, currentCard] : sessionStats.correct,
+        incorrect: isPass ? sessionStats.incorrect : [...sessionStats.incorrect, currentCard],
+      };
+
+      setSessionStats(nextStats);
+
+      if (isPass) {
+        // No additional action for correct
+      } else if (onSaveWord) {
+        onSaveWord(currentCard);
+      }
+
+      const nextIndex = cardIndex + 1;
+      if (nextIndex < words.length) {
+        setCardIndex(nextIndex);
+        setIsFlipped(false);
+      } else {
+        if (storageKey) localStorage.removeItem(storageKey);
+        onComplete(nextStats);
+      }
+    },
+    [
+      cardIndex,
+      currentCard,
+      storageKey,
+      onComplete,
+      onSaveWord,
+      sessionStats,
+      words.length,
+      onCardReview,
+    ]
+  );
+
+  const handleUndo = useCallback(() => {
+    const prevIndex = history.at(-1);
+    if (prevIndex === undefined) return;
+    const prevCard = words[prevIndex];
+    setSessionStats(prev => ({
+      correct: prev.correct.filter(w => w.id !== prevCard.id),
+      incorrect: prev.incorrect.filter(w => w.id !== prevCard.id),
+    }));
+    setHistory(prev => prev.slice(0, -1));
+    setCardIndex(prevIndex);
+    setIsFlipped(false);
+  }, [history, words]);
+
+  const toggleRandom = useCallback(() => {
+    setIsRandom(prev => {
+      const newRandom = !prev;
+      if (newRandom) {
+        setWords([...initialWords].sort(() => Math.random() - 0.5));
+      } else {
+        setWords(initialWords);
+      }
+      setCardIndex(0);
+      setHistory([]);
+      setSessionStats({ correct: [], incorrect: [] });
+      return newRandom;
+    });
+  }, [initialWords]);
+
+  return {
+    words,
+    cardIndex,
+    setCardIndex,
+    isFlipped,
+    setIsFlipped,
+    history,
+    trackProgress,
+    setTrackProgress,
+    sessionStats,
+    isRandom,
+    currentCard,
+    handleCardRate,
+    handleUndo,
+    toggleRandom,
   };
-  onUpdate: (settings: {
-    autoTTS: boolean;
-    cardFront: 'KOREAN' | 'NATIVE';
-    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
-  }) => void;
+};
+
+interface FlashcardProps {
+  card: ExtendedVocabularyItem;
+  isFlipped: boolean;
+  isDragging: boolean;
+  dragOffset: { x: number; y: number };
+  language: Language;
+  cardFront: 'KOREAN' | 'NATIVE';
+  onFlip: () => void;
+  onSpeak: (text: string) => void;
+  onDragStart: (x: number, y: number) => void;
+  onDragMove: (x: number, y: number) => void;
+  onDragEnd: () => void;
+}
+
+interface FlashcardToolbarProps {
+  cardIndex: number;
+  totalCards: number;
+  trackProgress: boolean;
+  ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
+  isRandom: boolean;
+  canUndo: boolean;
   labels: ReturnType<typeof getLabels>;
-}> = ({ isOpen, onClose, settings, onUpdate, labels }) => {
-  // ... (keep logic same)
-  if (!isOpen) return null;
+  onRate: (result: boolean | number) => void;
+  onUndo: () => void;
+  onToggleRandom: () => void;
+  onToggleTrackProgress: () => void;
+  onToggleFullscreen: () => void;
+  onShowSettings: () => void;
+  isFullscreen?: boolean;
+}
+
+const Flashcard: React.FC<FlashcardProps> = ({
+  card,
+  isFlipped,
+  isDragging,
+  dragOffset,
+  language,
+  cardFront,
+  onFlip,
+  onSpeak,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+}) => {
+  const meaning = getLocalizedContent(card, 'meaning', language) || card.english;
+  const exampleTranslation = getLocalizedContent(card, 'exampleTranslation', language);
+
+  const getPosClass = (pos: string) => {
+    if (pos === 'VERB_T') return 'bg-blue-100 text-blue-700';
+    if (pos === 'VERB_I') return 'bg-red-100 text-red-700';
+    if (pos === 'ADJ') return 'bg-purple-100 text-purple-700';
+    if (pos === 'NOUN') return 'bg-green-100 text-green-700';
+    return 'bg-slate-100 text-slate-700';
+  };
+
+  let transformStyle = '';
+  if (isDragging) {
+    transformStyle = `translateX(${dragOffset.x}px) rotate(${dragOffset.x * 0.05}deg)`;
+    if (isFlipped) {
+      transformStyle += ' rotateY(180deg)';
+    }
+  }
+
+  const transform = isDragging ? transformStyle : undefined;
+
+  const transitionStyle = isDragging ? 'none' : 'transform 0.5s';
+
+  const speakerButton = (text: string) => (
+    <button
+      type="button"
+      className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors z-10"
+      onClick={e => {
+        e.stopPropagation();
+        onSpeak(text);
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      aria-label="Speak"
+    >
+      <Volume2 className="w-5 h-5" />
+    </button>
+  );
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
-      onClick={onClose}
+    <button
+      type="button"
+      className="perspective-1000 w-full max-w-2xl h-96 relative group select-none touch-none bg-transparent border-none p-0 outline-none"
+      onClick={onFlip}
+      onMouseDown={e => onDragStart(e.clientX, e.clientY)}
+      onMouseMove={e => onDragMove(e.clientX, e.clientY)}
+      onMouseUp={onDragEnd}
+      onMouseLeave={onDragEnd}
+      onTouchStart={e => onDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+      onTouchMove={e => onDragMove(e.touches[0].clientX, e.touches[0].clientY)}
+      onTouchEnd={onDragEnd}
     >
       <div
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-        onClick={e => e.stopPropagation()}
+        className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}
+        style={{ transform, transition: transitionStyle }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-slate-900">⚙️ {labels.settings}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
+        {/* Drag Overlays */}
+        {isDragging && dragOffset.x > 50 && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-emerald-500/20 rounded-2xl border-4 border-emerald-500"
+            aria-hidden="true"
+          >
+            <CheckCircle className="w-32 h-32 text-emerald-600 opacity-50" />
+          </div>
+        )}
+        {isDragging && dragOffset.x < -50 && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-red-500/20 rounded-2xl border-4 border-red-500"
+            aria-hidden="true"
+          >
+            <XCircle className="w-32 h-32 text-red-600 opacity-50" />
+          </div>
+        )}
+
+        {/* Front */}
+        <div className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 text-center">
+          {speakerButton(card.korean)}
+          {cardFront === 'KOREAN' ? (
+            <h3 className="text-5xl font-bold text-slate-900 leading-tight">
+              {card.korean}
+            </h3>
+          ) : (
+            <h3 className="text-4xl font-medium text-slate-800 leading-tight">
+              {meaning}
+            </h3>
+          )}
         </div>
 
-        {/* Auto TTS */}
-        <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 mb-3">
-          <div>
-            <span className="font-bold text-slate-700 block">🔊 {labels.autoTTS}</span>
-          </div>
-          <input
-            type="checkbox"
-            checked={settings.autoTTS}
-            onChange={e => onUpdate({ ...settings, autoTTS: e.target.checked })}
-            className="w-5 h-5 accent-indigo-500"
-          />
-        </label>
-
-        {/* Card Front */}
-        <div className="mb-4">
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            {labels.cardFront}
-          </label>
-          <div className="space-y-2">
-            <label
-              className={`flex items-center p-3 rounded-xl cursor-pointer ${
-                settings.cardFront === 'KOREAN'
-                  ? 'bg-indigo-50 border-2 border-indigo-300'
-                  : 'bg-slate-50 border-2 border-transparent'
-              }`}
+        {/* Back */}
+        <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+          {speakerButton(card.korean)}
+          {card.partOfSpeech && (
+            <div
+              className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getPosClass(card.partOfSpeech)}`}
             >
-              <input
-                type="radio"
-                checked={settings.cardFront === 'KOREAN'}
-                onChange={() => onUpdate({ ...settings, cardFront: 'KOREAN' })}
-                className="mr-3"
-              />
-              <span className="font-medium">🇰🇷 {labels.koreanFront}</span>
-            </label>
-            <label
-              className={`flex items-center p-3 rounded-xl cursor-pointer ${
-                settings.cardFront === 'NATIVE'
-                  ? 'bg-indigo-50 border-2 border-indigo-300'
-                  : 'bg-slate-50 border-2 border-transparent'
-              }`}
-            >
-              <input
-                type="radio"
-                checked={settings.cardFront === 'NATIVE'}
-                onChange={() => onUpdate({ ...settings, cardFront: 'NATIVE' })}
-                className="mr-3"
-              />
-              <span className="font-medium">🇨🇳 {labels.nativeFront}</span>
-            </label>
-          </div>
+              {card.partOfSpeech}
+            </div>
+          )}
+          {cardFront === 'KOREAN' ? (
+            <>
+              <p className="text-3xl font-medium text-indigo-600 mb-2">{meaning}</p>
+              {card.hanja && <p className="text-lg text-slate-500 mb-4">漢字: {card.hanja}</p>}
+            </>
+          ) : (
+            <>
+              <h3 className="text-5xl font-bold text-indigo-600 mb-2">{card.korean}</h3>
+              {card.hanja && <p className="text-lg text-slate-500 mb-2">漢字: {card.hanja}</p>}
+            </>
+          )}
+          {card.exampleSentence && (
+            <div className="bg-slate-50 p-3 rounded-lg w-full max-w-lg mt-4">
+              <p className="text-slate-800 text-base mb-1">{card.exampleSentence}</p>
+              {exampleTranslation && (
+                <p className="text-slate-500 text-sm">{exampleTranslation}</p>
+              )}
+            </div>
+          )}
         </div>
+      </div>
+    </button>
+  );
+};
 
-        {/* Rating Mode */}
-        <div className="mb-4">
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            {labels.ratingMode || '评分模式'}
-          </label>
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button
-              onClick={() => onUpdate({ ...settings, ratingMode: 'PASS_FAIL' })}
-              className={`flex-1 px-3 py-2 text-sm font-bold rounded-md transition-all ${
-                settings.ratingMode === 'PASS_FAIL'
-                  ? 'bg-white shadow text-indigo-600'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              ✓/✗ {labels.passFail || '对/错'}
-            </button>
-            <button
-              onClick={() => onUpdate({ ...settings, ratingMode: 'FOUR_BUTTONS' })}
-              className={`flex-1 px-3 py-2 text-sm font-bold rounded-md transition-all ${
-                settings.ratingMode === 'FOUR_BUTTONS'
-                  ? 'bg-white shadow text-indigo-600'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              🎚️ {labels.fourButtons || '4级'}
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 mt-2">
-            {settings.ratingMode === 'PASS_FAIL'
-              ? labels.passFailDesc || '简单模式：对或错'
-              : labels.fourButtonsDesc || '详细模式：忘记/困难/正常/轻松'}
-          </p>
-        </div>
+const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
+  cardIndex,
+  totalCards,
+  trackProgress,
+  ratingMode,
+  isRandom,
+  canUndo,
+  labels,
+  onRate,
+  onUndo,
+  onToggleRandom,
+  onToggleTrackProgress,
+  onToggleFullscreen,
+  onShowSettings,
+  isFullscreen,
+}) => {
+  const containerClass = isFullscreen
+    ? 'flex items-center justify-between max-w-4xl mx-auto'
+    : 'w-full max-w-4xl bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-4';
 
+  const rateButtons =
+    ratingMode === 'PASS_FAIL' ? (
+      <>
         <button
-          onClick={onClose}
-          className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800"
+          onClick={() => onRate(false)}
+          className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+          title="Forgot (Left Arrow)"
         >
-          {labels.done || '完成'}
+          <XCircle className="w-6 h-6" />
+        </button>
+        <span className="px-4 py-2 text-slate-600 font-medium">
+          {cardIndex + 1} / {totalCards}
+        </span>
+        <button
+          onClick={() => onRate(true)}
+          className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
+          title="Remembered (Right Arrow)"
+        >
+          <CheckCircle className="w-6 h-6" />
+        </button>
+      </>
+    ) : (
+      <div className="flex items-center gap-2">
+        <span className="mr-2 text-slate-400 font-medium text-sm">
+          {cardIndex + 1} / {totalCards}
+        </span>
+        {(
+          [
+            { val: 1, label: 'Again', color: 'red' },
+            { val: 2, label: 'Hard', color: 'orange' },
+            { val: 3, label: 'Good', color: 'blue' },
+            { val: 4, label: 'Easy', color: 'green' },
+          ] as const
+        ).map(b => (
+          <button
+            key={b.val}
+            onClick={() => onRate(b.val)}
+            className={`px-3 py-2 rounded-lg bg-${b.color}-50 text-${b.color}-600 font-bold hover:bg-${b.color}-100 transition-colors`}
+            title={`${b.label} (${b.val})`}
+          >
+            {b.val}. {b.label}
+          </button>
+        ))}
+      </div>
+    );
+
+  return (
+    <div className={containerClass}>
+      <button
+        type="button"
+        className="flex items-center gap-2 cursor-pointer select-none group"
+        onClick={onToggleTrackProgress}
+      >
+        <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+          {labels.trackProgress || '跟踪进度'}
+        </span>
+        <div
+          className={`w-10 h-6 rounded-full transition-colors relative ${trackProgress ? 'bg-indigo-600' : 'bg-slate-300'}`}
+        >
+          <div
+            className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${trackProgress ? 'translate-x-5' : 'translate-x-1'}`}
+          />
+        </div>
+      </button>
+
+      <div className="flex items-center gap-2">{rateButtons}</div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onUndo}
+          className={`p-2.5 rounded-lg transition-colors ${canUndo ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' : 'text-slate-300 cursor-not-allowed'}`}
+          disabled={!canUndo}
+          title={labels.undo || '撤销'}
+        >
+          <Undo2 className="w-5 h-5" />
+        </button>
+        <button
+          onClick={onToggleRandom}
+          className={`p-2.5 rounded-lg transition-colors ${isRandom ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+          title={labels.randomMode || '随机模式'}
+        >
+          <Shuffle className="w-5 h-5" />
+        </button>
+        <button
+          onClick={onShowSettings}
+          className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          title={labels.settings || '设置'}
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+        <button
+          onClick={onToggleFullscreen}
+          className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          title={labels.fullscreen || '全屏'}
+        >
+          {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
         </button>
       </div>
     </div>
@@ -182,7 +571,51 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
     const { sidebarHidden, setSidebarHidden } = useApp();
-    const sidebarHiddenRef = useRef(sidebarHidden);
+
+    const {
+      localSettings,
+      setLocalSettings,
+      showSettings,
+      setShowSettings,
+    } = useFlashcardSettings(settings);
+
+    const storageKey = useMemo(() => {
+      if (progressKey) return `flashcard_progress_${progressKey}`;
+      if (courseId) return `flashcard_progress_${courseId}`;
+      return null;
+    }, [courseId, progressKey]);
+
+    const {
+      words,
+      cardIndex,
+      isFlipped,
+      setIsFlipped,
+      history,
+      trackProgress,
+      setTrackProgress,
+      sessionStats,
+      isRandom,
+      currentCard,
+      handleCardRate,
+      handleUndo,
+      toggleRandom,
+    } = useFlashcardStats(initialWords, settings, storageKey, onComplete, onSaveWord, onCardReview);
+
+    const {
+      dragOffset,
+      isDragging,
+      handleDragStart,
+      handleDragMove,
+      handleDragEnd,
+    } = useFlashcardDrag(handleCardRate);
+
+    const {
+      isFullscreen,
+      setIsFullscreen,
+      fullscreenMenuOpen,
+      setFullscreenMenuOpen,
+      toggleFullscreen,
+    } = useFlashcardFullscreen(setSidebarHidden, sidebarHidden);
 
     useEffect(() => stopTTS, [stopTTS]);
 
@@ -190,227 +623,23 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       (text: string) => {
         if (onSpeak) {
           onSpeak(text);
-          return;
+        } else {
+          void speakTTS(text);
         }
-        void speakTTS(text);
       },
       [onSpeak, speakTTS]
     );
 
-    // Local settings state
-    const [localSettings, setLocalSettings] = useState({
-      autoTTS: settings.flashcard.autoTTS,
-      cardFront: settings.flashcard.cardFront,
-      ratingMode:
-        (settings.flashcard as { ratingMode?: 'PASS_FAIL' | 'FOUR_BUTTONS' }).ratingMode ||
-        'PASS_FAIL',
+    // Use the extracted keyboard hook
+    useFlashcardKeyboard({
+      isFullscreen,
+      setIsFullscreen,
+      handleUndo,
+      isFlipped,
+      setIsFlipped,
+      handleCardRate,
+      ratingMode: localSettings.ratingMode,
     });
-
-    // Shuffle words if random mode is on
-    const [isRandom, setIsRandom] = useState(settings.flashcard.random);
-    const storageKey = useMemo(() => {
-      if (progressKey) return `flashcard_progress_${progressKey}`;
-      if (courseId) return `flashcard_progress_${courseId}`;
-      return null;
-    }, [courseId, progressKey]);
-    const [words, setWords] = useState<ExtendedVocabularyItem[]>(() => {
-      if (settings.flashcard.random) {
-        return [...initialWords].sort(() => Math.random() - 0.5);
-      }
-      return initialWords;
-    });
-
-    // Core state - initialize from localStorage if available
-    const [cardIndex, setCardIndex] = useState(() => {
-      if (storageKey) {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          try {
-            const { index } = JSON.parse(saved);
-            if (typeof index === 'number' && index < initialWords.length) {
-              return index;
-            }
-          } catch {
-            // Ignore parse errors
-          }
-        }
-      }
-      return 0;
-    });
-    const [isFlipped, setIsFlipped] = useState(false);
-    const [history, setHistory] = useState<number[]>([]);
-    const [trackProgress, setTrackProgress] = useState(true);
-    const [showSettings, setShowSettings] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [fullscreenMenuOpen, setFullscreenMenuOpen] = useState(false);
-
-    useEffect(() => {
-      if (!isFullscreen) {
-        sidebarHiddenRef.current = sidebarHidden;
-        return;
-      }
-      const previous = sidebarHiddenRef.current;
-      setSidebarHidden(true);
-      return () => setSidebarHidden(previous);
-    }, [isFullscreen, setSidebarHidden, sidebarHidden]);
-
-    useEffect(() => {
-      if (!isFullscreen) return;
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = previousOverflow;
-      };
-    }, [isFullscreen]);
-
-    useEffect(() => {
-      if (!isFullscreen || !fullscreenMenuOpen) return;
-      const handler = (e: MouseEvent) => {
-        const el = e.target as HTMLElement | null;
-        if (el?.closest?.('[data-flashcard-fullscreen-menu]')) return;
-        setFullscreenMenuOpen(false);
-      };
-      window.addEventListener('mousedown', handler);
-      return () => window.removeEventListener('mousedown', handler);
-    }, [fullscreenMenuOpen, isFullscreen]);
-
-    const [sessionStats, setSessionStats] = useState<{
-      correct: ExtendedVocabularyItem[];
-      incorrect: ExtendedVocabularyItem[];
-    }>(() => {
-      if (storageKey) {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          try {
-            const { stats } = JSON.parse(saved);
-            if (stats) {
-              return stats;
-            }
-          } catch {
-            // Ignore parse errors
-          }
-        }
-      }
-      return { correct: [], incorrect: [] };
-    });
-
-    // Drag state
-    const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
-    const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
-    const cardRef = useRef<HTMLDivElement>(null);
-
-    const currentCard = words[cardIndex];
-
-    // Save progress to localStorage
-    useEffect(() => {
-      if (storageKey && trackProgress && cardIndex > 0) {
-        localStorage.setItem(storageKey, JSON.stringify({ index: cardIndex, stats: sessionStats }));
-      }
-    }, [storageKey, trackProgress, cardIndex, sessionStats]);
-
-    const resetDrag = useCallback(() => {
-      setDragStart(null);
-      setDragOffset({ x: 0, y: 0 });
-      setIsDragging(false);
-    }, []);
-
-    const handleDragStart = useCallback((x: number, y: number) => {
-      setDragStart({ x, y });
-      setIsDragging(true);
-    }, []);
-
-    const handleDragMove = (x: number, y: number) => {
-      if (!dragStart) return;
-      const deltaX = x - dragStart.x;
-      const deltaY = y - dragStart.y;
-      setDragOffset({ x: deltaX, y: deltaY });
-    };
-
-    const handleDragEnd = () => {
-      if (!dragStart) return;
-      const threshold = 100;
-      if (dragOffset.x > threshold) {
-        handleCardRate(true);
-      } else if (dragOffset.x < -threshold) {
-        handleCardRate(false);
-      }
-      resetDrag();
-    };
-
-    const handleCardRate = useCallback(
-      (result: boolean | number) => {
-        if (!currentCard) return;
-
-        // Notify parent about the review
-        if (onCardReview) {
-          onCardReview(currentCard, result);
-        }
-
-        // Determine Pass/Fail for UI stats
-        // If number (1-4): 1=Again(Fail), 2=Hard(Pass), 3=Good(Pass), 4=Easy(Pass)
-        const isPass = typeof result === 'boolean' ? result : result > 1;
-
-        setHistory(prev => [...prev, cardIndex]);
-        const updatedStats = {
-          correct: isPass ? [...sessionStats.correct, currentCard] : sessionStats.correct,
-          incorrect: !isPass ? [...sessionStats.incorrect, currentCard] : sessionStats.incorrect,
-        };
-        setSessionStats(updatedStats);
-        if (!isPass && onSaveWord) {
-          onSaveWord(currentCard);
-        }
-        if (cardIndex + 1 < words.length) {
-          setCardIndex(cardIndex + 1);
-          setIsFlipped(false);
-        } else {
-          if (storageKey) localStorage.removeItem(storageKey);
-          onComplete(updatedStats);
-        }
-      },
-      [
-        cardIndex,
-        currentCard,
-        storageKey,
-        onComplete,
-        onSaveWord,
-        sessionStats,
-        words.length,
-        onCardReview,
-      ]
-    );
-
-    const handleUndo = useCallback(() => {
-      if (history.length === 0) return;
-      const prevIndex = history[history.length - 1];
-      const prevCard = words[prevIndex];
-      setSessionStats(prev => ({
-        correct: prev.correct.filter(w => w.id !== prevCard.id),
-        incorrect: prev.incorrect.filter(w => w.id !== prevCard.id),
-      }));
-      setHistory(prev => prev.slice(0, -1));
-      setCardIndex(prevIndex);
-      setIsFlipped(false);
-    }, [history, words]);
-
-    const toggleRandom = useCallback(() => {
-      setIsRandom(prev => {
-        const newRandom = !prev;
-        if (newRandom) {
-          setWords([...initialWords].sort(() => Math.random() - 0.5));
-        } else {
-          setWords(initialWords);
-        }
-        setCardIndex(0);
-        setHistory([]);
-        setSessionStats({ correct: [], incorrect: [] });
-        return newRandom;
-      });
-    }, [initialWords]);
-
-    const toggleFullscreen = useCallback(() => {
-      setIsFullscreen(prev => !prev);
-    }, []);
 
     // Auto TTS
     useEffect(() => {
@@ -423,468 +652,69 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       }
     }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped, onSpeak, speakKorean]);
 
-    // Keyboard shortcuts
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (!isFlipped) {
-          if (e.code === 'Space' || e.code === 'Enter') {
-            e.preventDefault();
-            setIsFlipped(true);
-          }
-        } else {
-          // Standard Mode (Left/Right)
-          if (localSettings.ratingMode === 'PASS_FAIL') {
-            if (e.key === 'ArrowLeft') {
-              e.preventDefault();
-              handleCardRate(false);
-            }
-            if (e.key === 'ArrowRight') {
-              e.preventDefault();
-              handleCardRate(true);
-            }
-          }
-          // FSRS Mode (1-4)
-          else {
-            if (e.key === '1') handleCardRate(1); // Again
-            if (e.key === '2') handleCardRate(2); // Hard
-            if (e.key === '3') handleCardRate(3); // Good
-            if (e.key === '4') handleCardRate(4); // Easy
-          }
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-          e.preventDefault();
-          handleUndo();
-        }
-        if (e.key === 'Escape' && isFullscreen) {
-          setIsFullscreen(false);
-        }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFlipped, handleCardRate, handleUndo, isFullscreen, localSettings.ratingMode]);
+    const onToggleTrackProgress = useCallback(() => {
+      setTrackProgress(prev => !prev);
+    }, [setTrackProgress]);
 
     if (!currentCard) {
       return <div className="text-center text-slate-500">{labels.noWords}</div>;
     }
 
-    // Card render helper
-    const renderCardContent = () => (
-      <div
-        className="perspective-1000 w-full max-w-2xl h-96 relative cursor-pointer group select-none touch-none"
-        onClick={() => !isDragging && setIsFlipped(!isFlipped)}
-        onMouseDown={e => handleDragStart(e.clientX, e.clientY)}
-        onMouseMove={e => handleDragMove(e.clientX, e.clientY)}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-        onTouchStart={e => handleDragStart(e.touches[0].clientX, e.touches[0].clientY)}
-        onTouchMove={e => handleDragMove(e.touches[0].clientX, e.touches[0].clientY)}
-        onTouchEnd={handleDragEnd}
-        ref={cardRef}
-      >
-        <div
-          className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}
-          style={{
-            transform: isDragging
-              ? `translateX(${dragOffset.x}px) rotate(${dragOffset.x * 0.05}deg) ${isFlipped ? 'rotateY(180deg)' : ''}`
-              : undefined,
-            transition: isDragging ? 'none' : 'transform 0.5s',
-          }}
-        >
-          {/* Drag Overlays */}
-          {isDragging && dragOffset.x > 50 && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-emerald-500/20 rounded-2xl border-4 border-emerald-500">
-              <CheckCircle className="w-32 h-32 text-emerald-600 opacity-50" />
-            </div>
-          )}
-          {isDragging && dragOffset.x < -50 && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-500/20 rounded-2xl border-4 border-red-500">
-              <XCircle className="w-32 h-32 text-red-600 opacity-50" />
-            </div>
-          )}
-
-          {/* Front */}
-          <div className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 text-center">
-            <button
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-              onClick={e => {
-                e.stopPropagation();
-                if (onSpeak) {
-                  onSpeak(currentCard.korean);
-                } else {
-                  speakKorean(currentCard.korean);
-                }
-              }}
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <Volume2 className="w-5 h-5" />
-            </button>
-
-            {localSettings.cardFront === 'KOREAN' ? (
-              <h3 className="text-5xl font-bold text-slate-900 leading-tight">
-                {currentCard.korean}
-              </h3>
-            ) : (
-              <h3 className="text-4xl font-medium text-slate-800 leading-tight">
-                {getLocalizedContent(currentCard, 'meaning', language) || currentCard.english}
-              </h3>
-            )}
-          </div>
-
-          {/* Back */}
-          <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
-            <button
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-              onClick={e => {
-                e.stopPropagation();
-                speakKorean(currentCard.korean);
-              }}
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <Volume2 className="w-5 h-5" />
-            </button>
-
-            {currentCard.partOfSpeech && (
-              <div
-                className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  currentCard.partOfSpeech === 'VERB_T'
-                    ? 'bg-blue-100 text-blue-700'
-                    : currentCard.partOfSpeech === 'VERB_I'
-                      ? 'bg-red-100 text-red-700'
-                      : currentCard.partOfSpeech === 'ADJ'
-                        ? 'bg-purple-100 text-purple-700'
-                        : currentCard.partOfSpeech === 'NOUN'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                {currentCard.partOfSpeech}
-              </div>
-            )}
-
-            {localSettings.cardFront === 'KOREAN' ? (
-              <>
-                <p className="text-3xl font-medium text-indigo-600 mb-2">
-                  {getLocalizedContent(currentCard, 'meaning', language) || currentCard.english}
-                </p>
-                {currentCard.hanja && (
-                  <p className="text-lg text-slate-500 mb-4">漢字: {currentCard.hanja}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <h3 className="text-5xl font-bold text-indigo-600 mb-2">{currentCard.korean}</h3>
-                {currentCard.hanja && (
-                  <p className="text-lg text-slate-500 mb-2">漢字: {currentCard.hanja}</p>
-                )}
-              </>
-            )}
-
-            {currentCard.exampleSentence && (
-              <div className="bg-slate-50 p-3 rounded-lg w-full max-w-lg mt-4">
-                <p className="text-slate-800 text-base mb-1">{currentCard.exampleSentence}</p>
-                {currentCard.exampleTranslation && (
-                  <p className="text-slate-500 text-sm">
-                    {getLocalizedContent(currentCard, 'exampleTranslation', language)}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+    const toolbar = (
+      <FlashcardToolbar
+        cardIndex={cardIndex}
+        totalCards={words.length}
+        trackProgress={trackProgress}
+        ratingMode={localSettings.ratingMode}
+        isRandom={isRandom}
+        canUndo={history.length > 0}
+        labels={labels}
+        onRate={handleCardRate}
+        onUndo={handleUndo}
+        onToggleRandom={toggleRandom}
+        onToggleTrackProgress={onToggleTrackProgress}
+        onToggleFullscreen={toggleFullscreen}
+        onShowSettings={() => setShowSettings(true)}
+        isFullscreen={isFullscreen}
+      />
     );
 
-    // Toolbar render helper
-    const renderToolbar = () => (
-      <div className="w-full max-w-4xl bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
-        {/* Left: Track Progress */}
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <span className="text-sm font-medium text-slate-600">
-            {labels.trackProgress || '跟踪进度'}
-          </span>
-          <div
-            className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
-              trackProgress ? 'bg-indigo-600' : 'bg-slate-300'
-            }`}
-            onClick={() => setTrackProgress(!trackProgress)}
-          >
-            <div
-              className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                trackProgress ? 'translate-x-5' : 'translate-x-1'
-              }`}
-            />
-          </div>
-        </label>
-
-        {/* Center: Rating Buttons + Counter */}
-        <div className="flex items-center gap-2">
-          {localSettings.ratingMode === 'PASS_FAIL' ? (
-            <>
-              <button
-                onClick={() => handleCardRate(false)}
-                className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
-                title="Forgot (Left Arrow)"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-              <span className="px-4 py-2 text-slate-600 font-medium">
-                {cardIndex + 1} / {words.length}
-              </span>
-              <button
-                onClick={() => handleCardRate(true)}
-                className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
-                title="Remembered (Right Arrow)"
-              >
-                <CheckCircle className="w-6 h-6" />
-              </button>
-            </>
-          ) : (
-            // FSRS 4 Buttons
-            <div className="flex items-center gap-2">
-              <span className="mr-2 text-slate-400 font-medium text-sm">
-                {cardIndex + 1} / {words.length}
-              </span>
-              <button
-                onClick={() => handleCardRate(1)}
-                className="px-3 py-2 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
-                title="Again (1)"
-              >
-                1. Again
-              </button>
-              <button
-                onClick={() => handleCardRate(2)}
-                className="px-3 py-2 rounded-lg bg-orange-50 text-orange-600 font-bold hover:bg-orange-100 transition-colors"
-                title="Hard (2)"
-              >
-                2. Hard
-              </button>
-              <button
-                onClick={() => handleCardRate(3)}
-                className="px-3 py-2 rounded-lg bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
-                title="Good (3)"
-              >
-                3. Good
-              </button>
-              <button
-                onClick={() => handleCardRate(4)}
-                className="px-3 py-2 rounded-lg bg-green-50 text-green-600 font-bold hover:bg-green-100 transition-colors"
-                title="Easy (4)"
-              >
-                4. Easy
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            className={`p-2.5 rounded-lg transition-colors ${
-              history.length === 0
-                ? 'text-slate-300 cursor-not-allowed'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-            }`}
-            title={labels.undo || '撤销'}
-          >
-            <Undo2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={toggleRandom}
-            className={`p-2.5 rounded-lg transition-colors ${
-              isRandom
-                ? 'bg-indigo-100 text-indigo-600'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-            }`}
-            title={labels.randomMode || '随机模式'}
-          >
-            <Shuffle className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            title={labels.settings || '设置'}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-          <button
-            onClick={toggleFullscreen}
-            className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            title={labels.fullscreen || '全屏'}
-          >
-            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+    const flashcard = (
+      <Flashcard
+        card={currentCard}
+        isFlipped={isFlipped}
+        isDragging={isDragging}
+        dragOffset={dragOffset}
+        language={language}
+        cardFront={localSettings.cardFront}
+        onFlip={() => !isDragging && setIsFlipped(!isFlipped)}
+        onSpeak={speakKorean}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+      />
     );
 
-    // Fullscreen mode
+    // Fullscreen mode - use extracted component
     if (isFullscreen) {
-      const content = (
-        <div className="fixed inset-0 z-[95] bg-white flex flex-col">
-          <FlashcardSettingsModal
-            isOpen={showSettings}
-            onClose={() => setShowSettings(false)}
-            settings={localSettings}
-            onUpdate={setLocalSettings}
-            labels={labels}
-          />
-
-          {/* Top Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="relative" data-flashcard-fullscreen-menu>
-                <button
-                  type="button"
-                  onClick={() => setFullscreenMenuOpen(v => !v)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 font-bold text-slate-700"
-                >
-                  📘 {language === 'zh' ? '单词卡' : labels.flashcards || 'Flashcards'}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {fullscreenMenuOpen ? (
-                  <div className="absolute left-0 top-full mt-2 w-44 bg-white border-2 border-slate-200 rounded-xl shadow-lg overflow-hidden z-[96]">
-                    {(
-                      [
-                        {
-                          id: 'flashcard' as const,
-                          label: language === 'zh' ? '单词卡' : labels.flashcards || 'Flashcards',
-                        },
-                        {
-                          id: 'learn' as const,
-                          label: language === 'zh' ? '学习模式' : labels.learn || 'Learn',
-                        },
-                        {
-                          id: 'test' as const,
-                          label: language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test',
-                        },
-                        { id: 'match' as const, label: language === 'zh' ? '配对' : 'Match' },
-                      ] as const
-                    ).map(item => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          setFullscreenMenuOpen(false);
-                          setIsFullscreen(false);
-                          onRequestNavigate?.(item.id);
-                        }}
-                        className="w-full text-left px-3 py-2 font-black text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-slate-800">
-                {cardIndex + 1} / {words.length}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              <button
-                onClick={toggleFullscreen}
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Progress Counters */}
-          <div className="flex items-center justify-between px-6 py-3">
-            <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-orange-50 text-orange-600 font-bold text-sm">
-              <span className="w-2 h-2 rounded-full bg-orange-500" />
-              {sessionStats.incorrect.length} {labels.stillLearning || '仍在学'}
-            </span>
-            <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-50 text-green-600 font-bold text-sm">
-              {language === 'zh' ? '本次记住' : 'Remembered'} {sessionStats.correct.length}
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-            </span>
-          </div>
-
-          {/* Card */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
-            {renderCardContent()}
-          </div>
-
-          {/* Keyboard Hint */}
-          <div className="text-center py-2 bg-indigo-50 text-indigo-600 text-sm font-medium">
-            ⌨️ {labels.keyboardHint || '快捷键'}: 按{' '}
-            <kbd className="px-2 py-0.5 bg-white rounded border border-indigo-200 mx-1">空格键</kbd>{' '}
-            或单击卡片以翻页
-          </div>
-
-          {/* Bottom Toolbar */}
-          <div className="px-6 py-4 border-t border-slate-100">
-            <div className="flex items-center justify-between max-w-4xl mx-auto">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <span className="text-sm font-medium text-slate-600">
-                  {labels.trackProgress || '跟踪进度'}
-                </span>
-                <div
-                  className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    trackProgress ? 'bg-indigo-600' : 'bg-slate-300'
-                  }`}
-                  onClick={() => setTrackProgress(!trackProgress)}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${trackProgress ? 'translate-x-5' : 'translate-x-1'}`}
-                  />
-                </div>
-              </label>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => handleCardRate(false)}
-                  className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-red-200 text-red-500 hover:bg-red-50"
-                >
-                  <XCircle className="w-7 h-7" />
-                </button>
-                <button
-                  onClick={() => handleCardRate(true)}
-                  className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-green-200 text-green-500 hover:bg-green-50"
-                >
-                  <CheckCircle className="w-7 h-7" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleUndo}
-                  disabled={history.length === 0}
-                  className={`p-2.5 rounded-lg ${history.length === 0 ? 'text-slate-300' : 'text-slate-500 hover:bg-slate-100'}`}
-                >
-                  <Undo2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={toggleRandom}
-                  className={`p-2.5 rounded-lg ${isRandom ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                >
-                  <Shuffle className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      return (
+        <FlashcardFullscreenOverlay
+          words={words}
+          cardIndex={cardIndex}
+          sessionStats={sessionStats}
+          language={language}
+          showSettings={showSettings}
+          fullscreenMenuOpen={fullscreenMenuOpen}
+          localSettings={localSettings}
+          flashcard={flashcard}
+          toolbar={toolbar}
+          onSetShowSettings={setShowSettings}
+          onSetFullscreenMenuOpen={setFullscreenMenuOpen}
+          onToggleFullscreen={toggleFullscreen}
+          onRequestNavigate={onRequestNavigate}
+          onUpdateSettings={setLocalSettings}
+        />
       );
-      if (typeof document === 'undefined') return content;
-      return createPortal(content, document.body);
     }
 
     // Normal mode
@@ -897,8 +727,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           onUpdate={setLocalSettings}
           labels={labels}
         />
-        {renderCardContent()}
-        <div className="mt-6">{renderToolbar()}</div>
+        {flashcard}
+        <div className="mt-6">{toolbar}</div>
       </div>
     );
   }

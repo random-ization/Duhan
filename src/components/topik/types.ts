@@ -1,4 +1,5 @@
-import { TopikExam, TopikQuestion, ExamAttempt, Annotation } from '../../types';
+export type { TopikExam, TopikQuestion, ExamAttempt, Annotation } from '../../types';
+import type { TopikExam, ExamAttempt } from '../../types';
 
 export interface TopikModuleState {
   view: 'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW';
@@ -15,5 +16,3 @@ export interface AudioState {
   currentTime: number;
   duration: number;
 }
-
-export type { TopikExam, TopikQuestion, ExamAttempt, Annotation };

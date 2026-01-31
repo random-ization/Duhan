@@ -1,7 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { WithTranslation, withTranslation } from 'react-i18next';
-import type { Language } from '../../types';
+
 import { logger } from '../../utils/logger';
 
 interface ErrorBoundaryProps extends WithTranslation {
@@ -9,7 +9,7 @@ interface ErrorBoundaryProps extends WithTranslation {
   fallback?: ReactNode;
   onReset?: () => void;
   moduleName?: string; // Optional: name of the module for better error messages
-  language?: Language;
+  language?: string;
 }
 
 interface ErrorBoundaryState {
@@ -37,6 +37,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Sync language with i18next if provided
+    if (this.props.language && this.props.i18n.language !== this.props.language) {
+      this.props.i18n.changeLanguage(this.props.language);
+    }
+
     // Log error using structured logger
     logger.error('[ErrorBoundary] Caught error:', {
       error,
@@ -52,11 +57,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   };
 
   handleReload = () => {
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   handleGoHome = () => {
-    window.location.href = '/dashboard';
+    globalThis.location.href = '/dashboard';
   };
 
   render() {

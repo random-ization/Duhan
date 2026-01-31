@@ -35,7 +35,14 @@ const VocabBookSpellingPage: React.FC = () => {
       const p = item.progress;
       const isMastered = p.status === 'MASTERED';
       const isUnlearned = p.state === 0 || p.status === 'NEW';
-      const c: VocabBookCategory = isMastered ? 'MASTERED' : isUnlearned ? 'UNLEARNED' : 'DUE';
+
+      let c: VocabBookCategory = 'DUE';
+      if (isMastered) {
+        c = 'MASTERED';
+      } else if (isUnlearned) {
+        c = 'UNLEARNED';
+      }
+
       return c === category;
     });
 

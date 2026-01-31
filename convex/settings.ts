@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Save or update a site setting
@@ -65,7 +66,7 @@ export const saveLogo = mutation({
             .withIndex("by_key", q => q.eq("key", "logo"))
             .first();
 
-        const value = { storageId: args.storageId, url: await ctx.storage.getUrl(args.storageId) };
+        const value = { storageId: args.storageId, url: await ctx.storage.getUrl(args.storageId as Id<'_storage'>) };
 
         if (existing) {
             await ctx.db.patch(existing._id, {

@@ -18,6 +18,7 @@ export const list = query({
 
     // Sort by newest first, return metadata only (exclude transcriptData)
     return videos
+      .slice()
       .sort((a, b) => b.createdAt - a.createdAt)
       .map(v => ({
         id: v._id,

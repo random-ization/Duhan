@@ -16,6 +16,7 @@ export enum SubscriptionType {
 export type UserRole = 'STUDENT' | 'ADMIN';
 
 export type Language = 'en' | 'zh' | 'vi' | 'mn';
+export type AnnotationColor = 'yellow' | 'green' | 'blue' | 'pink';
 
 // Canvas data structure for drawing annotations
 export interface CanvasLineData {
@@ -40,7 +41,7 @@ export interface Annotation {
   sentenceIndex?: number; // Index of sentence for Listening module
   text: string; // The selected text content
   selectedText?: string; // Alias for text
-  color: 'yellow' | 'green' | 'blue' | 'pink' | null;
+  color: AnnotationColor | null;
   note: string;
   timestamp: number;
   createdAt?: number; // Alias for timestamp

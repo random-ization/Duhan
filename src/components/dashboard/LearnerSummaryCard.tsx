@@ -27,37 +27,15 @@ export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ classNam
   const loading = userStats === undefined;
   const stats = userStats
     ? {
-        streak: userStats.streak,
-        dailyMinutes: userStats.dailyMinutes,
-        dailyGoal: userStats.dailyGoal,
-        dueReviews: userStats.vocabStats.dueReviews,
-      }
+      streak: userStats.streak,
+      dailyMinutes: userStats.dailyMinutes,
+      dailyGoal: userStats.dailyGoal,
+      dueReviews: userStats.vocabStats.dueReviews,
+    }
     : null;
 
   // Legacy fetch removed
-  /*
-    useEffect(() => {
-        loadStats();
-    }, []);
 
-    const loadStats = async () => {
-        try {
-            const response = await api.getMyStats();
-            if (response.success) {
-                setStats({
-                    streak: response.data.streak,
-                    todayMinutes: response.data.todayMinutes,
-                    dailyGoal: response.data.dailyGoal,
-                    wordsToReview: response.data.wordsToReview
-                });
-            }
-        } catch (e) {
-            console.error('Failed to load summary stats', e);
-        } finally {
-            setLoading(false);
-        }
-    };
-    */
 
   if (loading) {
     return (

@@ -44,6 +44,213 @@ const CircleNumber = ({ num, isSelected }: { num: number; isSelected: boolean })
   );
 };
 
+const TextSelectionWrapper = ({ children, onMouseUp }: { children: React.ReactNode, onMouseUp?: (e: React.MouseEvent) => void }) => (
+  <div onMouseUp={onMouseUp} role="none">
+    {children}
+  </div>
+);
+
+
+const PassageView = ({ question, highlightText, onTextSelect, hidePassage = false, isInline = false }: { question: TopikQuestion; highlightText: (t: string) => string; onTextSelect?: (e: React.MouseEvent) => void; hidePassage?: boolean; isInline?: boolean }) => {
+  if (hidePassage || !question.passage) return null;
+  // Standard layout hides passage if image exists
+  if (!isInline && (question.imageUrl || question.image)) return null;
+
+  const className = isInline
+    ? `mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`
+    : `mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`;
+
+  return (
+    <div className={className}>
+      <TextSelectionWrapper onMouseUp={onTextSelect}>
+        <div dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }} />
+      </TextSelectionWrapper>
+    </div>
+  );
+};
+
+const ContextBoxView = ({ question, questionIndex, highlightText, onTextSelect, isInline = false }: { question: TopikQuestion; questionIndex: number; highlightText: (t: string) => string; onTextSelect?: (e: React.MouseEvent) => void; isInline?: boolean }) => {
+  if (!question.contextBox || question.imageUrl || question.image) return null;
+
+  const qNum = questionIndex + 1;
+  const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
+  const showBogiHeader = qNum >= 39 && qNum <= 41 && !isNewFormat;
+  const containerClass = isInline ? "mb-4 bg-white ml-8" : "mb-4 bg-white";
+
+  if (showBogiHeader) {
+    return (
+      <div className={containerClass}>
+        <div className="flex items-center justify-center gap-2 mb-0">
+          <div className="flex-1 h-px bg-black"></div>
+          <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
+            &lt;보 &nbsp; 기&gt;
+          </span>
+          <div className="flex-1 h-px bg-black"></div>
+        </div>
+        <div className="border border-black border-t-0 p-4">
+          <TextSelectionWrapper onMouseUp={onTextSelect}>
+            <div
+              className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+              dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+            />
+          </TextSelectionWrapper>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={containerClass}>
+      <div className="border border-black p-4">
+        <TextSelectionWrapper onMouseUp={onTextSelect}>
+          <div
+            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+            dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
+          />
+        </TextSelectionWrapper>
+      </div>
+    </div>
+  );
+};
+
+const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onTextSelect, highlightText, getOptionStatus, isInline = false }: { question: TopikQuestion; userAnswer?: number; showCorrect: boolean; onAnswerChange?: (i: number) => void; onTextSelect?: (e: React.MouseEvent) => void; highlightText: (t: string) => string; getOptionStatus: (i: number) => 'correct' | 'incorrect' | null; isInline?: boolean }) => {
+  const allVeryShort = question.options.every(opt => opt.length <= 2);
+  const hasLongOptions = question.options.some(opt => opt.length > 15);
+
+  const getGridCols = () => {
+    if (allVeryShort) return 'grid-cols-4';
+    if (hasLongOptions) return 'grid-cols-1';
+    return 'grid-cols-1 md:grid-cols-2';
+  };
+
+  const gridClass = `${isInline ? 'ml-8 ' : ''}grid gap-y-2 gap-x-4 ${getGridCols()}`;
+
+  // Image-based options
+  if (question.optionImages?.some(Boolean)) {
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {question.optionImages.map((imgUrl, optionIndex) => {
+          const status = getOptionStatus(optionIndex);
+          const isSelected = userAnswer === optionIndex;
+          const getContainerClass = () => {
+            let cls = `relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer `;
+            if (status === 'correct') cls += 'border-green-500 ring-4 ring-green-200';
+            else if (status === 'incorrect') cls += 'border-red-500 ring-4 ring-red-200';
+            else if (isSelected) cls += 'border-blue-500 ring-4 ring-blue-200';
+            else cls += 'border-slate-200 hover:border-slate-400';
+            if (showCorrect) cls += ' cursor-default';
+            return cls;
+          };
+
+          const getNumberBadgeClass = () => {
+            const base = 'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ';
+            if (status === 'correct') return base + 'bg-green-500 text-white';
+            if (status === 'incorrect') return base + 'bg-red-500 text-white';
+            if (isSelected) return base + 'bg-blue-500 text-white';
+            return base + 'bg-white/80 text-slate-700 border border-slate-300';
+          };
+
+          const containerClass = getContainerClass();
+          const numberBadgeClass = getNumberBadgeClass();
+
+          const imageContent = (
+            <>
+              {imgUrl ? (
+                <img src={imgUrl} alt={`Option ${optionIndex + 1}`} className="w-full h-full object-contain bg-white" />
+              ) : (
+                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <span className="text-4xl font-bold">{optionIndex + 1}</span>
+                </div>
+              )}
+              <div className={numberBadgeClass}>
+                {CIRCLE_NUMBERS[optionIndex]}
+              </div>
+              {status === 'correct' && <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />}
+              {status === 'incorrect' && <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />}
+            </>
+          );
+
+          return showCorrect ? (
+            <div key={`${question.id}-opt-${optionIndex}`} className={containerClass}>{imageContent}</div>
+          ) : (
+            <button key={`${question.id}-opt-${optionIndex}`} onClick={() => onAnswerChange?.(optionIndex)} className={containerClass}>{imageContent}</button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Text-based options
+  return (
+    <div className={gridClass}>
+      {question.options.map((option, optionIndex) => {
+        const status = getOptionStatus(optionIndex);
+        const isSelected = userAnswer === optionIndex;
+        let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
+
+        if (status === 'correct') optionClass += ' text-green-700 font-bold bg-green-50/50';
+        else if (status === 'incorrect') optionClass += ' text-red-700 font-bold bg-red-50/50';
+        else optionClass += ' hover:bg-blue-50';
+
+        if (showCorrect) optionClass += ' cursor-text';
+
+        const content = (
+          <React.Fragment>
+            <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
+            <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+              <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
+            </span>
+            {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
+            {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
+          </React.Fragment>
+        );
+
+        const commonProps = {
+          key: `${isInline ? 'inline-' : ''}${question.id}-opt-${optionIndex}`,
+          onMouseUp: onTextSelect,
+          className: optionClass
+        };
+
+        return showCorrect ? (
+          <div {...commonProps}>{content}</div>
+        ) : (
+          <button {...commonProps} onClick={() => onAnswerChange?.(optionIndex)}>{content}</button>
+        );
+      })}
+    </div>
+  );
+};
+
+const AIAnalysisSection = ({ showCorrect, aiAnalysis, aiLoading, aiError, isSaving, isSaved, handleAIAnalysis, handleSaveToNotebook, isInline = false }: { showCorrect: boolean; aiAnalysis: AIAnalysis | null; aiLoading: boolean; aiError: string | null; isSaving: boolean; isSaved: boolean; handleAIAnalysis: () => void; handleSaveToNotebook: () => void; isInline?: boolean }) => {
+  if (!showCorrect) return null;
+  return (
+    <div className={isInline ? "mt-4 ml-8" : "mt-4"}>
+      {!aiAnalysis && (
+        <button
+          onClick={handleAIAnalysis}
+          disabled={aiLoading}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          <span className="font-medium">{aiLoading ? '分析中...' : 'AI 老师解析'}</span>
+        </button>
+      )}
+      {aiError && <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{aiError}</div>}
+      {aiAnalysis && <SanitizedAIAnalysisDisplay analysis={aiAnalysis} isSaving={isSaving} isSaved={isSaved} onSave={handleSaveToNotebook} />}
+    </div>
+  );
+};
+
+const ExplanationView = ({ showCorrect, question, labels, isInline = false }: { showCorrect: boolean; question: TopikQuestion; labels: any; isInline?: boolean }) => {
+  if (!showCorrect || !question.explanation) return null;
+  return (
+    <div className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-gray-100 border-l-4 border-black text-sm font-sans`}>
+      <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
+      <div className="leading-relaxed">{question.explanation}</div>
+    </div>
+  );
+};
+
 export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
   ({
     question,
@@ -66,13 +273,6 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       [contextPrefix, questionIndex]
     );
 
-    // AI Analysis state
-    interface AIAnalysis {
-      translation: string;
-      keyPoint: string;
-      analysis: string;
-      wrongOptions: Record<string, string>;
-    }
     const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
@@ -186,7 +386,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     // Helper for highlight styles
     // 高亮默认用色块背景，有笔记的用下划线区分
     const getHighlightClass = useCallback(
-      (color: string = 'yellow', isActive: boolean, hasNote: boolean = false) => {
+      (isActive: boolean, hasNote: boolean = false, color: string = 'yellow') => {
         const base =
           'box-decoration-clone cursor-pointer transition-all duration-200 px-0.5 rounded-sm ';
 
@@ -262,12 +462,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           const isActive =
             activeAnnotationId === annotation.id ||
             (annotation.id === 'temp' && !activeAnnotationId);
-          const hasNote = !!(annotation.note && annotation.note.trim());
-          const className = getHighlightClass(annotation.color || 'yellow', isActive, hasNote);
-          const regex = new RegExp(
-            `(${annotatedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
-            'gi'
-          );
+          const hasNote = Boolean(annotation.note?.trim());
+          const className = getHighlightClass(isActive, hasNote, annotation.color || 'yellow');
+          const annotatedRegExpSource = annotatedText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+          const regex = new RegExp(`(${annotatedRegExpSource})`, 'gi');
           result = result.replace(
             regex,
             `<mark data-annotation-id="${annotation.id}" class="${className}">$1</mark>`
@@ -289,465 +487,50 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       [showCorrect, correctAnswer, userAnswer]
     );
 
-    // Layout logic for options:
-    // - Very short options (1-2 chars, like ㉠ ㉡ ㉢ ㉣) => 4 columns horizontal
-    // - Medium options (≤15 chars, like 排序题 ㉠-㉡-㉢-㉣) => 2 columns
-    // - Long options (>15 chars, sentence-like) => 1 column
-    const allVeryShort = question.options.every(opt => opt.length <= 2);
-    const hasLongOptions = question.options.some(opt => opt.length > 15);
+    // Options grid logic is handled inside OptionsView based on question.options length
 
     return (
       <div className="break-inside-avoid">
-        {/* Standard layout - number on left, content on right */}
-        {!showInlineNumber && (
-          <div className="flex items-start">
-            {/* Question Number - always visible on left */}
-            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
-              {questionIndex + 1}.
-            </span>
-
-            <div className="flex-1">
-              {/* Image */}
-              {(question.imageUrl || question.image) && (
-                <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
-                  <img
-                    src={question.imageUrl || question.image}
-                    alt={`Question ${questionIndex + 1}`}
-                    className="max-h-[300px] object-contain"
-                  />
-                </div>
-              )}
-
-              {/* Passage */}
-              {!hidePassage && question.passage && !(question.imageUrl || question.image) && (
-                <div
-                  className={`mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`}
-                  onMouseUp={onTextSelect}
-                  dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
-                />
-              )}
-
-              {/* Question Text */}
-              {question.question && (
-                <div
-                  className={`text-lg leading-loose mb-3 cursor-text text-black ${FONT_SERIF}`}
-                  onMouseUp={onTextSelect}
-                  dangerouslySetInnerHTML={{
-                    __html: highlightText(
-                      question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
-                    ),
-                  }}
-                />
-              )}
-
-              {/* Context Box - with 보기 header for Q39-41 (unless new format instruction) */}
-              {question.contextBox &&
-                !(question.imageUrl || question.image) &&
-                (() => {
-                  const qNum = questionIndex + 1;
-                  // Show 보기 header for Q39-41, but NOT if instruction contains new format text
-                  const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
-                  const showBogiHeader = qNum >= 39 && qNum <= 41 && !isNewFormat;
-
-                  return (
-                    <div className="mb-4 bg-white">
-                      {showBogiHeader ? (
-                        <>
-                          {/* 보기 Header */}
-                          <div className="flex items-center justify-center gap-2 mb-0">
-                            <div className="flex-1 h-px bg-black"></div>
-                            <span
-                              className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}
-                            >
-                              &lt;보 &nbsp; 기&gt;
-                            </span>
-                            <div className="flex-1 h-px bg-black"></div>
-                          </div>
-                          {/* Content Box without top border */}
-                          <div className="border border-black border-t-0 p-4">
-                            <div
-                              className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
-                              onMouseUp={onTextSelect}
-                              dangerouslySetInnerHTML={{
-                                __html: highlightText(question.contextBox),
-                              }}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        /* Regular box without 보기 header for other questions */
-                        <div className="border border-black p-4">
-                          <div
-                            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
-                            onMouseUp={onTextSelect}
-                            dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-              {/* Options - Image or Text based */}
-              {question.optionImages && question.optionImages.some(img => img) ? (
-                // Image-based options (Listening Q1-3)
-                <div className="grid grid-cols-2 gap-4">
-                  {question.optionImages.map((imgUrl, optionIndex) => {
-                    const status = getOptionStatus(optionIndex);
-                    const isSelected = userAnswer === optionIndex;
-
-                    let containerClass = `relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer `;
-                    if (status === 'correct') {
-                      containerClass += 'border-green-500 ring-4 ring-green-200';
-                    } else if (status === 'incorrect') {
-                      containerClass += 'border-red-500 ring-4 ring-red-200';
-                    } else if (isSelected) {
-                      containerClass += 'border-blue-500 ring-4 ring-blue-200';
-                    } else {
-                      containerClass += 'border-slate-200 hover:border-slate-400';
-                    }
-
-                    if (showCorrect) containerClass += ' cursor-default';
-
-                    const imageContent = (
-                      <>
-                        {imgUrl ? (
-                          <img
-                            src={imgUrl}
-                            alt={`Option ${optionIndex + 1}`}
-                            className="w-full h-full object-contain bg-white"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
-                            <span className="text-4xl font-bold">{optionIndex + 1}</span>
-                          </div>
-                        )}
-                        <div
-                          className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            status === 'correct'
-                              ? 'bg-green-500 text-white'
-                              : status === 'incorrect'
-                                ? 'bg-red-500 text-white'
-                                : isSelected
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-white/80 text-slate-700 border border-slate-300'
-                          }`}
-                        >
-                          {CIRCLE_NUMBERS[optionIndex]}
-                        </div>
-                        {status === 'correct' && (
-                          <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />
-                        )}
-                        {status === 'incorrect' && (
-                          <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />
-                        )}
-                      </>
-                    );
-
-                    if (showCorrect) {
-                      return (
-                        <div key={optionIndex} className={containerClass}>
-                          {imageContent}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <button
-                        key={optionIndex}
-                        onClick={() => onAnswerChange?.(optionIndex)}
-                        className={containerClass}
-                      >
-                        {imageContent}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                // Text-based options
-                <div
-                  className={`
-                  grid gap-y-2 gap-x-4
-                  ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}
-                `}
-                >
-                  {question.options.map((option, optionIndex) => {
-                    const status = getOptionStatus(optionIndex);
-                    const isSelected = userAnswer === optionIndex;
-                    let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
-
-                    if (status === 'correct') {
-                      optionClass += ' text-green-700 font-bold bg-green-50/50';
-                    } else if (status === 'incorrect') {
-                      optionClass += ' text-red-700 font-bold bg-red-50/50';
-                    } else {
-                      optionClass += ' hover:bg-blue-50';
-                    }
-
-                    if (showCorrect) optionClass += ' cursor-text';
-
-                    const content = (
-                      <React.Fragment>
-                        <CircleNumber
-                          num={optionIndex + 1}
-                          isSelected={isSelected || status === 'correct'}
-                        />
-                        <span
-                          className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}
-                        >
-                          <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
-                        </span>
-                        {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
-                        {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
-                      </React.Fragment>
-                    );
-
-                    if (showCorrect) {
-                      return (
-                        <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
-                          {content}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <button
-                        key={optionIndex}
-                        onClick={() => onAnswerChange?.(optionIndex)}
-                        onMouseUp={onTextSelect}
-                        className={optionClass}
-                      >
-                        {content}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Explanation */}
-              {showCorrect && question.explanation && (
-                <div className="mt-4 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
-                  <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
-                  <div className="leading-relaxed">{question.explanation}</div>
-                </div>
-              )}
-
-              {/* AI Analysis Section */}
-              {showCorrect && (
-                <div className="mt-4">
-                  {/* AI Analysis Button */}
-                  {!aiAnalysis && (
-                    <button
-                      onClick={handleAIAnalysis}
-                      disabled={aiLoading}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {aiLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4" />
-                      )}
-                      <span className="font-medium">{aiLoading ? '分析中...' : 'AI 老师解析'}</span>
-                    </button>
-                  )}
-
-                  {/* Error Message */}
-                  {aiError && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                      {aiError}
-                    </div>
-                  )}
-
-                  {/* AI Analysis Card - Using Sanitized Logic */}
-                  {aiAnalysis && (
-                    <SanitizedAIAnalysisDisplay
-                      analysis={aiAnalysis}
-                      isSaving={isSaving}
-                      isSaved={isSaved}
-                      onSave={handleSaveToNotebook}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Inline number layout - for grouped questions (Q19-20, Q46, etc.) */}
-        {showInlineNumber && (
+        {showInlineNumber ? (
           <div>
-            {/* Passage - shown first, only if not hidden (for first question in group) */}
-            {!hidePassage && question.passage && (
-              <div
-                className={`mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`}
-                onMouseUp={onTextSelect}
-                dangerouslySetInnerHTML={{ __html: highlightText(question.passage) }}
-              />
-            )}
-
-            {/* Question Text with inline number */}
+            <PassageView question={question} highlightText={highlightText} onTextSelect={onTextSelect} isInline={true} hidePassage={hidePassage} />
             {question.question && (
               <div className="flex items-start mb-3">
-                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>
-                  {questionIndex + 1}.
-                </span>
-                <div
-                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
-                  onMouseUp={onTextSelect}
-                  dangerouslySetInnerHTML={{
-                    __html: highlightText(
-                      question.question.replace(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
-                    ),
-                  }}
-                />
+                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>{questionIndex + 1}.</span>
+                <div className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}>
+                  <TextSelectionWrapper onMouseUp={onTextSelect}>
+                    <div dangerouslySetInnerHTML={{ __html: highlightText(question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')) }} />
+                  </TextSelectionWrapper>
+                </div>
               </div>
             )}
-
-            {/* Context Box - with 보기 header for Q39-41 (unless new format instruction) */}
-            {question.contextBox &&
-              !(question.imageUrl || question.image) &&
-              (() => {
-                const qNum = questionIndex + 1;
-                const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
-                const showBogiHeader = qNum >= 39 && qNum <= 41 && !isNewFormat;
-
-                return (
-                  <div className="mb-4 bg-white ml-8">
-                    {showBogiHeader ? (
-                      <>
-                        {/* 보기 Header */}
-                        <div className="flex items-center justify-center gap-2 mb-0">
-                          <div className="flex-1 h-px bg-black"></div>
-                          <span
-                            className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}
-                          >
-                            &lt;보 &nbsp; 기&gt;
-                          </span>
-                          <div className="flex-1 h-px bg-black"></div>
-                        </div>
-                        {/* Content Box without top border */}
-                        <div className="border border-black border-t-0 p-4">
-                          <div
-                            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
-                            onMouseUp={onTextSelect}
-                            dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="border border-black p-4">
-                        <div
-                          className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
-                          onMouseUp={onTextSelect}
-                          dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-            {/* Options - indented */}
-            <div
-              className={`ml-8 grid gap-y-2 gap-x-4 ${allVeryShort ? 'grid-cols-4' : hasLongOptions ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}
-            >
-              {question.options.map((option, optionIndex) => {
-                const status = getOptionStatus(optionIndex);
-                const isSelected = userAnswer === optionIndex;
-                let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
-
-                if (status === 'correct') {
-                  optionClass += ' text-green-700 font-bold bg-green-50/50';
-                } else if (status === 'incorrect') {
-                  optionClass += ' text-red-700 font-bold bg-red-50/50';
-                } else {
-                  optionClass += ' hover:bg-blue-50';
-                }
-
-                if (showCorrect) optionClass += ' cursor-text';
-
-                const content = (
-                  <React.Fragment>
-                    <CircleNumber
-                      num={optionIndex + 1}
-                      isSelected={isSelected || status === 'correct'}
-                    />
-                    <span
-                      className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}
-                    >
-                      <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
-                    </span>
-                    {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
-                    {status === 'incorrect' && <X className="w-5 h-5 text-red-600 ml-2" />}
-                  </React.Fragment>
-                );
-
-                if (showCorrect) {
-                  return (
-                    <div key={optionIndex} onMouseUp={onTextSelect} className={optionClass}>
-                      {content}
-                    </div>
-                  );
-                }
-
-                return (
-                  <button
-                    key={optionIndex}
-                    onClick={() => onAnswerChange?.(optionIndex)}
-                    onMouseUp={onTextSelect}
-                    className={optionClass}
-                  >
-                    {content}
-                  </button>
-                );
-              })}
+            <ContextBoxView question={question} questionIndex={questionIndex} highlightText={highlightText} onTextSelect={onTextSelect} isInline={true} />
+            <OptionsView question={question} userAnswer={userAnswer} showCorrect={showCorrect} onAnswerChange={onAnswerChange} onTextSelect={onTextSelect} highlightText={highlightText} getOptionStatus={getOptionStatus} isInline={true} />
+            <ExplanationView showCorrect={showCorrect} question={question} labels={labels} isInline={true} />
+            <AIAnalysisSection showCorrect={showCorrect} aiAnalysis={aiAnalysis} aiLoading={aiLoading} aiError={aiError} isSaving={isSaving} isSaved={isSaved} handleAIAnalysis={handleAIAnalysis} handleSaveToNotebook={handleSaveToNotebook} isInline={true} />
+          </div>
+        ) : (
+          <div className="flex items-start">
+            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>{questionIndex + 1}.</span>
+            <div className="flex-1">
+              {(question.imageUrl || question.image) && (
+                <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
+                  <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
+                </div>
+              )}
+              <PassageView question={question} highlightText={highlightText} onTextSelect={onTextSelect} hidePassage={hidePassage} />
+              {question.question && (
+                <div className={`text-lg leading-loose mb-3 cursor-text text-black ${FONT_SERIF}`}>
+                  <TextSelectionWrapper onMouseUp={onTextSelect}>
+                    <div dangerouslySetInnerHTML={{ __html: highlightText(question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')) }} />
+                  </TextSelectionWrapper>
+                </div>
+              )}
+              <ContextBoxView question={question} questionIndex={questionIndex} highlightText={highlightText} onTextSelect={onTextSelect} />
+              <OptionsView question={question} userAnswer={userAnswer} showCorrect={showCorrect} onAnswerChange={onAnswerChange} onTextSelect={onTextSelect} highlightText={highlightText} getOptionStatus={getOptionStatus} />
+              <ExplanationView showCorrect={showCorrect} question={question} labels={labels} />
+              <AIAnalysisSection showCorrect={showCorrect} aiAnalysis={aiAnalysis} aiLoading={aiLoading} aiError={aiError} isSaving={isSaving} isSaved={isSaved} handleAIAnalysis={handleAIAnalysis} handleSaveToNotebook={handleSaveToNotebook} />
             </div>
-
-            {/* Explanation */}
-            {showCorrect && question.explanation && (
-              <div className="mt-4 ml-8 p-4 bg-gray-100 border-l-4 border-black text-sm font-sans">
-                <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
-                <div className="leading-relaxed">{question.explanation}</div>
-              </div>
-            )}
-
-            {/* AI Analysis Section - Inline Layout */}
-            {showCorrect && (
-              <div className="mt-4 ml-8">
-                {/* AI Analysis Button */}
-                {!aiAnalysis && (
-                  <button
-                    onClick={handleAIAnalysis}
-                    disabled={aiLoading}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {aiLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    <span className="font-medium">{aiLoading ? '分析中...' : 'AI 老师解析'}</span>
-                  </button>
-                )}
-
-                {/* Error Message */}
-                {aiError && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                    {aiError}
-                  </div>
-                )}
-
-                {/* AI Analysis Card - Using Sanitized Logic */}
-                {aiAnalysis && (
-                  <SanitizedAIAnalysisDisplay
-                    analysis={aiAnalysis}
-                    isSaving={isSaving}
-                    isSaved={isSaved}
-                    onSave={handleSaveToNotebook}
-                  />
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -821,7 +604,7 @@ const SanitizedAIAnalysisDisplay = ({
         return '[Complex Data]';
       }
     }
-    return String(val);
+    return typeof val === 'function' || typeof val === 'symbol' ? val.toString() : JSON.stringify(val);
   };
 
   // Helper to safely extract wrong options
@@ -842,6 +625,34 @@ const SanitizedAIAnalysisDisplay = ({
   const analysisText = safeString(analysis.analysis);
   const wrongOptions = safeWrongOptions(analysis.wrongOptions);
 
+  const getSaveBtnClass = () => {
+    const base = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ';
+    if (isSaved) return base + 'bg-emerald-100 text-emerald-700 cursor-default';
+    if (isSaving) return base + 'bg-indigo-100 text-indigo-500 cursor-wait';
+    return base + 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200';
+  };
+
+  const getSaveBtnContent = () => {
+    if (isSaved) return (
+      <>
+        <BookmarkCheck className="w-4 h-4" />
+        已收藏
+      </>
+    );
+    if (isSaving) return (
+      <>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        保存中...
+      </>
+    );
+    return (
+      <>
+        <Bookmark className="w-4 h-4" />
+        收藏
+      </>
+    );
+  };
+
   return (
     <div className="mt-3 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl shadow-sm relative">
       <div className="flex items-center justify-between mb-4">
@@ -854,30 +665,9 @@ const SanitizedAIAnalysisDisplay = ({
         <button
           onClick={onSave}
           disabled={isSaving || isSaved}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            isSaved
-              ? 'bg-emerald-100 text-emerald-700 cursor-default'
-              : isSaving
-                ? 'bg-indigo-100 text-indigo-500 cursor-wait'
-                : 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200'
-          }`}
+          className={getSaveBtnClass()}
         >
-          {isSaved ? (
-            <>
-              <BookmarkCheck className="w-4 h-4" />
-              已收藏
-            </>
-          ) : isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Bookmark className="w-4 h-4" />
-              收藏
-            </>
-          )}
+          {getSaveBtnContent()}
         </button>
       </div>
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { Headphones, Save, Loader2, Plus, Music, Upload } from 'lucide-react';
+import { Headphones, Loader2, Plus } from 'lucide-react';
 import { NoArgs, qRef, mRef } from '../../utils/convexRefs';
+import { ListeningUnitListItem, UnitListItem } from './ListeningUnitListItem';
+import { ListeningUnitEditor, UnitListeningData } from './ListeningUnitEditor';
 
 interface Institute {
   _id: string;
@@ -11,21 +13,6 @@ interface Institute {
   name: string;
   displayLevel?: string;
   volume?: string;
-}
-
-interface UnitListItem {
-  id: string;
-  unitIndex: number;
-  title: string;
-  hasAudio: boolean;
-}
-
-interface UnitListeningData {
-  id?: string;
-  unitIndex: number;
-  title: string;
-  audioUrl: string;
-  transcriptData: unknown;
 }
 
 export const ListeningContentManager: React.FC = () => {
@@ -206,8 +193,11 @@ export const ListeningContentManager: React.FC = () => {
     <div className="flex h-[calc(100vh-100px)] gap-6">
       <div className="w-1/3 bg-white border-2 border-zinc-900 rounded-xl p-4 flex flex-col shadow-[4px_4px_0px_0px_#18181B]">
         <div className="mb-4">
-          <label className="block text-sm font-bold mb-2">选择教材</label>
+          <label htmlFor="course-select" className="block text-sm font-bold mb-2">
+            选择教材
+          </label>
           <select
+            id="course-select"
             className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
             value={selectedCourseId}
             onChange={e => {
@@ -215,6 +205,7 @@ export const ListeningContentManager: React.FC = () => {
               setViewingUnitIndex(null);
               setEditingUnit(null);
             }}
+            aria-label="选择教材"
           >
             {institutes.map(i => (
               <option key={i._id} value={i.id || i.postgresId || i._id}>
@@ -224,32 +215,26 @@ export const ListeningContentManager: React.FC = () => {
           </select>
         </div>
         <div className="flex-1 overflow-y-auto space-y-2">
-          {!courseUnits ? (
-            <div className="text-center py-4">
-              <Loader2 className="animate-spin mx-auto" />
-            </div>
-          ) : units.length === 0 ? (
-            <div className="text-center text-zinc-400 py-10">暂无单元</div>
-          ) : (
-            units.map(unit => (
-              <div
-                key={unit.unitIndex}
-                onClick={() => handleSelectUnit(unit)}
-                className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                  editingUnit?.unitIndex === unit.unitIndex
-                    ? 'border-zinc-900 bg-lime-100 shadow-[2px_2px_0px_0px_#18181B]'
-                    : 'border-transparent hover:bg-zinc-50'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Headphones className="w-4 h-4 text-lime-600" />
-                  <span className="font-black text-sm">第 {unit.unitIndex} 课</span>
-                  {unit.hasAudio && <span className="text-xs text-green-500">🎵</span>}
+          {(() => {
+            if (!courseUnits) {
+              return (
+                <div className="text-center py-4">
+                  <Loader2 className="animate-spin mx-auto" />
                 </div>
-                <div className="text-xs text-zinc-700 truncate">{unit.title || '(未命名)'}</div>
-              </div>
-            ))
-          )}
+              );
+            }
+            if (units.length === 0) {
+              return <div className="text-center text-zinc-400 py-10">暂无单元</div>;
+            }
+            return units.map(unit => (
+              <ListeningUnitListItem
+                key={unit.unitIndex}
+                unit={unit}
+                isActive={editingUnit?.unitIndex === unit.unitIndex}
+                onSelect={handleSelectUnit}
+              />
+            ));
+          })()}
         </div>
         <button
           onClick={createNewUnit}
@@ -261,81 +246,18 @@ export const ListeningContentManager: React.FC = () => {
 
       <div className="flex-1 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B] overflow-y-auto">
         {editingUnit ? (
-          <div className="space-y-6 max-w-3xl mx-auto">
-            <div className="flex items-center gap-3 mb-6">
-              <Headphones className="w-8 h-8 text-lime-600" />
-              <h2 className="text-xl font-black">第 {editingUnit.unitIndex} 课 · 听力内容</h2>
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-2">标题 *</label>
-              <input
-                type="text"
-                className="w-full p-3 border-2 border-zinc-900 rounded-lg font-bold"
-                value={editingUnit.title}
-                onChange={e => setEditingUnit({ ...editingUnit, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-2 flex items-center gap-2">
-                <Music size={16} /> 音频文件
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleAudioUpload}
-                className="hidden"
-              />
-              {editingUnit.audioUrl ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-lime-50 border-2 border-lime-200 rounded-lg">
-                    <audio controls src={editingUnit.audioUrl} className="w-full" />
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="px-4 py-2 border-2 border-zinc-300 rounded-lg font-bold text-sm hover:bg-zinc-100"
-                  >
-                    {uploading ? <Loader2 className="animate-spin" /> : <Upload size={16} />}{' '}
-                    替换音频
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="w-full p-6 border-2 border-dashed border-zinc-400 rounded-lg hover:bg-zinc-50"
-                >
-                  {uploading ? '上传中...' : '点击上传音频'}
-                </button>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-2">时间戳文稿 (JSON)</label>
-              <textarea
-                className="w-full h-64 p-4 border-2 border-zinc-900 rounded-lg font-mono text-xs"
-                value={transcriptText}
-                onChange={e => setTranscriptText(e.target.value)}
-                placeholder="[{ start, end, text }...]"
-              />
-            </div>
-            {/* Preview omitted for brevity but can be added back */}
-            <div className="pt-4 flex justify-end gap-3">
-              <button
-                onClick={() => setEditingUnit(null)}
-                className="px-6 py-2 border-2 border-zinc-900 rounded-lg font-bold hover:bg-zinc-100"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !editingUnit.title}
-                className="px-6 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B]"
-              >
-                {saving ? <Loader2 className="animate-spin" /> : <Save size={18} />} 保存
-              </button>
-            </div>
-          </div>
+          <ListeningUnitEditor
+            editingUnit={editingUnit}
+            setEditingUnit={setEditingUnit}
+            transcriptText={transcriptText}
+            setTranscriptText={setTranscriptText}
+            fileInputRef={fileInputRef}
+            uploading={uploading}
+            saving={saving}
+            onAudioUpload={handleAudioUpload}
+            onCancel={() => setEditingUnit(null)}
+            onSave={handleSave}
+          />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-zinc-400">
             <Headphones size={48} className="mb-4 opacity-20" />

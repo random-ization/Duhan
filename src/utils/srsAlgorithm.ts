@@ -23,9 +23,8 @@ const params = generatorParameters({
 
 const fsrs = new FSRS(params);
 
-// Re-export for convenience
-export { Rating, State, createEmptyCard };
-export type { Card, Grade };
+export { Rating, State, createEmptyCard } from 'ts-fsrs';
+export type { Card, Grade } from 'ts-fsrs';
 
 /**
  * Legacy interface for backward compatibility
@@ -52,9 +51,9 @@ export const calculateNextReview = (
   now: number = Date.now()
 ): SRSResult => {
   const isCorrect = quality >= 4;
-  let newStatus: WordStatus = 'LEARNING';
-  let newInterval = 1;
-  let newStreak = 0;
+  let newStatus: WordStatus;
+  let newInterval: number;
+  let newStreak: number;
 
   if (currentProgress) {
     if (isCorrect) {
@@ -66,16 +65,14 @@ export const calculateNextReview = (
       newInterval = 1;
       newStatus = 'LEARNING';
     }
+  } else if (isCorrect) {
+    newStreak = 1;
+    newInterval = 1;
+    newStatus = 'LEARNING';
   } else {
-    if (isCorrect) {
-      newStreak = 1;
-      newInterval = 1;
-      newStatus = 'LEARNING';
-    } else {
-      newStreak = 0;
-      newInterval = 0.5;
-      newStatus = 'NEW';
-    }
+    newStreak = 0;
+    newInterval = 0.5;
+    newStatus = 'NEW';
   }
 
   return {
@@ -89,15 +86,6 @@ export const calculateNextReview = (
 // ============================================================
 // FSRS-specific functions
 // ============================================================
-
-/**
- * Map Pass/Fail (2-button mode) to FSRS Rating
- * - Pass → Good (standard interval growth)
- * - Fail → Again (reset to learning)
- */
-export const mapPassFailToRating = (isCorrect: boolean): Rating => {
-  return isCorrect ? Rating.Good : Rating.Again;
-};
 
 /**
  * Map legacy quality score (0-5) to FSRS Rating
@@ -158,18 +146,22 @@ export const isMastered = (card: Card): boolean => {
 /**
  * Serialize Card for database storage
  */
-export const serializeCard = (card: Card) => ({
-  state: card.state,
-  due: card.due.getTime(),
-  stability: card.stability,
-  difficulty: card.difficulty,
-  elapsed_days: card.elapsed_days,
-  scheduled_days: card.scheduled_days,
-  learning_steps: card.learning_steps,
-  reps: card.reps,
-  lapses: card.lapses,
-  last_review: card.last_review?.getTime() ?? null,
-});
+export const serializeCard = (card: Card) => {
+  // Use type assertion to avoid deprecation warnings while maintaining compatibility
+  const cardAny = card as any;
+  return {
+    state: card.state,
+    due: card.due.getTime(),
+    stability: card.stability,
+    difficulty: card.difficulty,
+    elapsed_days: cardAny.elapsed_days as number,
+    scheduled_days: card.scheduled_days,
+    learning_steps: card.learning_steps,
+    reps: card.reps,
+    lapses: card.lapses,
+    last_review: card.last_review?.getTime() ?? null,
+  };
+};
 
 /**
  * Deserialize Card from database

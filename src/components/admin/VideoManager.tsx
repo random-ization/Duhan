@@ -385,11 +385,11 @@ export default function VideoManager() {
                 </div>
                 <div
                   className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                    video.level === 'Beginner'
-                      ? 'bg-green-100 text-green-700'
-                      : video.level === 'Intermediate'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
+                    (() => {
+                      if (video.level === 'Beginner') return 'bg-green-100 text-green-700';
+                      if (video.level === 'Intermediate') return 'bg-yellow-100 text-yellow-700';
+                      return 'bg-red-100 text-red-700';
+                    })()
                   }`}
                 >
                   {video.level}
@@ -455,8 +455,9 @@ export default function VideoManager() {
 
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">视频标题 *</label>
+                <label htmlFor="video-title" className="block text-sm font-bold text-zinc-700 mb-2">视频标题 *</label>
                 <input
+                  id="video-title"
                   type="text"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
@@ -466,8 +467,9 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">视频简介</label>
+                <label htmlFor="video-desc" className="block text-sm font-bold text-zinc-700 mb-2">视频简介</label>
                 <textarea
+                  id="video-desc"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="输入视频简介..."
@@ -477,8 +479,9 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">难度等级 *</label>
+                <label htmlFor="video-level" className="block text-sm font-bold text-zinc-700 mb-2">难度等级 *</label>
                 <select
+                  id="video-level"
                   value={level}
                   onChange={e => setLevel(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition"
@@ -492,10 +495,11 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">
+                <label htmlFor="video-file" className="block text-sm font-bold text-zinc-700 mb-2">
                   视频文件 * (MP4)
                 </label>
                 <input
+                  id="video-file"
                   ref={videoInputRef}
                   type="file"
                   accept="video/mp4,video/*"
@@ -535,8 +539,9 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">封面图片</label>
+                <label htmlFor="video-thumbnail" className="block text-sm font-bold text-zinc-700 mb-2">封面图片</label>
                 <input
+                  id="video-thumbnail"
                   ref={thumbnailInputRef}
                   type="file"
                   accept="image/*"

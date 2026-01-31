@@ -154,6 +154,7 @@ export const getExamQuestions = query({
 
     // Sort by number and format for frontend
     return questions
+      .slice()
       .sort((a, b) => a.number - b.number)
       .map(q => ({
         id: q.number,
@@ -202,7 +203,7 @@ export const startExam = mutation({
       .withIndex('by_user_exam', q => q.eq('userId', userId).eq('examId', exam._id))
       .first();
 
-    if (existingSession && existingSession.status === 'IN_PROGRESS') {
+    if (existingSession?.status === 'IN_PROGRESS') {
       // Return existing active session
       return {
         sessionId: existingSession._id,
@@ -268,18 +269,16 @@ export const getSession = query({
       .query('users')
       .withIndex('by_token', q => q.eq('token', identity.subject))
       .first();
-    if (!user) {
-      user = await ctx.db
-        .query('users')
-        .withIndex('by_postgresId', q => q.eq('postgresId', identity.subject))
-        .first();
-    }
+    user ??= await ctx.db
+      .query('users')
+      .withIndex('by_postgresId', q => q.eq('postgresId', identity.subject))
+      .first();
     if (!user) return null;
 
     // Find session
     const session = await ctx.db
       .query('exam_sessions')
-      .withIndex('by_user_exam', q => q.eq('userId', user!._id).eq('examId', exam._id))
+      .withIndex('by_user_exam', q => q.eq('userId', user._id).eq('examId', exam._id))
       .first();
 
     if (!session) return null;

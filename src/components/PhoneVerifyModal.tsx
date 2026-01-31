@@ -14,10 +14,10 @@ import {
   tryParseSupportedPhone,
 } from '../lib/phone/phone';
 
-type PhoneVerifyModalContentProps = {
+type PhoneVerifyModalContentProps = Readonly<{
   region: SupportedPhoneRegion;
   onClose: () => void;
-};
+}>;
 
 function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentProps) {
   const { t } = useTranslation();
@@ -86,7 +86,12 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 border-none w-full h-full cursor-default"
+        onClick={onClose}
+        aria-label="Close modal backdrop"
+      />
       <div className="relative w-full max-w-xl bg-white border-4 border-black rounded-[32px] shadow-pop overflow-hidden">
         <div className="absolute -top-12 -right-12 w-28 h-28 bg-[#FFDE59] border-4 border-black rounded-full" />
 
@@ -116,9 +121,8 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
 
           <div className="mt-8">
             <div
-              className={`w-full rounded-2xl border-2 bg-white flex items-center gap-4 px-6 py-5 ${
-                parsed.valid ? 'border-[#10B981]' : 'border-slate-200'
-              }`}
+              className={`w-full rounded-2xl border-2 bg-white flex items-center gap-4 px-6 py-5 ${parsed.valid ? 'border-[#10B981]' : 'border-slate-200'
+                }`}
             >
               <input
                 value={nationalNumber}
@@ -128,11 +132,10 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
                 placeholder={t('phoneVerifyModal.placeholder')}
               />
               <div
-                className={`w-11 h-11 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                  parsed.valid
+                className={`w-11 h-11 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${parsed.valid
                     ? 'border-[#10B981] text-[#10B981]'
                     : 'border-slate-200 text-slate-300'
-                }`}
+                  }`}
               >
                 <Check className="w-6 h-6" />
               </div>
@@ -156,11 +159,10 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
             type="button"
             onClick={onSubmit}
             disabled={!canSubmit}
-            className={`mt-10 w-full h-20 rounded-3xl bg-[#FFDE59] border-4 border-black shadow-pop font-heading font-extrabold text-2xl transition-all ${
-              canSubmit
+            className={`mt-10 w-full h-20 rounded-3xl bg-[#FFDE59] border-4 border-black shadow-pop font-heading font-extrabold text-2xl transition-all ${canSubmit
                 ? 'hover:shadow-pop-hover hover:-translate-y-0.5'
                 : 'opacity-50 cursor-not-allowed'
-            }`}
+              }`}
           >
             {ctaLabel}
           </button>
@@ -177,11 +179,13 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
 export function PhoneVerifyModal() {
   const { i18n } = useTranslation();
   const { isOpen, close } = usePhoneVerifyModal();
-  const region: SupportedPhoneRegion = i18n.language.startsWith('vi')
-    ? 'VN'
-    : i18n.language.startsWith('mn')
-      ? 'MN'
-      : 'CN';
+
+  const region: SupportedPhoneRegion = useMemo(() => {
+    const lang = i18n.language;
+    if (lang.startsWith('vi')) return 'VN';
+    if (lang.startsWith('mn')) return 'MN';
+    return 'CN';
+  }, [i18n.language]);
 
   if (!isOpen) return null;
 

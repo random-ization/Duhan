@@ -10,9 +10,9 @@ i18n
     lng: 'en', // Default start language, AuthContext updates this
     backend: {
       loadPath:
-        typeof window !== 'undefined'
-          ? `${window.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}.json`
-          : `${import.meta.env.BASE_URL}locales/{{lng}}.json`,
+        globalThis.window === undefined
+          ? `${import.meta.env.BASE_URL}locales/{{lng}}.json`
+          : `${globalThis.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}.json`,
       queryStringParams: {
         v: import.meta.env.VITE_I18N_VERSION,
       },
@@ -25,4 +25,4 @@ i18n
     },
   });
 
-export default i18n;
+export default i18n; // NOSONAR

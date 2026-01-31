@@ -143,10 +143,10 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
             {filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredExams.map(exam => (
-                  <div
+                  <button
                     key={exam.id}
                     onClick={() => navigate(`/topik/${exam.id}`)}
-                    className="bg-white rounded-2xl p-0 border-2 border-slate-900 shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex flex-col md:flex-row h-auto min-h-[140px]"
+                    className="bg-white rounded-2xl p-0 border-2 border-slate-900 shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
                   >
                     <div
                       className={clsx(
@@ -208,7 +208,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -228,14 +228,16 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
             <div className="bg-white rounded-2xl border-2 border-slate-900 p-4 shadow-sm">
               <div className="space-y-3">
                 {user.examHistory && user.examHistory.length > 0 ? (
-                  user.examHistory.slice(0, 3).map((attempt, idx) => {
+                  user.examHistory.slice(0, 3).map((attempt, index) => {
                     const score = attempt.score || 0;
                     const maxScore = attempt.maxScore || attempt.totalScore || 100;
                     const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+                    const attemptKey = attempt.id || attempt.timestamp || `attempt-${index}`;
                     return (
-                      <div
-                        key={idx}
-                        className="relative bg-slate-50 p-3 rounded-xl border border-slate-200 group cursor-pointer hover:bg-white hover:border-slate-900 transition"
+                      <button
+                        key={attemptKey}
+                        onClick={() => navigate('/topik/history')}
+                        className="relative bg-slate-50 p-3 rounded-xl border border-slate-200 group cursor-pointer hover:bg-white hover:border-slate-900 transition w-full text-left"
                       >
                         <div className="flex justify-between items-start">
                           <div>
@@ -258,7 +260,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                             PASS
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })
                 ) : (

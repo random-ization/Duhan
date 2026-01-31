@@ -65,6 +65,12 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
     }
   };
 
+  const getOriginalPrice = (lang: string) => {
+    if (lang === 'zh') return '¥228';
+    if (lang === 'en') return '$69.99';
+    return undefined;
+  };
+
   const currentPlan = user?.subscriptionType || SubscriptionType.FREE;
 
   const plans = [
@@ -86,7 +92,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
       title: t('plan.annual', 'Annual'),
       price: `${priceConfig.symbol}${priceConfig.annual}`,
       period: t('period.per_year', '/ year'),
-      originalPrice: language === 'zh' ? '¥228' : language === 'en' ? '$69.99' : undefined,
+      originalPrice: getOriginalPrice(language),
       discount: t('pricing.discount', '70% OFF'),
       features: [
         t('pricing.features.annual.allMonthly'),
@@ -127,11 +133,10 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
           {plans.map(plan => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden transition-transform hover:scale-105 ${
-                plan.highlight
-                  ? 'border-2 border-indigo-500 z-10 scale-105'
-                  : 'border border-gray-200 dark:border-gray-700'
-              } bg-white dark:bg-gray-800`}
+              className={`relative rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden transition-transform hover:scale-105 ${plan.highlight
+                ? 'border-2 border-indigo-500 z-10 scale-105'
+                : 'border border-gray-200 dark:border-gray-700'
+                } bg-white dark:bg-gray-800`}
             >
               {plan.highlight && (
                 <div className="absolute top-0 right-0 left-0 bg-indigo-500 text-white text-xs font-bold text-center py-1 uppercase tracking-wider">
@@ -159,8 +164,8 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
                 )}
 
                 <ul className="mt-6 space-y-4">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex">
+                  {plan.features.map((feature) => (
+                    <li key={`${plan.id}-${feature}`} className="flex">
                       <svg
                         className="flex-shrink-0 w-6 h-6 text-green-500"
                         fill="none"
@@ -193,11 +198,10 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
                 ) : (
                   <button
                     onClick={() => handleSubscribe(plan.id)}
-                    className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${
-                      plan.highlight
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/30'
-                        : 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white border border-indigo-200 dark:border-gray-500 hover:bg-indigo-50 dark:hover:bg-gray-500'
-                    }`}
+                    className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${plan.highlight
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/30'
+                      : 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white border border-indigo-200 dark:border-gray-500 hover:bg-indigo-50 dark:hover:bg-gray-500'
+                      }`}
                   >
                     {t('button.upgrade', 'Upgrade Now')}
                   </button>

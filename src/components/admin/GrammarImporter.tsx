@@ -8,7 +8,6 @@ import {
   BookOpen,
   AlertCircle,
   X,
-  ChevronDown,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { GRAMMARS, INSTITUTES } from '../../utils/convexRefs';
@@ -81,27 +80,54 @@ function parseCSVLine(line: string): string[] {
   let current = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
+  let i = 0;
+  while (i < line.length) {
     const char = line[i];
-    const nextChar = line[i + 1];
 
     if (char === '"') {
-      if (inQuotes && nextChar === '"') {
+      if (inQuotes && line[i + 1] === '"') {
         current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
+        i += 2;
+        continue;
       }
+      inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
       result.push(current.trim());
       current = '';
     } else {
       current += char;
     }
+    i++;
   }
 
   result.push(current.trim());
   return result;
+}
+
+function matchYonseiCourse(
+  institutes: Institute[],
+  level: string,
+  volume: string
+): Institute | null {
+  for (const inst of institutes) {
+    const isYonsei =
+      inst.name?.includes('延世') ||
+      inst.publisher?.includes('延世') ||
+      inst.name?.toLowerCase().includes('yonsei');
+
+    if (isYonsei) {
+      const levelMatch =
+        inst.displayLevel?.includes(level) || inst.displayLevel?.includes(`${level}급`);
+      const volumeMatch =
+        inst.volume?.includes(volume) ||
+        inst.volume === `${volume}` ||
+        (!inst.volume && volume === '1');
+      if (levelMatch && volumeMatch) {
+        return inst;
+      }
+    }
+  }
+  return null;
 }
 
 function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute | null {
@@ -112,6 +138,7 @@ function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute 
     return null;
   }
 
+  // 1. Exact or name match
   for (const inst of institutes) {
     const displayName = `${inst.name || ''} ${inst.displayLevel || ''} ${inst.volume || ''}`
       .trim()
@@ -121,30 +148,16 @@ function autoMatchCourse(sheetName: string, institutes: Institute[]): Institute 
     }
   }
 
-  const numMatch = normalized.match(/(\d+)[^\d]*(\d+)?/);
+  // 2. Number pattern match (e.g., "1-1", "1级1册")
+  const numMatch = /(\d+)[^\d]*(\d+)?/.exec(normalized);
   if (numMatch) {
     const level = numMatch[1];
     const volume = numMatch[2] || '1';
-
-    for (const inst of institutes) {
-      const isYonsei =
-        inst.name?.includes('延世') ||
-        inst.publisher?.includes('延世') ||
-        inst.name?.toLowerCase().includes('yonsei');
-      if (isYonsei) {
-        const levelMatch =
-          inst.displayLevel?.includes(level) || inst.displayLevel?.includes(`${level}급`);
-        const volumeMatch =
-          inst.volume?.includes(volume) ||
-          inst.volume === `${volume}` ||
-          (!inst.volume && volume === '1');
-        if (levelMatch && volumeMatch) {
-          return inst;
-        }
-      }
-    }
+    const yonseiMatch = matchYonseiCourse(institutes, level, volume);
+    if (yonseiMatch) return yonseiMatch;
   }
 
+  // 3. Partial name match
   for (const inst of institutes) {
     const instName = inst.name?.toLowerCase() || '';
     if (instName && (normalized.includes(instName) || instName.includes(normalized))) {
@@ -161,6 +174,344 @@ function getInstituteDisplayName(inst: Institute): string {
   if (inst.volume) displayName += ` ${inst.volume}`;
   return displayName;
 }
+
+function parseGrammarItems(
+  rows: Record<string, unknown>[],
+  courseId: string,
+  defaultUnitId: number
+): BulkImportItem[] {
+  if (rows.length === 0) return [];
+
+  const findColumn = (keywords: string[]): string | null => {
+    const headerKey = Object.keys(rows[0]).find(h =>
+      keywords.some(k => h.toLowerCase().includes(k))
+    );
+    return headerKey || null;
+  };
+
+  const colMap = {
+    title: findColumn(['标题', 'title', '语法', 'grammar']),
+    summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
+    explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
+    summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
+    summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
+    summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
+    explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
+    explanationVi: findColumn([
+      '解释 (vn)',
+      '解释(vn)',
+      '解释 (vi)',
+      'explanation (vn)',
+      'explanation_vn',
+    ]),
+    explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
+    exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
+    exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
+    exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
+    exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
+    exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
+    unit: findColumn(['单元', 'unit', '课']),
+  };
+
+  if (!colMap.title) return [];
+
+  return rows
+    .map(row => {
+      const getValue = (key: string | null) => (key ? String(row[key] || '') : undefined);
+
+      const title = getValue(colMap.title);
+      if (!title) return null;
+
+      const exampleKr = getValue(colMap.exampleKr);
+      const examples = exampleKr
+        ? [
+            {
+              kr: exampleKr,
+              cn: getValue(colMap.exampleCn) || '',
+              en: getValue(colMap.exampleEn) || undefined,
+              vi: getValue(colMap.exampleVi) || undefined,
+              mn: getValue(colMap.exampleMn) || undefined,
+            },
+          ]
+        : undefined;
+
+      const unitValue = getValue(colMap.unit);
+      const unitId = unitValue ? Number(unitValue) : defaultUnitId;
+
+      return {
+        title,
+        summary: getValue(colMap.summary),
+        explanation: getValue(colMap.explanation),
+        summaryEn: getValue(colMap.summaryEn),
+        summaryVi: getValue(colMap.summaryVi),
+        summaryMn: getValue(colMap.summaryMn),
+        explanationEn: getValue(colMap.explanationEn),
+        explanationVi: getValue(colMap.explanationVi),
+        explanationMn: getValue(colMap.explanationMn),
+        examples,
+        courseId,
+        unitId: Number.isNaN(unitId) ? defaultUnitId : unitId,
+      };
+    })
+    .filter(Boolean) as BulkImportItem[];
+}
+
+function parseGrammarText(
+  text: string,
+  courseId: string,
+  defaultUnitId: number
+): BulkImportItem[] {
+  if (!text.trim()) return [];
+
+  const lines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headerLine = lines[0];
+  const headers = headerLine.includes('\t')
+    ? headerLine.split('\t').map(h => h.trim().toLowerCase())
+    : parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+  const findColumn = (keywords: string[]): number => {
+    return headers.findIndex(h => keywords.some(k => h.includes(k)));
+  };
+
+  const colMap = {
+    title: findColumn(['标题', 'title', '语法', 'grammar']),
+    summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
+    explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
+    summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
+    summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
+    summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
+    explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
+    explanationVi: findColumn([
+      '解释 (vn)',
+      '解释(vn)',
+      '解释 (vi)',
+      'explanation (vn)',
+      'explanation_vn',
+    ]),
+    explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
+    exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
+    exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
+    exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
+    exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
+    exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
+    unit: findColumn(['单元', 'unit', '课']),
+  };
+
+  if (colMap.title === -1) return [];
+
+  return lines
+    .slice(1)
+    .map(line => {
+      const parts = line.includes('\t')
+        ? line.split('\t').map(p => p.trim())
+        : parseCSVLine(line);
+
+      const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
+
+      const title = getValue(colMap.title);
+      if (!title) return null;
+
+      const exampleKr = getValue(colMap.exampleKr);
+      const exampleCn = getValue(colMap.exampleCn);
+      const exampleEn = getValue(colMap.exampleEn);
+      const exampleVi = getValue(colMap.exampleVi);
+      const exampleMn = getValue(colMap.exampleMn);
+
+      const examples = exampleKr
+        ? [
+            {
+              kr: exampleKr,
+              cn: exampleCn || '',
+              en: exampleEn || undefined,
+              vi: exampleVi || undefined,
+              mn: exampleMn || undefined,
+            },
+          ]
+        : undefined;
+
+      return {
+        title,
+        summary: getValue(colMap.summary),
+        explanation: getValue(colMap.explanation),
+        summaryEn: getValue(colMap.summaryEn),
+        summaryVi: getValue(colMap.summaryVi),
+        summaryMn: getValue(colMap.summaryMn),
+        explanationEn: getValue(colMap.explanationEn),
+        explanationVi: getValue(colMap.explanationVi),
+        explanationMn: getValue(colMap.explanationMn),
+        examples,
+        courseId,
+        unitId: Number(getValue(colMap.unit)) || defaultUnitId || 1,
+      };
+    })
+    .filter(Boolean) as BulkImportItem[];
+}
+
+interface SheetMappingModalProps {
+  show: boolean;
+  sheetDataList: SheetData[];
+  onClose: () => void;
+  onUpdateMapping: (index: number, updates: Partial<SheetData>) => void;
+  onImport: () => void;
+  submitting: boolean;
+  importProgress: { current: number; total: number } | null;
+  institutes: Institute[] | undefined;
+  getInstituteDisplayName: (inst: Institute) => string;
+}
+
+const SheetMappingModal: React.FC<SheetMappingModalProps> = ({
+  show,
+  sheetDataList,
+  onClose,
+  onUpdateMapping,
+  onImport,
+  submitting,
+  importProgress,
+  institutes,
+  getInstituteDisplayName,
+}) => {
+  if (!show) return null;
+
+  const autoMatched = sheetDataList.filter(s => s.confidence === 'auto' && !s.skip).length;
+  const manualSet = sheetDataList.filter(s => s.confidence === 'manual' && !s.skip).length;
+  const needsAction = sheetDataList.filter(s => s.confidence === 'none' && !s.skip).length;
+  const skipped = sheetDataList.filter(s => s.skip).length;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black text-zinc-900">工作表映射</h3>
+            <p className="text-sm text-zinc-500">
+              检测到 {sheetDataList.length} 个工作表，请确认教材对应关系
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {sheetDataList.map((sheet, index) => {
+            let borderClass = 'border-amber-200 bg-amber-50';
+            if (sheet.skip) {
+              borderClass = 'border-zinc-200 bg-zinc-50 opacity-60';
+            } else if (sheet.confidence === 'auto' || sheet.confidence === 'manual') {
+              borderClass = 'border-emerald-200 bg-emerald-50';
+            }
+
+            let iconBgClass = 'bg-amber-500 text-white';
+            let Icon = AlertCircle;
+            if (sheet.skip) {
+              iconBgClass = 'bg-zinc-200 text-zinc-500';
+              Icon = X;
+            } else if (sheet.confidence === 'auto' || sheet.confidence === 'manual') {
+              iconBgClass = 'bg-emerald-500 text-white';
+              Icon = CheckCircle2;
+            }
+
+            return (
+              <div
+                key={sheet.sheetName}
+                className={`p-3 rounded-xl border-2 transition-all ${borderClass}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-zinc-900 truncate">{sheet.sheetName}</div>
+                    <div className="text-xs text-zinc-500">
+                      {sheet.rows.length} 条数据
+                      {sheet.confidence === 'auto' && ' · 自动匹配'}
+                      {sheet.confidence === 'manual' && ' · 手动选择'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {sheet.skip ? (
+                      <button
+                        onClick={() => onUpdateMapping(index, { skip: false })}
+                        className="text-xs text-blue-600 font-bold hover:underline"
+                      >
+                        恢复
+                      </button>
+                    ) : (
+                      <>
+                        <select
+                          value={sheet.manualCourseId || sheet.matchedCourseId || ''}
+                          onChange={e =>
+                            onUpdateMapping(index, {
+                              manualCourseId: e.target.value,
+                              confidence: 'manual',
+                            })
+                          }
+                          className="px-2 py-1 rounded border border-zinc-200 text-xs bg-white min-w-[150px]"
+                        >
+                          <option value="">-- 选择教材 --</option>
+                          {(institutes || []).map(inst => (
+                            <option key={inst._id || inst.id} value={inst.id || inst._id}>
+                              {getInstituteDisplayName(inst)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => onUpdateMapping(index, { skip: true })}
+                          className="p-1 hover:bg-zinc-200 rounded text-zinc-400"
+                          title="跳过此表"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 bg-zinc-50 border-t border-zinc-200 space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
+            <div className="flex gap-3">
+              <span className="text-emerald-600">已匹配: {autoMatched + manualSet}</span>
+              <span className="text-amber-600">待定: {needsAction}</span>
+              <span>跳过: {skipped}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onImport}
+            disabled={submitting || (autoMatched === 0 && manualSet === 0)}
+            className="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                正在导入... ({importProgress?.current}/{importProgress?.total})
+              </>
+            ) : (
+              `开始导入 ${autoMatched + manualSet} 个工作表`
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const GrammarImporter: React.FC = () => {
   const institutes = useQuery(INSTITUTES.getAll, {});
@@ -184,91 +535,10 @@ const GrammarImporter: React.FC = () => {
     }
   }, [institutes, form.courseId]);
 
-  const parseSheetRows = (
-    rows: Record<string, unknown>[],
-    courseId: string,
-    defaultUnitId: number
-  ): BulkImportItem[] => {
-    if (rows.length === 0) return [];
-
-    const findColumn = (keywords: string[]): string | null => {
-      const headerKey = Object.keys(rows[0]).find(h =>
-        keywords.some(k => h.toLowerCase().includes(k))
-      );
-      return headerKey || null;
-    };
-
-    const colMap = {
-      title: findColumn(['标题', 'title', '语法', 'grammar']),
-      summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
-      explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
-      summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
-      summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
-      summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
-      explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
-      explanationVi: findColumn([
-        '解释 (vn)',
-        '解释(vn)',
-        '解释 (vi)',
-        'explanation (vn)',
-        'explanation_vn',
-      ]),
-      explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
-      exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
-      exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
-      exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
-      exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
-      exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
-      unit: findColumn(['单元', 'unit', '课']),
-    };
-
-    if (!colMap.title) return [];
-
-    return rows
-      .map(row => {
-        const getValue = (key: string | null) => (key ? String(row[key] || '') : undefined);
-
-        const title = getValue(colMap.title);
-        if (!title) return null;
-
-        const exampleKr = getValue(colMap.exampleKr);
-        const examples = exampleKr
-          ? [
-              {
-                kr: exampleKr,
-                cn: getValue(colMap.exampleCn) || '',
-                en: getValue(colMap.exampleEn) || undefined,
-                vi: getValue(colMap.exampleVi) || undefined,
-                mn: getValue(colMap.exampleMn) || undefined,
-              },
-            ]
-          : undefined;
-
-        const unitValue = getValue(colMap.unit);
-        const unitId = unitValue ? Number(unitValue) : defaultUnitId;
-
-        return {
-          title,
-          summary: getValue(colMap.summary),
-          explanation: getValue(colMap.explanation),
-          summaryEn: getValue(colMap.summaryEn),
-          summaryVi: getValue(colMap.summaryVi),
-          summaryMn: getValue(colMap.summaryMn),
-          explanationEn: getValue(colMap.explanationEn),
-          explanationVi: getValue(colMap.explanationVi),
-          explanationMn: getValue(colMap.explanationMn),
-          examples,
-          courseId,
-          unitId: isNaN(unitId) ? defaultUnitId : unitId,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  };
-
-  const handleExcelFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = event => {
-      const data = new Uint8Array(event.target?.result as ArrayBuffer);
+  const handleExcelFile = async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const data = new Uint8Array(arrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
 
       if (workbook.SheetNames.length === 1) {
@@ -279,7 +549,7 @@ const GrammarImporter: React.FC = () => {
           const headers = Object.keys(jsonData[0] as Record<string, unknown>);
           const headerLine = headers.join('\t');
           const dataLines = jsonData.map((row: any) =>
-            headers.map(h => String(row[h] || '').replace(/\n/g, ' ')).join('\t')
+            headers.map(h => String(row[h] || '').replaceAll('\n', ' ')).join('\t')
           );
           setBulkText([headerLine, ...dataLines].join('\n'));
           setStatus(`已加载 Excel 文件: ${file.name} (${jsonData.length} 条数据)`);
@@ -289,13 +559,12 @@ const GrammarImporter: React.FC = () => {
 
       const sheets: SheetData[] = workbook.SheetNames.map(sheetName => {
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<
-          string,
-          unknown
-        >[];
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+          defval: '',
+        });
 
         const matchedCourse = institutes
-          ? autoMatchCourse(sheetName, institutes as Institute[])
+          ? autoMatchCourse(sheetName, institutes)
           : null;
 
         return {
@@ -315,8 +584,10 @@ const GrammarImporter: React.FC = () => {
       setStatus(
         `检测到 ${sheets.length} 个工作表：${autoMatched} 个自动匹配，${needsAction} 个待选择`
       );
-    };
-    reader.readAsArrayBuffer(file);
+    } catch (e) {
+      console.error('Excel processing error:', e);
+      setStatus(`处理 Excel 文件失败: ${file.name}`);
+    }
   };
 
   const handleMultiSheetImport = async () => {
@@ -340,7 +611,7 @@ const GrammarImporter: React.FC = () => {
     for (let i = 0; i < validSheets.length; i++) {
       const sheet = validSheets[i];
       const courseId = sheet.manualCourseId || sheet.matchedCourseId!;
-      const items = parseSheetRows(sheet.rows, courseId, form.unitId);
+      const items = parseGrammarItems(sheet.rows, courseId, form.unitId);
 
       setImportProgress({ current: i + 1, total: validSheets.length });
 
@@ -392,100 +663,10 @@ const GrammarImporter: React.FC = () => {
     setSubmitting(true);
     setStatus(null);
     try {
-      const lines = bulkText
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean);
-
-      const headerLine = lines[0];
-      const headers = headerLine.includes('\t')
-        ? headerLine.split('\t').map(h => h.trim().toLowerCase())
-        : parseCSVLine(headerLine).map(h => h.toLowerCase());
-
-      const findColumn = (keywords: string[]): number => {
-        return headers.findIndex(h => keywords.some(k => h.includes(k)));
-      };
-
-      const colMap = {
-        title: findColumn(['标题', 'title', '语法', 'grammar']),
-        summary: findColumn(['简介', 'summary', '概述', '说明', '简介 (ch)', '简介(ch)']),
-        explanation: findColumn(['详细', 'explanation', '解释', '详解', '解释 (ch)', '解释(ch)']),
-        summaryEn: findColumn(['简介 (en)', '简介(en)', 'summary (en)', 'summary_en']),
-        summaryVi: findColumn(['简介 (vn)', '简介(vn)', '简介 (vi)', 'summary (vn)', 'summary_vn']),
-        summaryMn: findColumn(['简介 (mn)', '简介(mn)', 'summary (mn)', 'summary_mn']),
-        explanationEn: findColumn(['解释 (en)', '解释(en)', 'explanation (en)', 'explanation_en']),
-        explanationVi: findColumn([
-          '解释 (vn)',
-          '解释(vn)',
-          '解释 (vi)',
-          'explanation (vn)',
-          'explanation_vn',
-        ]),
-        explanationMn: findColumn(['解释 (mn)', '解释(mn)', 'explanation (mn)', 'explanation_mn']),
-        exampleKr: findColumn(['例句 (kr)', '例句(kr)', '例句', 'example (kr)', 'example']),
-        exampleCn: findColumn(['例句 (ch)', '例句(ch)', '例句翻译', 'example (ch)']),
-        exampleEn: findColumn(['例句 (en)', '例句(en)', 'example (en)']),
-        exampleVi: findColumn(['例句 (vn)', '例句(vn)', '例句 (vi)', 'example (vn)']),
-        exampleMn: findColumn(['例句 (mn)', '例句(mn)', 'example (mn)']),
-        unit: findColumn(['单元', 'unit', '课']),
-      };
-
-      if (colMap.title === -1) {
-        setStatus('错误：未找到"标题"或"Title"列，请检查表头');
-        setSubmitting(false);
-        return;
-      }
-
-      const items: BulkImportItem[] = lines
-        .slice(1)
-        .map(line => {
-          const parts = line.includes('\t')
-            ? line.split('\t').map(p => p.trim())
-            : parseCSVLine(line);
-
-          const getValue = (idx: number) =>
-            idx >= 0 && idx < parts.length ? parts[idx] : undefined;
-
-          const title = getValue(colMap.title);
-          if (!title) return null;
-
-          const exampleKr = getValue(colMap.exampleKr);
-          const exampleCn = getValue(colMap.exampleCn);
-          const exampleEn = getValue(colMap.exampleEn);
-          const exampleVi = getValue(colMap.exampleVi);
-          const exampleMn = getValue(colMap.exampleMn);
-
-          const examples = exampleKr
-            ? [
-                {
-                  kr: exampleKr,
-                  cn: exampleCn || '',
-                  en: exampleEn || undefined,
-                  vi: exampleVi || undefined,
-                  mn: exampleMn || undefined,
-                },
-              ]
-            : undefined;
-
-          return {
-            title,
-            summary: getValue(colMap.summary),
-            explanation: getValue(colMap.explanation),
-            summaryEn: getValue(colMap.summaryEn),
-            summaryVi: getValue(colMap.summaryVi),
-            summaryMn: getValue(colMap.summaryMn),
-            explanationEn: getValue(colMap.explanationEn),
-            explanationVi: getValue(colMap.explanationVi),
-            explanationMn: getValue(colMap.explanationMn),
-            examples,
-            courseId: form.courseId,
-            unitId: Number(getValue(colMap.unit)) || form.unitId || 1,
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+      const items = parseGrammarText(bulkText, form.courseId, form.unitId);
 
       if (items.length === 0) {
-        setStatus('未解析到有效的语法条目');
+        setStatus('未解析到有效的语法条目，请检查表头');
         setSubmitting(false);
         return;
       }
@@ -514,170 +695,7 @@ const GrammarImporter: React.FC = () => {
     }
   };
 
-  const SheetMappingModal = () => {
-    if (!showSheetMapping) return null;
 
-    const autoMatched = sheetDataList.filter(s => s.confidence === 'auto' && !s.skip).length;
-    const manualSet = sheetDataList.filter(s => s.confidence === 'manual' && !s.skip).length;
-    const needsAction = sheetDataList.filter(s => s.confidence === 'none' && !s.skip).length;
-    const skipped = sheetDataList.filter(s => s.skip).length;
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-black text-zinc-900">工作表映射</h3>
-              <p className="text-sm text-zinc-500">
-                检测到 {sheetDataList.length} 个工作表，请确认教材对应关系
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSheetMapping(false);
-                setSheetDataList([]);
-              }}
-              className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {sheetDataList.map((sheet, index) => (
-              <div
-                key={sheet.sheetName}
-                className={`p-3 rounded-xl border-2 transition-all ${
-                  sheet.skip
-                    ? 'border-zinc-200 bg-zinc-50 opacity-60'
-                    : sheet.confidence === 'auto' || sheet.confidence === 'manual'
-                      ? 'border-emerald-200 bg-emerald-50'
-                      : 'border-amber-200 bg-amber-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      sheet.skip
-                        ? 'bg-zinc-200 text-zinc-500'
-                        : sheet.confidence === 'auto' || sheet.confidence === 'manual'
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-amber-500 text-white'
-                    }`}
-                  >
-                    {sheet.skip ? (
-                      <X className="w-4 h-4" />
-                    ) : sheet.confidence === 'auto' || sheet.confidence === 'manual' ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-zinc-900 truncate">{sheet.sheetName}</div>
-                    <div className="text-xs text-zinc-500">
-                      {sheet.rows.length} 条数据
-                      {sheet.confidence === 'auto' && ' · 自动匹配'}
-                      {sheet.confidence === 'manual' && ' · 手动选择'}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {!sheet.skip ? (
-                      <div className="relative">
-                        <select
-                          value={sheet.manualCourseId || sheet.matchedCourseId || ''}
-                          onChange={e => {
-                            const value = e.target.value;
-                            updateSheetMapping(index, {
-                              manualCourseId: value || undefined,
-                              confidence: value ? 'manual' : 'none',
-                            });
-                          }}
-                          className="appearance-none pl-3 pr-8 py-2 rounded-lg border border-zinc-300 bg-white text-sm font-medium min-w-[180px] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                        >
-                          <option value="">请选择教材</option>
-                          {(institutes || []).map((inst: any) => (
-                            <option key={inst.id || inst._id} value={inst.id || inst._id}>
-                              {getInstituteDisplayName(inst)}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                      </div>
-                    ) : (
-                      <span className="text-sm text-zinc-500">已跳过</span>
-                    )}
-
-                    <button
-                      onClick={() => updateSheetMapping(index, { skip: !sheet.skip })}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        sheet.skip
-                          ? 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'
-                          : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                      }`}
-                    >
-                      {sheet.skip ? '恢复' : '跳过'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 border-t border-zinc-200 bg-zinc-50">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-zinc-600">
-                <span className="inline-flex items-center gap-1 mr-3">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  {autoMatched + manualSet} 已匹配
-                </span>
-                {needsAction > 0 && (
-                  <span className="inline-flex items-center gap-1 mr-3">
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    {needsAction} 待选择
-                  </span>
-                )}
-                {skipped > 0 && (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
-                    {skipped} 跳过
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    setShowSheetMapping(false);
-                    setSheetDataList([]);
-                  }}
-                  className="px-4 py-2 rounded-lg border border-zinc-300 text-zinc-700 font-medium hover:bg-zinc-100 transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleMultiSheetImport}
-                  disabled={submitting || autoMatched + manualSet === 0}
-                  className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      导入中 {importProgress?.current}/{importProgress?.total}
-                    </>
-                  ) : (
-                    <>确认导入 ({autoMatched + manualSet} 个工作表)</>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -690,22 +708,20 @@ const GrammarImporter: React.FC = () => {
           <p className="text-sm text-zinc-500">批量导入语法点到指定教材</p>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-500 mb-1">选择教材</label>
+          <label htmlFor="course-select" className="block text-xs font-bold text-zinc-500 mb-1">
+            选择教材
+          </label>
           <select
+            id="course-select"
             value={form.courseId}
             onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
-            {(institutes || []).map((inst: any) => {
-              let displayName = inst.name || '';
-              if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
-              if (inst.volume) displayName += ` ${inst.volume}`;
-              return (
-                <option key={inst.id || inst._id} value={inst.id || inst._id}>
-                  {displayName}
-                </option>
-              );
-            })}
+            {(institutes || []).map((inst: Institute) => (
+              <option key={inst.id || inst._id} value={inst.id || inst._id}>
+                {getInstituteDisplayName(inst)}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -718,16 +734,17 @@ const GrammarImporter: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-zinc-700">
+            <label htmlFor="default-unit" className="text-sm font-medium text-zinc-700">
               默认单元（表格中未指定时使用）:
-              <input
-                type="number"
-                min={1}
-                value={form.unitId}
-                onChange={e => setForm(prev => ({ ...prev, unitId: Number(e.target.value) }))}
-                className="ml-2 w-20 px-2 py-1 rounded border border-zinc-200"
-              />
             </label>
+            <input
+              id="default-unit"
+              type="number"
+              min={1}
+              value={form.unitId}
+              onChange={e => setForm(prev => ({ ...prev, unitId: Number(e.target.value) }))}
+              className="w-20 px-2 py-1 rounded border border-zinc-200"
+            />
           </div>
 
           <div className="relative">
@@ -816,7 +833,20 @@ const GrammarImporter: React.FC = () => {
         </div>
       )}
 
-      <SheetMappingModal />
+      <SheetMappingModal
+        show={showSheetMapping}
+        sheetDataList={sheetDataList}
+        onClose={() => {
+          setShowSheetMapping(false);
+          setSheetDataList([]);
+        }}
+        onUpdateMapping={updateSheetMapping}
+        onImport={handleMultiSheetImport}
+        submitting={submitting}
+        importProgress={importProgress}
+        institutes={institutes as Institute[] | undefined}
+        getInstituteDisplayName={getInstituteDisplayName}
+      />
     </div>
   );
 };

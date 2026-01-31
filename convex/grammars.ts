@@ -4,6 +4,15 @@ import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { toErrorMessage } from './errors';
 import type { Id } from './_generated/dataModel';
 
+interface GrammarExample {
+  kr: string;
+  cn: string;
+  en?: string;
+  vi?: string;
+  mn?: string;
+  audio?: string;
+}
+
 export type GrammarStatsDto = {
   total: number;
   mastered: number;
@@ -556,86 +565,19 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
     });
 
     let grammarId: Id<'grammar_points'> | null = null;
-    let shouldCreateNew = false;
-    let reuseGrammar = null;
-
-    if (matchingGrammars.length === 0) {
-      // No existing grammar with this title - create new
-      shouldCreateNew = true;
-    } else {
-      // Check if any matching grammar is used by the same publisher
-      for (const grammar of matchingGrammars) {
-        // Get all courses using this grammar
-        const links = await ctx.db
-          .query('course_grammars')
-          .filter(q => q.eq(q.field('grammarId'), grammar._id))
-          .collect();
-
-        let usedBySamePublisher = false;
-        let usedByDifferentPublisher = false;
-
-        for (const link of links) {
-          const linkedCourse = await ctx.db
-            .query('institutes')
-            .withIndex('by_legacy_id', q => q.eq('id', link.courseId))
-            .unique();
-          const linkedPublisher = linkedCourse?.publisher || linkedCourse?.name || 'unknown';
-
-          if (linkedPublisher === currentPublisher) {
-            usedBySamePublisher = true;
-          } else {
-            usedByDifferentPublisher = true;
-          }
-        }
-
-        // If this grammar is only used by different publishers, we can reuse it
-        if (!usedBySamePublisher && usedByDifferentPublisher && !reuseGrammar) {
-          reuseGrammar = grammar;
-        }
-
-        // If grammar not used by anyone yet, we can reuse it
-        if (links.length === 0 && !reuseGrammar) {
-          reuseGrammar = grammar;
-        }
-      }
-
-      // If we found a reusable grammar from different publisher
-      if (!reuseGrammar) {
-        // Same publisher already has a grammar with this title - create new with suffix
-        shouldCreateNew = true;
-      }
-    }
+    const { reuseGrammar, shouldCreateNew } = await determineGrammarAction(
+      ctx,
+      matchingGrammars,
+      currentPublisher
+    );
 
     // Parse examples if it's a string
-    let examples = item.examples;
-    if (typeof examples === 'string') {
-      try {
-        examples = JSON.parse(examples);
-      } catch {
-        examples = examples ? [{ kr: examples, cn: '' }] : [];
-      }
-    }
+    const examples = parseExamples(item.examples);
 
     // Parse conjugationRules if it's a string
-    let conjugationRules = item.conjugationRules;
-    if (typeof conjugationRules === 'string') {
-      try {
-        conjugationRules = JSON.parse(conjugationRules);
-      } catch {
-        conjugationRules = [];
-      }
-    }
+    const conjugationRules = parseConjugationRules(item.conjugationRules);
 
-    let searchPatterns: string[] | undefined = undefined;
-    if (Array.isArray(item.searchPatterns)) {
-      searchPatterns = item.searchPatterns.map(s => s.trim()).filter(Boolean);
-    } else if (typeof item.searchPatterns === 'string') {
-      const parts = item.searchPatterns
-        .split(/[\n,]+/)
-        .map(s => s.trim())
-        .filter(Boolean);
-      if (parts.length > 0) searchPatterns = parts;
-    }
+    const searchPatterns = parseSearchPatterns(item.searchPatterns);
 
     let isNew = false;
 
@@ -665,8 +607,7 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
         explanationEn: item.explanationEn,
         explanationVi: item.explanationVi,
         explanationMn: item.explanationMn,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        examples: (examples as any) || [],
+        examples: examples || [],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         conjugationRules: (conjugationRules as any) || [],
         searchPatterns,
@@ -678,7 +619,7 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
       // Reuse existing grammar from different publisher
       grammarId = reuseGrammar._id;
       // Optionally update with new content if provided
-      await ctx.db.patch(grammarId, {
+      await ctx.db.patch(reuseGrammar._id, {
         summary: item.summary || reuseGrammar.summary,
         summaryEn: item.summaryEn ?? reuseGrammar.summaryEn,
         summaryVi: item.summaryVi ?? reuseGrammar.summaryVi,
@@ -687,8 +628,7 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
         explanationEn: item.explanationEn ?? reuseGrammar.explanationEn,
         explanationVi: item.explanationVi ?? reuseGrammar.explanationVi,
         explanationMn: item.explanationMn ?? reuseGrammar.explanationMn,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        examples: (examples as any) || reuseGrammar.examples,
+        examples: examples || reuseGrammar.examples,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         conjugationRules: (conjugationRules as any) || reuseGrammar.conjugationRules,
         searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
@@ -727,4 +667,107 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
   } catch (e: unknown) {
     return { success: false, isNew: false, error: toErrorMessage(e) };
   }
+}
+
+async function determineGrammarAction(
+  ctx: MutationCtx,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  matchingGrammars: any[],
+  currentPublisher: string
+) {
+  let reuseGrammar = null;
+  let shouldCreateNew = false;
+
+  if (matchingGrammars.length === 0) {
+    shouldCreateNew = true;
+  } else {
+    for (const grammar of matchingGrammars) {
+      const { usedBySamePublisher, usedByDifferentPublisher, isUnused } = await checkUsage(
+        ctx,
+        grammar._id,
+        currentPublisher
+      );
+
+      if (!usedBySamePublisher && usedByDifferentPublisher && !reuseGrammar) {
+        reuseGrammar = grammar;
+      }
+      if (isUnused && !reuseGrammar) {
+        reuseGrammar = grammar;
+      }
+    }
+
+    if (!reuseGrammar) {
+      shouldCreateNew = true;
+    }
+  }
+
+  return { reuseGrammar, shouldCreateNew };
+}
+
+// Helper for complexity reduction
+async function checkUsage(
+  ctx: MutationCtx,
+  grammarId: Id<'grammar_points'>,
+  currentPublisher: string
+) {
+  const links = await ctx.db
+    .query('course_grammars')
+    .filter(q => q.eq(q.field('grammarId'), grammarId))
+    .collect();
+
+  let usedBySamePublisher = false;
+  let usedByDifferentPublisher = false;
+
+  for (const link of links) {
+    const linkedCourse = await ctx.db
+      .query('institutes')
+      .withIndex('by_legacy_id', q => q.eq('id', link.courseId))
+      .unique();
+    const linkedPublisher = linkedCourse?.publisher || linkedCourse?.name || 'unknown';
+
+    if (linkedPublisher === currentPublisher) {
+      usedBySamePublisher = true;
+    } else {
+      usedByDifferentPublisher = true;
+    }
+  }
+
+  return { usedBySamePublisher, usedByDifferentPublisher, isUnused: links.length === 0 };
+}
+
+function parseExamples(examples: unknown): GrammarExample[] {
+  if (typeof examples === 'string') {
+    try {
+      return JSON.parse(examples);
+    } catch {
+      return [{ kr: examples, cn: '' }];
+    }
+  }
+  return (examples as GrammarExample[]) || [];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseConjugationRules(rules: unknown): any[] {
+  if (typeof rules === 'string') {
+    try {
+      return JSON.parse(rules);
+    } catch {
+      return [];
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (rules as any[]) || [];
+}
+
+function parseSearchPatterns(patterns: string | string[] | undefined): string[] | undefined {
+  if (Array.isArray(patterns)) {
+    return patterns.map(s => s.trim()).filter(Boolean);
+  } else if (typeof patterns === 'string') {
+    const parts = patterns
+      .split(/[\n,]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (parts.length > 0) return parts;
+  }
+  return undefined;
 }

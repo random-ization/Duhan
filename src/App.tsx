@@ -45,18 +45,6 @@ function App() {
 
   if (loading) return <Loading fullScreen size="lg" text={t('loading')} />;
 
-  /* 
-  const handleNavigate = (page: string) => {
-    // Clear module state when navigating away from module page
-    if (page !== 'module') {
-      setActiveModule(null);
-      setActiveCustomList(null);
-      setActiveListType(null);
-    }
-    navigate(`/${page}`);
-  };
-  */
-
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
@@ -77,7 +65,6 @@ function App() {
             isOpen={showUpgradePrompt}
             onClose={() => setShowUpgradePrompt(false)}
             language={language}
-            contentType="textbook"
           />
           <PhoneVerifyModal />
         </PhoneVerifyModalProvider>

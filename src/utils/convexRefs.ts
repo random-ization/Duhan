@@ -1,5 +1,5 @@
 import { makeFunctionReference } from 'convex/server';
-import type { DefaultFunctionArgs } from 'convex/server';
+import type { DefaultFunctionArgs, PaginationOptions, PaginationResult } from 'convex/server';
 import type { Doc, Id } from '../../convex/_generated/dataModel';
 
 // Import types only to avoid runtime cycles
@@ -285,7 +285,6 @@ export const PASSWORD_RESET = {
  * TOPIK REFS
  */
 import { TopikQuestionDto, TopikExamDto } from '../../convex/topik';
-import type { PaginationOptions, PaginationResult } from 'convex/server';
 
 export const TOPIK = {
   getExams: qRef<

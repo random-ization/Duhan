@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode, useCallback } from 'react';
 import { LearningModuleType, VocabularyItem, Mistake } from '../types';
 import { useAuth } from './AuthContext';
+
+type CustomList = VocabularyItem[] | Mistake[];
+type ListType = 'SAVED' | 'MISTAKES';
 
 interface LearningContextType {
   // Learning Position
@@ -12,10 +15,10 @@ interface LearningContextType {
   setActiveModule: (module: LearningModuleType | null) => void;
 
   // Custom List State (for saved words / mistakes review)
-  activeCustomList: VocabularyItem[] | Mistake[] | null;
-  setActiveCustomList: (list: VocabularyItem[] | Mistake[] | null) => void;
-  activeListType: 'SAVED' | 'MISTAKES' | null;
-  setActiveListType: (type: 'SAVED' | 'MISTAKES' | null) => void;
+  activeCustomList: CustomList | null;
+  setActiveCustomList: (list: CustomList | null) => void;
+  activeListType: ListType | null;
+  setActiveListType: (type: ListType | null) => void;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -37,16 +40,14 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
   const [selectedInstituteOverride, setSelectedInstituteOverride] = useState<string | null>(null);
   const [selectedLevelOverride, setSelectedLevelOverride] = useState<number | null>(null);
   const [activeModule, setActiveModule] = useState<LearningModuleType | null>(null);
-  const [activeCustomList, setActiveCustomList] = useState<VocabularyItem[] | Mistake[] | null>(
-    null
-  );
-  const [activeListType, setActiveListType] = useState<'SAVED' | 'MISTAKES' | null>(null);
+  const [activeCustomList, setActiveCustomList] = useState<CustomList | null>(null);
+  const [activeListType, setActiveListType] = useState<ListType | null>(null);
 
   const selectedInstitute = selectedInstituteOverride ?? user?.lastInstitute ?? '';
   const selectedLevel = selectedLevelOverride ?? user?.lastLevel ?? 0;
 
-  const setSelectedInstitute = (id: string) => setSelectedInstituteOverride(id);
-  const setSelectedLevel = (level: number) => setSelectedLevelOverride(level);
+  const setSelectedInstitute = useCallback((id: string) => setSelectedInstituteOverride(id), []);
+  const setSelectedLevel = useCallback((level: number) => setSelectedLevelOverride(level), []);
 
   // OPTIMIZATION: Use useMemo to stabilize context value and prevent unnecessary re-renders
   const value = useMemo<LearningContextType>(
@@ -62,7 +63,15 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
       activeListType,
       setActiveListType,
     }),
-    [selectedInstitute, selectedLevel, activeModule, activeCustomList, activeListType]
+    [
+      selectedInstitute,
+      setSelectedInstitute,
+      selectedLevel,
+      setSelectedLevel,
+      activeModule,
+      activeCustomList,
+      activeListType,
+    ]
   );
 
   return <LearningContext.Provider value={value}>{children}</LearningContext.Provider>;

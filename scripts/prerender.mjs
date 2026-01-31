@@ -11,9 +11,9 @@
  * This provides SEO benefits without requiring framework migration or complex SSR setup.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_LANGUAGE,
   SUPPORTED_LANGUAGES,
@@ -26,6 +26,25 @@ const __dirname = dirname(__filename);
 
 const SITE_URL = 'https://koreanstudy.me';
 const DIST_DIR = join(__dirname, '..', 'dist');
+
+// Escape special regex characters and HTML entities
+function escapeHtml(text) {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+// Helper to replace meta tag content
+function replaceMetaContent(html, pattern, replacement) {
+  const regex = new RegExp(pattern, 'i');
+  if (regex.test(html)) {
+    return html.replace(regex, replacement);
+  }
+  return html;
+}
 
 /**
  * Inject route-specific meta tags into HTML
@@ -47,25 +66,6 @@ function injectMetaTags(html, route) {
     return `${alternates}\n<link rel="alternate" hrefLang="x-default" href="${xDefaultHref}" />`;
   })();
 
-  // Escape special regex characters and HTML entities
-  function escapeHtml(text) {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  // Helper to replace meta tag content
-  function replaceMetaContent(html, pattern, replacement) {
-    const regex = new RegExp(pattern, 'i');
-    if (regex.test(html)) {
-      return html.replace(regex, replacement);
-    }
-    return html;
-  }
-
   // Replace title
   html = html.replace(
     /<title>[^<]*<\/title>/i,
@@ -75,7 +75,7 @@ function injectMetaTags(html, route) {
   // Replace meta description
   html = replaceMetaContent(
     html,
-    '<meta\\s+name="description"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+name="description"\s+content="[^"]*"\s*/?\s*>`,
     `<meta name="description" content="${escapeHtml(description)}" />`
   );
 
@@ -83,7 +83,7 @@ function injectMetaTags(html, route) {
   if (keywords) {
     html = replaceMetaContent(
       html,
-      '<meta\\s+name="keywords"\\s+content="[^"]*"\\s*/?\\s*>',
+      String.raw`<meta\s+name="keywords"\s+content="[^"]*"\s*/?\s*>`,
       `<meta name="keywords" content="${escapeHtml(keywords)}" />`
     );
   }
@@ -91,45 +91,45 @@ function injectMetaTags(html, route) {
   // Replace canonical URL
   html = replaceMetaContent(
     html,
-    '<link\\s+rel="canonical"\\s+href="[^"]*"\\s*/?\\s*>',
+    String.raw`<link\s+rel="canonical"\s+href="[^"]*"\s*/?\s*>`,
     `<link rel="canonical" href="${canonicalUrl}" />\n${hreflangLinks}`
   );
 
   // Replace Open Graph tags
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="og:url"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="og:url"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="og:url" content="${canonicalUrl}" />`
   );
 
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="og:title"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="og:title"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`
   );
 
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="og:description"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="og:description"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="og:description" content="${escapeHtml(description)}" />`
   );
 
   // Replace Twitter Card tags
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="twitter:url"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="twitter:url"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="twitter:url" content="${canonicalUrl}" />`
   );
 
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="twitter:title"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="twitter:title"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="twitter:title" content="${escapeHtml(title)}" />`
   );
 
   html = replaceMetaContent(
     html,
-    '<meta\\s+property="twitter:description"\\s+content="[^"]*"\\s*/?\\s*>',
+    String.raw`<meta\s+property="twitter:description"\s+content="[^"]*"\s*/?\s*>`,
     `<meta property="twitter:description" content="${escapeHtml(description)}" />`
   );
 
@@ -138,7 +138,7 @@ function injectMetaTags(html, route) {
     if (/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i.test(html)) {
       html = replaceMetaContent(
         html,
-        '<meta\\s+name="robots"\\s+content="[^"]*"\\s*/?\\s*>',
+        String.raw`<meta\s+name="robots"\s+content="[^"]*"\s*/?\s*>`,
         noIndexTag
       );
     } else {
@@ -156,7 +156,7 @@ function preRenderRoutes() {
   console.log('🚀 Starting SSG pre-rendering for public routes...\n');
 
   const indexPath = join(DIST_DIR, 'index.html');
-  
+
   if (!existsSync(indexPath)) {
     console.error('❌ Error: dist/index.html not found. Please run build first.');
     process.exit(1);

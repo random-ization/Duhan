@@ -36,9 +36,6 @@ export function getLocalizedContent(
     case 'zh':
       suffix = 'Zh';
       break; // Default field usually
-    default:
-      suffix = '';
-      break;
   }
 
   // Try specific language field

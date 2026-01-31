@@ -37,6 +37,14 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   const { logActivity } = useApp();
   const labels = getLabels(language);
 
+  // Helper function to get custom list title
+  const getCustomListTitle = (
+    listType: 'SAVED' | 'MISTAKES' | undefined,
+    labels: ReturnType<typeof getLabels>
+  ): string => {
+    return listType === 'SAVED' ? labels.vocabBook : labels.mistakeBook;
+  };
+
   // Data State
   const [selectedUnitFilter, setSelectedUnitFilter] = useState<number | 'ALL'>('ALL');
   const [reviewingIncorrect, setReviewingIncorrect] = useState(false);
@@ -83,9 +91,9 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     } else {
       // Parse from context
       Object.keys(levelContexts).forEach(unitStr => {
-        const unit = parseInt(unitStr);
+        const unit = Number.parseInt(unitStr);
         const content = levelContexts[unit];
-        if (content && content.vocabularyList && content.vocabularyList.startsWith('[')) {
+        if (content?.vocabularyList?.startsWith('[')) {
           try {
             const parsed: VocabularyItem[] = JSON.parse(content.vocabularyList);
             parsed.forEach((item, idx) => {
@@ -122,7 +130,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       const itemsStudied = stats.correct.length + stats.incorrect.length;
       logActivity('VOCAB', duration, itemsStudied);
     },
-    [sessionStartTime, logActivity]
+    [sessionStartTime, logActivity, setIsSessionComplete]
   );
 
   const handleNewSession = () => {
@@ -169,11 +177,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
-            {customWordList
-              ? customListType === 'SAVED'
-                ? labels.vocabBook
-                : labels.mistakeBook
-              : labels.vocabLabel}
+            {customWordList ? getCustomListTitle(customListType, labels) : labels.vocabLabel}
           </h2>
           <p className="text-sm text-slate-500">
             {filteredWords.length} {labels.term}
@@ -219,11 +223,10 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
-              viewMode === 'CARDS'
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'CARDS'
+              ? 'bg-white text-indigo-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             <Layers className="w-4 h-4 mr-2" />
             {labels.flashcards}
@@ -234,11 +237,10 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
-              viewMode === 'LEARN'
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LEARN'
+              ? 'bg-white text-indigo-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             <Brain className="w-4 h-4 mr-2" />
             {labels.learn}
@@ -249,11 +251,10 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
-              viewMode === 'LIST'
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LIST'
+              ? 'bg-white text-indigo-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             <ListIcon className="w-4 h-4 mr-2" />
             {labels.list}

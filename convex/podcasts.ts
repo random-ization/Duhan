@@ -16,6 +16,7 @@ export const getTrending = query({
     // For now, let's fetch all and sort top 10 (assuming not massive scale yet).
     const allEpisodes = await ctx.db.query('podcast_episodes').collect();
     const internal = allEpisodes
+      .slice()
       .sort((a, b) => b.views - a.views)
       .slice(0, 10)
       .map(ep => ({
@@ -95,6 +96,7 @@ export const getHistory = query({
     // or doing memory sort if result set is small.
     // Let's manually sort for safety if index isn't composed with time.
     return history
+      .slice()
       .sort((a, b) => b.playedAt - a.playedAt)
       .map(h => ({
         ...h,
@@ -201,7 +203,7 @@ export const toggleSubscription = mutation({
     const existingSub = await ctx.db
       .query('podcast_subscriptions')
       .withIndex('by_user_channel', q =>
-        q.eq('userId', userId).eq('channelId', existingChannel!._id)
+        q.eq('userId', userId).eq('channelId', existingChannel._id)
       )
       .first();
 
@@ -241,57 +243,7 @@ export const trackView = mutation({
     const { guid, title, audioUrl, duration, pubDate, channel: channelInfo } = args;
 
     // 1. Find or Create Channel
-    let channelId;
-    const normalizedFeedUrl = channelInfo.feedUrl?.trim() || undefined;
-    const normalizedItunesId = channelInfo.itunesId?.trim() || undefined;
-
-    if (normalizedFeedUrl) {
-      const existingChannel = await ctx.db
-        .query('podcast_channels')
-        .withIndex('by_feedUrl', q => q.eq('feedUrl', normalizedFeedUrl))
-        .first();
-
-      if (existingChannel) {
-        channelId = existingChannel._id;
-      } else {
-        channelId = await ctx.db.insert('podcast_channels', {
-          title: channelInfo.title,
-          author: channelInfo.author || 'Unknown',
-          feedUrl: normalizedFeedUrl,
-          artworkUrl: channelInfo.artworkUrl,
-          itunesId: channelInfo.itunesId,
-          isFeatured: false,
-          createdAt: Date.now(),
-        });
-      }
-    } else if (normalizedItunesId) {
-      const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
-      const existingChannel = await ctx.db
-        .query('podcast_channels')
-        .withIndex('by_feedUrl', q => q.eq('feedUrl', pseudoFeedUrl))
-        .first();
-
-      if (existingChannel) {
-        channelId = existingChannel._id;
-      } else {
-        channelId = await ctx.db.insert('podcast_channels', {
-          title: channelInfo.title,
-          author: channelInfo.author || 'Unknown',
-          feedUrl: pseudoFeedUrl,
-          artworkUrl: channelInfo.artworkUrl,
-          itunesId: normalizedItunesId,
-          isFeatured: false,
-          createdAt: Date.now(),
-        });
-      }
-    } else {
-      // Fallback: Try to find by title if no feedUrl
-      const existingChannel = await ctx.db
-        .query('podcast_channels')
-        .filter(q => q.eq(q.field('title'), channelInfo.title))
-        .first();
-      if (existingChannel) channelId = existingChannel._id;
-    }
+    const channelId = await resolvePodcastChannel(ctx, channelInfo);
 
     if (!channelId) return { success: false, error: 'Missing channel identifier' };
 
@@ -302,13 +254,10 @@ export const trackView = mutation({
       .filter(q => q.eq(q.field('guid'), guid))
       .first();
 
-    if (!episode) {
-      // Try match by audioUrl just in case
-      episode = await ctx.db
-        .query('podcast_episodes')
-        .filter(q => q.eq(q.field('audioUrl'), audioUrl))
-        .first();
-    }
+    episode ??= await ctx.db
+      .query('podcast_episodes')
+      .filter(q => q.eq(q.field('audioUrl'), audioUrl))
+      .first();
 
     if (episode) {
       await ctx.db.patch(episode._id, {
@@ -356,3 +305,69 @@ export const saveProgress = mutation({
     return { success: true };
   },
 });
+
+// Helper for resolving podcast channels in podcasts.ts
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolvePodcastChannel(ctx: any, channelInfo: {
+  itunesId?: string;
+  title: string;
+  author?: string;
+  feedUrl?: string;
+  artworkUrl?: string;
+}) {
+  const normalizedFeedUrl = channelInfo.feedUrl?.trim() || undefined;
+  const normalizedItunesId = channelInfo.itunesId?.trim() || undefined;
+
+  if (normalizedFeedUrl) {
+    const existingChannel = await ctx.db
+      .query('podcast_channels')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', normalizedFeedUrl))
+      .first();
+
+    if (existingChannel) {
+      return existingChannel._id;
+    } else {
+      return await ctx.db.insert('podcast_channels', {
+        title: channelInfo.title,
+        author: channelInfo.author || 'Unknown',
+        feedUrl: normalizedFeedUrl,
+        artworkUrl: channelInfo.artworkUrl,
+        itunesId: channelInfo.itunesId,
+        isFeatured: false,
+        createdAt: Date.now(),
+      });
+    }
+  } else if (normalizedItunesId) {
+    const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
+    const existingChannel = await ctx.db
+      .query('podcast_channels')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', pseudoFeedUrl))
+      .first();
+
+    if (existingChannel) {
+      return existingChannel._id;
+    } else {
+      return await ctx.db.insert('podcast_channels', {
+        title: channelInfo.title,
+        author: channelInfo.author || 'Unknown',
+        feedUrl: pseudoFeedUrl,
+        artworkUrl: channelInfo.artworkUrl,
+        itunesId: normalizedItunesId,
+        isFeatured: false,
+        createdAt: Date.now(),
+      });
+    }
+  } else {
+    // Fallback: Try to find by title if no feedUrl
+    const existingChannel = await ctx.db
+      .query('podcast_channels')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((q: any) => q.eq(q.field('title'), channelInfo.title))
+      .first();
+    if (existingChannel) return existingChannel._id;
+  }
+  return null;
+}

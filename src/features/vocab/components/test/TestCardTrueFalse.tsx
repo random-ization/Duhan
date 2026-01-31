@@ -8,7 +8,7 @@ type Answer = {
 
 type Mode = 'test' | 'review';
 
-type Props = {
+type Props = Readonly<{
   language: Language;
   prompt: string;
   statement: string;
@@ -16,7 +16,7 @@ type Props = {
   mode?: Mode;
   correctIsTrue?: boolean;
   onSubmit: (isTrue: boolean) => void;
-};
+}>;
 
 export default function TestCardTrueFalse({
   language,
@@ -36,28 +36,34 @@ export default function TestCardTrueFalse({
     const base =
       'flex-1 h-14 rounded-2xl border-2 font-black text-lg flex items-center justify-center gap-2 transition-all';
 
-    const classes = isReview
-      ? (() => {
-          const isTheCorrectAnswer = correctIsTrue === isTrue;
-          const isCorrectChoice = isSelected && isTheCorrectAnswer;
-          const isWrongChoice = isSelected && !isTheCorrectAnswer;
-          if (isCorrectChoice) return `${base} bg-green-500 border-green-600 text-white`;
-          if (isWrongChoice) return `${base} bg-red-500 border-red-600 text-white`;
-          if (isTheCorrectAnswer) return `${base} bg-green-50 border-green-300 text-green-700`;
-          return `${base} bg-white border-slate-200 text-slate-500`;
-        })()
-      : answered
-        ? isSelected
-          ? `${base} bg-blue-600 border-blue-700 text-white`
-          : `${base} bg-white border-slate-200 text-slate-500`
-        : `${base} bg-white border-slate-200 text-slate-900 hover:border-slate-400`;
+    let className = base;
+
+    if (isReview) {
+      const isTheCorrectAnswer = correctIsTrue === isTrue;
+      const isCorrectChoice = isSelected && isTheCorrectAnswer;
+      const isWrongChoice = isSelected && !isTheCorrectAnswer;
+
+      if (isCorrectChoice) {
+        className += ' bg-green-500 border-green-600 text-white';
+      } else if (isWrongChoice) {
+        className += ' bg-red-500 border-red-600 text-white';
+      } else if (isTheCorrectAnswer) {
+        className += ' bg-green-50 border-green-300 text-green-700';
+      } else {
+        className += ' bg-white border-slate-200 text-slate-500';
+      }
+    } else if (isSelected) {
+      className += ' bg-blue-600 border-blue-700 text-white';
+    } else {
+      className += ' bg-white border-slate-200 text-slate-900 hover:border-slate-400';
+    }
 
     return (
       <button
         type="button"
         disabled={isReview}
         onClick={() => onSubmit(isTrue)}
-        className={classes}
+        className={className}
       >
         {isReview && correctIsTrue === isTrue ? <Check className="w-5 h-5" /> : null}
         {isReview && isSelected && correctIsTrue !== isTrue ? <X className="w-5 h-5" /> : null}

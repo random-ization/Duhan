@@ -2,16 +2,16 @@ import { Language } from '../types';
 
 import i18n from './i18next-config';
 
-export type Labels = string & { [key: string]: Labels };
-export type TranslationObject = Labels;
-
+export interface Labels {
+  [key: string]: any;
+}
 // Deprecated: translations are now managed by i18next
 // We export an empty object or proxy to satisfy legacy imports if any
-export const translations: Record<Language, TranslationObject> = {
-  en: '' as unknown as TranslationObject,
-  zh: '' as unknown as TranslationObject,
-  vi: '' as unknown as TranslationObject,
-  mn: '' as unknown as TranslationObject,
+export const translations: Record<Language, Labels> = {
+  en: '' as unknown as Labels,
+  zh: '' as unknown as Labels,
+  vi: '' as unknown as Labels,
+  mn: '' as unknown as Labels,
 };
 
 export const getLabels = (language: Language): Labels => {

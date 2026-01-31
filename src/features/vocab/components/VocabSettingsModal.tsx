@@ -190,7 +190,7 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                       onChange={e =>
                         setLocalSettings(s => ({
                           ...s,
-                          flashcard: { ...s.flashcard, batchSize: parseInt(e.target.value) },
+                          flashcard: { ...s.flashcard, batchSize: Number.parseInt(e.target.value) },
                         }))
                       }
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
@@ -238,7 +238,7 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                       onChange={e =>
                         setLocalSettings(s => ({
                           ...s,
-                          learn: { ...s.learn, batchSize: parseInt(e.target.value) },
+                          learn: { ...s.learn, batchSize: Number.parseInt(e.target.value) },
                         }))
                       }
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"

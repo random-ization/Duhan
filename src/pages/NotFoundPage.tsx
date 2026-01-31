@@ -1,14 +1,13 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LocalizedLink } from '../components/LocalizedLink';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 
 export default function NotFoundPage() {
   const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <SEO
+      <Seo
         title={t('seo.notFound.title', '404 - Page Not Found | DuHan')}
         description={t('seo.notFound.description', 'The page you are looking for does not exist.')}
         noIndex

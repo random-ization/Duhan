@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAction } from 'convex/react';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -67,6 +67,7 @@ export default function PricingDetailsPage() {
         userId?: string;
         userEmail?: string;
         userName?: string;
+        region?: string;
       },
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
@@ -132,8 +133,9 @@ export default function PricingDetailsPage() {
         userId: user.id,
         userEmail: user.email,
         userName: user.name,
+        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
       });
-      window.location.assign(checkoutUrl);
+      globalThis.location.assign(checkoutUrl);
     } catch (err) {
       logger.error('Failed to create checkout', err);
       notify.error(t('pricingDetails.errors.checkoutFailed'));
@@ -147,9 +149,16 @@ export default function PricingDetailsPage() {
     open();
   };
 
+  let buttonLabel = t('pricingDetails.plans.pro.cta');
+  if (showLocalizedPromo) {
+    buttonLabel = isPromoVerified
+      ? t('pricingDetails.promo.subscribe')
+      : t('pricingDetails.promo.verifyNow');
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-landing antialiased selection:bg-[#FFDE59] selection:text-black">
-      <SEO
+      <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
@@ -246,31 +255,28 @@ export default function PricingDetailsPage() {
         <div className="inline-flex flex-col sm:flex-row bg-white p-1.5 rounded-xl border-2 border-black shadow-pop items-center relative gap-1 sm:gap-0">
           <button
             onClick={() => setBillingCycle('monthly')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
-              billingCycle === 'monthly'
-                ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
-            }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${billingCycle === 'monthly'
+              ? 'bg-[#0F172A] text-white shadow-sm'
+              : 'text-slate-500 hover:text-black bg-white'
+              }`}
           >
             {t('pricingDetails.billing.monthly')}
           </button>
           <button
             onClick={() => setBillingCycle('quarterly')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
-              billingCycle === 'quarterly'
-                ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
-            }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${billingCycle === 'quarterly'
+              ? 'bg-[#0F172A] text-white shadow-sm'
+              : 'text-slate-500 hover:text-black bg-white'
+              }`}
           >
             {t('pricingDetails.billing.quarterly')}
           </button>
           <button
             onClick={() => setBillingCycle('annual')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
-              billingCycle === 'annual'
-                ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
-            }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${billingCycle === 'annual'
+              ? 'bg-[#0F172A] text-white shadow-sm'
+              : 'text-slate-500 hover:text-black bg-white'
+              }`}
           >
             {t('pricingDetails.billing.annual')}
           </button>
@@ -323,9 +329,8 @@ export default function PricingDetailsPage() {
           </div>
 
           <div
-            className={`rounded-3xl border-2 border-black p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
-              showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
-            }`}
+            className={`rounded-3xl border-2 border-black p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
+              }`}
           >
             {showLocalizedPromo ? (
               <div className="absolute top-4 right-4 bg-[#10B981] text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
@@ -381,17 +386,12 @@ export default function PricingDetailsPage() {
                 }
                 startCheckout(proPlanId);
               }}
-              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${
-                showLocalizedPromo
-                  ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
-                  : 'bg-[#FFDE59] text-black shadow-[4px_4px_0px_0px_#ffffff]'
-              }`}
+              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${showLocalizedPromo
+                ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
+                : 'bg-[#FFDE59] text-black shadow-[4px_4px_0px_0px_#ffffff]'
+                }`}
             >
-              {showLocalizedPromo
-                ? isPromoVerified
-                  ? t('pricingDetails.promo.subscribe')
-                  : t('pricingDetails.promo.verifyNow')
-                : t('pricingDetails.plans.pro.cta')}
+              {buttonLabel}
               {showLocalizedPromo && isPromoVerified ? (
                 <Check className="w-5 h-5" />
               ) : (
@@ -410,8 +410,8 @@ export default function PricingDetailsPage() {
                 t('pricingDetails.plans.pro.features.f3'),
                 t('pricingDetails.plans.pro.features.f4'),
                 t('pricingDetails.plans.pro.features.f5'),
-              ].map((item, idx) => (
-                <li key={idx} className="flex gap-3 items-start">
+              ].map((item) => (
+                <li key={item} className="flex gap-3 items-start">
                   <div className="bg-[#10B981]/20 p-0.5 rounded text-[#10B981] flex-shrink-0">
                     <Check className="w-4 h-4" />
                   </div>

@@ -329,13 +329,13 @@ export const runRouteAudit = action({
       await ctx.runMutation(completeUnitMutation, { courseId, unitIndex });
       const afterWrite = await ctx.runQuery(getCourseProgressQuery, { courseId });
       const afterWriteRec = asRecord(afterWrite);
-      const completed1 = asArray(afterWriteRec.completedUnits).map(v => Number(v));
+      const completed1 = asArray(afterWriteRec.completedUnits).map(Number);
       if (!completed1.includes(unitIndex))
         throw new Error('Course progress not readable after write');
       await ctx.runMutation(uncompleteUnitMutation, { courseId, unitIndex });
       const afterDelete = await ctx.runQuery(getCourseProgressQuery, { courseId });
       const afterDeleteRec = asRecord(afterDelete);
-      const completed2 = asArray(afterDeleteRec.completedUnits).map(v => Number(v));
+      const completed2 = asArray(afterDeleteRec.completedUnits).map(Number);
       if (completed2.includes(unitIndex)) throw new Error('Course progress not reverted');
       return { wrote: true, deleted: true };
     });

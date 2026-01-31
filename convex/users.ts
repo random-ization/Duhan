@@ -37,11 +37,26 @@ const REGION_CALLING_CODE = {
   MN: '976',
 } as const;
 
-const CN_MOBILE_REGEX =
-  /^(?:\+?86)?1(?:3\d{3}|5[^4\D]\d{2}|8\d{3}|7(?:[235-8]\d{2}|4(?:0\d|1[0-2]|9\d))|9[0-35-9]\d{2}|66\d{2})\d{6}$/;
+const CN_MOBILE_REGEX_PREFIX = /^(?:\+?86)?1/;
+
+// Split complex regex into simpler parts to avoid complexity limits
+const CN_MOBILE_PATTERNS = [
+  /^3\d{9}$/, // 13x
+  /^5[^4\D]\d{8}$/, // 15x (except 154)
+  /^8\d{9}$/, // 18x
+  /^7(?:[235-8]\d|4[019])\d{7}$/, // 17x
+  /^9[0-35-9]\d{8}$/, // 19x
+  /^66\d{8}$/, // 166
+];
+
+function isValidCnMobile(input: string) {
+  if (!CN_MOBILE_REGEX_PREFIX.test(input)) return false;
+  const body = input.replace(CN_MOBILE_REGEX_PREFIX, '');
+  return CN_MOBILE_PATTERNS.some(pattern => pattern.test(body));
+}
 
 function normalizeCnCandidate(input: string) {
-  let candidate = input.trim().replace(/[^\d+]/g, '');
+  let candidate = input.trim().replaceAll(/[^\d+]/g, '');
   if (candidate.startsWith('00')) {
     candidate = `+${candidate.slice(2)}`;
   }
@@ -59,7 +74,7 @@ export const verifyAndMarkRegion = mutation({
       throw new Error('UNAUTHORIZED');
     }
 
-    let digits = args.phoneRaw.replace(/\\D/g, '');
+    let digits = args.phoneRaw.replaceAll(/\D/g, '');
     const code = REGION_CALLING_CODE[args.regionHint];
     if (digits.startsWith('00')) {
       digits = digits.slice(2);
@@ -71,9 +86,8 @@ export const verifyAndMarkRegion = mutation({
     let eligible = false;
     let region: 'CN' | 'VN' | 'MN' | 'OTHER' = 'OTHER';
 
-    if (args.regionHint === 'CN' && !CN_MOBILE_REGEX.test(normalizeCnCandidate(args.phoneRaw))) {
-      eligible = false;
-      region = 'OTHER';
+    if (args.regionHint === 'CN' && !isValidCnMobile(normalizeCnCandidate(args.phoneRaw))) {
+      // eligible and region are already set to default
     } else {
       try {
         const phone = parsePhoneNumberWithError(input, phoneMetadata as unknown as MetadataJson);
@@ -86,7 +100,7 @@ export const verifyAndMarkRegion = mutation({
           phone.country === args.regionHint &&
           callingMatches &&
           isMobile;
-        region = eligible ? (args.regionHint as 'CN' | 'VN' | 'MN') : 'OTHER';
+        region = eligible ? args.regionHint : 'OTHER';
       } catch {
         eligible = false;
         region = 'OTHER';

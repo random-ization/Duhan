@@ -202,11 +202,6 @@ export const useCanvasAnnotation = (
   }, [fetchAnnotation]);
 
   // 翻页时自动获取数据 - Managed by UseQuery Effect now
-  /*
-    useEffect(() => {
-        fetchAnnotation();
-    }, [fetchAnnotation]);
-    */
 
   // 组件卸载时清理定时器，并保存未保存的数据
   useEffect(() => {

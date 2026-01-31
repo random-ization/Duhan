@@ -57,12 +57,22 @@ const WEBHOOK_SECRET_ENV = 'LEMONSQUEEZY_WEBHOOK_SECRET';
 const STORE_ID_ENV = 'LEMONSQUEEZY_STORE_ID';
 
 // Variant IDs for each plan
-const VARIANT_MAP: Record<string, string> = {
-  MONTHLY: process.env.LEMONSQUEEZY_VARIANT_MONTHLY || '',
-  SEMIANNUAL: process.env.LEMONSQUEEZY_VARIANT_SEMIANNUAL || '',
-  QUARTERLY: process.env.LEMONSQUEEZY_VARIANT_QUARTERLY || '',
-  ANNUAL: process.env.LEMONSQUEEZY_VARIANT_ANNUAL || '',
-  LIFETIME: process.env.LEMONSQUEEZY_VARIANT_LIFETIME || '',
+// Variant IDs for each plan
+const VARIANT_MAP: Record<string, Record<string, string>> = {
+  GLOBAL: {
+    MONTHLY: process.env.LEMONSQUEEZY_VARIANT_MONTHLY || '',
+    SEMIANNUAL: process.env.LEMONSQUEEZY_VARIANT_SEMIANNUAL || '',
+    QUARTERLY: process.env.LEMONSQUEEZY_VARIANT_QUARTERLY || '',
+    ANNUAL: process.env.LEMONSQUEEZY_VARIANT_ANNUAL || '',
+    LIFETIME: process.env.LEMONSQUEEZY_VARIANT_LIFETIME || '',
+  },
+  REGIONAL: {
+    MONTHLY: process.env.LEMONSQUEEZY_VARIANT_MONTHLY_REGIONAL || '',
+    SEMIANNUAL: process.env.LEMONSQUEEZY_VARIANT_SEMIANNUAL_REGIONAL || '',
+    QUARTERLY: process.env.LEMONSQUEEZY_VARIANT_QUARTERLY_REGIONAL || '',
+    ANNUAL: process.env.LEMONSQUEEZY_VARIANT_ANNUAL_REGIONAL || '',
+    LIFETIME: process.env.LEMONSQUEEZY_VARIANT_LIFETIME_REGIONAL || '',
+  },
 };
 
 const LEMONSQUEEZY_API_URL = 'https://api.lemonsqueezy.com/v1';
@@ -76,6 +86,7 @@ export const createCheckout = action({
     userId: v.optional(v.string()),
     userEmail: v.optional(v.string()),
     userName: v.optional(v.string()),
+    region: v.optional(v.string()), // "GLOBAL" | "REGIONAL"
   },
   handler: async (ctx, args) => {
     const apiKey = process.env[API_KEY_ENV];
@@ -88,9 +99,11 @@ export const createCheckout = action({
       throw new Error(`Missing ${STORE_ID_ENV} environment variable`);
     }
 
-    const variantId = VARIANT_MAP[args.plan];
+    const region = args.region === 'REGIONAL' ? 'REGIONAL' : 'GLOBAL';
+    const variantId = VARIANT_MAP[region]?.[args.plan];
+
     if (!variantId) {
-      throw new Error(`Invalid plan: ${args.plan}. No variant ID configured.`);
+      throw new Error(`Invalid plan: ${args.plan} for region ${region}. No variant ID configured.`);
     }
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
@@ -221,82 +234,14 @@ export const handleWebhook = action({
     console.log(`[LemonSqueezy] Webhook received: ${eventName ?? 'unknown'}`);
 
     try {
-      switch (eventName) {
-        case 'order_created':
-          // One-time purchase (e.g., LIFETIME)
-          if (userEmail) {
-            await ctx.runMutation(grantAccessMutation, {
-              customerEmail: userEmail,
-              plan: planFromCustom ?? 'LIFETIME',
-              userId,
-              lemonSqueezyCustomerId: customerId,
-            });
-            console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
-          }
-          break;
-
-        case 'subscription_created':
-        case 'subscription_payment_success':
-        case 'subscription_resumed':
-        case 'subscription_unpaused':
-          // Subscription activated or renewed
-          if (userEmail) {
-            const variantName = readString(attributes, ['variant_name']);
-            const plan =
-              planFromCustom ??
-              (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
-
-            await ctx.runMutation(grantAccessMutation, {
-              customerEmail: userEmail,
-              plan,
-              userId,
-              lemonSqueezyCustomerId: customerId,
-              lemonSqueezySubscriptionId: subscriptionOrOrderId,
-            });
-            console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
-          }
-          break;
-
-        case 'subscription_cancelled':
-        case 'subscription_expired':
-        case 'subscription_paused':
-          // Subscription ended
-          if (userEmail) {
-            await ctx.runMutation(revokeAccessMutation, {
-              customerEmail: userEmail,
-              userId,
-            });
-            console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
-          }
-          break;
-
-        case 'subscription_updated': {
-          // Check status to determine if access should be granted or revoked
-          const status = readString(attributes, ['status']);
-          if (status === 'active' || status === 'on_trial') {
-            if (userEmail) {
-              await ctx.runMutation(grantAccessMutation, {
-                customerEmail: userEmail,
-                plan: planFromCustom ?? 'MONTHLY',
-                userId,
-                lemonSqueezyCustomerId: customerId,
-                lemonSqueezySubscriptionId: subscriptionOrOrderId,
-              });
-            }
-          } else if (status === 'cancelled' || status === 'expired' || status === 'paused') {
-            if (userEmail) {
-              await ctx.runMutation(revokeAccessMutation, {
-                customerEmail: userEmail,
-                userId,
-              });
-            }
-          }
-          break;
-        }
-
-        default:
-          console.log(`[LemonSqueezy] Unhandled event: ${eventName}`);
-      }
+      await processWebhookEvent(ctx, eventName, {
+        userEmail,
+        userId,
+        planFromCustom,
+        customerId,
+        subscriptionOrOrderId,
+        attributes,
+      });
 
       return { success: true };
     } catch (error: unknown) {
@@ -305,3 +250,148 @@ export const handleWebhook = action({
     }
   },
 });
+
+
+// Helper for Lemon Squeezy webhook processing
+
+async function processWebhookEvent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  eventName: string | undefined,
+  data: {
+    userEmail: string | undefined;
+    userId: string | undefined;
+    planFromCustom: string | undefined;
+    customerId: string | undefined;
+    subscriptionOrOrderId: string | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    attributes: any;
+  }
+) {
+  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
+
+  if (eventName === 'order_created') {
+    if (userEmail) {
+      await ctx.runMutation(grantAccessMutation, {
+        customerEmail: userEmail,
+        plan: planFromCustom ?? 'LIFETIME',
+        userId,
+        lemonSqueezyCustomerId: customerId,
+      });
+      console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
+    }
+    return;
+  }
+
+  if (eventName?.startsWith('subscription_')) {
+    await handleSubscriptionEvent(ctx, eventName, {
+      userEmail,
+      userId,
+      planFromCustom,
+      customerId,
+      subscriptionOrOrderId,
+      attributes,
+    });
+  } else {
+    console.log(`[LemonSqueezy] Unhandled event: ${eventName}`);
+  }
+}
+
+async function handleSubscriptionEvent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  eventName: string,
+  data: {
+    userEmail: string | undefined;
+    userId: string | undefined;
+    planFromCustom: string | undefined;
+    customerId: string | undefined;
+    subscriptionOrOrderId: string | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    attributes: any;
+  }
+) {
+  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
+
+  switch (eventName) {
+    case 'subscription_created':
+    case 'subscription_payment_success':
+    case 'subscription_resumed':
+    case 'subscription_unpaused':
+      if (userEmail) {
+        const variantName = readString(attributes, ['variant_name']);
+        const plan =
+          planFromCustom ??
+          (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
+
+        await ctx.runMutation(grantAccessMutation, {
+          customerEmail: userEmail,
+          plan,
+          userId,
+          lemonSqueezyCustomerId: customerId,
+          lemonSqueezySubscriptionId: subscriptionOrOrderId,
+        });
+        console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
+      }
+      break;
+
+    case 'subscription_cancelled':
+    case 'subscription_expired':
+    case 'subscription_paused':
+      if (userEmail) {
+        await ctx.runMutation(revokeAccessMutation, {
+          customerEmail: userEmail,
+          userId,
+        });
+        console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
+      }
+      break;
+
+    case 'subscription_updated':
+      await handleSubscriptionUpdated(ctx, {
+        userEmail,
+        userId,
+        planFromCustom,
+        customerId,
+        subscriptionOrOrderId,
+        attributes,
+      });
+      break;
+  }
+}
+
+async function handleSubscriptionUpdated(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  data: {
+    userEmail: string | undefined;
+    userId: string | undefined;
+    planFromCustom: string | undefined;
+    customerId: string | undefined;
+    subscriptionOrOrderId: string | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    attributes: any;
+  }
+) {
+  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
+  const status = readString(attributes, ['status']);
+
+  if (status === 'active' || status === 'on_trial') {
+    if (userEmail) {
+      await ctx.runMutation(grantAccessMutation, {
+        customerEmail: userEmail,
+        plan: planFromCustom ?? 'MONTHLY',
+        userId,
+        lemonSqueezyCustomerId: customerId,
+        lemonSqueezySubscriptionId: subscriptionOrOrderId,
+      });
+    }
+  } else if (status === 'cancelled' || status === 'expired' || status === 'paused') {
+    if (userEmail) {
+      await ctx.runMutation(revokeAccessMutation, {
+        customerEmail: userEmail,
+        userId,
+      });
+    }
+  }
+}

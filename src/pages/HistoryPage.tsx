@@ -1,7 +1,6 @@
 import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Play, Calendar } from 'lucide-react';
-// import { PODCAST_MESSAGES, getPodcastMessages } from '../constants/podcast-messages';
 
 import { NoArgs, qRef } from '../utils/convexRefs';
 
@@ -34,11 +33,6 @@ export default function HistoryPage() {
   const loading = history === undefined;
   const navigate = useLocalizedNavigate();
 
-  // Mapping logic if necessary (Convex returns _id, frontend might wait for id)
-  // The query returns { ...h, id: h._id } so it should be compatible.
-  // However, ListeningHistoryItem type check might be strict.
-  // Let's assume the spread in convex/podcasts.ts matches.
-
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <div className="bg-white p-4 sticky top-0 z-10 border-b flex items-center gap-4">
@@ -53,10 +47,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Error handling in Convex is usually done via wrapping calls or side effects. 
-                    If query failed, it throws. For simple UI, we assume success or handled by ErrorBoundary. 
-                */}
-
         {!loading && (!history || history.length === 0) && (
           <EmptyState
             icon={Play}
@@ -68,7 +58,7 @@ export default function HistoryPage() {
         )}
 
         {history?.map(item => (
-          <div
+          <button
             key={item.id}
             onClick={() =>
               navigate('/podcasts/player', {
@@ -82,7 +72,7 @@ export default function HistoryPage() {
                 },
               })
             }
-            className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer active:scale-95 transition hover:shadow-md"
+            className="w-full text-left bg-white p-3 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer active:scale-95 transition hover:shadow-md"
           >
             <img
               src={item.channelImage || '/placeholder-podcast.png'}
@@ -100,7 +90,7 @@ export default function HistoryPage() {
             <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">
               <Play size={16} fill="currentColor" />
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

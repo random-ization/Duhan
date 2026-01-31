@@ -74,7 +74,11 @@ export const getStats = query({
 
         const oneDayMs = 24 * 60 * 60 * 1000;
         const daysSinceLastAccess = Math.floor((now - lastAccess) / oneDayMs);
-        const streak = daysSinceLastAccess <= 1 ? (daysSinceLastAccess === 0 ? 1 : 1) : 0; // Simplified streak logic - to be refined with activity logs if needed
+        // Simplified streak logic
+        let streak = 0;
+        if (daysSinceLastAccess <= 1) {
+            streak = 1;
+        }
 
         // Calculate Study Time
         // Daily Minutes
@@ -87,8 +91,12 @@ export const getStats = query({
         // Finding start of this week's Monday
         const date = new Date(now);
         const day = date.getDay() || 7; // Get current day number, converting Sun. 0 to 7
-        if (day !== 1) date.setHours(-24 * (day - 1)); // Set to Monday
-        else date.setHours(0, 0, 0, 0); // Is Monday
+        if (day === 1) {
+            date.setHours(0, 0, 0, 0); // Is Monday
+        } else {
+            // Set to Monday
+            date.setHours(-24 * (day - 1));
+        }
         const startOfWeek = date.setHours(0, 0, 0, 0);
 
         const weeklyMinutesArr = [0, 0, 0, 0, 0, 0, 0];

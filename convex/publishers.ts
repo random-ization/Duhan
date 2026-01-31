@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import { Id } from './_generated/dataModel';
 
 export const getAll = query({
   args: {},
@@ -10,7 +11,7 @@ export const getAll = query({
         let url = p.imageUrl;
         if (url && !url.startsWith('http')) {
           // Assume it's a storage ID
-          url = (await ctx.storage.getUrl(url)) || undefined;
+          url = (await ctx.storage.getUrl(url as Id<'_storage'>)) || undefined;
         }
         return { ...p, imageUrl: url };
       })

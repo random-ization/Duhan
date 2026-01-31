@@ -45,7 +45,7 @@ const VocabBookPage: React.FC = () => {
   const trimmedSearch = searchQuery.trim();
   const vocabBookResult = useQuery(VOCAB.getVocabBook, {
     includeMastered: true,
-    search: trimmedSearch ? trimmedSearch : undefined,
+    search: trimmedSearch || undefined,
   });
   const loading = vocabBookResult === undefined;
   const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
@@ -55,11 +55,14 @@ const VocabBookPage: React.FC = () => {
       const progress = item.progress;
       const isMastered = progress.status === 'MASTERED';
       const isUnlearned = progress.state === 0 || progress.status === 'NEW';
-      const category: VocabBookCategory = isMastered
-        ? 'MASTERED'
-        : isUnlearned
-          ? 'UNLEARNED'
-          : 'DUE';
+
+      let category: VocabBookCategory = 'DUE';
+      if (isMastered) {
+        category = 'MASTERED';
+      } else if (isUnlearned) {
+        category = 'UNLEARNED';
+      }
+
       const dueNow = !!progress.nextReviewAt && progress.nextReviewAt <= now && !isMastered;
       return { item, category, dueNow };
     });
@@ -112,22 +115,54 @@ const VocabBookPage: React.FC = () => {
 
   const exportSubtitle = useMemo(() => {
     const catLabel = filterButtons.find(b => b.key === activeCategory)?.label || activeCategory;
-    return trimmedSearch ? `生词本 · ${catLabel} · ${trimmedSearch}` : `生词本 · ${catLabel}`;
+    let subtitle = `生词本 · ${catLabel}`;
+    if (trimmedSearch) {
+      subtitle = `生词本 · ${catLabel} · ${trimmedSearch}`;
+    }
+    return subtitle;
   }, [activeCategory, filterButtons, trimmedSearch]);
 
   const langListLabel = useMemo(() => {
-    if (language === 'zh') return '中文词表';
-    if (language === 'vi') return 'Từ vựng tiếng Việt';
-    if (language === 'mn') return 'Монгол үгийн жагсаалт';
-    return 'English List';
+    let label = 'English List';
+    if (language === 'zh') {
+      label = '中文词表';
+    } else if (language === 'vi') {
+      label = 'Từ vựng tiếng Việt';
+    } else if (language === 'mn') {
+      label = 'Монгол үгийн жагсаалт';
+    }
+    return label;
   }, [language]);
 
   const langListDesc = useMemo(() => {
-    if (language === 'zh') return '默写单词';
-    if (language === 'vi') return 'Viết từ';
-    if (language === 'mn') return 'Үгийг бичих';
-    return 'Write the word';
+    let desc = 'Write the word';
+    if (language === 'zh') {
+      desc = '默写单词';
+    } else if (language === 'vi') {
+      desc = 'Viết từ';
+    } else if (language === 'mn') {
+      desc = 'Үгийг бичих';
+    }
+    return desc;
   }, [language]);
+
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('download_failed');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      globalThis.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const onExport = async () => {
     if (exporting) return;
@@ -138,237 +173,258 @@ const VocabBookPage: React.FC = () => {
         return;
       }
       const { url } = await exportPdf({
-        origin: window.location.origin,
+        origin: globalThis.location.origin,
         language,
         mode: exportMode,
         shuffle: exportShuffle,
         category: activeCategory,
-        q: trimmedSearch ? trimmedSearch : undefined,
+        q: trimmedSearch || undefined,
       });
-      const categoryLabel =
-        activeCategory === 'UNLEARNED'
-          ? 'unlearned'
-          : activeCategory === 'DUE'
-            ? 'due'
-            : 'mastered';
-      const modeLabel =
-        exportMode === 'A4_DICTATION' ? 'dictation' : exportMode === 'KO_LIST' ? 'ko' : 'lang';
-      const filename = `vocab-book-${categoryLabel}-${modeLabel}.pdf`;
 
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('download_failed');
-        const blob = await res.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(objectUrl);
-      } catch {
-        window.open(url, '_blank', 'noopener,noreferrer');
+      const categoryLabel = activeCategory.toLowerCase();
+      let modeLabel = 'lang';
+      if (exportMode === 'A4_DICTATION') {
+        modeLabel = 'dictation';
+      } else if (exportMode === 'KO_LIST') {
+        modeLabel = 'ko';
       }
+
+      const filename = `vocab-book-${categoryLabel}-${modeLabel}.pdf`;
+      await downloadFile(url, filename);
       setExportOpen(false);
     } catch {
       notify.error(language === 'zh' ? '导出失败，请稍后重试' : 'Export failed. Please try again.');
     } finally {
-      window.setTimeout(() => setExporting(false), 250);
+      globalThis.setTimeout(() => setExporting(false), 250);
     }
   };
 
   const startLearning = (mode: 'immerse' | 'listen' | 'dictation' | 'spelling') => {
     const params = new URLSearchParams();
-    params.set('category', activeCategory);
+    // If the current category has no items but others do, we should probably 
+    // default to a category that has items or allow learning from all.
+    // Here we prioritize the active category if it has items, otherwise we use 'all'.
+    const currentCategoryHasItems = visibleItems.length > 0;
+    params.set('category', currentCategoryHasItems ? activeCategory : 'all');
     if (trimmedSearch) params.set('q', trimmedSearch);
     navigate(`/vocab-book/${mode}?${params.toString()}`);
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Header - Claymorphism Style */}
-      <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b-[3px] border-indigo-100">
-        <div className="max-w-6xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between mb-5">
+  const renderHeader = () => (
+    <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b-[3px] border-indigo-100">
+      <div className="max-w-6xl mx-auto px-4 py-5">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)]"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </button>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)]"
-              >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
-              </button>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)] border-[3px] border-indigo-300">
-                  <BookOpen className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                    {labels.dashboard?.vocab?.title || 'Vocab Book'}
-                  </h1>
-                  <p className="text-slate-500 font-bold text-sm">
-                    {labels.dashboard?.vocab?.subtitle || 'SRS Smart Review'}
-                  </p>
-                </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)] border-[3px] border-indigo-300">
+                <BookOpen className="w-7 h-7 text-white" />
               </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {stats.dueNow > 0 && (
-                <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-[3px] border-red-200 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)]">
-                  <div className="p-2 bg-red-500 rounded-xl">
-                    <Zap className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
-                    <p className="text-xs font-bold text-red-400">
-                      {labels.dashboard?.vocab?.dueNow || '已到期'}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={() => setExportOpen(true)}
-                disabled={visibleItems.length === 0 || loading}
-                className="px-4 py-3 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 font-black text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
-              >
-                <FileDown className="w-5 h-5 text-indigo-600" />
-                {language === 'zh' ? '导出PDF' : 'Export PDF'}
-              </button>
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                  {labels.dashboard?.vocab?.title || 'Vocab Book'}
+                </h1>
+                <p className="text-slate-500 font-bold text-sm">
+                  {labels.dashboard?.vocab?.subtitle || 'SRS Smart Review'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Search & Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search - Claymorphism */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder={
-                  getLabel(labels, ['dashboard', 'vocab', 'search']) || 'Search words...'
-                }
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border-[3px] border-slate-200 rounded-2xl text-sm font-medium focus:ring-0 focus:border-indigo-300 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
-              />
-            </div>
+          <div className="flex items-center gap-3">
+            {stats.dueNow > 0 && (
+              <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-[3px] border-red-200 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)]">
+                <div className="p-2 bg-red-500 rounded-xl">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
+                  <p className="text-xs font-bold text-red-400">
+                    {labels.dashboard?.vocab?.dueNow || '已到期'}
+                  </p>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setExportOpen(true)}
+              disabled={visibleItems.length === 0 || loading}
+              className="px-4 py-3 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 font-black text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              <FileDown className="w-5 h-5 text-indigo-600" />
+              {language === 'zh' ? '导出PDF' : 'Export PDF'}
+            </button>
+          </div>
+        </div>
 
-            {/* Filter Buttons - Claymorphism */}
-            <div className="flex gap-2 flex-wrap">
-              {filterButtons.map(btn => (
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder={getLabel(labels, ['dashboard', 'vocab', 'search']) || 'Search words...'}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white border-[3px] border-slate-200 rounded-2xl text-sm font-medium focus:ring-0 focus:border-indigo-300 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
+            />
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            {filterButtons.map(btn => {
+              const isActive = activeCategory === btn.key;
+              let activeClasses = '';
+              if (isActive) {
+                if (btn.color === 'blue') {
+                  activeClasses = 'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]';
+                } else if (btn.color === 'amber') {
+                  activeClasses = 'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]';
+                } else {
+                  activeClasses = 'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]';
+                }
+              } else {
+                activeClasses = 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+              }
+
+              return (
                 <button
                   key={btn.key}
                   onClick={() => setActiveCategory(btn.key)}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-sm border-[3px] transition-all duration-200 ${
-                    activeCategory === btn.key
-                      ? btn.color === 'blue'
-                        ? 'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]'
-                        : btn.color === 'amber'
-                          ? 'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]'
-                          : 'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
-                  }`}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-sm border-[3px] transition-all duration-200 ${activeClasses}`}
                 >
                   {btn.label}
                   <span
                     className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
-                      activeCategory === btn.key ? 'bg-white/20' : 'bg-slate-100'
+                      isActive ? 'bg-white/20' : 'bg-slate-100'
                     }`}
                   >
                     {btn.count}
                   </span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8 pb-28">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4 animate-pulse">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-            </div>
-            <p className="text-slate-400 font-bold">{labels.common?.loading || 'Loading...'}</p>
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => (prev === id ? null : id));
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4 animate-pulse">
+            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
           </div>
-        ) : visibleItems.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20"
-          >
-            <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-[28px] flex items-center justify-center mb-6 border-[3px] border-indigo-200 shadow-[0_8px_30px_rgba(99,102,241,0.15)]">
-              <BookOpen className="w-12 h-12 text-indigo-400" />
-            </div>
-            <p className="text-xl font-black text-slate-700 mb-2">
-              {trimmedSearch
-                ? labels.dashboard?.vocab?.noMatch || 'No results found'
-                : labels.dashboard?.vocab?.noDueNow || '暂无单词'}
-            </p>
-            <p className="text-slate-400 font-medium text-center max-w-md">
-              {trimmedSearch
-                ? ''
-                : labels.dashboard?.vocab?.srsDesc ||
-                  "Words you mark as 'Don't know' will appear here for spaced repetition learning"}
-            </p>
-          </motion.div>
-        ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-            {visibleItems.map(({ item: word }) => {
-              const id = String(word.id);
-              const isExpanded = expandedId === id;
-              const isMastered = word.progress.status === 'MASTERED';
+          <p className="text-slate-400 font-bold">{labels.common?.loading || 'Loading...'}</p>
+        </div>
+      );
+    }
 
+    if (visibleItems.length === 0) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20"
+        >
+          <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-[28px] flex items-center justify-center mb-6 border-[3px] border-indigo-200 shadow-[0_8px_30px_rgba(99,102,241,0.15)]">
+            <BookOpen className="w-12 h-12 text-indigo-400" />
+          </div>
+          <p className="text-xl font-black text-slate-700 mb-2">
+            {(() => {
+              if (trimmedSearch) {
+                return labels.dashboard?.vocab?.noMatch || 'No results found';
+              }
+              return labels.dashboard?.vocab?.noDueNow || '暂无单词';
+            })()}
+          </p>
+          <p className="text-slate-400 font-medium text-center max-w-md">
+            {(() => {
+              if (trimmedSearch) {
+                return '';
+              }
               return (
-                <div
-                  key={id}
-                  className="bg-white rounded-2xl border-[3px] border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
-                >
-                  <div className="flex items-center justify-between gap-3 px-5 py-4">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(prev => (prev === id ? null : id))}
-                      className="flex-1 text-left min-w-0"
-                    >
-                      <div className="text-xl font-black text-slate-900 truncate">{word.word}</div>
-                    </button>
-
-                    <button
-                      onClick={async e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        await setMastery({ wordId: word.id, mastered: !isMastered });
-                      }}
-                      className="p-2 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
-                      aria-label={isMastered ? '取消已掌握' : '标记已掌握'}
-                    >
-                      {isMastered ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-slate-400" />
-                      )}
-                    </button>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="px-5 pb-5">
-                      <div className="pt-3 border-t-2 border-dashed border-slate-100">
-                        <div className="text-slate-700 font-bold leading-relaxed">
-                          {word.meaning}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                labels.dashboard?.vocab?.srsDesc ||
+                "Words you mark as 'Don't know' will appear here for spaced repetition learning"
               );
-            })}
-          </motion.div>
-        )}
-      </div>
+            })()}
+          </p>
+        </motion.div>
+      );
+    }
 
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+        {visibleItems.map(({ item: word }) => {
+          const id = String(word.id);
+          const isExpanded = expandedId === id;
+          const isMastered = word.progress.status === 'MASTERED';
+
+          return (
+            <div
+              key={id}
+              className="bg-white rounded-2xl border-[3px] border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-3 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(id)}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <div className="text-xl font-black text-slate-900 truncate">{word.word}</div>
+                </button>
+
+                <button
+                  onClick={async e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await setMastery({ wordId: word.id, mastered: !isMastered });
+                  }}
+                  className="p-2 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                  aria-label={isMastered ? '取消已掌握' : '标记已掌握'}
+                >
+                  {isMastered ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-slate-400" />
+                  )}
+                </button>
+              </div>
+
+              {isExpanded && (
+                <div className="px-5 pb-5">
+                  <div className="pt-3 border-t-2 border-dashed border-slate-100">
+                    <div className="text-slate-700 font-bold leading-relaxed">{word.meaning}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </motion.div>
+    );
+  };
+
+  const renderExportModal = () => {
+    let buttonText = 'Export PDF';
+    let exportingText = 'Exporting...';
+    if (language === 'zh') {
+      buttonText = '导出 PDF 词表';
+      exportingText = '正在导出...';
+    }
+
+    const currentButtonText = exporting ? exportingText : buttonText;
+
+    return (
       <AnimatePresence>
         {exportOpen && (
           <motion.div
@@ -377,8 +433,9 @@ const VocabBookPage: React.FC = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-4"
             onClick={() => {
-              if (exporting) return;
-              setExportOpen(false);
+              if (!exporting) {
+                setExportOpen(false);
+              }
             }}
           >
             <motion.div
@@ -401,8 +458,9 @@ const VocabBookPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => {
-                    if (exporting) return;
-                    setExportOpen(false);
+                    if (!exporting) {
+                      setExportOpen(false);
+                    }
                   }}
                   className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-40"
                   aria-label="关闭"
@@ -465,12 +523,14 @@ const VocabBookPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setExportShuffle(v => !v)}
-                  className={`w-12 h-7 rounded-full transition-all ${exportShuffle ? 'bg-orange-500' : 'bg-slate-300'}`}
+                  className={`w-12 h-7 rounded-full transition-all relative ${
+                    exportShuffle ? 'bg-orange-500' : 'bg-slate-300'
+                  }`}
                   aria-label="shuffle"
                 >
                   <span
-                    className={`block w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                      exportShuffle ? 'translate-x-5' : 'translate-x-1'
+                    className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
+                      exportShuffle ? 'left-6' : 'left-1'
                     }`}
                   />
                 </button>
@@ -481,78 +541,83 @@ const VocabBookPage: React.FC = () => {
                 disabled={exporting || visibleItems.length === 0}
                 className="mt-6 w-full py-4 rounded-2xl bg-orange-500 text-white font-black border-[3px] border-orange-400 shadow-[0_12px_35px_rgba(249,115,22,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {exporting
-                  ? language === 'zh'
-                    ? '正在导出...'
-                    : 'Exporting...'
-                  : language === 'zh'
-                    ? '导出 PDF 词表'
-                    : 'Export PDF'}
+                {currentButtonText}
               </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+    );
+  };
 
-      <div className="fixed inset-x-0 bottom-4 z-[70] px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white/90 backdrop-blur-xl border-[3px] border-slate-200 rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
-            <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => startLearning('immerse')}
-                disabled={stats.total === 0}
-                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Layers className="w-5 h-5 text-indigo-600" />
-                  <span className="text-xs font-black text-slate-800">
-                    {labels.vocab?.modeImmersive || '沉浸刷词'}
-                  </span>
-                </div>
-              </button>
+  const renderFloatingActions = () => (
+    <div className="fixed inset-x-0 bottom-4 z-[70] px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white/90 backdrop-blur-xl border-[3px] border-slate-200 rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              onClick={() => startLearning('immerse')}
+              disabled={stats.total === 0}
+              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Layers className="w-5 h-5 text-indigo-600" />
+                <span className="text-xs font-black text-slate-800">
+                  {labels.vocab?.modeImmersive || '沉浸刷词'}
+                </span>
+              </div>
+            </button>
 
-              <button
-                onClick={() => startLearning('listen')}
-                disabled={stats.total === 0}
-                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Headphones className="w-5 h-5 text-amber-700" />
-                  <span className="text-xs font-black text-slate-800">
-                    {labels.vocab?.modeListen || '随身听'}
-                  </span>
-                </div>
-              </button>
+            <button
+              onClick={() => startLearning('listen')}
+              disabled={stats.total === 0}
+              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Headphones className="w-5 h-5 text-amber-700" />
+                <span className="text-xs font-black text-slate-800">
+                  {labels.vocab?.modeListen || '随身听'}
+                </span>
+              </div>
+            </button>
 
-              <button
-                onClick={() => startLearning('dictation')}
-                disabled={stats.total === 0}
-                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <PencilLine className="w-5 h-5 text-rose-600" />
-                  <span className="text-xs font-black text-slate-800">
-                    {labels.vocab?.modeDictation || '听写'}
-                  </span>
-                </div>
-              </button>
+            <button
+              onClick={() => startLearning('dictation')}
+              disabled={stats.total === 0}
+              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <PencilLine className="w-5 h-5 text-rose-600" />
+                <span className="text-xs font-black text-slate-800">
+                  {labels.vocab?.modeDictation || '听写'}
+                </span>
+              </div>
+            </button>
 
-              <button
-                onClick={() => startLearning('spelling')}
-                disabled={stats.total === 0}
-                className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <SpellCheck className="w-5 h-5 text-emerald-700" />
-                  <span className="text-xs font-black text-slate-800">
-                    {labels.vocab?.modeSpelling || '拼写'}
-                  </span>
-                </div>
-              </button>
-            </div>
+            <button
+              onClick={() => startLearning('spelling')}
+              disabled={stats.total === 0}
+              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <SpellCheck className="w-5 h-5 text-emerald-700" />
+                <span className="text-xs font-black text-slate-800">
+                  {labels.vocab?.modeSpelling || '拼写'}
+                </span>
+              </div>
+            </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {renderHeader()}
+      <div className="max-w-6xl mx-auto px-4 py-8 pb-28">{renderContent()}</div>
+      {renderExportModal()}
+      {renderFloatingActions()}
     </div>
   );
 };

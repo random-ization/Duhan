@@ -45,6 +45,7 @@ export const getSavedWords = query({
       .take(limit);
 
     return rows
+      .slice()
       .sort((a, b) => b.createdAt - a.createdAt)
       .map(r => ({
         id: r._id,
@@ -83,6 +84,7 @@ export const getMistakes = query({
       .take(limit);
 
     return rows
+      .slice()
       .sort((a, b) => b.createdAt - a.createdAt)
       .map(r => ({
         id: r._id,
@@ -119,7 +121,7 @@ export const getExamAttempts = query({
       .withIndex('by_user', q => q.eq('userId', userId))
       .take(limit);
 
-    const sorted = attempts.sort((a, b) => b.createdAt - a.createdAt);
+    const sorted = attempts.slice().sort((a, b) => b.createdAt - a.createdAt);
     const examIds = [...new Set(sorted.map(a => a.examId))];
 
     const examsArray = await Promise.all(examIds.map(id => ctx.db.get(id)));
@@ -238,8 +240,8 @@ export const saveExamAttempt = mutation({
         if (doc) {
           exam = doc;
         }
-      } catch (e) {
-        void e;
+      } catch {
+        // Ignored
       }
     }
 
@@ -251,7 +253,7 @@ export const saveExamAttempt = mutation({
     if (!totalQuestions) {
       const questions = await ctx.db
         .query('topik_questions')
-        .withIndex('by_exam', q => q.eq('examId', exam!._id))
+        .withIndex('by_exam', q => q.eq('examId', exam._id))
         .collect();
       totalQuestions = questions.length;
     }

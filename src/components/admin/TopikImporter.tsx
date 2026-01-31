@@ -656,9 +656,9 @@ function parseSheetName(sheetName: string): Partial<ExamMetadata> {
     isPaid: false,
   };
 
-  const roundMatch = sheetName.match(/(\d+)/);
+  const roundMatch = /(\d+)/.exec(sheetName);
   if (roundMatch) {
-    result.round = parseInt(roundMatch[1], 10);
+    result.round = Number.parseInt(roundMatch[1], 10);
   }
 
   const upperName = sheetName.toUpperCase();
@@ -682,10 +682,44 @@ function parseSheetName(sheetName: string): Partial<ExamMetadata> {
 
   if (result.round && result.type) {
     const typeLabel = result.type === 'READING' ? '읽기' : '듣기';
-    result.title = `제${result.round}회 한국어능력시험 TOPIK II ${typeLabel}${result.paperType ? ` (${result.paperType})` : ''}`;
+    const paperSuffix = result.paperType ? ` (${result.paperType})` : '';
+    result.title = `제${result.round}회 한국어능력시험 TOPIK II ${typeLabel}${paperSuffix}`;
   }
 
   return result;
+}
+
+function getRowValue(row: Record<string, any>, keys: string[]): string {
+  for (const key of keys) {
+    const val = row[key];
+    if (val !== undefined && val !== null && val !== '') {
+      return String(val).trim();
+    }
+  }
+  return '';
+}
+
+function getRowNumber(
+  row: Record<string, any>,
+  keys: string[],
+  defaultVal: number = 0
+): number {
+  const val = getRowValue(row, keys);
+  const num = Number.parseInt(val, 10);
+  return Number.isNaN(num) ? defaultVal : num;
+}
+
+function parseCorrectAnswer(answerRaw: string): number {
+  if (!answerRaw) return 0;
+  const upper = answerRaw.toUpperCase();
+  if (upper === 'B' || upper === '②' || upper === '2') return 1;
+  if (upper === 'C' || upper === '③' || upper === '3') return 2;
+  if (upper === 'D' || upper === '④' || upper === '4') return 3;
+  if (!(upper === 'A' || upper === '①' || upper === '1')) {
+    const num = Number.parseInt(answerRaw, 10);
+    if (num >= 1 && num <= 4) return num - 1;
+  }
+  return 0;
 }
 
 function parseQuestionRow(
@@ -693,64 +727,37 @@ function parseQuestionRow(
   rowIndex: number,
   examType: 'READING' | 'LISTENING'
 ): { question: ParsedQuestion | null; error: string | null } {
-  const getValue = (keys: string[]): string => {
-    for (const key of keys) {
-      const val = row[key];
-      if (val !== undefined && val !== null && val !== '') {
-        return String(val).trim();
-      }
-    }
-    return '';
-  };
-
-  const getNumber = (keys: string[], defaultVal: number = 0): number => {
-    const val = getValue(keys);
-    const num = parseInt(val, 10);
-    return isNaN(num) ? defaultVal : num;
-  };
-
-  const questionNum = getNumber(['题号', 'number', 'id', 'No', '序号', '번호'], rowIndex);
+  const questionNum = getRowNumber(row, ['题号', 'number', 'id', 'No', '序号', '번호'], rowIndex);
   if (questionNum <= 0) {
     return { question: null, error: `第${rowIndex}行: 缺少有效题号` };
   }
 
-  const optionA = getValue(['选项A', '选项1', 'A', 'optionA', 'option1', '①']);
-  const optionB = getValue(['选项B', '选项2', 'B', 'optionB', 'option2', '②']);
-  const optionC = getValue(['选项C', '选项3', 'C', 'optionC', 'option3', '③']);
-  const optionD = getValue(['选项D', '选项4', 'D', 'optionD', 'option4', '④']);
+  const optionA = getRowValue(row, ['选项A', '选项1', 'A', 'optionA', 'option1', '①']);
+  const optionB = getRowValue(row, ['选项B', '选项2', 'B', 'optionB', 'option2', '②']);
+  const optionC = getRowValue(row, ['选项C', '选项3', 'C', 'optionC', 'option3', '③']);
+  const optionD = getRowValue(row, ['选项D', '选项4', 'D', 'optionD', 'option4', '④']);
 
   if (!optionA || !optionB || !optionC || !optionD) {
     return { question: null, error: `第${questionNum}题: 选项不完整` };
   }
 
-  const answerRaw = getValue(['正确答案', '答案', 'answer', 'correct', '정답']);
-  let correctAnswer = 0;
-  if (answerRaw) {
-    const upper = answerRaw.toUpperCase();
-    if (upper === 'A' || upper === '①' || upper === '1') correctAnswer = 0;
-    else if (upper === 'B' || upper === '②' || upper === '2') correctAnswer = 1;
-    else if (upper === 'C' || upper === '③' || upper === '3') correctAnswer = 2;
-    else if (upper === 'D' || upper === '④' || upper === '4') correctAnswer = 3;
-    else {
-      const num = parseInt(answerRaw, 10);
-      if (num >= 1 && num <= 4) correctAnswer = num - 1;
-    }
-  }
+  const answerRaw = getRowValue(row, ['正确答案', '答案', 'answer', 'correct', '정답']);
+  const correctAnswer = parseCorrectAnswer(answerRaw);
 
   const config = getQuestionConfig(questionNum, examType);
 
-  const useFixedOptions = config?.fixedOptions && config.fixedOptions.length === 4;
+  const useFixedOptions = config?.fixedOptions?.length === 4;
   const finalOptions = useFixedOptions ? config.fixedOptions : [optionA, optionB, optionC, optionD];
 
-  const excelQuestion = getValue(['问题', 'question', '질문']);
+  const excelQuestion = getRowValue(row, ['问题', 'question', '질문']);
   const finalQuestion =
     config?.needsQuestionInput && excelQuestion ? excelQuestion : config?.question || '';
 
   const question: ParsedQuestion = {
     id: questionNum,
     number: questionNum,
-    passage: getValue(['阅读文段', 'passage', '지문', '文段']),
-    contextBox: getValue(['보기', 'contextBox', '보기内容', 'context']),
+    passage: getRowValue(row, ['阅读文段', 'passage', '지문', '文段']),
+    contextBox: getRowValue(row, ['보기', 'contextBox', '보기内容', 'context']),
     options: finalOptions as [string, string, string, string],
     correctAnswer,
     question: finalQuestion,
@@ -758,16 +765,16 @@ function parseQuestionRow(
     instruction: config?.instruction || '',
   };
 
-  const imageUrl = getValue(['图片URL', 'image', 'imageUrl', '图片']);
+  const imageUrl = getRowValue(row, ['图片URL', 'image', 'imageUrl', '图片']);
   if (imageUrl) question.image = imageUrl;
 
-  const explanation = getValue(['解析', 'explanation', '해설']);
+  const explanation = getRowValue(row, ['解析', 'explanation', '해설']);
   if (explanation) question.explanation = explanation;
 
-  const optImgA = getValue(['选项A图片', 'optionImageA']);
-  const optImgB = getValue(['选项B图片', 'optionImageB']);
-  const optImgC = getValue(['选项C图片', 'optionImageC']);
-  const optImgD = getValue(['选项D图片', 'optionImageD']);
+  const optImgA = getRowValue(row, ['选项A图片', 'optionImageA']);
+  const optImgB = getRowValue(row, ['选项B图片', 'optionImageB']);
+  const optImgC = getRowValue(row, ['选项C图片', 'optionImageC']);
+  const optImgD = getRowValue(row, ['选项D图片', 'optionImageD']);
   if (optImgA || optImgB || optImgC || optImgD) {
     question.optionImages = [optImgA, optImgB, optImgC, optImgD];
   }
@@ -782,77 +789,71 @@ const TopikImporter: React.FC = () => {
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleExcelFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = event => {
-      try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+  const handleExcelFile = async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const data = new Uint8Array(arrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
 
-        const exams: ParsedExam[] = [];
+      const exams: ParsedExam[] = [];
 
-        for (const sheetName of workbook.SheetNames) {
-          const lowerName = sheetName.toLowerCase();
-          if (
-            lowerName.includes('说明') ||
-            lowerName.includes('readme') ||
-            lowerName.includes('template')
-          ) {
-            continue;
-          }
-
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<
-            string,
-            any
-          >[];
-
-          if (jsonData.length === 0) continue;
-
-          const metadata = parseSheetName(sheetName);
-          const questions: ParsedQuestion[] = [];
-          const errors: string[] = [];
-
-          if (!metadata.round || !metadata.type) {
-            errors.push(`无法从表名"${sheetName}"解析届数和类型，请手动设置`);
-          }
-
-          const examType: 'READING' | 'LISTENING' = metadata.type || 'READING';
-
-          jsonData.forEach((row, idx) => {
-            const { question, error } = parseQuestionRow(row, idx + 1, examType);
-            if (question) questions.push(question);
-            if (error) errors.push(error);
-          });
-
-          if (questions.length > 0) {
-            exams.push({
-              metadata: {
-                id: `exam-${Date.now()}-${sheetName.replace(/\\s/g, '_')}`,
-                title: metadata.title || sheetName,
-                round: metadata.round || 0,
-                type: metadata.type || 'READING',
-                paperType: metadata.paperType,
-                timeLimit: metadata.timeLimit || 70,
-                isPaid: false,
-              },
-              questions,
-              sheetName,
-              errors,
-            });
-          }
+      for (const sheetName of workbook.SheetNames) {
+        const lowerName = sheetName.toLowerCase();
+        if (
+          lowerName.includes('说明') ||
+          lowerName.includes('readme') ||
+          lowerName.includes('template')
+        ) {
+          continue;
         }
 
-        setParsedExams(exams);
-        setStatus(
-          `解析完成：${exams.length} 套试卷，共 ${exams.reduce((sum, e) => sum + e.questions.length, 0)} 道题目`
-        );
-      } catch (e: any) {
-        console.error('Excel parse error:', e);
-        setStatus(`解析失败: ${e.message}`);
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        if (jsonData.length === 0) continue;
+
+        const metadata = parseSheetName(sheetName);
+        const questions: ParsedQuestion[] = [];
+        const errors: string[] = [];
+
+        if (!metadata.round || !metadata.type) {
+          errors.push(`无法从表名"${sheetName}"解析届数和类型，请手动设置`);
+        }
+
+        const examType: 'READING' | 'LISTENING' = metadata.type || 'READING';
+
+        jsonData.forEach((row, idx) => {
+          const { question, error } = parseQuestionRow(row as Record<string, any>, idx + 1, examType);
+          if (question) questions.push(question);
+          if (error) errors.push(error);
+        });
+
+        if (questions.length > 0) {
+          exams.push({
+            metadata: {
+              id: `exam-${Date.now()}-${sheetName.replaceAll(/\s/g, '_')}`,
+              title: metadata.title || sheetName,
+              round: metadata.round || 0,
+              type: metadata.type || 'READING',
+              paperType: metadata.paperType,
+              timeLimit: metadata.timeLimit || 70,
+              isPaid: false,
+            },
+            questions,
+            sheetName,
+            errors,
+          });
+        }
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      setParsedExams(exams);
+      setStatus(
+        `解析完成：${exams.length} 套试卷，共 ${exams.reduce((sum, e) => sum + e.questions.length, 0)} 道题目`
+      );
+    } catch (e: any) {
+      console.error('Excel parse error:', e);
+      setStatus(`解析失败: ${e.message}`);
+    }
   };
 
   const handleImportExam = async (exam: ParsedExam) => {
@@ -1085,7 +1086,7 @@ const TopikImporter: React.FC = () => {
                     </div>
                     <div className="text-xs text-amber-700 space-y-0.5">
                       {exam.errors.slice(0, 3).map((err, i) => (
-                        <div key={i}>• {err}</div>
+                        <div key={`${exam.metadata.id}-err-${i}`}>• {err}</div>
                       ))}
                       {exam.errors.length > 3 && <div>... 还有 {exam.errors.length - 3} 条</div>}
                     </div>

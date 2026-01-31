@@ -22,10 +22,13 @@ export const LocalizedLink: React.FC<LocalizedLinkProps> = ({ to, children, ...p
         to === `/${l}` || to.startsWith(`/${l}/`)
     );
 
-    // Normalize and add prefix if needed
+    // Normalize the base path (ensure it starts with /)
+    const normalizedTo = to.startsWith('/') ? to : `/${to}`;
+
+    // Add prefix if needed
     const localizedTo = hasLangPrefix
         ? to
-        : `/${currentLang}${to.startsWith('/') ? to : `/${to}`}`;
+        : `/${currentLang}${normalizedTo}`;
 
     return (
         <Link to={localizedTo} {...props}>

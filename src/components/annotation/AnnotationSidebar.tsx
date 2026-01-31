@@ -30,6 +30,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
   sidebarAnnotations,
   activeAnnotationId,
   editingAnnotationId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hoveredAnnotationId,
   labels,
   onActivate,
@@ -42,7 +43,6 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
   onClose,
 }) => {
   const [editNoteInput, setEditNoteInput] = useState('');
-  void hoveredAnnotationId;
 
   // Sync input when editing starts
   useEffect(() => {
@@ -72,20 +72,28 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
         const isEditing = editingAnnotationId === ann.id;
         const isActive = activeAnnotationId === ann.id;
 
+        const handleCardClick = () => {
+          if (!isEditing) {
+            onActivate(ann.id);
+            onEdit(ann.id);
+          }
+        };
+
         return (
-          <div
+          <button
+            type="button"
             key={ann.id}
             id={`sidebar-card-${ann.id}`}
             className={`group p-4 rounded-xl border transition-all cursor-pointer relative scroll-mt-24
-                  ${
-                    isActive || isEditing
-                      ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
-                      : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
-                  }`}
-            onClick={() => {
-              if (!isEditing) {
-                onActivate(ann.id);
-                onEdit(ann.id);
+                  ${isActive || isEditing
+                ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
+                : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+              }`}
+            onClick={handleCardClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCardClick();
               }
             }}
             onMouseEnter={() => onHover(ann.id)}
@@ -103,9 +111,9 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                   const annColor = (ann as unknown as { color?: unknown }).color;
                   const key =
                     annColor === 'yellow' ||
-                    annColor === 'green' ||
-                    annColor === 'blue' ||
-                    annColor === 'pink'
+                      annColor === 'green' ||
+                      annColor === 'blue' ||
+                      annColor === 'pink'
                       ? annColor
                       : 'yellow';
                   return colorClassMap[key];
@@ -177,7 +185,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                 </button>
               </>
             )}
-          </div>
+          </button>
         );
       })
     );
@@ -200,7 +208,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
 
       <MobileSheet
         isOpen={isOpen}
-        onClose={onClose || (() => {})}
+        onClose={onClose || (() => { })}
         title={labels.annotate}
         height="half"
       >

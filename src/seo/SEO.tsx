@@ -60,7 +60,7 @@ export const SEO: React.FC<SEOProps> = ({
         ? `meta[name="${args.name}"]`
         : `meta[property="${args.property}"]`;
 
-      let el = document.head.querySelector(selector) as HTMLMetaElement | null;
+      let el = document.head.querySelector(selector);
       if (!el) {
         el = document.createElement('meta');
         if (args.name) el.setAttribute('name', args.name);
@@ -68,14 +68,14 @@ export const SEO: React.FC<SEOProps> = ({
         document.head.appendChild(el);
       }
       el.setAttribute('content', args.content);
-      el.setAttribute('data-duhan-seo', args.tag);
+      if (el instanceof HTMLElement) el.dataset.duhanSeo = args.tag;
     };
 
     const upsertLink = (args: { rel: string; href: string; hreflang?: string; tag: string }) => {
       const hreflangSelector = args.hreflang ? `[hreflang="${args.hreflang}"]` : '';
       const selector = `link[rel="${args.rel}"]${hreflangSelector}`;
 
-      let el = document.head.querySelector(selector) as HTMLLinkElement | null;
+      let el = document.head.querySelector(selector);
       if (!el) {
         el = document.createElement('link');
         el.setAttribute('rel', args.rel);
@@ -83,7 +83,7 @@ export const SEO: React.FC<SEOProps> = ({
         document.head.appendChild(el);
       }
       el.setAttribute('href', args.href);
-      el.setAttribute('data-duhan-seo', args.tag);
+      if (el instanceof HTMLElement) el.dataset.duhanSeo = args.tag;
     };
 
     const removeManagedLinks = (rel: string, tag: string) => {

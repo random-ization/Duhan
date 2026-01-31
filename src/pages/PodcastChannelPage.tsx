@@ -229,7 +229,7 @@ const PodcastChannelPage: React.FC = () => {
   if (error && !displayChannel) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-        <p className="text-red-500">{error || labels.errors?.loadError || 'Load failed'}</p>
+        <p className="text-red-500">{error}</p>
         <button
           onClick={() => navigate(-1)}
           className="text-indigo-600 hover:underline flex items-center gap-1"
@@ -324,7 +324,7 @@ const PodcastChannelPage: React.FC = () => {
       {displayChannel.description && (
         <div className="px-4 py-4 bg-slate-50 border-b border-slate-100">
           <p
-            className={`text-sm text-slate-600 leading-relaxed ${!isDescExpanded ? 'line-clamp-3' : ''}`}
+            className={`text-sm text-slate-600 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-3'}`}
           >
             {displayChannel.description}
           </p>
@@ -362,10 +362,11 @@ const PodcastChannelPage: React.FC = () => {
         )}
         <div className="space-y-3">
           {data?.episodes?.map((episode, idx) => (
-            <div
-              key={idx}
+            <button
+              key={episode.guid || episode.id || episode.link || idx}
+              type="button"
               onClick={() => handlePlayEpisode(episode)}
-              className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer border border-slate-100 hover:border-slate-200 hover:shadow-sm"
+              className="w-full text-left flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer border border-slate-100 hover:border-slate-200 hover:shadow-sm"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
                 <Play className="w-5 h-5" fill="currentColor" />
@@ -381,7 +382,7 @@ const PodcastChannelPage: React.FC = () => {
                   <span>{formatDate(episode.pubDate)}</span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

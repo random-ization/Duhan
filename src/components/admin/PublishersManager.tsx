@@ -146,7 +146,7 @@ export const PublishersManager: React.FC = () => {
     if (!editingPub?.name.trim()) return;
     const normalizeText = (value?: string) => {
       const trimmed = value?.trim();
-      return trimmed ? trimmed : undefined;
+      return trimmed || undefined;
     };
     setSaving(true);
     try {
@@ -168,6 +168,15 @@ export const PublishersManager: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const { isEditing, hasImage, displayImageUrl } = useMemo(() => {
+    if (!editingPub) return { isEditing: false, hasImage: false, displayImageUrl: undefined };
+    return {
+      isEditing: !!editingPub.id,
+      hasImage: !!(previewUrl || editingPub.imageUrl?.startsWith('http')),
+      displayImageUrl: previewUrl || editingPub.imageUrl,
+    };
+  }, [editingPub, previewUrl]);
 
   if (!publishers || !institutes)
     return (
@@ -194,8 +203,9 @@ export const PublishersManager: React.FC = () => {
         </div>
         <div className="space-y-2">
           {mergedPublishers.map(pub => (
-            <div
+            <button
               key={pub.name}
+              type="button"
               onClick={() => {
                 setEditingPub({
                   id: pub.id,
@@ -209,7 +219,7 @@ export const PublishersManager: React.FC = () => {
                 });
                 setPreviewUrl(null);
               }}
-              className={`p-3 border-2 rounded-lg cursor-pointer flex items-center gap-3 ${editingPub?.name === pub.name ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'}`}
+              className={`w-full text-left p-3 border-2 rounded-lg cursor-pointer flex items-center gap-3 ${editingPub?.name === pub.name ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'}`}
             >
               {pub.imageUrl ? (
                 <img
@@ -229,7 +239,7 @@ export const PublishersManager: React.FC = () => {
                 )}
                 {!pub.id && <div className="text-[10px] text-amber-500 font-bold">未配置</div>}
               </div>
-            </div>
+            </button>
           ))}
           {mergedPublishers.length === 0 && (
             <div className="text-center text-zinc-400 py-10 text-sm">暂无出版社</div>
@@ -241,24 +251,28 @@ export const PublishersManager: React.FC = () => {
       <div className="flex-1 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
         {editingPub ? (
           <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-xl font-black">{editingPub.id ? '编辑出版社' : '新增出版社'}</h2>
+            <h2 className="text-xl font-black">{isEditing ? '编辑出版社' : '新增出版社'}</h2>
 
             <div>
-              <label className="block text-xs font-bold mb-1">
+              <label htmlFor="pub-name" className="block text-xs font-bold mb-1">
                 出版社名称 (必须与教材中的一致)
               </label>
               <input
+                id="pub-name"
                 value={editingPub.name}
                 onChange={e => setEditingPub({ ...editingPub, name: e.target.value })}
-                disabled={!!editingPub.id} // Name is ID usually, disabling edit for simplicity or allow but be careful
+                disabled={isEditing} // Name is ID usually, disabling edit for simplicity or allow but be careful
                 className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
                 placeholder="如：延世大学"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold mb-2">韩语名称（主展示）</label>
+              <label htmlFor="pub-name-ko" className="block text-xs font-bold mb-2">
+                韩语名称（主展示）
+              </label>
               <input
+                id="pub-name-ko"
                 value={editingPub.nameKo || ''}
                 onChange={e => setEditingPub({ ...editingPub, nameKo: e.target.value })}
                 className="w-full p-2 border-2 border-zinc-900 rounded-lg font-bold"
@@ -268,8 +282,11 @@ export const PublishersManager: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold mb-1">出版社名称（中文）</label>
+                <label htmlFor="pub-name-zh" className="block text-xs font-bold mb-1">
+                  出版社名称（中文）
+                </label>
                 <input
+                  id="pub-name-zh"
                   value={editingPub.nameZh || ''}
                   onChange={e => setEditingPub({ ...editingPub, nameZh: e.target.value })}
                   className="w-full p-2 border-2 border-zinc-300 rounded-lg"
@@ -277,8 +294,11 @@ export const PublishersManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Publisher Name (English)</label>
+                <label htmlFor="pub-name-en" className="block text-xs font-bold mb-1">
+                  Publisher Name (English)
+                </label>
                 <input
+                  id="pub-name-en"
                   value={editingPub.nameEn || ''}
                   onChange={e => setEditingPub({ ...editingPub, nameEn: e.target.value })}
                   className="w-full p-2 border-2 border-zinc-300 rounded-lg"
@@ -286,10 +306,11 @@ export const PublishersManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">
+                <label htmlFor="pub-name-vi" className="block text-xs font-bold mb-1">
                   Tên nhà xuất bản (Tiếng Việt)
                 </label>
                 <input
+                  id="pub-name-vi"
                   value={editingPub.nameVi || ''}
                   onChange={e => setEditingPub({ ...editingPub, nameVi: e.target.value })}
                   className="w-full p-2 border-2 border-zinc-300 rounded-lg"
@@ -297,8 +318,11 @@ export const PublishersManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Нэр (Монгол)</label>
+                <label htmlFor="pub-name-mn" className="block text-xs font-bold mb-1">
+                  Нэр (Монгол)
+                </label>
                 <input
+                  id="pub-name-mn"
                   value={editingPub.nameMn || ''}
                   onChange={e => setEditingPub({ ...editingPub, nameMn: e.target.value })}
                   className="w-full p-2 border-2 border-zinc-300 rounded-lg"
@@ -308,9 +332,12 @@ export const PublishersManager: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold mb-2">图片 (显示在抽屉头部)</label>
+              <label htmlFor="pub-image" className="block text-xs font-bold mb-2">
+                图片 (显示在抽屉头部)
+              </label>
 
               <input
+                id="pub-image"
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileUpload}
@@ -319,10 +346,11 @@ export const PublishersManager: React.FC = () => {
               />
 
               <div className="flex items-center gap-4">
-                {previewUrl || (editingPub.imageUrl && editingPub.imageUrl.startsWith('http')) ? (
+                {hasImage ? (
                   <div className="relative group">
                     <img
-                      src={previewUrl || editingPub.imageUrl}
+                      src={displayImageUrl}
+                      alt="Preview"
                       className="w-24 h-24 object-contain border-2 border-zinc-200 rounded-lg bg-zinc-50"
                     />
                     <button

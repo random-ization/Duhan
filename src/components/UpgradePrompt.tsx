@@ -7,7 +7,6 @@ interface UpgradePromptProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
-  contentType?: 'textbook' | 'exam';
 }
 
 const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language }) => {
@@ -22,7 +21,9 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
   ];
 
   const handleUpgrade = () => {
-    window.location.href = `/${language}/pricing/details`;
+    if (globalThis.window !== undefined) {
+      globalThis.window.location.href = `/${language}/pricing/details`;
+    }
     onClose();
   };
 
@@ -57,8 +58,8 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
               {labels.premiumFeatures || 'Premium Features'}
             </h3>
             <ul className="space-y-2">
-              {features.map((feature, index) => (
-                <li key={index} className="flex items-center gap-2 text-sm text-slate-700">
+              {features.map((feature) => (
+                <li key={feature} className="flex items-center gap-2 text-sm text-slate-700">
                   <Check size={16} className="text-green-500 flex-shrink-0" />
                   <span>{feature}</span>
                 </li>

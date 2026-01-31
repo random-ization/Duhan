@@ -19,13 +19,10 @@ export const grantAccess = internalMutation({
       user = await ctx.db.get(asId<'users'>(args.userId));
     }
 
-    if (!user) {
-      // Fallback to email lookup
-      user = await ctx.db
-        .query('users')
-        .withIndex('email', q => q.eq('email', args.customerEmail))
-        .first();
-    }
+    user ??= await ctx.db
+      .query('users')
+      .withIndex('email', q => q.eq('email', args.customerEmail))
+      .first();
 
     if (!user) {
       console.error(`User not found for email: ${args.customerEmail} or id: ${args.userId}`);
@@ -70,12 +67,10 @@ export const revokeAccess = internalMutation({
       user = await ctx.db.get(asId<'users'>(args.userId));
     }
 
-    if (!user) {
-      user = await ctx.db
-        .query('users')
-        .withIndex('email', q => q.eq('email', args.customerEmail))
-        .first();
-    }
+    user ??= await ctx.db
+      .query('users')
+      .withIndex('email', q => q.eq('email', args.customerEmail))
+      .first();
 
     if (!user) {
       console.error(`User not found for email: ${args.customerEmail}`);

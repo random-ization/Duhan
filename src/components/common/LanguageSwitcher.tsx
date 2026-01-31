@@ -18,9 +18,9 @@ export const LanguageSwitcher = () => {
     { code: 'mn', label: 'Монгол' },
   ];
 
-  const pathSegments = location.pathname.split('/').filter(Boolean);
+  const firstSegment = location.pathname.split('/').find(Boolean);
   const activeLang =
-    pathSegments[0] && isValidLanguage(pathSegments[0]) ? pathSegments[0] : i18n.language;
+    firstSegment && isValidLanguage(firstSegment) ? firstSegment : i18n.language;
   const currentLang = languages.find(l => l.code === activeLang) || languages[0];
 
   useEffect(() => {

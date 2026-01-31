@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { ArrowLeft, Mail, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { SEO } from '../seo/SEO';
+import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 flex items-center justify-center font-sans">
-      <SEO
+      <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}

@@ -50,15 +50,54 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
     const order = grammar.displayOrder ?? (index + 1);
     const cardNumber = String(order).padStart(2, '0');
 
+    // Helper to determine progress bar color
+    const getProgressBarColor = () => {
+        if (isMastered) return 'bg-green-500';
+        if (isLearning) return 'bg-amber-500';
+        return 'bg-slate-300';
+    };
+
+    // Helper to render status content
+    const renderStatus = () => {
+        if (isMastered) {
+            return (
+                <>
+                    <Trophy className="w-3 h-3 text-green-600" />
+                    <span className="text-[10px] font-bold text-green-600">已掌握</span>
+                </>
+            );
+        }
+        if (isLearning) {
+            return (
+                <>
+                    <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-amber-400"></div>
+                    <span className="text-[10px] font-bold text-amber-600">学习中</span>
+                </>
+            );
+        }
+        return (
+            <>
+                <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-slate-300"></div>
+                <span className="text-[10px] font-bold text-slate-500">未学习</span>
+            </>
+        );
+    };
+
     return (
         <div
-            onClick={onClick}
             className="group bg-white border-2 border-slate-900 rounded-xl p-0 shadow-[4px_4px_0px_0px_#0f172a] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer overflow-hidden flex flex-col h-52 relative"
         >
-            {/* Top Colored Bar */}
-            <div className={`h-1.5 w-full ${config.barColor} border-b-2 border-slate-900`}></div>
+            {/* Main Click Action (Stretched Link) */}
+            <button
+                onClick={onClick}
+                className="absolute inset-0 w-full h-full z-0 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-xl"
+                aria-label={`View details for ${grammar.title}`}
+            />
 
-            <div className="p-4 flex flex-col h-full">
+            {/* Top Colored Bar */}
+            <div className={`h-1.5 w-full ${config.barColor} border-b-2 border-slate-900 z-10 relative pointer-events-none`}></div>
+
+            <div className="p-4 flex flex-col h-full z-10 relative pointer-events-none">
                 {/* Top Row: Tag + Number */}
                 <div className="flex justify-between items-start mb-2">
                     <span className={`px-1.5 py-0.5 ${config.bgColor} ${config.textColor} border border-slate-900 rounded text-[10px] font-black uppercase tracking-tight`}>
@@ -82,9 +121,7 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
                     <div className="flex items-center gap-2 mb-1">
                         <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-300">
                             <div
-                                className={`h-full transition-all duration-300 ${isMastered ? 'bg-green-500' :
-                                        isLearning ? 'bg-amber-500' : 'bg-slate-300'
-                                    }`}
+                                className={`h-full transition-all duration-300 ${getProgressBarColor()}`}
                                 style={{ width: `${proficiency}%` }}
                             />
                         </div>
@@ -93,31 +130,19 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
                 </div>
 
                 {/* Bottom Row: Status + Action */}
-                <div className="flex justify-between items-end pt-2">
+                <div className="flex justify-between items-end pt-2 pointer-events-auto">
                     <button
-                        onClick={onToggleStatus}
-                        className="flex items-center gap-1.5"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleStatus(e);
+                        }}
+                        className="flex items-center gap-1.5 z-20 relative"
                     >
-                        {isMastered ? (
-                            <>
-                                <Trophy className="w-3 h-3 text-green-600" />
-                                <span className="text-[10px] font-bold text-green-600">已掌握</span>
-                            </>
-                        ) : isLearning ? (
-                            <>
-                                <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-amber-400"></div>
-                                <span className="text-[10px] font-bold text-amber-600">学习中</span>
-                            </>
-                        ) : (
-                            <>
-                                <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-slate-300"></div>
-                                <span className="text-[10px] font-bold text-slate-500">未学习</span>
-                            </>
-                        )}
+                        {renderStatus()}
                     </button>
-                    <button className="w-6 h-6 rounded border-2 border-slate-900 bg-white hover:bg-slate-900 hover:text-white flex items-center justify-center transition-colors">
+                    <div className="w-6 h-6 rounded border-2 border-slate-900 bg-white group-hover:bg-slate-900 group-hover:text-white flex items-center justify-center transition-colors">
                         <ArrowRight className="w-3 h-3" />
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

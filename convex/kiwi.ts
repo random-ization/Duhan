@@ -1,5 +1,5 @@
 'use node';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import { gunzipSync } from 'node:zlib';
 import { KiwiBuilder } from 'kiwi-nlp';
 import type { Kiwi, TokenInfo } from 'kiwi-nlp';
@@ -44,7 +44,7 @@ function parseTarGz(buffer: ArrayBuffer): KiwiModelFiles {
   const readOctal = (offset: number, length: number) => {
     const raw = readString(offset, length).trim();
     if (!raw) return 0;
-    return parseInt(raw, 8);
+    return Number.parseInt(raw, 8);
   };
 
   let offset = 0;
@@ -101,23 +101,21 @@ async function loadModelFiles(): Promise<KiwiModelFiles> {
 }
 
 export async function getKiwi(): Promise<Kiwi> {
-  if (!kiwiPromise) {
-    kiwiPromise = (async () => {
-      const wasmPath = require.resolve('kiwi-nlp/dist/kiwi-wasm.wasm');
-      const builder = await KiwiBuilder.create(wasmPath);
-      if (!modelFilesPromise) modelFilesPromise = loadModelFiles();
-      const modelFiles = await modelFilesPromise;
-      return await builder.build({
-        modelFiles,
-        modelType: 'cong',
-        integrateAllomorph: true,
-        loadDefaultDict: true,
-        loadMultiDict: true,
-        loadTypoDict: true,
-        typos: 'none',
-      });
-    })();
-  }
+  kiwiPromise ??= (async () => {
+    const wasmPath = require.resolve('kiwi-nlp/dist/kiwi-wasm.wasm');
+    const builder = await KiwiBuilder.create(wasmPath);
+    modelFilesPromise ??= loadModelFiles();
+    const modelFiles = await modelFilesPromise;
+    return await builder.build({
+      modelFiles,
+      modelType: 'cong',
+      integrateAllomorph: true,
+      loadDefaultDict: true,
+      loadMultiDict: true,
+      loadTypoDict: true,
+      typos: 'none',
+    });
+  })();
   return kiwiPromise;
 }
 

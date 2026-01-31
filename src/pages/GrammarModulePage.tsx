@@ -189,9 +189,10 @@ const GrammarModulePage: React.FC = () => {
             onSelectUnit={unitStr => {
               if (!unitStr) return;
               // Parse "Unit X: ..." to get the unit number
-              const match = unitStr.match(/Unit (\d+)/);
+              const unitRegex = /Unit (\d+)/;
+              const match = unitRegex.exec(unitStr);
               if (match) {
-                setSelectedUnit(parseInt(match[1], 10));
+                setSelectedUnit(Number.parseInt(match[1], 10));
                 setSelectedGrammar(null); // Clear selection when changing units
               }
             }}

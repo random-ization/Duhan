@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ArrowLeft,
   Video,
@@ -234,12 +235,14 @@ const VideoPlayerPage: React.FC = () => {
   };
 
   // Handle word popup
-  const handleWordClick = (e: React.MouseEvent) => {
-    const wordEl = (e.target as HTMLElement).closest('[data-word]') as HTMLElement | null;
+  const handleWordClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+    const target = e.target as any;
+    const wordEl = target.closest('[data-word]') as HTMLElement | null;
     if (wordEl) {
+      e.preventDefault();
+      e.stopPropagation();
       const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
       if (!clickedWord) return;
-      e.stopPropagation();
       const rect = wordEl.getBoundingClientRect();
       const fallbackMeaning = labels.dashboard?.common?.noMeaning || '暂无释义';
       const requestId = dictionaryRequestRef.current + 1;
@@ -275,6 +278,8 @@ const VideoPlayerPage: React.FC = () => {
       })();
     }
   };
+
+  const saveWord = useAction(aRef<{ word: string; meaning: string }, void>('vocabulary:save'));
 
   const speak = useCallback(
     (text: string) => {
@@ -331,15 +336,16 @@ const VideoPlayerPage: React.FC = () => {
       ) : (
         video.transcriptData.map((segment, index) => {
           const isActive = index === activeSegmentIndex;
+          const segmentId = `segment-${index}-${segment.start}`;
 
           return (
-            <div
-              key={index}
+            <button
+              key={segmentId}
               ref={el => {
-                segmentRefs.current[index] = el;
+                segmentRefs.current[index] = el as unknown as HTMLDivElement;
               }}
               onClick={() => seekTo(segment.start)}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left w-full block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 ${
                 isActive
                   ? 'bg-indigo-100 border-indigo-400 shadow-[4px_4px_0px_0px_#6366f1] scale-[1.02]'
                   : 'bg-white border-zinc-200 hover:border-zinc-400'
@@ -349,18 +355,22 @@ const VideoPlayerPage: React.FC = () => {
                 {formatTime(segment.start)} - {formatTime(segment.end)}
               </div>
 
-              <div
-                className={`text-lg font-medium leading-relaxed ${
+              <button
+                className={`text-lg font-medium leading-relaxed text-left w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-300 rounded px-1 ${
                   isActive ? 'text-zinc-900' : 'text-zinc-700'
                 }`}
                 onClick={handleWordClick}
               >
                 {segment.text.split(/(\s+)/).map((part, wordIndex) => {
                   const word = part.trim();
-                  if (!word) return <span key={wordIndex}>{part}</span>;
+                  if (!word) {
+                    const spaceId = `space-${index}-${wordIndex}`;
+                    return <span key={spaceId}>{part}</span>;
+                  }
+                  const wordId = `word-${index}-${wordIndex}-${word}`;
                   return (
                     <span
-                      key={wordIndex}
+                      key={wordId}
                       data-word={word}
                       className={`cursor-pointer rounded px-0.5 transition-colors ${
                         isActive ? 'hover:bg-indigo-200' : 'hover:bg-yellow-100'
@@ -370,14 +380,14 @@ const VideoPlayerPage: React.FC = () => {
                     </span>
                   );
                 })}
-              </div>
+              </button>
 
               {showTranslation && segment.translation && (
                 <div className="text-sm text-zinc-500 mt-2 border-t border-zinc-100 pt-2">
                   {segment.translation}
                 </div>
               )}
-            </div>
+            </button>
           );
         })
       )}
@@ -496,8 +506,14 @@ const VideoPlayerPage: React.FC = () => {
             position={selectedWord.position}
             onClose={() => setSelectedWord(null)}
             onSpeak={() => speak(selectedWord.word)}
-            onSave={() => {
-              // TODO: Save to vocabulary
+            onSave={async () => {
+              try {
+                await saveWord({ word: selectedWord.word, meaning: selectedWord.meaning });
+                toast.success(labels.dashboard?.common?.saved || '已保存到生词本');
+              } catch (err) {
+                console.error('Failed to save word:', err);
+                toast.error(labels.dashboard?.common?.saveFailed || '保存失败');
+              }
               setSelectedWord(null);
             }}
             language={language}

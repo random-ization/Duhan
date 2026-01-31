@@ -33,7 +33,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
     const userId = await getAuthUserId(ctx);
     const user = await ctx.db.get(userId);
 
-    if (!user || user.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
         throw new ConvexError({ code: "FORBIDDEN", message: "Admin access required" });
     }
 

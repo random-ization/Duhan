@@ -123,14 +123,13 @@ export const ExamList: React.FC<ExamListProps> = ({
 
             return (
               <div
-                key={idx}
+                key={attempt.id || idx}
                 className="group bg-white rounded-2xl p-6 border border-slate-200 hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${
-                      passed ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                    }`}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${passed ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                      }`}
                   >
                     {percentage.toFixed(0)}
                   </div>
@@ -164,7 +163,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                     <button
                       onClick={() => {
                         if (
-                          window.confirm(
+                          globalThis.window.confirm(
                             language === 'zh' ? '确定要删除这条记录吗？' : 'Delete this attempt?'
                           )
                         ) {
@@ -220,31 +219,28 @@ export const ExamList: React.FC<ExamListProps> = ({
         <div className="flex p-1 bg-slate-100 rounded-xl">
           <button
             onClick={() => setFilterType('ALL')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              filterType === 'ALL'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterType === 'ALL'
+              ? 'bg-white text-indigo-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             全部
           </button>
           <button
             onClick={() => setFilterType('READING')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-              filterType === 'READING'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${filterType === 'READING'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             <BookOpen className="w-4 h-4" /> 阅读
           </button>
           <button
             onClick={() => setFilterType('LISTENING')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-              filterType === 'LISTENING'
-                ? 'bg-white text-violet-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${filterType === 'LISTENING'
+              ? 'bg-white text-violet-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
           >
             <Headphones className="w-4 h-4" /> 听力
           </button>
@@ -271,25 +267,24 @@ export const ExamList: React.FC<ExamListProps> = ({
           const isReading = exam.type === 'READING';
 
           return (
-            <div
+            <button
               key={exam.id}
               onClick={() => !isLocked && onSelectExam(exam)}
-              className={`group relative bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full`}
+              disabled={isLocked}
+              className={`group relative bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all text-left w-full ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full outline-none focus:ring-2 focus:ring-indigo-500/50`}
             >
               {/* Top Decor */}
               <div
-                className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${
-                  isReading
-                    ? 'bg-blue-50 group-hover:bg-blue-100'
-                    : 'bg-violet-50 group-hover:bg-violet-100'
-                }`}
+                className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${isReading
+                  ? 'bg-blue-50 group-hover:bg-blue-100'
+                  : 'bg-violet-50 group-hover:bg-violet-100'
+                  }`}
               ></div>
 
               <div className="relative z-10 flex justify-between items-start mb-6">
                 <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${
-                    isReading ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
-                  }`}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${isReading ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
+                    }`}
                 >
                   {isReading ? (
                     <BookOpen className="w-6 h-6" />
@@ -330,11 +325,10 @@ export const ExamList: React.FC<ExamListProps> = ({
                 {attemptCount > 0 ? (
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
-                        (bestScore || 0) >= 60
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
+                      className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${(bestScore || 0) >= 60
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-slate-100 text-slate-600'
+                        }`}
                     >
                       <Trophy className="w-3 h-3" />
                       最高分: {bestScore?.toFixed(0)}
@@ -345,17 +339,16 @@ export const ExamList: React.FC<ExamListProps> = ({
                   <span className="text-xs text-slate-400 font-medium">尚未开始</span>
                 )}
 
-                <button
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    isReading
-                      ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
-                      : 'bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white'
-                  }`}
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isReading
+                    ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
+                    : 'bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white'
+                    }`}
                 >
                   <PlayCircle className="w-5 h-5 fill-current" />
-                </button>
+                </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

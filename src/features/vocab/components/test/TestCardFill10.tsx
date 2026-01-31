@@ -18,14 +18,14 @@ type Direction = 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
 
 type Mode = 'test' | 'review';
 
-type Props = {
+type Props = Readonly<{
   language: Language;
   items: Item[];
   initialDirection: Direction;
   answered?: Answer;
   mode?: Mode;
   onSubmit: (filled: string[], directionUsed: Direction) => void;
-};
+}>;
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   const arr = [...array];
@@ -34,6 +34,63 @@ const shuffleArray = <T,>(array: T[]): T[] => {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+};
+
+const FillSlot = ({
+  idx,
+  val,
+  isTarget,
+  isReview,
+  isCorrect,
+  answer,
+  language,
+  onClear,
+  onSelect,
+}: {
+  idx: number;
+  val: string;
+  isTarget: boolean;
+  isReview: boolean;
+  isCorrect: boolean | null;
+  answer: string;
+  language: Language;
+  onClear: (idx: number) => void;
+  onSelect: (idx: number) => void;
+}) => {
+  const label = val || (language === 'zh' ? '未作答' : '—');
+
+  let className =
+    'w-full h-14 rounded-2xl border-2 px-4 text-left font-black transition-all';
+  if (isReview) {
+    className += isCorrect
+      ? ' bg-green-50 border-green-300 text-green-800'
+      : ' bg-red-50 border-red-300 text-red-800';
+  } else if (val) {
+    className += ' bg-slate-50 border-slate-300 text-slate-900 hover:border-slate-400';
+  } else if (isTarget) {
+    className += ' bg-blue-50 border-blue-300 text-blue-800';
+  } else {
+    className += ' bg-white border-slate-200 text-slate-400 hover:border-slate-400';
+  }
+
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        disabled={isReview}
+        onClick={() => (val ? onClear(idx) : onSelect(idx))}
+        className={className}
+      >
+        {label}
+      </button>
+      {isReview && !isCorrect ? (
+        <div className="mt-1 text-xs text-slate-500 font-bold">
+          {language === 'zh' ? '正确答案：' : 'Answer: '}
+          <span className="font-black text-slate-900">{answer}</span>
+        </div>
+      ) : null}
+    </div>
+  );
 };
 
 export default function TestCardFill10({
@@ -61,7 +118,9 @@ export default function TestCardFill10({
   }, [direction, items]);
 
   const [filled, setFilled] = useState<string[]>(() =>
-    answered?.filled?.length === items.length ? answered.filled : Array(items.length).fill('')
+    answered?.filled?.length === items.length
+      ? answered.filled
+      : new Array(items.length).fill('')
   );
   const [optionPool, setOptionPool] = useState<string[]>(() => {
     const used =
@@ -75,7 +134,7 @@ export default function TestCardFill10({
 
   const reset = () => {
     if (isReview) return;
-    setFilled(Array(items.length).fill(''));
+    setFilled(new Array(items.length).fill(''));
     setOptionPool(shuffleArray(derived.answers));
     setActiveIndex(null);
   };
@@ -84,7 +143,7 @@ export default function TestCardFill10({
     if (isReview) return;
     const nextDirection = direction === 'KR_TO_NATIVE' ? 'NATIVE_TO_KR' : 'KR_TO_NATIVE';
     setDirection(nextDirection);
-    setFilled(Array(items.length).fill(''));
+    setFilled(new Array(items.length).fill(''));
     setOptionPool(
       shuffleArray(
         items.map(it => (nextDirection === 'KR_TO_NATIVE' ? it.pair.native : it.pair.korean))
@@ -95,8 +154,7 @@ export default function TestCardFill10({
 
   const takeOption = (opt: string) => {
     if (isReview) return;
-    const targetIndex =
-      activeIndex !== null ? activeIndex : filled.findIndex(v => v.trim().length === 0);
+    const targetIndex = activeIndex ?? filled.findIndex(v => v.trim().length === 0);
     if (targetIndex < 0) return;
     if (filled[targetIndex]) return;
 
@@ -124,10 +182,13 @@ export default function TestCardFill10({
   };
 
   const submit = () => {
-    if (isReview) return;
-    if (!isComplete) return;
+    if (isReview || !isComplete) return;
     onSubmit(filled, direction);
   };
+
+  const switchKR = language === 'zh' ? '切换到韩语' : 'Switch to Korean';
+  const switchNative = language === 'zh' ? '切换到母语' : 'Switch to Native';
+  const switchLabel = direction === 'KR_TO_NATIVE' ? switchKR : switchNative;
 
   return (
     <div className="mt-6">
@@ -142,13 +203,7 @@ export default function TestCardFill10({
             disabled={isReview}
             className="px-3 py-2 rounded-xl bg-white border-2 border-slate-200 font-black text-sm text-slate-700 disabled:opacity-50"
           >
-            {direction === 'KR_TO_NATIVE'
-              ? language === 'zh'
-                ? '切换到韩语'
-                : 'Switch to Korean'
-              : language === 'zh'
-                ? '切换到母语'
-                : 'Switch to Native'}
+            {switchLabel}
           </button>
           <button
             type="button"
@@ -165,51 +220,31 @@ export default function TestCardFill10({
       <div className="mt-4 bg-white rounded-3xl border-2 border-slate-200 overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_1px_1fr]">
           <div className="p-6 sm:p-8 space-y-3">
-            {items.map((it, idx) => {
-              const val = filled[idx];
-              const isTarget = activeIndex === idx;
-              const isCorrect = isReview
-                ? val.trim() === (derived.answers[idx] || '').trim()
-                : null;
-
-              return (
-                <div key={`${it.wordId}-${idx}`} className="w-full">
-                  <button
-                    type="button"
-                    disabled={isReview}
-                    onClick={() => (val ? clearSlot(idx) : setActiveIndex(idx))}
-                    className={`w-full h-14 rounded-2xl border-2 px-4 text-left font-black transition-all ${
-                      isReview
-                        ? isCorrect
-                          ? 'bg-green-50 border-green-300 text-green-800'
-                          : 'bg-red-50 border-red-300 text-red-800'
-                        : val
-                          ? 'bg-slate-50 border-slate-300 text-slate-900 hover:border-slate-400'
-                          : isTarget
-                            ? 'bg-blue-50 border-blue-300 text-blue-800'
-                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400'
-                    }`}
-                  >
-                    {val ? val : language === 'zh' ? '未作答' : '—'}
-                  </button>
-                  {isReview && !isCorrect ? (
-                    <div className="mt-1 text-xs text-slate-500 font-bold">
-                      {language === 'zh' ? '正确答案：' : 'Answer: '}
-                      <span className="font-black text-slate-900">
-                        {derived.answers[idx] || ''}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+            {items.map((it, idx) => (
+              <FillSlot
+                key={`${it.wordId}-${it.pair.korean}-${idx}`}
+                idx={idx}
+                val={filled[idx]}
+                isTarget={activeIndex === idx}
+                isReview={isReview}
+                isCorrect={
+                  isReview
+                    ? filled[idx].trim() === (derived.answers[idx] || '').trim()
+                    : null
+                }
+                answer={derived.answers[idx] || ''}
+                language={language}
+                onClear={clearSlot}
+                onSelect={setActiveIndex}
+              />
+            ))}
           </div>
 
           <div className="hidden sm:block bg-slate-200" />
 
           <div className="p-6 sm:p-8 space-y-3">
             {derived.prompts.map((p, idx) => (
-              <div key={idx} className="h-14 flex items-center">
+              <div key={`prompt-${p}-${idx}`} className="h-14 flex items-center">
                 <div className="text-xl font-black text-slate-900 truncate">{p}</div>
               </div>
             ))}
@@ -217,7 +252,7 @@ export default function TestCardFill10({
         </div>
       </div>
 
-      {!isReview ? (
+      {isReview ? null : (
         <>
           <div className="mt-6 flex flex-wrap gap-2">
             {optionPool.map(opt => (
@@ -244,7 +279,7 @@ export default function TestCardFill10({
             </button>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -68,7 +68,7 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
     };
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTime = parseFloat(e.target.value);
+        const newTime = Number.parseFloat(e.target.value);
         setCurrentTime(newTime);
         if (audioRef.current) {
             audioRef.current.currentTime = newTime;
@@ -130,7 +130,9 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-zinc-900 shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] z-50">
-            <audio ref={audioRef} src={audioUrl} preload="metadata" />
+            <audio ref={audioRef} src={audioUrl} preload="metadata">
+                <track kind="captions" src="" label="English" />
+            </audio>
 
             {/* Progress Bar */}
             <div className="h-1 bg-zinc-200 relative cursor-pointer group">

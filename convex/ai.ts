@@ -54,11 +54,12 @@ export const generateTranscript = action({
       }
 
       const contentType = audioRes.headers.get('content-type') || 'audio/mpeg';
-      const ext = contentType.includes('wav')
-        ? 'wav'
-        : contentType.includes('mp4') || contentType.includes('m4a')
-          ? 'm4a'
-          : 'mp3';
+      let ext = 'mp3';
+      if (contentType.includes('wav')) {
+        ext = 'wav';
+      } else if (contentType.includes('mp4') || contentType.includes('m4a')) {
+        ext = 'm4a';
+      }
 
       const buffer = await audioRes.arrayBuffer();
       const file = new File([buffer], `episode_${args.episodeId}.${ext}`, { type: contentType });
@@ -78,12 +79,17 @@ export const generateTranscript = action({
       const rawSegments =
         (transcription as unknown as { segments?: WhisperSegment[] }).segments ?? [];
       const baseSegments = rawSegments
-        .map(s => ({
-          start: typeof s.start === 'number' ? s.start : 0,
-          end: typeof s.end === 'number' ? s.end : 0,
-          text: typeof s.text === 'string' ? s.text.trim() : '',
-          translation: '',
-        }))
+        .map(s => {
+          const start = typeof s.start === 'number' ? s.start : 0;
+          const end = typeof s.end === 'number' ? s.end : 0;
+          const text = typeof s.text === 'string' ? s.text.trim() : '';
+          return {
+            start,
+            end,
+            text,
+            translation: '',
+          };
+        })
         .filter(s => s.text.length > 0);
 
       const targetLang = (args.language || '').trim().toLowerCase();

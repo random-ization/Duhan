@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// import { generateGrammarLesson } from '../services/geminiService';
 import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../types';
 import { BookOpen, Search, X } from 'lucide-react';
 import { getLabels } from '../utils/i18n';
@@ -16,6 +15,21 @@ const generateGrammarLesson = async (
 ): Promise<GrammarPoint[]> => {
   logger.warn('AI Generation unavailable: geminiService deleted');
   return [];
+};
+
+/**
+ * Checks if a grammar point matches the search query.
+ * Extracted to reduce function nesting levels.
+ */
+const matchesSearchQuery = (point: GrammarPoint, query: string): boolean => {
+  const q = query.toLowerCase();
+  if (point.pattern.toLowerCase().includes(q)) return true;
+  if (point.explanation.toLowerCase().includes(q)) return true;
+
+  return point.usages.some(usage =>
+    usage.example.toLowerCase().includes(q) ||
+    usage.translation.toLowerCase().includes(q)
+  );
 };
 
 interface GrammarModuleProps {
@@ -49,9 +63,6 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
       for (const unit of units) {
         try {
           const content = levelContexts[unit];
-          // Use AI or parse if available. Since AI call is expensive, we do it carefully.
-          // For demo, we are calling it for all available units. In production, maybe cache or load on demand.
-          // Here we assume if context exists, we generate grammar.
           const data = await generateGrammarLesson(
             instituteName,
             course.level,
@@ -63,7 +74,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
             newGroups[unit] = data;
           }
         } catch (e) {
-          console.error(e);
+          console.error('[GrammarModule] Fetch error:', e);
         }
       }
       setGroupedPoints(newGroups);
@@ -75,25 +86,14 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
 
   // Filter Logic
   const filteredData = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
+    const query = searchQuery.trim();
     if (!query) return groupedPoints;
 
     const result: Record<number, GrammarPoint[]> = {};
-    Object.keys(groupedPoints).forEach(unitKey => {
-      const unit = Number(unitKey);
-      const points = groupedPoints[unit];
-      const matches = points.filter(
-        p =>
-          p.pattern.toLowerCase().includes(query) ||
-          p.explanation.toLowerCase().includes(query) ||
-          p.usages.some(
-            u =>
-              u.example.toLowerCase().includes(query) || u.translation.toLowerCase().includes(query)
-          )
-      );
-
+    Object.entries(groupedPoints).forEach(([unitKey, points]) => {
+      const matches = points.filter(p => matchesSearchQuery(p, query));
       if (matches.length > 0) {
-        result[unit] = matches;
+        result[Number(unitKey)] = matches;
       }
     });
     return result;
@@ -111,6 +111,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
   const units = Object.keys(filteredData)
     .map(Number)
     .sort((a, b) => a - b);
+
   const totalPoints = Object.values(filteredData).reduce(
     (acc: number, curr: GrammarPoint[]) => acc + curr.length,
     0
@@ -154,7 +155,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
       ) : (
         <div className="space-y-12">
           {units.map(unit => (
-            <div key={unit}>
+            <div key={`unit-${unit}`}>
               <div className="flex items-center mb-6">
                 <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold mr-4">
                   {labels.unit} {unit}
@@ -163,9 +164,9 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
               </div>
 
               <div className="grid gap-6">
-                {filteredData[unit].map((point, idx) => (
+                {filteredData[unit].map((point) => (
                   <div
-                    key={idx}
+                    key={`point-${unit}-${point.pattern}`}
                     className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:border-indigo-300 transition-colors"
                   >
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center">
@@ -179,9 +180,9 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                       </p>
 
                       <div className="space-y-4">
-                        {point.usages.map((usage, uIdx) => (
+                        {point.usages.map((usage) => (
                           <div
-                            key={uIdx}
+                            key={`usage-${point.pattern}-${usage.example}`}
                             className="bg-slate-50 p-4 rounded-lg border border-slate-100"
                           >
                             <div className="flex items-center mb-2">

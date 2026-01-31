@@ -47,12 +47,12 @@ export const searchPodcasts = action({
             };
           }
           const idValue = item.collectionId;
-          const id =
-            typeof idValue === 'string'
-              ? idValue
-              : typeof idValue === 'number'
-                ? String(idValue)
-                : '';
+          let id = '';
+          if (typeof idValue === 'string') {
+            id = idValue;
+          } else if (typeof idValue === 'number') {
+            id = String(idValue);
+          }
           const title = typeof item.collectionName === 'string' ? item.collectionName : 'Unknown';
           const author = typeof item.artistName === 'string' ? item.artistName : 'Unknown';
           const feedUrl = typeof item.feedUrl === 'string' ? item.feedUrl : '';

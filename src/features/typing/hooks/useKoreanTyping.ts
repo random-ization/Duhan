@@ -157,6 +157,20 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     return normalized;
   };
 
+  // Check if input jamos match target jamos with potential migration
+  const isConsonantMigration = useCallback(
+    (inputJamos: string, targetJamos: string, nextTargetChar: string): boolean => {
+      if (inputJamos.length <= targetJamos.length) return false;
+      if (!inputJamos.startsWith(targetJamos)) return false;
+
+      const extraJamos = inputJamos.substring(targetJamos.length);
+      const nextTargetJamos = normalizeKorean(disassemble(nextTargetChar));
+
+      return nextTargetJamos.startsWith(extraJamos);
+    },
+    []
+  );
+
   // Core Korean Logic - Character validation
   // Now also considers if extra trailing consonant could be initial of next char
   const checkInput = useCallback(
@@ -186,25 +200,8 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
         }
 
         // 5. Check if input has extra trailing consonant(s) that could be the initial of the next character
-        // This handles the Korean consonant "migration" where ㄹ typed after 이 temporarily makes 일
-        // before the next vowel causes it to move to the next syllable (일 + ㅡ → 이름)
-        if (inputJamos.length > targetJamos.length && nextTargetChar) {
-          // Check if the input starts with all the target jamos
-          const inputStartsWithTarget = inputJamos.substring(0, targetJamos.length) === targetJamos;
-
-          if (inputStartsWithTarget) {
-            const extraJamos = inputJamos.substring(targetJamos.length);
-            const nextTargetJamos = normalizeKorean(disassemble(nextTargetChar));
-
-            // Check if the extra jamos match the beginning of the next target
-            // Use substring comparison for more reliability
-            if (
-              nextTargetJamos.length >= extraJamos.length &&
-              nextTargetJamos.substring(0, extraJamos.length) === extraJamos
-            ) {
-              return 'pending';
-            }
-          }
+        if (nextTargetChar && isConsonantMigration(inputJamos, targetJamos, nextTargetChar)) {
+          return 'pending';
         }
 
         // 6. If input is longer or doesn't match prefix → incorrect
@@ -214,7 +211,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
         return targetChar === inputChar ? 'correct' : 'incorrect';
       }
     },
-    []
+    [isConsonantMigration]
   );
 
   // Get the next jamo needed for keyboard hints

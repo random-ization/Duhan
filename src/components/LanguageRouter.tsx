@@ -15,18 +15,18 @@ export const isValidLanguage = (lang: string): lang is Language => {
 };
 
 const getBrowserPreferredLanguage = (): Language | null => {
-  const rawLanguages =
-    typeof navigator !== 'undefined' && navigator.languages?.length
-      ? navigator.languages
-      : typeof navigator !== 'undefined'
-        ? [navigator.language]
-        : [];
-  const normalizedList = rawLanguages
-    .map(raw => raw.split(/[-_]/)[0])
-    .filter((value): value is Language => isValidLanguage(value));
+  if (typeof navigator === 'undefined') return null;
+
+  const rawLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
+
+  const normalizedList = new Set(
+    rawLanguages
+      .map(raw => raw.split(/[-_]/)[0])
+      .filter((value): value is Language => isValidLanguage(value))
+  );
 
   for (const preferred of ['zh', 'vi', 'mn', 'en'] as const) {
-    if (normalizedList.includes(preferred)) {
+    if (normalizedList.has(preferred)) {
       return preferred;
     }
   }

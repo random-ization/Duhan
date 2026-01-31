@@ -1,7 +1,9 @@
 import Google from '@auth/core/providers/google';
 import Kakao from '@auth/core/providers/kakao';
 import { Password } from '@convex-dev/auth/providers/Password';
-import { convexAuth } from '@convex-dev/auth/server';
+import { convexAuth, getAuthUserId } from '@convex-dev/auth/server';
+import { v } from 'convex/values';
+import { mutation, query } from './_generated/server';
 import { compareSync, hashSync } from 'bcryptjs';
 
 // Custom bcrypt crypto for Password provider (to match legacy password hashes)
@@ -74,6 +76,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         typeof args.profile.email === 'string'
           ? args.profile.email.trim().toLowerCase()
           : undefined;
+
+      if (!email) {
+        throw new Error('EMAIL_REQUIRED');
+      }
+
       let userId = args.existingUserId;
       let isLinking = false;
       try {
@@ -86,29 +93,14 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         isLinking = false;
       }
 
-      if (!email) {
-        throw new Error('EMAIL_REQUIRED');
-      }
-
       const emailVerified = args.profile.emailVerified === true;
 
+      // 1. Update existing user if we have an ID
       if (userId) {
-        const user = await ctx.db.get(userId);
-        if (!user) {
-          throw new Error('USER_NOT_FOUND');
-        }
-
-        const updates: Record<string, unknown> = {};
-        if (emailVerified && !user.emailVerificationTime) {
-          updates.emailVerificationTime = Date.now();
-        }
-
-        if (Object.keys(updates).length > 0) {
-          await ctx.db.patch(userId, updates);
-        }
-        return userId;
+        return await updateExistingUser(ctx, userId, emailVerified);
       }
 
+      // 2. Check for existing account with same email (if not linking)
       const existingByEmail = await ctx.db
         .query('users')
         .filter(q => q.eq(q.field('email'), email))
@@ -118,31 +110,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         throw new Error('ACCOUNT_EXISTS_LINK_REQUIRED');
       }
 
-      const providerId = (args.provider as { id?: string } | undefined)?.id;
-      const isPasswordProvider = providerId === 'password';
-
-      const insertData: Record<string, unknown> = {
-        email,
-        ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
-        createdAt: Date.now(),
-        tier: 'FREE',
-      };
-
-      if (isPasswordProvider && typeof args.profile.name === 'string') {
-        const name = args.profile.name.trim();
-        if (name) {
-          insertData.name = name;
-        }
-      }
-
-      return await ctx.db.insert('users', insertData);
+      // 3. Create new user
+      return await createNewUser(ctx, email, emailVerified, args);
     },
   },
 });
 
-import { mutation, query } from './_generated/server';
-import { v } from 'convex/values';
-import { getAuthUserId } from '@convex-dev/auth/server';
+
 
 export const updateProfile = mutation({
   args: {
@@ -276,3 +250,56 @@ export const changePassword = mutation({
     });
   },
 });
+
+// --- Helper Functions ---
+
+// Refactored to reduce complexity
+async function updateExistingUser(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any, // Using any for ctx here as inferred types from convexAuth callbacks are complex to import manually
+  userId: string,
+  emailVerified: boolean
+) {
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    throw new Error('USER_NOT_FOUND');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (emailVerified && !user.emailVerificationTime) {
+    updates.emailVerificationTime = Date.now();
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await ctx.db.patch(userId, updates);
+  }
+  return userId;
+}
+
+async function createNewUser(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  email: string,
+  emailVerified: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: any
+) {
+  const providerId = (args.provider as { id?: string } | undefined)?.id;
+  const isPasswordProvider = providerId === 'password';
+
+  const insertData: Record<string, unknown> = {
+    email,
+    ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
+    createdAt: Date.now(),
+    tier: 'FREE',
+  };
+
+  if (isPasswordProvider && typeof args.profile.name === 'string') {
+    const name = args.profile.name.trim();
+    if (name) {
+      insertData.name = name;
+    }
+  }
+
+  return await ctx.db.insert('users', insertData);
+}

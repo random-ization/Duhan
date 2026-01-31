@@ -1,4 +1,4 @@
-import { Labels } from '../utils/i18n';
+import { Labels } from '../src/utils/i18n';
 
 /**
  * Helper to get localized podcast messages.

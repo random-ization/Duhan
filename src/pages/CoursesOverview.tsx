@@ -1,6 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
-// import { useAuth } from '../contexts/AuthContext';
-// import { useData } from '../contexts/DataContext';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronDown, Search, ChevronRight, Layers } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { useQuery } from 'convex/react';
@@ -241,12 +239,15 @@ const CoursesOverview: React.FC = () => {
   }, [courses, searchQuery, t, getPublisherSearchValues]);
 
   // Auto-expand if searching or if only one group
-  React.useEffect(() => {
+  useEffect(() => {
     const groups = Object.keys(groupedCourses);
-    if (groups.length === 1) {
-      setExpandedPublisher(groups[0]);
-    } else if (searchQuery && groups.length > 0) {
-      setExpandedPublisher(groups[0]);
+    if (groups.length === 1 || (searchQuery && groups.length > 0)) {
+      const target = groups[0];
+      // Use a small timeout to avoid synchronous setState during effect which can trigger cascading render warnings
+      const timer = setTimeout(() => {
+        setExpandedPublisher(prev => (prev === target ? prev : target));
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [groupedCourses, searchQuery]);
 
@@ -422,14 +423,14 @@ const CoursesOverview: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
                       {groupCourses.map(course => (
-                        <div
+                        <button
                           key={course._id || course.id}
                           onClick={() => navigate(`/course/${course.id}`)}
-                          className="flex w-full bg-white border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group/card min-h-[104px]"
+                          className="flex w-full bg-white border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all overflow-hidden group/card min-h-[104px] text-left"
                         >
                           {/* Left: Level Strip */}
                           <div
-                            className={`w-16 ${theme.accent} border-r-2 border-slate-900 flex flex-col items-center justify-center relative overflow-hidden px-1`}
+                            className={`w-16 ${theme.accent} border-r-2 border-slate-900 flex flex-col items-center justify-center relative overflow-hidden px-1 self-stretch`}
                           >
                             {/* Diagonal stripes pattern overlay */}
                             <div
@@ -469,10 +470,10 @@ const CoursesOverview: React.FC = () => {
                           </div>
 
                           {/* Right: Arrow Actions */}
-                          <div className="w-12 border-l-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 group-hover/card:bg-slate-100 transition-colors">
+                          <div className="w-12 border-l-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 group-hover/card:bg-slate-100 transition-colors self-stretch">
                             <ChevronRight className="w-5 h-5 text-slate-400 group-hover/card:text-slate-900 transition-colors" />
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>

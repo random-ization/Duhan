@@ -133,9 +133,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Overview Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((stat, i) => (
+        {statCards.map(stat => (
           <div
-            key={i}
+            key={stat.label}
             className="bg-white border-2 border-zinc-900 rounded-xl p-4 shadow-[3px_3px_0px_0px_#18181B]"
           >
             <div
@@ -220,7 +220,7 @@ export const AdminDashboard: React.FC = () => {
                 const maxCalls = Math.max(...aiUsage.daily.map(d => d.calls), 1);
                 const height = (day.calls / maxCalls) * 100;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center">
+                  <div key={day.date} className="flex-1 flex flex-col items-center">
                     <div
                       className="w-full bg-blue-400 rounded-t-sm hover:bg-blue-500 transition-colors"
                       style={{ height: `${Math.max(height, 2)}%` }}

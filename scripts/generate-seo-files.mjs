@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SUPPORTED_LANGUAGES, PUBLIC_ROUTES, withLang } from '../src/seo/publicRoutesData.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,15 +27,15 @@ function generateSitemap() {
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 ${languageRoutes
-  .map(
-    (route) => `  <url>
+      .map(
+        (route) => `  <url>
     <loc>${SITE_URL}${route.path}</loc>
     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>
   </url>`
-  )
-  .join('\n')}
+      )
+      .join('\n')}
 </urlset>`;
 
   return sitemap;

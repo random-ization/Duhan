@@ -42,7 +42,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const { setSidebarHidden } = useApp();
   const labels = getLabels(language);
 
-  const [view, setViewState] = useState<
+  const [view, setView] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
   >('LIST');
   const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
@@ -58,10 +58,10 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const [loading, setLoading] = useState(false);
 
-  // Custom setView that also updates URL
-  const setView = useCallback(
+  // Custom handleSetView that also updates URL
+  const handleSetView = useCallback(
     (newView: typeof view) => {
-      setViewState(newView);
+      setView(newView);
 
       // Update URL based on view
       if (newView === 'LIST') {
@@ -102,14 +102,14 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         setTimeLeft(exam.timeLimit * 60);
 
         if (viewParam === 'exam') {
-          setViewState('EXAM');
+          setView('EXAM');
           setTimerActive(true);
         } else if (viewParam === 'result') {
-          setViewState('RESULT');
+          setView('RESULT');
         } else if (viewParam === 'review') {
-          setViewState('REVIEW');
+          setView('REVIEW');
         } else {
-          setViewState('COVER');
+          setView('COVER');
         }
       } catch (error) {
         console.error('Failed to load exam:', error);
@@ -130,7 +130,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         selectExamFromUrl(exam, urlView);
       }
     } else if (!examId && view !== 'LIST' && view !== 'HISTORY_LIST') {
-      setViewState('LIST');
+      setView('LIST');
     }
   }, [examId, urlView, exams, currentExam, view, selectExamFromUrl]);
 
@@ -181,7 +181,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   React.useEffect(() => {
     let interval: number;
     if (timerActive && timeLeft > 0) {
-      interval = window.setInterval(() => {
+      interval = globalThis.window.setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
     } else if (timeLeft === 0 && timerActive) {
@@ -222,7 +222,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       setUserAnswers({});
       setTimeLeft(exam.timeLimit * 60);
       // Navigate to cover page (sets both URL and internal state)
-      setViewState('COVER');
+      setView('COVER');
       navigate(`/topik/${exam.id}`);
     } catch (error) {
       logger.error('Failed to load exam content:', error);
@@ -236,7 +236,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const startExam = () => {
     setSidebarHidden(true); // Hide sidebar when exam starts
     setTimerActive(true);
-    setView('EXAM');
+    handleSetView('EXAM');
   };
 
   const reviewExam = async (attempt?: ExamAttempt) => {
@@ -252,7 +252,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           const fullExam = { ...exam, questions: fullQuestions };
           setCurrentExam(fullExam as TopikExam);
           setUserAnswers(attempt.userAnswers);
-          setViewState('REVIEW');
+          setView('REVIEW');
           navigate(`/topik/${exam.id}/review`);
         } catch (error) {
           logger.error('Failed to load exam for review:', error);
@@ -263,7 +263,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         return;
       }
     }
-    setViewState('REVIEW');
+    setView('REVIEW');
   };
 
   const resetExam = () => {
@@ -273,7 +273,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     setTimeLeft(0);
     setTimerActive(false);
     setExamResult(null);
-    setView('LIST');
+    handleSetView('LIST');
   };
 
   const handleAnswerChange = (questionIndex: number, optionIndex: number) => {
@@ -340,7 +340,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         history={history}
         language={language}
         onSelectExam={selectExam}
-        onViewHistory={() => setView('HISTORY_LIST')}
+        onViewHistory={() => handleSetView('HISTORY_LIST')}
         onReviewAttempt={reviewExam}
         canAccessContent={canAccessContent}
         onDeleteAttempt={onDeleteHistory}
@@ -355,10 +355,10 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         history={history}
         language={language}
         onSelectExam={selectExam}
-        onViewHistory={() => setView('LIST')}
+        onViewHistory={() => handleSetView('LIST')}
         onReviewAttempt={reviewExam}
         showHistoryView={true}
-        onBack={() => setView('LIST')}
+        onBack={() => handleSetView('LIST')}
         canAccessContent={canAccessContent}
         onDeleteAttempt={onDeleteHistory}
       />
@@ -391,7 +391,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         onExit={() => {
           // Show confirmation dialog
           if (
-            window.confirm(
+            globalThis.window.confirm(
               labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'
             )
           ) {
@@ -417,7 +417,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           setUserAnswers({});
           setTimeLeft(currentExam.timeLimit * 60);
           setExamResult(null);
-          setView('COVER');
+          handleSetView('COVER');
         }}
         onBackToList={resetExam}
       />

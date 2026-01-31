@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { FileText, Type, ChevronDown, BookOpen, Loader2, Check } from 'lucide-react';
 
+type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | null;
+
 interface AnnotationMenuProps {
   visible: boolean;
   position: { top: number; left: number } | null;
   onAddNote: () => void;
-  onHighlight?: (color: 'yellow' | 'green' | 'blue' | 'pink' | null) => void;
-  selectedColor: 'yellow' | 'green' | 'blue' | 'pink' | null;
-  setSelectedColor: (val: 'yellow' | 'green' | 'blue' | 'pink' | null) => void;
-  onSaveWord?: (text: string) => void;
+  onHighlight?: (color: HighlightColor) => void;
+  selectedColor: HighlightColor;
+  setSelectedColor: (val: HighlightColor) => void;
   selectionText?: string;
   onClose: () => void;
-  onDelete?: () => void;
   labels: { [key: string]: string };
   // New: For saving to vocab notebook
   onSaveToVocab?: (text: string) => Promise<void>;
@@ -66,8 +66,35 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
       }, 1500);
     } catch (e) {
       console.error('[Vocab] Save failed:', e);
-      setVocabSaving(false);
     }
+  };
+
+  const getSaveBtnClass = () => {
+    const base = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ';
+    if (vocabSaved) return base + 'bg-emerald-50 text-emerald-600';
+    if (vocabSaving) return base + 'bg-slate-50 text-slate-400 cursor-wait';
+    return base + 'hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700';
+  };
+
+  const getSaveBtnContent = () => {
+    if (vocabSaved) return (
+      <React.Fragment>
+        <Check className="w-4 h-4" />
+        已保存
+      </React.Fragment>
+    );
+    if (vocabSaving) return (
+      <React.Fragment>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        保存中...
+      </React.Fragment>
+    );
+    return (
+      <React.Fragment>
+        <BookOpen className="w-4 h-4" />
+        {labels.saveToVocab || '存入生词本'}
+      </React.Fragment>
+    );
   };
 
   return (
@@ -88,9 +115,8 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
               if (onHighlight) onHighlight(null);
               setShowColorPicker(false);
             }}
-            className={`w-6 h-6 rounded-full border border-slate-200 bg-white transition-all ${
-              selectedColor === null ? 'ring-2 ring-slate-400 ring-offset-1' : 'hover:scale-110'
-            }`}
+            className={`w-6 h-6 rounded-full border border-slate-200 bg-white transition-all ${selectedColor === null ? 'ring-2 ring-slate-400 ring-offset-1' : 'hover:scale-110'
+              }`}
             title="None"
           />
           {COLORS.map(color => (
@@ -101,11 +127,10 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                 if (onHighlight) onHighlight(color.name);
                 setShowColorPicker(false);
               }}
-              className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${
-                selectedColor === color.name
-                  ? `ring-2 ${color.ringClass} ring-offset-1`
-                  : 'hover:scale-110'
-              }`}
+              className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${selectedColor === color.name
+                ? `ring-2 ${color.ringClass} ring-offset-1`
+                : 'hover:scale-110'
+                }`}
               title={color.name}
             />
           ))}
@@ -149,30 +174,9 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
             <button
               onClick={handleSaveToVocab}
               disabled={vocabSaving || vocabSaved}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                vocabSaved
-                  ? 'bg-emerald-50 text-emerald-600'
-                  : vocabSaving
-                    ? 'bg-slate-50 text-slate-400 cursor-wait'
-                    : 'hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700'
-              }`}
+              className={getSaveBtnClass()}
             >
-              {vocabSaved ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  已保存
-                </>
-              ) : vocabSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                <>
-                  <BookOpen className="w-4 h-4" />
-                  {labels.saveToVocab || '存入生词本'}
-                </>
-              )}
+              {getSaveBtnContent()}
             </button>
           </>
         )}

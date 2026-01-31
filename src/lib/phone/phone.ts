@@ -9,11 +9,10 @@ export const REGION_CALLING_CODE: Record<SupportedPhoneRegion, string> = {
   MN: '976',
 };
 
-const CN_MOBILE_REGEX =
-  /^(?:\+?86)?1(?:3\d{3}|5[^4\D]\d{2}|8\d{3}|7(?:[235-8]\d{2}|4(?:0\d|1[0-2]|9\d))|9[0-35-9]\d{2}|66\d{2})\d{6}$/;
+const CN_MOBILE_REGEX = /^(?:\+?86)?1[3-9]\d{9}$/;
 
 function normalizeCnCandidate(input: string) {
-  let candidate = input.trim().replace(/[^\d+]/g, '');
+  let candidate = input.trim().replaceAll(/[^\d+]/g, '');
   if (candidate.startsWith('00')) {
     candidate = `+${candidate.slice(2)}`;
   }
@@ -21,7 +20,7 @@ function normalizeCnCandidate(input: string) {
 }
 
 export function buildE164FromNational(nationalNumber: string, region: SupportedPhoneRegion) {
-  let digits = nationalNumber.replace(/\D/g, '');
+  let digits = nationalNumber.replaceAll(/\D/g, '');
   const code = REGION_CALLING_CODE[region];
   if (digits.startsWith('00')) {
     digits = digits.slice(2);

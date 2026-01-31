@@ -17,8 +17,8 @@ export default function AppLayout() {
   const { user, language } = useAuth();
   const { sidebarHidden, footerHidden } = useLayout();
   const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
+    if (globalThis.window === undefined) return true;
+    return globalThis.window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
   });
   const syncProfileFromIdentityMutation = useMutation(
     mRef<NoArgs, { updated: boolean }>('auth:syncProfileFromIdentity')
@@ -52,7 +52,7 @@ export default function AppLayout() {
     if (!user) return false;
     if (profilePromptDismissed) return false;
     if (isProfilePage) return false;
-    const nameMissing = !user.name || !user.name.trim();
+    const nameMissing = !user.name?.trim();
     const avatarMissing = !user.avatar;
     return nameMissing || avatarMissing;
   }, [user, profilePromptDismissed, isProfilePage]);
@@ -87,8 +87,8 @@ export default function AppLayout() {
                         await syncProfileFromIdentityMutation();
                       } finally {
                         setProfilePromptDismissed(true);
-                        if (typeof window !== 'undefined') {
-                          window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                        if (globalThis.window !== undefined) {
+                          globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
                         }
                       }
                     }}
@@ -100,8 +100,8 @@ export default function AppLayout() {
                     type="button"
                     onClick={() => {
                       setProfilePromptDismissed(true);
-                      if (typeof window !== 'undefined') {
-                        window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                      if (globalThis.window !== undefined) {
+                        globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
                       }
                       navigate('/profile');
                     }}
@@ -114,8 +114,8 @@ export default function AppLayout() {
                   type="button"
                   onClick={() => {
                     setProfilePromptDismissed(true);
-                    if (typeof window !== 'undefined') {
-                      window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                    if (globalThis.window !== undefined) {
+                      globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
                     }
                   }}
                   className="mt-4 w-full text-sm font-bold text-slate-500 hover:text-slate-700 transition"

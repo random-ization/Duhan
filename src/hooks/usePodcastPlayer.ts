@@ -46,7 +46,7 @@ export interface UsePodcastPlayerReturn {
  * Extracts common audio player logic from PodcastPlayerPage
  */
 export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodcastPlayerReturn {
-  const { onEnded, onTimeUpdate, initialVolume = 1.0, initialSpeed = 1.0 } = options;
+  const { onEnded, onTimeUpdate, initialVolume = 1, initialSpeed = 1 } = options;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timeRafRef = useRef<number | null>(null);
@@ -57,8 +57,8 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [speed, setSpeedState] = useState(initialSpeed);
-  const [volume, setVolumeState] = useState(initialVolume);
+  const [speed, setSpeed] = useState(initialSpeed);
+  const [volume, setVolume] = useState(initialVolume);
 
   // A-B Loop state
   const [abLoop, setAbLoop] = useState<ABLoop>({
@@ -69,7 +69,7 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
 
   // Format time helper
   const formatTime = useCallback((seconds: number): string => {
-    if (!seconds || isNaN(seconds)) return '00:00';
+    if (!seconds || Number.isNaN(seconds)) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -118,17 +118,17 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
   );
 
   // Speed control
-  const setSpeed = useCallback((newSpeed: number) => {
-    setSpeedState(newSpeed);
+  const updateSpeed = useCallback((newSpeed: number) => {
+    setSpeed(newSpeed);
     if (audioRef.current) {
       audioRef.current.playbackRate = newSpeed;
     }
   }, []);
 
   // Volume control
-  const setVolume = useCallback((newVolume: number) => {
+  const updateVolume = useCallback((newVolume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, newVolume));
-    setVolumeState(clampedVolume);
+    setVolume(clampedVolume);
     if (audioRef.current) {
       audioRef.current.volume = clampedVolume;
     }
@@ -225,8 +225,8 @@ export function usePodcastPlayer(options: UsePodcastPlayerOptions = {}): UsePodc
     togglePlay,
     seekTo,
     skip,
-    setSpeed,
-    setVolume,
+    setSpeed: updateSpeed,
+    setVolume: updateVolume,
     toggleLoop,
     resetLoop,
     formatTime,
