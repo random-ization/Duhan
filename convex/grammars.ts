@@ -164,9 +164,16 @@ export const getUnitGrammar = query({
       let institute = null;
       if (instituteId) {
         institute = await ctx.db.get(instituteId);
-        if (institute) {
-          effectiveCourseId = institute.id || institute._id;
-        }
+      } else {
+        // Fallback: Try to find by legacy ID
+        institute = await ctx.db
+          .query('institutes')
+          .withIndex('by_legacy_id', q => q.eq('id', args.courseId))
+          .unique();
+      }
+
+      if (institute) {
+        effectiveCourseId = institute.id || institute._id;
       }
 
       // SPECIAL HANDLING: Legacy Yonsei 1-2 & new Volume 2 courses

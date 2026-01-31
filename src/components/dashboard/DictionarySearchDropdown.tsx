@@ -4,6 +4,7 @@ import { useAction } from 'convex/react';
 import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { cleanDictionaryText } from '../../utils/dictionaryMeaning';
 
 type DictionaryEntry = {
   targetCode: string;
@@ -124,11 +125,12 @@ const DictionarySearchDropdown: React.FC = () => {
       <ul className="max-h-[360px] overflow-auto">
         {entries.map(entry => {
           const firstSense = entry.senses?.[0];
-          const meaning =
+          const rawMeaning =
             firstSense?.translation?.definition ||
             firstSense?.translation?.word ||
             firstSense?.definition ||
             '';
+          const meaning = cleanDictionaryText(rawMeaning);
           return (
             <li key={entry.targetCode}>
               <button

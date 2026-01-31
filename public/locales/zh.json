@@ -578,7 +578,24 @@
       "subtitle": "谈话系列",
       "mySubs": "我的订阅",
       "dailyConv": "日常对话",
-      "title": "最新播客"
+      "title": "最新播客",
+      "headerSubtitle": "听力技巧",
+      "continueListening": "继续收听",
+      "featured": "精选播客",
+      "plays": "次播放",
+      "unknown": "未知",
+      "community": "热门趋势",
+      "editorPicks": "编辑精选",
+      "loginRequired": "请先登录",
+      "filters": {
+        "all": "全部",
+        "beginner": "初级"
+      },
+      "msg": {
+        "EMPTY_SUBSCRIPTIONS": "暂无订阅",
+        "NO_TRENDING": "暂无热门推荐",
+        "NO_RECOMMENDATIONS": "暂无推荐内容"
+      }
     },
     "vocab": {
       "label": "生词本",

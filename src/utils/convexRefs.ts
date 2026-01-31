@@ -4,6 +4,7 @@ import type { Doc, Id } from '../../convex/_generated/dataModel';
 
 // Import types only to avoid runtime cycles
 import type { GrammarStatsDto, GrammarItemDto, UnitGrammarDto } from '../../convex/grammars';
+import type { SearchResult } from '../../convex/dictionary';
 
 export type NoArgs = Record<string, never>;
 
@@ -29,6 +30,20 @@ export const STORAGE = {
     { filename: string; contentType: string; folder?: string },
     { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
   >('storage:getUploadUrl'),
+};
+
+export const DICTIONARY = {
+  searchDictionary: aRef<
+    {
+      query: string;
+      translationLang?: string;
+      start?: number;
+      num?: number;
+      part?: string;
+      sort?: string;
+    },
+    SearchResult
+  >('dictionary:searchDictionary'),
 };
 
 export const UNITS = {
@@ -74,9 +89,10 @@ export const GRAMMARS = {
     { title: string; summary: string; explanation: string; type: string; level: string },
     { id: string }
   >('grammars:create'),
-  getAdminById: qRef<{ grammarId: string }, { id: string; title: string; searchPatterns: string[] } | null>(
-    'grammars:getAdminById'
-  ),
+  getAdminById: qRef<
+    { grammarId: string },
+    { id: string; title: string; searchPatterns: string[] } | null
+  >('grammars:getAdminById'),
   updateSearchPatterns: mRef<{ grammarId: string; searchPatterns: string[] }, void>(
     'grammars:updateSearchPatterns'
   ),

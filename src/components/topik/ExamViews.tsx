@@ -19,9 +19,9 @@ import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
 import type { ToolType } from '../../features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAnnotation';
-import { useMutation } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import toast from 'react-hot-toast';
-import { mRef } from '../../utils/convexRefs';
+import { DICTIONARY, VOCAB } from '../../utils/convexRefs';
 
 const PAPER_MAX_WIDTH = 'max-w-[900px]';
 
@@ -357,13 +357,8 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const labels = useMemo(() => getLabels(language), [language]);
     const questionRefs = useRef<Record<number, HTMLElement | null>>({});
 
-    // Convex Mutation
-    const saveNotebook = useMutation(
-      mRef<
-        { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
-        unknown
-      >('notebooks:save')
-    );
+    const searchDictionary = useAction(DICTIONARY.searchDictionary);
+    const addToReview = useMutation(VOCAB.addToReview);
 
     const structure =
       exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
@@ -580,46 +575,67 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       async (text: string) => {
         if (!text) return;
 
-        // Get question context from selection
-        const questionIndex = selectionContextKey.split('-Q')[1];
-        const question = questionIndex ? exam.questions[Number.parseInt(questionIndex, 10)] : null;
-        const context = question?.question || question?.passage?.substring(0, 100) || '';
+        const loadingToast = toast.loading(labels.savingToVocab || 'Saving to Vocabulary...');
 
-        // Save to notebook
         try {
-          await saveNotebook({
-            type: 'VOCAB',
-            title: text,
-            content: {
-              text: text, // Normalized field for notebook content
-              word: text,
-              context: context,
-              examId: exam.id,
-              examTitle: exam.title,
-              questionIndex: questionIndex ? Number.parseInt(questionIndex, 10) : undefined,
-              savedAt: new Date().toISOString(),
-            },
-            tags: ['exam-vocab', `topik-${exam.round}`],
+          // 1. Get meaning from dictionary
+          const searchResult = await searchDictionary({ query: text });
+          const bestMatch = searchResult?.entries?.[0];
+
+          // Use dictionary definition or fallback
+          let meaning = '';
+          let partOfSpeech = 'noun'; // Default
+
+          if (bestMatch) {
+            const sense = bestMatch.senses?.[0];
+            meaning =
+              sense?.translation?.definition || sense?.translation?.word || sense?.definition || '';
+            meaning = meaning.replaceAll(/<!\[CDATA\[|\]\]>/g, '').trim();
+            partOfSpeech = bestMatch.pos || 'noun';
+          } else {
+            meaning = 'Manual Entry (Not found in dictionary)';
+          }
+
+          // Get context
+          const questionIndexStart = selectionContextKey.indexOf('-Q');
+          let context = '';
+          if (questionIndexStart >= 0) {
+            const questionIndexStr = selectionContextKey.substring(questionIndexStart + 2);
+            const questionIndex = questionIndexStr
+              ? Number.parseInt(questionIndexStr, 10)
+              : undefined;
+            const question = questionIndex !== undefined ? exam.questions[questionIndex] : null;
+            context = question?.question || question?.passage?.substring(0, 100) || '';
+          }
+
+          // 2. Save using addToReview
+          await addToReview({
+            word: text,
+            meaning: meaning,
+            partOfSpeech: partOfSpeech,
+            context: context,
+            source: `TOPIK-${exam.round}-${exam.type}`,
           });
-          toast.success('Saved to Notebook');
+
+          toast.success(labels.savedToVocab || 'Saved to Vocabulary!', { id: loadingToast });
         } catch (error_: unknown) {
-          console.error('Failed to save to notebook', error_);
-          toast.error('Failed to save');
+          console.error('Failed to save to vocab:', error_);
+          toast.error(labels.saveFailed || 'Failed to save', { id: loadingToast });
         }
       },
-      [exam, selectionContextKey, saveNotebook]
+      [addToReview, searchDictionary, exam, selectionContextKey, labels]
     );
 
     const tempAnnotation: Annotation | null =
       showAnnotationMenu && selectionText && selectionContextKey
         ? {
-          id: 'temp',
-          contextKey: selectionContextKey,
-          text: selectionText,
-          note: '',
-          color: selectedColor,
-          timestamp: Date.now(),
-        }
+            id: 'temp',
+            contextKey: selectionContextKey,
+            text: selectionText,
+            note: '',
+            color: selectedColor,
+            timestamp: Date.now(),
+          }
         : null;
 
     return (
@@ -650,10 +666,11 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsDrawingMode(!isDrawingMode)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${isDrawingMode
-                  ? 'bg-amber-50 border-amber-200 text-amber-600'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                  isDrawingMode
+                    ? 'bg-amber-50 border-amber-200 text-amber-600'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
               >
                 <Pencil className="w-4 h-4" />
                 标记
@@ -939,10 +956,11 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                       >
                         <button
                           className={`p-3 rounded-lg border transition-all cursor-pointer w-full text-left outline-none focus:ring-2 focus:ring-indigo-500/50
-                                ${isActive
-                              ? 'bg-indigo-50 border-indigo-300 shadow-md'
-                              : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:shadow-sm'
-                            }`}
+                                ${
+                                  isActive
+                                    ? 'bg-indigo-50 border-indigo-300 shadow-md'
+                                    : 'bg-slate-50 border-slate-100 hover:border-indigo-200 hover:shadow-sm'
+                                }`}
                           onClick={() => {
                             setActiveAnnotationId(ann.id);
                             setEditingAnnotationId(ann.id);
@@ -950,13 +968,14 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           }}
                         >
                           <div
-                            className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${{
-                              yellow: 'bg-yellow-100 text-yellow-800',
-                              green: 'bg-green-100 text-green-800',
-                              blue: 'bg-blue-100 text-blue-800',
-                              pink: 'bg-pink-100 text-pink-800',
-                            }[ann.color || 'yellow'] || 'bg-yellow-100 text-yellow-800'
-                              }`}
+                            className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${
+                              {
+                                yellow: 'bg-yellow-100 text-yellow-800',
+                                green: 'bg-green-100 text-green-800',
+                                blue: 'bg-blue-100 text-blue-800',
+                                pink: 'bg-pink-100 text-pink-800',
+                              }[ann.color || 'yellow'] || 'bg-yellow-100 text-yellow-800'
+                            }`}
                           >
                             {ann.text.substring(0, 20)}...
                           </div>
@@ -1007,9 +1026,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             saveAnnotationQuick(color || undefined);
           }}
           selectedColor={selectedColor}
-          setSelectedColor={(val: AnnotationColor | null) =>
-            val && setSelectedColor(val)
-          }
+          setSelectedColor={(val: AnnotationColor | null) => val && setSelectedColor(val)}
           onClose={() => {
             setShowAnnotationMenu(false);
             globalThis.window.getSelection()?.removeAllRanges();

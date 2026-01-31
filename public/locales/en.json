@@ -579,7 +579,24 @@
       "subtitle": "Iyagi Series",
       "mySubs": "My Subscriptions",
       "dailyConv": "Daily Conversation",
-      "title": "Latest Podcast"
+      "title": "Latest Podcast",
+      "headerSubtitle": "Listening Skills",
+      "continueListening": "Continue Listening",
+      "featured": "Featured Podcast",
+      "plays": "plays",
+      "unknown": "Unknown",
+      "community": "Trending",
+      "editorPicks": "Editor Picks",
+      "loginRequired": "Please login first",
+      "filters": {
+        "all": "All",
+        "beginner": "Beginner"
+      },
+      "msg": {
+        "EMPTY_SUBSCRIPTIONS": "No subscriptions yet",
+        "NO_TRENDING": "No trending podcasts yet",
+        "NO_RECOMMENDATIONS": "No recommendations yet"
+      }
     },
     "vocab": {
       "label": "Vocab",

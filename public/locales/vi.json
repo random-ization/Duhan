@@ -555,7 +555,24 @@
       "subtitle": "Sê-ri đối thoại",
       "mySubs": "Kênh của tôi",
       "dailyConv": "Hội thoại hàng ngày",
-      "title": "Podcast mới nhất"
+      "title": "Podcast mới nhất",
+      "headerSubtitle": "Kỹ năng nghe",
+      "continueListening": "Tiếp tục nghe",
+      "featured": "Podcast nổi bật",
+      "plays": "lượt nghe",
+      "unknown": "Không rõ",
+      "community": "Thịnh hành",
+      "editorPicks": "Biên tập viên chọn",
+      "loginRequired": "Vui lòng đăng nhập trước",
+      "filters": {
+        "all": "Tất cả",
+        "beginner": "Sơ cấp"
+      },
+      "msg": {
+        "EMPTY_SUBSCRIPTIONS": "Chưa có đăng ký nào",
+        "NO_TRENDING": "Chưa có podcast thịnh hành",
+        "NO_RECOMMENDATIONS": "Chưa có đề xuất nào"
+      }
     },
     "vocab": {
       "label": "Sổ từ vựng",
@@ -1087,11 +1104,18 @@
     "subtitle": "Chỉ dùng để xác nhận bạn có đủ điều kiện ưu đãi theo khu vực.",
     "disclaimer": "Chúng tôi không lưu số điện thoại của bạn. Sau khi gửi, chúng tôi chỉ ghi lại tình trạng đủ điều kiện và khu vực để áp dụng ưu đãi.",
     "close": "Đóng",
-    "tabs": { "cn": "Trung Quốc", "vn": "Việt Nam", "mn": "Mông Cổ" },
+    "tabs": {
+      "cn": "Trung Quốc",
+      "vn": "Việt Nam",
+      "mn": "Mông Cổ"
+    },
     "placeholder": "Nhập số điện thoại",
     "hint": "Vui lòng nhập số hợp lệ cho khu vực đã chọn.",
     "formattedLabel": "Xác minh thành công",
-    "cta": { "verify": "Xác minh và nhận ưu đãi", "login": "Đăng nhập để xác minh và nhận ưu đãi" },
+    "cta": {
+      "verify": "Xác minh và nhận ưu đãi",
+      "login": "Đăng nhập để xác minh và nhận ưu đãi"
+    },
     "errors": {
       "invalid": "Số điện thoại không hợp lệ hoặc không thuộc khu vực đã chọn.",
       "failed": "Xác minh thất bại. Vui lòng thử lại."

@@ -9,7 +9,7 @@ import {
   buildWordUpdates,
   buildAppearanceUpdates,
   cleanupUndefinedFields,
-  normalizeUnitIdParam
+  normalizeUnitIdParam,
 } from './vocabHelpers';
 
 export type VocabStatsDto = {
@@ -414,7 +414,11 @@ export const getOfCourse = query({
 
     // Fallback logic for Vol 2 units (1-10 -> 11-20)
     const MAX_VOL_1_UNIT = 20;
-    if (appearances.length === 0 && normalizedUnitId !== undefined && normalizedUnitId <= MAX_VOL_1_UNIT) {
+    if (
+      appearances.length === 0 &&
+      normalizedUnitId !== undefined &&
+      normalizedUnitId <= MAX_VOL_1_UNIT
+    ) {
       const offsetUnitId = normalizedUnitId + 10;
       const fallbackAppearances = await ctx.db
         .query('vocabulary_appearances')
@@ -492,22 +496,22 @@ export const getOfCourse = query({
         // Merge progress data (normalized structure for frontend)
         progress: progress
           ? {
-            id: progress._id,
-            status: progress.status,
-            interval: progress.interval,
-            streak: progress.streak,
-            nextReviewAt: progress.nextReviewAt,
-            lastReviewedAt: progress.lastReviewedAt,
-            // FSRS Fields (Optional, may be undefined for legacy data)
-            state: progress.state,
-            stability: progress.stability,
-            difficulty: progress.difficulty,
-            elapsed_days: progress.elapsed_days,
-            scheduled_days: progress.scheduled_days,
-            reps: progress.reps,
-            lapses: progress.lapses,
-            last_review: progress.last_review,
-          }
+              id: progress._id,
+              status: progress.status,
+              interval: progress.interval,
+              streak: progress.streak,
+              nextReviewAt: progress.nextReviewAt,
+              lastReviewedAt: progress.lastReviewedAt,
+              // FSRS Fields (Optional, may be undefined for legacy data)
+              state: progress.state,
+              stability: progress.stability,
+              difficulty: progress.difficulty,
+              elapsed_days: progress.elapsed_days,
+              scheduled_days: progress.scheduled_days,
+              reps: progress.reps,
+              lapses: progress.lapses,
+              last_review: progress.last_review,
+            }
           : null,
         mastered: progress?.status === 'MASTERED' || false,
       };
@@ -813,7 +817,6 @@ export const resetProgress = mutation({
 
 // Bulk Import (Admin) - Optimized for N+1
 
-
 export const bulkImport = mutation({
   args: {
     items: v.array(
@@ -854,7 +857,10 @@ export const bulkImport = mutation({
 
     // Phase 1: Resolve Words
     const wordPromises = items.map(item =>
-      ctx.db.query('words').withIndex('by_word', q => q.eq('word', item.word)).unique()
+      ctx.db
+        .query('words')
+        .withIndex('by_word', q => q.eq('word', item.word))
+        .unique()
     );
     const existingWordsResults = await Promise.all(wordPromises);
     const wordIdMap = new Map<string, Id<'words'>>();
@@ -869,7 +875,7 @@ export const bulkImport = mutation({
           hanja: item.hanja,
           meaningEn: item.meaningEn,
           meaningVi: item.meaningVi,
-          meaningMn: item.meaningMn
+          meaningMn: item.meaningMn,
         };
         const cleanUpdates = cleanupUndefinedFields<Record<string, unknown>>(wordUpdates);
         if (Object.keys(cleanUpdates).length > 0) {
@@ -949,7 +955,13 @@ export const bulkImport = mutation({
 
     return {
       success: true,
-      results: { success: successCount, failed: failedCount, smartFilled: smartFilledCount, newWords: newWordCount, errors },
+      results: {
+        success: successCount,
+        failed: failedCount,
+        smartFilled: smartFilledCount,
+        newWords: newWordCount,
+        errors,
+      },
     };
   },
 });

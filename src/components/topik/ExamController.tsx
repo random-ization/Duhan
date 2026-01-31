@@ -75,7 +75,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           orientation="vertical"
         >
           <VolumeSlider.Track className="relative w-1.5 h-full bg-slate-200 rounded-full overflow-hidden">
-            <VolumeSlider.TrackFill className="absolute bottom-0 w-full bg-indigo-500 rounded-full will-change-[height]" />
+            <VolumeSlider.TrackFill className="absolute bottom-0 w-full bg-indigo-500 rounded-full will-change-[height] h-[var(--slider-fill)]" />
           </VolumeSlider.Track>
           <VolumeSlider.Thumb className="absolute w-3 h-3 bg-indigo-600 rounded-full shadow-md opacity-0 group-hover/volume:opacity-100 left-1/2 -translate-x-1/2 focus:opacity-100" />
         </VolumeSlider.Root>
@@ -190,9 +190,10 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           className={`
             absolute top-0 right-[105px] w-[280px] bg-white/95 backdrop-blur-xl border border-slate-200 
             rounded-3xl shadow-xl overflow-hidden transition-all duration-300 origin-right
-            ${showOverview
-              ? 'opacity-100 scale-100 translate-x-0 visible'
-              : 'opacity-0 scale-95 translate-x-4 invisible pointer-events-none'
+            ${
+              showOverview
+                ? 'opacity-100 scale-100 translate-x-0 visible'
+                : 'opacity-0 scale-95 translate-x-4 invisible pointer-events-none'
             }
           `}
           style={{ maxHeight: '600px', height: 'auto' }}
@@ -202,9 +203,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
             <span className="text-slate-800 font-bold text-sm">题目概览</span>
 
             <div className="text-xs font-mono text-slate-500">
-              <span className="text-emerald-600 font-bold">
-                {Object.keys(userAnswers).length}
-              </span>
+              <span className="text-emerald-600 font-bold">{Object.keys(userAnswers).length}</span>
               <span className="mx-1 text-slate-300">/</span>
               <span>{questions.length}</span>
               <span className="ml-1 text-[10px] uppercase opacity-70">Done</span>
@@ -266,10 +265,11 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           onClick={() => setShowOverview(!showOverview)}
           className={`
               w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border transition-all
-              ${showOverview
-              ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
-              : 'bg-white border-slate-200 text-slate-500 hover:scale-105 active:scale-95 hover:text-indigo-600 hover:border-indigo-100'
-            }
+              ${
+                showOverview
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                  : 'bg-white border-slate-200 text-slate-500 hover:scale-105 active:scale-95 hover:text-indigo-600 hover:border-indigo-100'
+              }
             `}
         >
           <Grid className="w-5 h-5" />
@@ -309,9 +309,7 @@ const getQuestionButtonClass = (isActive: boolean, isAnswered: boolean) => {
 };
 
 const getOverviewButtonClass = (isActive: boolean, isAnswered: boolean) => {
-  if (isActive)
-    return 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-200';
-  if (isAnswered)
-    return 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100';
+  if (isActive) return 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-200';
+  if (isAnswered) return 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100';
   return 'bg-white border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700';
 };

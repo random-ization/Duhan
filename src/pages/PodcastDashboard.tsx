@@ -50,11 +50,12 @@ interface HistoryItem {
 const getPodcastMessages = (labels: Labels) => ({
   DASHBOARD_TITLE: labels.podcastDashboard || 'Podcast Dashboard',
   ACTION_SEARCH: getLabel(labels, ['search']) || 'Search',
-  DASHBOARD_COMMUNITY: labels.trending || 'Trending',
-  DASHBOARD_EDITOR_PICKS: labels.editorsPicks || 'Editor Picks',
+  DASHBOARD_COMMUNITY: labels.dashboard?.podcast?.community || 'Trending',
+  DASHBOARD_EDITOR_PICKS: labels.dashboard?.podcast?.editorPicks || 'Editor Picks',
   DASHBOARD_VIEW_ALL: labels.viewAll || 'View All',
-  EMPTY_TRENDING: labels.noTrending || 'No trending podcasts yet',
-  DASHBOARD_NO_RECOMMENDATIONS: labels.noRecommendations || 'No recommendations yet',
+  EMPTY_TRENDING: labels.dashboard?.podcast?.msg?.NO_TRENDING || 'No trending podcasts yet',
+  DASHBOARD_NO_RECOMMENDATIONS:
+    labels.dashboard?.podcast?.msg?.NO_RECOMMENDATIONS || 'No recommendations yet',
   HISTORY_TITLE: labels.history || 'History',
 });
 
@@ -155,7 +156,7 @@ export default function PodcastDashboard() {
           {!user && (
             <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 text-center space-y-4">
               <p className="font-bold text-slate-600">
-                {labels.podcast?.loginRequired || 'Please login first'}
+                {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
               </p>
               <button
                 type="button"
@@ -175,7 +176,7 @@ export default function PodcastDashboard() {
 
           {user && !subscriptionsLoading && subscriptions.length === 0 && (
             <div className="text-center py-16 bg-white rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold">
-              {labels.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
+              {labels.dashboard?.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
             </div>
           )}
 
@@ -277,8 +278,8 @@ export default function PodcastDashboard() {
           </div>
           <div className="z-10 flex-1 text-center md:text-left">
             <div className="text-xs font-bold text-green-400 mb-1 flex items-center justify-center md:justify-start gap-2 uppercase tracking-wider">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Continue
-              Listening
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>{' '}
+              {labels.dashboard?.podcast?.continueListening || 'Continue Listening'}
             </div>
             <h3 className="text-2xl font-black mb-1 line-clamp-1">{lastPlayed.episodeTitle}</h3>
             <p className="text-slate-400 text-sm mb-4">{lastPlayed.channelName}</p>
@@ -310,6 +311,8 @@ export default function PodcastDashboard() {
               src={
                 featuredPodcast.artworkUrl ||
                 featuredPodcast.artwork ||
+                featuredPodcast.channel?.artworkUrl ||
+                featuredPodcast.channel?.artwork ||
                 'https://placehold.co/400x400/indigo/white?text=Pod'
               }
               className="w-full h-full object-cover"
@@ -318,8 +321,8 @@ export default function PodcastDashboard() {
           </div>
           <div className="z-10 flex-1 text-center md:text-left">
             <div className="text-xs font-bold text-yellow-400 mb-1 flex items-center justify-center md:justify-start gap-2 uppercase tracking-wider">
-              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span> Featured
-              Podcast
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>{' '}
+              {labels.dashboard?.podcast?.featured || 'Featured Podcast'}
             </div>
             <h3 className="text-2xl font-black mb-1 line-clamp-1">{featuredPodcast.title}</h3>
             <p className="text-slate-400 text-sm">{featuredPodcast.author}</p>
@@ -355,7 +358,7 @@ export default function PodcastDashboard() {
                 {podcastMsgs.DASHBOARD_TITLE}
               </h2>
               <p className="text-slate-500 font-bold">
-                {labels.dashboard?.podcast?.subtitle || 'Listening Skills'}
+                {labels.dashboard?.podcast?.headerSubtitle || 'Listening Skills'}
               </p>
             </div>
             <img
@@ -393,13 +396,15 @@ export default function PodcastDashboard() {
               type="button"
               className="px-4 py-3 bg-slate-900 text-white rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap shadow-pop hover:translate-y-1 hover:shadow-none transition"
             >
-              {labels.common?.all || 'All'}
+              {labels.dashboard?.podcast?.filters?.all || labels.common?.all || 'All'}
             </button>
             <button
               type="button"
               className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition"
             >
-              {labels.dashboard?.level?.beginner || 'Beginner'}
+              {labels.dashboard?.podcast?.filters?.beginner ||
+                labels.dashboard?.level?.beginner ||
+                'Beginner'}
             </button>
             <button
               type="button"
@@ -529,6 +534,7 @@ export default function PodcastDashboard() {
                     src={
                       pod.artwork ||
                       pod.artworkUrl ||
+                      pod.channel?.artworkUrl ||
                       pod.channel?.artwork ||
                       'https://placehold.co/100x100'
                     }
@@ -540,12 +546,15 @@ export default function PodcastDashboard() {
                       {pod.title}
                     </h4>
                     <p className="text-xs text-slate-500 truncate">
-                      {pod.author || pod.channel?.title || 'Unknown'}
+                      {pod.author ||
+                        pod.channel?.title ||
+                        labels.dashboard?.podcast?.unknown ||
+                        'Unknown'}
                     </p>
                     {activeTab === 'community' && (
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">
-                          {pod.views || 0} plays
+                          {pod.views || 0} {labels.dashboard?.podcast?.plays || 'plays'}
                         </span>
                       </div>
                     )}

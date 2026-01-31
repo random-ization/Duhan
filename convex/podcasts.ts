@@ -17,7 +17,11 @@ export const getTrending = query({
     const allEpisodes = await ctx.db.query('podcast_episodes').collect();
     const internal = allEpisodes
       .slice()
-      .sort((a, b) => b.views - a.views)
+      .sort((a, b) => {
+        const viewsDiff = (b.views || 0) - (a.views || 0);
+        if (viewsDiff !== 0) return viewsDiff;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      })
       .slice(0, 10)
       .map(ep => ({
         ...ep,
@@ -309,13 +313,16 @@ export const saveProgress = mutation({
 // Helper for resolving podcast channels in podcasts.ts
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePodcastChannel(ctx: any, channelInfo: {
-  itunesId?: string;
-  title: string;
-  author?: string;
-  feedUrl?: string;
-  artworkUrl?: string;
-}) {
+async function resolvePodcastChannel(
+  ctx: any,
+  channelInfo: {
+    itunesId?: string;
+    title: string;
+    author?: string;
+    feedUrl?: string;
+    artworkUrl?: string;
+  }
+) {
   const normalizedFeedUrl = channelInfo.feedUrl?.trim() || undefined;
   const normalizedItunesId = channelInfo.itunesId?.trim() || undefined;
 
@@ -340,7 +347,7 @@ async function resolvePodcastChannel(ctx: any, channelInfo: {
       });
     }
   } else if (normalizedItunesId) {
-    const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
+    const pseudoFeedUrl = `itunes:${normalizedItunesId} `;
     const existingChannel = await ctx.db
       .query('podcast_channels')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

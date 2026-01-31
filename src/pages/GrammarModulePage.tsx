@@ -47,7 +47,7 @@ const GrammarModulePage: React.FC = () => {
   const updateStatusMutation = useMutation(GRAMMARS.updateStatus);
 
   // Derive loading state and grammarList directly from query
-  const isLoading = grammarListQuery === undefined;
+  const isGrammarLoading = grammarListQuery === undefined;
   const grammarList = useMemo<GrammarPointData[]>(() => {
     if (!grammarListQuery) return [];
     return grammarListQuery.map(g => ({ ...g, status: normalizeStatus(g.status) }));
@@ -135,7 +135,7 @@ const GrammarModulePage: React.FC = () => {
     return Array.from({ length: totalUnits }, (_, i) => `Unit ${i + 1}: 第${i + 1}课`);
   }, [totalUnits]);
 
-  if (isLoading) {
+  if (instituteQuery === undefined) {
     return (
       <div
         className="min-h-screen bg-slate-100 flex items-center justify-center"
@@ -200,7 +200,8 @@ const GrammarModulePage: React.FC = () => {
 
           {/* Center Feed */}
           <GrammarFeed
-            grammarPoints={displayedPoints}
+            grammarPoints={isGrammarLoading ? [] : displayedPoints}
+            isLoading={isGrammarLoading}
             selectedUnit={`Unit ${selectedUnit}`}
             onSelect={setSelectedGrammar}
             onToggleStatus={handleToggleStatus}
