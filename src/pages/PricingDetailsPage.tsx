@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAction } from 'convex/react';
@@ -73,6 +73,18 @@ export default function PricingDetailsPage() {
     >('lemonsqueezy:createCheckout')
   );
 
+  const [prices, setPrices] = useState<any>(null);
+
+  const getPrices = useAction(aRef('lemonsqueezy:getVariantPrices'));
+
+  useEffect(() => {
+    getPrices({})
+      .then(setPrices)
+      .catch(err => {
+        logger.error('Failed to fetch prices', err);
+      });
+  }, [getPrices]);
+
   const proPlanId = useMemo(() => {
     if (billingCycle === 'monthly') return 'MONTHLY' as const;
     if (billingCycle === 'quarterly') return 'QUARTERLY' as const;
@@ -80,37 +92,78 @@ export default function PricingDetailsPage() {
   }, [billingCycle]);
 
   const proPrice = useMemo(() => {
-    const base = {
-      monthly: { amount: '6.90', period: t('pricingDetails.period.month', '/month'), saving: '' },
-      quarterly: {
-        amount: '19.9',
-        period: t('pricingDetails.period.quarterly', '/quarter'),
-        saving: '',
-      },
-      annual: { amount: '49', period: t('pricingDetails.period.annual', '/year'), saving: '' },
-    } as const;
+    const periodMap = {
+      monthly: t('pricingDetails.period.month', '/month'),
+      quarterly: t('pricingDetails.period.quarterly', '/quarter'),
+      annual: t('pricingDetails.period.annual', '/year'),
+    };
 
-    const promo = {
-      monthly: { amount: '1.9', period: t('pricingDetails.period.month', '/month'), saving: '' },
-      quarterly: {
-        amount: '3.9',
-        period: t('pricingDetails.period.quarterly', '/quarter'),
-        saving: '',
-      },
-      annual: { amount: '19.9', period: t('pricingDetails.period.annual', '/year'), saving: '' },
-    } as const;
+    // Default Fallback
+    const fallback = {
+      monthly: { amount: showLocalizedPromo ? '1.90' : '6.90' },
+      quarterly: { amount: showLocalizedPromo ? '3.9' : '19.9' },
+      annual: { amount: showLocalizedPromo ? '19.9' : '49' },
+    };
 
-    return showLocalizedPromo ? promo[billingCycle] : base[billingCycle];
-  }, [billingCycle, t, showLocalizedPromo]);
+    if (prices) {
+      const regionKey = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
+      const planKeyMap: Record<string, string> = {
+        monthly: 'MONTHLY',
+        quarterly: 'QUARTERLY',
+        annual: 'ANNUAL',
+      };
+      const planKey = planKeyMap[billingCycle] || 'ANNUAL';
+
+      const priceData = prices[regionKey]?.[planKey];
+      if (priceData) {
+        return {
+          amount: priceData.amount,
+          period: periodMap[billingCycle],
+          saving: '',
+        };
+      }
+    }
+
+    return {
+      amount: fallback[billingCycle].amount,
+      period: periodMap[billingCycle],
+      saving: '',
+    };
+  }, [billingCycle, t, showLocalizedPromo, prices]);
 
   const proOriginalPrice = useMemo(() => {
-    const base = {
-      monthly: { amount: '6.90', label: t('pricingDetails.originalLabel', 'Original') },
-      quarterly: { amount: '19.9', label: t('pricingDetails.originalLabel', 'Original') },
-      annual: { amount: '49', label: t('pricingDetails.originalLabel', 'Original') },
-    } as const;
-    return base[billingCycle];
-  }, [billingCycle, t]);
+    // Original price is always the GLOBAL price (high anchor)
+    // Or if we have a specific "Strikethrough" price from somewhere?
+    // For now, let's keep the hardcoded "Original" anchor prices or use GLOBAL price if dynamic
+
+    // Hardcoded anchors (Global prices)
+    const anchors = {
+      monthly: '6.90',
+      quarterly: '19.90',
+      annual: '49.00',
+    };
+
+    let amount = anchors[billingCycle];
+
+    // If we have dynamic global prices, use those as anchors
+    if (prices && prices.GLOBAL) {
+      const planKeyMap: Record<string, string> = {
+        monthly: 'MONTHLY',
+        quarterly: 'QUARTERLY',
+        annual: 'ANNUAL',
+      };
+      const planKey = planKeyMap[billingCycle] || 'ANNUAL';
+
+      if (prices.GLOBAL[planKey]) {
+        amount = prices.GLOBAL[planKey].amount;
+      }
+    }
+
+    return {
+      amount,
+      label: t('pricingDetails.originalLabel', 'Original'),
+    };
+  }, [billingCycle, t, prices]);
 
   const redirectTo = (target: string) => {
     const encoded = encodeURIComponent(target);
@@ -255,28 +308,31 @@ export default function PricingDetailsPage() {
         <div className="inline-flex flex-col sm:flex-row bg-white p-1.5 rounded-xl border-2 border-black shadow-pop items-center relative gap-1 sm:gap-0">
           <button
             onClick={() => setBillingCycle('monthly')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${billingCycle === 'monthly'
-              ? 'bg-[#0F172A] text-white shadow-sm'
-              : 'text-slate-500 hover:text-black bg-white'
-              }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
+              billingCycle === 'monthly'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'text-slate-500 hover:text-black bg-white'
+            }`}
           >
             {t('pricingDetails.billing.monthly')}
           </button>
           <button
             onClick={() => setBillingCycle('quarterly')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${billingCycle === 'quarterly'
-              ? 'bg-[#0F172A] text-white shadow-sm'
-              : 'text-slate-500 hover:text-black bg-white'
-              }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
+              billingCycle === 'quarterly'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'text-slate-500 hover:text-black bg-white'
+            }`}
           >
             {t('pricingDetails.billing.quarterly')}
           </button>
           <button
             onClick={() => setBillingCycle('annual')}
-            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${billingCycle === 'annual'
-              ? 'bg-[#0F172A] text-white shadow-sm'
-              : 'text-slate-500 hover:text-black bg-white'
-              }`}
+            className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
+              billingCycle === 'annual'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'text-slate-500 hover:text-black bg-white'
+            }`}
           >
             {t('pricingDetails.billing.annual')}
           </button>
@@ -329,8 +385,9 @@ export default function PricingDetailsPage() {
           </div>
 
           <div
-            className={`rounded-3xl border-2 border-black p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
-              }`}
+            className={`rounded-3xl border-2 border-black p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
+              showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
+            }`}
           >
             {showLocalizedPromo ? (
               <div className="absolute top-4 right-4 bg-[#10B981] text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
@@ -386,10 +443,11 @@ export default function PricingDetailsPage() {
                 }
                 startCheckout(proPlanId);
               }}
-              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${showLocalizedPromo
-                ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
-                : 'bg-[#FFDE59] text-black shadow-[4px_4px_0px_0px_#ffffff]'
-                }`}
+              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${
+                showLocalizedPromo
+                  ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
+                  : 'bg-[#FFDE59] text-black shadow-[4px_4px_0px_0px_#ffffff]'
+              }`}
             >
               {buttonLabel}
               {showLocalizedPromo && isPromoVerified ? (
@@ -410,7 +468,7 @@ export default function PricingDetailsPage() {
                 t('pricingDetails.plans.pro.features.f3'),
                 t('pricingDetails.plans.pro.features.f4'),
                 t('pricingDetails.plans.pro.features.f5'),
-              ].map((item) => (
+              ].map(item => (
                 <li key={item} className="flex gap-3 items-start">
                   <div className="bg-[#10B981]/20 p-0.5 rounded text-[#10B981] flex-shrink-0">
                     <Check className="w-4 h-4" />

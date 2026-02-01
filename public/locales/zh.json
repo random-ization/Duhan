@@ -792,6 +792,28 @@
       "openMenu": "打开菜单",
       "closeMenu": "关闭菜单"
     },
+    "typing": {
+      "badge": "NEW FEATURE",
+      "titleLine1": "像弹钢琴一样",
+      "titleHighlight": "流利输入韩语",
+      "desc": "告别“一指禅”打字。通过我们内置的智能跟打练习，从基础字母到完整文章，建立肌肉记忆。无需额外安装软件，直接在浏览器中体验原生韩语输入法的节奏感。",
+      "feature1Title": "实时纠错与反馈",
+      "feature1Desc": "精确到字母层级的错误提示，帮你快速纠正键位记忆。",
+      "feature2Title": "动态输入指引",
+      "feature2Desc": "智能预判并高亮下一键位，提供即时的视觉反馈。无需生硬记忆键位图，在流畅的跟打中自然形成肌肉记忆。",
+      "cta": "开始打字练习",
+      "preview": {
+        "label": "TYPING PREVIEW",
+        "text1": "한",
+        "text2": "국",
+        "text3": "어",
+        "text4": "를 배워요",
+        "wpmLabel": "WPM",
+        "accLabel": "Acc",
+        "nextKeyLabel": "NEXT KEY",
+        "layoutLabel": "KOREAN 2-SET"
+      }
+    },
     "hero": {
       "badge": "已有 2,000+ 留学生加入备考",
       "titleLine1": "掌握韩语，",

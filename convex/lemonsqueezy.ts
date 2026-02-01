@@ -108,7 +108,6 @@ export const createCheckout = action({
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
 
-    // Build checkout request body (JSON:API format)
     const requestBody = {
       data: {
         type: 'checkouts',
@@ -117,8 +116,8 @@ export const createCheckout = action({
             email: args.userEmail || undefined,
             name: args.userName || undefined,
             custom: {
-              user_id: args.userId || '',
-              plan: args.plan,
+              user_id: args.userId ? String(args.userId) : 'guest',
+              plan: String(args.plan),
             },
           },
           product_options: {
@@ -162,7 +161,7 @@ export const createCheckout = action({
       }
 
       const data = await response.json();
-      const checkoutUrl = data.data?.attributes?.url;
+      let checkoutUrl = data.data?.attributes?.url;
 
       if (!checkoutUrl) {
         throw new Error('No checkout URL returned from Lemon Squeezy');
@@ -174,6 +173,75 @@ export const createCheckout = action({
       console.error('[LemonSqueezy] Error creating checkout:', toErrorMessage(error));
       throw error instanceof Error ? error : new Error(toErrorMessage(error));
     }
+  },
+});
+
+/**
+ * Get pricing for all configured variants
+ */
+export const getVariantPrices = action({
+  args: {},
+  handler: async () => {
+    const apiKey = process.env[API_KEY_ENV];
+    if (!apiKey) {
+      throw new Error(`Missing ${API_KEY_ENV} environment variable`);
+    }
+
+    // Fetch all variants from Lemon Squeezy
+    // We request 100 per page to likely get all in one go
+    const response = await fetch(`${LEMONSQUEEZY_API_URL}/variants?page[size]=100`, {
+      headers: {
+        Accept: 'application/vnd.api+json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[LemonSqueezy] Failed to fetch variants:', response.status, errorText);
+      throw new Error(`Lemon Squeezy API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const variants = data.data as any[];
+
+    // Build pricing map
+    const prices = {
+      GLOBAL: {} as Record<string, { amount: string; currency: string; formatted: string }>,
+      REGIONAL: {} as Record<string, { amount: string; currency: string; formatted: string }>,
+    };
+
+    // Helper to find variant data
+    const findVariant = (paramsId: string | undefined) => {
+      if (!paramsId) return undefined;
+      return variants.find(v => String(v.id) === String(paramsId));
+    };
+
+    // Iterate over our config and fill prices
+    for (const [region, plans] of Object.entries(VARIANT_MAP)) {
+      for (const [plan, id] of Object.entries(plans)) {
+        const variant = findVariant(id);
+        if (variant) {
+          const price = variant.attributes.price; // integer (cents)
+          const formatted = variant.attributes.price_formatted; // e.g. "$9.99"
+          // We assume USD mostly, but LS handles currency symbol in formatted string
+          // We can also just return the formatted string directly
+          // Or format it manually if needed. formatted string is best for display.
+
+          // Normalize price to decimal string (e.g. "9.99")
+          const amount = (price / 100).toFixed(2);
+
+          prices[region as keyof typeof prices][plan] = {
+            amount,
+            currency: 'USD', // defaulting for now, or could parse from formatted
+            formatted,
+          };
+        }
+      }
+    }
+
+    return prices;
   },
 });
 
@@ -251,7 +319,6 @@ export const handleWebhook = action({
   },
 });
 
-
 // Helper for Lemon Squeezy webhook processing
 
 async function processWebhookEvent(
@@ -321,8 +388,7 @@ async function handleSubscriptionEvent(
       if (userEmail) {
         const variantName = readString(attributes, ['variant_name']);
         const plan =
-          planFromCustom ??
-          (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
+          planFromCustom ?? (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
 
         await ctx.runMutation(grantAccessMutation, {
           customerEmail: userEmail,

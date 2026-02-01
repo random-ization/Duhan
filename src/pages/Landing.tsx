@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, Navigate } from 'react-router-dom';
-import { useConvexAuth } from 'convex/react';
+import { useConvexAuth, useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
@@ -69,60 +70,72 @@ const useFeatureCards = () => {
   return { expandedFeatureCards, toggleFeatureCard };
 };
 
-const LandingJsonLd = ({ description }: { description: string }) => (
-  <script
-    type="application/ld+json"
-    dangerouslySetInnerHTML={{
-      __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'DuHan Korean Learning',
-        description,
-        applicationCategory: 'EducationalApplication',
-        operatingSystem: 'Web',
-        url: 'https://koreanstudy.me',
-        offers: [
-          {
-            '@type': 'Offer',
-            name: 'Monthly Subscription',
-            price: '6.90',
-            priceCurrency: 'USD',
-            priceValidUntil: '2026-12-31',
-            availability: 'https://schema.org/InStock',
-          },
-          {
-            '@type': 'Offer',
-            name: 'Annual Subscription',
-            price: '49.00',
-            priceCurrency: 'USD',
-            priceValidUntil: '2026-12-31',
-            availability: 'https://schema.org/InStock',
-          },
-          {
-            '@type': 'Offer',
-            name: 'Lifetime Access',
-            price: '99.00',
-            priceCurrency: 'USD',
-            priceValidUntil: '2026-12-31',
-            availability: 'https://schema.org/InStock',
-          },
-        ],
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: '4.8',
-          ratingCount: '500',
-          bestRating: '5',
-          worstRating: '1',
-        },
-        publisher: {
-          '@type': 'Organization',
-          name: 'DuHan',
+const LandingJsonLd = ({ description, prices }: { description: string; prices: any }) => {
+  const getPrice = (plan: 'MONTHLY' | 'ANNUAL' | 'LIFETIME') => {
+    // SEO Prices are usually Global
+    if (prices && prices.GLOBAL && prices.GLOBAL[plan]) {
+      return prices.GLOBAL[plan].amount;
+    }
+    if (plan === 'MONTHLY') return '6.90';
+    if (plan === 'ANNUAL') return '49.00';
+    return '99.00';
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'DuHan Korean Learning',
+          description,
+          applicationCategory: 'EducationalApplication',
+          operatingSystem: 'Web',
           url: 'https://koreanstudy.me',
-        },
-      }),
-    }}
-  />
-);
+          offers: [
+            {
+              '@type': 'Offer',
+              name: 'Monthly Subscription',
+              price: getPrice('MONTHLY'),
+              priceCurrency: 'USD',
+              priceValidUntil: '2026-12-31',
+              availability: 'https://schema.org/InStock',
+            },
+            {
+              '@type': 'Offer',
+              name: 'Annual Subscription',
+              price: getPrice('ANNUAL'),
+              priceCurrency: 'USD',
+              priceValidUntil: '2026-12-31',
+              availability: 'https://schema.org/InStock',
+            },
+            {
+              '@type': 'Offer',
+              name: 'Lifetime Access',
+              price: getPrice('LIFETIME'),
+              priceCurrency: 'USD',
+              priceValidUntil: '2026-12-31',
+              availability: 'https://schema.org/InStock',
+            },
+          ],
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '4.8',
+            ratingCount: '500',
+            bestRating: '5',
+            worstRating: '1',
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'DuHan',
+            url: 'https://koreanstudy.me',
+          },
+        }),
+      }}
+    />
+  );
+};
 
 const LandingNav = ({
   isScrolled,
@@ -241,11 +254,6 @@ const LandingHero = () => {
   return (
     <header className="pt-40 pb-32 px-6 relative overflow-hidden bg-[linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(90deg,#f0f0f0_1px,transparent_1px)] [background-size:40px_40px]">
       <div className="max-w-5xl mx-auto text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm text-slate-600 text-sm font-semibold mb-8">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-          {t('landing.hero.badge')}
-        </div>
-
         <h1 className="text-6xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-8 text-slate-900 tracking-tight">
           {t('landing.hero.titleLine1')}
           <br />
@@ -567,7 +575,9 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
                   <Bot className="w-6 h-6" />
                 </div>
                 <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-200 max-w-[90%]">
-                  <p className="text-sm text-slate-700 leading-relaxed">{t('landing.ai.botAnswer')}</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {t('landing.ai.botAnswer')}
+                  </p>
                 </div>
               </div>
             </div>
@@ -588,20 +598,22 @@ const LandingToolbox = ({
   const { t } = useTranslation();
 
   return (
-    <section className="py-20 px-6 relative overflow-hidden bg-slate-900 text-white">
+    <section className="py-24 px-6 relative overflow-hidden bg-white text-slate-900">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-5xl md:text-7xl font-heading font-extrabold tracking-tight mb-5">
             {t('landing.toolbox.title')}
           </h2>
-          <p className="text-lg md:text-2xl text-slate-400/90">{t('landing.toolbox.subtitle')}</p>
+          <p className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto">
+            {t('landing.toolbox.subtitle')}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {/* Card 1: PDF */}
           <div
-            className={`group bg-slate-800 rounded-3xl border border-slate-700 hover:border-[#FFDE59] hover:bg-slate-800/80 transition-all duration-300 overflow-hidden relative flex flex-col ${
-              expandedFeatureCards.pdf ? 'ring-2 ring-[#FFDE59] md:min-h-[760px]' : ''
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-amber-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
+              expandedFeatureCards.pdf ? 'ring-2 ring-amber-400 md:min-h-[760px] shadow-xl' : ''
             }`}
           >
             <button
@@ -610,47 +622,53 @@ const LandingToolbox = ({
               className="p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#FFDE59]/10 text-[#FFDE59] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <FileDown className="w-6 h-6 text-[#FFDE59]" />
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <FileDown className="w-7 h-7" />
                 </div>
-                <ChevronDown
-                  className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
-                    expandedFeatureCards.pdf ? 'rotate-180' : ''
-                  }`}
-                />
+                <div
+                  className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${expandedFeatureCards.pdf ? 'bg-slate-100' : ''}`}
+                >
+                  <ChevronDown
+                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
+                      expandedFeatureCards.pdf ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-white">
+              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-amber-600 transition-colors">
                 {t('landing.toolbox.card1Title')}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">
                 {t('landing.toolbox.card1Desc')}
               </p>
             </button>
 
             <div
               className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.pdf ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                expandedFeatureCards.pdf
+                  ? 'grid-rows-[1fr] opacity-100'
+                  : 'grid-rows-[0fr] opacity-0'
               }`}
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-700/50 flex-1 flex flex-col">
+                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
                     <div className="grid grid-cols-2 gap-3 mb-6">
-                      <div className="bg-slate-700/50 p-3 rounded-xl border border-slate-600 text-xs text-slate-300">
-                        <strong className="text-[#FFDE59] block mb-1">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
+                        <strong className="text-amber-600 block mb-1">
                           {t('landing.toolbox.demo.pdf.block1Title')}
                         </strong>
                         {t('landing.toolbox.demo.pdf.block1Value')}
                       </div>
-                      <div className="bg-slate-700/50 p-3 rounded-xl border border-slate-600 text-xs text-slate-300">
-                        <strong className="text-[#FFDE59] block mb-1">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
+                        <strong className="text-amber-600 block mb-1">
                           {t('landing.toolbox.demo.pdf.block2Title')}
                         </strong>
                         {t('landing.toolbox.demo.pdf.block2Value')}
                       </div>
                     </div>
 
-                    <div className="relative w-full bg-white text-slate-900 p-6 rounded-sm shadow-paper transform hover:scale-[1.02] transition-transform duration-500 mb-6 font-sans">
+                    <div className="relative w-full bg-white text-slate-900 p-6 rounded-sm shadow-lg border border-slate-100 transform hover:scale-[1.02] transition-transform duration-500 mb-6 font-sans">
                       <div className="flex justify-between items-end border-b-2 border-slate-800 pb-3 mb-4">
                         <div>
                           <h4 className="font-bold text-lg leading-none">
@@ -722,7 +740,7 @@ const LandingToolbox = ({
                     <button
                       type="button"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-[#FFDE59] text-black font-bold rounded-xl hover:bg-white transition-colors shadow-lg flex justify-center gap-2 items-center mt-auto"
+                      className="w-full py-3 bg-amber-400 text-slate-900 font-bold rounded-xl hover:bg-amber-500 hover:text-white transition-colors shadow-lg shadow-amber-100 flex justify-center gap-2 items-center mt-auto"
                     >
                       <Download className="w-4 h-4" /> {t('landing.toolbox.card1Cta')}
                     </button>
@@ -734,8 +752,8 @@ const LandingToolbox = ({
 
           {/* Card 2: Podcast */}
           <div
-            className={`group bg-slate-800 rounded-3xl border border-slate-700 hover:border-[#EC4899] hover:bg-slate-800/80 transition-all duration-300 overflow-hidden relative flex flex-col ${
-              expandedFeatureCards.podcast ? 'ring-2 ring-[#EC4899] md:min-h-[760px]' : ''
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-pink-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
+              expandedFeatureCards.podcast ? 'ring-2 ring-pink-400 md:min-h-[760px] shadow-xl' : ''
             }`}
           >
             <button
@@ -744,19 +762,23 @@ const LandingToolbox = ({
               className="p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#EC4899]/10 text-[#EC4899] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <Mic2 className="w-6 h-6 text-[#EC4899]" />
+                <div className="w-14 h-14 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <Mic2 className="w-7 h-7" />
                 </div>
-                <ChevronDown
-                  className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
-                    expandedFeatureCards.podcast ? 'rotate-180' : ''
-                  }`}
-                />
+                <div
+                  className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${expandedFeatureCards.podcast ? 'bg-slate-100' : ''}`}
+                >
+                  <ChevronDown
+                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
+                      expandedFeatureCards.podcast ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-white">
+              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-pink-600 transition-colors">
                 {t('landing.toolbox.card2Title')}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">
                 {t('landing.toolbox.card2Desc')}
               </p>
             </button>
@@ -770,30 +792,34 @@ const LandingToolbox = ({
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-700/50 flex-1 flex flex-col">
-                    <ul className="space-y-2 text-sm text-slate-300 mb-6">
+                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
+                    <ul className="space-y-2 text-sm text-slate-600 mb-6">
                       <li className="flex gap-2">
-                        <Check className="w-4 h-4 text-[#EC4899]" />
-                        <strong>{t('landing.toolbox.card2Point1Title')}</strong>:{' '}
-                        {t('landing.toolbox.card2Point1Desc')}
+                        <Check className="w-4 h-4 text-pink-500" />
+                        <strong className="text-slate-900">
+                          {t('landing.toolbox.card2Point1Title')}
+                        </strong>
+                        : {t('landing.toolbox.card2Point1Desc')}
                       </li>
                       <li className="flex gap-2">
-                        <Check className="w-4 h-4 text-[#EC4899]" />
-                        <strong>{t('landing.toolbox.card2Point2Title')}</strong>:{' '}
-                        {t('landing.toolbox.card2Point2Desc')}
+                        <Check className="w-4 h-4 text-pink-500" />
+                        <strong className="text-slate-900">
+                          {t('landing.toolbox.card2Point2Title')}
+                        </strong>
+                        : {t('landing.toolbox.card2Point2Desc')}
                       </li>
                     </ul>
 
-                    <div className="bg-black border border-slate-700 rounded-xl overflow-hidden mb-6 relative shadow-2xl">
-                      <div className="bg-slate-900/80 p-3 flex items-center gap-3 backdrop-blur-md border-b border-slate-800">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#EC4899] to-purple-600 flex items-center justify-center animate-pulse">
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 relative shadow-lg">
+                      <div className="bg-slate-50 p-3 flex items-center gap-3 border-b border-slate-100">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center animate-pulse">
                           <BarChart2 className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex-1">
                           <div className="text-[10px] text-slate-400">
                             {t('landing.toolbox.demo.podcast.nowPlaying')}
                           </div>
-                          <div className="text-xs font-bold text-white">
+                          <div className="text-xs font-bold text-slate-900">
                             {t('landing.toolbox.demo.podcast.episodeTitle')}
                           </div>
                         </div>
@@ -801,33 +827,33 @@ const LandingToolbox = ({
 
                       <div className="p-6">
                         <div className="flex justify-center gap-6 items-center mb-6">
-                          <SkipBack className="w-5 h-5 text-slate-500" />
-                          <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg">
+                          <SkipBack className="w-5 h-5 text-slate-400" />
+                          <div className="w-12 h-12 rounded-full bg-pink-500 text-white flex items-center justify-center shadow-lg hover:bg-pink-600 transition-colors">
                             <PauseCircle className="w-8 h-8" />
                           </div>
-                          <SkipForward className="w-5 h-5 text-slate-500" />
+                          <SkipForward className="w-5 h-5 text-slate-400" />
                         </div>
                         <div className="space-y-3">
-                          <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#EC4899] w-1/3 rounded-full relative">
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-lg" />
+                          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 w-1/3 rounded-full relative">
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-pink-600 rounded-full shadow-lg" />
                             </div>
                           </div>
-                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
                             <span>04:12</span>
                             <span>12:45</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-slate-900/50 p-4 border-t border-slate-800/50">
+                      <div className="bg-slate-50 p-4 border-t border-slate-100">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
                             {t('landing.toolbox.demo.podcast.liveTranscript')}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-300 leading-relaxed italic">
+                        <p className="text-xs text-slate-600 leading-relaxed italic">
                           &quot;... {t('landing.toolbox.demo.podcast.transcriptFragment')} ...&quot;
                         </p>
                       </div>
@@ -836,7 +862,7 @@ const LandingToolbox = ({
                     <button
                       type="button"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-[#EC4899] hover:text-white transition-colors shadow-lg mt-auto flex justify-center items-center"
+                      className="w-full py-3 bg-pink-500 text-white font-bold rounded-xl hover:bg-pink-600 transition-colors shadow-lg shadow-pink-100 mt-auto flex justify-center items-center"
                     >
                       {t('landing.toolbox.card2Cta')}
                     </button>
@@ -848,8 +874,8 @@ const LandingToolbox = ({
 
           {/* Card 3: Video */}
           <div
-            className={`group bg-slate-800 rounded-3xl border border-slate-700 hover:border-[#8B5CF6] hover:bg-slate-800/80 transition-all duration-300 overflow-hidden relative flex flex-col ${
-              expandedFeatureCards.video ? 'ring-2 ring-[#8B5CF6] md:min-h-[760px]' : ''
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-violet-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
+              expandedFeatureCards.video ? 'ring-2 ring-violet-400 md:min-h-[760px] shadow-xl' : ''
             }`}
           >
             <button
@@ -858,19 +884,19 @@ const LandingToolbox = ({
               className="p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#8B5CF6]/10 text-[#8B5CF6] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <PlayCircle className="w-6 h-6 text-[#8B5CF6]" />
+                <div className="w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <PlayCircle className="w-7 h-7" />
                 </div>
                 <ChevronDown
-                  className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
+                  className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
                     expandedFeatureCards.video ? 'rotate-180' : ''
                   }`}
                 />
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-white">
+              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-violet-600 transition-colors">
                 {t('landing.toolbox.card3Title')}
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">
                 {t('landing.toolbox.card3Desc')}
               </p>
             </button>
@@ -884,33 +910,33 @@ const LandingToolbox = ({
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-700/50 flex-1 flex flex-col">
-                    <div className="bg-black rounded-xl overflow-hidden mb-6 aspect-video relative group/vid shadow-2xl border border-slate-800">
+                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
+                    <div className="bg-black rounded-xl overflow-hidden mb-6 aspect-video relative group/vid shadow-xl border border-slate-200">
                       <img
                         src="https://images.unsplash.com/photo-1540653542719-7243b614f1d9?auto=format&fit=crop&q=80&w=800"
                         alt="Video learning demo"
-                        className="w-full h-full object-cover opacity-60"
+                        className="w-full h-full object-cover opacity-80 group-hover/vid:opacity-60 transition-opacity"
                       />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[#8B5CF6] flex items-center justify-center text-white shadow-xl transform group-hover/vid:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center text-white shadow-xl transform group-hover/vid:scale-110 transition-transform">
                           <Play className="w-6 h-6 fill-current" />
                         </div>
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
                         <div className="flex flex-col gap-2">
                           <div className="bg-white/10 backdrop-blur-md p-2 rounded-lg border border-white/20">
-                            <div className="text-[10px] text-purple-300 font-bold mb-0.5">
+                            <div className="text-[10px] text-violet-300 font-bold mb-0.5">
                               KOREAN
                             </div>
                             <div className="text-xs text-white font-medium">
                               {t('landing.toolbox.demo.video.subtitle')}
                             </div>
                           </div>
-                          <div className="bg-purple-600/20 backdrop-blur-md p-2 rounded-lg border border-purple-500/30">
-                            <div className="text-[10px] text-purple-300 font-bold mb-0.5">
+                          <div className="bg-violet-600/30 backdrop-blur-md p-2 rounded-lg border border-violet-500/30">
+                            <div className="text-[10px] text-violet-200 font-bold mb-0.5">
                               TRANSLATION
                             </div>
-                            <div className="text-xs text-white/80">
+                            <div className="text-xs text-white/90">
                               {t('landing.toolbox.demo.video.translation')}
                             </div>
                           </div>
@@ -921,7 +947,7 @@ const LandingToolbox = ({
                     <button
                       type="button"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-[#8B5CF6] text-white font-bold rounded-xl hover:bg-purple-500 transition-colors shadow-lg mt-auto flex justify-center items-center"
+                      className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-colors shadow-lg shadow-violet-100 mt-auto flex justify-center items-center"
                     >
                       {t('landing.toolbox.card3Cta')}
                     </button>
@@ -936,16 +962,217 @@ const LandingToolbox = ({
   );
 };
 
+const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
+  const { t } = useTranslation();
+
+  return (
+    <section className="py-24 bg-white relative overflow-hidden">
+      {/* Background Blobs */}
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+        <div className="flex flex-col lg:flex-row items-center gap-16">
+          {/* Left Content */}
+          <div className="lg:w-1/2 space-y-8 text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold border border-blue-100">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              {t('landing.typing.badge')}
+            </div>
+
+            <h2 className="text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
+              {t('landing.typing.titleLine1')}
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
+                {t('landing.typing.titleHighlight')}
+              </span>
+            </h2>
+
+            <p className="text-lg text-slate-600 leading-relaxed max-w-xl">
+              {t('landing.typing.desc')}
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+                  <Check className="w-3 h-3" strokeWidth={3} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    {t('landing.typing.feature1Title')}
+                  </h4>
+                  <p className="text-slate-500 text-sm">{t('landing.typing.feature1Desc')}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-1 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                  <Check className="w-3 h-3" strokeWidth={3} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    {t('landing.typing.feature2Title')}
+                  </h4>
+                  <p className="text-slate-500 text-sm">{t('landing.typing.feature2Desc')}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                onClick={() => navigate('/learn?module=typing')}
+                className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center gap-2 group"
+              >
+                <span>{t('landing.typing.cta')}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Preview */}
+          <div className="lg:w-1/2 w-full">
+            <div className="relative bg-slate-50 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden group">
+              <div className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[400px]">
+                {/* Stats Header */}
+                <div className="text-center mb-10 w-full max-w-md">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                    {t('landing.typing.preview.label', 'TYPING PREVIEW')}
+                  </p>
+                  <div className="text-3xl md:text-4xl font-bold leading-relaxed tracking-tight">
+                    <span className="text-slate-900">
+                      {t('landing.typing.preview.text1', '한')}
+                    </span>
+                    <span className="text-slate-900">
+                      {t('landing.typing.preview.text2', '국')}
+                    </span>
+                    <span className="text-blue-600 relative inline-block mx-0.5">
+                      {t('landing.typing.preview.text3', '어')}
+                      <span className="absolute -right-0.5 top-1 bottom-1 w-0.5 bg-blue-600 animate-pulse rounded-full" />
+                    </span>
+                    <span className="text-slate-300">
+                      {t('landing.typing.preview.text4', '를 배워요')}
+                    </span>
+                  </div>
+                  <div className="mt-6 flex justify-center gap-4 text-sm font-medium text-slate-500">
+                    <div className="px-3 py-1 bg-white rounded border border-slate-200 shadow-sm">
+                      {t('landing.typing.preview.wpmLabel', 'WPM')}:{' '}
+                      <span className="text-slate-900 font-bold">210</span>
+                    </div>
+                    <div className="px-3 py-1 bg-white rounded border border-slate-200 shadow-sm">
+                      {t('landing.typing.preview.accLabel', 'Acc')}:{' '}
+                      <span className="text-green-600 font-bold">98%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Keyboard Visual */}
+                <div className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm select-none transform transition-transform group-hover:scale-[1.02]">
+                  <div className="flex justify-between items-center mb-3 px-1">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {t('landing.typing.preview.nextKeyLabel', 'NEXT KEY')}:{' '}
+                      <span className="text-blue-600">ㄹ (F)</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-300">
+                      {t('landing.typing.preview.layoutLabel', 'KOREAN 2-SET')}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 font-typing text-sm">
+                    {/* Row 1 */}
+                    <div className="flex justify-center gap-1">
+                      {['ㅂ', 'ㅈ', 'ㄷ', 'ㄱ', 'ㅅ', 'ㅛ', 'ㅕ', 'ㅑ', 'ㅐ', 'ㅔ'].map(k => (
+                        <div
+                          key={k}
+                          className="bg-white border-b-2 border-slate-200 text-slate-600 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
+                        >
+                          {k}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Row 2 */}
+                    <div className="flex justify-center gap-1 pl-4">
+                      {['ㅁ', 'ㄴ', 'ㅇ'].map(k => (
+                        <div
+                          key={k}
+                          className="bg-white border-b-2 border-slate-200 text-slate-600 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
+                        >
+                          {k}
+                        </div>
+                      ))}
+                      {/* Active Key */}
+                      <div className="bg-blue-500 border-b-2 border-blue-600 text-white rounded-md flex items-center justify-center font-bold shadow-md transform translate-y-px w-8 h-8 md:w-10 md:h-10 relative text-xs md:text-sm">
+                        ㄹ<span className="absolute top-0.5 right-1 text-[8px] opacity-70">F</span>
+                      </div>
+                      {['ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'].map(k => (
+                        <div
+                          key={k}
+                          className="bg-white border-b-2 border-slate-200 text-slate-600 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
+                        >
+                          {k}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Row 3 */}
+                    <div className="flex justify-center gap-1 pl-8">
+                      {['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ'].map(k => (
+                        <div
+                          key={k}
+                          className="bg-white border-b-2 border-slate-200 text-slate-600 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
+                        >
+                          {k}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -z-10 top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100/30 via-transparent to-purple-100/30 rounded-full blur-3xl" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const LandingPricing = ({
   showLocalizedPromo,
   navigate,
   open,
+  prices,
 }: {
   showLocalizedPromo: boolean;
   navigate: (path: string) => void;
   open: () => void;
+
+  prices: any;
 }) => {
   const { t } = useTranslation();
+
+  // Price Calculation Helpers
+  const getPrice = (
+    plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME',
+    region: 'GLOBAL' | 'REGIONAL'
+  ) => {
+    if (prices && prices[region] && prices[region][plan]) {
+      return prices[region][plan].amount;
+    }
+    // Fallbacks
+    if (region === 'REGIONAL') {
+      if (plan === 'MONTHLY') return '1.9';
+      if (plan === 'ANNUAL') return '19.9';
+    } else {
+      if (plan === 'MONTHLY') return '6.90';
+      if (plan === 'ANNUAL') return '49';
+      if (plan === 'LIFETIME') return '99.00';
+    }
+    return '---';
+  };
+
+  const proPriceDisplay = showLocalizedPromo
+    ? getPrice('MONTHLY', 'REGIONAL')
+    : getPrice('ANNUAL', 'GLOBAL');
+
+  const lifetimePriceDisplay = getPrice('LIFETIME', 'GLOBAL');
 
   return (
     <section id="pricing" className="py-32 bg-white">
@@ -1036,7 +1263,7 @@ const LandingPricing = ({
               <>
                 <div className="flex items-baseline gap-1 mb-1">
                   <span className="text-3xl font-black text-[#10B981]">$</span>
-                  <span className="text-6xl font-extrabold text-[#10B981]">1.9</span>
+                  <span className="text-6xl font-extrabold text-[#10B981]">{proPriceDisplay}</span>
                   <span className="text-slate-400 text-sm">
                     {t('pricingDetails.period.month', '/月')}
                   </span>
@@ -1050,7 +1277,7 @@ const LandingPricing = ({
               </>
             ) : (
               <>
-                <div className="text-5xl font-extrabold mb-1">{t('landing.pricing.pro.price')}</div>
+                <div className="text-5xl font-extrabold mb-1">${proPriceDisplay}</div>
                 <div className="text-slate-400 text-sm mb-6">{t('landing.pricing.pro.period')}</div>
               </>
             )}
@@ -1084,13 +1311,15 @@ const LandingPricing = ({
               }}
               className="w-full py-4 bg-[#FFDE59] text-black rounded-xl font-bold shadow-lg hover:bg-yellow-300 transition-colors"
             >
-              {showLocalizedPromo ? t('pricingDetails.promo.verifyNow') : t('landing.pricing.pro.cta')}
+              {showLocalizedPromo
+                ? t('pricingDetails.promo.verifyNow')
+                : t('landing.pricing.pro.cta')}
             </button>
           </div>
 
           <div className="p-8 border border-slate-200 rounded-3xl bg-slate-50">
             <div className="font-bold text-lg mb-2">{t('landing.pricing.lifetime.title')}</div>
-            <div className="text-4xl font-extrabold mb-6">{t('landing.pricing.lifetime.price')}</div>
+            <div className="text-4xl font-extrabold mb-6">${lifetimePriceDisplay}</div>
             <ul className="space-y-4 text-sm text-slate-600 mb-8">
               <li className="flex gap-2">
                 <Check className="w-4 h-4" />
@@ -1120,7 +1349,9 @@ const LandingFaq = () => {
   return (
     <section id="faq" className="py-24 bg-slate-50 border-t border-slate-200">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-3xl font-heading font-bold mb-12 text-center">{t('landing.faq.title')}</h2>
+        <h2 className="text-3xl font-heading font-bold mb-12 text-center">
+          {t('landing.faq.title')}
+        </h2>
         <div className="space-y-6">
           <details className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
             <summary className="font-bold text-lg list-none flex justify-between items-center">
@@ -1193,6 +1424,14 @@ export default function Landing() {
   const isScrolled = useLandingScroll();
   const { expandedFeatureCards, toggleFeatureCard } = useFeatureCards();
 
+  // Dynamic Pricing for Landing
+  const [prices, setPrices] = useState<any>(null);
+  const getPrices = useAction(api.lemonsqueezy.getVariantPrices);
+
+  useEffect(() => {
+    getPrices({}).then(setPrices).catch(console.error);
+  }, [getPrices]);
+
   // Condition return AFTER hooks
   const meta = getRouteMeta(location.pathname);
   const showLocalizedPromo =
@@ -1213,7 +1452,7 @@ export default function Landing() {
         keywords={meta.keywords}
         noIndex={meta.noIndex}
       />
-      <LandingJsonLd description={meta.description} />
+      <LandingJsonLd description={meta.description} prices={prices} />
       <LandingNav
         isScrolled={isScrolled}
         mobileMenuOpen={mobileMenuOpen}
@@ -1225,19 +1464,28 @@ export default function Landing() {
 
       <main className="space-y-0">
         <LandingTopik />
+        <div className="w-full h-px bg-slate-100" />
         <LandingFsrs />
+        <div className="w-full h-px bg-slate-100" />
         <LandingAi userAvatar={DEMO_ASSETS.userAvatar} />
+        <div className="w-full h-px bg-slate-100" />
+
+        <LandingTyping navigate={navigate} />
+        <div className="w-full h-px bg-slate-100" />
 
         <LandingToolbox
           expandedFeatureCards={expandedFeatureCards}
           toggleFeatureCard={toggleFeatureCard}
         />
+        <div className="w-full h-px bg-slate-100" />
 
         <LandingPricing
           showLocalizedPromo={showLocalizedPromo}
           navigate={navigate}
           open={open}
+          prices={prices}
         />
+        <div className="w-full h-px bg-slate-100" />
 
         <LandingFaq />
 
