@@ -252,9 +252,9 @@ const LandingHero = () => {
   const navigate = useLocalizedNavigate();
 
   return (
-    <header className="pt-40 pb-32 px-6 relative overflow-hidden bg-[linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(90deg,#f0f0f0_1px,transparent_1px)] [background-size:40px_40px]">
+    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(90deg,#f0f0f0_1px,transparent_1px)] [background-size:40px_40px]">
       <div className="max-w-5xl mx-auto text-center relative z-10">
-        <h1 className="text-6xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-8 text-slate-900 tracking-tight">
+        <h1 className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight">
           {t('landing.hero.titleLine1')}
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-pink-500">
@@ -262,7 +262,7 @@ const LandingHero = () => {
           </span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-12 leading-relaxed">
+        <p className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed">
           {t('landing.hero.desc')}
         </p>
 
@@ -293,10 +293,10 @@ const LandingStats = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="border-y border-slate-200 bg-white py-12">
-      <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+    <div className="border-y border-slate-200 bg-white py-8 md:py-12">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
         <div className="text-center">
-          <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
+          <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.topikCoverageValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -312,7 +312,7 @@ const LandingStats = () => {
           </div>
         </div>
         <div className="text-center">
-          <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
+          <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.fsrsValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -336,8 +336,8 @@ const LandingTopik = () => {
   const { t } = useTranslation();
 
   return (
-    <section id="topik" className="py-32 overflow-hidden bg-white">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-20">
+    <section id="topik" className="py-16 md:py-32 overflow-hidden bg-white">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
         <div className="md:w-1/2 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg font-bold text-sm mb-6">
             <Trophy className="w-4 h-4" />
@@ -432,8 +432,8 @@ const LandingFsrs = () => {
   const { t } = useTranslation();
 
   return (
-    <section id="fsrs" className="py-32 bg-slate-50 relative border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row-reverse items-center gap-20">
+    <section id="fsrs" className="py-16 md:py-32 bg-slate-50 relative border-t border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20">
         <div className="md:w-1/2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFDE59]/30 text-slate-900 rounded-lg font-bold text-sm mb-6">
             <BrainCircuit className="w-4 h-4" />
@@ -516,8 +516,8 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
   const { t } = useTranslation();
 
   return (
-    <section id="ai" className="py-32 bg-white border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-20">
+    <section id="ai" className="py-16 md:py-32 bg-white border-t border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
         <div className="md:w-1/2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 text-violet-600 rounded-lg font-bold text-sm mb-6">
             <Sparkles className="w-4 h-4" />
@@ -598,10 +598,10 @@ const LandingToolbox = ({
   const { t } = useTranslation();
 
   return (
-    <section className="py-24 px-6 relative overflow-hidden bg-white text-slate-900">
+    <section className="py-16 md:py-24 px-4 md:px-6 relative overflow-hidden bg-white text-slate-900">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-5xl md:text-7xl font-heading font-extrabold tracking-tight mb-5">
+          <h2 className="text-4xl md:text-7xl font-heading font-extrabold tracking-tight mb-5">
             {t('landing.toolbox.title')}
           </h2>
           <p className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto">
@@ -966,13 +966,13 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
   const { t } = useTranslation();
 
   return (
-    <section className="py-24 bg-white relative overflow-hidden">
+    <section className="py-16 md:py-24 bg-white relative overflow-hidden">
       {/* Background Blobs */}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center gap-16">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
+        <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
           {/* Left Content */}
           <div className="lg:w-1/2 space-y-8 text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold border border-blue-100">
@@ -980,7 +980,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
               {t('landing.typing.badge')}
             </div>
 
-            <h2 className="text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
               {t('landing.typing.titleLine1')}
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
@@ -1175,10 +1175,12 @@ const LandingPricing = ({
   const lifetimePriceDisplay = getPrice('LIFETIME', 'GLOBAL');
 
   return (
-    <section id="pricing" className="py-32 bg-white">
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-heading font-bold mb-4">{t('landing.pricing.title')}</h2>
+    <section id="pricing" className="py-16 md:py-32 bg-white">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
+        <div className="text-center mb-10 md:mb-16">
+          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+            {t('landing.pricing.title')}
+          </h2>
           <p className="text-slate-500">{t('landing.pricing.subtitle')}</p>
         </div>
 
@@ -1214,8 +1216,8 @@ const LandingPricing = ({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-          <div className="p-8 border border-slate-200 rounded-3xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center">
+          <div className="p-6 md:p-8 border border-slate-200 rounded-3xl">
             <div className="font-bold text-lg mb-2">{t('landing.pricing.free.title')}</div>
             <div className="text-4xl font-extrabold mb-6">{t('landing.pricing.free.price')}</div>
             <ul className="space-y-4 text-sm text-slate-600 mb-8">
@@ -1317,7 +1319,7 @@ const LandingPricing = ({
             </button>
           </div>
 
-          <div className="p-8 border border-slate-200 rounded-3xl bg-slate-50">
+          <div className="p-6 md:p-8 border border-slate-200 rounded-3xl bg-slate-50">
             <div className="font-bold text-lg mb-2">{t('landing.pricing.lifetime.title')}</div>
             <div className="text-4xl font-extrabold mb-6">${lifetimePriceDisplay}</div>
             <ul className="space-y-4 text-sm text-slate-600 mb-8">

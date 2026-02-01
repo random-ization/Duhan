@@ -198,9 +198,9 @@ export default function DashboardPage({
                   <br />
                   {selectedLevel
                     ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
-                      '{level}',
-                      String(selectedLevel)
-                    )
+                        '{level}',
+                        String(selectedLevel)
+                      )
                     : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
                 </h3>
                 <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">
@@ -446,17 +446,17 @@ export default function DashboardPage({
   };
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="space-y-6 md:space-y-10 pb-10 md:pb-20">
       {/* 1. Header */}
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-        <div className="relative pl-4">
+        <div className="relative pl-0 md:pl-4">
           <img
             src={ASSETS.wave}
-            className="absolute -top-6 -left-10 w-14 h-14 animate-float"
+            className="absolute -top-6 -left-4 md:-left-10 w-10 h-10 md:w-14 md:h-14 animate-float"
             alt="waving hand"
           />
           {/* SVG Underline Header */}
-          <h1 className="text-4xl md:text-5xl font-black font-display text-slate-900 tracking-tight mb-2">
+          <h1 className="text-3xl md:text-4xl md:text-5xl font-black font-display text-slate-900 tracking-tight mb-2">
             {getGreeting()},{' '}
             <span className="text-indigo-600 relative inline-block">
               {user?.name?.split(' ')[0] || 'Learner'}
@@ -474,7 +474,7 @@ export default function DashboardPage({
           </p>
         </div>
 
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-wrap gap-3 md:gap-4 items-center">
           {/* Dictionary Search with Dropdown */}
           <DictionarySearchDropdown />
 

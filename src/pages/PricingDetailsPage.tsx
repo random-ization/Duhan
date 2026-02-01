@@ -146,7 +146,7 @@ export default function PricingDetailsPage() {
     let amount = anchors[billingCycle];
 
     // If we have dynamic global prices, use those as anchors
-    if (prices && prices.GLOBAL) {
+    if (prices?.GLOBAL) {
       const planKeyMap: Record<string, string> = {
         monthly: 'MONTHLY',
         quarterly: 'QUARTERLY',
@@ -291,8 +291,8 @@ export default function PricingDetailsPage() {
         </section>
       )}
 
-      <header className="pt-16 pb-12 px-6 text-center">
-        <h1 className="text-4xl md:text-6xl font-heading font-extrabold mb-6">
+      <header className="pt-10 pb-8 md:pt-16 md:pb-12 px-4 md:px-6 text-center">
+        <h1 className="text-3xl md:text-6xl font-heading font-extrabold mb-6">
           {t('pricingDetails.hero.titlePrefix')}
           <span className="relative inline-block px-2">
             <span className="relative z-10">{t('pricingDetails.hero.titleHighlight')}</span>
@@ -339,9 +339,9 @@ export default function PricingDetailsPage() {
         </div>
       </header>
 
-      <section className="pb-24 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          <div className="bg-white rounded-3xl border-2 border-slate-200 p-8 flex flex-col hover:border-slate-400 transition-colors order-2 md:order-1">
+      <section className="pb-12 md:pb-24 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-start">
+          <div className="bg-white rounded-3xl border-2 border-slate-200 p-6 md:p-8 flex flex-col hover:border-slate-400 transition-colors order-2 md:order-1">
             <div className="mb-4">
               <h3 className="text-xl font-bold text-slate-500">
                 {t('pricingDetails.plans.free.title')}
@@ -385,7 +385,7 @@ export default function PricingDetailsPage() {
           </div>
 
           <div
-            className={`rounded-3xl border-2 border-black p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
+            className={`rounded-3xl border-2 border-black p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
               showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
             }`}
           >
@@ -479,7 +479,7 @@ export default function PricingDetailsPage() {
             </ul>
           </div>
 
-          <div className="bg-white rounded-3xl border-2 border-black p-8 flex flex-col shadow-pop hover:shadow-[0_0_20px_rgba(255,222,89,0.5)] transition-shadow relative overflow-hidden order-3">
+          <div className="bg-white rounded-3xl border-2 border-black p-6 md:p-8 flex flex-col shadow-pop hover:shadow-[0_0_20px_rgba(255,222,89,0.5)] transition-shadow relative overflow-hidden order-3">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899]" />
             <div className="mb-4">
               <h3 className="text-xl font-bold text-[#8B5CF6]">
@@ -516,8 +516,8 @@ export default function PricingDetailsPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-white border-y-2 border-black">
-        <div className="max-w-5xl mx-auto px-6">
+      <section className="py-12 md:py-20 bg-white border-y-2 border-black">
+        <div className="max-w-5xl mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-heading font-bold text-center mb-4">
             {t('pricingDetails.table.title')}
           </h2>
@@ -674,7 +674,7 @@ export default function PricingDetailsPage() {
         </div>
       </section>
 
-      <section className="py-24 px-6">
+      <section className="py-12 md:py-24 px-4 md:px-6">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-heading font-bold mb-12 text-center">
             {t('pricingDetails.faq.title')}

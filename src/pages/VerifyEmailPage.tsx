@@ -61,7 +61,7 @@ const VerifyEmailPage: React.FC = () => {
       </div>
 
       <div className="w-full max-w-md p-6 relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10 text-center">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10 text-center">
           {status === 'loading' && (
             <>
               <Loader2 className="w-16 h-16 text-indigo-400 mx-auto animate-spin mb-6" />

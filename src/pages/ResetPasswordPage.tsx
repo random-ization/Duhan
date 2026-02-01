@@ -92,7 +92,7 @@ const ResetPasswordPage: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-3/4 h-3/4 bg-violet-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
         </div>
         <div className="w-full max-w-md p-6 relative z-10">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10 text-center">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10 text-center">
             <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
             <h1 className="text-2xl font-bold text-white mb-2">
               {labels.auth?.invalidLink || (language === 'zh' ? '无效链接' : 'Invalid Link')}
@@ -124,7 +124,7 @@ const ResetPasswordPage: React.FC = () => {
       </div>
 
       <div className="w-full max-w-md p-6 relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-10">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10">
           {status === 'form' ? (
             <ResetPasswordForm
               labels={labels}

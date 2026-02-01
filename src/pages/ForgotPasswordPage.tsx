@@ -38,16 +38,16 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 flex items-center justify-center font-sans">
+    <div className="min-h-screen bg-[#F0F4F8] p-4 md:p-12 flex items-center justify-center font-sans">
       <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
         noIndex={meta.noIndex}
       />
-      <div className="max-w-5xl w-full bg-white rounded-[3rem] border-2 border-slate-900 shadow-pop overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+      <div className="max-w-5xl w-full bg-white rounded-3xl md:rounded-[3rem] border-2 border-slate-900 shadow-pop overflow-hidden flex flex-col md:flex-row min-h-0 md:min-h-[600px]">
         {/* Left: Visuals (Consistent with AuthPage) */}
-        <div className="w-full md:w-1/2 bg-slate-900 relative flex flex-col items-center justify-center p-10 text-white overflow-hidden">
+        <div className="w-full md:w-1/2 bg-slate-900 relative flex flex-col items-center justify-center p-6 md:p-10 text-white overflow-hidden">
           <div
             className="absolute inset-0 opacity-20"
             style={{
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Right: Recovery Console */}
-        <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
+        <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-white relative">
           <div className="mb-8">
             <LocalizedLink
               to="/login"
