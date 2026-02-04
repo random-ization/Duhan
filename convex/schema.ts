@@ -406,6 +406,22 @@ export default defineSchema({
     .index('by_channel', ['channelId'])
     .index('by_pubDate', ['pubDate']),
 
+  // Podcast Transcripts (server-stored fallback)
+  podcast_transcripts: defineTable({
+    episodeId: v.string(),
+    segments: v.any(),
+    translations: v.optional(
+      v.object({
+        zh: v.optional(v.array(v.string())),
+        en: v.optional(v.array(v.string())),
+        vi: v.optional(v.array(v.string())),
+        mn: v.optional(v.array(v.string())),
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_episode', ['episodeId']),
+
   // Podcast Subscriptions
   podcast_subscriptions: defineTable({
     userId: v.id('users'),

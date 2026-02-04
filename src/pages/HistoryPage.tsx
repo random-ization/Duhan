@@ -13,6 +13,7 @@ const getPodcastMessages = (labels: import('../utils/i18n').Labels) => ({
 import BackButton from '../components/ui/BackButton';
 import EmptyState from '../components/common/EmptyState';
 import { useAuth } from '../contexts/AuthContext';
+import { localeFromLanguage } from '../utils/locale';
 import { getLabels } from '../utils/i18n';
 
 export default function HistoryPage() {
@@ -84,7 +85,7 @@ export default function HistoryPage() {
               <p className="text-xs text-slate-500 mb-1">{item.channelName}</p>
               <div className="flex items-center text-xs text-slate-400 gap-1">
                 <Calendar size={12} />
-                {new Date(item.playedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}
+                {new Date(item.playedAt).toLocaleDateString(localeFromLanguage(language))}
               </div>
             </div>
             <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">

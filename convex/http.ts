@@ -5,12 +5,16 @@ import { toErrorMessage } from './errors';
 
 type WebhookResult = { success: boolean; error?: string };
 type WebhookArgs = { body: string; signature: string };
+type DeepgramWebhookArgs = { episodeId: string; language?: string; payload: unknown };
 
 const creemWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
   'payments:handleWebhook'
 );
 const lemonWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
   'lemonsqueezy:handleWebhook'
+);
+const deepgramWebhookAction = makeFunctionReference<'action', DeepgramWebhookArgs, WebhookResult>(
+  'ai:handleDeepgramCallback'
 );
 
 const http = httpRouter();
@@ -86,6 +90,45 @@ http.route({
       }
     } catch (error: unknown) {
       console.error('Lemon Squeezy webhook error:', toErrorMessage(error));
+      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
+    }
+  }),
+});
+
+// Deepgram Callback Handler
+http.route({
+  path: '/webhook/deepgram',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const episodeId = url.searchParams.get('episodeId');
+    const language = url.searchParams.get('language') || undefined;
+
+    if (!episodeId) {
+      return new Response('Missing episodeId', { status: 400 });
+    }
+
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch (error: unknown) {
+      console.error('Deepgram webhook JSON parse error:', toErrorMessage(error));
+      return new Response('Invalid JSON payload', { status: 400 });
+    }
+
+    try {
+      const result = await ctx.runAction(deepgramWebhookAction, {
+        episodeId,
+        language,
+        payload,
+      });
+
+      if (result.success) {
+        return new Response('OK', { status: 200 });
+      }
+      return new Response(result.error || 'Webhook processing failed', { status: 400 });
+    } catch (error: unknown) {
+      console.error('Deepgram webhook error:', toErrorMessage(error));
       return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
     }
   }),

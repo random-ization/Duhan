@@ -442,7 +442,7 @@ const MCOptions: React.FC<MCOptionsProps> = ({
 };
 
 interface PendingAdvanceBannerProps {
-  language: string;
+  language: Language;
   onContinue: () => void;
 }
 
@@ -450,12 +450,11 @@ const PendingAdvanceBanner: React.FC<PendingAdvanceBannerProps> = ({ language, o
   <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
     <div className="min-w-0">
       <div className="text-sm font-black text-slate-700">
-        {language === 'zh' ? '没关系，您仍在学习！' : "No worries — you're learning!"}
+        {getLabels(language).vocabQuiz?.pendingTitle || "No worries — you're learning!"}
       </div>
       <div className="text-xs font-bold text-slate-500 mt-1">
-        {language === 'zh'
-          ? '稍后再试此问题。单击继续或按任意键继续。'
-          : 'We’ll practice this again later. Click Continue or press any key.'}
+        {getLabels(language).vocabQuiz?.pendingSubtitle ||
+          'We’ll practice this again later. Click Continue or press any key.'}
       </div>
     </div>
     <button
@@ -463,7 +462,7 @@ const PendingAdvanceBanner: React.FC<PendingAdvanceBannerProps> = ({ language, o
       onClick={onContinue}
       className="px-6 py-3 rounded-full bg-blue-600 text-white font-black hover:bg-blue-700"
     >
-      {language === 'zh' ? '继续' : 'Continue'}
+      {getLabels(language).vocabQuiz?.continue || 'Continue'}
     </button>
   </div>
 );
@@ -474,11 +473,7 @@ interface QuestionDisplayProps {
   isLearn: boolean;
 }
 
-const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
-  promptText,
-  questionText,
-  isLearn,
-}) => (
+const QuestionDisplay: React.FC<QuestionDisplayProps> = ({ promptText, questionText, isLearn }) => (
   <div className={`text-center ${isLearn ? 'mb-8' : 'mb-10'}`}>
     <p className={`text-sm text-slate-400 font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
       {promptText}
@@ -497,7 +492,9 @@ interface ScoreBadgeProps {
 }
 
 const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting, isLearn }) => (
-  <div className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}>
+  <div
+    className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}
+  >
     <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">
       ✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}
     </span>
@@ -571,7 +568,6 @@ interface CompleteScreenProps {
   totalQuestions: number;
   labels: any;
   variant: 'quiz' | 'learn';
-  language: string;
   hasNextUnit?: boolean;
   onNextUnit?: () => void;
   restartGame: () => void;
@@ -583,7 +579,6 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
   totalQuestions,
   labels,
   variant,
-  language,
   hasNextUnit,
   onNextUnit,
   restartGame,
@@ -595,7 +590,7 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
   let completeTitle: string = (labels.dashboard?.quiz?.complete as unknown as string) || '';
   if (!completeTitle) {
     if (variant === 'learn') {
-      completeTitle = language === 'zh' ? '🎉 学习完成！' : '🎉 Learning Complete!';
+      completeTitle = labels.vocabQuiz?.learnCompleteTitle || '🎉 Learning Complete!';
     } else {
       completeTitle = '🎉 Quiz Complete!';
     }
@@ -604,7 +599,7 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
   let finishedText: string = (labels.dashboard?.quiz?.youFinished as unknown as string) || '';
   if (!finishedText) {
     if (variant === 'learn') {
-      finishedText = language === 'zh' ? '你已完成本轮学习。' : 'You finished this learning round!';
+      finishedText = labels.vocabQuiz?.learnCompleteSubtitle || 'You finished this learning round!';
     } else {
       finishedText = 'You finished all questions!';
     }
@@ -647,8 +642,7 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
               onClick={onNextUnit}
               className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
             >
-              {labels.dashboard?.quiz?.nextUnit || 'Next Unit'}{' '}
-              <ChevronRight className="w-5 h-5" />
+              {labels.dashboard?.quiz?.nextUnit || 'Next Unit'} <ChevronRight className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -905,15 +899,7 @@ const useQuizGame = ({
       }, 400);
       timersRef.current.push(timer1);
     },
-    [
-      isLocked,
-      currentQuestion,
-      handleCorrectMC,
-      handleWrongMC,
-      isLearn,
-      nextQuestion,
-      timersRef,
-    ]
+    [isLocked, currentQuestion, handleCorrectMC, handleWrongMC, isLearn, nextQuestion, timersRef]
   );
 
   const handleDontKnow = useCallback(() => {
@@ -1130,9 +1116,10 @@ const useQuizSounds = (enabled: boolean) => {
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      const w = globalThis as Window & typeof globalThis & {
-        webkitAudioContext?: typeof AudioContext;
-      };
+      const w = globalThis as Window &
+        typeof globalThis & {
+          webkitAudioContext?: typeof AudioContext;
+        };
       const Ctor = globalThis.AudioContext ?? w.webkitAudioContext;
       if (!Ctor) {
         throw new Error('AudioContext not supported');
@@ -1209,15 +1196,9 @@ interface NotEnoughWordsProps {
   wordsCount: number;
   labels: any;
   variant: string;
-  language: string;
 }
 
-const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({
-  wordsCount,
-  labels,
-  variant,
-  language,
-}) => {
+const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({ wordsCount, labels, variant }) => {
   if (wordsCount >= 4) return null;
 
   let minWordsMessage: string;
@@ -1226,10 +1207,9 @@ const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({
   if (typeof minWordsLabel === 'string') {
     minWordsMessage = minWordsLabel;
   } else if (variant === 'learn') {
-    minWordsMessage =
-      language === 'zh' ? '至少需要 4 个单词才能开始学习' : 'Need at least 4 words to start learning';
+    minWordsMessage = labels.vocabQuiz?.minWordsLearn || 'Need at least 4 words to start learning';
   } else {
-    minWordsMessage = 'Need at least 4 words to start quiz';
+    minWordsMessage = labels.vocabQuiz?.minWordsQuiz || 'Need at least 4 words to start quiz';
   }
 
   return (
@@ -1372,7 +1352,7 @@ const QuizContent: React.FC<QuizContentProps> = ({
             disabled={isLocked}
             className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
           >
-            {language === 'zh' ? '不知道？' : "I don't know"}
+            {labels.vocabQuiz?.dontKnow || "I don't know"}
           </button>
         </div>
       ) : null}
@@ -1425,7 +1405,7 @@ function VocabQuizComponent({
   const isLearn = variant === 'learn';
   let modeLabel = labels.vocab?.quiz || 'Quiz';
   if (variant === 'learn') {
-    modeLabel = language === 'zh' ? '学习' : labels.learn || 'Learn';
+    modeLabel = labels.learn || 'Learn';
   }
   // Settings
   const [settings, setSettings] = useState<QuizSettings>({
@@ -1497,14 +1477,7 @@ function VocabQuizComponent({
 
   // Not enough words
   if (words.length < 4) {
-    return (
-      <NotEnoughWords
-        wordsCount={words.length}
-        labels={labels}
-        variant={variant}
-        language={language}
-      />
-    );
+    return <NotEnoughWords wordsCount={words.length} labels={labels} variant={variant} />;
   }
 
   // Complete Screen
@@ -1516,7 +1489,6 @@ function VocabQuizComponent({
         totalQuestions={totalQuestions}
         labels={labels}
         variant={variant}
-        language={language}
         hasNextUnit={hasNextUnit}
         onNextUnit={onNextUnit}
         restartGame={restartGame}

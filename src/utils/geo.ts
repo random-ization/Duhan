@@ -16,9 +16,10 @@ export async function fetchUserCountry(): Promise<string | null> {
     const data = await response.json();
     return data.country_code || null;
   } catch (error) {
-    logger.warn('Failed to fetch user country via ipapi.co:', error);
-
-    // Fallback? For now just return null and let the app default to English or stored language
+    // Only log in development, not production (network issues are common)
+    if (import.meta.env.DEV) {
+      logger.warn('Failed to fetch user country via ipapi.co:', error);
+    }
     return null;
   }
 }

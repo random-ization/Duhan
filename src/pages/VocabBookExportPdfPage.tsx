@@ -4,6 +4,7 @@ import { useQuery } from 'convex/react';
 import QRCode from 'qrcode';
 import { useAuth } from '../contexts/AuthContext';
 import { VOCAB } from '../utils/convexRefs';
+import { getLabels } from '../utils/i18n';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
@@ -18,66 +19,6 @@ type Labels = {
   footerDesc: string;
   footerLink: string;
   preparing: string;
-};
-
-const getPdfLabels = (language: string, origin: string): Labels => {
-  if (language === 'zh') {
-    return {
-      title: '单词学习表',
-      wordHeader: '韩语',
-      meaningHeader: '释义',
-      domainLabel: origin.replace(/^https?:\/\//, ''),
-      slogan: '每天 10 分钟，轻松学韩语',
-      footerName: 'DuHan',
-      footerDesc: '韩语学习平台 · 生词本/刷词/听写',
-      footerLink: origin,
-      preparing: '正在准备打印…',
-    };
-  }
-  if (language === 'vi') {
-    return {
-      title: 'Bảng học từ',
-      wordHeader: 'Tiếng Hàn',
-      meaningHeader: 'Nghĩa',
-      domainLabel: origin.replace(/^https?:\/\//, ''),
-      slogan: '10 phút mỗi ngày, học tiếng Hàn dễ dàng',
-      footerName: 'DuHan',
-      footerDesc: 'Nền tảng học tiếng Hàn · Sổ từ/Ôn tập/Nghe chép',
-      footerLink: origin,
-      preparing: 'Đang chuẩn bị in…',
-    };
-  }
-  if (language === 'mn') {
-    return {
-      title: 'Үг сурах хүснэгт',
-      wordHeader: 'Солонгос',
-      meaningHeader: 'Утга',
-      domainLabel: origin.replace(/^https?:\/\//, ''),
-      slogan: 'Өдөрт 10 минут, солонгос хэлийг амархан сур',
-      footerName: 'DuHan',
-      footerDesc: 'Солонгос хэл сурах платформ · Үгийн дэвтэр/Давталт/Диктант',
-      footerLink: origin,
-      preparing: 'Хэвлэхийг бэлтгэж байна…',
-    };
-  }
-  return {
-    title: 'Word Study Sheet',
-    wordHeader: 'Korean',
-    meaningHeader: 'Meaning',
-    domainLabel: origin.replace(/^https?:\/\//, ''),
-    slogan: '10 minutes a day, learn Korean easily',
-    footerName: 'DuHan',
-    footerDesc: 'Korean learning platform · Vocab book/Review/Dictation',
-    footerLink: origin,
-    preparing: 'Preparing to print…',
-  };
-};
-
-const getLanguageListTitle = (language: string) => {
-  if (language === 'zh') return '中文词表';
-  if (language === 'vi') return 'Từ vựng tiếng Việt';
-  if (language === 'mn') return 'Монгол үгийн жагсаалт';
-  return 'English List';
 };
 
 const getMeaningForLanguage = (
@@ -110,7 +51,23 @@ const VocabBookExportPdfPage: React.FC = () => {
   const { language } = useAuth();
   const [params] = useSearchParams();
   const origin = globalThis.location.origin;
-  const labels = useMemo(() => getPdfLabels(language, origin), [language, origin]);
+  const i18nLabels = useMemo(() => getLabels(language), [language]);
+  const labels = useMemo<Labels>(
+    () => ({
+      title: i18nLabels.vocabBookPdf?.title || 'Word Study Sheet',
+      wordHeader: i18nLabels.vocabBookPdf?.wordHeader || 'Korean',
+      meaningHeader: i18nLabels.vocabBookPdf?.meaningHeader || 'Meaning',
+      domainLabel: origin.replace(/^https?:\/\//, ''),
+      slogan: i18nLabels.vocabBookPdf?.slogan || '10 minutes a day, learn Korean easily',
+      footerName: 'DuHan',
+      footerDesc:
+        i18nLabels.vocabBookPdf?.footerDesc ||
+        'Korean learning platform · Vocab book/Review/Dictation',
+      footerLink: origin,
+      preparing: i18nLabels.vocabBookPdf?.preparing || 'Preparing to print…',
+    }),
+    [i18nLabels, origin]
+  );
 
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
   const q = params.get('q')?.trim();
@@ -162,22 +119,24 @@ const VocabBookExportPdfPage: React.FC = () => {
 
   const subtitle = useMemo(() => {
     const getCategoryLabel = () => {
-      if (category === 'DUE') return language === 'zh' ? '待复习' : 'Due';
-      if (category === 'UNLEARNED') return language === 'zh' ? '未学习' : 'Unlearned';
-      return language === 'zh' ? '已掌握' : 'Mastered';
+      if (category === 'DUE') return i18nLabels.vocab?.due || 'Due';
+      if (category === 'UNLEARNED') return i18nLabels.vocab?.unlearned || 'Unlearned';
+      return i18nLabels.vocab?.mastered || 'Mastered';
     };
 
     const getModeLabel = () => {
-      if (mode === 'A4_DICTATION') return language === 'zh' ? 'A4 默写' : 'A4 Dictation';
-      if (mode === 'LANG_LIST') return getLanguageListTitle(language);
-      return language === 'zh' ? '韩语词表' : 'Korean List';
+      if (mode === 'A4_DICTATION')
+        return i18nLabels.vocabBook?.exportModes?.a4Title || 'A4 Dictation';
+      if (mode === 'LANG_LIST')
+        return i18nLabels.vocabBook?.exportModes?.langListTitle || 'English List';
+      return i18nLabels.vocabBook?.exportModes?.koListTitle || 'Korean List';
     };
 
     const cat = getCategoryLabel();
     const modeLabel = getModeLabel();
     const base = `${cat} · ${modeLabel}`;
     return q ? `${base} · ${q}` : base;
-  }, [category, language, mode, q]);
+  }, [category, i18nLabels.vocab, i18nLabels.vocabBook?.exportModes, mode, q]);
 
   const pages = useMemo(() => {
     const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);

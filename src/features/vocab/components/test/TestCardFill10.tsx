@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Check, RefreshCw } from 'lucide-react';
+import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
 
 type Pair = { korean: string; native: string };
@@ -57,10 +58,10 @@ const FillSlot = ({
   onClear: (idx: number) => void;
   onSelect: (idx: number) => void;
 }) => {
-  const label = val || (language === 'zh' ? '未作答' : '—');
+  const labels = getLabels(language);
+  const label = val || labels.vocabTest?.unanswered || '—';
 
-  let className =
-    'w-full h-14 rounded-2xl border-2 px-4 text-left font-black transition-all';
+  let className = 'w-full h-14 rounded-2xl border-2 px-4 text-left font-black transition-all';
   if (isReview) {
     className += isCorrect
       ? ' bg-green-50 border-green-300 text-green-800'
@@ -85,7 +86,7 @@ const FillSlot = ({
       </button>
       {isReview && !isCorrect ? (
         <div className="mt-1 text-xs text-slate-500 font-bold">
-          {language === 'zh' ? '正确答案：' : 'Answer: '}
+          {labels.vocabTest?.answerLabel || 'Answer: '}
           <span className="font-black text-slate-900">{answer}</span>
         </div>
       ) : null}
@@ -101,6 +102,7 @@ export default function TestCardFill10({
   mode = 'test',
   onSubmit,
 }: Props) {
+  const labels = getLabels(language);
   const isReview = mode === 'review' && !!answered;
   const [direction, setDirection] = useState<Direction>(
     answered?.directionUsed || initialDirection
@@ -118,9 +120,7 @@ export default function TestCardFill10({
   }, [direction, items]);
 
   const [filled, setFilled] = useState<string[]>(() =>
-    answered?.filled?.length === items.length
-      ? answered.filled
-      : new Array(items.length).fill('')
+    answered?.filled?.length === items.length ? answered.filled : new Array(items.length).fill('')
   );
   const [optionPool, setOptionPool] = useState<string[]>(() => {
     const used =
@@ -186,15 +186,15 @@ export default function TestCardFill10({
     onSubmit(filled, direction);
   };
 
-  const switchKR = language === 'zh' ? '切换到韩语' : 'Switch to Korean';
-  const switchNative = language === 'zh' ? '切换到母语' : 'Switch to Native';
+  const switchKR = labels.vocabTest?.switchToKorean || 'Switch to Korean';
+  const switchNative = labels.vocabTest?.switchToNative || 'Switch to Native';
   const switchLabel = direction === 'KR_TO_NATIVE' ? switchKR : switchNative;
 
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs font-black text-slate-400">
-          {language === 'zh' ? '从下方列表中选择' : 'Pick from the list below'}
+          {labels.vocabTest?.pickFromList || 'Pick from the list below'}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -210,7 +210,7 @@ export default function TestCardFill10({
             onClick={reset}
             disabled={isReview}
             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-50"
-            aria-label={language === 'zh' ? '重置' : 'Reset'}
+            aria-label={labels.vocabTest?.reset || 'Reset'}
           >
             <RefreshCw className="w-5 h-5 text-slate-700" />
           </button>
@@ -228,9 +228,7 @@ export default function TestCardFill10({
                 isTarget={activeIndex === idx}
                 isReview={isReview}
                 isCorrect={
-                  isReview
-                    ? filled[idx].trim() === (derived.answers[idx] || '').trim()
-                    : null
+                  isReview ? filled[idx].trim() === (derived.answers[idx] || '').trim() : null
                 }
                 answer={derived.answers[idx] || ''}
                 language={language}
@@ -275,7 +273,7 @@ export default function TestCardFill10({
               className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-5 h-5" />
-              {language === 'zh' ? '确认本卡' : 'Confirm'}
+              {labels.vocabTest?.confirm || 'Confirm'}
             </button>
           </div>
         </>

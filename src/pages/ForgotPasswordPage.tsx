@@ -60,12 +60,9 @@ export default function ForgotPasswordPage() {
             <div className="w-20 h-20 bg-indigo-500 rounded-3xl flex items-center justify-center text-4xl font-black border-4 border-white shadow-lg mb-6 mx-auto">
               ?
             </div>
-            <h1 className="text-4xl font-black font-display mb-2">
-              {labels.auth?.recoveryTitle || (language === 'zh' ? '账号找回' : 'Account Recovery')}
-            </h1>
+            <h1 className="text-4xl font-black font-display mb-2">{labels.auth?.recoveryTitle}</h1>
             <p className="text-slate-400 font-bold text-lg tracking-wide">
-              {labels.auth?.recoverySlogan ||
-                (language === 'zh' ? '别担心，探索者。' : "Don't panic, Explorer.")}
+              {labels.auth?.recoverySlogan}
             </p>
           </div>
 
@@ -86,18 +83,10 @@ export default function ForgotPasswordPage() {
               to="/login"
               className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition mb-4"
             >
-              <ArrowLeft size={16} /> {labels.auth?.backToLogin || 'Back to Login'}
+              <ArrowLeft size={16} /> {labels.auth?.backToLogin}
             </LocalizedLink>
-            <h2 className="text-3xl font-black text-slate-900">
-              {labels.auth?.recoverPassword ||
-                (language === 'zh' ? '重置密码' : 'Recover Password')}
-            </h2>
-            <p className="text-slate-500 font-medium mt-2">
-              {labels.auth?.recoveryDesc ||
-                (language === 'zh'
-                  ? '请输入您的已注册邮箱，我们将发送一条恢复信号。'
-                  : 'Enter your registered email, and we will send a recovery signal.')}
-            </p>
+            <h2 className="text-3xl font-black text-slate-900">{labels.auth?.recoverPassword}</h2>
+            <p className="text-slate-500 font-medium mt-2">{labels.auth?.recoveryDesc}</p>
           </div>
 
           {error && (
@@ -135,14 +124,11 @@ export default function ForgotPasswordPage() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>
-                    {labels.auth?.sending || (language === 'zh' ? '正在发送...' : 'Sending...')}
-                  </span>
+                  <span>{labels.auth?.sending}</span>
                 </div>
               ) : (
                 <>
-                  {labels.auth?.sendResetLink ||
-                    (language === 'zh' ? '发送重置链接' : 'Send Reset Link')}
+                  {labels.auth?.sendResetLink}
                   <Send size={18} />
                 </>
               )}
@@ -154,7 +140,7 @@ export default function ForgotPasswordPage() {
               className="inline-flex items-center gap-2 text-sm font-black text-slate-400 hover:text-indigo-600 transition-colors"
             >
               <ArrowLeft size={16} />
-              {labels.auth?.backToLogin || (language === 'zh' ? '返回登录' : 'Back to Login')}
+              {labels.auth?.backToLogin}
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   buildAppearanceUpdates,
   cleanupUndefinedFields,
   normalizeUnitIdParam,
+  resolveTargetUnitId,
 } from './vocabHelpers';
 
 export type VocabStatsDto = {
@@ -377,12 +378,21 @@ export const getOfCourse = query({
   handler: async (ctx, args): Promise<VocabWordDto[]> => {
     const userId = await getOptionalAuthUserId(ctx);
     let effectiveCourseId = args.courseId;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let institute: any = null;
     const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+
     if (instituteId) {
-      const institute = await ctx.db.get(instituteId);
+      institute = await ctx.db.get(instituteId);
       if (institute) {
         effectiveCourseId = institute.id || institute._id;
       }
+    } else {
+      // Try lookup by legacy ID if instituteId was null (fallback)
+      institute = await ctx.db
+        .query('institutes')
+        .withIndex('by_legacy_id', q => q.eq('id', effectiveCourseId))
+        .unique();
     }
 
     // 1. Get appearances with optional limit
@@ -395,14 +405,15 @@ export const getOfCourse = query({
       }
     }
 
-    // Simplified query logic to avoid nested ternaries and complexity
-    // 1. Get appearances with optional limit
+    const targetUnitId = resolveTargetUnitId(institute, normalizedUnitId);
+
+    // 2. Query appearances using the resolved targetUnitId
     let appearances;
-    if (typeof normalizedUnitId === 'number') {
+    if (typeof targetUnitId === 'number') {
       appearances = await ctx.db
         .query('vocabulary_appearances')
         .withIndex('by_course_unit', q =>
-          q.eq('courseId', effectiveCourseId).eq('unitId', normalizedUnitId)
+          q.eq('courseId', effectiveCourseId).eq('unitId', targetUnitId)
         )
         .take(limit);
     } else {
@@ -412,24 +423,15 @@ export const getOfCourse = query({
         .take(limit);
     }
 
-    // Fallback logic for Vol 2 units (1-10 -> 11-20)
-    const MAX_VOL_1_UNIT = 20;
+    // Legacy fallback (safeguard) - Only run if explicit logic didn't find anything AND we didn't already offset
+    // Note: The helper function logic is the primary source of truth now.
     if (
       appearances.length === 0 &&
-      normalizedUnitId !== undefined &&
-      normalizedUnitId <= MAX_VOL_1_UNIT
+      typeof normalizedUnitId === 'number' &&
+      targetUnitId === normalizedUnitId &&
+      normalizedUnitId <= 20
     ) {
-      const offsetUnitId = normalizedUnitId + 10;
-      const fallbackAppearances = await ctx.db
-        .query('vocabulary_appearances')
-        .withIndex('by_course_unit', q =>
-          q.eq('courseId', effectiveCourseId).eq('unitId', offsetUnitId)
-        )
-        .take(limit);
-
-      if (fallbackAppearances.length > 0) {
-        appearances = fallbackAppearances;
-      }
+      // Optional: keep legacy blind +10 check if absolutely necessary, but removing for now as discussed.
     }
 
     if (appearances.length === 0) {

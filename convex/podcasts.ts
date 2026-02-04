@@ -10,48 +10,64 @@ import { getAuthUserId, getOptionalAuthUserId } from './utils';
 export const getTrending = query({
   args: {},
   handler: async ctx => {
-    // 1. Internal: Get episodes sorted by views (descending)
-    // Note: Convex doesn't support direct sorting by non-indexed fields efficiently without an index.
-    // We'll trust the "views" field and maybe add an index later for perf if needed.
-    // For now, let's fetch all and sort top 10 (assuming not massive scale yet).
+    // 1. Internal: Rank channels by total episode views
     const allEpisodes = await ctx.db.query('podcast_episodes').collect();
-    const internal = allEpisodes
-      .slice()
+    const channelStats = new Map<
+      string,
+      { channelId: (typeof allEpisodes)[number]['channelId']; views: number; latestAt: number }
+    >();
+
+    for (const ep of allEpisodes) {
+      const key = ep.channelId.toString();
+      const entry = channelStats.get(key) ?? {
+        channelId: ep.channelId,
+        views: 0,
+        latestAt: 0,
+      };
+      entry.views += ep.views || 0;
+      const latestAt = ep.pubDate || ep.createdAt || 0;
+      if (latestAt > entry.latestAt) entry.latestAt = latestAt;
+      channelStats.set(key, entry);
+    }
+
+    const rankedChannels = Array.from(channelStats.values())
       .sort((a, b) => {
-        const viewsDiff = (b.views || 0) - (a.views || 0);
+        const viewsDiff = b.views - a.views;
         if (viewsDiff !== 0) return viewsDiff;
-        return (b.createdAt || 0) - (a.createdAt || 0);
+        return b.latestAt - a.latestAt;
       })
-      .slice(0, 10)
-      .map(ep => ({
-        ...ep,
-        id: ep._id,
-        // Resolving channel details would require a separate lookup or join
-        // For simplicity in list view, we assume channel info is fetched or we do a promise.all
-        // But actually, we need channel info.
+      .slice(0, 12);
+
+    const channelDocs = await Promise.all(rankedChannels.map(stat => ctx.db.get(stat.channelId)));
+    const internal = rankedChannels
+      .map((stat, idx) => {
+        const channel = channelDocs[idx];
+        if (!channel) return null;
+        return {
+          ...channel,
+          id: channel._id,
+          views: stat.views,
+        };
+      })
+      .filter(Boolean);
+
+    // 2. External: Featured channels
+    const featuredChannels = await ctx.db
+      .query('podcast_channels')
+      .withIndex('by_featured', q => q.eq('isFeatured', true))
+      .collect();
+
+    const external = featuredChannels
+      .slice()
+      .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
+      .slice(0, 12)
+      .map(channel => ({
+        ...channel,
+        id: channel._id,
       }));
 
-    // Populate channel for internal items
-    // OPTIMIZATION: Batch fetch channels
-    const channelIds = [...new Set(internal.map(ep => ep.channelId))];
-    const channelsArray = await Promise.all(channelIds.map(id => ctx.db.get(id)));
-    const channelsMap = new Map(channelsArray.filter(Boolean).map(c => [c!._id.toString(), c!]));
-
-    const internalWithChannel = internal.map(ep => {
-      const channel = channelsMap.get(ep.channelId.toString());
-      return {
-        ...ep,
-        channel: channel ? { ...channel, id: channel._id } : null,
-      };
-    });
-
-    // 2. External: Placeholder for now (or fetch from a curated lists table if we had one)
-    // Legacy API likely fetched from iTunes or a "Featured" DB table.
-    // We'll return empty for now or populate if we have data.
-    const external: unknown[] = [];
-
     return {
-      internal: internalWithChannel,
+      internal,
       external,
     };
   },
@@ -311,10 +327,26 @@ export const saveProgress = mutation({
 });
 
 // Helper for resolving podcast channels in podcasts.ts
+type ConvexQueryBuilder = {
+  eq: (field: string, value: string) => unknown;
+  field: (name: string) => unknown;
+};
+type ConvexQuery = {
+  withIndex: (
+    name: string,
+    cb: (q: ConvexQueryBuilder) => unknown
+  ) => { first: () => Promise<unknown> };
+  filter: (cb: (q: ConvexQueryBuilder) => unknown) => { first: () => Promise<unknown> };
+};
+type ConvexDb = {
+  query: (table: string) => ConvexQuery;
+  insert: (table: string, data: Record<string, unknown>) => Promise<unknown>;
+  get: (id: unknown) => Promise<unknown>;
+};
+type ConvexCtx = { db: ConvexDb };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolvePodcastChannel(
-  ctx: any,
+  ctx: ConvexCtx,
   channelInfo: {
     itunesId?: string;
     title: string;
@@ -329,8 +361,7 @@ async function resolvePodcastChannel(
   if (normalizedFeedUrl) {
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', normalizedFeedUrl))
+      .withIndex('by_feedUrl', q => q.eq('feedUrl', normalizedFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -350,8 +381,7 @@ async function resolvePodcastChannel(
     const pseudoFeedUrl = `itunes:${normalizedItunesId} `;
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', pseudoFeedUrl))
+      .withIndex('by_feedUrl', q => q.eq('feedUrl', pseudoFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -371,8 +401,8 @@ async function resolvePodcastChannel(
     // Fallback: Try to find by title if no feedUrl
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((q: any) => q.eq(q.field('title'), channelInfo.title))
+
+      .filter(q => q.eq(q.field('title'), channelInfo.title))
       .first();
     if (existingChannel) return existingChannel._id;
   }

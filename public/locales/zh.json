@@ -71,7 +71,26 @@
   "grammar": "语法解析",
   "grammarDesc": "AI 智能分析的语法点和例句。",
   "review": "复习与练习",
-  "vocabBook": "生词本",
+  "vocabBook": {
+    "title": "生词本",
+    "exportPdf": "导出PDF",
+    "exportPdfTitle": "导出PDF词表",
+    "wordSheetTitle": "单词学习表",
+    "exporting": "正在导出...",
+    "signInToExport": "请先登录后再导出",
+    "exportFailed": "导出失败，请稍后重试",
+    "markMastered": "标记已掌握",
+    "unmarkMastered": "取消已掌握",
+    "exportModes": {
+      "a4Title": "A4 默写",
+      "a4Desc": "单词、释义双向测试",
+      "langListTitle": "中文词表",
+      "langListDesc": "默写单词",
+      "koListTitle": "韩语词表",
+      "koListDesc": "默写释义",
+      "shuffleLabel": "乱序导出"
+    }
+  },
   "savedWordsDesc": "复习您手动保存的单词。",
   "mistakeBook": "错题本",
   "mistakeWordsDesc": "练习您答错的单词。",
@@ -584,8 +603,8 @@
       "featured": "精选播客",
       "plays": "次播放",
       "unknown": "未知",
-      "community": "热门趋势",
-      "editorPicks": "编辑精选",
+      "community": "韩语热榜",
+      "editorPicks": "用户热播",
       "loginRequired": "请先登录",
       "filters": {
         "all": "全部",
@@ -780,7 +799,11 @@
     "getStarted": "开始使用",
     "privacy": "隐私政策",
     "terms": "服务条款",
-    "contact": "联系客服"
+    "contact": "联系客服",
+    "close": "关闭",
+    "prev": "上一词",
+    "next": "下一词",
+    "back": "返回"
   },
   "landing": {
     "nav": {
@@ -1231,7 +1254,7 @@
     "resendError": "无法重置密码，请检查邮箱地址是否正确。",
     "backToLogin": "返回登录",
     "recoverPassword": "找回密码",
-    "recoveryDesc": "输入您的邮箱以找回账号。",
+    "recoveryDesc": "请输入您的已注册邮箱，我们将发送一条恢复信号。",
     "verifyingEmail": "正在验证您的邮箱...",
     "waitPlease": "请稍候",
     "verifySuccess": "邮箱验证成功！",
@@ -1257,7 +1280,10 @@
     "social": {
       "google": "Google",
       "kakao": "Kakao"
-    }
+    },
+    "newPasswordLabel": "新密码",
+    "resetFailed": "重置密码失败，请稍后重试。",
+    "networkError": "网络错误。请检查网络后重试。"
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "创建播客频道失败。",
@@ -1460,7 +1486,15 @@
       "noun": "名词",
       "adv": "副词",
       "particle": "助词"
-    }
+    },
+    "dictationStatusPlaying": "正在播放第 {current}/{total} 遍",
+    "dictationStatusIdle": "未播放",
+    "dictationPlayerTitle": "听写播放",
+    "dictationPlayerSubtitle": "请专注听音并书写",
+    "repeatTimes": "{count}次",
+    "seconds": "{count}秒",
+    "dictationStartButton": "开始播放",
+    "unassigned": "未分单元"
   },
   "profileLabel": "个人资料",
   "profile": {
@@ -1479,7 +1513,24 @@
     "languageDesc": "选择界面和学习内容的语言。",
     "noActivity": "暂无活动。开始一次测试以查看进度！",
     "updatePassword": "更新密码",
-    "recentActivity": "最近活动"
+    "recentActivity": "最近活动",
+    "unnamed": "未命名用户",
+    "link": {
+      "connect": "绑定",
+      "unlink": "解绑",
+      "linked": "已连接",
+      "notLinked": "未连接",
+      "sectionTitle": "社交账号绑定"
+    },
+    "importSuccess": "已导入社交账号资料",
+    "importUnavailable": "未能导入资料，请手动设置",
+    "importFailed": "导入失败",
+    "importButton": "导入社交账号资料",
+    "createManually": "自己创建",
+    "connectFailed": "绑定失败",
+    "unlinkSuccess": "解绑成功",
+    "keepOneLoginMethod": "至少保留一种登录方式",
+    "unlinkFailed": "解绑失败"
   },
   "typingLobby": {
     "title": "韩语打字练习",
@@ -1506,5 +1557,116 @@
       "switch": "切换模式"
     },
     "back": "返回主页"
+  },
+  "topikExamList": {
+    "review": "复习错题",
+    "deleteConfirm": "确定要删除这条记录吗？",
+    "historyTitle": "考试记录",
+    "historySubtitle": "回顾你的历史表现",
+    "noHistory": "暂无考试记录",
+    "badge": "TOPIK 备考",
+    "title": "TOPIK 实战模拟",
+    "subtitle": "通过历年真题模拟考试，熟悉考试节奏，精准定位薄弱环节。",
+    "filterAll": "全部",
+    "filterReading": "阅读",
+    "filterListening": "听力",
+    "searchPlaceholder": "搜索届数或标题...",
+    "round": "第 {round} 届",
+    "questionCount": "{count} 题",
+    "timeMinutes": "{minutes} 分钟",
+    "bestScore": "最高分: {score}",
+    "attempts": "{count} 次练习",
+    "notStarted": "尚未开始",
+    "noResults": "没有找到符合条件的考试",
+    "clearFilters": "清除筛选"
+  },
+  "vocabBookPdf": {
+    "title": "单词学习表",
+    "wordHeader": "韩语",
+    "meaningHeader": "释义",
+    "slogan": "每天 10 分钟，轻松学韩语",
+    "footerDesc": "韩语学习平台 · 生词本/刷词/听写",
+    "preparing": "正在准备打印…"
+  },
+  "flashcardsOverlay": {
+    "stillLearning": "仍在学",
+    "remembered": "本次记住",
+    "keyboardHint": "快捷键",
+    "keyboardInstruction": "按空格键或单击卡片以翻页",
+    "spaceKey": "空格键"
+  },
+  "vocabProgress": {
+    "learningSubtitle": "这些是你已经开始学习的词语。继续保持！",
+    "starred": "已收藏",
+    "star": "收藏",
+    "speak": "朗读",
+    "listTitle": "词表",
+    "groupedByFsrs": "按 FSRS 进度分组（共 {count} 个）",
+    "redEyeEnable": "开启红眼模式",
+    "redEyeEnableDesc": "释义将被模糊",
+    "redEyeDisable": "关闭红眼模式",
+    "redEyeDisableDesc": "释义正常显示"
+  },
+  "profileSetupPrompt": {
+    "title": "完善个人资料",
+    "description": "你可以选择导入当前登录方式的头像/昵称，或自己创建。",
+    "useSocial": "使用社交账号资料",
+    "createMyself": "自己创建",
+    "maybeLater": "稍后再说"
+  },
+  "vocabTest": {
+    "correct": "正确",
+    "wrong": "错误",
+    "answerLabel": "正确答案：",
+    "writtenAnswer": "书写回答",
+    "writtenPlaceholder": "请输入答案…",
+    "confirm": "确认",
+    "trueLabel": "对",
+    "falseLabel": "错",
+    "definitionLabel": "定义",
+    "termLabel": "词语",
+    "chooseAnswer": "选择答案",
+    "unanswered": "未作答",
+    "switchToKorean": "切换到韩语",
+    "switchToNative": "切换到母语",
+    "pickFromList": "从下方列表中选择",
+    "reset": "重置",
+    "resultsTitle": "测试结果",
+    "accuracy": "正确率",
+    "time": "用时",
+    "newTest": "重新设置",
+    "review": "逐题回顾",
+    "cardLabel": "卡片",
+    "answered": "已作答",
+    "notAnswered": "未作答",
+    "questionTypeTrueFalse": "判断对错",
+    "questionTypeMultipleChoice": "多项选择",
+    "questionTypeFill": "填空",
+    "questionTypeWritten": "书写回答",
+    "answeredCount": "已作答 {current}/{total}",
+    "unansweredWarning": "还有未作答的题目，已跳转到第一题。",
+    "submitTest": "提交测试",
+    "setupTitle": "设置您的测试",
+    "questions": "问题",
+    "maxQuestions": "最多 {count}",
+    "answers": "回答",
+    "answerLanguageKorean": "韩语",
+    "answerLanguageBoth": "两个都出现",
+    "questionTypes": "测试问题",
+    "notEnoughWords": "（词数不足）",
+    "pickAtLeastOneType": "至少选择一种题型。",
+    "startTest": "开始测试",
+    "fillPrompt": "请完成填空",
+    "nativeLanguage": "中文"
+  },
+  "vocabQuiz": {
+    "pendingTitle": "没关系，您仍在学习！",
+    "pendingSubtitle": "稍后再试此问题。单击继续或按任意键继续。",
+    "continue": "继续",
+    "learnCompleteTitle": "🎉 学习完成！",
+    "learnCompleteSubtitle": "你已完成本轮学习。",
+    "minWordsLearn": "至少需要 4 个单词才能开始学习",
+    "minWordsQuiz": "至少需要 4 个单词才能开始测验",
+    "dontKnow": "不知道？"
   }
 }

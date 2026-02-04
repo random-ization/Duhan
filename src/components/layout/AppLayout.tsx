@@ -10,11 +10,13 @@ import { useMutation } from 'convex/react';
 import { mRef, NoArgs } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useLayout } from '../../contexts/LayoutContext';
+import { getLabels } from '../../utils/i18n';
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
+  const labels = getLabels(language);
   const { sidebarHidden, footerHidden } = useLayout();
   const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
     if (globalThis.window === undefined) return true;
@@ -72,12 +74,11 @@ export default function AppLayout() {
             <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
               <div className="p-6 sm:p-8">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                  {language === 'zh' ? '完善个人资料' : 'Complete your profile'}
+                  {labels.profileSetupPrompt?.title || 'Complete your profile'}
                 </h2>
                 <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  {language === 'zh'
-                    ? '你可以选择导入当前登录方式的头像/昵称，或自己创建。'
-                    : 'Import your current login profile (name/avatar) or create your own.'}
+                  {labels.profileSetupPrompt?.description ||
+                    'Import your current login profile (name/avatar) or create your own.'}
                 </p>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                   <button
@@ -88,26 +89,32 @@ export default function AppLayout() {
                       } finally {
                         setProfilePromptDismissed(true);
                         if (globalThis.window !== undefined) {
-                          globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                          globalThis.window.sessionStorage.setItem(
+                            'profile_setup_prompt_dismissed',
+                            '1'
+                          );
                         }
                       }
                     }}
                     className="flex-1 rounded-2xl px-5 py-3 font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 active:opacity-90 transition"
                   >
-                    {language === 'zh' ? '使用社交账号资料' : 'Use social profile'}
+                    {labels.profileSetupPrompt?.useSocial || 'Use social profile'}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setProfilePromptDismissed(true);
                       if (globalThis.window !== undefined) {
-                        globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                        globalThis.window.sessionStorage.setItem(
+                          'profile_setup_prompt_dismissed',
+                          '1'
+                        );
                       }
                       navigate('/profile');
                     }}
                     className="flex-1 rounded-2xl px-5 py-3 font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition"
                   >
-                    {language === 'zh' ? '自己创建' : 'Create myself'}
+                    {labels.profileSetupPrompt?.createMyself || 'Create myself'}
                   </button>
                 </div>
                 <button
@@ -115,12 +122,15 @@ export default function AppLayout() {
                   onClick={() => {
                     setProfilePromptDismissed(true);
                     if (globalThis.window !== undefined) {
-                      globalThis.window.sessionStorage.setItem('profile_setup_prompt_dismissed', '1');
+                      globalThis.window.sessionStorage.setItem(
+                        'profile_setup_prompt_dismissed',
+                        '1'
+                      );
                     }
                   }}
                   className="mt-4 w-full text-sm font-bold text-slate-500 hover:text-slate-700 transition"
                 >
-                  {language === 'zh' ? '稍后再说' : 'Maybe later'}
+                  {labels.profileSetupPrompt?.maybeLater || 'Maybe later'}
                 </button>
               </div>
             </div>

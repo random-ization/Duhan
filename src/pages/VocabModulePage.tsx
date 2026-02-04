@@ -181,11 +181,29 @@ export default function VocabModulePage() {
   }, [selectedUnitId]);
 
   const availableUnits = useMemo(() => {
-    const total = course?.totalUnits || 20;
-    const base = Array.from({ length: total }, (_, i) => i + 1);
+    // Check if this is a Volume 2 course
+    const isVolume2 =
+      (course?.volume &&
+        (course.volume === '2' || course.volume === 'B' || course.volume === '下')) ||
+      (course?.id &&
+        (course.id.includes('_1b') || course.id.includes('_2b') || course.id.endsWith('b'))) ||
+      (course?.name && (course.name.includes('1B') || course.name.includes('2B')));
+
+    const startUnit = isVolume2 ? 11 : 1;
+    // If it's volume 2, we assume units are 11-20 (or similar range)
+    // If totalUnits is e.g. 10 (per book), then Vol 1 is 1-10, Vol 2 is 11-20.
+    // If totalUnits is 20 (legacy default), we might want to cap it.
+    // Let's assume standard 10 units per volume for Yonsei-like courses.
+    const count =
+      course?.levels?.[0] && typeof course.levels[0] === 'object'
+        ? (course.levels[0] as any).units || 10
+        : 10;
+
+    const base = Array.from({ length: count }, (_, i) => startUnit + i);
+
     if (unitCounts.has(0)) base.unshift(0);
     return base;
-  }, [course?.totalUnits, unitCounts]);
+  }, [course, unitCounts]);
 
   const masteryCount = useMemo(() => {
     return filteredWords.filter(w => {
@@ -278,12 +296,7 @@ export default function VocabModulePage() {
         }
       }
     },
-    [
-      calculateNextSchedule,
-      updateProgressMutation,
-      updateProgressV2Mutation,
-      user?.id,
-    ]
+    [calculateNextSchedule, updateProgressMutation, updateProgressV2Mutation, user?.id]
   );
 
   const toggleStar = useCallback(
@@ -321,7 +334,7 @@ export default function VocabModulePage() {
       );
     }
     if (selectedUnitId === 0) {
-      return language === 'zh' ? '未分单元' : 'Unassigned';
+      return labels.vocab?.unassigned || 'Unassigned';
     }
     return `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`;
   }, [
@@ -330,20 +343,24 @@ export default function VocabModulePage() {
     course?.nameZh,
     labels.vocab?.unit,
     labels.vocab?.allUnits,
-    language,
+    labels.vocab?.unassigned,
     selectedUnitId,
   ]);
 
   const tabs: { id: TabId; label: string; emoji: string }[] = [
     {
       id: 'flashcard',
-      label: language === 'zh' ? '单词卡' : labels.vocab?.flashcard || 'Flashcard',
+      label: labels.vocab?.flashcard || 'Flashcard',
       emoji: '🎴',
     },
-    { id: 'learn', label: language === 'zh' ? '学习模式' : labels.learn || 'Learn', emoji: '🧠' },
+    {
+      id: 'learn',
+      label: labels.learn || 'Learn',
+      emoji: '🧠',
+    },
     {
       id: 'test',
-      label: language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test',
+      label: labels.vocab?.quiz || 'Test',
       emoji: '📝',
     },
     { id: 'match', label: getLabel(labels, ['vocab', 'match']) || 'Match', emoji: '🧩' },
@@ -426,7 +443,7 @@ export default function VocabModulePage() {
                     >
                       <span>
                         {(() => {
-                          if (u === 0) return language === 'zh' ? '未分单元' : 'Unassigned';
+                          if (u === 0) return labels.vocab?.unassigned || 'Unassigned';
                           return `${labels.vocab?.unit || 'Unit'} ${u}`;
                         })()}
                       </span>
@@ -523,7 +540,7 @@ export default function VocabModulePage() {
         open={learnOpen}
         onClose={() => setLearnOpen(false)}
         language={language}
-        title={language === 'zh' ? '学习模式' : labels.learn || 'Learn'}
+        title={labels.learn || 'Learn'}
         variant="fullscreen"
       >
         <div className="p-4 sm:p-6">
@@ -561,7 +578,7 @@ export default function VocabModulePage() {
         open={testOpen}
         onClose={() => setTestOpen(false)}
         language={language}
-        title={language === 'zh' ? '测试模式' : labels.vocab?.quiz || 'Test'}
+        title={labels.vocab?.quiz || 'Test'}
         variant="fullscreen"
       >
         <VocabTest
@@ -637,7 +654,7 @@ export default function VocabModulePage() {
                       onClick={() => setLearnOpen(true)}
                       className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
                     >
-                      🧠 {language === 'zh' ? '学习模式' : labels.learn || 'Learn'}
+                      🧠 {labels.learn || 'Learn'}
                     </button>
                     {typeof selectedUnitId === 'number' &&
                       availableUnits.indexOf(selectedUnitId) < availableUnits.length - 1 && (

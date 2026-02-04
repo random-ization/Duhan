@@ -1,9 +1,7 @@
 import React from 'react';
 import { Lock, Loader2 } from 'lucide-react';
-
 interface ResetPasswordFormProps {
   labels: any;
-  language: string;
   newPassword: string;
   setNewPassword: (val: string) => void;
   confirmPassword: string;
@@ -15,7 +13,6 @@ interface ResetPasswordFormProps {
 
 export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
   labels,
-  language,
   newPassword,
   setNewPassword,
   confirmPassword,
@@ -24,7 +21,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
   loading,
   error,
 }) => {
-  const defaultButtonLabel = language === 'zh' ? '重置密码' : 'Reset Password';
+  const defaultButtonLabel = labels.auth?.recoverPassword;
   const recoverPasswordLabel = labels.auth?.recoverPassword || defaultButtonLabel;
 
   const buttonLabel = loading ? <Loader2 className="w-5 h-5 animate-spin" /> : recoverPasswordLabel;
@@ -33,13 +30,8 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
     <>
       <div className="text-center mb-8">
         <Lock className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">
-          {labels.auth?.setNewPassword || (language === 'zh' ? '设置新密码' : 'Set New Password')}
-        </h1>
-        <p className="text-indigo-200 text-sm">
-          {labels.auth?.enterNewPassword ||
-            (language === 'zh' ? '请输入您的新密码' : 'Enter your new password below')}
-        </p>
+        <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.setNewPassword}</h1>
+        <p className="text-indigo-200 text-sm">{labels.auth?.enterNewPassword}</p>
       </div>
 
       {error && (
@@ -51,7 +43,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-            {language === 'zh' ? '新密码' : 'New Password'}
+            {labels.auth?.newPasswordLabel}
           </label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -71,7 +63,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-indigo-200 ml-1 uppercase tracking-wider">
-            {labels.auth?.confirmPasswordLabel || (language === 'zh' ? '确认密码' : 'Confirm Password')}
+            {labels.auth?.confirmPasswordLabel}
           </label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

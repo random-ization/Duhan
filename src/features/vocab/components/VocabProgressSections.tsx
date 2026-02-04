@@ -94,6 +94,8 @@ export default function VocabProgressSections({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hasShownPickerRef = useRef(false);
   const [showPicker, setShowPicker] = useState(false);
+  const format = (template: string, vars: Record<string, string | number>) =>
+    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
   const grouped = useMemo(() => {
     const buckets: Record<GroupKey, VocabProgressWord[]> = {
@@ -140,21 +142,23 @@ export default function VocabProgressSections({
     return [
       {
         key: 'LEARNING' as const,
-        title: language === 'zh' ? '在学习' : labels.vocab?.learningBadge || 'Learning',
-        subtitle: language === 'zh' ? '这些是你已经开始学习的词语。继续保持！' : undefined,
+        title: labels.vocab?.learningBadge || 'Learning',
+        subtitle:
+          labels.vocabProgress?.learningSubtitle ||
+          'These are words you have started learning. Keep it up!',
       },
       {
         key: 'UNLEARNED' as const,
-        title: language === 'zh' ? '未学习' : labels.vocab?.newBadge || 'New',
+        title: labels.vocab?.newBadge || 'New',
         subtitle: undefined,
       },
       {
         key: 'MASTERED' as const,
-        title: language === 'zh' ? '已掌握' : labels.vocab?.mastered || 'Mastered',
+        title: labels.vocab?.mastered || 'Mastered',
         subtitle: undefined,
       },
     ];
-  }, [labels, language]);
+  }, [labels]);
 
   const renderWordRow = (w: VocabProgressWord) => {
     const isStarred = starredIds?.has(w.id) ?? false;
@@ -164,8 +168,10 @@ export default function VocabProgressSections({
 
     // Helper to get star button aria-label
     const getStarLabel = (): string => {
-      if (isStarred) return language === 'zh' ? '已收藏' : 'Starred';
-      return language === 'zh' ? '收藏' : 'Star';
+      if (isStarred) {
+        return labels.vocabProgress?.starred || 'Starred';
+      }
+      return labels.vocabProgress?.star || 'Star';
     };
 
     return (
@@ -180,15 +186,17 @@ export default function VocabProgressSections({
             </div>
             <div className="min-w-0">
               <div
-                className={`text-slate-700 text-sm font-bold transition-all ${redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
-                  }`}
+                className={`text-slate-700 text-sm font-bold transition-all ${
+                  redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
+                }`}
               >
                 {meaning}
               </div>
               {exampleMeaning && (
                 <div
-                  className={`text-slate-500 text-xs mt-1 transition-all ${redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
-                    }`}
+                  className={`text-slate-500 text-xs mt-1 transition-all ${
+                    redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
+                  }`}
                 >
                   {exampleMeaning}
                 </div>
@@ -213,7 +221,7 @@ export default function VocabProgressSections({
               type="button"
               onClick={() => speak(w.korean)}
               className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center"
-              aria-label={language === 'zh' ? '朗读' : 'Speak'}
+              aria-label={labels.vocabProgress?.speak || 'Speak'}
             >
               <Volume2 className="w-4 h-4 text-slate-500" />
             </button>
@@ -232,23 +240,27 @@ export default function VocabProgressSections({
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-xl font-black text-slate-900">
-            {language === 'zh' ? '列表' : labels.vocab?.quickStudy || 'List'}
+            {labels.vocabProgress?.listTitle || labels.list || 'List'}
           </div>
           <div className="text-sm text-slate-500">
-            {language === 'zh' ? `按 FSRS 进度分组（共 ${totalCount} 个）` : `${totalCount} words`}
+            {format(
+              labels.vocabProgress?.groupedByFsrs || 'Grouped by FSRS progress ({count} words)',
+              { count: totalCount }
+            )}
           </div>
         </div>
 
         <button
           type="button"
           onClick={() => onRedEyeEnabledChange(!redEyeEnabled)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${redEyeEnabled
-            ? 'bg-red-50 border-red-400 text-red-600'
-            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
-            }`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
+            redEyeEnabled
+              ? 'bg-red-50 border-red-400 text-red-600'
+              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
+          }`}
         >
           {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {language === 'zh' ? '红眼模式' : labels.vocab?.redSheet || 'Red Eye'}
+          {labels.vocab?.redSheet || 'Red Eye'}
         </button>
       </div>
 
@@ -280,13 +292,13 @@ export default function VocabProgressSections({
             <div className="pointer-events-auto bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
                 <div className="font-black text-slate-900">
-                  {language === 'zh' ? '红眼模式' : labels.vocab?.redSheet || 'Red Eye'}
+                  {labels.vocab?.redSheet || 'Red Eye'}
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowPicker(false)}
                   className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
-                  aria-label={language === 'zh' ? '关闭' : 'Close'}
+                  aria-label={labels.common?.close || 'Close'}
                 >
                   <X className="w-4 h-4 text-slate-700" />
                 </button>
@@ -299,14 +311,15 @@ export default function VocabProgressSections({
                     onRedEyeEnabledChange(true);
                     setShowPicker(false);
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${redEyeEnabled
-                    ? 'bg-red-50 border-red-400 text-red-700'
-                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                    }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                    redEyeEnabled
+                      ? 'bg-red-50 border-red-400 text-red-700'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                  }`}
                 >
-                  <span>{language === 'zh' ? '开启红眼模式' : 'Enable'}</span>
+                  <span>{labels.vocabProgress?.redEyeEnable || 'Enable'}</span>
                   <span className="text-xs font-bold text-slate-500">
-                    {language === 'zh' ? '释义将被模糊' : 'Blur meanings'}
+                    {labels.vocabProgress?.redEyeEnableDesc || 'Blur meanings'}
                   </span>
                 </button>
                 <button
@@ -315,14 +328,15 @@ export default function VocabProgressSections({
                     onRedEyeEnabledChange(false);
                     setShowPicker(false);
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${redEyeEnabled
-                    ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                    : 'bg-green-50 border-green-400 text-green-700'
-                    }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                    redEyeEnabled
+                      ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                      : 'bg-green-50 border-green-400 text-green-700'
+                  }`}
                 >
-                  <span>{language === 'zh' ? '关闭红眼模式' : 'Disable'}</span>
+                  <span>{labels.vocabProgress?.redEyeDisable || 'Disable'}</span>
                   <span className="text-xs font-bold text-slate-500">
-                    {language === 'zh' ? '释义正常显示' : 'Show meanings'}
+                    {labels.vocabProgress?.redEyeDisableDesc || 'Show meanings'}
                   </span>
                 </button>
               </div>

@@ -61,6 +61,8 @@ const VocabBookDictationPage: React.FC = () => {
 
   const [mode, setMode] = useState<DictationMode>('HEAR_PRONUNCIATION');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const format = (template: string, vars: Record<string, string | number>) =>
+    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
   const [playCount, setPlayCount] = useState<1 | 2 | 3>(2);
   const [gapSeconds, setGapSeconds] = useState<2 | 4 | 6 | 8>(2);
@@ -168,11 +170,12 @@ const VocabBookDictationPage: React.FC = () => {
 
   const getStatusText = () => {
     if (repeatIteration > 0) {
-      return language === 'zh'
-        ? `正在播放第 ${repeatIteration}/${playCount} 遍`
-        : `Playing ${repeatIteration}/${playCount}`;
+      return format(labels.vocab?.dictationStatusPlaying || 'Playing {current}/{total}', {
+        current: repeatIteration,
+        total: playCount,
+      });
     }
-    return language === 'zh' ? '未播放' : 'Idle';
+    return labels.vocab?.dictationStatusIdle || 'Idle';
   };
 
   const renderContent = () => {
@@ -188,10 +191,10 @@ const VocabBookDictationPage: React.FC = () => {
       return (
         <div className="py-24 text-center">
           <p className="text-xl font-black text-slate-800">
-            {labels.dashboard?.vocab?.noDueNow || '暂无单词'}
+            {labels.vocab?.noDueNow || labels.dashboard?.vocab?.noDueNow || 'No words yet'}
           </p>
           <p className="text-slate-400 font-medium mt-2">
-            {labels.vocab?.tryAnotherFilter || '换个分类或搜索试试'}
+            {labels.vocab?.tryAnotherFilter || 'Try another category or search'}
           </p>
         </div>
       );
@@ -205,14 +208,14 @@ const VocabBookDictationPage: React.FC = () => {
               <div>
                 <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
                   {mode === 'HEAR_PRONUNCIATION'
-                    ? labels.vocab?.dictationHearPron || '听发音'
-                    : labels.vocab?.dictationHearMeaning || '听释义'}
+                    ? labels.vocab?.dictationHearPron || 'Hear pronunciation'
+                    : labels.vocab?.dictationHearMeaning || 'Hear meaning'}
                 </p>
                 <h1 className="text-3xl font-black text-slate-900 mt-1">
-                  {language === 'zh' ? '听写播放' : 'Dictation Player'}
+                  {labels.vocab?.dictationPlayerTitle || 'Dictation Player'}
                 </h1>
                 <p className="mt-2 text-slate-600 font-bold">
-                  {language === 'zh' ? '请专注听音并书写' : 'Listen and write'}
+                  {labels.vocab?.dictationPlayerSubtitle || 'Listen and write'}
                 </p>
               </div>
               <div className="text-right">
@@ -228,7 +231,7 @@ const VocabBookDictationPage: React.FC = () => {
                 className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 inline-flex items-center gap-2"
               >
                 <ChevronLeft className="w-5 h-5" />
-                {labels.common?.prev || '上一词'}
+                {labels.common?.prev || 'Previous'}
               </button>
 
               {playing ? (
@@ -237,7 +240,7 @@ const VocabBookDictationPage: React.FC = () => {
                   className="px-5 py-3 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400 inline-flex items-center gap-2"
                 >
                   <Square className="w-5 h-5" />
-                  {labels.vocab?.stop || '停止'}
+                  {labels.vocab?.stop || 'Stop'}
                 </button>
               ) : (
                 <button
@@ -245,7 +248,7 @@ const VocabBookDictationPage: React.FC = () => {
                   className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black border-[3px] border-slate-800 inline-flex items-center gap-2"
                 >
                   <Play className="w-5 h-5" />
-                  {labels.vocab?.play || '播放'}
+                  {labels.vocab?.play || 'Play'}
                 </button>
               )}
 
@@ -253,7 +256,7 @@ const VocabBookDictationPage: React.FC = () => {
                 onClick={next}
                 className="px-4 py-3 rounded-2xl border-[3px] border-slate-200 font-black text-slate-700 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
               >
-                {labels.common?.next || '下一词'}
+                {labels.common?.next || 'Next'}
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -279,10 +282,10 @@ const VocabBookDictationPage: React.FC = () => {
               </div>
               <div>
                 <p className="font-black text-slate-900">
-                  {labels.vocab?.dictationHearPron || '听发音'}
+                  {labels.vocab?.dictationHearPron || 'Hear pronunciation'}
                 </p>
                 <p className="text-xs font-bold text-slate-400">
-                  {labels.vocab?.dictationHearPronDesc || '写单词/释义'}
+                  {labels.vocab?.dictationHearPronDesc || 'Write the word/meaning'}
                 </p>
               </div>
             </div>
@@ -302,10 +305,10 @@ const VocabBookDictationPage: React.FC = () => {
               </div>
               <div>
                 <p className="font-black text-slate-900">
-                  {labels.vocab?.dictationHearMeaning || '听释义'}
+                  {labels.vocab?.dictationHearMeaning || 'Hear meaning'}
                 </p>
                 <p className="text-xs font-bold text-slate-400">
-                  {labels.vocab?.dictationHearMeaningDesc || '写单词'}
+                  {labels.vocab?.dictationHearMeaningDesc || 'Write the word'}
                 </p>
               </div>
             </div>
@@ -315,7 +318,7 @@ const VocabBookDictationPage: React.FC = () => {
         <div className="rounded-[28px] bg-white border-[3px] border-slate-200 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6 space-y-6">
           <div>
             <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
-              {labels.vocab?.repeatCount || '单词播放次数'}
+              {labels.vocab?.repeatCount || 'Repetitions'}
             </p>
             <div className="grid grid-cols-3 gap-2">
               {([1, 2, 3] as const).map(v => (
@@ -328,7 +331,7 @@ const VocabBookDictationPage: React.FC = () => {
                       : 'border-slate-200 bg-white text-slate-700'
                   }`}
                 >
-                  {v}次
+                  {format(labels.vocab?.repeatTimes || '{count}x', { count: v })}
                 </button>
               ))}
             </div>
@@ -336,7 +339,7 @@ const VocabBookDictationPage: React.FC = () => {
 
           <div>
             <p className="text-xs font-black text-slate-400 tracking-wider uppercase mb-2">
-              {labels.vocab?.playGap || '单词播放间隔'}
+              {labels.vocab?.playGap || 'Repeat interval'}
             </p>
             <div className="grid grid-cols-4 gap-2">
               {([2, 4, 6, 8] as const).map(v => (
@@ -349,7 +352,7 @@ const VocabBookDictationPage: React.FC = () => {
                       : 'border-slate-200 bg-white text-slate-700'
                   }`}
                 >
-                  {v}秒
+                  {format(labels.vocab?.seconds || '{count}s', { count: v })}
                 </button>
               ))}
             </div>
@@ -357,7 +360,7 @@ const VocabBookDictationPage: React.FC = () => {
 
           <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
             <span className="font-black text-slate-800">
-              {labels.vocab?.autoNext || '自动播放下一词'}
+              {labels.vocab?.autoNext || 'Auto next'}
             </span>
             <input
               type="checkbox"
@@ -371,7 +374,7 @@ const VocabBookDictationPage: React.FC = () => {
             onClick={start}
             className="w-full py-4 rounded-2xl bg-rose-500 text-white font-black border-[3px] border-rose-400"
           >
-            {language === 'zh' ? '开始播放' : labels.vocab?.play || 'Play'}
+            {labels.vocab?.dictationStartButton || 'Start playback'}
           </button>
         </div>
       </div>
@@ -385,14 +388,14 @@ const VocabBookDictationPage: React.FC = () => {
           <button
             onClick={() => navigate('/vocab-book')}
             className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-rose-300 transition-all duration-200"
-            aria-label="返回"
+            aria-label={labels.common?.back || 'Back'}
           >
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </button>
 
           <div className="text-center">
             <p className="text-xs font-black text-rose-500 tracking-wider uppercase">
-              {labels.vocab?.modeDictation || '听写'}
+              {labels.vocab?.modeDictation || 'Dictation'}
             </p>
             <p className="text-sm font-black text-slate-700">
               {started ? `${index + 1}/${total || 0}` : ''}
@@ -402,7 +405,7 @@ const VocabBookDictationPage: React.FC = () => {
           <button
             onClick={() => setSettingsOpen(true)}
             className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-rose-300 transition-all duration-200"
-            aria-label="设置"
+            aria-label={labels.vocab?.settings || 'Settings'}
           >
             <Settings2 className="w-5 h-5 text-slate-700" />
           </button>
@@ -431,16 +434,16 @@ const VocabBookDictationPage: React.FC = () => {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
-                    {labels.settings || '设置'}
+                    {labels.vocab?.settings || labels.settings || 'Settings'}
                   </p>
                   <h2 className="text-2xl font-black text-slate-900">
-                    {labels.vocab?.modeDictation || '听写'}
+                    {labels.vocab?.modeDictation || 'Dictation'}
                   </h2>
                 </div>
                 <button
                   onClick={() => setSettingsOpen(false)}
                   className="p-2 rounded-xl hover:bg-slate-100"
-                  aria-label="关闭"
+                  aria-label={labels.common?.close || 'Close'}
                 >
                   <X className="w-5 h-5 text-slate-600" />
                 </button>
@@ -449,7 +452,7 @@ const VocabBookDictationPage: React.FC = () => {
               <div className="space-y-3">
                 <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
                   <span className="font-black text-slate-800">
-                    {labels.vocab?.autoNext || '自动播放下一词'}
+                    {labels.vocab?.autoNext || 'Auto next'}
                   </span>
                   <input
                     type="checkbox"
@@ -464,7 +467,7 @@ const VocabBookDictationPage: React.FC = () => {
                 onClick={() => setSettingsOpen(false)}
                 className="mt-6 w-full py-3 rounded-2xl bg-slate-900 text-white font-black"
               >
-                {labels.done || '完成'}
+                {labels.done || 'Done'}
               </button>
             </motion.div>
           </motion.div>

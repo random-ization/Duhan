@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { Play, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
+import { localeFromLanguage } from '../utils/locale';
 import BackButton from '../components/ui/BackButton';
 import { getLabel, getLabels, Labels } from '../utils/i18n';
-import { NoArgs, qRef } from '../utils/convexRefs';
+import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 interface PodcastChannel {
@@ -17,21 +17,7 @@ interface PodcastChannel {
   artworkUrl?: string;
   feedUrl?: string;
   itunesId?: string;
-}
-
-interface PodcastItem {
-  _id?: string;
-  id?: string;
-  guid?: string;
-  title: string;
-  audioUrl?: string;
-  artwork?: string;
-  artworkUrl?: string;
-  author?: string;
   views?: number;
-  channel?: PodcastChannel;
-  itunesId?: string;
-  feedUrl?: string;
 }
 
 interface HistoryItem {
@@ -59,33 +45,44 @@ const getPodcastMessages = (labels: Labels) => ({
   HISTORY_TITLE: labels.history || 'History',
 });
 
-const toPodcastItemList = (value: unknown): PodcastItem[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((v): v is Record<string, unknown> => typeof v === 'object' && v !== null)
-    .map(v => ({
-      _id: typeof v._id === 'string' ? v._id : undefined,
-      id: typeof v.id === 'string' ? v.id : undefined,
-      guid: typeof v.guid === 'string' ? v.guid : undefined,
-      title: typeof v.title === 'string' ? v.title : '',
-      audioUrl: typeof v.audioUrl === 'string' ? v.audioUrl : undefined,
-      artwork: typeof v.artwork === 'string' ? v.artwork : undefined,
-      artworkUrl: typeof v.artworkUrl === 'string' ? v.artworkUrl : undefined,
-      author: typeof v.author === 'string' ? v.author : undefined,
-      views: typeof v.views === 'number' ? v.views : undefined,
-      channel:
-        typeof v.channel === 'object' && v.channel !== null
-          ? (v.channel as PodcastChannel)
-          : undefined,
-      itunesId: typeof v.itunesId === 'string' ? v.itunesId : undefined,
-      feedUrl: typeof v.feedUrl === 'string' ? v.feedUrl : undefined,
-    }))
-    .filter(p => p.title !== '');
+const useScrollButtons = () => {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+
+  const update = React.useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < max - 1);
+  }, []);
+
+  React.useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    const handle = () => update();
+    el.addEventListener('scroll', handle, { passive: true });
+    window.addEventListener('resize', handle);
+    return () => {
+      el.removeEventListener('scroll', handle);
+      window.removeEventListener('resize', handle);
+    };
+  }, [update]);
+
+  const scrollByAmount = (direction: 'left' | 'right') => {
+    const el = ref.current;
+    if (!el) return;
+    const amount = Math.max(240, Math.round(el.clientWidth * 0.7));
+    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  return { ref, canScrollLeft, canScrollRight, scrollByAmount };
 };
 
 export default function PodcastDashboard() {
   const navigate = useLocalizedNavigate();
-  const location = useLocation();
   const { user, language } = useAuth();
   const labels = getLabels(language);
   const podcastMsgs = getPodcastMessages(labels);
@@ -93,13 +90,39 @@ export default function PodcastDashboard() {
   // State
   const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
   const [searchTerm, setSearchTerm] = useState('');
+  const [chartChannels, setChartChannels] = useState<PodcastChannel[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const chartCacheKey = 'podcast:koreanChart';
+  const chartCacheTsKey = 'podcast:koreanChart:ts';
+  const chartCacheTtlMs = 1000 * 60 * 60 * 24 * 7;
+  const {
+    ref: subscriptionsRef,
+    canScrollLeft: subscriptionsCanLeft,
+    canScrollRight: subscriptionsCanRight,
+    scrollByAmount: scrollSubscriptions,
+  } = useScrollButtons();
+  const {
+    ref: trendingRef,
+    canScrollLeft: trendingCanLeft,
+    canScrollRight: trendingCanRight,
+    scrollByAmount: scrollTrending,
+  } = useScrollButtons();
+  const {
+    ref: historyRef,
+    canScrollLeft: historyCanLeft,
+    canScrollRight: historyCanRight,
+    scrollByAmount: scrollHistory,
+  } = useScrollButtons();
 
   // Convex Integration
   type TrendingResult = {
-    internal: (PodcastItem & { _id: string; channel?: PodcastChannel & { _id: string } })[];
-    external: unknown[];
+    internal: (PodcastChannel & { _id: string })[];
+    external: (PodcastChannel & { _id: string })[];
   };
   const trendingData = useQuery(qRef<NoArgs, TrendingResult>('podcasts:getTrending'));
+  const getTopKoreanPodcasts = useAction(
+    aRef<{ limit?: number }, PodcastChannel[]>('podcastActions:getTopKoreanPodcasts')
+  );
   // Note: getHistory and getSubscriptions use authentication internally, no userId arg needed
   const historyData = useQuery(
     qRef<NoArgs, (HistoryItem & { _id: string })[]>('podcasts:getHistory'),
@@ -114,12 +137,14 @@ export default function PodcastDashboard() {
   const trending = React.useMemo(() => {
     if (!trendingData) return { external: [], internal: [] };
     return {
-      internal: trendingData.internal.map(ep => ({
-        ...ep,
-        id: ep._id,
-        channel: ep.channel ? { ...ep.channel, id: ep.channel._id } : undefined,
+      internal: trendingData.internal.map(channel => ({
+        ...channel,
+        id: channel._id,
       })),
-      external: toPodcastItemList(trendingData.external),
+      external: trendingData.external.map(channel => ({
+        ...channel,
+        id: channel._id,
+      })),
     };
   }, [trendingData]);
 
@@ -134,94 +159,62 @@ export default function PodcastDashboard() {
   const loading = trendingData === undefined;
   const subscriptionsLoading = user ? subscriptionsData === undefined : false;
   const subscriptions = React.useMemo(() => subscriptionsData ?? [], [subscriptionsData]);
-  const isSubscriptionsView = location.pathname.includes('/podcasts/subscriptions');
 
-  if (isSubscriptionsView) {
-    return (
-      <div
-        className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32"
-        style={{
-          backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
-          backgroundSize: '24px 24px',
-        }}
-      >
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="flex items-center gap-4">
-            <BackButton onClick={() => navigate('/podcasts')} />
-            <h1 className="text-3xl font-black text-slate-900">
-              {labels.dashboard?.podcast?.mySubs || 'My Subscriptions'}
-            </h1>
-          </div>
+  React.useEffect(() => {
+    let cancelled = false;
+    const now = Date.now();
+    let cached: PodcastChannel[] | null = null;
+    let cachedAt = 0;
 
-          {!user && (
-            <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 text-center space-y-4">
-              <p className="font-bold text-slate-600">
-                {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
-              >
-                {labels.login || 'Login'}
-              </button>
-            </div>
-          )}
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedRaw = window.localStorage.getItem(chartCacheKey);
+        const cachedTs = window.localStorage.getItem(chartCacheTsKey);
+        cachedAt = cachedTs ? Number(cachedTs) : 0;
+        if (cachedRaw) cached = JSON.parse(cachedRaw) as PodcastChannel[];
+      } catch {
+        cached = null;
+        cachedAt = 0;
+      }
+    }
 
-          {user && subscriptionsLoading && (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
-            </div>
-          )}
+    const hasCache = Array.isArray(cached) && cached.length > 0;
+    const isStale = !cached || now - cachedAt >= chartCacheTtlMs;
 
-          {user && !subscriptionsLoading && subscriptions.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold">
-              {labels.dashboard?.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
-            </div>
-          )}
+    if (hasCache) {
+      setChartChannels(cached!);
+      setChartLoading(false);
+    } else {
+      setChartLoading(true);
+    }
 
-          {user && !subscriptionsLoading && subscriptions.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subscriptions.map(channel => {
-                const channelId = channel.itunesId || channel.id || channel._id;
-                const params = new URLSearchParams();
-                if (channelId) params.set('id', String(channelId));
-                if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
-                const query = params.toString();
-                return (
-                  <button
-                    key={channelId || channel.title}
-                    type="button"
-                    onClick={() => {
-                      const finalQuery = query ? `?${query}` : '';
-                      navigate(`/podcasts/channel${finalQuery}`, {
-                        state: { channel },
-                      });
-                    }}
-                    className="text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex gap-4 items-center"
-                  >
-                    <img
-                      src={channel.artworkUrl || channel.artwork || 'https://placehold.co/100x100'}
-                      alt={channel.title}
-                      className="w-16 h-16 rounded-xl border-2 border-slate-100 object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-lg text-slate-900 line-clamp-1">
-                        {channel.title}
-                      </h3>
-                      <p className="text-sm font-bold text-slate-500 line-clamp-1">
-                        {channel.author}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+    if (!isStale) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getTopKoreanPodcasts({ limit: 12 })
+      .then(results => {
+        if (cancelled) return;
+        const next = results ?? [];
+        setChartChannels(next);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(chartCacheKey, JSON.stringify(next));
+          window.localStorage.setItem(chartCacheTsKey, String(Date.now()));
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (!hasCache) setChartChannels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setChartLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [getTopKoreanPodcasts, chartCacheKey, chartCacheTsKey, chartCacheTtlMs]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,12 +226,12 @@ export default function PodcastDashboard() {
   // Determine featured content: Last played episode OR Top Trending (Internal)
   const lastPlayed = history.length > 0 ? history[0] : null;
 
-  let featuredPodcast: PodcastItem | null = null;
+  let featuredChannel: PodcastChannel | null = null;
   if (!lastPlayed) {
     if (trending.internal.length > 0) {
-      featuredPodcast = trending.internal[0];
+      featuredChannel = trending.internal[0];
     } else if (trending.external.length > 0) {
-      featuredPodcast = trending.external[0];
+      featuredChannel = trending.external[0];
     }
   }
 
@@ -294,12 +287,19 @@ export default function PodcastDashboard() {
       );
     }
 
-    if (featuredPodcast) {
+    if (featuredChannel) {
+      const params = new URLSearchParams();
+      const channelId = featuredChannel.itunesId || featuredChannel.id;
+      if (channelId) params.set('id', String(channelId));
+      if (featuredChannel.feedUrl) params.set('feedUrl', featuredChannel.feedUrl);
+      const query = params.toString();
       return (
         <button
           type="button"
           onClick={() =>
-            navigate(`/podcasts/channel?id=${featuredPodcast.itunesId || featuredPodcast.id}`)
+            navigate(`/podcasts/channel${query ? `?${query}` : ''}`, {
+              state: { channel: featuredChannel },
+            })
           }
           className="w-full text-left bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6"
         >
@@ -309,10 +309,8 @@ export default function PodcastDashboard() {
           <div className="w-28 h-28 rounded-2xl bg-indigo-500 border-2 border-white shadow-lg overflow-hidden shrink-0 z-10">
             <img
               src={
-                featuredPodcast.artworkUrl ||
-                featuredPodcast.artwork ||
-                featuredPodcast.channel?.artworkUrl ||
-                featuredPodcast.channel?.artwork ||
+                featuredChannel.artworkUrl ||
+                featuredChannel.artwork ||
                 'https://placehold.co/400x400/indigo/white?text=Pod'
               }
               className="w-full h-full object-cover"
@@ -324,8 +322,8 @@ export default function PodcastDashboard() {
               <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>{' '}
               {labels.dashboard?.podcast?.featured || 'Featured Podcast'}
             </div>
-            <h3 className="text-2xl font-black mb-1 line-clamp-1">{featuredPodcast.title}</h3>
-            <p className="text-slate-400 text-sm">{featuredPodcast.author}</p>
+            <h3 className="text-2xl font-black mb-1 line-clamp-1">{featuredChannel.title}</h3>
+            <p className="text-slate-400 text-sm">{featuredChannel.author}</p>
           </div>
         </button>
       );
@@ -338,7 +336,14 @@ export default function PodcastDashboard() {
     );
   };
 
-  const activeTrending = activeTab === 'community' ? trending.internal : trending.external;
+  const activeTrending = activeTab === 'community' ? chartChannels : trending.internal;
+  const activeLoading = activeTab === 'community' ? chartLoading : loading;
+  const displayedTrending = React.useMemo(() => {
+    if (activeTab !== 'weekly') return activeTrending;
+    return activeTrending.filter(
+      pod => pod.title && pod.title.trim() && pod.title.trim().toLowerCase() !== 'unknown'
+    );
+  }, [activeTab, activeTrending]);
 
   return (
     <div
@@ -350,30 +355,21 @@ export default function PodcastDashboard() {
     >
       <div className="max-w-7xl mx-auto space-y-12">
         {/* 1. Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-6">
-          <div className="flex items-center gap-4">
-            <BackButton onClick={() => navigate('/dashboard')} />
-            <div>
-              <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
-                {podcastMsgs.DASHBOARD_TITLE}
-              </h2>
-              <p className="text-slate-500 font-bold">
-                {labels.dashboard?.podcast?.headerSubtitle || 'Listening Skills'}
-              </p>
-            </div>
-            <img
-              src="/emojis/Headphone.png"
-              className="w-14 h-14 animate-bounce-slow"
-              alt="headphone"
-            />
+        <div className="flex items-center gap-4 mb-6">
+          <BackButton onClick={() => navigate('/dashboard')} />
+          <div>
+            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
+              {podcastMsgs.DASHBOARD_TITLE}
+            </h2>
+            <p className="text-slate-500 font-bold">
+              {labels.dashboard?.podcast?.headerSubtitle || 'Listening Skills'}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/podcasts/subscriptions')}
-            className="flex items-center gap-2 bg-white border-2 border-slate-900 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 shadow-pop active:shadow-none active:translate-y-1 transition text-slate-900"
-          >
-            <Library size={18} /> {labels.dashboard?.podcast?.mySubs || 'My Subscriptions'}
-          </button>
+          <img
+            src="/emojis/Headphone.png"
+            className="w-14 h-14 animate-bounce-slow"
+            alt="headphone"
+          />
         </div>
 
         {/* 2. Search & Filters */}
@@ -415,20 +411,276 @@ export default function PodcastDashboard() {
           </div>
         </div>
 
-        {/* 3. Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column (Featured + History) */}
-          <div className="lg:col-span-8 space-y-8">
-            {/* Featured Hero Card */}
+        {/* 3. Main Content (Centered) */}
+        <div className="space-y-12">
+          {/* Featured */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Disc size={20} className="text-indigo-500" />
+              <h3 className="font-black text-xl">
+                {lastPlayed
+                  ? labels.dashboard?.podcast?.continueListening || 'Continue Listening'
+                  : labels.dashboard?.podcast?.featured || 'Featured Podcast'}
+              </h3>
+            </div>
             {renderFeaturedHero()}
+          </section>
 
-            {/* Listening History (Vertical Grid) */}
-            {history.length > 0 && (
-              <div>
-                <h3 className="font-black text-xl mb-4 flex items-center gap-2 text-slate-900">
-                  <HistoryIcon size={20} /> {podcastMsgs.HISTORY_TITLE}
+          {/* My Subscriptions */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Library size={20} className="text-indigo-500" />
+              <h3 className="font-black text-xl">
+                {labels.dashboard?.podcast?.mySubs || 'My Subscriptions'}
+              </h3>
+            </div>
+
+            {!user && (
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 text-center space-y-4">
+                <p className="font-bold text-slate-600">
+                  {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
+                >
+                  {labels.login || 'Login'}
+                </button>
+              </div>
+            )}
+
+            {user && subscriptionsLoading && (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
+              </div>
+            )}
+
+            {user && !subscriptionsLoading && subscriptions.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold">
+                {labels.dashboard?.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
+              </div>
+            )}
+
+            {user && !subscriptionsLoading && subscriptions.length > 0 && (
+              <div className="relative">
+                <div
+                  ref={subscriptionsRef}
+                  className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory"
+                >
+                  {subscriptions.map(channel => {
+                    const channelId = channel.itunesId || channel.id || channel._id;
+                    const params = new URLSearchParams();
+                    if (channelId) params.set('id', String(channelId));
+                    if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
+                    const query = params.toString();
+                    return (
+                      <button
+                        key={channelId || channel.title}
+                        type="button"
+                        onClick={() => {
+                          const finalQuery = query ? `?${query}` : '';
+                          navigate(`/podcasts/channel${finalQuery}`, {
+                            state: { channel },
+                          });
+                        }}
+                        className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start"
+                      >
+                        <div className="w-full aspect-square rounded-xl border-2 border-slate-100 overflow-hidden bg-slate-50">
+                          <img
+                            src={
+                              channel.artworkUrl ||
+                              channel.artwork ||
+                              'https://placehold.co/220x220'
+                            }
+                            alt={channel.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-sm text-slate-900 line-clamp-2">
+                            {channel.title}
+                          </h4>
+                          <p className="text-xs font-bold text-slate-500 line-clamp-1 mt-1">
+                            {channel.author}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {subscriptionsCanLeft && (
+                  <button
+                    type="button"
+                    onClick={() => scrollSubscriptions('left')}
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    aria-label="Scroll left"
+                  >
+                    ‹
+                  </button>
+                )}
+                {subscriptionsCanRight && (
+                  <button
+                    type="button"
+                    onClick={() => scrollSubscriptions('right')}
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    aria-label="Scroll right"
+                  >
+                    ›
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Trending / Editor Picks */}
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-2 text-slate-900">
+                <Play size={20} className="text-indigo-500" />
+                <h3 className="font-black text-xl">
+                  {activeTab === 'community'
+                    ? podcastMsgs.DASHBOARD_COMMUNITY
+                    : podcastMsgs.DASHBOARD_EDITOR_PICKS}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('community')}
+                  className={`px-4 py-2 rounded-full text-sm font-black transition ${
+                    activeTab === 'community'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white text-slate-500 border-2 border-slate-200 hover:border-slate-900'
+                  }`}
+                >
+                  {podcastMsgs.DASHBOARD_COMMUNITY}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('weekly')}
+                  className={`px-4 py-2 rounded-full text-sm font-black transition ${
+                    activeTab === 'weekly'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white text-slate-500 border-2 border-slate-200 hover:border-slate-900'
+                  }`}
+                >
+                  {podcastMsgs.DASHBOARD_EDITOR_PICKS}
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div
+                ref={trendingRef}
+                className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory"
+              >
+                {displayedTrending.slice(0, 12).map((pod, idx) => (
+                  <button
+                    key={pod.id || pod.title || idx}
+                    type="button"
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      const channelId = pod.itunesId || pod.id;
+                      if (channelId) params.set('id', String(channelId));
+                      if (pod.feedUrl) params.set('feedUrl', pod.feedUrl);
+                      const query = params.toString();
+                      navigate(`/podcasts/channel${query ? `?${query}` : ''}`, {
+                        state: { channel: pod },
+                      });
+                    }}
+                    className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start"
+                  >
+                    <div className="relative w-full aspect-square rounded-xl border-2 border-slate-100 overflow-hidden bg-slate-50">
+                      <img
+                        src={pod.artworkUrl || pod.artwork || 'https://placehold.co/220x220'}
+                        className="w-full h-full object-cover"
+                        alt={pod.title}
+                      />
+                      <span
+                        className={`absolute top-2 left-2 text-[10px] font-black px-2 py-1 rounded-full ${idx < 3 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600'}`}
+                      >
+                        #{idx + 1}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-black text-sm text-slate-900 line-clamp-2">
+                        {pod.title}
+                      </h4>
+                      {pod.author &&
+                        pod.author.trim() &&
+                        pod.author.trim().toLowerCase() !== 'unknown' && (
+                          <p className="text-xs text-slate-500 line-clamp-1 mt-1">{pod.author}</p>
+                        )}
+                      {activeTab === 'weekly' && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-full font-bold">
+                            {pod.views || 0} {labels.dashboard?.podcast?.plays || 'plays'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">
+                            {labels.dashboard?.podcast?.editorPicks || 'User Hot'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+
+                {activeLoading &&
+                  [1, 2, 3, 4].map(i => (
+                    <div
+                      key={i}
+                      className="min-w-[220px] max-w-[220px] bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm animate-pulse snap-start"
+                    >
+                      <div className="w-full aspect-square bg-slate-200 rounded-xl" />
+                      <div className="mt-3 space-y-2">
+                        <div className="h-4 w-24 bg-slate-200 rounded" />
+                        <div className="h-3 w-16 bg-slate-100 rounded" />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              {trendingCanLeft && (
+                <button
+                  type="button"
+                  onClick={() => scrollTrending('left')}
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                  aria-label="Scroll left"
+                >
+                  ‹
+                </button>
+              )}
+              {trendingCanRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollTrending('right')}
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                  aria-label="Scroll right"
+                >
+                  ›
+                </button>
+              )}
+            </div>
+
+            {!activeLoading && displayedTrending.length === 0 && (
+              <div className="text-center py-8 text-slate-400 font-bold text-sm bg-white rounded-2xl border-2 border-slate-900">
+                {podcastMsgs.EMPTY_TRENDING}
+              </div>
+            )}
+          </section>
+
+          {/* Listening History */}
+          {history.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-slate-900">
+                <HistoryIcon size={20} className="text-indigo-500" />
+                <h3 className="font-black text-xl">{podcastMsgs.HISTORY_TITLE}</h3>
+              </div>
+              <div className="relative">
+                <div
+                  ref={historyRef}
+                  className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory"
+                >
                   {history.map(record => (
                     <button
                       key={record.id}
@@ -448,7 +700,7 @@ export default function PodcastDashboard() {
                           },
                         })
                       }
-                      className="text-left bg-white p-3 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop transition cursor-pointer flex gap-3 items-center group"
+                      className="min-w-[260px] max-w-[260px] text-left bg-white p-3 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-3 items-center group snap-start"
                     >
                       <div className="relative w-14 h-14 shrink-0">
                         <img
@@ -468,133 +720,36 @@ export default function PodcastDashboard() {
                           {record.channelName}
                           <span className="text-slate-300">•</span>
                           {new Date(record.playedAt).toLocaleDateString(
-                            language === 'zh' ? 'zh-CN' : 'en-US'
+                            localeFromLanguage(language)
                           )}
                         </div>
                       </div>
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column (Community Charts & Recommended) */}
-          <div className="lg:col-span-4 bg-white rounded-[2rem] border-2 border-slate-900 p-6 shadow-pop h-fit sticky top-6">
-            <div className="flex gap-4 mb-6 border-b-2 border-slate-100 pb-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('community')}
-                className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'community' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                {podcastMsgs.DASHBOARD_COMMUNITY}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('weekly')}
-                className={`text-lg font-black transition pb-2 -mb-3.5 ${activeTab === 'weekly' ? 'text-slate-900 border-b-4 border-indigo-500' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                {podcastMsgs.DASHBOARD_EDITOR_PICKS}
-              </button>
-            </div>
-
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-              {activeTrending.slice(0, 10).map((pod, idx) => (
-                <button
-                  key={pod.id || pod.guid || pod.title || idx}
-                  type="button"
-                  onClick={() => {
-                    if (activeTab === 'weekly') {
-                      // External (Channel) -> Go to Channel Page
-                      navigate(
-                        `/podcasts/channel?id=${pod.id}&feedUrl=${encodeURIComponent(pod.feedUrl ?? '')}`
-                      );
-                    } else {
-                      // Internal (Episode) -> Go to Player directly
-                      navigate('/podcasts/player', {
-                        state: {
-                          episode: {
-                            guid: pod.guid,
-                            title: pod.title,
-                            audioUrl: pod.audioUrl,
-                            channel: pod.channel,
-                          },
-                        },
-                      });
-                    }
-                  }}
-                  className="w-full text-left flex items-center gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition"
-                >
-                  <div
-                    className={`font-black text-xl w-6 text-center ${idx < 3 ? 'text-indigo-500' : 'text-slate-300'}`}
+                {historyCanLeft && (
+                  <button
+                    type="button"
+                    onClick={() => scrollHistory('left')}
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    aria-label="Scroll left"
                   >
-                    {idx + 1}
-                  </div>
-                  <img
-                    src={
-                      pod.artwork ||
-                      pod.artworkUrl ||
-                      pod.channel?.artworkUrl ||
-                      pod.channel?.artwork ||
-                      'https://placehold.co/100x100'
-                    }
-                    className="w-12 h-12 rounded-lg border border-slate-200 object-cover"
-                    alt={pod.title}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-slate-900 truncate group-hover:text-indigo-600 transition">
-                      {pod.title}
-                    </h4>
-                    <p className="text-xs text-slate-500 truncate">
-                      {pod.author ||
-                        pod.channel?.title ||
-                        labels.dashboard?.podcast?.unknown ||
-                        'Unknown'}
-                    </p>
-                    {activeTab === 'community' && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">
-                          {pod.views || 0} {labels.dashboard?.podcast?.plays || 'plays'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {activeTab === 'community' && (
-                    <Play
-                      size={16}
-                      className="text-slate-300 group-hover:text-indigo-500 transition"
-                    />
-                  )}
-                </button>
-              ))}
-
-              {/* Show skeleton if loading */}
-              {loading &&
-                !trending.external.length &&
-                [1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center gap-4 p-2 rounded-xl animate-pulse">
-                    <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
-                    <div className="w-12 h-12 bg-slate-200 rounded-lg" />
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="h-4 w-24 bg-slate-200 rounded"></div>
-                      <div className="h-3 w-16 bg-slate-100 rounded"></div>
-                    </div>
-                  </div>
-                ))}
-
-              {!loading && activeTrending.length === 0 && (
-                <div className="text-center py-8 text-slate-400 font-bold text-sm">
-                  {podcastMsgs.EMPTY_TRENDING}
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              className="w-full mt-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-500 hover:border-slate-900 hover:text-slate-900 transition"
-            >
-              {podcastMsgs.DASHBOARD_VIEW_ALL}
-            </button>
-          </div>
+                    ‹
+                  </button>
+                )}
+                {historyCanRight && (
+                  <button
+                    type="button"
+                    onClick={() => scrollHistory('right')}
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    aria-label="Scroll right"
+                  >
+                    ›
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

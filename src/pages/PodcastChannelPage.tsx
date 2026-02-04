@@ -9,6 +9,7 @@ import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
+import { localeFromLanguage } from '../utils/locale';
 
 interface Episode {
   title: string;
@@ -19,6 +20,7 @@ interface Episode {
   guid?: string;
   link?: string;
   id?: string;
+  image?: string;
 }
 
 interface ChannelData {
@@ -161,6 +163,13 @@ const PodcastChannelPage: React.FC = () => {
   const handlePlayEpisode = (episode: Episode) => {
     const fullEpisode = {
       ...episode,
+      image:
+        episode.image ||
+        data?.channel.image ||
+        stateChannel?.image ||
+        data?.channel.artworkUrl ||
+        data?.channel.artwork ||
+        '',
       channelTitle: data?.channel.title,
       channelArtwork: data?.channel.image,
       // Fallback for missing GUID (use title or audio hash if needed)
@@ -202,7 +211,7 @@ const PodcastChannelPage: React.FC = () => {
     if (!dateStr) return '';
     try {
       const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-      return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
+      return date.toLocaleDateString(localeFromLanguage(language), {
         month: 'short',
         day: 'numeric',
         year: 'numeric',

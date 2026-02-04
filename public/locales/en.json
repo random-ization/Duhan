@@ -71,7 +71,26 @@
   "grammar": "Grammar",
   "grammarDesc": "AI-analyzed grammar points and usage examples.",
   "review": "Review & Practice",
-  "vocabBook": "Vocabulary Book",
+  "vocabBook": {
+    "title": "Vocab Book",
+    "exportPdf": "Export PDF",
+    "exportPdfTitle": "Export PDF",
+    "wordSheetTitle": "Word Sheet",
+    "exporting": "Exporting...",
+    "signInToExport": "Please sign in to export",
+    "exportFailed": "Export failed. Please try again.",
+    "markMastered": "Mark as mastered",
+    "unmarkMastered": "Unmark mastered",
+    "exportModes": {
+      "a4Title": "A4 Dictation",
+      "a4Desc": "Two-way test",
+      "langListTitle": "English List",
+      "langListDesc": "Write the word",
+      "koListTitle": "Korean List",
+      "koListDesc": "Write the meaning",
+      "shuffleLabel": "Shuffle"
+    }
+  },
   "savedWordsDesc": "Review words you saved manually.",
   "mistakeBook": "Mistake Notebook",
   "mistakeWordsDesc": "Practice words you got wrong.",
@@ -585,8 +604,8 @@
       "featured": "Featured Podcast",
       "plays": "plays",
       "unknown": "Unknown",
-      "community": "Trending",
-      "editorPicks": "Editor Picks",
+      "community": "Korean Top Chart",
+      "editorPicks": "User Hot",
       "loginRequired": "Please login first",
       "filters": {
         "all": "All",
@@ -772,7 +791,11 @@
     "getStarted": "Get Started",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "contact": "Contact Support"
+    "contact": "Contact Support",
+    "close": "Close",
+    "prev": "Previous",
+    "next": "Next",
+    "back": "Back"
   },
   "landing": {
     "nav": {
@@ -1248,7 +1271,7 @@
     "resendError": "Failed to reset password. Please check if the email address is correct.",
     "backToLogin": "Back to Login",
     "recoverPassword": "Recover Password",
-    "recoveryDesc": "Enter your email to recover.",
+    "recoveryDesc": "Enter your registered email, and we will send a recovery signal.",
     "verifyingEmail": "Verifying your email...",
     "waitPlease": "Please wait",
     "verifySuccess": "Email Verified!",
@@ -1274,7 +1297,10 @@
     "social": {
       "google": "Google",
       "kakao": "Kakao"
-    }
+    },
+    "newPasswordLabel": "New Password",
+    "resetFailed": "Failed to reset password. Please try again.",
+    "networkError": "Network error. Please check your connection and try again."
   },
   "loading": "Loading...",
   "podcast": {
@@ -1452,7 +1478,15 @@
       "noun": "Noun",
       "adv": "Adverb",
       "particle": "Particle"
-    }
+    },
+    "dictationStatusPlaying": "Playing {current}/{total}",
+    "dictationStatusIdle": "Idle",
+    "dictationPlayerTitle": "Dictation Player",
+    "dictationPlayerSubtitle": "Listen and write",
+    "repeatTimes": "{count}x",
+    "seconds": "{count}s",
+    "dictationStartButton": "Start playback",
+    "unassigned": "Unassigned"
   },
   "profileLabel": "Profile",
   "profile": {
@@ -1471,7 +1505,24 @@
     "languageDesc": "Choose the language for the interface and learning materials.",
     "noActivity": "No activity yet. Start a test to see your progress!",
     "updatePassword": "Update Password",
-    "recentActivity": "Recent Activity"
+    "recentActivity": "Recent Activity",
+    "unnamed": "Unnamed",
+    "link": {
+      "connect": "Connect",
+      "unlink": "Unlink",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "sectionTitle": "Social Accounts"
+    },
+    "importSuccess": "Imported social profile",
+    "importUnavailable": "Could not import profile, please set manually",
+    "importFailed": "Import failed",
+    "importButton": "Import social profile",
+    "createManually": "Create manually",
+    "connectFailed": "Failed to connect {provider}",
+    "unlinkSuccess": "Account unlinked",
+    "keepOneLoginMethod": "Keep one login method",
+    "unlinkFailed": "Failed to unlink account"
   },
   "typingLobby": {
     "title": "Duhan Typing",
@@ -1498,5 +1549,116 @@
       "switch": "to switch modes"
     },
     "back": "Back to Dashboard"
+  },
+  "topikExamList": {
+    "review": "Review",
+    "deleteConfirm": "Delete this attempt?",
+    "historyTitle": "Exam History",
+    "historySubtitle": "Review your past performance",
+    "noHistory": "No exam history yet",
+    "badge": "TOPIK Preparation",
+    "title": "TOPIK Practice Exams",
+    "subtitle": "Practice with past exams to master the pace and find your weak spots.",
+    "filterAll": "All",
+    "filterReading": "Reading",
+    "filterListening": "Listening",
+    "searchPlaceholder": "Search by round or title...",
+    "round": "Round {round}",
+    "questionCount": "{count} questions",
+    "timeMinutes": "{minutes} min",
+    "bestScore": "Best: {score}",
+    "attempts": "{count} attempts",
+    "notStarted": "Not started",
+    "noResults": "No exams match your filters",
+    "clearFilters": "Clear filters"
+  },
+  "vocabBookPdf": {
+    "title": "Word Study Sheet",
+    "wordHeader": "Korean",
+    "meaningHeader": "Meaning",
+    "slogan": "10 minutes a day, learn Korean easily",
+    "footerDesc": "Korean learning platform · Vocab book/Review/Dictation",
+    "preparing": "Preparing to print…"
+  },
+  "flashcardsOverlay": {
+    "stillLearning": "Still learning",
+    "remembered": "Remembered",
+    "keyboardHint": "Keyboard",
+    "keyboardInstruction": "Press space or click the card to flip",
+    "spaceKey": "Space"
+  },
+  "vocabProgress": {
+    "learningSubtitle": "These are words you have started learning. Keep it up!",
+    "starred": "Starred",
+    "star": "Star",
+    "speak": "Speak",
+    "listTitle": "List",
+    "groupedByFsrs": "Grouped by FSRS progress ({count} words)",
+    "redEyeEnable": "Enable",
+    "redEyeEnableDesc": "Blur meanings",
+    "redEyeDisable": "Disable",
+    "redEyeDisableDesc": "Show meanings"
+  },
+  "profileSetupPrompt": {
+    "title": "Complete your profile",
+    "description": "Import your current login profile (name/avatar) or create your own.",
+    "useSocial": "Use social profile",
+    "createMyself": "Create myself",
+    "maybeLater": "Maybe later"
+  },
+  "vocabTest": {
+    "correct": "Correct",
+    "wrong": "Wrong",
+    "answerLabel": "Answer: ",
+    "writtenAnswer": "Written answer",
+    "writtenPlaceholder": "Type your answer...",
+    "confirm": "Confirm",
+    "trueLabel": "True",
+    "falseLabel": "False",
+    "definitionLabel": "Definition",
+    "termLabel": "Term",
+    "chooseAnswer": "Choose an answer",
+    "unanswered": "—",
+    "switchToKorean": "Switch to Korean",
+    "switchToNative": "Switch to Native",
+    "pickFromList": "Pick from the list below",
+    "reset": "Reset",
+    "resultsTitle": "Results",
+    "accuracy": "Accuracy",
+    "time": "Time",
+    "newTest": "New test",
+    "review": "Review",
+    "cardLabel": "Card",
+    "answered": "Answered",
+    "notAnswered": "Not answered",
+    "questionTypeTrueFalse": "True / False",
+    "questionTypeMultipleChoice": "Multiple choice",
+    "questionTypeFill": "Fill",
+    "questionTypeWritten": "Written",
+    "answeredCount": "Answered {current}/{total}",
+    "unansweredWarning": "Some questions are unanswered. Jumped to the first one.",
+    "submitTest": "Submit test",
+    "setupTitle": "Set up your test",
+    "questions": "Questions",
+    "maxQuestions": "Max {count}",
+    "answers": "Answers",
+    "answerLanguageKorean": "Korean",
+    "answerLanguageBoth": "Both",
+    "questionTypes": "Question types",
+    "notEnoughWords": "(not enough words)",
+    "pickAtLeastOneType": "Pick at least one type.",
+    "startTest": "Start test",
+    "fillPrompt": "Complete the blanks",
+    "nativeLanguage": "English"
+  },
+  "vocabQuiz": {
+    "pendingTitle": "No worries — you're learning!",
+    "pendingSubtitle": "We’ll practice this again later. Click Continue or press any key.",
+    "continue": "Continue",
+    "learnCompleteTitle": "🎉 Learning Complete!",
+    "learnCompleteSubtitle": "You finished this learning round!",
+    "minWordsLearn": "Need at least 4 words to start learning",
+    "minWordsQuiz": "Need at least 4 words to start quiz",
+    "dontKnow": "I don't know"
   }
 }

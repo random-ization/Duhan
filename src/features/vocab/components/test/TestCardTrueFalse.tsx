@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
+import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
 
 type Answer = {
@@ -27,8 +28,9 @@ export default function TestCardTrueFalse({
   correctIsTrue,
   onSubmit,
 }: Props) {
-  const trueLabel = language === 'zh' ? '对' : 'True';
-  const falseLabel = language === 'zh' ? '错' : 'False';
+  const labels = getLabels(language);
+  const trueLabel = labels.vocabTest?.trueLabel || 'True';
+  const falseLabel = labels.vocabTest?.falseLabel || 'False';
   const isReview = mode === 'review' && typeof correctIsTrue === 'boolean';
 
   const renderButton = (isTrue: boolean) => {
@@ -78,13 +80,13 @@ export default function TestCardTrueFalse({
         <div className="grid grid-cols-1 sm:grid-cols-2">
           <div className="p-6 sm:p-8 border-b sm:border-b-0 sm:border-r border-slate-200">
             <div className="text-xs font-black text-slate-400">
-              {language === 'zh' ? '定义' : 'Definition'}
+              {labels.vocabTest?.definitionLabel || 'Definition'}
             </div>
             <div className="mt-3 text-3xl font-black text-slate-900 leading-tight">{statement}</div>
           </div>
           <div className="p-6 sm:p-8">
             <div className="text-xs font-black text-slate-400">
-              {language === 'zh' ? '词语' : 'Term'}
+              {labels.vocabTest?.termLabel || 'Term'}
             </div>
             <div className="mt-3 text-3xl font-black text-slate-900 leading-tight">{prompt}</div>
           </div>

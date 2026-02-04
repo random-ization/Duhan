@@ -2,7 +2,6 @@ import React from 'react';
 import { Loading } from '../../../components/common/Loading';
 import { Mail } from 'lucide-react';
 import { LocalizedLink } from '../../../components/LocalizedLink';
-
 interface ProfileSecurityTabProps {
   labels: any;
   handlePasswordChange: (e: React.FormEvent) => Promise<void>;
@@ -23,8 +22,11 @@ interface ProfileSecurityTabProps {
   linkLabel: string;
   signIn: (providerId: string, options?: any) => Promise<any>;
   unlinkAuthProviderMutation: (args: { provider: string }) => Promise<any>;
-  getAccountButtonClass: (isLinked: boolean, accountsLoading: boolean, disableUnlink: boolean) => string;
-  language: string;
+  getAccountButtonClass: (
+    isLinked: boolean,
+    accountsLoading: boolean,
+    disableUnlink: boolean
+  ) => string;
   success: (msg: string) => void;
   error: (msg: string) => void;
   toErrorMessage: (err: any) => string;
@@ -51,7 +53,6 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
   signIn,
   unlinkAuthProviderMutation,
   getAccountButtonClass,
-  language,
   success,
   error,
   toErrorMessage,
@@ -186,9 +187,9 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
                         await signIn(provider.id, { redirectTo: globalThis.location.href });
                       } catch {
                         error(
-                          language === 'zh'
-                            ? '绑定失败'
-                            : `Failed to connect ${provider.label}`
+                          (
+                            labels.profile?.connectFailed || `Failed to connect ${provider.label}`
+                          ).replace('{provider}', provider.label)
                         );
                       }
                       return;
@@ -196,16 +197,14 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
 
                     try {
                       await unlinkAuthProviderMutation({ provider: provider.id });
-                      success(language === 'zh' ? '解绑成功' : 'Account unlinked');
+                      success(labels.profile?.unlinkSuccess || 'Account unlinked');
                     } catch (err: unknown) {
                       const message = toErrorMessage(err);
                       if (message.includes('LAST_AUTH_METHOD')) {
-                        error(
-                          language === 'zh' ? '至少保留一种登录方式' : 'Keep one login method'
-                        );
+                        error(labels.profile?.keepOneLoginMethod || 'Keep one login method');
                         return;
                       }
-                      error(language === 'zh' ? '解绑失败' : 'Failed to unlink account');
+                      error(labels.profile?.unlinkFailed || 'Failed to unlink account');
                     }
                   }}
                   className={`px-4 py-2 rounded-lg text-sm font-bold transition ${getAccountButtonClass(isLinked, accountsLoading, disableUnlink)}`}

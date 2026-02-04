@@ -22,12 +22,7 @@ const VerifyEmailPage: React.FC = () => {
 
       if (!token) {
         setStatus('error');
-        setMessage(
-          labels.auth?.invalidLinkDesc ||
-            (language === 'zh'
-              ? '链接已失效或缺失令牌，请重新请求'
-              : 'Invalid verification link. Token is missing.')
-        );
+        setMessage(labels.auth?.invalidLinkDesc);
         return;
       }
 
@@ -37,20 +32,26 @@ const VerifyEmailPage: React.FC = () => {
 
         if (response.ok) {
           setStatus('success');
-          setMessage(data.message || 'Email verified successfully!');
+          setMessage(data.message || labels.auth?.verifySuccess);
         } else {
           setStatus('error');
-          setMessage(data.error || 'Verification failed. Please try again.');
+          setMessage(data.error || labels.auth?.verifyFailed);
         }
       } catch (err) {
         console.error(err);
         setStatus('error');
-        setMessage('Network error. Please check your connection and try again.');
+        setMessage(labels.auth?.networkError);
       }
     };
 
     verifyEmail();
-  }, [searchParams, labels.auth?.invalidLinkDesc, language]);
+  }, [
+    searchParams,
+    labels.auth?.invalidLinkDesc,
+    labels.auth?.verifySuccess,
+    labels.auth?.verifyFailed,
+    labels.auth?.networkError,
+  ]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 font-sans">
@@ -65,25 +66,21 @@ const VerifyEmailPage: React.FC = () => {
           {status === 'loading' && (
             <>
               <Loader2 className="w-16 h-16 text-indigo-400 mx-auto animate-spin mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {labels.auth?.verifyingEmail || 'Verifying your email...'}
-              </h1>
-              <p className="text-indigo-200 text-sm">{labels.auth?.waitPlease || 'Please wait'}</p>
+              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifyingEmail}</h1>
+              <p className="text-indigo-200 text-sm">{labels.auth?.waitPlease}</p>
             </>
           )}
 
           {status === 'success' && (
             <>
               <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {labels.auth?.verifySuccess || 'Email Verified!'}
-              </h1>
+              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifySuccess}</h1>
               <p className="text-indigo-200 text-sm mb-8">{message}</p>
               <button
                 onClick={() => navigate('/login')}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
               >
-                {labels.login || 'Log In'}
+                {labels.login}
               </button>
             </>
           )}
@@ -91,15 +88,13 @@ const VerifyEmailPage: React.FC = () => {
           {status === 'error' && (
             <>
               <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {labels.auth?.verifyFailed || 'Verification Failed'}
-              </h1>
+              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifyFailed}</h1>
               <p className="text-red-200 text-sm mb-8">{message}</p>
               <button
                 onClick={() => navigate('/login')}
                 className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
               >
-                {labels.auth?.backToLogin || 'Back to Login'}
+                {labels.auth?.backToLogin}
               </button>
             </>
           )}

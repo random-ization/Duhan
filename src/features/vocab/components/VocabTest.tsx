@@ -102,10 +102,8 @@ const chunk = <T,>(arr: T[], size: number): T[][] => {
 const normalizeText = (s: string) => s.trim().replaceAll(/\s+/g, ' ').toLowerCase();
 
 const nativeLabelFromLanguage = (language: Language) => {
-  if (language === 'zh') return '中文';
-  if (language === 'en') return 'English';
-  if (language === 'vi') return 'Tiếng Việt';
-  return 'Монгол';
+  const labels = getLabels(language);
+  return labels.vocabTest?.nativeLanguage || 'English';
 };
 
 type TestSettingsProps = Readonly<{
@@ -174,9 +172,9 @@ function ResultScreen({
       return `${correctness.correctCount}/${correctness.totalCount}`;
     }
     if (correctness.allCorrect) {
-      return language === 'zh' ? '正确' : 'Correct';
+      return labels.vocabTest?.correct || 'Correct';
     }
-    return language === 'zh' ? '错误' : 'Wrong';
+    return labels.vocabTest?.wrong || 'Wrong';
   };
 
   const renderReviewCard = (card: TestCard, a: TestCardAnswer | undefined) => {
@@ -236,7 +234,7 @@ function ResultScreen({
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-8">
         <div className="text-3xl font-black text-slate-900">
-          {language === 'zh' ? '测试结果' : 'Results'}
+          {labels.vocabTest?.resultsTitle || 'Results'}
         </div>
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
@@ -244,7 +242,7 @@ function ResultScreen({
               {stats.correctQuestions}/{Math.max(stats.totalQuestions, 1)}
             </div>
             <div className="text-xs font-bold text-slate-500">
-              {language === 'zh' ? '正确' : 'Correct'}
+              {labels.vocabTest?.correct || 'Correct'}
             </div>
           </div>
           <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
@@ -252,7 +250,7 @@ function ResultScreen({
               {Math.round((stats.correctQuestions / Math.max(stats.totalQuestions, 1)) * 100)}%
             </div>
             <div className="text-xs font-bold text-slate-500">
-              {language === 'zh' ? '正确率' : 'Accuracy'}
+              {labels.vocabTest?.accuracy || 'Accuracy'}
             </div>
           </div>
           <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
@@ -260,7 +258,7 @@ function ResultScreen({
               {stats.seconds === null ? '--' : `${stats.seconds}s`}
             </div>
             <div className="text-xs font-bold text-slate-500">
-              {language === 'zh' ? '用时' : 'Time'}
+              {labels.vocabTest?.time || 'Time'}
             </div>
           </div>
         </div>
@@ -271,21 +269,21 @@ function ResultScreen({
             onClick={() => setStage('SETTINGS')}
             className="px-5 py-3 rounded-2xl bg-white border-2 border-slate-900 text-slate-900 font-black"
           >
-            {language === 'zh' ? '重新设置' : 'New test'}
+            {labels.vocabTest?.newTest || 'New test'}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black"
           >
-            {language === 'zh' ? '关闭' : labels.common?.close || 'Close'}
+            {labels.common?.close || 'Close'}
           </button>
         </div>
       </div>
 
       <div className="mt-8">
         <div className="text-lg font-black text-slate-900 mb-3">
-          {language === 'zh' ? '逐题回顾' : 'Review'}
+          {labels.vocabTest?.review || 'Review'}
         </div>
         <div className="space-y-6">
           {cards.map((card, idx) => {
@@ -293,10 +291,13 @@ function ResultScreen({
             const correctness = getCorrectness(card, a);
 
             return (
-              <div key={card.id} className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8">
+              <div
+                key={card.id}
+                className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="text-xs font-black text-slate-400">
-                    {language === 'zh' ? '卡片' : 'Card'} {idx + 1}
+                    {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
                   </div>
                   {correctness && (
                     <div
@@ -352,6 +353,7 @@ function RunningCard({
   getCardTypeText,
   onSetCardRef,
 }: RunningCardProps) {
+  const labels = getLabels(language);
   const setRef = useCallback(
     (el: HTMLDivElement | null) => {
       onSetCardRef(card.id, el);
@@ -363,14 +365,14 @@ function RunningCard({
     if (isComplete) {
       return (
         <div className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700">
-          {language === 'zh' ? '已作答' : 'Answered'}
+          {labels.vocabTest?.answered || 'Answered'}
         </div>
       );
     }
     if (isMissing) {
       return (
         <div className="px-3 py-1 rounded-full text-xs font-black bg-red-100 text-red-700">
-          {language === 'zh' ? '未作答' : 'Not answered'}
+          {labels.vocabTest?.notAnswered || 'Not answered'}
         </div>
       );
     }
@@ -379,9 +381,9 @@ function RunningCard({
 
   const getBottomStatus = () => {
     if (isComplete) {
-      return language === 'zh' ? '已作答' : 'Answered';
+      return labels.vocabTest?.answered || 'Answered';
     }
-    return language === 'zh' ? '未作答' : 'Not answered';
+    return labels.vocabTest?.notAnswered || 'Not answered';
   };
 
   const renderCardInput = () => {
@@ -406,7 +408,9 @@ function RunningCard({
           prompt={card.prompt}
           options={card.options}
           answered={
-            answered?.type === 'MULTIPLE_CHOICE' ? { selectedIndex: answered.selectedIndex } : undefined
+            answered?.type === 'MULTIPLE_CHOICE'
+              ? { selectedIndex: answered.selectedIndex }
+              : undefined
           }
           onSubmit={selectedIndex => {
             upsertAnswer(card.id, { type: 'MULTIPLE_CHOICE', selectedIndex });
@@ -457,7 +461,8 @@ function RunningCard({
           <div className="text-xs font-black text-slate-400">{getCardTypeText(card.type)}</div>
           {card.type === 'FILL_10' && (
             <div className="text-2xl font-black text-slate-900 mt-2">
-              {`${language === 'zh' ? '请完成填空' : 'Complete the blanks'} (${card.items.length}/10)`}
+              {(labels.vocabTest?.fillPrompt || 'Complete the blanks') +
+                ` (${card.items.length}/10)`}
             </div>
           )}
         </div>
@@ -468,7 +473,7 @@ function RunningCard({
 
       <div className="mt-6 flex justify-between text-xs font-bold text-slate-400">
         <div>
-          {language === 'zh' ? '卡片' : 'Card'} {idx + 1}
+          {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
         </div>
         <div className="truncate max-w-[60%]">{getBottomStatus()}</div>
       </div>
@@ -491,6 +496,9 @@ function RunningScreen({
   scrollContainerRef,
   onSetCardRef,
 }: RunningScreenProps) {
+  const labels = getLabels(language);
+  const format = (template: string, vars: Record<string, string | number>) =>
+    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
   const active = cards[activeCardIndex];
 
   const getCardClassName = (isActive: boolean, isMissing: boolean) => {
@@ -503,10 +511,16 @@ function RunningScreen({
   };
 
   const getCardTypeText = (type: QuestionType) => {
-    if (type === 'TRUE_FALSE') return language === 'zh' ? '判断对错' : 'True / False';
-    if (type === 'MULTIPLE_CHOICE') return language === 'zh' ? '多项选择' : 'Multiple choice';
-    if (type === 'FILL_10') return language === 'zh' ? '填空' : 'Fill';
-    return language === 'zh' ? '书写回答' : 'Written';
+    if (type === 'TRUE_FALSE') {
+      return labels.vocabTest?.questionTypeTrueFalse || 'True / False';
+    }
+    if (type === 'MULTIPLE_CHOICE') {
+      return labels.vocabTest?.questionTypeMultipleChoice || 'Multiple choice';
+    }
+    if (type === 'FILL_10') {
+      return labels.vocabTest?.questionTypeFill || 'Fill';
+    }
+    return labels.vocabTest?.questionTypeWritten || 'Written';
   };
 
   return (
@@ -571,15 +585,15 @@ function RunningScreen({
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-black text-slate-700">
-              {language === 'zh'
-                ? `已作答 ${answeredCardCount}/${Math.max(cards.length, 1)}`
-                : `Answered ${answeredCardCount}/${Math.max(cards.length, 1)}`}
+              {format(labels.vocabTest?.answeredCount || 'Answered {current}/{total}', {
+                current: answeredCardCount,
+                total: Math.max(cards.length, 1),
+              })}
             </div>
             {submitAttempted && !isAllAnswered && (
               <div className="text-xs font-bold text-red-600 mt-0.5">
-                {language === 'zh'
-                  ? '还有未作答的题目，已跳转到第一题。'
-                  : 'Some questions are unanswered. Jumped to the first one.'}
+                {labels.vocabTest?.unansweredWarning ||
+                  'Some questions are unanswered. Jumped to the first one.'}
               </div>
             )}
           </div>
@@ -590,14 +604,13 @@ function RunningScreen({
               isAllAnswered ? 'bg-slate-900' : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            {language === 'zh' ? '提交测试' : 'Submit test'}
+            {labels.vocabTest?.submitTest || 'Submit test'}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
 
 function SettingsScreen({
   language,
@@ -614,6 +627,9 @@ function SettingsScreen({
   startTest,
   isStartDisabled,
 }: TestSettingsProps) {
+  const labels = getLabels(language);
+  const format = (template: string, vars: Record<string, string | number>) =>
+    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
   const getToggleClass = (key: QuestionType, disabled: boolean) => {
     if (enabledTypes[key]) return 'bg-blue-600';
     if (disabled) return 'bg-slate-200 cursor-not-allowed';
@@ -626,7 +642,7 @@ function SettingsScreen({
         <div>
           <div className="text-sm font-bold text-slate-500">{scopeTitle}</div>
           <div className="text-4xl font-black text-slate-900 mt-2">
-            {language === 'zh' ? '设置您的测试' : 'Set up your test'}
+            {labels.vocabTest?.setupTitle || 'Set up your test'}
           </div>
         </div>
         <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shrink-0">
@@ -638,10 +654,10 @@ function SettingsScreen({
         <div className="flex items-center justify-between">
           <div>
             <div className="font-black text-slate-900 text-lg">
-              {language === 'zh' ? '问题' : 'Questions'}
+              {labels.vocabTest?.questions || 'Questions'}
             </div>
             <div className="text-slate-500 text-sm">
-              {language === 'zh' ? `最多 ${maxQuestions}` : `Max ${maxQuestions}`}
+              {format(labels.vocabTest?.maxQuestions || 'Max {count}', { count: maxQuestions })}
             </div>
           </div>
           <input
@@ -660,47 +676,57 @@ function SettingsScreen({
 
         <div className="flex items-center justify-between">
           <div className="font-black text-slate-900 text-lg">
-            {language === 'zh' ? '回答' : 'Answers'}
+            {labels.vocabTest?.answers || 'Answers'}
           </div>
           <select
             value={answerLanguage}
             onChange={e => setAnswerLanguage(e.target.value as AnswerLanguage)}
             className="px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold"
           >
-            <option value="KOREAN">{language === 'zh' ? '韩语' : 'Korean'}</option>
+            <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
             <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
-            <option value="BOTH">{language === 'zh' ? '两个都出现' : 'Both'}</option>
+            <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
           </select>
         </div>
 
         <div className="border-t border-slate-100 pt-6 space-y-5">
           <div className="font-black text-slate-900 text-lg">
-            {language === 'zh' ? '测试问题' : 'Question types'}
+            {labels.vocabTest?.questionTypes || 'Question types'}
           </div>
 
           {(
             [
-              { key: 'TRUE_FALSE', labelZh: '判断对错', labelEn: 'True / False' },
-              { key: 'MULTIPLE_CHOICE', labelZh: '多项选择', labelEn: 'Multiple choice' },
-              { key: 'FILL_10', labelZh: '填空', labelEn: 'Fill' },
-              { key: 'WRITTEN', labelZh: '书写回答', labelEn: 'Written' },
+              { key: 'TRUE_FALSE' },
+              { key: 'MULTIPLE_CHOICE' },
+              { key: 'FILL_10' },
+              { key: 'WRITTEN' },
             ] as const
           ).map(row => {
             const disabled = row.key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice;
             return (
               <div key={row.key} className="flex items-center justify-between">
                 <div className="font-black text-slate-900 text-base">
-                  {language === 'zh' ? row.labelZh : row.labelEn}
+                  {row.key === 'TRUE_FALSE' &&
+                    (labels.vocabTest?.questionTypeTrueFalse || 'True / False')}
+                  {row.key === 'MULTIPLE_CHOICE' &&
+                    (labels.vocabTest?.questionTypeMultipleChoice || 'Multiple choice')}
+                  {row.key === 'FILL_10' && (labels.vocabTest?.questionTypeFill || 'Fill')}
+                  {row.key === 'WRITTEN' && (labels.vocabTest?.questionTypeWritten || 'Written')}
                   {disabled && (
                     <span className="ml-2 text-xs font-bold text-slate-400">
-                      {language === 'zh' ? '（词数不足）' : '(not enough words)'}
+                      {labels.vocabTest?.notEnoughWords || '(not enough words)'}
                     </span>
                   )}
                 </div>
                 <button
                   type="button"
                   disabled={disabled}
-                  onClick={() => setEnabledTypes((prev: EnabledTypes) => ({ ...prev, [row.key]: !prev[row.key] }))}
+                  onClick={() =>
+                    setEnabledTypes((prev: EnabledTypes) => ({
+                      ...prev,
+                      [row.key]: !prev[row.key],
+                    }))
+                  }
                   className={`w-12 h-7 rounded-full relative transition-all ${getToggleClass(row.key, disabled)}`}
                 >
                   <span
@@ -715,7 +741,7 @@ function SettingsScreen({
 
           {enabledTypeList.length === 0 && (
             <div className="text-sm font-bold text-red-600">
-              {language === 'zh' ? '至少选择一种题型。' : 'Pick at least one type.'}
+              {labels.vocabTest?.pickAtLeastOneType || 'Pick at least one type.'}
             </div>
           )}
         </div>
@@ -727,7 +753,7 @@ function SettingsScreen({
             disabled={isStartDisabled}
             className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {language === 'zh' ? '开始测试' : 'Start test'}
+            {labels.vocabTest?.startTest || 'Start test'}
           </button>
         </div>
       </div>
@@ -735,7 +761,10 @@ function SettingsScreen({
   );
 }
 
-const calculateFillStats = (card: TestCard & { type: 'FILL_10' }, a: TestCardAnswer | undefined) => {
+const calculateFillStats = (
+  card: TestCard & { type: 'FILL_10' },
+  a: TestCardAnswer | undefined
+) => {
   const total = card.items.length;
   let correct = 0;
   if (a?.type === 'FILL_10') {
@@ -1115,10 +1144,6 @@ export default function VocabTest({
     return { totalQuestions, correctQuestions, seconds };
   }, [answers, cards, finishedAt, startedAt]);
 
-
-
-
-
   const onSetCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     cardRefs.current[id] = el;
   }, []);
@@ -1187,7 +1212,7 @@ export default function VocabTest({
             type="button"
             onClick={onClose}
             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
-            aria-label={language === 'zh' ? '关闭' : labels.common?.close || 'Close'}
+            aria-label={labels.common?.close || 'Close'}
           >
             <X className="w-5 h-5 text-slate-700" />
           </button>

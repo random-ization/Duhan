@@ -24,6 +24,9 @@ import BackButton from '../components/ui/BackButton';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
+import { useFileUpload } from '../hooks/useFileUpload';
+import { useAuth } from '../contexts/AuthContext';
+import { getLanguageLabel } from '../utils/languageUtils';
 
 // Types
 interface TranscriptLine {
@@ -115,9 +118,7 @@ const AnalysisContent: React.FC<{
     );
   }
 
-  return (
-    <div className="text-center py-12 text-slate-400">Analysis failed. Please try again.</div>
-  );
+  return <div className="text-center py-12 text-slate-400">Analysis failed. Please try again.</div>;
 };
 
 interface PodcastEpisode {
@@ -136,6 +137,7 @@ interface PodcastEpisode {
 
 // CDN Domain for transcript cache
 const CDN_DOMAIN = import.meta.env.VITE_CDN_URL ?? '';
+const MAX_SAFE_URL_LENGTH = 8000;
 
 // Mock transcript for fallback
 const MOCK_TRANSCRIPT: TranscriptLine[] = [
@@ -175,6 +177,8 @@ const PodcastPlayerPage: React.FC = () => {
   const { state } = useLocation();
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
+  const { language } = useAuth();
+  const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
 
   const getEpisodeFromUrl = useCallback(() => {
     // Try to reconstruct from URL params
@@ -216,8 +220,12 @@ const PodcastPlayerPage: React.FC = () => {
     feedUrl?: string;
     artworkUrl?: string;
     artwork?: string;
+    image?: string;
   };
-  const channel: PodcastChannel = (state as { channel?: PodcastChannel } | null)?.channel ?? {};
+  const channel: PodcastChannel =
+    (state as { channel?: PodcastChannel } | null)?.channel ??
+    (state as { episode?: { channel?: PodcastChannel } } | null)?.episode?.channel ??
+    {};
 
   useEffect(() => {
     if (!episode.audioUrl) {
@@ -257,20 +265,35 @@ const PodcastPlayerPage: React.FC = () => {
   const [analyzingLine, setAnalyzingLine] = useState<TranscriptLine | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const showTranscriptLoader = transcriptLoading && transcript.length === 0;
 
   // Playlist State
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const resumeCheckedRef = useRef<string | null>(null); // Track resume check to prevent override
+  const transcriptLoadKeyRef = useRef<string | null>(null);
+  const transcriptLoadedKeyRef = useRef<string | null>(null);
 
   // Convex Hooks
-  const generateTranscript = useAction(
+  const requestTranscript = useAction(
     aRef<
-      { audioUrl: string; episodeId: string; language: string },
-      { success: boolean; data?: { segments?: TranscriptLine[] }; error?: string }
-    >('ai:generateTranscript')
+      {
+        audioUrl: string;
+        episodeId: string;
+        language: string;
+        storageId?: string;
+        storageIds?: string[];
+      },
+      { success: boolean; requestId?: string; error?: string }
+    >('ai:requestTranscript')
   );
+  const getTranscript = useAction(
+    aRef<{ episodeId: string; language?: string }, { segments?: TranscriptLine[] | null }>(
+      'ai:getTranscript'
+    )
+  );
+
   type PlaylistEpisode = Omit<PodcastEpisode, 'audioUrl'> & { audioUrl?: string };
   const getEpisodes = useAction(
     aRef<{ feedUrl: string }, { episodes: PlaylistEpisode[] }>('podcastActions:getEpisodes')
@@ -304,6 +327,7 @@ const PodcastPlayerPage: React.FC = () => {
   };
   const historyData = useQuery(qRef<NoArgs, HistoryRecord[]>('podcasts:getHistory'));
   const history = useMemo(() => historyData ?? [], [historyData]);
+  const { uploadFile } = useFileUpload();
 
   // --- Helpers ---
   const formatTime = (seconds: number) => {
@@ -322,24 +346,7 @@ const PodcastPlayerPage: React.FC = () => {
       hash = Math.trunc(hash);
     }
     return `ep_${Math.abs(hash).toString(16)}`;
-  }, [episode]);
-
-  const loadTranscriptFromLocal = (episodeId: string) => {
-    const localCacheKey = `transcript_${episodeId}`;
-    try {
-      const cachedData = localStorage.getItem(localCacheKey);
-      if (cachedData) {
-        const parsed = JSON.parse(cachedData);
-        if (parsed.segments && parsed.segments.length > 0) {
-          console.log('[Transcript] Loaded from localStorage (instant)');
-          return parsed.segments;
-        }
-      }
-    } catch {
-      /* localStorage error */
-    }
-    return null;
-  };
+  }, [episode.guid, episode.title, episode.audioUrl]);
 
   const loadTranscriptFromS3 = async (episodeId: string) => {
     if (!CDN_DOMAIN) return null;
@@ -356,97 +363,333 @@ const PodcastPlayerPage: React.FC = () => {
     return null;
   };
 
-  const saveTranscriptToLocal = (episodeId: string, segments: TranscriptLine[]) => {
-    if (!segments || segments.length === 0) return;
-    const localCacheKey = `transcript_${episodeId}`;
-    try {
-      localStorage.setItem(
-        localCacheKey,
-        JSON.stringify({
-          segments,
-          cachedAt: Date.now(),
-        })
-      );
-    } catch (storageError) {
-      logger.warn('Failed to cache transcript locally', storageError);
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const retryLoadTranscriptFromS3 = useCallback(async (episodeId: string) => {
+    if (!CDN_DOMAIN) return null;
+    const delays = [4000, 6000, 8000];
+    for (const delay of delays) {
+      await wait(delay);
+      const data = await loadTranscriptFromS3(episodeId);
+      if (data && Array.isArray(data) && data.length > 0) {
+        return data;
+      }
     }
+    return null;
+  }, []);
+
+  const waitForTranscriptFromS3 = useCallback(async (episodeId: string) => {
+    if (!CDN_DOMAIN) return null;
+    const delays = [5000, 5000, 10000, 10000, 15000, 15000, 20000];
+    for (const delay of delays) {
+      await wait(delay);
+      const data = await loadTranscriptFromS3(episodeId);
+      if (data && Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+    return null;
+  }, []);
+
+  const inferAudioExtension = (contentType: string) => {
+    if (contentType.includes('wav')) return 'wav';
+    if (contentType.includes('ogg')) return 'ogg';
+    if (contentType.includes('webm')) return 'webm';
+    if (contentType.includes('m4a')) return 'm4a';
+    if (contentType.includes('mp4')) return 'mp4';
+    return 'mp3';
   };
 
-  const fetchTranscript = useCallback(
-    async (episodeId: string, audioUrl: string, isMounted: boolean) => {
-      // Step 0: Check localStorage
-      const localData = loadTranscriptFromLocal(episodeId);
-      if (localData) return localData;
+  const resolveTranscriptAudioUrl = useCallback(
+    async (rawUrl: string, episodeId: string) => {
+      if (!rawUrl) return '';
 
-      // Step 1: S3 Cache
-      const s3Data = await loadTranscriptFromS3(episodeId);
-      if (s3Data) {
-        saveTranscriptToLocal(episodeId, s3Data);
-        return s3Data;
+      const cacheKey = `transcript_audio_url_${episodeId}`;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return cached;
+      } catch {
+        /* ignore cache errors */
       }
 
-      // Step 2: Generate
-      if (isMounted) setIsGeneratingTranscript(true);
-      const result = await generateTranscript({
-        audioUrl,
-        episodeId,
-        language: 'zh',
+      const isHttp = /^https?:\/\//i.test(rawUrl);
+      const isBlob = rawUrl.startsWith('blob:');
+      const isData = rawUrl.startsWith('data:');
+      const looksLikeBase64 = !isHttp && !isBlob && !isData && rawUrl.length > 10000;
+      const urlTooLong = rawUrl.length > MAX_SAFE_URL_LENGTH;
+      const shouldUpload = isBlob || isData || looksLikeBase64 || urlTooLong;
+
+      if (!shouldUpload) {
+        return rawUrl;
+      }
+
+      let blob: Blob;
+      if (isBlob || isData) {
+        const res = await fetch(rawUrl);
+        if (!res.ok) {
+          throw new Error('读取音频失败');
+        }
+        blob = await res.blob();
+      } else {
+        // Raw base64 fallback
+        const binary = atob(rawUrl);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'audio/mpeg' });
+      }
+
+      const ext = inferAudioExtension(blob.type || 'audio/mpeg');
+      const file = new File([blob], `${episodeId}.${ext}`, {
+        type: blob.type || 'audio/mpeg',
       });
 
-      if (result?.success && result.data?.segments) {
-        saveTranscriptToLocal(episodeId, result.data.segments);
-        return result.data.segments;
+      const { url } = await uploadFile(file, 'podcasts');
+
+      try {
+        localStorage.setItem(cacheKey, url);
+      } catch {
+        /* ignore cache errors */
       }
-      throw new Error(result?.error || 'Invalid transcript response');
+
+      return url;
     },
-    [generateTranscript]
+    [uploadFile]
+  );
+
+  // 2. Transcript Loading Logic
+  // V4: Deepgram URL Strategy (Simple)
+  const loadTranscriptChunked = useCallback(
+    async (force = false) => {
+      console.log('[Transcript] V4: Starting Deepgram URL Strategy');
+      if (!episode.audioUrl) {
+        setTranscript([]);
+        setTranscriptLoading(false);
+        setTranscriptError('缺少音频链接');
+        return;
+      }
+
+      const episodeId = getEpisodeId();
+      const targetLanguage = language;
+      const loadKey = `${episodeId}:${targetLanguage}`;
+
+      const getTranscriptCacheKey = (id: string, lang: string) => `transcript_${id}_${lang}`;
+
+      const loadTranscriptFromLocal = (id: string, lang: string) => {
+        const localCacheKey = getTranscriptCacheKey(id, lang);
+        try {
+          const cachedData = localStorage.getItem(localCacheKey);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            if (parsed.language && parsed.language !== lang) {
+              return null;
+            }
+            if (parsed.segments && parsed.segments.length > 0) {
+              const hasTranslation = parsed.segments.some(
+                (seg: TranscriptLine) =>
+                  typeof seg.translation === 'string' && seg.translation.trim().length > 0
+              );
+              if (!hasTranslation && lang) {
+                return null;
+              }
+              console.log('[Transcript] Loaded from localStorage (instant)');
+              return parsed.segments;
+            }
+          }
+        } catch {
+          /* localStorage error */
+        }
+        return null;
+      };
+
+      const saveTranscriptToLocal = (id: string, lang: string, segments: TranscriptLine[]) => {
+        if (!segments || segments.length === 0) return;
+        const localCacheKey = getTranscriptCacheKey(id, lang);
+        try {
+          localStorage.setItem(
+            localCacheKey,
+            JSON.stringify({
+              segments,
+              language: lang,
+              cachedAt: Date.now(),
+            })
+          );
+        } catch (storageError) {
+          logger.warn('Failed to cache transcript locally', storageError);
+        }
+      };
+
+      if (!force) {
+        if (transcriptLoadKeyRef.current === loadKey) {
+          return;
+        }
+        if (transcriptLoadedKeyRef.current === loadKey) {
+          return;
+        }
+      }
+
+      transcriptLoadKeyRef.current = loadKey;
+      setTranscriptLoading(true);
+      setTranscriptError(null);
+
+      const shouldMarkLoaded = (segments: TranscriptLine[]) => {
+        if (!targetLanguage) return true;
+        return segments.some(
+          seg => typeof seg.translation === 'string' && seg.translation.trim().length > 0
+        );
+      };
+
+      // Step 0: Check localStorage
+      const localData = loadTranscriptFromLocal(episodeId, targetLanguage);
+      if (localData) {
+        setTranscript(localData);
+        setTranscriptLoading(false);
+        if (shouldMarkLoaded(localData)) {
+          transcriptLoadedKeyRef.current = loadKey;
+        }
+        transcriptLoadKeyRef.current = null;
+        return;
+      }
+
+      try {
+        // Step 1: S3 Cache
+        let prefilledFromS3 = false;
+        if (CDN_DOMAIN) {
+          try {
+            const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
+            const s3Res = await fetch(s3Url);
+            if (s3Res.ok) {
+              const data = await s3Res.json();
+              const segments = data.segments || data;
+              setTranscript(segments);
+              setTranscriptLoading(false);
+              prefilledFromS3 = true;
+              if (shouldMarkLoaded(segments)) {
+                transcriptLoadedKeyRef.current = loadKey;
+              }
+            }
+          } catch {
+            /* Ignore S3 error */
+          }
+        }
+
+        // Step 1.5: Convex DB fallback (if CDN missing)
+        const dbResult = await getTranscript({ episodeId, language: targetLanguage });
+        if (dbResult?.segments && dbResult.segments.length > 0) {
+          setTranscript(dbResult.segments);
+          saveTranscriptToLocal(episodeId, targetLanguage, dbResult.segments);
+          setTranscriptLoading(false);
+          if (shouldMarkLoaded(dbResult.segments)) {
+            transcriptLoadedKeyRef.current = loadKey;
+          }
+          return;
+        }
+
+        // Step 2: Generate (Direct Deepgram URL)
+        setIsGeneratingTranscript(true);
+
+        const transcriptAudioUrl = await resolveTranscriptAudioUrl(episode.audioUrl, episodeId);
+        if (!transcriptAudioUrl) {
+          throw new Error('缺少音频链接');
+        }
+        if (transcriptAudioUrl.length > MAX_SAFE_URL_LENGTH) {
+          throw new Error('音频链接过长，无法提交转写请求');
+        }
+
+        const kickoff = await requestTranscript({
+          audioUrl: transcriptAudioUrl,
+          episodeId,
+          language: targetLanguage,
+        });
+
+        if (!kickoff?.success) {
+          const errorMsg = kickoff?.error || 'Failed to start transcription';
+          throw new Error(errorMsg);
+        }
+
+        const s3Ready = await waitForTranscriptFromS3(episodeId);
+        if (s3Ready && !prefilledFromS3) {
+          setTranscript(s3Ready);
+          setTranscriptLoading(false);
+          prefilledFromS3 = true;
+          if (shouldMarkLoaded(s3Ready)) {
+            transcriptLoadedKeyRef.current = loadKey;
+          }
+        }
+
+        const dbFallback = await getTranscript({ episodeId, language: targetLanguage });
+        if (dbFallback?.segments && dbFallback.segments.length > 0) {
+          setTranscript(dbFallback.segments);
+          saveTranscriptToLocal(episodeId, targetLanguage, dbFallback.segments);
+          if (shouldMarkLoaded(dbFallback.segments)) {
+            transcriptLoadedKeyRef.current = loadKey;
+          }
+        } else if (!s3Ready) {
+          throw new Error('字幕生成超时，请稍后重试');
+        }
+      } catch (err) {
+        console.error('Transcript failed:', err);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        if (
+          typeof message === 'string' &&
+          message.includes('Connection lost while action was in flight')
+        ) {
+          const s3Fallback = await retryLoadTranscriptFromS3(episodeId);
+          if (s3Fallback) {
+            setTranscript(s3Fallback);
+            saveTranscriptToLocal(episodeId, targetLanguage, s3Fallback);
+            setTranscriptLoading(false);
+            setIsGeneratingTranscript(false);
+            transcriptLoadedKeyRef.current = loadKey;
+            transcriptLoadKeyRef.current = null;
+            return;
+          }
+        }
+        if (typeof message === 'string' && message.includes('Maximum content size')) {
+          setTranscript([]);
+          setTranscriptError('音频链接过大，转写请求被拦截，请先上传音频后再试');
+          setTranscriptLoading(false);
+          setIsGeneratingTranscript(false);
+          return;
+        }
+        if (import.meta.env.DEV) {
+          setTranscript(MOCK_TRANSCRIPT);
+          setTranscriptError(`失败: ${message}`);
+        } else {
+          setTranscript([]);
+          setTranscriptError('字幕不可用');
+        }
+      } finally {
+        setTranscriptLoading(false);
+        setIsGeneratingTranscript(false);
+        transcriptLoadKeyRef.current = null;
+      }
+    },
+    [
+      episode.audioUrl,
+      requestTranscript,
+      getTranscript,
+      getEpisodeId,
+      resolveTranscriptAudioUrl,
+      retryLoadTranscriptFromS3,
+      waitForTranscriptFromS3,
+      language,
+    ]
   );
 
   // --- Effects ---
 
+  // 0. Transcript Load (also refresh on language change)
+  useEffect(() => {
+    if (episode.audioUrl) {
+      loadTranscriptChunked();
+    }
+  }, [episode.audioUrl, language, loadTranscriptChunked]);
+
   // 1. Initial Load & Analytics & Playlist
   useEffect(() => {
     let isMounted = true;
-
-    // Load transcript with mount check
-    const loadTranscriptSafe = async () => {
-      if (!episode.audioUrl) {
-        if (isMounted) {
-          setTranscript([]);
-          setTranscriptLoading(false);
-          setTranscriptError('缺少音频链接');
-        }
-        return;
-      }
-      const episodeId = getEpisodeId();
-      setTranscriptLoading(true);
-      setTranscriptError(null);
-
-      try {
-        const segments = await fetchTranscript(episodeId, episode.audioUrl, isMounted);
-        if (isMounted && segments) {
-          setTranscript(segments);
-        }
-      } catch (err) {
-        console.error('Transcript failed:', err);
-        if (isMounted) {
-          if (import.meta.env.DEV) {
-            setTranscript(MOCK_TRANSCRIPT);
-            setTranscriptError('使用演示字幕 (字幕生成失败)');
-          } else {
-            setTranscript([]);
-            setTranscriptError('字幕不可用');
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setTranscriptLoading(false);
-          setIsGeneratingTranscript(false);
-        }
-      }
-    };
-
-    loadTranscriptSafe();
 
     // Load Playlist (Episodes from same channel)
     if (channel.feedUrl) {
@@ -494,7 +737,6 @@ const PodcastPlayerPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [episode.audioUrl]);
 
-  // 1.5 Resume Playback Logic
   // 1.5 Resume Playback Logic
   useEffect(() => {
     const checkResume = async () => {
@@ -550,52 +792,6 @@ const PodcastPlayerPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [isPlaying, currentTime, episode.guid, saveProgress]);
 
-  // 2. Transcript Loading Logic
-  const loadTranscript = async () => {
-    const episodeId = getEpisodeId();
-    setTranscriptLoading(true);
-    setTranscriptError(null);
-
-    try {
-      // S3 Cache First
-      if (CDN_DOMAIN) {
-        try {
-          const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
-          const s3Res = await fetch(s3Url);
-          if (s3Res.ok) {
-            const data = await s3Res.json();
-            setTranscript(data.segments || data);
-            setTranscriptLoading(false);
-            return;
-          }
-        } catch {
-          /* Fallback to API */
-        }
-      }
-
-      // Generate
-      setIsGeneratingTranscript(true);
-      const result = await generateTranscript({
-        audioUrl: episode.audioUrl,
-        episodeId,
-        language: 'zh',
-      });
-
-      if (result?.success && result.data?.segments) {
-        setTranscript(result.data.segments);
-      } else {
-        throw new Error('Invalid transcript response');
-      }
-    } catch (err) {
-      console.error('Transcript failed:', err);
-      setTranscript(MOCK_TRANSCRIPT);
-      setTranscriptError('使用演示字幕 (AI 生成失败)');
-    } finally {
-      setTranscriptLoading(false);
-      setIsGeneratingTranscript(false);
-    }
-  };
-
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
     return transcript.findIndex(line => currentTime >= line.start && currentTime < line.end);
@@ -609,7 +805,6 @@ const PodcastPlayerPage: React.FC = () => {
       }
     }
   }, [activeLineIndex, autoScroll]);
-
   // --- Handlers ---
 
   const handleTimeUpdate = () => {
@@ -662,7 +857,8 @@ const PodcastPlayerPage: React.FC = () => {
 
   const getAbLoopClassName = useCallback(() => {
     if (abLoop.active) return 'bg-indigo-600 text-white shadow-md shadow-indigo-200';
-    if (abLoop.a === null) return 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300';
+    if (abLoop.a === null)
+      return 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300';
     return 'bg-amber-100 text-amber-700 border border-amber-200';
   }, [abLoop.active, abLoop.a]);
 
@@ -675,9 +871,17 @@ const PodcastPlayerPage: React.FC = () => {
     setTranscript([]);
 
     try {
+      try {
+        const languagesToClear = ['zh', 'en', 'vi', 'mn'];
+        languagesToClear.forEach(lang => {
+          localStorage.removeItem(`transcript_${episodeId}_${lang}`);
+        });
+      } catch {
+        /* ignore localStorage errors */
+      }
       await deleteTranscript({ episodeId });
       // Force reload from API
-      await loadTranscript();
+      await loadTranscriptChunked(true);
     } catch (e) {
       console.error(e);
       setTranscriptError('重置失败，请稍后重试');
@@ -878,7 +1082,10 @@ const PodcastPlayerPage: React.FC = () => {
               <img
                 src={
                   episode.image ||
+                  episode.itunes?.image ||
                   channel.artworkUrl ||
+                  channel.image ||
+                  channel.artwork ||
                   episode.channelArtwork ||
                   'https://placehold.co/400x400'
                 }
@@ -908,7 +1115,7 @@ const PodcastPlayerPage: React.FC = () => {
                   </div>
                   <div className="text-left">
                     <p className="text-sm font-bold text-slate-700">翻译字幕</p>
-                    <p className="text-xs text-slate-400">显示中文翻译</p>
+                    <p className="text-xs text-slate-400">显示{translationLabel}翻译</p>
                   </div>
                 </div>
                 <button
@@ -951,7 +1158,7 @@ const PodcastPlayerPage: React.FC = () => {
         {/* Right Column: Transcript Stream */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto scroll-smooth bg-slate-50/50 pb-[180px] md:pb-[140px] relative"
+          className="flex-1 overflow-y-auto scroll-smooth bg-slate-50/50 pb-10 md:pb-12 relative"
         >
           {/* Auto-Scroll Floating Toggle */}
           <div className="sticky top-4 right-4 z-20 flex justify-end px-4 pointer-events-none">
@@ -975,7 +1182,7 @@ const PodcastPlayerPage: React.FC = () => {
 
           <div className="max-w-3xl mx-auto p-4 md:p-8 lg:p-12 space-y-2">
             {/* Loading State */}
-            {transcriptLoading && (
+            {showTranscriptLoader && (
               <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
                 <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                 <p className="text-slate-500 font-medium animate-pulse">AI 正在生成智能字幕...</p>
@@ -996,7 +1203,7 @@ const PodcastPlayerPage: React.FC = () => {
                 <h3 className="text-slate-800 font-bold mb-1">无法加载字幕</h3>
                 <p className="text-sm text-slate-500 mb-4">{transcriptError}</p>
                 <button
-                  onClick={loadTranscript}
+                  onClick={loadTranscriptChunked}
                   className="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
                   重试
@@ -1012,118 +1219,117 @@ const PodcastPlayerPage: React.FC = () => {
             )}
 
             {/* Transcript List */}
-            {!transcriptLoading && transcript.map((line, idx) => renderTranscriptLine(line, idx))}
+            {transcript.length > 0 &&
+              transcript.map((line, idx) => renderTranscriptLine(line, idx))}
+
+            {/* Player Bar (Aligned with Transcript Width) */}
+            <div className="sticky bottom-4 z-30 pt-6">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-4 md:px-6 py-3">
+                {/* Progress Slider */}
+                <div className="relative group mb-1 pt-2">
+                  <button
+                    type="button"
+                    className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full"
+                    onClick={e => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const pct = (e.clientX - rect.left) / rect.width;
+                      seekTo(pct * duration);
+                    }}
+                  >
+                    <span className="sr-only">Seek</span>
+                  </button>
+                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-600 rounded-full relative"
+                      style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                    >
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 rounded-full shadow border-2 border-white scale-0 group-hover:scale-100 transition-transform" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-medium mt-1 select-none">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>-{formatTime(duration - currentTime)}</span>
+                  </div>
+                </div>
+
+                {/* Controls Row */}
+                <div className="flex items-center justify-between">
+                  {/* Left: Speed & Loop */}
+                  <div className="flex items-center gap-2 flex-1">
+                    <button
+                      onClick={changeSpeed}
+                      className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors w-8"
+                    >
+                      {speed}x
+                    </button>
+                    <button
+                      onClick={toggleLoop}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
+                    >
+                      <Repeat className="w-3 h-3" />
+                      <span className="hidden md:inline">{getAbLoopLabel()}</span>
+                    </button>
+                  </div>
+
+                  {/* Center: Main Playback */}
+                  <div className="flex items-center gap-4 flex-none">
+                    <button
+                      onClick={() => skip(-10)}
+                      className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
+                    >
+                      <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={togglePlay}
+                      className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100"
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
+                      ) : (
+                        <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => skip(10)}
+                      className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
+                    >
+                      <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
+                    </button>
+                  </div>
+
+                  {/* Right: Tools / Volume */}
+                  <div className="flex items-center justify-end gap-3 flex-1">
+                    <div className="hidden md:flex items-center gap-2 group w-20">
+                      <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={volume}
+                        onChange={e => {
+                          const v = Number.parseFloat(e.target.value);
+                          setVolume(v);
+                          if (audioRef.current) audioRef.current.volume = v;
+                        }}
+                        className="w-full h-1 bg-slate-200 rounded-full accent-slate-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setShowPlaylist(true)}
+                      className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
+                      title="Playlist"
+                    >
+                      <ListMusic className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
-      </div>
-
-      {/* Fixed Bottom Player Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-        <div className="max-w-screen-2xl mx-auto px-4 md:px-8 py-3">
-          {/* Progress Slider */}
-          <div className="relative group mb-2 md:mb-4 pt-2">
-            <button
-              type="button"
-              className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full"
-              onClick={e => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const pct = (e.clientX - rect.left) / rect.width;
-                seekTo(pct * duration);
-              }}
-            >
-              <span className="sr-only">Seek</span>
-            </button>
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-indigo-600 rounded-full relative"
-                style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
-              >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-indigo-600 rounded-full shadow border-2 border-white scale-0 group-hover:scale-100 transition-transform" />
-              </div>
-            </div>
-            <div className="flex justify-between text-[10px] text-slate-400 font-medium mt-1 select-none">
-              <span>{formatTime(currentTime)}</span>
-              <span>-{formatTime(duration - currentTime)}</span>
-            </div>
-          </div>
-
-          {/* Controls Row */}
-          <div className="flex items-center justify-between">
-            {/* Left: Speed & Loop */}
-            <div className="flex items-center gap-2 md:gap-4 flex-1">
-              <button
-                onClick={changeSpeed}
-                className="text-xs font-bold text-slate-600 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-50 transition-colors w-12"
-              >
-                {speed}x
-              </button>
-              <button
-                onClick={toggleLoop}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${getAbLoopClassName()}`}
-              >
-                <Repeat className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">
-                  {getAbLoopLabel()}
-                </span>
-              </button>
-            </div>
-
-            {/* Center: Main Playback */}
-            <div className="flex items-center gap-6 md:gap-8 flex-none">
-              <button
-                onClick={() => skip(-10)}
-                className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
-              >
-                <SkipBack className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.5} />
-              </button>
-
-              <button
-                onClick={togglePlay}
-                className="w-14 h-14 md:w-16 md:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-600 hover:scale-105 transition-all active:scale-95 ring-4 ring-transparent hover:ring-indigo-100"
-              >
-                {isPlaying ? (
-                  <Pause className="w-6 h-6 md:w-8 md:h-8" fill="currentColor" />
-                ) : (
-                  <Play className="w-6 h-6 md:w-8 md:h-8 ml-1" fill="currentColor" />
-                )}
-              </button>
-
-              <button
-                onClick={() => skip(10)}
-                className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
-              >
-                <SkipForward className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* Right: Tools / Volume */}
-            <div className="flex items-center justify-end gap-4 flex-1">
-              <div className="hidden md:flex items-center gap-2 group w-24">
-                <Volume2 className="w-4 h-4 text-slate-400" />
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={volume}
-                  onChange={e => {
-                    const v = Number.parseFloat(e.target.value);
-                    setVolume(v);
-                    if (audioRef.current) audioRef.current.volume = v;
-                  }}
-                  className="w-full h-1 bg-slate-200 rounded-full accent-slate-500"
-                />
-              </div>
-              <button
-                onClick={() => setShowPlaylist(true)}
-                className={`p-2 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
-                title="Playlist"
-              >
-                <ListMusic className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Hidden Audio Element */}
@@ -1194,7 +1400,7 @@ const PodcastPlayerPage: React.FC = () => {
                     <div className="flex gap-3">
                       <div className="relative flex-none w-12 h-12 rounded-lg overflow-hidden bg-slate-100">
                         <img
-                          src={ep.image || ep.itunes?.image || channel.artworkUrl}
+                          src={ep.image || ep.itunes?.image || channel.artworkUrl || channel.image}
                           className="w-full h-full object-cover"
                           alt=""
                         />
@@ -1244,7 +1450,7 @@ const PodcastPlayerPage: React.FC = () => {
           {/* Backdrop */}
           <button
             type="button"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0 z-[100]"
             onClick={() => setShowAnalysis(false)}
           >
             <span className="sr-only">Close Analysis</span>
@@ -1253,7 +1459,7 @@ const PodcastPlayerPage: React.FC = () => {
           {/* Modal Content */}
           <div
             className="
-                        bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl 
+                        relative z-[101] bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl 
                         pointer-events-auto transform transition-transform duration-300 md:max-h-[80vh] max-h-[85vh] flex flex-col overflow-hidden
                     "
           >

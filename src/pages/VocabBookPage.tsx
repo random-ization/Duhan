@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
-import { getLabel, getLabels } from '../utils/i18n';
+import { getLabels } from '../utils/i18n';
 import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
@@ -91,14 +91,19 @@ const VocabBookPage: React.FC = () => {
     () => [
       {
         key: 'UNLEARNED',
-        label: labels.vocab?.unlearned || '未学习',
+        label: labels.vocab?.unlearned || 'Unlearned',
         count: stats.unlearned,
         color: 'blue',
       },
-      { key: 'DUE', label: labels.vocab?.due || '待复习', count: stats.due, color: 'amber' },
+      {
+        key: 'DUE',
+        label: labels.vocab?.due || 'Due',
+        count: stats.due,
+        color: 'amber',
+      },
       {
         key: 'MASTERED',
-        label: labels.vocab?.mastered || '已掌握',
+        label: labels.vocab?.mastered || 'Mastered',
         count: stats.mastered,
         color: 'emerald',
       },
@@ -115,36 +120,21 @@ const VocabBookPage: React.FC = () => {
 
   const exportSubtitle = useMemo(() => {
     const catLabel = filterButtons.find(b => b.key === activeCategory)?.label || activeCategory;
-    let subtitle = `生词本 · ${catLabel}`;
+    const baseLabel = labels.vocabBook?.title || 'Vocab Book';
+    let subtitle = `${baseLabel} · ${catLabel}`;
     if (trimmedSearch) {
-      subtitle = `生词本 · ${catLabel} · ${trimmedSearch}`;
+      subtitle = `${baseLabel} · ${catLabel} · ${trimmedSearch}`;
     }
     return subtitle;
-  }, [activeCategory, filterButtons, trimmedSearch]);
+  }, [activeCategory, filterButtons, labels.vocabBook?.title, trimmedSearch]);
 
   const langListLabel = useMemo(() => {
-    let label = 'English List';
-    if (language === 'zh') {
-      label = '中文词表';
-    } else if (language === 'vi') {
-      label = 'Từ vựng tiếng Việt';
-    } else if (language === 'mn') {
-      label = 'Монгол үгийн жагсаалт';
-    }
-    return label;
-  }, [language]);
+    return labels.vocabBook?.exportModes?.langListTitle || 'English List';
+  }, [labels.vocabBook?.exportModes?.langListTitle]);
 
   const langListDesc = useMemo(() => {
-    let desc = 'Write the word';
-    if (language === 'zh') {
-      desc = '默写单词';
-    } else if (language === 'vi') {
-      desc = 'Viết từ';
-    } else if (language === 'mn') {
-      desc = 'Үгийг бичих';
-    }
-    return desc;
-  }, [language]);
+    return labels.vocabBook?.exportModes?.langListDesc || 'Write the word';
+  }, [labels.vocabBook?.exportModes?.langListDesc]);
 
   const downloadFile = async (url: string, filename: string) => {
     try {
@@ -169,7 +159,7 @@ const VocabBookPage: React.FC = () => {
     try {
       setExporting(true);
       if (!user) {
-        notify.error(language === 'zh' ? '请先登录后再导出' : 'Please sign in to export');
+        notify.error(labels.vocabBook?.signInToExport || 'Please sign in to export');
         return;
       }
       const { url } = await exportPdf({
@@ -193,7 +183,7 @@ const VocabBookPage: React.FC = () => {
       await downloadFile(url, filename);
       setExportOpen(false);
     } catch {
-      notify.error(language === 'zh' ? '导出失败，请稍后重试' : 'Export failed. Please try again.');
+      notify.error(labels.vocabBook?.exportFailed || 'Export failed. Please try again.');
     } finally {
       globalThis.setTimeout(() => setExporting(false), 250);
     }
@@ -201,7 +191,7 @@ const VocabBookPage: React.FC = () => {
 
   const startLearning = (mode: 'immerse' | 'listen' | 'dictation' | 'spelling') => {
     const params = new URLSearchParams();
-    // If the current category has no items but others do, we should probably 
+    // If the current category has no items but others do, we should probably
     // default to a category that has items or allow learning from all.
     // Here we prioritize the active category if it has items, otherwise we use 'all'.
     const currentCategoryHasItems = visibleItems.length > 0;
@@ -245,7 +235,7 @@ const VocabBookPage: React.FC = () => {
                 <div>
                   <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
                   <p className="text-xs font-bold text-red-400">
-                    {labels.dashboard?.vocab?.dueNow || '已到期'}
+                    {labels.vocab?.dueNow || labels.dashboard?.vocab?.dueNow || 'Due now'}
                   </p>
                 </div>
               </div>
@@ -256,7 +246,7 @@ const VocabBookPage: React.FC = () => {
               className="px-4 py-3 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 font-black text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               <FileDown className="w-5 h-5 text-indigo-600" />
-              {language === 'zh' ? '导出PDF' : 'Export PDF'}
+              {labels.vocabBook?.exportPdf || 'Export PDF'}
             </button>
           </div>
         </div>
@@ -267,7 +257,7 @@ const VocabBookPage: React.FC = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder={getLabel(labels, ['dashboard', 'vocab', 'search']) || 'Search words...'}
+              placeholder={labels.vocab?.search || 'Search words...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white border-[3px] border-slate-200 rounded-2xl text-sm font-medium focus:ring-0 focus:border-indigo-300 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
@@ -280,14 +270,18 @@ const VocabBookPage: React.FC = () => {
               let activeClasses = '';
               if (isActive) {
                 if (btn.color === 'blue') {
-                  activeClasses = 'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]';
+                  activeClasses =
+                    'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]';
                 } else if (btn.color === 'amber') {
-                  activeClasses = 'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]';
+                  activeClasses =
+                    'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]';
                 } else {
-                  activeClasses = 'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]';
+                  activeClasses =
+                    'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]';
                 }
               } else {
-                activeClasses = 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+                activeClasses =
+                  'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
               }
 
               return (
@@ -344,7 +338,7 @@ const VocabBookPage: React.FC = () => {
               if (trimmedSearch) {
                 return labels.dashboard?.vocab?.noMatch || 'No results found';
               }
-              return labels.dashboard?.vocab?.noDueNow || '暂无单词';
+              return labels.vocab?.noDueNow || labels.dashboard?.vocab?.noDueNow || 'No words yet';
             })()}
           </p>
           <p className="text-slate-400 font-medium text-center max-w-md">
@@ -353,6 +347,7 @@ const VocabBookPage: React.FC = () => {
                 return '';
               }
               return (
+                labels.vocab?.srsDesc ||
                 labels.dashboard?.vocab?.srsDesc ||
                 "Words you mark as 'Don't know' will appear here for spaced repetition learning"
               );
@@ -390,7 +385,11 @@ const VocabBookPage: React.FC = () => {
                     await setMastery({ wordId: word.id, mastered: !isMastered });
                   }}
                   className="p-2 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
-                  aria-label={isMastered ? '取消已掌握' : '标记已掌握'}
+                  aria-label={
+                    isMastered
+                      ? labels.vocabBook?.unmarkMastered || 'Unmark mastered'
+                      : labels.vocabBook?.markMastered || 'Mark as mastered'
+                  }
                 >
                   {isMastered ? (
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -415,12 +414,8 @@ const VocabBookPage: React.FC = () => {
   };
 
   const renderExportModal = () => {
-    let buttonText = 'Export PDF';
-    let exportingText = 'Exporting...';
-    if (language === 'zh') {
-      buttonText = '导出 PDF 词表';
-      exportingText = '正在导出...';
-    }
+    const buttonText = labels.vocabBook?.exportPdf || 'Export PDF';
+    const exportingText = labels.vocabBook?.exporting || 'Exporting...';
 
     const currentButtonText = exporting ? exportingText : buttonText;
 
@@ -449,10 +444,10 @@ const VocabBookPage: React.FC = () => {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
-                    {language === 'zh' ? '导出PDF词表' : 'Export PDF'}
+                    {labels.vocabBook?.exportPdfTitle || 'Export PDF'}
                   </p>
                   <h2 className="text-2xl font-black text-slate-900">
-                    {language === 'zh' ? '单词学习表' : 'Word Sheet'}
+                    {labels.vocabBook?.wordSheetTitle || 'Word Sheet'}
                   </h2>
                   <p className="text-sm font-bold text-slate-500 mt-1">{exportSubtitle}</p>
                 </div>
@@ -463,7 +458,7 @@ const VocabBookPage: React.FC = () => {
                     }
                   }}
                   className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-40"
-                  aria-label="关闭"
+                  aria-label={labels.common?.close || 'Close'}
                   disabled={exporting}
                 >
                   <X className="w-5 h-5 text-slate-600" />
@@ -480,10 +475,10 @@ const VocabBookPage: React.FC = () => {
                   }`}
                 >
                   <p className="font-black text-slate-900">
-                    {language === 'zh' ? 'A4 默写' : 'A4 Dictation'}
+                    {labels.vocabBook?.exportModes?.a4Title || 'A4 Dictation'}
                   </p>
                   <p className="text-xs font-bold text-slate-500 mt-1">
-                    {language === 'zh' ? '单词、释义双向测试' : 'Two-way test'}
+                    {labels.vocabBook?.exportModes?.a4Desc || 'Two-way test'}
                   </p>
                 </button>
 
@@ -508,17 +503,17 @@ const VocabBookPage: React.FC = () => {
                   }`}
                 >
                   <p className="font-black text-slate-900">
-                    {language === 'zh' ? '韩语词表' : 'Korean List'}
+                    {labels.vocabBook?.exportModes?.koListTitle || 'Korean List'}
                   </p>
                   <p className="text-xs font-bold text-slate-500 mt-1">
-                    {language === 'zh' ? '默写释义' : 'Write the meaning'}
+                    {labels.vocabBook?.exportModes?.koListDesc || 'Write the meaning'}
                   </p>
                 </button>
               </div>
 
               <div className="mt-5 rounded-2xl border-2 border-slate-100 bg-slate-50 p-4 flex items-center justify-between">
                 <span className="font-black text-slate-800">
-                  {language === 'zh' ? '乱序导出' : 'Shuffle'}
+                  {labels.vocabBook?.exportModes?.shuffleLabel || 'Shuffle'}
                 </span>
                 <button
                   type="button"
@@ -563,7 +558,7 @@ const VocabBookPage: React.FC = () => {
               <div className="flex flex-col items-center gap-1">
                 <Layers className="w-5 h-5 text-indigo-600" />
                 <span className="text-xs font-black text-slate-800">
-                  {labels.vocab?.modeImmersive || '沉浸刷词'}
+                  {labels.vocab?.modeImmersive || 'Immersive'}
                 </span>
               </div>
             </button>
@@ -576,7 +571,7 @@ const VocabBookPage: React.FC = () => {
               <div className="flex flex-col items-center gap-1">
                 <Headphones className="w-5 h-5 text-amber-700" />
                 <span className="text-xs font-black text-slate-800">
-                  {labels.vocab?.modeListen || '随身听'}
+                  {labels.vocab?.modeListen || 'Listen'}
                 </span>
               </div>
             </button>
@@ -589,7 +584,7 @@ const VocabBookPage: React.FC = () => {
               <div className="flex flex-col items-center gap-1">
                 <PencilLine className="w-5 h-5 text-rose-600" />
                 <span className="text-xs font-black text-slate-800">
-                  {labels.vocab?.modeDictation || '听写'}
+                  {labels.vocab?.modeDictation || 'Dictation'}
                 </span>
               </div>
             </button>
@@ -602,7 +597,7 @@ const VocabBookPage: React.FC = () => {
               <div className="flex flex-col items-center gap-1">
                 <SpellCheck className="w-5 h-5 text-emerald-700" />
                 <span className="text-xs font-black text-slate-800">
-                  {labels.vocab?.modeSpelling || '拼写'}
+                  {labels.vocab?.modeSpelling || 'Spelling'}
                 </span>
               </div>
             </button>

@@ -10,12 +10,7 @@ import { toErrorMessage } from '../utils/errors';
 
 import toast, { Toaster } from 'react-hot-toast';
 import { Loading } from '../components/common/Loading';
-import {
-  User as UserIcon,
-  BarChart3,
-  Lock,
-  Settings,
-} from 'lucide-react';
+import { User as UserIcon, BarChart3, Lock, Settings } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { ProfileTabButton } from './profile/components/ProfileTabButton';
 import { ProfileHeader } from './profile/components/ProfileHeader';
@@ -88,7 +83,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   if (!user) return <Loading fullScreen size="lg" />;
 
   const displayName =
-    user.name || user.email?.split('@')[0] || (language === 'zh' ? '未命名用户' : 'Unnamed');
+    user.name || user.email?.split('@')[0] || labels.profile?.unnamed || 'Unnamed';
   const userMeta = user as User & {
     _id?: string;
     _creationTime?: number;
@@ -102,11 +97,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const linkedProviders = new Set(linkedAccounts?.map(account => account.provider) ?? []);
   const linkedCount = linkedAccounts?.length ?? 0;
   const accountsLoading = linkedAccounts === undefined;
-  const linkLabel = language === 'zh' ? '绑定' : 'Connect';
-  const unlinkLabel = language === 'zh' ? '解绑' : 'Unlink';
-  const linkedLabel = language === 'zh' ? '已连接' : 'Linked';
-  const notLinkedLabel = language === 'zh' ? '未连接' : 'Not linked';
-  const accountSectionTitle = language === 'zh' ? '社交账号绑定' : 'Social Accounts';
+  const linkLabel = labels.profile?.link?.connect || 'Connect';
+  const unlinkLabel = labels.profile?.link?.unlink || 'Unlink';
+  const linkedLabel = labels.profile?.link?.linked || 'Linked';
+  const notLinkedLabel = labels.profile?.link?.notLinked || 'Not linked';
+  const accountSectionTitle = labels.profile?.link?.sectionTitle || 'Social Accounts';
   const isProfileIncomplete = !user.name?.trim() || !user.avatar;
 
   const handleNameUpdate = async () => {
@@ -117,14 +112,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     try {
       await updateProfileMutation({ name: newName });
       updateUser({ name: newName });
-      success(labels.profileUpdated || (language === 'zh' ? '名字已更新' : 'Profile updated'));
+      success(labels.profileUpdated || 'Profile updated');
       setIsEditingName(false);
     } catch (err) {
       console.error(err);
-      error(
-        labels.profile?.updateNameFailed ||
-          (language === 'zh' ? '更新名字失败' : 'Failed to update name')
-      );
+      error(labels.profile?.updateNameFailed || 'Failed to update name');
     }
   };
 
@@ -132,17 +124,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      error(
-        labels.profile?.uploadImageError ||
-          (language === 'zh' ? '请上传图片文件' : 'Please upload an image file')
-      );
+      error(labels.profile?.uploadImageError || 'Please upload an image file');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      error(
-        labels.profile?.imageTooLarge ||
-          (language === 'zh' ? '图片大小不能超过 5MB' : 'Image size must be less than 5MB')
-      );
+      error(labels.profile?.imageTooLarge || 'Image size must be less than 5MB');
       return;
     }
     setIsUploadingAvatar(true);
@@ -168,13 +154,10 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
       // 4. Update local state
       updateUser({ avatar: publicUrl });
-      success(labels.avatarUpdated || (language === 'zh' ? '头像已更新' : 'Avatar updated'));
+      success(labels.avatarUpdated || 'Avatar updated');
     } catch (err) {
       console.error('Avatar upload failed:', err);
-      error(
-        labels.profile?.uploadAvatarFailed ||
-          (language === 'zh' ? '上传头像失败' : 'Failed to upload avatar')
-      );
+      error(labels.profile?.uploadAvatarFailed || 'Failed to upload avatar');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -196,7 +179,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         currentPassword,
         newPassword,
       });
-      success(labels.passwordUpdated || (language === 'zh' ? '密码已更新' : 'Password updated'));
+      success(labels.passwordUpdated || 'Password updated');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -210,12 +193,9 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         msg.includes('wrong') ||
         msg.includes('INCORRECT_PASSWORD')
       ) {
-        error(labels.wrongPassword || (language === 'zh' ? '密码不正确' : 'Incorrect password'));
+        error(labels.wrongPassword || 'Incorrect password');
       } else {
-        error(
-          labels.profile?.changePasswordFailed ||
-            (language === 'zh' ? '修改密码失败' : 'Failed to change password')
-        );
+        error(labels.profile?.changePasswordFailed || 'Failed to change password');
       }
     } finally {
       setIsChangingPassword(false);
@@ -240,7 +220,11 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     );
   };
 
-  const getAccountButtonClass = (isLinked: boolean, accountsLoading: boolean, disableUnlink: boolean) => {
+  const getAccountButtonClass = (
+    isLinked: boolean,
+    accountsLoading: boolean,
+    disableUnlink: boolean
+  ) => {
     if (accountsLoading || disableUnlink) {
       return 'bg-slate-200 text-slate-400 cursor-not-allowed';
     }
@@ -262,7 +246,6 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       {/* Header Profile Card */}
       <ProfileHeader
         user={user}
-        language={language}
         labels={labels}
         displayName={displayName}
         isEditingName={isEditingName}
@@ -347,7 +330,6 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
             signIn={signIn}
             unlinkAuthProviderMutation={unlinkAuthProviderMutation}
             getAccountButtonClass={getAccountButtonClass}
-            language={language}
             success={success}
             error={error}
             toErrorMessage={toErrorMessage}

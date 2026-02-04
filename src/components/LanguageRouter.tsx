@@ -37,21 +37,31 @@ const getBrowserPreferredLanguage = (): Language | null => {
 // Get language from URL or detect from browser
 export const detectLanguage = async (): Promise<Language> => {
   const stored = localStorage.getItem('preferredLanguage');
+  const storedSource = localStorage.getItem('preferredLanguageSource');
 
+  // 1. If user explicitly chose a language, prioritize it above all else
+  if (storedSource === 'user' && stored && isValidLanguage(stored)) {
+    return stored;
+  }
+
+  // 2. Geo-location detection (force language for specific countries if no user override)
   const country = await fetchUserCountry();
   if (country === 'CN') return 'zh';
   if (country === 'VN') return 'vi';
   if (country === 'MN') return 'mn';
 
+  // 3. Browser language detection
   const browserLang = getBrowserPreferredLanguage();
   if (browserLang && (browserLang === 'zh' || browserLang === 'vi' || browserLang === 'mn')) {
     return browserLang;
   }
 
+  // 4. Fallback to stored preference (legacy logic or auto-saved)
   if (stored && isValidLanguage(stored)) {
     return stored;
   }
 
+  // 5. Fallback to browser lang if valid supported lang
   if (browserLang) return browserLang;
 
   return DEFAULT_LANGUAGE;

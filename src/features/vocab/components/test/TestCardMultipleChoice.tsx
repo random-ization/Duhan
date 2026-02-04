@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
+import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
 
 type Answer = {
@@ -59,12 +60,7 @@ const OptionButton = ({
   }
 
   return (
-    <button
-      type="button"
-      disabled={isReview}
-      onClick={() => onSelect(idx)}
-      className={className}
-    >
+    <button type="button" disabled={isReview} onClick={() => onSelect(idx)} className={className}>
       <span className="min-w-0 truncate">{opt}</span>
       {isReview && isCorrect ? <Check className="w-5 h-5 shrink-0" /> : null}
       {isReview && isWrongChoice ? <X className="w-5 h-5 shrink-0" /> : null}
@@ -81,11 +77,12 @@ export default function TestCardMultipleChoice({
   correctIndex,
   onSubmit,
 }: Props) {
+  const labels = getLabels(language);
   const isReview = mode === 'review' && typeof correctIndex === 'number';
   return (
     <div className="mt-6">
       <div className="text-xs font-black text-slate-400">
-        {language === 'zh' ? '选择答案' : 'Choose an answer'}
+        {labels.vocabTest?.chooseAnswer || 'Choose an answer'}
       </div>
       <div className="text-3xl font-black text-slate-900 mt-3">{prompt}</div>
 

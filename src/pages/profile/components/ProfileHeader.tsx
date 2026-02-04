@@ -1,10 +1,9 @@
 import React from 'react';
 import { Camera, CheckCircle, XCircle, Crown, Calendar, Trophy } from 'lucide-react';
-import { User, Language } from '../../../types';
+import { User } from '../../../types';
 
 interface ProfileHeaderProps {
   user: User;
-  language: Language;
   labels: any;
   displayName: string;
   isEditingName: boolean;
@@ -26,7 +25,6 @@ interface ProfileHeaderProps {
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
-  language,
   labels,
   displayName,
   isEditingName,
@@ -110,7 +108,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           )}
           {(user.tier === 'PAID' || user.tier === 'PREMIUM') && (
             <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1">
-              <Crown size={12} className="fill-current" /> {labels.profile?.premiumBadge || 'Premium'}
+              <Crown size={12} className="fill-current" />{' '}
+              {labels.profile?.premiumBadge || 'Premium'}
             </span>
           )}
         </div>
@@ -123,28 +122,27 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 try {
                   const result = await syncProfileFromIdentityMutation();
                   if (result.updated) {
-                    success(language === 'zh' ? '已导入社交账号资料' : 'Imported social profile');
+                    success(labels.profile?.importSuccess || 'Imported social profile');
                   } else {
                     error(
-                      language === 'zh'
-                        ? '未能导入资料，请手动设置'
-                        : 'Could not import profile, please set manually'
+                      labels.profile?.importUnavailable ||
+                        'Could not import profile, please set manually'
                     );
                   }
                 } catch {
-                  error(language === 'zh' ? '导入失败' : 'Import failed');
+                  error(labels.profile?.importFailed || 'Import failed');
                 }
               }}
               className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
             >
-              {language === 'zh' ? '导入社交账号资料' : 'Import social profile'}
+              {labels.profile?.importButton || 'Import social profile'}
             </button>
             <button
               type="button"
               onClick={() => navigate('/profile')}
               className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
             >
-              {language === 'zh' ? '自己创建' : 'Create manually'}
+              {labels.profile?.createManually || 'Create manually'}
             </button>
           </div>
         )}
