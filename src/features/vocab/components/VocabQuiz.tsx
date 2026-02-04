@@ -442,7 +442,7 @@ const MCOptions: React.FC<MCOptionsProps> = ({
 };
 
 interface PendingAdvanceBannerProps {
-  language: string;
+  language: Language;
   onContinue: () => void;
 }
 
@@ -1253,7 +1253,7 @@ interface QuizContentProps {
   isLocked: boolean;
   handleDontKnow: () => void;
   pendingAdvance: boolean;
-  language: string;
+  language: Language;
   setPendingAdvanceReason: (reason: any) => void;
   nextQuestionRef: React.RefObject<() => void>;
   inputRef: React.RefObject<HTMLInputElement | null>;
