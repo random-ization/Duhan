@@ -367,7 +367,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                     >
                       <Trophy className="w-3 h-3" />
                       {format(getLabel(labels, ['topikExamList', 'bestScore']) || 'Best: {score}', {
-                        score: bestScore?.toFixed(0),
+                        score: bestScore ? bestScore.toFixed(0) : '0',
                       })}
                     </div>
                     <span className="text-xs text-slate-400">

@@ -327,26 +327,9 @@ export const saveProgress = mutation({
 });
 
 // Helper for resolving podcast channels in podcasts.ts
-type ConvexQueryBuilder = {
-  eq: (field: string, value: string) => unknown;
-  field: (name: string) => unknown;
-};
-type ConvexQuery = {
-  withIndex: (
-    name: string,
-    cb: (q: ConvexQueryBuilder) => unknown
-  ) => { first: () => Promise<unknown> };
-  filter: (cb: (q: ConvexQueryBuilder) => unknown) => { first: () => Promise<unknown> };
-};
-type ConvexDb = {
-  query: (table: string) => ConvexQuery;
-  insert: (table: string, data: Record<string, unknown>) => Promise<unknown>;
-  get: (id: unknown) => Promise<unknown>;
-};
-type ConvexCtx = { db: ConvexDb };
-
 async function resolvePodcastChannel(
-  ctx: ConvexCtx,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
   channelInfo: {
     itunesId?: string;
     title: string;
@@ -361,7 +344,8 @@ async function resolvePodcastChannel(
   if (normalizedFeedUrl) {
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      .withIndex('by_feedUrl', q => q.eq('feedUrl', normalizedFeedUrl))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', normalizedFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -381,7 +365,8 @@ async function resolvePodcastChannel(
     const pseudoFeedUrl = `itunes:${normalizedItunesId} `;
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      .withIndex('by_feedUrl', q => q.eq('feedUrl', pseudoFeedUrl))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', pseudoFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -402,7 +387,8 @@ async function resolvePodcastChannel(
     const existingChannel = await ctx.db
       .query('podcast_channels')
 
-      .filter(q => q.eq(q.field('title'), channelInfo.title))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((q: any) => q.eq(q.field('title'), channelInfo.title))
       .first();
     if (existingChannel) return existingChannel._id;
   }

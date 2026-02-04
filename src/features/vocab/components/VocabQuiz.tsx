@@ -442,7 +442,7 @@ const MCOptions: React.FC<MCOptionsProps> = ({
 };
 
 interface PendingAdvanceBannerProps {
-  language: Language;
+  language: string;
   onContinue: () => void;
 }
 

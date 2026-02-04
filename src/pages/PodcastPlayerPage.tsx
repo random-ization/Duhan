@@ -1203,7 +1203,7 @@ const PodcastPlayerPage: React.FC = () => {
                 <h3 className="text-slate-800 font-bold mb-1">无法加载字幕</h3>
                 <p className="text-sm text-slate-500 mb-4">{transcriptError}</p>
                 <button
-                  onClick={loadTranscriptChunked}
+                  onClick={() => loadTranscriptChunked(true)}
                   className="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
                   重试
