@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
+import { Button } from '../components/ui/button';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
@@ -1133,23 +1134,33 @@ const PodcastPlayerPage: React.FC = () => {
               </div>
 
               {/* Regenerate Button (For fixing broken subtitles) */}
-              <button
+              <Button
                 onClick={regenerateTranscript}
                 disabled={transcriptLoading || isGeneratingTranscript}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-slate-300 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all text-slate-400 font-medium text-sm"
+                variant="outline"
+                size="md"
+                className="w-full gap-2 border-dashed border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-600"
               >
                 <RefreshCw className={`w-4 h-4 ${isGeneratingTranscript ? 'animate-spin' : ''}`} />
                 {isGeneratingTranscript ? '生成中...' : '重新生成字幕 (修正排版)'}
-              </button>
+              </Button>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-3">
-                <button className="flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all text-slate-600 font-medium text-sm">
+                <Button
+                  variant="outline"
+                  size="md"
+                  className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
+                >
                   <Heart className="w-4 h-4" /> 收藏此集
-                </button>
-                <button className="flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all text-slate-600 font-medium text-sm">
+                </Button>
+                <Button
+                  variant="outline"
+                  size="md"
+                  className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
+                >
                   <Share2 className="w-4 h-4" /> 分享
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1202,12 +1213,9 @@ const PodcastPlayerPage: React.FC = () => {
                 </div>
                 <h3 className="text-slate-800 font-bold mb-1">无法加载字幕</h3>
                 <p className="text-sm text-slate-500 mb-4">{transcriptError}</p>
-                <button
-                  onClick={() => loadTranscriptChunked(true)}
-                  className="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
-                >
+                <Button onClick={() => loadTranscriptChunked(true)} size="md" className="px-6 py-2">
                   重试
-                </button>
+                </Button>
               </div>
             )}
 

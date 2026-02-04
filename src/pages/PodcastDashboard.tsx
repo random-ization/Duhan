@@ -4,6 +4,8 @@ import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
 import BackButton from '../components/ui/BackButton';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -375,12 +377,12 @@ export default function PodcastDashboard() {
         {/* 2. Search & Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <form onSubmit={handleSearch} className="relative flex-1 group">
-            <input
+            <Input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder={podcastMsgs.ACTION_SEARCH}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl py-3 px-12 shadow-pop focus:outline-none focus:translate-y-1 focus:shadow-none transition font-bold placeholder:text-slate-400 text-slate-900"
+              className="border-2 border-slate-900 px-12 font-bold focus:translate-y-1 focus:shadow-none"
             />
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition"
@@ -388,26 +390,17 @@ export default function PodcastDashboard() {
             />
           </form>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
-            <button
-              type="button"
-              className="px-4 py-3 bg-slate-900 text-white rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap shadow-pop hover:translate-y-1 hover:shadow-none transition"
-            >
+            <Button type="button" variant="solid" size="md" className="whitespace-nowrap">
               {labels.dashboard?.podcast?.filters?.all || labels.common?.all || 'All'}
-            </button>
-            <button
-              type="button"
-              className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition"
-            >
+            </Button>
+            <Button type="button" variant="outline" size="md" className="whitespace-nowrap">
               {labels.dashboard?.podcast?.filters?.beginner ||
                 labels.dashboard?.level?.beginner ||
                 'Beginner'}
-            </button>
-            <button
-              type="button"
-              className="px-4 py-3 bg-white text-slate-600 rounded-xl border-2 border-slate-900 font-bold text-sm whitespace-nowrap hover:bg-slate-50 transition"
-            >
+            </Button>
+            <Button type="button" variant="outline" size="md" className="whitespace-nowrap">
               {labels.dashboard?.podcast?.dailyConv || 'Daily Conv'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -440,13 +433,13 @@ export default function PodcastDashboard() {
                 <p className="font-bold text-slate-600">
                   {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
                 </p>
-                <button
+                <Button
                   type="button"
                   onClick={() => navigate('/login')}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
+                  className="px-6 py-3 rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
                 >
                   {labels.login || 'Login'}
-                </button>
+                </Button>
               </div>
             )}
 
@@ -510,24 +503,28 @@ export default function PodcastDashboard() {
                   })}
                 </div>
                 {subscriptionsCanLeft && (
-                  <button
+                  <Button
                     type="button"
+                    size="icon"
+                    variant="outline"
                     onClick={() => scrollSubscriptions('left')}
-                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                     aria-label="Scroll left"
                   >
                     ‹
-                  </button>
+                  </Button>
                 )}
                 {subscriptionsCanRight && (
-                  <button
+                  <Button
                     type="button"
+                    size="icon"
+                    variant="outline"
                     onClick={() => scrollSubscriptions('right')}
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                     aria-label="Scroll right"
                   >
                     ›
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -641,24 +638,28 @@ export default function PodcastDashboard() {
                   ))}
               </div>
               {trendingCanLeft && (
-                <button
+                <Button
                   type="button"
+                  size="icon"
+                  variant="outline"
                   onClick={() => scrollTrending('left')}
-                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                   aria-label="Scroll left"
                 >
                   ‹
-                </button>
+                </Button>
               )}
               {trendingCanRight && (
-                <button
+                <Button
                   type="button"
+                  size="icon"
+                  variant="outline"
                   onClick={() => scrollTrending('right')}
-                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                   aria-label="Scroll right"
                 >
                   ›
-                </button>
+                </Button>
               )}
             </div>
 
@@ -728,24 +729,28 @@ export default function PodcastDashboard() {
                   ))}
                 </div>
                 {historyCanLeft && (
-                  <button
+                  <Button
                     type="button"
+                    size="icon"
+                    variant="outline"
                     onClick={() => scrollHistory('left')}
-                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                     aria-label="Scroll left"
                   >
                     ‹
-                  </button>
+                  </Button>
                 )}
                 {historyCanRight && (
-                  <button
+                  <Button
                     type="button"
+                    size="icon"
+                    variant="outline"
                     onClick={() => scrollHistory('right')}
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-slate-900 shadow-pop flex items-center justify-center hover:-translate-y-1/2 hover:scale-105 transition"
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
                     aria-label="Scroll right"
                   >
                     ›
-                  </button>
+                  </Button>
                 )}
               </div>
             </section>
