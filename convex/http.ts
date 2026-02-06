@@ -101,6 +101,22 @@ http.route({
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
     const url = new URL(request.url);
+    const expectedDgToken = process.env.DEEPGRAM_API_KEY_ID?.trim();
+    const expectedCallbackToken = process.env.DEEPGRAM_CALLBACK_TOKEN?.trim();
+    const dgToken = request.headers.get('dg-token')?.trim();
+    const callbackToken = url.searchParams.get('token')?.trim();
+
+    if (!expectedDgToken && !expectedCallbackToken) {
+      console.error('Deepgram webhook auth is not configured');
+      return new Response('Webhook auth not configured', { status: 500 });
+    }
+
+    const isDgTokenValid = !!expectedDgToken && dgToken === expectedDgToken;
+    const isCallbackTokenValid = !!expectedCallbackToken && callbackToken === expectedCallbackToken;
+    if (!isDgTokenValid && !isCallbackTokenValid) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
     const episodeId = url.searchParams.get('episodeId');
     const language = url.searchParams.get('language') || undefined;
 

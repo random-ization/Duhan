@@ -1,6 +1,6 @@
 import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { Play, Calendar } from 'lucide-react';
+import { Play, Calendar, ArrowLeft } from 'lucide-react';
 
 import { NoArgs, qRef } from '../utils/convexRefs';
 
@@ -10,8 +10,8 @@ const getPodcastMessages = (labels: import('../utils/i18n').Labels) => ({
   DASHBOARD_NO_RECOMMENDATIONS: labels.startListening || 'Start listening to some podcasts!',
   ACTION_EXPLORE: labels.explore || 'Explore Podcasts',
 });
-import BackButton from '../components/ui/BackButton';
-import EmptyState from '../components/common/EmptyState';
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
 import { getLabels } from '../utils/i18n';
@@ -37,7 +37,16 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <div className="bg-white p-4 sticky top-0 z-10 border-b flex items-center gap-4">
-        <BackButton onClick={() => navigate(-1)} />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="w-12 h-12 border-2 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
+          aria-label={labels.errors?.backToHome || 'Back'}
+        >
+          <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+        </Button>
         <h1 className="text-xl font-bold">{podcastMsgs.HISTORY_TITLE}</h1>
       </div>
 
@@ -49,18 +58,26 @@ export default function HistoryPage() {
         )}
 
         {!loading && (!history || history.length === 0) && (
-          <EmptyState
-            icon={Play}
-            title={podcastMsgs.EMPTY_HISTORY}
-            description={podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}
-            actionLabel={podcastMsgs.ACTION_EXPLORE}
-            onAction={() => navigate('/podcasts')}
-          />
+          <Card className="text-center">
+            <CardContent className="py-16 flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Play size={20} className="fill-current" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-bold text-slate-800">{podcastMsgs.EMPTY_HISTORY}</p>
+                <p className="text-sm text-slate-500">{podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}</p>
+              </div>
+              <Button type="button" onClick={() => navigate('/podcasts')}>
+                {podcastMsgs.ACTION_EXPLORE}
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {history?.map(item => (
-          <button
+          <Button
             key={item.id}
+            size="auto"
             onClick={() =>
               navigate('/podcasts/player', {
                 state: {
@@ -73,7 +90,8 @@ export default function HistoryPage() {
                 },
               })
             }
-            className="w-full text-left bg-white p-3 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer active:scale-95 transition hover:shadow-md"
+            variant="ghost"
+            className="w-full text-left bg-white p-3 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer active:scale-95 transition hover:shadow-md font-normal"
           >
             <img
               src={item.channelImage || '/placeholder-podcast.png'}
@@ -91,7 +109,7 @@ export default function HistoryPage() {
             <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">
               <Play size={16} fill="currentColor" />
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

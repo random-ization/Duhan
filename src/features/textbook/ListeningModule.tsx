@@ -9,6 +9,9 @@ import { getLabels } from '../../utils/i18n';
 import { ListeningModuleSkeleton } from '../../components/common';
 import { useTTS } from '../../hooks/useTTS';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
+import { useUserActions } from '../../hooks/useUserActions';
+import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { notify } from '../../utils/notify';
 
 // =========================================
 // Types
@@ -63,7 +66,13 @@ interface SearchResult {
 }
 
 interface MorphologyLookupResult {
-  token: { surface: string; lemma: string; pos: string | null; begin: number | null; len: number | null };
+  token: {
+    surface: string;
+    lemma: string;
+    pos: string | null;
+    begin: number | null;
+    len: number | null;
+  };
   morphemes: Array<{ form: string; tag: string; begin: number; len: number }>;
   wordFromDb: null | {
     word: string;
@@ -73,7 +82,13 @@ interface MorphologyLookupResult {
     hanja?: string;
     audioUrl?: string;
   };
-  grammarMatches: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+  grammarMatches: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    type: string;
+    level: string;
+  }>;
   krdict: SearchResult | null;
   krdictError: string | null;
 }
@@ -88,7 +103,13 @@ interface FlashcardPopoverProps {
   lemma?: string;
   meaning: string;
   contextTranslation?: string;
-  grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+  grammarMatches?: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    type: string;
+    level: string;
+  }>;
   position: { x: number; y: number };
   onClose: () => void;
   onSave: () => void;
@@ -258,17 +279,19 @@ const SegmentView: React.FC<SegmentViewProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const localizedTranslation = getLocalizedContent(segment, 'translation', language) || segment.translation;
+  const localizedTranslation =
+    getLocalizedContent(segment, 'translation', language) || segment.translation;
 
   return (
     <button
       ref={setRef}
       onClick={onClick}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onClick(e)}
-      className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left ${isActive
-        ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
-        : 'bg-white border-zinc-200 hover:border-zinc-400'
-        }`}
+      className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left ${
+        isActive
+          ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
+          : 'bg-white border-zinc-200 hover:border-zinc-400'
+      }`}
     >
       {/* Timestamp */}
       <div className="text-xs font-mono text-zinc-400 mb-2">
@@ -301,9 +324,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 
       {/* Translation */}
       {(showTranslation || isActive) && localizedTranslation && (
-        <div className="mt-2 text-sm text-zinc-500">
-          {localizedTranslation}
-        </div>
+        <div className="mt-2 text-sm text-zinc-500">{localizedTranslation}</div>
       )}
     </button>
   );
@@ -318,14 +339,21 @@ interface WordViewProps {
   isActive: boolean;
 }
 
-const WordView: React.FC<WordViewProps> = ({ word, normalizedWord, baseForm, segmentIndex, isActive }) => {
+const WordView: React.FC<WordViewProps> = ({
+  word,
+  normalizedWord,
+  baseForm,
+  segmentIndex,
+  isActive,
+}) => {
   return (
     <span
       data-word={normalizedWord}
       data-base={baseForm}
       data-seg-index={segmentIndex}
-      className={`cursor-pointer rounded px-0.5 transition-colors ${isActive ? 'hover:bg-lime-200' : 'hover:bg-yellow-100'
-        }`}
+      className={`cursor-pointer rounded px-0.5 transition-colors ${
+        isActive ? 'hover:bg-lime-200' : 'hover:bg-yellow-100'
+      }`}
     >
       {word}{' '}
     </span>
@@ -351,6 +379,8 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   onBack,
 }) => {
   const labels = getLabels(language);
+  const { saveWord } = useUserActions();
+  const { logActivity } = useActivityLogger();
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const lookupWithMorphology = useAction(
     aRef<
@@ -376,6 +406,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       void
     >('vocab:addToReview')
   );
+  const completeUnitMutation = useMutation(
+    mRef<{ courseId: string; unitIndex: number }, unknown>('progress:completeUnit')
+  );
+  const touchCourseMutation = useMutation(
+    mRef<{ courseId: string; unitIndex?: number }, unknown>('progress:touchCourse')
+  );
   const dictionaryRequestRef = useRef(0);
   const translationLang = useMemo(() => {
     if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
@@ -396,6 +432,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
   // Audio/Karaoke State
   const [currentTime, setCurrentTime] = useState(0);
+  const listeningAccumulatedRef = useRef(0);
+  const lastAudioTimeRef = useRef<number | null>(null);
+  const activityContextRef = useRef({ courseId, unitIndex });
 
   // Word popup state
   const [selectedWord, setSelectedWord] = useState<{
@@ -404,12 +443,43 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     meaning: string;
     baseForm?: string;
     contextTranslation?: string;
-    grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+    grammarMatches?: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      type: string;
+      level: string;
+    }>;
     position: { x: number; y: number };
     isFromVocabList: boolean;
   } | null>(null);
 
   const segmentRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const flushListeningTime = useCallback(
+    (force = false) => {
+      const seconds = listeningAccumulatedRef.current;
+      if (seconds <= 0) return;
+      if (!force && seconds < 30) return;
+      const minutes = Number((seconds / 60).toFixed(2));
+      listeningAccumulatedRef.current = 0;
+      logActivity('LISTENING', minutes, 0, { ...activityContextRef.current, auto: true });
+    },
+    [logActivity]
+  );
+
+  useEffect(() => {
+    flushListeningTime(true);
+    activityContextRef.current = { courseId, unitIndex };
+    listeningAccumulatedRef.current = 0;
+    lastAudioTimeRef.current = null;
+  }, [courseId, unitIndex, flushListeningTime]);
+
+  useEffect(() => () => flushListeningTime(true), [flushListeningTime]);
+
+  useEffect(() => {
+    void touchCourseMutation({ courseId, unitIndex });
+  }, [touchCourseMutation, courseId, unitIndex]);
 
   // ========================================
   // Data Fetching - Use dedicated listening API
@@ -433,40 +503,40 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     if (!unitDetails?.unit) return null;
     const transcriptData = Array.isArray(unitDetails.unit.transcriptData)
       ? unitDetails.unit.transcriptData
-        .map((s): TranscriptSegment | null => {
-          if (!s || typeof s !== 'object') return null;
-          const r = s as Record<string, unknown>;
-          const start = r.start;
-          const end = r.end;
-          const text = r.text;
-          if (typeof start !== 'number' || typeof end !== 'number' || typeof text !== 'string')
-            return null;
-          const segment: TranscriptSegment = { start, end, text };
-          if (typeof r.translation === 'string') segment.translation = r.translation;
-          if (typeof r.translationEn === 'string') segment.translationEn = r.translationEn;
-          if (typeof r.translationVi === 'string') segment.translationVi = r.translationVi;
-          if (typeof r.translationMn === 'string') segment.translationMn = r.translationMn;
-          if (Array.isArray(r.tokens)) {
-            segment.tokens = r.tokens
-              .map(t => {
-                if (!t || typeof t !== 'object') return null;
-                const tr = t as Record<string, unknown>;
-                const surface = tr.surface;
-                const base = tr.base;
-                const pos = tr.pos;
-                if (
-                  typeof surface !== 'string' ||
-                  typeof base !== 'string' ||
-                  typeof pos !== 'string'
-                )
-                  return null;
-                return { surface, base, pos };
-              })
-              .filter((t): t is { surface: string; base: string; pos: string } => t !== null);
-          }
-          return segment;
-        })
-        .filter((s): s is TranscriptSegment => s !== null)
+          .map((s): TranscriptSegment | null => {
+            if (!s || typeof s !== 'object') return null;
+            const r = s as Record<string, unknown>;
+            const start = r.start;
+            const end = r.end;
+            const text = r.text;
+            if (typeof start !== 'number' || typeof end !== 'number' || typeof text !== 'string')
+              return null;
+            const segment: TranscriptSegment = { start, end, text };
+            if (typeof r.translation === 'string') segment.translation = r.translation;
+            if (typeof r.translationEn === 'string') segment.translationEn = r.translationEn;
+            if (typeof r.translationVi === 'string') segment.translationVi = r.translationVi;
+            if (typeof r.translationMn === 'string') segment.translationMn = r.translationMn;
+            if (Array.isArray(r.tokens)) {
+              segment.tokens = r.tokens
+                .map(t => {
+                  if (!t || typeof t !== 'object') return null;
+                  const tr = t as Record<string, unknown>;
+                  const surface = tr.surface;
+                  const base = tr.base;
+                  const pos = tr.pos;
+                  if (
+                    typeof surface !== 'string' ||
+                    typeof base !== 'string' ||
+                    typeof pos !== 'string'
+                  )
+                    return null;
+                  return { surface, base, pos };
+                })
+                .filter((t): t is { surface: string; base: string; pos: string } => t !== null);
+            }
+            return segment;
+          })
+          .filter((s): s is TranscriptSegment => s !== null)
       : undefined;
     return {
       id: unitDetails.unit._id,
@@ -485,7 +555,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       for (const ending of endings) {
         if (word.endsWith(ending)) {
           const stem = word.slice(0, -ending.length);
-          const stemMatch = vocabList.find(v => v.korean === stem + '다' || v.korean.startsWith(stem));
+          const stemMatch = vocabList.find(
+            v => v.korean === stem + '다' || v.korean.startsWith(stem)
+          );
           if (stemMatch) return stemMatch;
         }
       }
@@ -520,9 +592,23 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   // ========================================
   const handleTimeUpdate = (time: number) => {
     setCurrentTime(time);
+    const prev = lastAudioTimeRef.current;
+    lastAudioTimeRef.current = time;
+    if (prev === null) return;
+    const delta = time - prev;
+    if (delta <= 0) return;
+    if (delta > 2.5) return;
+    listeningAccumulatedRef.current += delta;
+    if (listeningAccumulatedRef.current >= 60) {
+      flushListeningTime();
+    }
   };
 
-  const handleSegmentClick = (segment: TranscriptSegment, _index: number, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleSegmentClick = (
+    segment: TranscriptSegment,
+    _index: number,
+    e: React.MouseEvent | React.KeyboardEvent
+  ) => {
     // If a word was clicked, handleWordClick will handle it via bubbling if we want,
     // but here we can explicitly check to avoid seeking if a word was clicked.
     const wordEl = (e.target as Element).closest<HTMLElement>('[data-word]');
@@ -564,8 +650,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       if (dictionaryRequestRef.current !== requestId) return;
 
       const lemma = normalizeLookupWordCb(res.token.lemma || query) || query;
-      let meaning =
-        selectedWord?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+      let meaning = selectedWord?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
 
       if (res.wordFromDb?.meaning) {
         meaning = res.wordFromDb.meaning;
@@ -576,12 +661,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       setSelectedWord(prev =>
         prev
           ? {
-            ...prev,
-            lemma,
-            baseForm: lemma,
-            grammarMatches: res.grammarMatches,
-            meaning,
-          }
+              ...prev,
+              lemma,
+              baseForm: lemma,
+              grammarMatches: res.grammarMatches,
+              meaning,
+            }
           : prev
       );
     } catch (error: unknown) {
@@ -590,9 +675,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       setSelectedWord(prev =>
         prev
           ? {
-            ...prev,
-            meaning: prev.meaning === labels.dashboard?.common?.loading ? '查询失败' : prev.meaning,
-          }
+              ...prev,
+              meaning:
+                prev.meaning === labels.dashboard?.common?.loading ? '查询失败' : prev.meaning,
+            }
           : prev
       );
     }
@@ -608,10 +694,13 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     const baseForm = wordEl.dataset.base ? normalizeLookupWordCb(wordEl.dataset.base) : undefined;
     const query = baseForm || clickedWord;
     const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
-    const segIndex = wordEl.dataset.segIndex ? Number.parseInt(wordEl.dataset.segIndex, 10) : undefined;
-    const segment =
-      typeof segIndex === 'number' ? unitData?.transcriptData?.[segIndex] : undefined;
-    const contextTranslation = segment ? getLocalizedContent(segment, 'translation', language) : undefined;
+    const segIndex = wordEl.dataset.segIndex
+      ? Number.parseInt(wordEl.dataset.segIndex, 10)
+      : undefined;
+    const segment = typeof segIndex === 'number' ? unitData?.transcriptData?.[segIndex] : undefined;
+    const contextTranslation = segment
+      ? getLocalizedContent(segment, 'translation', language)
+      : undefined;
 
     const requestId = dictionaryRequestRef.current + 1;
     dictionaryRequestRef.current = requestId;
@@ -693,7 +782,6 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     );
   };
 
-
   return (
     <div
       className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col pb-20"
@@ -735,8 +823,9 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
               </span>
               <button
                 onClick={() => setShowTranslation(!showTranslation)}
-                className={`px-3 py-2 border-2 border-zinc-900 rounded-lg font-bold text-xs transition-colors ${showTranslation ? 'bg-blue-100' : 'bg-white'
-                  }`}
+                className={`px-3 py-2 border-2 border-zinc-900 rounded-lg font-bold text-xs transition-colors ${
+                  showTranslation ? 'bg-blue-100' : 'bg-white'
+                }`}
               >
                 <Languages className="w-4 h-4 inline mr-1" />
                 {labels.dashboard?.listening?.translate || '译文'}
@@ -780,6 +869,24 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
               )}
 
               {renderTranscript()}
+
+              <div className="mt-8 pt-6 border-t-2 border-zinc-200 flex justify-center">
+                <button
+                  onClick={async () => {
+                    try {
+                      await completeUnitMutation({ courseId, unitIndex });
+                      flushListeningTime(true);
+                      notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
+                    } catch (e) {
+                      console.error('Failed to mark unit complete:', e);
+                      notify.error(labels.dashboard?.common?.error || '操作失败，请稍后重试');
+                    }
+                  }}
+                  className="px-8 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                >
+                  ✅ {labels.dashboard?.reading?.completeLesson || '完成本课学习'}
+                </button>
+              </div>
             </div>
           </div>
         </>
@@ -799,6 +906,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             onSave={async () => {
               if (selectedWord) {
                 try {
+                  await saveWord(selectedWord.lemma || selectedWord.word, selectedWord.meaning);
                   await addToReview({
                     word: selectedWord.lemma || selectedWord.word,
                     meaning: selectedWord.meaning,

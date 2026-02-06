@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Play, Library, Search, Disc, History as HistoryIcon } from 'lucide-react';
+import { Play, Library, Search, Disc, History as HistoryIcon, ArrowLeft } from 'lucide-react';
 import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
-import BackButton from '../components/ui/BackButton';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
+import { Skeleton } from '../components/ui/skeleton';
 import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -240,8 +242,9 @@ export default function PodcastDashboard() {
   const renderFeaturedHero = () => {
     if (lastPlayed) {
       return (
-        <button
+        <Button
           type="button"
+          size="auto"
           onClick={() =>
             navigate('/podcasts/player', {
               state: {
@@ -257,7 +260,7 @@ export default function PodcastDashboard() {
               },
             })
           }
-          className="w-full text-left bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6"
+          className="w-full text-left bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6 font-normal"
         >
           <div className="absolute right-[-20px] bottom-[-40px] opacity-20 group-hover:rotate-12 transition duration-500">
             <Disc size={200} />
@@ -285,7 +288,7 @@ export default function PodcastDashboard() {
           <div className="z-10 hidden md:flex w-12 h-12 bg-white rounded-full items-center justify-center text-black hover:scale-110 transition shadow-lg shrink-0">
             <Play fill="currentColor" size={20} />
           </div>
-        </button>
+        </Button>
       );
     }
 
@@ -296,14 +299,15 @@ export default function PodcastDashboard() {
       if (featuredChannel.feedUrl) params.set('feedUrl', featuredChannel.feedUrl);
       const query = params.toString();
       return (
-        <button
+        <Button
           type="button"
+          size="auto"
           onClick={() =>
             navigate(`/podcasts/channel${query ? `?${query}` : ''}`, {
               state: { channel: featuredChannel },
             })
           }
-          className="w-full text-left bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6"
+          className="w-full text-left bg-slate-900 rounded-[2rem] p-6 text-white border-2 border-slate-900 shadow-pop relative overflow-hidden group cursor-pointer bouncy flex flex-col md:flex-row items-center gap-6 font-normal"
         >
           <div className="absolute right-[-20px] bottom-[-40px] opacity-20 group-hover:rotate-12 transition duration-500">
             <Disc size={200} />
@@ -327,14 +331,14 @@ export default function PodcastDashboard() {
             <h3 className="text-2xl font-black mb-1 line-clamp-1">{featuredChannel.title}</h3>
             <p className="text-slate-400 text-sm">{featuredChannel.author}</p>
           </div>
-        </button>
+        </Button>
       );
     }
 
     return (
-      <div className="bg-slate-800 rounded-[2rem] p-8 text-center text-slate-400">
+      <Card className="bg-slate-800 rounded-[2rem] p-8 text-center text-slate-400 border-slate-800">
         <p>{podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}</p>
-      </div>
+      </Card>
     );
   };
 
@@ -358,7 +362,16 @@ export default function PodcastDashboard() {
       <div className="max-w-7xl mx-auto space-y-12">
         {/* 1. Header Section */}
         <div className="flex items-center gap-4 mb-6">
-          <BackButton onClick={() => navigate('/dashboard')} />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/dashboard')}
+            className="w-12 h-12 border-2 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
+            aria-label={labels.errors?.backToHome || 'Back'}
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+          </Button>
           <div>
             <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
               {podcastMsgs.DASHBOARD_TITLE}
@@ -429,18 +442,20 @@ export default function PodcastDashboard() {
             </div>
 
             {!user && (
-              <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 text-center space-y-4">
-                <p className="font-bold text-slate-600">
-                  {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => navigate('/login')}
-                  className="px-6 py-3 rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
-                >
-                  {labels.login || 'Login'}
-                </Button>
-              </div>
+              <Card className="border-2 border-slate-900">
+                <CardContent className="p-6 text-center space-y-4">
+                  <p className="font-bold text-slate-600">
+                    {labels.dashboard?.podcast?.loginRequired || 'Please login first'}
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="px-6 py-3 rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all"
+                  >
+                    {labels.login || 'Login'}
+                  </Button>
+                </CardContent>
+              </Card>
             )}
 
             {user && subscriptionsLoading && (
@@ -450,9 +465,11 @@ export default function PodcastDashboard() {
             )}
 
             {user && !subscriptionsLoading && subscriptions.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold">
-                {labels.dashboard?.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
-              </div>
+              <Card className="rounded-[2rem] border-2 border-slate-900 text-slate-400 font-bold text-center">
+                <CardContent className="py-12">
+                  {labels.dashboard?.podcast?.msg?.EMPTY_SUBSCRIPTIONS || 'No subscriptions yet'}
+                </CardContent>
+              </Card>
             )}
 
             {user && !subscriptionsLoading && subscriptions.length > 0 && (
@@ -468,16 +485,17 @@ export default function PodcastDashboard() {
                     if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
                     const query = params.toString();
                     return (
-                      <button
+                      <Button
                         key={channelId || channel.title}
                         type="button"
+                        size="auto"
                         onClick={() => {
                           const finalQuery = query ? `?${query}` : '';
                           navigate(`/podcasts/channel${finalQuery}`, {
                             state: { channel },
                           });
                         }}
-                        className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start"
+                        className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal"
                       >
                         <div className="w-full aspect-square rounded-xl border-2 border-slate-100 overflow-hidden bg-slate-50">
                           <img
@@ -498,7 +516,7 @@ export default function PodcastDashboard() {
                             {channel.author}
                           </p>
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -542,8 +560,10 @@ export default function PodcastDashboard() {
                 </h3>
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setActiveTab('community')}
                   className={`px-4 py-2 rounded-full text-sm font-black transition ${
                     activeTab === 'community'
@@ -552,9 +572,11 @@ export default function PodcastDashboard() {
                   }`}
                 >
                   {podcastMsgs.DASHBOARD_COMMUNITY}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setActiveTab('weekly')}
                   className={`px-4 py-2 rounded-full text-sm font-black transition ${
                     activeTab === 'weekly'
@@ -563,7 +585,7 @@ export default function PodcastDashboard() {
                   }`}
                 >
                   {podcastMsgs.DASHBOARD_EDITOR_PICKS}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -573,9 +595,10 @@ export default function PodcastDashboard() {
                 className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory"
               >
                 {displayedTrending.slice(0, 12).map((pod, idx) => (
-                  <button
+                  <Button
                     key={pod.id || pod.title || idx}
                     type="button"
+                    size="auto"
                     onClick={() => {
                       const params = new URLSearchParams();
                       const channelId = pod.itunesId || pod.id;
@@ -586,7 +609,8 @@ export default function PodcastDashboard() {
                         state: { channel: pod },
                       });
                     }}
-                    className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start"
+                    variant="ghost"
+                    className="min-w-[220px] max-w-[220px] text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal"
                   >
                     <div className="relative w-full aspect-square rounded-xl border-2 border-slate-100 overflow-hidden bg-slate-50">
                       <img
@@ -594,11 +618,13 @@ export default function PodcastDashboard() {
                         className="w-full h-full object-cover"
                         alt={pod.title}
                       />
-                      <span
-                        className={`absolute top-2 left-2 text-[10px] font-black px-2 py-1 rounded-full ${idx < 3 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600'}`}
+                      <Badge
+                        className={`absolute top-2 left-2 text-[10px] ${
+                          idx < 3 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600'
+                        }`}
                       >
                         #{idx + 1}
-                      </span>
+                      </Badge>
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-black text-sm text-slate-900 line-clamp-2">
@@ -611,30 +637,30 @@ export default function PodcastDashboard() {
                         )}
                       {activeTab === 'weekly' && (
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-full font-bold">
+                          <Badge variant="secondary" className="text-[10px]">
                             {pod.views || 0} {labels.dashboard?.podcast?.plays || 'plays'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase text-slate-400">
                             {labels.dashboard?.podcast?.editorPicks || 'User Hot'}
-                          </span>
+                          </Badge>
                         </div>
                       )}
                     </div>
-                  </button>
+                  </Button>
                 ))}
 
                 {activeLoading &&
                   [1, 2, 3, 4].map(i => (
-                    <div
+                    <Card
                       key={i}
-                      className="min-w-[220px] max-w-[220px] bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm animate-pulse snap-start"
+                      className="min-w-[220px] max-w-[220px] bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm snap-start"
                     >
-                      <div className="w-full aspect-square bg-slate-200 rounded-xl" />
+                      <Skeleton className="w-full aspect-square rounded-xl" />
                       <div className="mt-3 space-y-2">
-                        <div className="h-4 w-24 bg-slate-200 rounded" />
-                        <div className="h-3 w-16 bg-slate-100 rounded" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-16 bg-slate-100" />
                       </div>
-                    </div>
+                    </Card>
                   ))}
               </div>
               {trendingCanLeft && (
@@ -664,9 +690,9 @@ export default function PodcastDashboard() {
             </div>
 
             {!activeLoading && displayedTrending.length === 0 && (
-              <div className="text-center py-8 text-slate-400 font-bold text-sm bg-white rounded-2xl border-2 border-slate-900">
+              <Card className="text-center py-8 text-slate-400 font-bold text-sm border-2 border-slate-900">
                 {podcastMsgs.EMPTY_TRENDING}
-              </div>
+              </Card>
             )}
           </section>
 
@@ -683,9 +709,10 @@ export default function PodcastDashboard() {
                   className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x snap-mandatory"
                 >
                   {history.map(record => (
-                    <button
+                    <Button
                       key={record.id}
                       type="button"
+                      size="auto"
                       onClick={() =>
                         navigate('/podcasts/player', {
                           state: {
@@ -701,7 +728,8 @@ export default function PodcastDashboard() {
                           },
                         })
                       }
-                      className="min-w-[260px] max-w-[260px] text-left bg-white p-3 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-3 items-center group snap-start"
+                      variant="ghost"
+                      className="min-w-[260px] max-w-[260px] text-left bg-white p-3 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-3 items-center group snap-start font-normal"
                     >
                       <div className="relative w-14 h-14 shrink-0">
                         <img
@@ -725,7 +753,7 @@ export default function PodcastDashboard() {
                           )}
                         </div>
                       </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 {historyCanLeft && (

@@ -1,19 +1,58 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use node';
-import { action } from './_generated/server';
+import { action, type ActionCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import OpenAI from 'openai';
 import { createClient } from '@deepgram/sdk';
+import { getAuthUserId } from '@convex-dev/auth/server';
+import type { Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
 
 // Helper: No-op fallback for logging
 const logAI = (msg: string) => console.log(`[AI] ${msg}`);
 
+const logUsageMutation = internal.aiUsageLogs.logUsage;
+const logInvocationMutation = internal.aiUsageLogs.logInvocation;
+const countRecentUsageQuery = internal.aiUsageLogs.countRecentByUser;
+
+const readPositiveInteger = (value: string | undefined, fallback: number) => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const AI_RATE_LIMIT_WINDOW_MS = readPositiveInteger(process.env.AI_RATE_LIMIT_WINDOW_MS, 60_000);
+const AI_RATE_LIMIT_MAX_CALLS = readPositiveInteger(process.env.AI_RATE_LIMIT_MAX_CALLS, 120);
+
 // Minimal error formatter
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Id<'users'>> {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new Error('UNAUTHORIZED');
+  }
+  return userId as Id<'users'>;
+}
+
+async function enforceAiRateLimit(ctx: ActionCtx, userId: Id<'users'>, feature: string) {
+  const { count } = await ctx.runQuery(countRecentUsageQuery, {
+    userId,
+    windowMs: AI_RATE_LIMIT_WINDOW_MS,
+  });
+  if (count >= AI_RATE_LIMIT_MAX_CALLS) {
+    throw new Error('AI_RATE_LIMIT_EXCEEDED');
+  }
+  await ctx.runMutation(logInvocationMutation, { userId, feature });
+}
+
+async function guardAiAction(ctx: ActionCtx, feature: string): Promise<Id<'users'>> {
+  const userId = await requireAuthenticatedUser(ctx);
+  await enforceAiRateLimit(ctx, userId, feature);
+  return userId;
 }
 
 const SUPPORTED_TRANSLATION_LANGS = new Set(['zh', 'en', 'vi', 'mn']);
@@ -390,6 +429,7 @@ async function upsertTranscript(ctx: any, episodeId: string, segments: any[]) {
 export const deleteTranscript = action({
   args: { episodeId: v.string() },
   handler: async (ctx, args) => {
+    await requireAuthenticatedUser(ctx);
     await ctx.runMutation(internal.podcastTranscripts.deleteByEpisode, {
       episodeId: args.episodeId,
     });
@@ -406,6 +446,7 @@ export const generateTranscript = action({
     storageIds: v.optional(v.array(v.string())), // Legacy, kept for compatibility but ignored
   },
   handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'generate_transcript');
     console.log('[AI] Starting Deepgram Transcript Generation...');
 
     // 1. Deepgram Transcription (Transcribe URL directly)
@@ -446,6 +487,7 @@ export const generateTranscript = action({
       if (logUsageMutation) {
         // Log "seconds" as "tokens" roughly for tracking? Or just count 1 call.
         await ctx.runMutation(logUsageMutation, {
+          userId,
           feature: 'transcribe',
           model: 'deepgram-nova-2',
         });
@@ -484,6 +526,7 @@ export const requestTranscript = action({
     language: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
+    await guardAiAction(_ctx, 'request_transcript');
     const deepgramKey = process.env.DEEPGRAM_API_KEY;
     if (!deepgramKey) {
       return { success: false, error: 'DEEPGRAM_API_KEY not set' };
@@ -501,6 +544,10 @@ export const requestTranscript = action({
       : `${baseCallback.replace(/\/$/, '')}/webhook/deepgram`;
     const callbackUrl = `${callbackBase}?episodeId=${encodeURIComponent(args.episodeId)}${
       normalizedTargetLang ? `&language=${encodeURIComponent(normalizedTargetLang)}` : ''
+    }${
+      process.env.DEEPGRAM_CALLBACK_TOKEN
+        ? `&token=${encodeURIComponent(process.env.DEEPGRAM_CALLBACK_TOKEN)}`
+        : ''
     }`;
 
     const deepgramLang = 'ko';
@@ -573,6 +620,7 @@ export const handleDeepgramCallback = action({
 export const getTranscript = action({
   args: { episodeId: v.string(), language: v.optional(v.string()) },
   handler: async (ctx, args): Promise<{ segments: any[] | null }> => {
+    await guardAiAction(ctx, 'get_transcript');
     const record = (await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
       episodeId: args.episodeId,
     })) as { segments?: any[]; translations?: Record<string, string[]> } | null;
@@ -616,6 +664,7 @@ export const getTranscript = action({
 export const analyzeText = action({
   args: { text: v.string() },
   handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'analyze_text');
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.warn('OPENAI_API_KEY not set');
@@ -664,6 +713,7 @@ Return a JSON object with a "tokens" key containing an array of:
       });
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
+        userId,
         feature: 'analyze_text',
         model: 'gpt-4o-mini',
         promptTokens: usage?.prompt_tokens,
@@ -692,6 +742,7 @@ export const analyzeSentence = action({
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'analyze_sentence');
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.warn('OPENAI_API_KEY not set');
@@ -734,6 +785,7 @@ Return a JSON object with:
       });
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
+        userId,
         feature: 'analyze_sentence',
         model: 'gpt-4o-mini',
         promptTokens: usage?.prompt_tokens,
@@ -763,6 +815,7 @@ export const analyzeQuestion = action({
     type: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'analyze_topik_question');
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return null;
 
@@ -795,6 +848,7 @@ export const analyzeQuestion = action({
       });
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
+        userId,
         feature: 'analyze_topik_question',
         model: 'gpt-4o-mini',
         promptTokens: usage?.prompt_tokens,
@@ -820,6 +874,7 @@ export const generateVideoAnalysis = action({
     language: v.optional(v.string()), // Target language for translation (default: Chinese)
   },
   handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'generate_video_analysis');
     // 1. Fetch file
     // Note: Video analysis might also need to switch to Deepgram if videos are large
     // But for now, user instruction only mentioned generateTranscript.
@@ -859,6 +914,7 @@ export const generateVideoAnalysis = action({
       });
 
       await ctx.runMutation(logUsageMutation, {
+        userId,
         feature: 'transcribe_video',
         model: 'whisper-1',
       });
@@ -903,6 +959,7 @@ export const generateVideoAnalysis = action({
 
         const usage = response.usage;
         await ctx.runMutation(logUsageMutation, {
+          userId,
           feature: 'translate_video',
           model: 'gpt-4o-mini',
           promptTokens: usage?.prompt_tokens,
@@ -929,5 +986,3 @@ export const generateVideoAnalysis = action({
     }
   },
 });
-
-const logUsageMutation = internal.aiUsageLogs.logUsage;

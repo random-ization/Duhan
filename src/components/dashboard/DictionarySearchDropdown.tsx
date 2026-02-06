@@ -5,6 +5,8 @@ import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { cleanDictionaryText } from '../../utils/dictionaryMeaning';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 type DictionaryEntry = {
   targetCode: string;
@@ -133,8 +135,10 @@ const DictionarySearchDropdown: React.FC = () => {
           const meaning = cleanDictionaryText(rawMeaning);
           return (
             <li key={entry.targetCode}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => {
                   setQuery(entry.word);
                   setOpen(false);
@@ -150,7 +154,7 @@ const DictionarySearchDropdown: React.FC = () => {
                 {meaning && (
                   <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{meaning}</div>
                 )}
-              </button>
+              </Button>
             </li>
           );
         })}
@@ -168,7 +172,7 @@ const DictionarySearchDropdown: React.FC = () => {
         ) : (
           <Search className="w-4 h-4 text-slate-400" />
         )}
-        <input
+        <Input
           value={query}
           onChange={e => {
             setQuery(e.target.value);
@@ -176,7 +180,7 @@ const DictionarySearchDropdown: React.FC = () => {
           }}
           onFocus={() => setOpen(true)}
           placeholder={t('dashboard.dictionary.placeholder', { defaultValue: 'Search dictionary' })}
-          className="w-full outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400"
+          className="w-full border-none shadow-none p-0 h-auto text-sm font-medium text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
         />
       </div>
 

@@ -6,6 +6,28 @@ import { useAuth } from '../contexts/AuthContext';
 import { toErrorMessage } from '../utils/errors';
 import { mRef } from '../utils/convexRefs';
 
+const normalizeExamAnswers = (answers: Record<number, number> | undefined) => {
+  if (!answers) return answers;
+  const entries = Object.entries(answers);
+  if (entries.length === 0) return answers;
+
+  const numericKeys = entries.map(([k]) => Number(k)).filter(n => Number.isFinite(n));
+  if (numericKeys.length === 0) return answers;
+
+  const minKey = Math.min(...numericKeys);
+  const hasZero = numericKeys.includes(0);
+  const isZeroBased = hasZero || minKey === 0;
+  if (!isZeroBased) return answers;
+
+  const normalized: Record<number, number> = {};
+  for (const [k, v] of entries) {
+    const n = Number(k);
+    if (!Number.isFinite(n)) continue;
+    normalized[n + 1] = v;
+  }
+  return normalized;
+};
+
 export const useUserActions = () => {
   const { user } = useAuth();
 
@@ -160,7 +182,7 @@ export const useUserActions = () => {
         await saveExamAttemptMutation({
           examId: attempt.examId,
           score: attempt.score,
-          answers: attempt.userAnswers,
+          answers: normalizeExamAnswers(attempt.userAnswers),
         });
       } catch (e) {
         console.error('Failed to save exam attempt', toErrorMessage(e));

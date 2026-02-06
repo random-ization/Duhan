@@ -44,15 +44,63 @@ export default defineConfig({
     // Optimize chunk splitting
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks - split large libraries
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Canvas 画板功能 - 懒加载，不阻塞首页
-          canvas: ['konva', 'react-konva'],
+        manualChunks: (id: string) => {
+          const normalized = id.replaceAll('\\', '/');
+          if (!normalized.includes('node_modules')) return undefined;
+
+          // React core
+          if (
+            normalized.includes('/node_modules/react-dom/') ||
+            normalized.includes('/node_modules/react/') ||
+            normalized.includes('/node_modules/react-router-dom/')
+          ) {
+            return 'vendor-react';
+          }
+
+          // Canvas 画板功能
+          if (normalized.includes('/node_modules/konva/')) return 'vendor-konva';
+          if (normalized.includes('/node_modules/react-konva/')) return 'vendor-react-konva';
+
           // UI 图标库
-          ui: ['lucide-react'],
-          // Excel 处理
-          'vendor-xlsx': ['xlsx'],
+          if (normalized.includes('/node_modules/lucide-react/')) return 'ui';
+
+          // Excel 处理 (admin heavy but keep split)
+          if (normalized.includes('/node_modules/xlsx/')) return 'vendor-xlsx';
+
+          // Media player / podcast/video
+          if (normalized.includes('/node_modules/vidstack/')) return 'vendor-vidstack-core';
+          if (normalized.includes('/node_modules/@vidstack/react/player/')) {
+            return 'vendor-vidstack-player';
+          }
+          if (normalized.includes('/node_modules/@vidstack/')) return 'vendor-vidstack-react';
+
+          // Charts
+          if (normalized.includes('/node_modules/recharts/')) return 'vendor-recharts';
+
+          // PDF export
+          if (normalized.includes('/node_modules/@react-pdf/')) return 'vendor-pdf';
+
+          // Animation
+          if (normalized.includes('/node_modules/framer-motion/')) return 'vendor-motion';
+
+          // YouTube embeds
+          if (normalized.includes('/node_modules/react-youtube/')) return 'vendor-youtube';
+
+          // Keyboard typing
+          if (normalized.includes('/node_modules/react-simple-keyboard/')) return 'vendor-keyboard';
+
+          // Data fetching
+          if (normalized.includes('/node_modules/@tanstack/react-query/')) return 'vendor-query';
+
+          // i18n
+          if (normalized.includes('/node_modules/i18next/')) return 'vendor-i18n';
+          if (normalized.includes('/node_modules/react-i18next/')) return 'vendor-i18n';
+          if (normalized.includes('/node_modules/i18next-http-backend/')) return 'vendor-i18n';
+
+          // Toasts
+          if (normalized.includes('/node_modules/react-hot-toast/')) return 'vendor-toast';
+
+          return undefined;
         },
       },
     },

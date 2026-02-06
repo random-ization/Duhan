@@ -22,6 +22,7 @@ import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAn
 import { useMutation, useAction } from 'convex/react';
 import toast from 'react-hot-toast';
 import { DICTIONARY, VOCAB } from '../../utils/convexRefs';
+import { Button } from '../ui/button';
 
 const PAPER_MAX_WIDTH = 'max-w-[900px]';
 
@@ -114,12 +115,15 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
           {/* Left Panel: Info */}
           <div className="md:w-2/5 bg-slate-900 text-white p-10 flex flex-col justify-between relative overflow-hidden">
             <div className="relative z-10">
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
                 className="flex items-center text-slate-400 hover:text-white transition-colors mb-8 text-sm font-bold uppercase tracking-wider"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> {labels.back || 'Back'}
-              </button>
+              </Button>
 
               <div className="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
                 {exam.type === 'READING' ? (
@@ -205,13 +209,15 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
             </div>
 
             <div className="mt-8 pt-8 border-t border-slate-100">
-              <button
+              <Button
+                type="button"
+                size="auto"
                 onClick={onStart}
                 className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 hover:-translate-y-1 flex items-center justify-center gap-2 group"
               >
                 {hasAttempted ? '重新挑战' : '开始考试'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Button>
               <p className="text-center text-xs text-slate-400 mt-4">点击开始即代表您已做好准备</p>
             </div>
           </div>
@@ -303,27 +309,35 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
 
           {/* Actions */}
           <div className="px-8 pb-8 space-y-3">
-            <button
+            <Button
+              type="button"
+              size="auto"
               onClick={onReview}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
             >
               <Eye className="w-5 h-5" />
               查看详细解析
-            </button>
+            </Button>
 
             <div className="grid grid-cols-2 gap-3">
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onTryAgain}
                 className="py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" /> 再次挑战
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onBackToList}
                 className="py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold transition-colors"
               >
                 返回列表
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -644,12 +658,15 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm shrink-0">
           <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
-              </button>
+              </Button>
               <div>
                 <h1 className="font-bold text-slate-800 text-lg">{exam.title}</h1>
                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
@@ -664,7 +681,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
             {/* Drawing Mode Toggle - Single Button */}
             <div className="flex items-center gap-3">
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => setIsDrawingMode(!isDrawingMode)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
                   isDrawingMode
@@ -674,7 +694,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               >
                 <Pencil className="w-4 h-4" />
                 标记
-              </button>
+              </Button>
 
               {/* Canvas Status Indicator */}
               {isDrawingMode && (
@@ -714,13 +734,16 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                   // Only show wrong answers in review mode
                   if (isCorrect) return null;
                   return (
-                    <button
+                    <Button
                       key={q.id}
+                      type="button"
+                      variant="ghost"
+                      size="auto"
                       onClick={() => scrollToQuestion(idx)}
                       className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all hover:scale-110 shrink-0 bg-red-500 text-white"
                     >
                       {idx + 1}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -931,18 +954,23 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                             autoFocus
                           />
                           <div className="flex justify-end gap-2">
-                            <button
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="auto"
                               onClick={() => setEditingAnnotationId(null)}
                               className="px-3 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
                             >
                               {labels.cancel || '取消'}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              type="button"
+                              size="auto"
                               onClick={() => handleUpdateNote(ann.id)}
                               className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1"
                             >
                               <Check className="w-3 h-3" /> {labels.save || '保存'}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       );
@@ -954,7 +982,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                         id={`sidebar-card-${ann.id}`}
                         className="group relative scroll-mt-20"
                       >
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="auto"
                           className={`p-3 rounded-lg border transition-all cursor-pointer w-full text-left outline-none focus:ring-2 focus:ring-indigo-500/50
                                 ${
                                   isActive
@@ -986,9 +1017,12 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                               {labels.clickToAddNote || '点击添加笔记...'}
                             </p>
                           )}
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="auto"
                           onClick={e => {
                             e.stopPropagation();
                             handleDeleteAnnotation(ann.id);
@@ -996,7 +1030,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     );
                   })

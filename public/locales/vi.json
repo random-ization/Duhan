@@ -939,6 +939,28 @@
     "footer": {
       "about": "Giới thiệu",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
+    },
+    "typing": {
+      "badge": "NEW FEATURE",
+      "titleLine1": "Type Korean Fluently",
+      "titleHighlight": "Like Playing Piano",
+      "desc": "Say goodbye to 'hunt and peck' typing. Build muscle memory from basic letters to full articles with our built-in smart typing practice. Experience the rhythm of native Korean typing directly in your browser without installing extra software.",
+      "feature1Title": "Real-time Feedback",
+      "feature1Desc": "Letter-level error correction helps you quickly correct key position memory.",
+      "feature2Title": "Dynamic Key Guidance",
+      "feature2Desc": "Smart prediction highlights the next key for instant visual feedback. Build muscle memory naturally through fluid practice, no rote memorization needed.",
+      "cta": "Start Typing Practice",
+      "preview": {
+        "label": "TYPING PREVIEW",
+        "text1": "한",
+        "text2": "국",
+        "text3": "어",
+        "text4": "를 배워요",
+        "wpmLabel": "WPM",
+        "accLabel": "Acc",
+        "nextKeyLabel": "NEXT KEY",
+        "layoutLabel": "KOREAN 2-SET"
+      }
     }
   },
   "pricing": {
@@ -1607,5 +1629,38 @@
     "minWordsLearn": "Cần ít nhất 4 từ để bắt đầu",
     "minWordsQuiz": "Cần ít nhất 4 từ để bắt đầu bài kiểm tra",
     "dontKnow": "Không biết?"
+  },
+  "typing": {
+    "label": "Typing Practice",
+    "title": "Korean Typing",
+    "subtitle": "Word / Sentence / Article",
+    "speed": "Speed",
+    "unit": "WPM"
+  },
+  "typingLobby": {
+    "title": "Duhan Typing",
+    "subtitle": "Choose your practice mode",
+    "volumeWithLevel": "Level {{level}} Vol {{volume}}",
+    "volumeOnly": "Vol {{volume}}",
+    "word": {
+      "title": "Word",
+      "desc": "Build your vocabulary.\nOne word at a time.",
+      "tag": "Basic Practice"
+    },
+    "sentence": {
+      "title": "Sentence",
+      "desc": "Master fluid typing with\nreal-world phrases.",
+      "tag": "Recommended"
+    },
+    "paragraph": {
+      "title": "Paragraph",
+      "desc": "Challenge yourself with\nlong articles & lyrics.",
+      "tag": "Advanced"
+    },
+    "footer": {
+      "press": "Press",
+      "switch": "to switch modes"
+    },
+    "back": "Back to Dashboard"
   }
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Annotation } from '../../types';
 import { Highlighter, MessageSquare, Trash2, Check } from 'lucide-react';
 import { MobileSheet } from '../mobile/MobileSheet';
+import { Button } from '../ui/button';
 
 interface AnnotationSidebarProps {
   sidebarAnnotations: Annotation[];
@@ -80,17 +81,20 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
         };
 
         return (
-          <button
+          <Button
             type="button"
             key={ann.id}
+            variant="ghost"
+            size="auto"
             id={`sidebar-card-${ann.id}`}
             className={`group p-4 rounded-xl border transition-all cursor-pointer relative scroll-mt-24
-                  ${isActive || isEditing
-                ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
-                : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
-              }`}
+                  ${
+                    isActive || isEditing
+                      ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
+                      : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                  }`}
             onClick={handleCardClick}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 handleCardClick();
@@ -111,9 +115,9 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                   const annColor = (ann as unknown as { color?: unknown }).color;
                   const key =
                     annColor === 'yellow' ||
-                      annColor === 'green' ||
-                      annColor === 'blue' ||
-                      annColor === 'pink'
+                    annColor === 'green' ||
+                    annColor === 'blue' ||
+                    annColor === 'pink'
                       ? annColor
                       : 'yellow';
                   return colorClassMap[key];
@@ -142,8 +146,10 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                   }}
                 />
                 <div className="flex justify-end gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="auto"
                     onClick={e => {
                       e.stopPropagation();
                       onCancelEdit(ann.id);
@@ -151,9 +157,10 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                     className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
                   >
                     {labels.cancel}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="auto"
                     onClick={e => {
                       e.stopPropagation();
                       onSave(ann.id, editNoteInput);
@@ -161,7 +168,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                     className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 transition-colors shadow-sm"
                   >
                     <Check className="w-3 h-3" /> {labels.save}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -173,8 +180,10 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                 ) : (
                   <p className="text-xs text-slate-400 italic pl-3.5">{labels.clickToAddNote}</p>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={e => {
                     e.stopPropagation();
                     onDelete(ann.id);
@@ -182,10 +191,10 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                   className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 rounded"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </>
             )}
-          </button>
+          </Button>
         );
       })
     );
@@ -208,7 +217,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
 
       <MobileSheet
         isOpen={isOpen}
-        onClose={onClose || (() => { })}
+        onClose={onClose || (() => {})}
         title={labels.annotate}
         height="half"
       >

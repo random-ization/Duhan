@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import { useTranslation } from 'react-i18next';
+import { Button } from './ui/button';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 
@@ -133,10 +134,11 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
           {plans.map(plan => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden transition-transform hover:scale-105 ${plan.highlight
-                ? 'border-2 border-indigo-500 z-10 scale-105'
-                : 'border border-gray-200 dark:border-gray-700'
-                } bg-white dark:bg-gray-800`}
+              className={`relative rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden transition-transform hover:scale-105 ${
+                plan.highlight
+                  ? 'border-2 border-indigo-500 z-10 scale-105'
+                  : 'border border-gray-200 dark:border-gray-700'
+              } bg-white dark:bg-gray-800`}
             >
               {plan.highlight && (
                 <div className="absolute top-0 right-0 left-0 bg-indigo-500 text-white text-xs font-bold text-center py-1 uppercase tracking-wider">
@@ -164,7 +166,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
                 )}
 
                 <ul className="mt-6 space-y-4">
-                  {plan.features.map((feature) => (
+                  {plan.features.map(feature => (
                     <li key={`${plan.id}-${feature}`} className="flex">
                       <svg
                         className="flex-shrink-0 w-6 h-6 text-green-500"
@@ -189,22 +191,28 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
 
               <div className="p-6 md:p-8 bg-gray-50 dark:bg-gray-700/30">
                 {currentPlan === plan.type ? (
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
                     disabled
                     className="w-full py-3 px-4 border border-transparent rounded-xl text-center font-medium bg-green-100 text-green-700 cursor-default"
                   >
                     {t('pricing.currentPlan')}
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
+                    type="button"
+                    size="auto"
                     onClick={() => handleSubscribe(plan.id)}
-                    className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${plan.highlight
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/30'
-                      : 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white border border-indigo-200 dark:border-gray-500 hover:bg-indigo-50 dark:hover:bg-gray-500'
-                      }`}
+                    className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${
+                      plan.highlight
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/30'
+                        : 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white border border-indigo-200 dark:border-gray-500 hover:bg-indigo-50 dark:hover:bg-gray-500'
+                    }`}
                   >
                     {t('button.upgrade', 'Upgrade Now')}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

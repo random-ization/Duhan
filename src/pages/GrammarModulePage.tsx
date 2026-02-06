@@ -88,7 +88,7 @@ const GrammarModulePage: React.FC = () => {
   };
 
   const handleToggleStatus = async (grammarId: string) => {
-    if (!user?.id) return;
+    if (!user) return;
 
     // Determine new status (toggle logic)
     const current = grammarListWithUpdates.find(g => g.id === grammarId);

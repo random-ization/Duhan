@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { TopikExam, ExamAttempt, Language } from '../../types';
 import { getLabel, getLabels } from '../../utils/i18n';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface ExamListProps {
   exams: TopikExam[];
@@ -81,12 +83,15 @@ export const ExamList: React.FC<ExamListProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {onBack && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
                 className="group flex items-center justify-center w-10 h-10 rounded-full bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
               >
                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-              </button>
+              </Button>
             )}
             <div>
               <h2 className="text-2xl font-bold text-slate-900">
@@ -163,16 +168,21 @@ export const ExamList: React.FC<ExamListProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3 md:self-center self-end">
-                  <button
+                  <Button
+                    type="button"
+                    size="auto"
                     onClick={() => onReviewAttempt(attempt)}
                     className="px-5 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 rounded-xl font-bold transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     <span>{getLabel(labels, ['topikExamList', 'review']) || 'Review'}</span>
-                  </button>
+                  </Button>
 
                   {onDeleteAttempt && (
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
                       onClick={() => {
                         if (
                           globalThis.window.confirm(
@@ -186,7 +196,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                       className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -220,13 +230,16 @@ export const ExamList: React.FC<ExamListProps> = ({
 
         <div className="flex items-center gap-3">
           {history.length > 0 && (
-            <button
+            <Button
+              type="button"
+              size="auto"
+              variant="ghost"
               onClick={onViewHistory}
               className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
             >
               <History className="w-4 h-4" />
               {labels.history}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -234,7 +247,10 @@ export const ExamList: React.FC<ExamListProps> = ({
       {/* Filter & Search Bar */}
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-2">
         <div className="flex p-1 bg-slate-100 rounded-xl">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('ALL')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
               filterType === 'ALL'
@@ -243,8 +259,11 @@ export const ExamList: React.FC<ExamListProps> = ({
             }`}
           >
             {getLabel(labels, ['topikExamList', 'filterAll']) || 'All'}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('READING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'READING'
@@ -254,8 +273,11 @@ export const ExamList: React.FC<ExamListProps> = ({
           >
             <BookOpen className="w-4 h-4" />{' '}
             {getLabel(labels, ['topikExamList', 'filterReading']) || 'Reading'}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('LISTENING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'LISTENING'
@@ -265,12 +287,12 @@ export const ExamList: React.FC<ExamListProps> = ({
           >
             <Headphones className="w-4 h-4" />{' '}
             {getLabel(labels, ['topikExamList', 'filterListening']) || 'Listening'}
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
+          <Input
             type="text"
             placeholder={
               getLabel(labels, ['topikExamList', 'searchPlaceholder']) ||
@@ -278,7 +300,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             }
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 h-full bg-transparent outline-none text-sm font-medium placeholder-slate-400"
+            className="w-full pl-10 pr-4 py-2.5 h-full bg-transparent text-sm font-medium placeholder-slate-400 border-none shadow-none focus-visible:ring-0"
           />
         </div>
       </div>
@@ -292,8 +314,11 @@ export const ExamList: React.FC<ExamListProps> = ({
           const isReading = exam.type === 'READING';
 
           return (
-            <button
+            <Button
               key={exam.id}
+              type="button"
+              size="auto"
+              variant="ghost"
               onClick={() => !isLocked && onSelectExam(exam)}
               disabled={isLocked}
               className={`group relative bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all text-left w-full ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full outline-none focus:ring-2 focus:ring-indigo-500/50`}
@@ -393,7 +418,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                   <PlayCircle className="w-5 h-5 fill-current" />
                 </div>
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -406,7 +431,10 @@ export const ExamList: React.FC<ExamListProps> = ({
           <p className="text-slate-500 font-medium">
             {getLabel(labels, ['topikExamList', 'noResults']) || 'No exams match your filters'}
           </p>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => {
               setFilterType('ALL');
               setSearchQuery('');
@@ -414,7 +442,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             className="mt-4 text-indigo-600 font-bold hover:underline"
           >
             {getLabel(labels, ['topikExamList', 'clearFilters']) || 'Clear filters'}
-          </button>
+          </Button>
         </div>
       )}
     </div>

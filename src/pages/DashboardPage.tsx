@@ -8,10 +8,10 @@ import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
-import { TextbookContent, TopikExam } from '../types';
+import { TextbookContent, TopikExam, ExamAttempt } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
-import { NoArgs, qRef } from '../utils/convexRefs';
+import { qRef } from '../utils/convexRefs';
 
 // DnD Kit
 import {
@@ -104,9 +104,25 @@ export default function DashboardPage({
   const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
   const { institutes } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
-  const savedWordsCount = useQuery(
-    qRef<NoArgs, { count: number }>('user:getSavedWordsCount'),
-    user ? {} : 'skip'
+  const vocabBookCount = useQuery(
+    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
+    user ? { includeMastered: true } : 'skip'
+  );
+  const examAttempts = useQuery(
+    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
+    user ? { limit: 200 } : 'skip'
+  );
+  const courseProgress = useQuery(
+    qRef<
+      { courseId: string },
+      {
+        completedUnits: number[];
+        totalUnits: number;
+        progressPercent: number;
+        lastUnitIndex?: number;
+      } | null
+    >('progress:getCourseProgress'),
+    user && selectedInstitute ? { courseId: selectedInstitute } : 'skip'
   );
 
   // Sensors
@@ -119,17 +135,22 @@ export default function DashboardPage({
     })
   );
 
-  const wordsToReview = savedWordsCount?.count || 0;
+  const wordsToReview = vocabBookCount?.count || 0;
 
-  // Calculate Progress (Mock for now, or based on lastUnit)
-  const currentUnit = user?.lastUnit || 1;
-  const progressPercent = Math.min(100, Math.round((currentUnit / 10) * 100));
+  // Calculate Progress (use course progress if available)
+  const completedUnits = courseProgress?.completedUnits ?? [];
+  const totalUnits = courseProgress?.totalUnits || 10;
+  const inferredUnit =
+    completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, totalUnits) : 1;
+  const currentUnit = courseProgress?.lastUnitIndex || user?.lastUnit || inferredUnit;
+  const progressPercent =
+    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
 
   // Determine top score
   const topScore = useMemo(() => {
-    if (!user?.examHistory || user.examHistory.length === 0) return 0;
-    return Math.max(...user.examHistory.map(e => e.score));
-  }, [user]);
+    if (!examAttempts || examAttempts.length === 0) return 0;
+    return Math.max(...examAttempts.map(e => e.score));
+  }, [examAttempts]);
 
   // Lookup institute name
   const instituteName = useMemo(() => {

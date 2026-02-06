@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { ArrowLeft } from 'lucide-react';
+import { Button } from './button';
 
 interface BackButtonProps {
   className?: string;
@@ -23,7 +24,10 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
   };
 
   return (
-    <button
+    <Button
+      type="button"
+      variant="outline"
+      size="auto"
       onClick={handleClick}
       className={`
         w-12 h-12 flex items-center justify-center
@@ -38,7 +42,7 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
       aria-label="返回上一页"
     >
       <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
-    </button>
+    </Button>
   );
 };
 

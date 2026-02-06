@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Podcast, Loader2 } from 'lucide-react';
+import { Search, Podcast, Loader2, ArrowLeft } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { PodcastChannel } from '../types';
-import BackButton from '../components/ui/BackButton';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { aRef } from '../utils/convexRefs';
@@ -37,9 +40,11 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
 
   if (error) {
     return (
-      <div className="text-center py-20 text-red-500 font-bold bg-white rounded-2xl border-2 border-red-100 p-8">
-        <p>{error}</p>
-      </div>
+      <Card className="border-2 border-red-100 text-red-500">
+        <CardContent className="py-20 text-center font-bold">
+          <p>{error}</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -54,15 +59,17 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {results.map(channel => (
-            <button
+            <Button
               key={channel.itunesId || channel.id}
               type="button"
+              size="auto"
               onClick={() =>
                 navigate(
                   `/podcasts/channel?id=${channel.itunesId || channel.id}&feedUrl=${encodeURIComponent(channel.feedUrl)}`
                 )
               }
-              className="w-full text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-4 group focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              variant="ghost"
+              className="w-full text-left bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-4 group focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal"
             >
               <img
                 src={channel.artworkUrl || channel.artwork}
@@ -77,12 +84,12 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
                   {channel.author}
                 </p>
                 <div className="flex gap-2">
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                  <Badge variant="secondary" className="text-xs">
                     Podcast
-                  </span>
+                  </Badge>
                 </div>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
       </>
@@ -91,16 +98,18 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
 
   if (query) {
     return (
-      <div className="text-center py-20 bg-white rounded-[2rem] border-dashed border-2 border-slate-300">
-        <Podcast className="w-16 h-16 mx-auto text-slate-200 mb-4" />
-        <h3 className="text-xl font-bold text-slate-900 mb-2">
-          {labels.podcast?.noResults || 'No podcasts found'}
-        </h3>
-        <p className="text-slate-500">
-          {labels.podcast?.msg?.EMPTY_SEARCH_DESC ||
-            'Try another keyword? e.g. "Talk To Me In Korean"'}
-        </p>
-      </div>
+      <Card className="rounded-[2rem] border-dashed border-2 border-slate-300">
+        <CardContent className="py-20 text-center">
+          <Podcast className="w-16 h-16 mx-auto text-slate-200 mb-4" />
+          <h3 className="text-xl font-bold text-slate-900 mb-2">
+            {labels.podcast?.noResults || 'No podcasts found'}
+          </h3>
+          <p className="text-slate-500">
+            {labels.podcast?.msg?.EMPTY_SEARCH_DESC ||
+              'Try another keyword? e.g. "Talk To Me In Korean"'}
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -171,32 +180,42 @@ export default function PodcastSearchPage() {
         {/* Header & Search */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <BackButton onClick={() => navigate('/podcasts')} />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => navigate('/podcasts')}
+              className="w-12 h-12 border-2 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
+              aria-label={labels.errors?.backToHome || 'Back'}
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+            </Button>
             <h1 className="text-3xl font-black text-slate-900">
               {labels.podcast?.searchTitle || 'Search Podcasts'}
             </h1>
           </div>
 
           <form onSubmit={handleSearchSubmit} className="relative group">
-            <input
+            <Input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder={labels.podcast?.searchPlaceholder || 'Enter keywords...'}
               autoFocus
-              className="w-full bg-white border-2 border-slate-900 rounded-xl py-4 px-12 shadow-pop focus:outline-none focus:translate-y-1 focus:shadow-none transition font-bold placeholder:text-slate-400 text-slate-900 text-lg"
+              className="border-2 border-slate-900 px-12 font-bold text-lg focus:translate-y-1 focus:shadow-none"
             />
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition"
               size={24}
             />
-            <button
+            <Button
               type="submit"
               disabled={loading || !searchTerm.trim()}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition disabled:opacity-50"
+              size="sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 px-4 py-2 rounded-lg"
             >
               {getLabel(labels, ['common', 'search']) || 'Search'}
-            </button>
+            </Button>
           </form>
         </div>
 

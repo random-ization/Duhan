@@ -11,6 +11,8 @@ import { mRef, NoArgs } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useLayout } from '../../contexts/LayoutContext';
 import { getLabels } from '../../utils/i18n';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -71,8 +73,8 @@ export default function AppLayout() {
       >
         {shouldShowProfileSetupPrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
-              <div className="p-6 sm:p-8">
+            <Card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
+              <CardContent className="p-6 sm:p-8">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900">
                   {labels.profileSetupPrompt?.title || 'Complete your profile'}
                 </h2>
@@ -81,8 +83,10 @@ export default function AppLayout() {
                     'Import your current login profile (name/avatar) or create your own.'}
                 </p>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="auto"
                     onClick={async () => {
                       try {
                         await syncProfileFromIdentityMutation();
@@ -99,9 +103,11 @@ export default function AppLayout() {
                     className="flex-1 rounded-2xl px-5 py-3 font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 active:opacity-90 transition"
                   >
                     {labels.profileSetupPrompt?.useSocial || 'Use social profile'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="auto"
                     onClick={() => {
                       setProfilePromptDismissed(true);
                       if (globalThis.window !== undefined) {
@@ -115,10 +121,12 @@ export default function AppLayout() {
                     className="flex-1 rounded-2xl px-5 py-3 font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition"
                   >
                     {labels.profileSetupPrompt?.createMyself || 'Create myself'}
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => {
                     setProfilePromptDismissed(true);
                     if (globalThis.window !== undefined) {
@@ -131,9 +139,9 @@ export default function AppLayout() {
                   className="mt-4 w-full text-sm font-bold text-slate-500 hover:text-slate-700 transition"
                 >
                   {labels.profileSetupPrompt?.maybeLater || 'Maybe later'}
-                </button>
-              </div>
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
         {!shouldHideMobileHeader && <MobileHeader />}

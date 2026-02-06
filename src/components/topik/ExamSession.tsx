@@ -1,8 +1,10 @@
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import type { TopikExam, Language, Annotation } from '../../types';
 
 import { QuestionRenderer } from './QuestionRenderer';
-import { ExamController } from './ExamController';
+const LazyExamController = React.lazy(() =>
+  import('./ExamController').then(module => ({ default: module.ExamController }))
+);
 
 interface ExamSessionProps {
   exam: TopikExam;
@@ -29,181 +31,181 @@ const TOPIK_READING_STRUCTURE: {
   instruction: string;
   grouped?: boolean;
 }[] = [
-    { range: [1, 2], instruction: '※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)' },
-    {
-      range: [3, 4],
-      instruction: '※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)',
-    },
-    { range: [5, 8], instruction: '※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)' },
-    {
-      range: [9, 12],
-      instruction: '※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [13, 15],
-      instruction: '※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [16, 18],
-      instruction:
-        '※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [19, 20],
-      instruction: '※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [21, 22],
-      instruction: '※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [23, 24],
-      instruction: '※ [23～24] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [25, 27],
-      instruction:
-        '※ [25～27] 다음은 신문 기사의 제목입니다. 가장 잘 설명한 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [28, 31],
-      instruction:
-        '※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
-    },
-    { range: [32, 34], instruction: '※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)' },
-    {
-      range: [35, 38],
-      instruction: '※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [39, 41],
-      instruction:
-        '※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)',
-    },
-    {
-      range: [42, 43],
-      instruction: '※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [44, 45],
-      instruction: '※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [46, 47],
-      instruction: '※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [48, 50],
-      instruction: '※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-  ];
+  { range: [1, 2], instruction: '※ [1~2] (    )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)' },
+  {
+    range: [3, 4],
+    instruction: '※ [3～4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)',
+  },
+  { range: [5, 8], instruction: '※ [5～8] 다음은 무엇에 대한 글인지 고르십시오. (각 2점)' },
+  {
+    range: [9, 12],
+    instruction: '※ [9～12] 다음 글 또는 도표의 내용과 같은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [13, 15],
+    instruction: '※ [13～15] 다음을 순서대로 맞게 배열한 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [16, 18],
+    instruction:
+      '※ [16～18] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [19, 20],
+    instruction: '※ [19～20] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [21, 22],
+    instruction: '※ [21～22] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [23, 24],
+    instruction: '※ [23～24] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [25, 27],
+    instruction:
+      '※ [25～27] 다음은 신문 기사의 제목입니다. 가장 잘 설명한 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [28, 31],
+    instruction:
+      '※ [28～31] 다음을 읽고 (    )에 들어갈 내용으로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  { range: [32, 34], instruction: '※ [32～34] 다음을 읽고 내용이 같은 것을 고르십시오. (각 2점)' },
+  {
+    range: [35, 38],
+    instruction: '※ [35～38] 다음 글의 주제로 가장 알맞은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [39, 41],
+    instruction:
+      '※ [39～41] 다음 글에서 <보기>의 문장이 들어가기에 가장 알맞은 곳을 고르십시오. (각 2점)',
+  },
+  {
+    range: [42, 43],
+    instruction: '※ [42～43] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [44, 45],
+    instruction: '※ [44～45] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [46, 47],
+    instruction: '※ [46～47] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [48, 50],
+    instruction: '※ [48～50] 다음을 읽고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+];
 
 const TOPIK_LISTENING_STRUCTURE: {
   range: [number, number];
   instruction: string;
   grouped?: boolean;
 }[] = [
-    { range: [1, 3], instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)' },
-    {
-      range: [4, 8],
-      instruction: '※ [4～8] 다음 대화를 잘 듣고 이어질 수 있는 말을 고르십시오. (각 2점)',
-    },
-    {
-      range: [9, 12],
-      instruction:
-        '※ [9～12] 다음 대화를 잘 듣고 여자가 이어서 할 행동으로 알맞은 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [13, 16],
-      instruction: '※ [13～16] 다음을 듣고 내용과 일치하는 것을 고르십시오. (각 2점)',
-    },
-    {
-      range: [17, 20],
-      instruction: '※ [17～20] 다음을 듣고 남자의 중심 생각을 고르십시오. (각 2점)',
-    },
-    {
-      range: [21, 22],
-      instruction: '※ [21～22] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [23, 24],
-      instruction: '※ [23～24] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [25, 26],
-      instruction: '※ [25～26] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [27, 28],
-      instruction: '※ [27～28] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [29, 30],
-      instruction: '※ [29～30] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [31, 32],
-      instruction: '※ [31～32] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [33, 34],
-      instruction: '※ [33～34] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [35, 36],
-      instruction: '※ [35～36] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [37, 38],
-      instruction: '※ [37～38] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [39, 40],
-      instruction: '※ [39～40] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [41, 42],
-      instruction: '※ [41～42] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [43, 44],
-      instruction: '※ [43～44] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [45, 46],
-      instruction: '※ [45～46] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [47, 48],
-      instruction: '※ [47～48] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-    {
-      range: [49, 50],
-      instruction: '※ [49～50] 다음을 듣고 물음에 답하십시오. (각 2점)',
-      grouped: true,
-    },
-  ];
+  { range: [1, 3], instruction: '※ [1～3] 다음을 듣고 알맞은 그림을 고르십시오. (각 2점)' },
+  {
+    range: [4, 8],
+    instruction: '※ [4～8] 다음 대화를 잘 듣고 이어질 수 있는 말을 고르십시오. (각 2점)',
+  },
+  {
+    range: [9, 12],
+    instruction:
+      '※ [9～12] 다음 대화를 잘 듣고 여자가 이어서 할 행동으로 알맞은 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [13, 16],
+    instruction: '※ [13～16] 다음을 듣고 내용과 일치하는 것을 고르십시오. (각 2점)',
+  },
+  {
+    range: [17, 20],
+    instruction: '※ [17～20] 다음을 듣고 남자의 중심 생각을 고르십시오. (각 2점)',
+  },
+  {
+    range: [21, 22],
+    instruction: '※ [21～22] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [23, 24],
+    instruction: '※ [23～24] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [25, 26],
+    instruction: '※ [25～26] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [27, 28],
+    instruction: '※ [27～28] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [29, 30],
+    instruction: '※ [29～30] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [31, 32],
+    instruction: '※ [31～32] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [33, 34],
+    instruction: '※ [33～34] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [35, 36],
+    instruction: '※ [35～36] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [37, 38],
+    instruction: '※ [37～38] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [39, 40],
+    instruction: '※ [39～40] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [41, 42],
+    instruction: '※ [41～42] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [43, 44],
+    instruction: '※ [43～44] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [45, 46],
+    instruction: '※ [45～46] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [47, 48],
+    instruction: '※ [47～48] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+  {
+    range: [49, 50],
+    instruction: '※ [49～50] 다음을 듣고 물음에 답하십시오. (각 2점)',
+    grouped: true,
+  },
+];
 
 export const ExamSession: React.FC<ExamSessionProps> = React.memo(
   ({ exam, language, userAnswers, timeLeft, onAnswerChange, onSubmit, onExit }) => {
@@ -385,7 +387,10 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                       onAnswerChange={optionIndex => onAnswerChange(idx, optionIndex)}
                       annotations={[]} // Don't show annotation highlights in exam-taking mode
                       contextPrefix={examContextPrefix}
-                      hidePassage={exam.type === 'LISTENING' || (isGroupedQuestion(idx) && !isFirstInGroup(idx))}
+                      hidePassage={
+                        exam.type === 'LISTENING' ||
+                        (isGroupedQuestion(idx) && !isFirstInGroup(idx))
+                      }
                       showInlineNumber={isGroupedQuestion(idx)}
                     />
                   </div>
@@ -403,17 +408,19 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
         </div>
 
         {/* New Exam Controller & Audio Player Combo */}
-        <ExamController
-          exam={exam}
-          questions={exam.questions}
-          userAnswers={userAnswers}
-          currentQuestionIndex={currentQuestionIndex}
-          onQuestionSelect={scrollToQuestion}
-          onSubmit={onSubmit}
-          timeLeft={timeLeft}
-          audioUrl={exam.type === 'LISTENING' ? exam.audioUrl : undefined}
-          onExit={onExit}
-        />
+        <Suspense fallback={<div className="fixed right-6 top-1/2 -translate-y-1/2 z-[50]" />}>
+          <LazyExamController
+            exam={exam}
+            questions={exam.questions}
+            userAnswers={userAnswers}
+            currentQuestionIndex={currentQuestionIndex}
+            onQuestionSelect={scrollToQuestion}
+            onSubmit={onSubmit}
+            timeLeft={timeLeft}
+            audioUrl={exam.type === 'LISTENING' ? exam.audioUrl : undefined}
+            onExit={onExit}
+          />
+        </Suspense>
       </div>
     );
   }

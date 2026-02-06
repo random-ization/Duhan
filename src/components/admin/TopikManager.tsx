@@ -13,7 +13,6 @@ import {
   FileUp,
   X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { TOPIK } from '../../utils/convexRefs';
 import {
@@ -24,6 +23,8 @@ import {
   getQuestionConfig,
 } from './TopikConstants';
 import { QuestionRenderer } from './TopikQuestionRenderer';
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 export const TopikManager: React.FC = () => {
   // ========================================
@@ -446,6 +447,7 @@ export const TopikManager: React.FC = () => {
 
     try {
       const data = await file.arrayBuffer();
+      const XLSX = await loadXlsx();
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -698,36 +700,36 @@ export const TopikManager: React.FC = () => {
                   id={`q-anchor-${start}`}
                 >
                   {/* Instruction Bar - 可编辑 (听力) / 静态显示 (阅读) */}
-                                  <div className="bg-zinc-100 border-l-4 border-zinc-800 p-2 mb-6 font-bold text-zinc-800 text-[17px] font-serif">
-                                    {currentExam?.type === 'LISTENING' ? (
-                                      <input
-                                        className="w-full bg-transparent outline-none font-bold text-zinc-800 text-[17px] font-serif"
-                                        value={questionsInRange[0].instruction || section.instruction}
-                                        onChange={e =>
-                                          updateQuestionState(questionsInRange[0].id, 'instruction', e.target.value)
-                                        }
-                                        placeholder={section.instruction}
-                                        aria-label="Section instruction"
-                                      />
-                                    ) : (
-                                      <span>{section.instruction}</span>
-                                    )}
-                                  </div>
+                  <div className="bg-zinc-100 border-l-4 border-zinc-800 p-2 mb-6 font-bold text-zinc-800 text-[17px] font-serif">
+                    {currentExam?.type === 'LISTENING' ? (
+                      <input
+                        className="w-full bg-transparent outline-none font-bold text-zinc-800 text-[17px] font-serif"
+                        value={questionsInRange[0].instruction || section.instruction}
+                        onChange={e =>
+                          updateQuestionState(questionsInRange[0].id, 'instruction', e.target.value)
+                        }
+                        placeholder={section.instruction}
+                        aria-label="Section instruction"
+                      />
+                    ) : (
+                      <span>{section.instruction}</span>
+                    )}
+                  </div>
 
-                                  {/* Shared Passage */}
-                                  {isGrouped && (
-                                    <div className="mb-6 p-4 border-2 border-dashed border-zinc-300 rounded-xl hover:border-zinc-500 transition-colors bg-zinc-50/50">
-                                      <textarea
-                                        className="w-full bg-transparent border-none focus:ring-0 text-[17px] leading-8 font-serif resize-none h-48 outline-none"
-                                        placeholder="Enter shared passage here..."
-                                        aria-label="Enter shared passage"
-                                        value={questionsInRange[0].passage || ''}
-                                        onChange={e =>
-                                          updateQuestionState(questionsInRange[0].id, 'passage', e.target.value)
-                                        }
-                                      />
-                                    </div>
-                                  )}
+                  {/* Shared Passage */}
+                  {isGrouped && (
+                    <div className="mb-6 p-4 border-2 border-dashed border-zinc-300 rounded-xl hover:border-zinc-500 transition-colors bg-zinc-50/50">
+                      <textarea
+                        className="w-full bg-transparent border-none focus:ring-0 text-[17px] leading-8 font-serif resize-none h-48 outline-none"
+                        placeholder="Enter shared passage here..."
+                        aria-label="Enter shared passage"
+                        value={questionsInRange[0].passage || ''}
+                        onChange={e =>
+                          updateQuestionState(questionsInRange[0].id, 'passage', e.target.value)
+                        }
+                      />
+                    </div>
+                  )}
 
                   {/* Questions */}
                   <div className={isGrouped ? 'pl-2' : ''}>

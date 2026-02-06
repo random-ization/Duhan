@@ -5,6 +5,8 @@ import { useAction, useMutation } from 'convex/react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { aRef, mRef } from '../../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface GrammarDetailSheetProps {
   grammar: GrammarPointData | null;
@@ -33,13 +35,19 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
   const { i18n } = useTranslation();
 
   const checkAction = useAction(
-    aRef<{ sentence: string; context: string; language?: string }, { success?: boolean; data?: { nuance?: unknown } }>(
-      'ai:analyzeSentence'
-    )
+    aRef<
+      { sentence: string; context: string; language?: string },
+      { success?: boolean; data?: { nuance?: unknown } }
+    >('ai:analyzeSentence')
   );
   const updateStatus = useMutation(
     mRef<
-      { grammarId: Id<'grammar_points'>; status?: GrammarPointData['status']; proficiency?: number; increment?: number },
+      {
+        grammarId: Id<'grammar_points'>;
+        status?: GrammarPointData['status'];
+        proficiency?: number;
+        increment?: number;
+      },
       { status: string; proficiency: number }
     >('grammars:updateStatus')
   );
@@ -84,7 +92,10 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
     const _isCorrect = true;
 
     let feedback = typeof data.nuance === 'string' ? data.nuance : '分析完成';
-    const isFeedbackNegative = feedback.toLowerCase().startsWith('incorrect') || feedback.includes('错误') || feedback.includes('Incorrect');
+    const isFeedbackNegative =
+      feedback.toLowerCase().startsWith('incorrect') ||
+      feedback.includes('错误') ||
+      feedback.includes('Incorrect');
 
     // Override isCorrect based on feedback content if strict check found errors
     const finalIsCorrect = !isFeedbackNegative;
@@ -111,8 +122,8 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       if (onProficiencyUpdate) {
         const normalizedStatus: GrammarPointData['status'] =
           updateRes.status === 'NEW' ||
-            updateRes.status === 'LEARNING' ||
-            updateRes.status === 'MASTERED'
+          updateRes.status === 'LEARNING' ||
+          updateRes.status === 'MASTERED'
             ? (updateRes.status as GrammarPointData['status'])
             : 'LEARNING';
         onProficiencyUpdate(grammar.id, updateRes.proficiency, normalizedStatus);
@@ -133,8 +144,6 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       handleCheck();
     }
   };
-
-
 
   // Get rules object (support both old and new field names)
   const rulesObject = (grammar?.conjugationRules || grammar?.construction || {}) as Record<
@@ -171,9 +180,13 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
           updateStatus({
             grammarId: grammar.id as unknown as Id<'grammar_points'>,
             status: newStatus,
-          }).then((res) => {
+          }).then(res => {
             if (onProficiencyUpdate) {
-              onProficiencyUpdate(grammar.id, res.proficiency, res.status as GrammarPointData['status']);
+              onProficiencyUpdate(
+                grammar.id,
+                res.proficiency,
+                res.status as GrammarPointData['status']
+              );
             }
             if (res.status === 'MASTERED') {
               setShowConfetti(true);
@@ -191,28 +204,31 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
           AI 陪练
         </label>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={practiceSentence}
             onChange={e => setPracticeSentence(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={`用 ${grammar.title} 造个句子...`}
-            className="flex-1 px-3 py-2 border-2 border-slate-900 rounded-lg text-sm font-bold focus:shadow-[2px_2px_0px_0px_#0f172a] outline-none bg-white"
+            className="flex-1 px-3 py-2 border-2 border-slate-900 rounded-lg text-sm font-bold bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          <button
+          <Button
+            type="button"
+            size="auto"
             onClick={handleCheck}
             disabled={isChecking || !practiceSentence.trim()}
             className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg border-2 border-slate-900 text-sm hover:bg-white hover:text-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isChecking ? '...' : '检查'}
-          </button>
+          </Button>
         </div>
 
         {/* AI Feedback */}
         {aiFeedback && (
           <div
-            className={`mt-3 p-3 border-2 border-slate-900 rounded-lg ${aiFeedback.isCorrect ? 'bg-green-50' : 'bg-red-50'
-              }`}
+            className={`mt-3 p-3 border-2 border-slate-900 rounded-lg ${
+              aiFeedback.isCorrect ? 'bg-green-50' : 'bg-red-50'
+            }`}
           >
             <div className="flex items-start gap-2">
               {aiFeedback.isCorrect ? (
@@ -293,19 +309,21 @@ export default GrammarDetailSheet;
 
 const Confetti: React.FC<{ show: boolean }> = ({ show }) => {
   /* eslint-disable react-hooks/purity */
-  const items = React.useMemo(() =>
-    Array.from({ length: 20 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.random() * 0.5}s`,
-      char: ['🎉', '✨', '⭐', '💫', '🌟'][i % 5]
-    })),
-    []);
+  const items = React.useMemo(
+    () =>
+      Array.from({ length: 20 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        delay: `${Math.random() * 0.5}s`,
+        char: ['🎉', '✨', '⭐', '💫', '🌟'][i % 5],
+      })),
+    []
+  );
 
   if (!show) return null;
   return (
     <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
-      {items.map((item) => (
+      {items.map(item => (
         <div
           key={`confetti-${item.id}`}
           className="absolute animate-bounce"
@@ -361,13 +379,19 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
   };
 
   return (
-    <div className={`p-4 border-b-2 border-slate-900 ${typeStyles.bg} flex justify-between items-start`}>
+    <div
+      className={`p-4 border-b-2 border-slate-900 ${typeStyles.bg} flex justify-between items-start`}
+    >
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <span className={`text-[10px] font-black ${typeStyles.label} uppercase px-2 py-0.5 border-2 border-current rounded`}>
+          <span
+            className={`text-[10px] font-black ${typeStyles.label} uppercase px-2 py-0.5 border-2 border-current rounded`}
+          >
             {grammar.type}
           </span>
-          {grammar.level && <span className="text-[10px] font-bold text-slate-500">{grammar.level}</span>}
+          {grammar.level && (
+            <span className="text-[10px] font-bold text-slate-500">{grammar.level}</span>
+          )}
         </div>
         <h2 className="text-2xl font-black text-slate-900">{grammar.title}</h2>
 
@@ -383,22 +407,29 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={onStatusToggle}
-          className={`p-1.5 rounded-lg border-2 ${status === 'MASTERED'
-            ? 'bg-green-100 border-green-500 text-green-700'
-            : 'bg-white border-slate-900 text-slate-400 hover:bg-slate-100'
-            } transition-colors`}
+          className={`p-1.5 rounded-lg border-2 ${
+            status === 'MASTERED'
+              ? 'bg-green-100 border-green-500 text-green-700'
+              : 'bg-white border-slate-900 text-slate-400 hover:bg-slate-100'
+          } transition-colors`}
           title={status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
         >
           <Trophy className={`w-4 h-4 ${status === 'MASTERED' ? 'fill-current' : ''}`} />
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="auto"
           onClick={onClose}
           className="w-6 h-6 rounded border-2 border-slate-900 bg-white flex items-center justify-center hover:bg-red-100 text-slate-900 transition-colors ml-2"
         >
           <X className="w-3 h-3" />
-        </button>
+        </Button>
       </div>
     </div>
   );

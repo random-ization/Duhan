@@ -32,9 +32,9 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   const error = toast.error;
   const { signIn } = useAuthActions();
 
-  const savedWordsCount = useQuery(
-    qRef<Record<string, never>, { count: number }>('user:getSavedWordsCount'),
-    user ? {} : 'skip'
+  const vocabBookCount = useQuery(
+    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
+    user ? { includeMastered: true } : 'skip'
   );
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -340,7 +340,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
           <ProfileStatsTab
             labels={labels}
             dayStreak={user.statistics?.dayStreak || 0}
-            savedWordsCount={savedWordsCount?.count || 0}
+            savedWordsCount={vocabBookCount?.count || 0}
             examsTaken={examsTaken}
             averageScore={averageScore}
             examHistory={examHistory}

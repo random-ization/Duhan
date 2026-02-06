@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { CheckCircle2, Loader2, Upload, FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
 
 interface FormState {
@@ -42,6 +41,8 @@ type BulkImportItem = Pick<
   exampleMeaningMn?: string;
   tips?: unknown;
 };
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -318,7 +319,9 @@ const VocabImporter: React.FC = () => {
           <p className="text-sm text-zinc-500">支持单条录入与快速批量导入</p>
         </div>
         <div>
-          <label htmlFor="course-select" className="block text-xs font-bold text-zinc-500 mb-1">选择教材</label>
+          <label htmlFor="course-select" className="block text-xs font-bold text-zinc-500 mb-1">
+            选择教材
+          </label>
           <select
             id="course-select"
             value={form.courseId}
@@ -482,30 +485,37 @@ const VocabImporter: React.FC = () => {
                 const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
                 if (isExcel) {
-                  file.arrayBuffer().then(buffer => {
-                    const data = new Uint8Array(buffer);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const text = XLSX.utils.sheet_to_csv(worksheet, { FS: '\t' });
-                    setBulkText(text);
-                    setStatus(
-                      `已加载 Excel 文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
-                    );
-                  }).catch(err => {
-                    console.error('Excel load failed:', err);
-                    setStatus('加载 Excel 文件失败');
-                  });
+                  file
+                    .arrayBuffer()
+                    .then(async buffer => {
+                      const XLSX = await loadXlsx();
+                      const data = new Uint8Array(buffer);
+                      const workbook = XLSX.read(data, { type: 'array' });
+                      const firstSheetName = workbook.SheetNames[0];
+                      const worksheet = workbook.Sheets[firstSheetName];
+                      const text = XLSX.utils.sheet_to_csv(worksheet, { FS: '\t' });
+                      setBulkText(text);
+                      setStatus(
+                        `已加载 Excel 文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
+                      );
+                    })
+                    .catch(err => {
+                      console.error('Excel load failed:', err);
+                      setStatus('加载 Excel 文件失败');
+                    });
                 } else {
-                  file.text().then(text => {
-                    setBulkText(text);
-                    setStatus(
-                      `已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
-                    );
-                  }).catch(err => {
-                    console.error('Text file load failed:', err);
-                    setStatus('加载文本文件失败');
-                  });
+                  file
+                    .text()
+                    .then(text => {
+                      setBulkText(text);
+                      setStatus(
+                        `已加载文本文件: ${file.name} (${text.split('\n').filter(Boolean).length} 行)`
+                      );
+                    })
+                    .catch(err => {
+                      console.error('Text file load failed:', err);
+                      setStatus('加载文本文件失败');
+                    });
                 }
                 e.target.value = '';
               }}

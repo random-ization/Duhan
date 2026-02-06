@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -14,18 +14,18 @@ import {
   List,
 } from 'lucide-react';
 import { useQuery, useAction } from 'convex/react';
-import { MediaPlayer, MediaProvider, MediaPlayerInstance } from '@vidstack/react';
-import { DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
-import '@vidstack/react/player/styles/default/theme.css';
-import '@vidstack/react/player/styles/default/layouts/video.css';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
+import type { MediaPlayerInstance } from '@vidstack/react';
 import { aRef, qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTTS } from '../hooks/useTTS';
 import { extractBestMeaning, normalizeLookupWord } from '../utils/dictionaryMeaning';
+import { useUserActions } from '../hooks/useUserActions';
+
+const LazyVideoPlayer = React.lazy(() => import('../components/media/VidstackVideoPlayer'));
 
 interface TranscriptSegment {
   start: number;
@@ -125,6 +125,7 @@ const VideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
+  const { saveWord } = useUserActions();
   const labels = getLabels(language);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const playerRef = useRef<MediaPlayerInstance>(null);
@@ -278,8 +279,6 @@ const VideoPlayerPage: React.FC = () => {
       })();
     }
   };
-
-  const saveWord = useAction(aRef<{ word: string; meaning: string }, void>('vocabulary:save'));
 
   const speak = useCallback(
     (text: string) => {
@@ -454,22 +453,24 @@ const VideoPlayerPage: React.FC = () => {
       <div className="flex flex-col lg:flex-row h-[calc(100vh-65px)] h-[calc(100dvh-65px)]">
         {/* Video Player - 70% on desktop */}
         <div className="lg:w-[70%] bg-black flex items-center justify-center">
-          <MediaPlayer
-            ref={playerRef}
-            src={video.videoUrl}
-            viewType="video"
-            streamType="on-demand"
-            logLevel="warn"
-            crossOrigin
-            playsInline
-            title={video.title}
-            poster={video.thumbnailUrl}
-            className="w-full h-full"
-            onTimeUpdate={handleTimeUpdate}
-          >
-            <MediaProvider />
-            <DefaultVideoLayout icons={defaultLayoutIcons} />
-          </MediaPlayer>
+          {video && (
+            <Suspense
+              fallback={
+                <div className="w-full h-full flex items-center justify-center text-white text-sm">
+                  Loading player...
+                </div>
+              }
+            >
+              <LazyVideoPlayer
+                ref={playerRef}
+                src={video.videoUrl}
+                title={video.title}
+                poster={video.thumbnailUrl}
+                className="w-full h-full"
+                onTimeUpdate={handleTimeUpdate}
+              />
+            </Suspense>
+          )}
         </div>
 
         <div className="hidden lg:flex lg:w-[30%] bg-[#FDFBF7] border-zinc-900 flex-col lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none">
@@ -508,7 +509,7 @@ const VideoPlayerPage: React.FC = () => {
             onSpeak={() => speak(selectedWord.word)}
             onSave={async () => {
               try {
-                await saveWord({ word: selectedWord.word, meaning: selectedWord.meaning });
+                await saveWord(selectedWord.word, selectedWord.meaning);
                 toast.success(labels.dashboard?.common?.saved || '已保存到生词本');
               } catch (err) {
                 console.error('Failed to save word:', err);

@@ -2,6 +2,8 @@ import React from 'react';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { Sparkles, X, Check } from 'lucide-react';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -29,15 +31,18 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-in zoom-in-95">
+      <Card className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-in zoom-in-95 overflow-hidden">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-amber-500 to-orange-500 p-6 rounded-t-2xl">
-          <button
+          <Button
             onClick={onClose}
+            type="button"
+            variant="ghost"
+            size="auto"
             className="absolute top-4 right-4 text-white hover:bg-white/20 p-2 rounded-full transition-colors"
           >
             <X size={20} />
-          </button>
+          </Button>
           <div className="text-center text-white">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
               <Sparkles size={32} />
@@ -52,13 +57,13 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <CardContent className="p-6">
           <div className="mb-6">
             <h3 className="font-semibold text-slate-800 mb-3">
               {labels.premiumFeatures || 'Premium Features'}
             </h3>
             <ul className="space-y-2">
-              {features.map((feature) => (
+              {features.map(feature => (
                 <li key={feature} className="flex items-center gap-2 text-sm text-slate-700">
                   <Check size={16} className="text-green-500 flex-shrink-0" />
                   <span>{feature}</span>
@@ -75,22 +80,27 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={onClose}
+              type="button"
+              variant="ghost"
+              size="auto"
               className="flex-1 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
             >
               {labels.maybeLater || labels.cancel}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleUpgrade}
+              type="button"
+              size="auto"
               className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg shadow-amber-500/20 flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Sparkles size={16} className="mr-2" />
               {labels.upgradeNow || 'Upgrade Now'}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

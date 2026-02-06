@@ -4,6 +4,7 @@ import { LayoutDashboard, BookOpen, Trophy, Headphones, Video } from 'lucide-rea
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { isValidLanguage } from '../LanguageRouter';
+import { Button } from '../ui/button';
 
 type Tab = {
   key: string;
@@ -43,11 +44,13 @@ export function MobileBottomNav() {
         const Icon = tab.icon;
 
         return (
-          <button
+          <Button
             key={tab.key}
             type="button"
+            size="auto"
+            variant="ghost"
             onClick={() => navigate(tab.path)}
-            className={`h-14 rounded-[22px] grid place-items-center gap-1 text-[11px] font-extrabold select-none transition ${
+            className={`h-14 w-full rounded-[22px] grid place-items-center gap-1 text-[11px] font-extrabold select-none transition ${
               isActive
                 ? 'bg-indigo-50 text-indigo-600 outline outline-2 outline-indigo-500'
                 : 'text-slate-300 active:bg-slate-50'
@@ -56,7 +59,7 @@ export function MobileBottomNav() {
           >
             <Icon size={22} strokeWidth={isActive ? 3 : 2} />
             <span className="leading-none">{tab.label}</span>
-          </button>
+          </Button>
         );
       })}
     </nav>

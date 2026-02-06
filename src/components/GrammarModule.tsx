@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../types';
 import { BookOpen, Search, X } from 'lucide-react';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 import { getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { logger } from '../utils/logger';
@@ -26,9 +28,8 @@ const matchesSearchQuery = (point: GrammarPoint, query: string): boolean => {
   if (point.pattern.toLowerCase().includes(q)) return true;
   if (point.explanation.toLowerCase().includes(q)) return true;
 
-  return point.usages.some(usage =>
-    usage.example.toLowerCase().includes(q) ||
-    usage.translation.toLowerCase().includes(q)
+  return point.usages.some(
+    usage => usage.example.toLowerCase().includes(q) || usage.translation.toLowerCase().includes(q)
   );
 };
 
@@ -129,20 +130,23 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
         </div>
         <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
+          <Input
             type="text"
             placeholder="Search grammar..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-72 bg-white shadow-sm transition-all"
+            className="pl-9 pr-8 py-2.5 text-sm w-full sm:w-72 bg-white shadow-sm transition-all"
           />
           {searchQuery && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -164,7 +168,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
               </div>
 
               <div className="grid gap-6">
-                {filteredData[unit].map((point) => (
+                {filteredData[unit].map(point => (
                   <div
                     key={`point-${unit}-${point.pattern}`}
                     className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:border-indigo-300 transition-colors"
@@ -180,7 +184,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                       </p>
 
                       <div className="space-y-4">
-                        {point.usages.map((usage) => (
+                        {point.usages.map(usage => (
                           <div
                             key={`usage-${point.pattern}-${usage.example}`}
                             className="bg-slate-50 p-4 rounded-lg border border-slate-100"

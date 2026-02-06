@@ -63,9 +63,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const language: Language =
     i18n.language === 'zh' ||
-      i18n.language === 'en' ||
-      i18n.language === 'vi' ||
-      i18n.language === 'mn'
+    i18n.language === 'en' ||
+    i18n.language === 'vi' ||
+    i18n.language === 'mn'
       ? i18n.language
       : 'en';
 
@@ -79,7 +79,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!isAuthenticated) return null;
     if (viewer === undefined) return null;
     if (!viewer) return null;
-    return userOverride ? { ...viewer, ...userOverride } : viewer;
+    const base = userOverride ? { ...viewer, ...userOverride } : viewer;
+    const baseWithId = base as User & { _id?: string; id?: string };
+    const resolvedId = baseWithId.id ?? baseWithId._id;
+    return resolvedId ? { ...baseWithId, id: resolvedId } : baseWithId;
   }, [isAuthenticated, viewer, userOverride]);
 
   // Legacy manual loadUser effect removed

@@ -24,6 +24,8 @@ import { ListeningModuleSkeleton } from '../../components/common';
 import { useTTS } from '../../hooks/useTTS';
 import { notify } from '../../utils/notify';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
+import { useUserActions } from '../../hooks/useUserActions';
+import { useActivityLogger } from '../../hooks/useActivityLogger';
 
 // Legacy API removed - using Convex
 
@@ -123,7 +125,13 @@ interface SearchResult {
 }
 
 interface MorphologyLookupResult {
-  token: { surface: string; lemma: string; pos: string | null; begin: number | null; len: number | null };
+  token: {
+    surface: string;
+    lemma: string;
+    pos: string | null;
+    begin: number | null;
+    len: number | null;
+  };
   morphemes: Array<{ form: string; tag: string; begin: number; len: number }>;
   wordFromDb: null | {
     word: string;
@@ -133,7 +141,13 @@ interface MorphologyLookupResult {
     hanja?: string;
     audioUrl?: string;
   };
-  grammarMatches: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+  grammarMatches: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    type: string;
+    level: string;
+  }>;
   krdict: SearchResult | null;
   krdictError: string | null;
 }
@@ -163,7 +177,13 @@ interface FlashcardPopoverProps {
   lemma?: string;
   meaning: string;
   contextTranslation?: string;
-  grammarMatches?: Array<{ id: string; title: string; summary: string; type: string; level: string }>;
+  grammarMatches?: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    type: string;
+    level: string;
+  }>;
   position: { x: number; y: number };
   onClose: () => void;
   onSave: () => void;
@@ -411,8 +431,9 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className={`w-6 h-6 rounded-full border-2 ${color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
-                  } ${HIGHLIGHT_CLASSES[c]} transition-all`}
+                className={`w-6 h-6 rounded-full border-2 ${
+                  color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
+                } ${HIGHLIGHT_CLASSES[c]} transition-all`}
                 aria-label={c}
               />
             ))}
@@ -529,6 +550,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 }) => {
   const labels = getLabels(language);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
+  const { saveWord } = useUserActions();
+  const { logActivity } = useActivityLogger();
 
   useEffect(() => stopTTS, [stopTTS]);
   // State for selected unit (allows changing within the component)
@@ -553,7 +576,6 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   }, [uniqueUnitIndices, selectedUnitIndexOverride]);
 
   const setSelectedUnitIndex = (next: number) => setSelectedUnitIndexOverride(next);
-
   // ========================================
   // Convex Query: Fetch unit data
   // ========================================
@@ -590,6 +612,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const completeUnitMutation = useMutation(
     mRef<{ courseId: string; unitIndex: number }, unknown>('progress:completeUnit')
   );
+  const touchCourseMutation = useMutation(
+    mRef<{ courseId: string; unitIndex?: number }, unknown>('progress:touchCourse')
+  );
 
   // Use loading state instead of early return to avoid hooks order issues
   const isLoading = unitDetails === undefined;
@@ -613,6 +638,84 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   }, [articles, activeArticleIndexOverride]);
 
   const setActiveArticleIndex = (next: number) => setActiveArticleIndexOverride(next);
+
+  const readingAccumulatedRef = useRef(0);
+  const lastTickRef = useRef(0);
+  const lastInteractionRef = useRef(0);
+  const activityContextRef = useRef({
+    courseId,
+    unitIndex: selectedUnitIndex,
+    articleIndex: activeArticleIndex,
+  });
+
+  const flushReadingTime = useCallback(
+    (force = false) => {
+      const seconds = readingAccumulatedRef.current;
+      if (seconds <= 0) return;
+      if (!force && seconds < 30) return;
+      const minutes = Number((seconds / 60).toFixed(2));
+      readingAccumulatedRef.current = 0;
+      logActivity('READING', minutes, 0, { ...activityContextRef.current, auto: true });
+    },
+    [logActivity]
+  );
+
+  useEffect(() => {
+    flushReadingTime(true);
+    activityContextRef.current = {
+      courseId,
+      unitIndex: selectedUnitIndex,
+      articleIndex: activeArticleIndex,
+    };
+    lastTickRef.current = Date.now();
+    lastInteractionRef.current = Date.now();
+  }, [courseId, selectedUnitIndex, activeArticleIndex, flushReadingTime]);
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      lastInteractionRef.current = Date.now();
+    };
+
+    document.addEventListener('scroll', handleInteraction, true);
+    window.addEventListener('keydown', handleInteraction);
+    window.addEventListener('pointerdown', handleInteraction, { passive: true });
+    window.addEventListener('touchstart', handleInteraction, { passive: true });
+    window.addEventListener('mousemove', handleInteraction, { passive: true });
+
+    return () => {
+      document.removeEventListener('scroll', handleInteraction, true);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('pointerdown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('mousemove', handleInteraction);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const now = Date.now();
+      const deltaSeconds = Math.max(0, (now - lastTickRef.current) / 1000);
+      lastTickRef.current = now;
+
+      if (document.visibilityState !== 'visible') return;
+      if (now - lastInteractionRef.current > 15000) return;
+      if (deltaSeconds <= 0) return;
+
+      readingAccumulatedRef.current += deltaSeconds;
+      if (readingAccumulatedRef.current >= 60) {
+        flushReadingTime();
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+      flushReadingTime(true);
+    };
+  }, [flushReadingTime]);
+
+  useEffect(() => {
+    void touchCourseMutation({ courseId, unitIndex: selectedUnitIndex });
+  }, [touchCourseMutation, courseId, selectedUnitIndex]);
 
   // Select the active article - ensure we always have a valid selection
   const unitData = useMemo(() => {
@@ -863,7 +966,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             after.indexOf('！'),
             after.indexOf('？'),
           ].filter(v => v >= 0);
-          const endOffset = endCandidates.length > 0 ? Math.min(...endCandidates) + 1 : after.length;
+          const endOffset =
+            endCandidates.length > 0 ? Math.min(...endCandidates) + 1 : after.length;
           const end = Math.min(fullText.length, safeIndex + endOffset);
           contextText = fullText.slice(start, end);
           charIndexInContext = safeIndex - start;
@@ -891,12 +995,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         setSelectedWord(prev =>
           prev
             ? {
-              ...prev,
-              lemma,
-              baseForm: lemma,
-              grammarMatches: res.grammarMatches,
-              meaning,
-            }
+                ...prev,
+                lemma,
+                baseForm: lemma,
+                grammarMatches: res.grammarMatches,
+                meaning,
+              }
             : prev
         );
       } catch (error: unknown) {
@@ -931,7 +1035,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       const query = tokenInfo?.base || clickedWord;
 
       const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
-      const fallbackMeaning = vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+      const fallbackMeaning =
+        vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
 
       const requestId = dictionaryRequestRef.current + 1;
       dictionaryRequestRef.current = requestId;
@@ -1008,7 +1113,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   // Close popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const { selectedWord: currentSelectedWord, selectionToolbar: currentSelectionToolbar } = popoverStateRef.current;
+      const { selectedWord: currentSelectedWord, selectionToolbar: currentSelectionToolbar } =
+        popoverStateRef.current;
       if (currentSelectedWord || currentSelectionToolbar) {
         const target = e.target as HTMLElement;
         if (!target.closest('[data-popover]') && !target.closest('[data-word]')) {
@@ -1036,6 +1142,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         { id: Date.now().toString(), word, meaning, timestamp: Date.now() },
       ]);
     }
+    void saveWord(word, meaning);
     setSelectedWord(null);
   };
 
@@ -1078,8 +1185,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
   const renderContent = (content: string) => {
     const parts = content.split(/(\s+)/);
-    const isSentenceEnd = (value: string) =>
-      /([다요까]\.|습니다\.|습니까\?|[?!])$/.test(value);
+    const isSentenceEnd = (value: string) => /([다요까]\.|습니다\.|습니까\?|[?!])$/.test(value);
 
     let currentOffset = 0;
     let sentenceIndex = 0;
@@ -1222,10 +1328,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       <button
                         key={articleIndex}
                         onClick={() => setActiveArticleIndex(articleIndex)}
-                        className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${activeArticleIndex === article.articleIndex
-                          ? 'bg-zinc-900 text-white'
-                          : 'hover:bg-zinc-50'
-                          }`}
+                        className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${
+                          activeArticleIndex === article.articleIndex
+                            ? 'bg-zinc-900 text-white'
+                            : 'hover:bg-zinc-50'
+                        }`}
                       >
                         {(labels.dashboard?.reading?.article || '文章').replace(
                           '{index}',
@@ -1314,6 +1421,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     onClick={async () => {
                       try {
                         await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
+                        flushReadingTime(true);
                         // Show success feedback
                         notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
                       } catch (e) {
@@ -1354,8 +1462,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
-                      }`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${
+                      activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
+                    }`}
                   >
                     <tab.icon className="w-4 h-4" />
                     {tab.label}
@@ -1441,11 +1550,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 {activeTab === 'ai' && (
                   <div className="flex flex-col h-full">
                     <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
-                      {aiMessages.map((msg) => (
+                      {aiMessages.map(msg => (
                         <div
                           key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
-                          className={`p-3 rounded-lg border-2 border-zinc-900 ${msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
-                            }`}
+                          className={`p-3 rounded-lg border-2 border-zinc-900 ${
+                            msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
+                          }`}
                         >
                           <p className="text-sm">{msg.content}</p>
                         </div>
@@ -1556,10 +1666,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${activeTab === tab.key
-                    ? 'border-lime-500 text-lime-600'
-                    : 'border-transparent text-zinc-400'
-                    }`}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${
+                    activeTab === tab.key
+                      ? 'border-lime-500 text-lime-600'
+                      : 'border-transparent text-zinc-400'
+                  }`}
                 >
                   <tab.icon className="w-4 h-4" />
                   {tab.label}

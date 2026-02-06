@@ -252,7 +252,7 @@ export default function VocabModulePage() {
 
   const handleReview = useCallback(
     async (word: ExtendedVocabItem, result: boolean | number) => {
-      if (!user?.id) return;
+      if (!user) return;
 
       const isCorrect = typeof result === 'boolean' ? result : result > 1;
 
@@ -296,7 +296,7 @@ export default function VocabModulePage() {
         }
       }
     },
-    [calculateNextSchedule, updateProgressMutation, updateProgressV2Mutation, user?.id]
+    [calculateNextSchedule, updateProgressMutation, updateProgressV2Mutation, user]
   );
 
   const toggleStar = useCallback(

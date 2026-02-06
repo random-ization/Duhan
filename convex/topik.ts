@@ -2,7 +2,7 @@ import { mutation, query, internalMutation } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator, makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
-import { getAuthUserId } from './utils';
+import { getAuthUserId, requireAdmin } from './utils';
 import type { Id } from './_generated/dataModel';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
@@ -81,7 +81,13 @@ export const getExams = query({
       };
     }
 
-    const exams = await query.collect();
+    const exams: Awaited<ReturnType<typeof query.paginate>>['page'] = [];
+    let cursor: string | null = null;
+    do {
+      const batch = await query.paginate({ numItems: 200, cursor });
+      exams.push(...batch.page);
+      cursor = batch.isDone ? null : batch.continueCursor;
+    } while (cursor);
 
     return exams.map(
       exam =>
@@ -478,6 +484,7 @@ export const saveExam = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { id, questions, ...examData } = args;
 
     // Check if exam exists
@@ -545,6 +552,7 @@ export const deleteExam = mutation({
     examId: v.string(), // Legacy ID
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     // Find exam
     const exam = await ctx.db
       .query('topik_exams')
@@ -574,6 +582,7 @@ export const deleteExam = mutation({
 export const updateQ46QuestionText = mutation({
   args: {},
   handler: async ctx => {
+    await requireAdmin(ctx);
     const newQuestionText = '위 글에서 <보기>의 글이 들어가기에 가장 알맞은 곳을 고르십시오.';
 
     // Get all Q46 questions across all exams
@@ -601,6 +610,7 @@ export const checkExamQuestions = mutation({
     round: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     // Find exam by round
     const exam = await ctx.db
       .query('topik_exams')
@@ -646,6 +656,7 @@ export const removeDuplicateQuestions = mutation({
     round: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     // Find exam by round
     const exam = await ctx.db
       .query('topik_exams')
@@ -690,6 +701,7 @@ export const updateQ39to41ForNewFormat = mutation({
     round: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const newInstruction =
       '※ [39～41] 주어진 문장이 들어갈 곳으로 가장 알맞은 것을 고르십시오. (각 2점)';
 

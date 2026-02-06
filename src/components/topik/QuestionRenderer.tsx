@@ -5,6 +5,7 @@ import { Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-rea
 import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
 import { aRef, mRef } from '../../utils/convexRefs';
+import { Button } from '../ui/button';
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -44,14 +45,31 @@ const CircleNumber = ({ num, isSelected }: { num: number; isSelected: boolean })
   );
 };
 
-const TextSelectionWrapper = ({ children, onMouseUp }: { children: React.ReactNode, onMouseUp?: (e: React.MouseEvent) => void }) => (
+const TextSelectionWrapper = ({
+  children,
+  onMouseUp,
+}: {
+  children: React.ReactNode;
+  onMouseUp?: (e: React.MouseEvent) => void;
+}) => (
   <div onMouseUp={onMouseUp} role="none">
     {children}
   </div>
 );
 
-
-const PassageView = ({ question, highlightText, onTextSelect, hidePassage = false, isInline = false }: { question: TopikQuestion; highlightText: (t: string) => string; onTextSelect?: (e: React.MouseEvent) => void; hidePassage?: boolean; isInline?: boolean }) => {
+const PassageView = ({
+  question,
+  highlightText,
+  onTextSelect,
+  hidePassage = false,
+  isInline = false,
+}: {
+  question: TopikQuestion;
+  highlightText: (t: string) => string;
+  onTextSelect?: (e: React.MouseEvent) => void;
+  hidePassage?: boolean;
+  isInline?: boolean;
+}) => {
   if (hidePassage || !question.passage) return null;
   // Standard layout hides passage if image exists
   if (!isInline && (question.imageUrl || question.image)) return null;
@@ -69,13 +87,25 @@ const PassageView = ({ question, highlightText, onTextSelect, hidePassage = fals
   );
 };
 
-const ContextBoxView = ({ question, questionIndex, highlightText, onTextSelect, isInline = false }: { question: TopikQuestion; questionIndex: number; highlightText: (t: string) => string; onTextSelect?: (e: React.MouseEvent) => void; isInline?: boolean }) => {
+const ContextBoxView = ({
+  question,
+  questionIndex,
+  highlightText,
+  onTextSelect,
+  isInline = false,
+}: {
+  question: TopikQuestion;
+  questionIndex: number;
+  highlightText: (t: string) => string;
+  onTextSelect?: (e: React.MouseEvent) => void;
+  isInline?: boolean;
+}) => {
   if (!question.contextBox || question.imageUrl || question.image) return null;
 
   const qNum = questionIndex + 1;
   const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
   const showBogiHeader = qNum >= 39 && qNum <= 41 && !isNewFormat;
-  const containerClass = isInline ? "mb-4 bg-white ml-8" : "mb-4 bg-white";
+  const containerClass = isInline ? 'mb-4 bg-white ml-8' : 'mb-4 bg-white';
 
   if (showBogiHeader) {
     return (
@@ -113,7 +143,25 @@ const ContextBoxView = ({ question, questionIndex, highlightText, onTextSelect, 
   );
 };
 
-const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onTextSelect, highlightText, getOptionStatus, isInline = false }: { question: TopikQuestion; userAnswer?: number; showCorrect: boolean; onAnswerChange?: (i: number) => void; onTextSelect?: (e: React.MouseEvent) => void; highlightText: (t: string) => string; getOptionStatus: (i: number) => 'correct' | 'incorrect' | null; isInline?: boolean }) => {
+const OptionsView = ({
+  question,
+  userAnswer,
+  showCorrect,
+  onAnswerChange,
+  onTextSelect,
+  highlightText,
+  getOptionStatus,
+  isInline = false,
+}: {
+  question: TopikQuestion;
+  userAnswer?: number;
+  showCorrect: boolean;
+  onAnswerChange?: (i: number) => void;
+  onTextSelect?: (e: React.MouseEvent) => void;
+  highlightText: (t: string) => string;
+  getOptionStatus: (i: number) => 'correct' | 'incorrect' | null;
+  isInline?: boolean;
+}) => {
   const allVeryShort = question.options.every(opt => opt.length <= 2);
   const hasLongOptions = question.options.some(opt => opt.length > 15);
 
@@ -143,7 +191,8 @@ const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onText
           };
 
           const getNumberBadgeClass = () => {
-            const base = 'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ';
+            const base =
+              'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ';
             if (status === 'correct') return base + 'bg-green-500 text-white';
             if (status === 'incorrect') return base + 'bg-red-500 text-white';
             if (isSelected) return base + 'bg-blue-500 text-white';
@@ -156,24 +205,41 @@ const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onText
           const imageContent = (
             <>
               {imgUrl ? (
-                <img src={imgUrl} alt={`Option ${optionIndex + 1}`} className="w-full h-full object-contain bg-white" />
+                <img
+                  src={imgUrl}
+                  alt={`Option ${optionIndex + 1}`}
+                  className="w-full h-full object-contain bg-white"
+                />
               ) : (
                 <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
                   <span className="text-4xl font-bold">{optionIndex + 1}</span>
                 </div>
               )}
-              <div className={numberBadgeClass}>
-                {CIRCLE_NUMBERS[optionIndex]}
-              </div>
-              {status === 'correct' && <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />}
-              {status === 'incorrect' && <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />}
+              <div className={numberBadgeClass}>{CIRCLE_NUMBERS[optionIndex]}</div>
+              {status === 'correct' && (
+                <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />
+              )}
+              {status === 'incorrect' && (
+                <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />
+              )}
             </>
           );
 
           return showCorrect ? (
-            <div key={`${question.id}-opt-${optionIndex}`} className={containerClass}>{imageContent}</div>
+            <div key={`${question.id}-opt-${optionIndex}`} className={containerClass}>
+              {imageContent}
+            </div>
           ) : (
-            <button key={`${question.id}-opt-${optionIndex}`} onClick={() => onAnswerChange?.(optionIndex)} className={containerClass}>{imageContent}</button>
+            <Button
+              key={`${question.id}-opt-${optionIndex}`}
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => onAnswerChange?.(optionIndex)}
+              className={`${containerClass} p-0`}
+            >
+              {imageContent}
+            </Button>
           );
         })}
       </div>
@@ -197,7 +263,9 @@ const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onText
         const content = (
           <React.Fragment>
             <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
-            <span className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}>
+            <span
+              className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}
+            >
               <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
             </span>
             {status === 'correct' && <Check className="w-5 h-5 text-green-600 ml-2" />}
@@ -208,43 +276,101 @@ const OptionsView = ({ question, userAnswer, showCorrect, onAnswerChange, onText
         const commonProps = {
           key: `${isInline ? 'inline-' : ''}${question.id}-opt-${optionIndex}`,
           onMouseUp: onTextSelect,
-          className: optionClass
+          className: optionClass,
         };
 
         return showCorrect ? (
           <div {...commonProps}>{content}</div>
         ) : (
-          <button {...commonProps} onClick={() => onAnswerChange?.(optionIndex)}>{content}</button>
+          <Button
+            {...commonProps}
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={() => onAnswerChange?.(optionIndex)}
+            className={`${optionClass} justify-start font-normal`}
+          >
+            {content}
+          </Button>
         );
       })}
     </div>
   );
 };
 
-const AIAnalysisSection = ({ showCorrect, aiAnalysis, aiLoading, aiError, isSaving, isSaved, handleAIAnalysis, handleSaveToNotebook, isInline = false }: { showCorrect: boolean; aiAnalysis: AIAnalysis | null; aiLoading: boolean; aiError: string | null; isSaving: boolean; isSaved: boolean; handleAIAnalysis: () => void; handleSaveToNotebook: () => void; isInline?: boolean }) => {
+const AIAnalysisSection = ({
+  showCorrect,
+  aiAnalysis,
+  aiLoading,
+  aiError,
+  isSaving,
+  isSaved,
+  handleAIAnalysis,
+  handleSaveToNotebook,
+  isInline = false,
+}: {
+  showCorrect: boolean;
+  aiAnalysis: AIAnalysis | null;
+  aiLoading: boolean;
+  aiError: string | null;
+  isSaving: boolean;
+  isSaved: boolean;
+  handleAIAnalysis: () => void;
+  handleSaveToNotebook: () => void;
+  isInline?: boolean;
+}) => {
   if (!showCorrect) return null;
   return (
-    <div className={isInline ? "mt-4 ml-8" : "mt-4"}>
+    <div className={isInline ? 'mt-4 ml-8' : 'mt-4'}>
       {!aiAnalysis && (
-        <button
+        <Button
+          type="button"
+          size="auto"
           onClick={handleAIAnalysis}
           disabled={aiLoading}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {aiLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Sparkles className="w-4 h-4" />
+          )}
           <span className="font-medium">{aiLoading ? '分析中...' : 'AI 老师解析'}</span>
-        </button>
+        </Button>
       )}
-      {aiError && <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{aiError}</div>}
-      {aiAnalysis && <SanitizedAIAnalysisDisplay analysis={aiAnalysis} isSaving={isSaving} isSaved={isSaved} onSave={handleSaveToNotebook} />}
+      {aiError && (
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {aiError}
+        </div>
+      )}
+      {aiAnalysis && (
+        <SanitizedAIAnalysisDisplay
+          analysis={aiAnalysis}
+          isSaving={isSaving}
+          isSaved={isSaved}
+          onSave={handleSaveToNotebook}
+        />
+      )}
     </div>
   );
 };
 
-const ExplanationView = ({ showCorrect, question, labels, isInline = false }: { showCorrect: boolean; question: TopikQuestion; labels: any; isInline?: boolean }) => {
+const ExplanationView = ({
+  showCorrect,
+  question,
+  labels,
+  isInline = false,
+}: {
+  showCorrect: boolean;
+  question: TopikQuestion;
+  labels: any;
+  isInline?: boolean;
+}) => {
   if (!showCorrect || !question.explanation) return null;
   return (
-    <div className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-gray-100 border-l-4 border-black text-sm font-sans`}>
+    <div
+      className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-gray-100 border-l-4 border-black text-sm font-sans`}
+    >
       <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
       <div className="leading-relaxed">{question.explanation}</div>
     </div>
@@ -464,7 +590,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
             (annotation.id === 'temp' && !activeAnnotationId);
           const hasNote = Boolean(annotation.note?.trim());
           const className = getHighlightClass(isActive, hasNote, annotation.color || 'yellow');
-          const annotatedRegExpSource = annotatedText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+          const annotatedRegExpSource = annotatedText.replaceAll(
+            /[.*+?^${}()|[\]\\]/g,
+            String.raw`\$&`
+          );
           const regex = new RegExp(`(${annotatedRegExpSource})`, 'gi');
           result = result.replace(
             regex,
@@ -493,43 +622,128 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       <div className="break-inside-avoid">
         {showInlineNumber ? (
           <div>
-            <PassageView question={question} highlightText={highlightText} onTextSelect={onTextSelect} isInline={true} hidePassage={hidePassage} />
+            <PassageView
+              question={question}
+              highlightText={highlightText}
+              onTextSelect={onTextSelect}
+              isInline={true}
+              hidePassage={hidePassage}
+            />
             {question.question && (
               <div className="flex items-start mb-3">
-                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>{questionIndex + 1}.</span>
-                <div className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}>
+                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>
+                  {questionIndex + 1}.
+                </span>
+                <div
+                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
+                >
                   <TextSelectionWrapper onMouseUp={onTextSelect}>
-                    <div dangerouslySetInnerHTML={{ __html: highlightText(question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')) }} />
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: highlightText(
+                          question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
+                        ),
+                      }}
+                    />
                   </TextSelectionWrapper>
                 </div>
               </div>
             )}
-            <ContextBoxView question={question} questionIndex={questionIndex} highlightText={highlightText} onTextSelect={onTextSelect} isInline={true} />
-            <OptionsView question={question} userAnswer={userAnswer} showCorrect={showCorrect} onAnswerChange={onAnswerChange} onTextSelect={onTextSelect} highlightText={highlightText} getOptionStatus={getOptionStatus} isInline={true} />
-            <ExplanationView showCorrect={showCorrect} question={question} labels={labels} isInline={true} />
-            <AIAnalysisSection showCorrect={showCorrect} aiAnalysis={aiAnalysis} aiLoading={aiLoading} aiError={aiError} isSaving={isSaving} isSaved={isSaved} handleAIAnalysis={handleAIAnalysis} handleSaveToNotebook={handleSaveToNotebook} isInline={true} />
+            <ContextBoxView
+              question={question}
+              questionIndex={questionIndex}
+              highlightText={highlightText}
+              onTextSelect={onTextSelect}
+              isInline={true}
+            />
+            <OptionsView
+              question={question}
+              userAnswer={userAnswer}
+              showCorrect={showCorrect}
+              onAnswerChange={onAnswerChange}
+              onTextSelect={onTextSelect}
+              highlightText={highlightText}
+              getOptionStatus={getOptionStatus}
+              isInline={true}
+            />
+            <ExplanationView
+              showCorrect={showCorrect}
+              question={question}
+              labels={labels}
+              isInline={true}
+            />
+            <AIAnalysisSection
+              showCorrect={showCorrect}
+              aiAnalysis={aiAnalysis}
+              aiLoading={aiLoading}
+              aiError={aiError}
+              isSaving={isSaving}
+              isSaved={isSaved}
+              handleAIAnalysis={handleAIAnalysis}
+              handleSaveToNotebook={handleSaveToNotebook}
+              isInline={true}
+            />
           </div>
         ) : (
           <div className="flex items-start">
-            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>{questionIndex + 1}.</span>
+            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
+              {questionIndex + 1}.
+            </span>
             <div className="flex-1">
               {(question.imageUrl || question.image) && (
                 <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
-                  <img src={question.imageUrl || question.image} alt={`Question ${questionIndex + 1}`} className="max-h-[300px] object-contain" />
+                  <img
+                    src={question.imageUrl || question.image}
+                    alt={`Question ${questionIndex + 1}`}
+                    className="max-h-[300px] object-contain"
+                  />
                 </div>
               )}
-              <PassageView question={question} highlightText={highlightText} onTextSelect={onTextSelect} hidePassage={hidePassage} />
+              <PassageView
+                question={question}
+                highlightText={highlightText}
+                onTextSelect={onTextSelect}
+                hidePassage={hidePassage}
+              />
               {question.question && (
                 <div className={`text-lg leading-loose mb-3 cursor-text text-black ${FONT_SERIF}`}>
                   <TextSelectionWrapper onMouseUp={onTextSelect}>
-                    <div dangerouslySetInnerHTML={{ __html: highlightText(question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')) }} />
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: highlightText(
+                          question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
+                        ),
+                      }}
+                    />
                   </TextSelectionWrapper>
                 </div>
               )}
-              <ContextBoxView question={question} questionIndex={questionIndex} highlightText={highlightText} onTextSelect={onTextSelect} />
-              <OptionsView question={question} userAnswer={userAnswer} showCorrect={showCorrect} onAnswerChange={onAnswerChange} onTextSelect={onTextSelect} highlightText={highlightText} getOptionStatus={getOptionStatus} />
+              <ContextBoxView
+                question={question}
+                questionIndex={questionIndex}
+                highlightText={highlightText}
+                onTextSelect={onTextSelect}
+              />
+              <OptionsView
+                question={question}
+                userAnswer={userAnswer}
+                showCorrect={showCorrect}
+                onAnswerChange={onAnswerChange}
+                onTextSelect={onTextSelect}
+                highlightText={highlightText}
+                getOptionStatus={getOptionStatus}
+              />
               <ExplanationView showCorrect={showCorrect} question={question} labels={labels} />
-              <AIAnalysisSection showCorrect={showCorrect} aiAnalysis={aiAnalysis} aiLoading={aiLoading} aiError={aiError} isSaving={isSaving} isSaved={isSaved} handleAIAnalysis={handleAIAnalysis} handleSaveToNotebook={handleSaveToNotebook} />
+              <AIAnalysisSection
+                showCorrect={showCorrect}
+                aiAnalysis={aiAnalysis}
+                aiLoading={aiLoading}
+                aiError={aiError}
+                isSaving={isSaving}
+                isSaved={isSaved}
+                handleAIAnalysis={handleAIAnalysis}
+                handleSaveToNotebook={handleSaveToNotebook}
+              />
             </div>
           </div>
         )}
@@ -554,7 +768,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                   </a>
                 )}
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => {
                   setShowSaveToast(false);
                   setSaveError(null);
@@ -562,7 +779,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 className={`ml-2 p-1 ${saveError ? 'hover:bg-red-500' : 'hover:bg-emerald-500'} rounded`}
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -604,7 +821,9 @@ const SanitizedAIAnalysisDisplay = ({
         return '[Complex Data]';
       }
     }
-    return typeof val === 'function' || typeof val === 'symbol' ? val.toString() : JSON.stringify(val);
+    return typeof val === 'function' || typeof val === 'symbol'
+      ? val.toString()
+      : JSON.stringify(val);
   };
 
   // Helper to safely extract wrong options
@@ -626,25 +845,30 @@ const SanitizedAIAnalysisDisplay = ({
   const wrongOptions = safeWrongOptions(analysis.wrongOptions);
 
   const getSaveBtnClass = () => {
-    const base = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ';
+    const base =
+      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ';
     if (isSaved) return base + 'bg-emerald-100 text-emerald-700 cursor-default';
     if (isSaving) return base + 'bg-indigo-100 text-indigo-500 cursor-wait';
-    return base + 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200';
+    return (
+      base + 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200'
+    );
   };
 
   const getSaveBtnContent = () => {
-    if (isSaved) return (
-      <>
-        <BookmarkCheck className="w-4 h-4" />
-        已收藏
-      </>
-    );
-    if (isSaving) return (
-      <>
-        <Loader2 className="w-4 h-4 animate-spin" />
-        保存中...
-      </>
-    );
+    if (isSaved)
+      return (
+        <>
+          <BookmarkCheck className="w-4 h-4" />
+          已收藏
+        </>
+      );
+    if (isSaving)
+      return (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          保存中...
+        </>
+      );
     return (
       <>
         <Bookmark className="w-4 h-4" />
@@ -662,13 +886,16 @@ const SanitizedAIAnalysisDisplay = ({
         </div>
 
         {/* Save to Notebook Button */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={onSave}
           disabled={isSaving || isSaved}
           className={getSaveBtnClass()}
         >
           {getSaveBtnContent()}
-        </button>
+        </Button>
       </div>
 
       {/* Translation */}

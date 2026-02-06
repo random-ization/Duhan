@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe, Check } from 'lucide-react';
 import { isValidLanguage } from '../LanguageRouter';
+import { Button } from '../ui/button';
 
 export const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
@@ -19,8 +20,7 @@ export const LanguageSwitcher = () => {
   ];
 
   const firstSegment = location.pathname.split('/').find(Boolean);
-  const activeLang =
-    firstSegment && isValidLanguage(firstSegment) ? firstSegment : i18n.language;
+  const activeLang = firstSegment && isValidLanguage(firstSegment) ? firstSegment : i18n.language;
   const currentLang = languages.find(l => l.code === activeLang) || languages[0];
 
   useEffect(() => {
@@ -35,20 +35,26 @@ export const LanguageSwitcher = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
+        type="button"
+        variant="outline"
+        size="auto"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Language"
         className="inline-flex items-center justify-center w-10 h-10 bg-white border-2 border-black rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all text-slate-900"
       >
         <Globe size={18} />
         <span className="sr-only">{currentLang.label}</span>
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-48 bg-white border-2 border-black rounded-xl shadow-pop-card z-50 overflow-hidden">
           {languages.map(lang => (
-            <button
+            <Button
               key={lang.code}
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => {
                 const nextLang = lang.code;
                 const segments = location.pathname.split('/').filter(Boolean);
@@ -68,7 +74,7 @@ export const LanguageSwitcher = () => {
             >
               <span>{lang.label}</span>
               {i18n.language === lang.code && <Check size={16} className="text-indigo-600" />}
-            </button>
+            </Button>
           ))}
         </div>
       )}

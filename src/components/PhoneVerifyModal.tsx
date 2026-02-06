@@ -13,6 +13,9 @@ import {
   SupportedPhoneRegion,
   tryParseSupportedPhone,
 } from '../lib/phone/phone';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Card, CardContent } from './ui/card';
 
 type PhoneVerifyModalContentProps = Readonly<{
   region: SupportedPhoneRegion;
@@ -86,25 +89,29 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="auto"
         className="absolute inset-0 bg-black/50 border-none w-full h-full cursor-default"
         onClick={onClose}
         aria-label="Close modal backdrop"
       />
-      <div className="relative w-full max-w-xl bg-white border-4 border-black rounded-[32px] shadow-pop overflow-hidden">
+      <Card className="relative w-full max-w-xl bg-white border-4 border-black rounded-[32px] shadow-pop overflow-hidden">
         <div className="absolute -top-12 -right-12 w-28 h-28 bg-[#FFDE59] border-4 border-black rounded-full" />
 
-        <button
+        <Button
           type="button"
           onClick={onClose}
+          variant="outline"
+          size="auto"
           className="absolute top-5 right-5 w-10 h-10 rounded-full border-2 border-black bg-white shadow-pop-sm flex items-center justify-center hover:shadow-pop transition-all"
           aria-label={t('phoneVerifyModal.close')}
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
 
-        <div className="p-10">
+        <CardContent className="p-10">
           <div className="flex items-center gap-3">
             <Phone className="w-6 h-6" />
             <h2 className="text-3xl font-heading font-extrabold">{t('phoneVerifyModal.title')}</h2>
@@ -121,21 +128,23 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
 
           <div className="mt-8">
             <div
-              className={`w-full rounded-2xl border-2 bg-white flex items-center gap-4 px-6 py-5 ${parsed.valid ? 'border-[#10B981]' : 'border-slate-200'
-                }`}
+              className={`w-full rounded-2xl border-2 bg-white flex items-center gap-4 px-6 py-5 ${
+                parsed.valid ? 'border-[#10B981]' : 'border-slate-200'
+              }`}
             >
-              <input
+              <Input
                 value={nationalNumber}
                 onChange={e => setNationalNumber(e.target.value)}
                 inputMode="numeric"
-                className="flex-1 outline-none text-2xl font-extrabold placeholder:text-slate-300"
+                className="flex-1 border-none shadow-none p-0 text-2xl font-extrabold placeholder:text-slate-300 focus-visible:ring-0"
                 placeholder={t('phoneVerifyModal.placeholder')}
               />
               <div
-                className={`w-11 h-11 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${parsed.valid
+                className={`w-11 h-11 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  parsed.valid
                     ? 'border-[#10B981] text-[#10B981]'
                     : 'border-slate-200 text-slate-300'
-                  }`}
+                }`}
               >
                 <Check className="w-6 h-6" />
               </div>
@@ -155,23 +164,25 @@ function PhoneVerifyModalContent({ region, onClose }: PhoneVerifyModalContentPro
             </div>
           </div>
 
-          <button
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={!canSubmit}
-            className={`mt-10 w-full h-20 rounded-3xl bg-[#FFDE59] border-4 border-black shadow-pop font-heading font-extrabold text-2xl transition-all ${canSubmit
+            size="auto"
+            className={`mt-10 w-full h-20 rounded-3xl bg-[#FFDE59] border-4 border-black shadow-pop font-heading font-extrabold text-2xl transition-all ${
+              canSubmit
                 ? 'hover:shadow-pop-hover hover:-translate-y-0.5'
                 : 'opacity-50 cursor-not-allowed'
-              }`}
+            }`}
           >
             {ctaLabel}
-          </button>
+          </Button>
 
           <p className="mt-6 text-sm text-slate-500 font-semibold leading-relaxed">
             {t('phoneVerifyModal.disclaimer')}
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

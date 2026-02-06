@@ -10,7 +10,6 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { INSTITUTES, STORAGE, UNITS } from '../../utils/convexRefs';
 
 interface FormState {
@@ -39,6 +38,8 @@ type BulkImportResult = {
     errors: string[];
   };
 };
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -108,9 +109,7 @@ function parseBulkText(text: string): BulkImportItem[] {
   return lines
     .slice(1)
     .map(line => {
-      const parts = line.includes('\t')
-        ? line.split('\t').map(p => p.trim())
-        : parseCSVLine(line);
+      const parts = line.includes('\t') ? line.split('\t').map(p => p.trim()) : parseCSVLine(line);
 
       const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
       const restoreNewlines = (val?: string) => val?.replaceAll('⏎', '\n');
@@ -191,7 +190,10 @@ const AudioFileList: React.FC<{
   return (
     <div className="space-y-2 mb-3">
       {files.map(af => (
-        <div key={af.file.name} className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg text-xs">
+        <div
+          key={af.file.name}
+          className="flex items-center gap-2 p-2 bg-zinc-50 rounded-lg text-xs"
+        >
           <span className="bg-green-200 px-1.5 py-0.5 rounded">
             第{af.unitIndex}课-{af.articleIndex}
           </span>
@@ -260,6 +262,7 @@ const ReadingImporter: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const data = new Uint8Array(arrayBuffer);
+      const XLSX = await loadXlsx();
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
@@ -270,9 +273,7 @@ const ReadingImporter: React.FC = () => {
         const headers = Object.keys(jsonData[0] as Record<string, unknown>);
         const headerLine = headers.join('\t');
         const dataLines = jsonData.map((row: any) =>
-          headers
-            .map(h => String(row[h] || '').replaceAll(/[\r\n]+/g, '⏎'))
-            .join('\t')
+          headers.map(h => String(row[h] || '').replaceAll(/[\r\n]+/g, '⏎')).join('\t')
         );
         setBulkText([headerLine, ...dataLines].join('\n'));
         setStatus(`已加载 Excel 文件: ${file.name} (${jsonData.length} 条数据)`);

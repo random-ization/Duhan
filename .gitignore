@@ -45,3 +45,4 @@ playwright-report/
 
 # Trae IDE artifacts
 .trae/
+coverage/

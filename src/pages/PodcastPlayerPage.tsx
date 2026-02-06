@@ -20,8 +20,11 @@ import {
   ListMusic,
   RefreshCw,
 } from 'lucide-react';
-import BackButton from '../components/ui/BackButton';
 import { Button } from '../components/ui/button';
+import { Switch } from '../components/ui/switch';
+import { Badge } from '../components/ui/badge';
+import { Card } from '../components/ui/card';
+import { Slider } from '../components/ui/slider';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
@@ -189,7 +192,7 @@ const PodcastPlayerPage: React.FC = () => {
 
     if (audioUrl) {
       return {
-        guid: guid || `ep_${Date.now()}`,
+        guid: guid || '',
         title: title || 'Unknown Episode',
         audioUrl: decodeURIComponent(audioUrl),
         channelTitle: searchParams.get('channelTitle') || 'Unknown Channel',
@@ -316,9 +319,17 @@ const PodcastPlayerPage: React.FC = () => {
     };
   };
   const trackView = useMutation(mRef<TrackViewArgs, unknown>('podcasts:trackView'));
-  const saveProgress = useMutation(
-    mRef<{ episodeGuid: string; progress: number }, unknown>('podcasts:saveProgress')
-  );
+  type RecordHistoryArgs = {
+    episodeGuid: string;
+    episodeTitle: string;
+    episodeUrl: string;
+    channelName: string;
+    channelImage?: string;
+    progress: number;
+    duration?: number;
+    episodeId?: string;
+  };
+  const recordHistory = useMutation(mRef<RecordHistoryArgs, unknown>('podcasts:recordHistory'));
   type HistoryRecord = {
     episodeGuid: string;
     episodeTitle: string;
@@ -337,7 +348,6 @@ const PodcastPlayerPage: React.FC = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
   const getEpisodeId = useCallback(() => {
     if (episode.guid) return encodeURIComponent(episode.guid);
     let hash = 0;
@@ -348,6 +358,42 @@ const PodcastPlayerPage: React.FC = () => {
     }
     return `ep_${Math.abs(hash).toString(16)}`;
   }, [episode.guid, episode.title, episode.audioUrl]);
+  const getEpisodeKey = useCallback(() => {
+    if (episode.guid) return episode.guid;
+    let hash = 0;
+    const str = `${episode.title}-${episode.audioUrl}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.codePointAt(i)!;
+      hash = Math.trunc(hash);
+    }
+    return `ep_${Math.abs(hash).toString(16)}`;
+  }, [episode.guid, episode.title, episode.audioUrl]);
+  const episodeKey = useMemo(() => getEpisodeKey(), [getEpisodeKey]);
+  const historyBase = useMemo(
+    () => ({
+      episodeGuid: episodeKey,
+      episodeTitle: episode.title || 'Unknown Episode',
+      episodeUrl: episode.audioUrl || '',
+      channelName: channel.title || episode.channelTitle || 'Unknown Channel',
+      channelImage:
+        channel.artworkUrl ||
+        channel.artwork ||
+        channel.image ||
+        episode.channelArtwork ||
+        undefined,
+    }),
+    [
+      episodeKey,
+      episode.title,
+      episode.audioUrl,
+      channel.title,
+      channel.artworkUrl,
+      channel.artwork,
+      channel.image,
+      episode.channelTitle,
+      episode.channelArtwork,
+    ]
+  );
 
   const loadTranscriptFromS3 = async (episodeId: string) => {
     if (!CDN_DOMAIN) return null;
@@ -716,7 +762,7 @@ const PodcastPlayerPage: React.FC = () => {
     // Track View
     if (episode?.audioUrl) {
       trackView({
-        guid: episode.guid || `${episode.title}-${Date.now()}`,
+        guid: episodeKey,
         title: episode.title,
         audioUrl: episode.audioUrl,
         duration: typeof episode.duration === 'number' ? episode.duration : 0,
@@ -729,6 +775,16 @@ const PodcastPlayerPage: React.FC = () => {
           artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork || '',
         },
       }).catch(console.error);
+
+      if (historyBase.episodeUrl) {
+        const resolvedDuration =
+          typeof episode.duration === 'number' ? episode.duration : duration || undefined;
+        recordHistory({
+          ...historyBase,
+          progress: Math.floor(currentTime),
+          duration: resolvedDuration,
+        }).catch(console.error);
+      }
     }
 
     // Cleanup: prevent updates after unmount
@@ -741,8 +797,8 @@ const PodcastPlayerPage: React.FC = () => {
   // 1.5 Resume Playback Logic
   useEffect(() => {
     const checkResume = async () => {
-      if (!episode?.guid) return;
-      if (resumeCheckedRef.current === episode.guid) return; // Already checked for this episode
+      if (!episodeKey) return;
+      if (resumeCheckedRef.current === episodeKey) return; // Already checked for this episode
 
       // Using history from query which is already loaded (hopefully)
       // If history isn't loaded yet, this might run again when history updates
@@ -752,7 +808,7 @@ const PodcastPlayerPage: React.FC = () => {
         // Match by guid (or title if guid is unstable/generated)
         const record = history.find(
           h =>
-            h.episodeGuid === episode.guid ||
+            h.episodeGuid === episodeKey ||
             (h.episodeTitle === episode.title &&
               h.channelName === (channel.title || episode.channelTitle))
         );
@@ -761,14 +817,14 @@ const PodcastPlayerPage: React.FC = () => {
           console.log(`[Resume] Found progress: ${record.progress}s`);
           setResumeTime(record.progress);
           setCurrentTime(record.progress); // Update UI immediately
-          resumeCheckedRef.current = episode.guid;
+          resumeCheckedRef.current = episodeKey;
         }
       } catch (err) {
         console.error('[Resume] Failed to check history', err);
       }
     };
     checkResume();
-  }, [episode.guid, history, channel.title, episode.title, episode.channelTitle]);
+  }, [episodeKey, history, channel.title, episode.title, episode.channelTitle]);
 
   // 1.6 Apply Resume Time (Wait for Metadata)
   useEffect(() => {
@@ -783,15 +839,18 @@ const PodcastPlayerPage: React.FC = () => {
   // 1.7 Save Progress Periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isPlaying && currentTime > 5 && episode.guid) {
-        saveProgress({
-          episodeGuid: episode.guid,
+      if (isPlaying && currentTime > 5 && historyBase.episodeUrl) {
+        const resolvedDuration =
+          typeof episode.duration === 'number' ? episode.duration : duration || undefined;
+        recordHistory({
+          ...historyBase,
           progress: Math.floor(currentTime),
+          duration: resolvedDuration,
         }).catch(() => {});
       }
     }, 10000); // Save every 10 seconds
     return () => clearInterval(interval);
-  }, [isPlaying, currentTime, episode.guid, saveProgress]);
+  }, [isPlaying, currentTime, historyBase, recordHistory, episode.duration, duration]);
 
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
@@ -956,8 +1015,10 @@ const PodcastPlayerPage: React.FC = () => {
       >
         <div className="flex gap-4 items-start">
           {/* Timestamp Bubble */}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => seekTo(line.start)}
             className={`
                                                 flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
@@ -969,28 +1030,30 @@ const PodcastPlayerPage: React.FC = () => {
                                             `}
           >
             {formatTime(line.start)}
-          </button>
+          </Button>
 
           {/* Content */}
-          <button
+          <Button
             type="button"
-            className="flex-1 space-y-2 text-left"
+            variant="ghost"
+            className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0"
             onClick={() => seekTo(line.start)}
           >
-            {/* Text Content with Karaoke Support */}
-            <div
-              className={`
+            <div className="flex w-full flex-col items-start space-y-2">
+              {/* Text Content with Karaoke Support */}
+              <div
+                className={`
                                                     text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
                                                     ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
                                                 `}
-            >
-              {line.words && line.words.length > 0 ? (
-                line.words.map((w, i) => {
-                  const isWordActive = currentTime >= w.start && currentTime < w.end;
-                  return (
-                    <span
-                      key={`${w.start}-${w.word}-${i}`}
-                      className={`
+              >
+                {line.words && line.words.length > 0 ? (
+                  line.words.map((w, i) => {
+                    const isWordActive = currentTime >= w.start && currentTime < w.end;
+                    return (
+                      <span
+                        key={`${w.start}-${w.word}-${i}`}
+                        className={`
                                                                         rounded px-0.5 transition-all duration-75
                                                                         ${
                                                                           isWordActive
@@ -998,20 +1061,20 @@ const PodcastPlayerPage: React.FC = () => {
                                                                             : 'hover:bg-indigo-50'
                                                                         }
                                                                     `}
-                    >
-                      {w.word}
-                    </span>
-                  );
-                })
-              ) : (
-                <span>{line.text}</span>
-              )}
-            </div>
+                      >
+                        {w.word}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span>{line.text}</span>
+                )}
+              </div>
 
-            {/* Translation */}
-            {showTranslation && (
-              <p
-                className={`
+              {/* Translation */}
+              {showTranslation && (
+                <p
+                  className={`
                                                         text-base leading-relaxed transition-colors border-l-2 pl-3
                                                         ${
                                                           isActive
@@ -1019,17 +1082,20 @@ const PodcastPlayerPage: React.FC = () => {
                                                             : 'text-slate-500 border-slate-200'
                                                         }
                                                     `}
-              >
-                {line.translation || (
-                  <span className="text-slate-300 italic text-sm">暂无翻译</span>
-                )}
-              </p>
-            )}
-          </button>
+                >
+                  {line.translation || (
+                    <span className="text-slate-300 italic text-sm">暂无翻译</span>
+                  )}
+                </p>
+              )}
+            </div>
+          </Button>
 
           {/* Analyze Button (Visible on Hover/Active) */}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={e => {
               e.stopPropagation();
               analyze(line);
@@ -1046,7 +1112,7 @@ const PodcastPlayerPage: React.FC = () => {
             title="Analyze this sentence"
           >
             <Sparkles className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -1056,16 +1122,25 @@ const PodcastPlayerPage: React.FC = () => {
     <div className="flex flex-col h-screen h-[100dvh] bg-slate-50 text-slate-900 overflow-hidden font-sans">
       {/* Header - Fixed on Mobile, Part of layout on Desktop */}
       <header className="flex-none flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 z-20 md:hidden">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-slate-100 rounded-full"
+        >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <span className="font-bold text-sm truncate max-w-[200px]">{episode.title}</span>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => setShowPlaylist(true)}
           className="p-2 hover:bg-slate-100 rounded-full"
         >
           <ListMusic className="w-5 h-5" />
-        </button>
+        </Button>
       </header>
 
       {/* Main Layout: Stack on Mobile, Split on Desktop */}
@@ -1075,7 +1150,16 @@ const PodcastPlayerPage: React.FC = () => {
           <div className="p-6 md:p-8 flex flex-col items-center md:items-start text-center md:text-left h-full overflow-y-auto">
             {/* Desktop Back Button */}
             <div className="hidden md:block mb-6">
-              <BackButton onClick={() => navigate(-1)} />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="w-12 h-12 border-2 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+              </Button>
             </div>
 
             {/* Cover Art */}
@@ -1119,18 +1203,7 @@ const PodcastPlayerPage: React.FC = () => {
                     <p className="text-xs text-slate-400">显示{translationLabel}翻译</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowTranslation(!showTranslation)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${
-                    showTranslation ? 'bg-indigo-600' : 'bg-slate-300'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${
-                      showTranslation ? 'left-7' : 'left-1'
-                    }`}
-                  />
-                </button>
+                <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
               </div>
 
               {/* Regenerate Button (For fixing broken subtitles) */}
@@ -1173,7 +1246,10 @@ const PodcastPlayerPage: React.FC = () => {
         >
           {/* Auto-Scroll Floating Toggle */}
           <div className="sticky top-4 right-4 z-20 flex justify-end px-4 pointer-events-none">
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setAutoScroll(!autoScroll)}
               className={`
                                 pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-md border transition-all
@@ -1188,7 +1264,7 @@ const PodcastPlayerPage: React.FC = () => {
               <span className="text-xs font-bold">
                 {autoScroll ? '自动滚动: 开' : '自动滚动: 关'}
               </span>
-            </button>
+            </Button>
           </div>
 
           <div className="max-w-3xl mx-auto p-4 md:p-8 lg:p-12 space-y-2">
@@ -1198,16 +1274,16 @@ const PodcastPlayerPage: React.FC = () => {
                 <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                 <p className="text-slate-500 font-medium animate-pulse">AI 正在生成智能字幕...</p>
                 {isGeneratingTranscript && (
-                  <span className="text-xs text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
+                  <Badge variant="secondary" className="text-xs shadow-sm">
                     首次生成约需 1 分钟
-                  </span>
+                  </Badge>
                 )}
               </div>
             )}
 
             {/* Error State */}
             {transcriptError && !transcriptLoading && (
-              <div className="bg-white border border-red-100 rounded-2xl p-6 text-center shadow-sm mx-4 mt-8">
+              <Card className="border border-red-100 p-6 text-center shadow-sm mx-4 mt-8">
                 <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3 text-red-500">
                   <Volume2 className="w-6 h-6" />
                 </div>
@@ -1216,14 +1292,14 @@ const PodcastPlayerPage: React.FC = () => {
                 <Button onClick={() => loadTranscriptChunked(true)} size="md" className="px-6 py-2">
                   重试
                 </Button>
-              </div>
+              </Card>
             )}
 
             {/* Empty State */}
             {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-              <div className="text-center py-20 text-slate-400">
+              <Card className="text-center py-16 text-slate-400 border-dashed">
                 <p>暂无字幕内容</p>
-              </div>
+              </Card>
             )}
 
             {/* Transcript List */}
@@ -1235,9 +1311,11 @@ const PodcastPlayerPage: React.FC = () => {
               <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-4 md:px-6 py-3">
                 {/* Progress Slider */}
                 <div className="relative group mb-1 pt-2">
-                  <button
+                  <Button
                     type="button"
-                    className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full p-0 font-normal bg-transparent hover:bg-transparent"
                     onClick={e => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const pct = (e.clientX - rect.left) / rect.width;
@@ -1245,7 +1323,7 @@ const PodcastPlayerPage: React.FC = () => {
                     }}
                   >
                     <span className="sr-only">Seek</span>
-                  </button>
+                  </Button>
                   <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-indigo-600 rounded-full relative"
@@ -1264,55 +1342,69 @@ const PodcastPlayerPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   {/* Left: Speed & Loop */}
                   <div className="flex items-center gap-2 flex-1">
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={changeSpeed}
-                      className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors w-8"
+                      className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors w-8 h-auto"
                     >
                       {speed}x
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={toggleLoop}
                       className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
                     >
                       <Repeat className="w-3 h-3" />
                       <span className="hidden md:inline">{getAbLoopLabel()}</span>
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Center: Main Playback */}
                   <div className="flex items-center gap-4 flex-none">
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => skip(-10)}
                       className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
                     >
                       <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                      type="button"
+                      variant="solid"
+                      size="icon"
                       onClick={togglePlay}
-                      className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100"
                     >
                       {isPlaying ? (
                         <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
                       ) : (
                         <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
                       )}
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => skip(10)}
                       className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
                     >
                       <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Right: Tools / Volume */}
                   <div className="flex items-center justify-end gap-3 flex-1">
                     <div className="hidden md:flex items-center gap-2 group w-20">
                       <Volume2 className="w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="range"
+                      <Slider
                         min="0"
                         max="1"
                         step="0.1"
@@ -1322,16 +1414,18 @@ const PodcastPlayerPage: React.FC = () => {
                           setVolume(v);
                           if (audioRef.current) audioRef.current.volume = v;
                         }}
-                        className="w-full h-1 bg-slate-200 rounded-full accent-slate-500"
                       />
                     </div>
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setShowPlaylist(true)}
                       className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
                       title="Playlist"
                     >
                       <ListMusic className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1372,12 +1466,15 @@ const PodcastPlayerPage: React.FC = () => {
                 {playlist.length}
               </span>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setShowPlaylist(false)}
               className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -1393,16 +1490,19 @@ const PodcastPlayerPage: React.FC = () => {
                   ep.id === episode.id ||
                   ep.audioUrl === episode.audioUrl;
                 return (
-                  <button
+                  <Button
                     key={ep.guid || ep.id}
                     onClick={() => playEpisode(ep)}
+                    variant="ghost"
+                    size="auto"
                     className={`
-                                            w-full text-left p-3 rounded-xl transition-all border
+                                            w-full text-left p-3 rounded-xl transition-all border justify-start items-start
                                             ${
                                               isCurrent
                                                 ? 'bg-indigo-50 border-indigo-100 ring-1 ring-indigo-200'
                                                 : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-100'
                                             }
+                                            font-normal
                                         `}
                   >
                     <div className="flex gap-3">
@@ -1433,7 +1533,7 @@ const PodcastPlayerPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </button>
+                  </Button>
                 );
               })
             )}
@@ -1443,26 +1543,30 @@ const PodcastPlayerPage: React.FC = () => {
 
       {/* Backdrop for Playlist */}
       {showPlaylist && (
-        <button
+        <Button
           type="button"
-          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] w-full h-full border-none p-0"
+          variant="ghost"
+          size="sm"
+          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] w-full h-full border-none p-0 font-normal"
           onClick={() => setShowPlaylist(false)}
         >
           <span className="sr-only">Close Playlist</span>
-        </button>
+        </Button>
       )}
 
       {/* AI Analysis Modal/Sheet */}
       {showAnalysis && analyzingLine && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center pointer-events-none">
           {/* Backdrop */}
-          <button
+          <Button
             type="button"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0 z-[100]"
+            variant="ghost"
+            size="sm"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0 z-[100] font-normal"
             onClick={() => setShowAnalysis(false)}
           >
             <span className="sr-only">Close Analysis</span>
-          </button>
+          </Button>
 
           {/* Modal Content */}
           <div
@@ -1483,12 +1587,15 @@ const PodcastPlayerPage: React.FC = () => {
                   {analyzingLine.text}
                 </h3>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowAnalysis(false)}
                 className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Body */}

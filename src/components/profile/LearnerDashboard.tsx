@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { NoArgs, qRef } from '../../utils/convexRefs';
+import { Button } from '../ui/button';
 
 const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
 
@@ -115,13 +116,16 @@ export const LearnerDashboard: React.FC = () => {
                   {stats.currentProgress.instituteName}
                 </div>
                 <div className="text-sm text-zinc-500 mb-4">
-                  第 {stats.currentProgress.unit} 课 ·{' '}
-                  {getModuleName(stats.currentProgress.module)}
+                  第 {stats.currentProgress.unit} 课 · {getModuleName(stats.currentProgress.module)}
                 </div>
               </div>
-              <button className="w-full py-3 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all">
+              <Button
+                type="button"
+                size="auto"
+                className="w-full py-3 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all"
+              >
                 继续学习 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-zinc-400">
@@ -165,9 +169,13 @@ export const LearnerDashboard: React.FC = () => {
               <div className="text-sm text-yellow-700">趁热打铁，巩固记忆！</div>
             </div>
           </div>
-          <button className="px-4 py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-500 transition-colors">
+          <Button
+            type="button"
+            size="auto"
+            className="px-4 py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-500 transition-colors"
+          >
             去复习
-          </button>
+          </Button>
         </div>
       )}
     </div>

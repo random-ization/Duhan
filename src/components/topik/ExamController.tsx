@@ -18,6 +18,7 @@ import {
   LogOut, // Exit icon
 } from 'lucide-react';
 import { TopikExam, TopikQuestion } from '../../types';
+import { Button } from '../ui/button';
 
 interface ExamControllerProps {
   exam: TopikExam;
@@ -136,9 +137,12 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           const isAnswered = userAnswers[idx] !== undefined;
 
           return (
-            <button
+            <Button
               key={question.id}
               data-question-index={idx}
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => onQuestionSelect(idx)}
               className={`
                 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all shrink-0 shadow-sm
@@ -146,7 +150,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
               `}
             >
               {idx + 1}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -216,8 +220,11 @@ export const ExamController: React.FC<ExamControllerProps> = ({
               const isActive = currentQuestionIndex === idx;
               const isAnswered = userAnswers[idx] !== undefined;
               return (
-                <button
+                <Button
                   key={question.id}
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => {
                     onQuestionSelect(idx);
                   }}
@@ -227,7 +234,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
                       `}
                 >
                   {idx + 1}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -248,12 +255,15 @@ export const ExamController: React.FC<ExamControllerProps> = ({
             </div>
 
             {/* Close button inside popover */}
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => setShowOverview(false)}
               className="hover:text-slate-900 transition-colors font-medium"
             >
               Close
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -261,7 +271,10 @@ export const ExamController: React.FC<ExamControllerProps> = ({
       {/* Detached Action Buttons (Below Main Capsule) */}
       <div className="flex flex-col gap-3">
         {/* Overview Trigger Toggle */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={() => setShowOverview(!showOverview)}
           className={`
               w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border transition-all
@@ -274,26 +287,31 @@ export const ExamController: React.FC<ExamControllerProps> = ({
         >
           <Grid className="w-5 h-5" />
           <span className="text-[9px] font-bold">概览</span>
-        </button>
+        </Button>
 
         {/* Submit Button */}
-        <button
+        <Button
+          type="button"
+          size="auto"
           onClick={onSubmit}
           className="w-14 h-14 rounded-full bg-indigo-600 border-2 border-indigo-100 flex flex-col items-center justify-center gap-0.5 text-white shadow-xl shadow-indigo-200 hover:scale-105 active:scale-95 transition-all group"
         >
           <Check className="w-6 h-6 stroke-[3]" />
           <span className="text-[9px] font-bold opacity-90 group-hover:opacity-100">交卷</span>
-        </button>
+        </Button>
 
         {/* Exit Button (Optional) */}
         {onExit && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={onExit}
             className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border border-slate-200 bg-white text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 hover:scale-105 active:scale-95 transition-all mt-2"
           >
             <LogOut className="w-5 h-5 ml-0.5" />
             <span className="text-[9px] font-bold">退出</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>,

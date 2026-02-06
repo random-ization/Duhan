@@ -456,6 +456,7 @@ export default defineSchema({
     courseId: v.string(), // Institute ID
     completedUnits: v.array(v.number()), // Array of completed unit indexes
     lastAccessAt: v.number(),
+    lastUnitIndex: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index('by_user_course', ['userId', 'courseId'])

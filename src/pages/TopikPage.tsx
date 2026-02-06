@@ -31,6 +31,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
     user ? {} : 'skip'
   );
+  const examHistory = examAttempts ?? [];
   const { examId } = useParams();
   const topikAnnotations = useQuery(
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
@@ -64,7 +65,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
       <TopikModule
         exams={topikExams}
         language={language}
-        history={examAttempts ?? []}
+        history={examHistory}
         onSaveHistory={saveExamAttempt}
         annotations={topikAnnotations ?? []}
         onSaveAnnotation={saveAnnotation}
@@ -227,8 +228,8 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
 
             <div className="bg-white rounded-2xl border-2 border-slate-900 p-4 shadow-sm">
               <div className="space-y-3">
-                {user.examHistory && user.examHistory.length > 0 ? (
-                  user.examHistory.slice(0, 3).map((attempt, index) => {
+                {examHistory.length > 0 ? (
+                  examHistory.slice(0, 3).map((attempt, index) => {
                     const score = attempt.score || 0;
                     const maxScore = attempt.maxScore || attempt.totalScore || 100;
                     const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
@@ -272,7 +273,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
                   </div>
                 )}
               </div>
-              {user.examHistory && user.examHistory.length > 0 && (
+              {examHistory.length > 0 && (
                 <button
                   onClick={() => navigate('/topik/history')}
                   className="w-full mt-4 py-2 border-2 border-slate-200 rounded-xl font-bold text-xs text-slate-500 hover:border-slate-900 hover:text-slate-900 transition"

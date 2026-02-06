@@ -9,7 +9,6 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { GRAMMARS, INSTITUTES } from '../../utils/convexRefs';
 
 interface FormState {
@@ -46,6 +45,8 @@ type BulkImportItem = {
   courseId: string;
   unitId: number;
 };
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 type BulkImportResult = {
   success: boolean;
@@ -256,11 +257,7 @@ function parseGrammarItems(
     .filter(Boolean) as BulkImportItem[];
 }
 
-function parseGrammarText(
-  text: string,
-  courseId: string,
-  defaultUnitId: number
-): BulkImportItem[] {
+function parseGrammarText(text: string, courseId: string, defaultUnitId: number): BulkImportItem[] {
   if (!text.trim()) return [];
 
   const lines = text
@@ -308,9 +305,7 @@ function parseGrammarText(
   return lines
     .slice(1)
     .map(line => {
-      const parts = line.includes('\t')
-        ? line.split('\t').map(p => p.trim())
-        : parseCSVLine(line);
+      const parts = line.includes('\t') ? line.split('\t').map(p => p.trim()) : parseCSVLine(line);
 
       const getValue = (idx: number) => (idx >= 0 && idx < parts.length ? parts[idx] : undefined);
 
@@ -393,10 +388,7 @@ const SheetMappingModal: React.FC<SheetMappingModalProps> = ({
               检测到 {sheetDataList.length} 个工作表，请确认教材对应关系
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -539,6 +531,7 @@ const GrammarImporter: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const data = new Uint8Array(arrayBuffer);
+      const XLSX = await loadXlsx();
       const workbook = XLSX.read(data, { type: 'array' });
 
       if (workbook.SheetNames.length === 1) {
@@ -563,9 +556,7 @@ const GrammarImporter: React.FC = () => {
           defval: '',
         });
 
-        const matchedCourse = institutes
-          ? autoMatchCourse(sheetName, institutes)
-          : null;
+        const matchedCourse = institutes ? autoMatchCourse(sheetName, institutes) : null;
 
         return {
           sheetName,
@@ -694,8 +685,6 @@ const GrammarImporter: React.FC = () => {
       setSubmitting(false);
     }
   };
-
-
 
   return (
     <div className="p-6 space-y-6">

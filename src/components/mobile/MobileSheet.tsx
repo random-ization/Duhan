@@ -1,5 +1,6 @@
 import React, { ReactNode, useEffect, useId } from 'react';
 import { X } from 'lucide-react';
+import { Button } from '../ui/button';
 
 type MobileSheetHeight = 'half' | 'full' | 'auto';
 
@@ -68,14 +69,16 @@ export function MobileSheet({
               <div id={titleId} className="text-[15px] font-black tracking-tight text-slate-900">
                 {title}
               </div>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="auto"
                 onClick={onClose}
                 className="w-11 h-11 rounded-[14px] border-2 border-slate-900 bg-white shadow-pop-sm grid place-items-center select-none active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition"
                 aria-label="Close"
               >
                 <X size={18} />
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="bg-white border-b-2 border-slate-200 px-3 py-3 flex justify-center">

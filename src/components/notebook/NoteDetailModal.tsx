@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation } from 'convex/react';
 import { mRef, qRef } from '../../utils/convexRefs';
+import { Button } from '../ui/button';
 
 // Type display config
 const TYPE_CONFIG: Record<
@@ -68,28 +69,30 @@ const NoteDetailHeader = ({
       </div>
     </div>
     <div className="flex items-center gap-2">
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
         onClick={handleDelete}
         disabled={deleting || loading}
         className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
       >
         {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-      </button>
-      <button
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
         onClick={onClose}
         className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
       >
         <X className="w-5 h-5" />
-      </button>
+      </Button>
     </div>
   </div>
 );
 
-const NoteDetailFooter = ({
-  note,
-}: {
-  note: { tags?: string[]; createdAt: number };
-}) => (
+const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number } }) => (
   <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
     <div className="flex gap-2">
       {note.tags?.map((tag: string, idx: number) => (
@@ -268,8 +271,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
   const question = typeof record.question === 'string' ? record.question : undefined;
   const imageUrl = typeof record.imageUrl === 'string' ? record.imageUrl : undefined;
   const options = Array.isArray(record.options) ? record.options : undefined;
-  const correctAnswer =
-    typeof record.correctAnswer === 'number' ? record.correctAnswer : undefined;
+  const correctAnswer = typeof record.correctAnswer === 'number' ? record.correctAnswer : undefined;
   const aiAnalysis = record.aiAnalysis;
   const analysis = typeof record.analysis === 'string' ? record.analysis : undefined;
 
@@ -279,9 +281,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
       <div className="space-y-4">
         {(questionText || question) && (
           <div>
-            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-              题目
-            </h4>
+            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">题目</h4>
             <div className="text-lg font-medium text-slate-800 leading-relaxed mb-4">
               {questionText || question}
             </div>
@@ -310,16 +310,16 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
               return (
                 <div
                   key={`${idx}-${typeof option === 'string' ? option.slice(0, 10) : 'opt'}`}
-                  className={`p-3 rounded-lg border flex items-center gap-3 ${isCorrect
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-white border-slate-200 text-slate-600'
-                    }`}
+                  className={`p-3 rounded-lg border flex items-center gap-3 ${
+                    isCorrect
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-white border-slate-200 text-slate-600'
+                  }`}
                 >
                   <span
-                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${isCorrect
-                      ? 'bg-emerald-200 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500'
-                      }`}
+                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                      isCorrect ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                    }`}
                   >
                     {idx + 1}
                   </span>

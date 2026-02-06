@@ -8,7 +8,6 @@ import {
   FileText,
   AlertCircle,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { TOPIK } from '../../utils/convexRefs';
 
 interface ExamMetadata {
@@ -38,6 +37,8 @@ interface ParsedQuestion {
   groupCount?: number;
   explanation?: string;
 }
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 interface ParsedExam {
   metadata: ExamMetadata;
@@ -699,11 +700,7 @@ function getRowValue(row: Record<string, any>, keys: string[]): string {
   return '';
 }
 
-function getRowNumber(
-  row: Record<string, any>,
-  keys: string[],
-  defaultVal: number = 0
-): number {
+function getRowNumber(row: Record<string, any>, keys: string[], defaultVal: number = 0): number {
   const val = getRowValue(row, keys);
   const num = Number.parseInt(val, 10);
   return Number.isNaN(num) ? defaultVal : num;
@@ -793,6 +790,7 @@ const TopikImporter: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const data = new Uint8Array(arrayBuffer);
+      const XLSX = await loadXlsx();
       const workbook = XLSX.read(data, { type: 'array' });
 
       const exams: ParsedExam[] = [];
@@ -823,7 +821,11 @@ const TopikImporter: React.FC = () => {
         const examType: 'READING' | 'LISTENING' = metadata.type || 'READING';
 
         jsonData.forEach((row, idx) => {
-          const { question, error } = parseQuestionRow(row as Record<string, any>, idx + 1, examType);
+          const { question, error } = parseQuestionRow(
+            row as Record<string, any>,
+            idx + 1,
+            examType
+          );
           if (question) questions.push(question);
           if (error) errors.push(error);
         });

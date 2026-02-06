@@ -10,6 +10,7 @@ import {
   useLocalizedNavigate,
 } from '../../hooks/useLocalizedNavigate';
 import { isValidLanguage } from '../LanguageRouter';
+import { Button } from '../ui/button';
 
 // Helper for 3D Icons
 const EmojiIcon = ({ src, grayscale = false }: { src: string; grayscale?: boolean }) => (
@@ -25,8 +26,10 @@ const EmojiIcon = ({ src, grayscale = false }: { src: string; grayscale?: boolea
 const MobileOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   if (!isOpen) return null;
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="auto"
       className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm md:hidden animate-in fade-in duration-200 w-full h-full cursor-default"
       onClick={onClose}
       aria-label="Close menu"
@@ -45,8 +48,10 @@ const UserProfileHeader = ({
   navigate: (path: string) => void;
   t: (key: string) => string;
 }) => (
-  <button
+  <Button
     type="button"
+    variant="ghost"
+    size="auto"
     className={`p-6 flex items-center cursor-pointer hover:bg-slate-50 rounded-t-[2.3rem] transition text-left w-full ${collapsed ? 'justify-center' : 'gap-4'}`}
     onClick={() => navigate('/profile')}
     title={t('sidebar.profile')}
@@ -64,7 +69,7 @@ const UserProfileHeader = ({
         <p className="text-xs text-slate-400 truncate">{user?.email || t('sidebar.viewProfile')}</p>
       </div>
     )}
-  </button>
+  </Button>
 );
 
 const SidebarNav = ({
@@ -90,10 +95,11 @@ const SidebarNav = ({
           key={item.path}
           to={item.to}
           title={collapsed ? item.label : undefined}
-          className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${isActive
-            ? `${item.activeClass}`
-            : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-200'
-            }`}
+          className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${
+            isActive
+              ? `${item.activeClass}`
+              : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-200'
+          }`}
         >
           {item.icon}
           {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
@@ -121,7 +127,10 @@ const SidebarFooter = ({
   t: (key: string) => string;
 }) => (
   <div className={`p-4 border-t-2 border-slate-100 flex ${collapsed ? 'flex-col' : ''} gap-2`}>
-    <button
+    <Button
+      type="button"
+      variant="ghost"
+      size="auto"
       onClick={() => {
         if (pathWithoutLang === '/dashboard') {
           toggleEditMode();
@@ -130,20 +139,24 @@ const SidebarFooter = ({
         }
       }}
       title={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
-      className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${pathWithoutLang === '/dashboard' && isEditing
-        ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
-        : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
-        } transition border-2`}
+      className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${
+        pathWithoutLang === '/dashboard' && isEditing
+          ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+          : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
+      } transition border-2`}
     >
       {pathWithoutLang === '/dashboard' && isEditing ? <Check size={20} /> : <Settings size={20} />}
-    </button>
-    <button
+    </Button>
+    <Button
+      type="button"
+      variant="ghost"
+      size="auto"
       onClick={logout}
       title={t('sidebar.logout')}
       className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-50 transition border-2 border-transparent hover:border-red-100`}
     >
       <LogOut size={20} />
-    </button>
+    </Button>
   </div>
 );
 
@@ -180,22 +193,28 @@ export default function Sidebar() {
                 `}
       >
         {/* Mobile Close Button */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={toggleMobileMenu}
           className="md:hidden absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-900"
         >
           <X size={20} />
-        </button>
+        </Button>
 
         <UserProfileHeader user={user} collapsed={collapsed} navigate={navigate} t={t} />
 
         {/* Collapse Toggle Button */}
-        <button
+        <Button
+          type="button"
+          variant="outline"
+          size="auto"
           onClick={() => setCollapsed(!collapsed)}
           className="absolute -right-3 top-20 w-6 h-6 bg-white border-2 border-slate-900 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition shadow-sm z-30"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
+        </Button>
 
         <SidebarNav items={navItems} pathWithoutLang={pathWithoutLang} collapsed={collapsed} />
 

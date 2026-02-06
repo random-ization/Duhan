@@ -4,12 +4,15 @@ import { paginationOptsValidator } from 'convex/server';
 import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from './queryLimits';
 import { requireAdmin } from './utils';
 
+const SCAN_PAGE_SIZE = 500;
+
 // Get all users with real database pagination
 export const getUsers = query({
   args: {
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const results = await ctx.db.query('users').order('desc').paginate(args.paginationOpts);
 
     return {
@@ -37,6 +40,7 @@ export const searchUsers = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const limit = args.limit || 20;
     const searchLower = args.search.toLowerCase();
 
@@ -112,6 +116,7 @@ export const getInstitutes = query({
     paginationOpts: v.optional(paginationOptsValidator),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     // If pagination is provided, use it
     if (args.paginationOpts) {
       const results = await ctx.db.query('institutes').paginate(args.paginationOpts);
@@ -251,20 +256,50 @@ export const deleteInstitute = mutation({
 export const getOverviewStats = query({
   args: {},
   handler: async ctx => {
+    await requireAdmin(ctx);
+    const countByPages = async (
+      getPage: (cursor: string | null) => Promise<{
+        page: unknown[];
+        isDone: boolean;
+        continueCursor: string;
+      }>
+    ) => {
+      let total = 0;
+      let cursor: string | null = null;
+      do {
+        const batch = await getPage(cursor);
+        total += batch.page.length;
+        cursor = batch.isDone ? null : batch.continueCursor;
+      } while (cursor);
+      return total;
+    };
+
     // Count users
-    const users = await ctx.db.query('users').collect();
-    const userCount = users.length;
+    const userCount = await countByPages(cursor =>
+      ctx.db.query('users').paginate({ numItems: SCAN_PAGE_SIZE, cursor })
+    );
 
     // Count institutes (not archived)
-    const institutes = await ctx.db
-      .query('institutes')
-      .withIndex('by_archived', q => q.eq('isArchived', false))
-      .collect();
-    const instituteCount = institutes.length;
+    const instituteCount = await countByPages(cursor =>
+      ctx.db
+        .query('institutes')
+        .withIndex('by_archived', q => q.eq('isArchived', false))
+        .paginate({ numItems: SCAN_PAGE_SIZE, cursor })
+    );
 
     // Count vocabulary words (master dictionary)
-    const vocabWords = await ctx.db.query('words').take(10000);
-    const vocabCount = vocabWords.length >= 10000 ? '10000+' : vocabWords.length;
+    const vocabLimit = 10000;
+    let vocabScanned = 0;
+    let vocabCursor: string | null = null;
+    do {
+      const batch = await ctx.db
+        .query('words')
+        .paginate({ numItems: SCAN_PAGE_SIZE, cursor: vocabCursor });
+      vocabScanned += batch.page.length;
+      if (vocabScanned > vocabLimit) break;
+      vocabCursor = batch.isDone ? null : batch.continueCursor;
+    } while (vocabCursor);
+    const vocabCount = vocabScanned > vocabLimit ? '10000+' : vocabScanned;
 
     // Count grammar points
     const grammarPoints = await ctx.db.query('grammar_points').take(1000);
@@ -278,8 +313,9 @@ export const getOverviewStats = query({
     const unitCount = units.length;
 
     // Count TOPIK exams
-    const exams = await ctx.db.query('topik_exams').collect();
-    const examCount = exams.length;
+    const examCount = await countByPages(cursor =>
+      ctx.db.query('topik_exams').paginate({ numItems: SCAN_PAGE_SIZE, cursor })
+    );
 
     return {
       users: userCount,
@@ -298,14 +334,11 @@ export const getAiUsageStats = query({
     days: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const start = Date.now() - args.days * 24 * 60 * 60 * 1000;
-    const logs = await ctx.db
-      .query('ai_usage_logs')
-      .withIndex('by_createdAt', q => q.gte('createdAt', start))
-      .collect();
 
     const summary = {
-      totalCalls: logs.length,
+      totalCalls: 0,
       totalTokens: 0,
       totalCost: 0,
     };
@@ -316,26 +349,36 @@ export const getAiUsageStats = query({
       { date: string; calls: number; tokens: number; cost: number }
     >();
 
-    for (const log of logs) {
-      const tokens = log.totalTokens || 0;
-      const cost = log.costUsd || 0;
+    let cursor: string | null = null;
+    do {
+      const batch = await ctx.db
+        .query('ai_usage_logs')
+        .withIndex('by_createdAt', q => q.gte('createdAt', start))
+        .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
 
-      summary.totalTokens += tokens;
-      summary.totalCost += cost;
+      for (const log of batch.page) {
+        const tokens = log.totalTokens || 0;
+        const cost = log.costUsd || 0;
+        summary.totalCalls += 1;
+        summary.totalTokens += tokens;
+        summary.totalCost += cost;
 
-      const feature = log.feature || 'unknown';
-      byFeature[feature] = byFeature[feature] || { calls: 0, tokens: 0, cost: 0 };
-      byFeature[feature].calls += 1;
-      byFeature[feature].tokens += tokens;
-      byFeature[feature].cost += cost;
+        const feature = log.feature || 'unknown';
+        byFeature[feature] = byFeature[feature] || { calls: 0, tokens: 0, cost: 0 };
+        byFeature[feature].calls += 1;
+        byFeature[feature].tokens += tokens;
+        byFeature[feature].cost += cost;
 
-      const date = new Date(log.createdAt).toISOString().slice(0, 10);
-      const daily = dailyMap.get(date) || { date, calls: 0, tokens: 0, cost: 0 };
-      daily.calls += 1;
-      daily.tokens += tokens;
-      daily.cost += cost;
-      dailyMap.set(date, daily);
-    }
+        const date = new Date(log.createdAt).toISOString().slice(0, 10);
+        const daily = dailyMap.get(date) || { date, calls: 0, tokens: 0, cost: 0 };
+        daily.calls += 1;
+        daily.tokens += tokens;
+        daily.cost += cost;
+        dailyMap.set(date, daily);
+      }
+
+      cursor = batch.isDone ? null : batch.continueCursor;
+    } while (cursor);
 
     const daily = [...dailyMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 
@@ -354,6 +397,7 @@ export const getRecentActivity = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     // Get recent activity logs
     const activityLogs = await ctx.db.query('activity_logs').order('desc').take(args.limit);
 

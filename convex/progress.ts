@@ -37,6 +37,7 @@ export const getCourseProgress = query({
       completedUnits,
       completedCount: completedUnits.length,
       totalUnits,
+      lastUnitIndex: progress?.lastUnitIndex,
       progressPercent: totalUnits > 0 ? Math.round((completedUnits.length / totalUnits) * 100) : 0,
     };
   },
@@ -70,6 +71,7 @@ export const completeUnit = mutation({
       await ctx.db.patch(existing._id, {
         completedUnits,
         lastAccessAt: Date.now(),
+        lastUnitIndex: unitIndex,
       });
 
       return { success: true, completedUnits };
@@ -80,6 +82,7 @@ export const completeUnit = mutation({
         courseId,
         completedUnits: [unitIndex],
         lastAccessAt: Date.now(),
+        lastUnitIndex: unitIndex,
         createdAt: Date.now(),
       });
 
@@ -105,8 +108,44 @@ export const uncompleteUnit = mutation({
     await ctx.db.patch(existing._id, {
       completedUnits,
       lastAccessAt: Date.now(),
+      lastUnitIndex: existing.lastUnitIndex,
     });
     return { success: true, completedUnits };
+  },
+});
+
+// Touch course progress (update last access without completing)
+export const touchCourse = mutation({
+  args: {
+    courseId: v.string(),
+    unitIndex: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    const existing = await ctx.db
+      .query('user_course_progress')
+      .withIndex('by_user_course', q => q.eq('userId', userId).eq('courseId', args.courseId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        lastAccessAt: Date.now(),
+        lastUnitIndex: typeof args.unitIndex === 'number' ? args.unitIndex : existing.lastUnitIndex,
+      });
+      return { success: true, updated: true };
+    }
+
+    await ctx.db.insert('user_course_progress', {
+      userId,
+      courseId: args.courseId,
+      completedUnits: [],
+      lastAccessAt: Date.now(),
+      lastUnitIndex: typeof args.unitIndex === 'number' ? args.unitIndex : undefined,
+      createdAt: Date.now(),
+    });
+
+    return { success: true, created: true };
   },
 });
 
@@ -143,6 +182,7 @@ export const getAllProgress = query({
         completedUnits: p.completedUnits.length,
         totalUnits: institute?.totalUnits || 0,
         lastAccessAt: p.lastAccessAt,
+        lastUnitIndex: p.lastUnitIndex,
       };
     });
 

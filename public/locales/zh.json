@@ -775,7 +775,8 @@
         "intermediate": "中级",
         "advanced": "高级"
       }
-    }
+    },
+    "subtitle": "Ready to beat today's boss?"
   },
   "plan": {
     "monthly": "月度会员",

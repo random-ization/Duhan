@@ -129,7 +129,12 @@ export const getExamAttempts = query({
 
     const scoreMap = new Map<
       string,
-      { totalScore: number; correctAnswerMap: Map<number, number> }
+      {
+        totalScore: number;
+        correctAnswerMap: Map<number, number>;
+        indexToNumber: number[];
+        numberToIndex: Map<number, number>;
+      }
     >();
     await Promise.all(
       examIds.map(async examId => {
@@ -137,11 +142,21 @@ export const getExamAttempts = query({
           .query('topik_questions')
           .withIndex('by_exam', q => q.eq('examId', examId))
           .collect();
-        const totalScore = questions.reduce((sum, q) => sum + (q.score || 0), 0);
+        const sortedQuestions = questions.slice().sort((a, b) => a.number - b.number);
+        const totalScore = sortedQuestions.reduce((sum, q) => sum + (q.score || 0), 0);
         const correctAnswerMap = new Map<number, number>(
-          questions.map(q => [q.number, q.correctAnswer])
+          sortedQuestions.map(q => [q.number, q.correctAnswer])
         );
-        scoreMap.set(examId.toString(), { totalScore, correctAnswerMap });
+        const indexToNumber = sortedQuestions.map(q => q.number);
+        const numberToIndex = new Map<number, number>(
+          sortedQuestions.map((q, idx) => [q.number, idx])
+        );
+        scoreMap.set(examId.toString(), {
+          totalScore,
+          correctAnswerMap,
+          indexToNumber,
+          numberToIndex,
+        });
       })
     );
 
@@ -151,18 +166,47 @@ export const getExamAttempts = query({
         if (!exam) return null;
 
         const answers = (a.answers || {}) as Record<string, number>;
-        const userAnswers: Record<number, number> = {};
-        for (const [k, v] of Object.entries(answers)) {
-          const n = Number(k);
-          if (Number.isFinite(n)) userAnswers[n] = v;
-        }
+        const entries = Object.entries(answers)
+          .map(([k, v]) => [Number(k), v] as const)
+          .filter(([k]) => Number.isFinite(k));
 
         const scoreInfo = scoreMap.get(a.examId.toString());
         const totalScore = scoreInfo?.totalScore ?? 0;
         const correctAnswerMap = scoreInfo?.correctAnswerMap ?? new Map<number, number>();
+        const indexToNumber = scoreInfo?.indexToNumber ?? [];
+        const numberToIndex = scoreInfo?.numberToIndex ?? new Map<number, number>();
+
+        const numericKeys = entries.map(([k]) => k);
+        const maxKey = numericKeys.length > 0 ? Math.max(...numericKeys) : -1;
+        const hasZero = numericKeys.includes(0);
+        const isZeroBased =
+          hasZero || (numericKeys.length > 0 && maxKey <= Math.max(indexToNumber.length - 1, 0));
+
+        const answersByNumber = new Map<number, number>();
+        const userAnswers: Record<number, number> = {};
+
+        for (const [key, value] of entries) {
+          if (isZeroBased) {
+            const idx = key;
+            userAnswers[idx] = value;
+            const qNum = indexToNumber[idx] ?? idx + 1;
+            if (Number.isFinite(qNum)) {
+              answersByNumber.set(qNum, value);
+            }
+          } else {
+            const qNum = key;
+            answersByNumber.set(qNum, value);
+            const idx = numberToIndex.get(qNum);
+            if (idx !== undefined) {
+              userAnswers[idx] = value;
+            } else if (qNum > 0) {
+              userAnswers[qNum - 1] = value;
+            }
+          }
+        }
+
         let correctCount = 0;
-        for (const [qn, ans] of Object.entries(userAnswers)) {
-          const qNum = Number(qn);
+        for (const [qNum, ans] of answersByNumber.entries()) {
           if (correctAnswerMap.get(qNum) === ans) correctCount++;
         }
 
@@ -359,10 +403,10 @@ export const updateLearningProgress = mutation({
       lastUnit?: number;
       lastModule?: string;
     } = {};
-    if (lastInstitute) updates.lastInstitute = lastInstitute;
-    if (lastLevel) updates.lastLevel = lastLevel;
+    if (lastInstitute !== undefined) updates.lastInstitute = lastInstitute;
+    if (lastLevel !== undefined) updates.lastLevel = lastLevel;
     if (lastUnit !== undefined) updates.lastUnit = lastUnit;
-    if (lastModule) updates.lastModule = lastModule;
+    if (lastModule !== undefined) updates.lastModule = lastModule;
 
     await ctx.db.patch(user._id, updates);
 

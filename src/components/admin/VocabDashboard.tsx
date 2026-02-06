@@ -1,16 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
 import { Id } from '../../../convex/_generated/dataModel';
-import * as XLSX from 'xlsx';
 import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
 import { notify } from '../../utils/notify';
 import { logger } from '../../utils/logger';
-import {
-  Database,
-  Loader2,
-  Search,
-  Download,
-} from 'lucide-react';
+import { Database, Loader2, Search, Download } from 'lucide-react';
 import VocabWordRow from './VocabWordRow';
 import VocabEditModal from './VocabEditModal';
 import VocabStats from './VocabStats';
@@ -42,6 +36,8 @@ interface InstituteRow {
   displayLevel?: string;
   volume?: string;
 }
+
+const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
 const ITEMS_PER_PAGE = 20;
 
@@ -174,12 +170,13 @@ const VocabDashboard: React.FC = () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredWords.length) {
       notify.error('没有可导出的数据');
       return;
     }
 
+    const XLSX = await loadXlsx();
     const exportData = filteredWords.map(w => ({
       单元: w.unitId || '',
       韩语: w.word,

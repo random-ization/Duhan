@@ -11,7 +11,7 @@ export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
-  const { language } = useAuth();
+  const { user, language } = useAuth();
 
   // Use same Convex query as CoursesOverview for consistency
   type Institute = {
@@ -30,6 +30,19 @@ export default function CourseDashboard() {
     instituteId ? { courseId: instituteId } : 'skip'
   );
   const vocabData = useQuery(VOCAB.getStats, instituteId ? { courseId: instituteId } : 'skip');
+  const courseProgress = useQuery(
+    qRef<
+      { courseId: string },
+      {
+        completedUnits: number[];
+        completedCount: number;
+        totalUnits: number;
+        progressPercent: number;
+        lastUnitIndex?: number;
+      } | null
+    >('progress:getCourseProgress'),
+    user && instituteId ? { courseId: instituteId } : 'skip'
+  );
 
   // Loading states
   const loadingGrammar = grammarList === undefined;
@@ -48,13 +61,23 @@ export default function CourseDashboard() {
   const displayLevel = course?.displayLevel || t('courseDashboard.defaultDisplayLevel');
   const coverUrl = course?.coverUrl;
   const totalUnits = course?.totalUnits || 10;
+  const completedUnits = courseProgress?.completedUnits ?? [];
+  const completedCount = courseProgress?.completedCount ?? completedUnits.length;
+  const unitTotal = courseProgress?.totalUnits || totalUnits;
+  const unitProgress = unitTotal > 0 ? (completedCount / unitTotal) * 100 : 0;
+  const lastUnitIndex =
+    courseProgress?.lastUnitIndex ??
+    (completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, unitTotal) : undefined);
 
   // Calculate overall progress
   const grammarMastered = grammarPoints.filter(g => g.status === 'MASTERED').length;
   const grammarTotal = grammarPoints.length;
   const vocabProgress = vocabStats.total > 0 ? (vocabStats.mastered / vocabStats.total) * 100 : 0;
   const grammarProgress = grammarTotal > 0 ? (grammarMastered / grammarTotal) * 100 : 0;
-  const overallProgress = Math.round((vocabProgress + grammarProgress) / 2);
+  const progressParts = [vocabProgress, grammarProgress, unitProgress];
+  const overallProgress = Math.round(
+    progressParts.reduce((sum, value) => sum + value, 0) / progressParts.length
+  );
 
   // Module definitions with routes and progress data
   const modules = [
@@ -106,9 +129,12 @@ export default function CourseDashboard() {
       iconBorder: 'border-blue-200',
       hoverBg: 'bg-blue-400/90',
       progressLabel: t('courseDashboard.progress.units'),
-      progressValue: t('courseDashboard.lessonCount', { count: totalUnits }),
+      progressValue:
+        unitTotal > 0
+          ? `${completedCount}/${unitTotal}`
+          : t('courseDashboard.lessonCount', { count: totalUnits }),
       progressColor: 'bg-blue-400',
-      progressWidth: '0%',
+      progressWidth: `${Math.min(unitProgress, 100)}%`,
       hoverText: 'READ',
       hoverRotate: 'group-hover:scale-110',
       path: `/course/${instituteId}/reading`,
@@ -123,9 +149,12 @@ export default function CourseDashboard() {
       iconBorder: 'border-yellow-200',
       hoverBg: 'bg-[#FEE500]/90',
       progressLabel: t('courseDashboard.progress.units'),
-      progressValue: t('courseDashboard.lessonCount', { count: totalUnits }),
+      progressValue:
+        unitTotal > 0
+          ? `${completedCount}/${unitTotal}`
+          : t('courseDashboard.lessonCount', { count: totalUnits }),
       progressColor: 'bg-[#FEE500]',
-      progressWidth: '0%',
+      progressWidth: `${Math.min(unitProgress, 100)}%`,
       hoverText: 'LISTEN',
       hoverRotate: 'group-hover:-translate-y-1',
       path: `/course/${instituteId}/listening`,
@@ -185,6 +214,14 @@ export default function CourseDashboard() {
                 <span>{course?.publisher}</span>
                 {t('courseDashboard.courseMeta', { level: displayLevel, totalUnits })}
               </p>
+              {lastUnitIndex ? (
+                <p className="text-xs text-slate-400 font-semibold mt-1">
+                  {t('courseDashboard.recentUnit', {
+                    defaultValue: '最近学习：第 {unit} 课',
+                    unit: lastUnitIndex,
+                  })}
+                </p>
+              ) : null}
 
               {/* Progress Bar */}
               <div className="max-w-md mx-auto md:mx-0">
@@ -279,12 +316,12 @@ export default function CourseDashboard() {
 
           <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory">
             {loadingGrammar &&
-               // Loading skeleton
-               ['sk1', 'sk2', 'sk3', 'sk4'].map((id) => (
-                 <div
-                   key={id}
-                   className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse"
-                 >
+              // Loading skeleton
+              ['sk1', 'sk2', 'sk3', 'sk4'].map(id => (
+                <div
+                  key={id}
+                  className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse"
+                >
                   <div className="h-8 bg-slate-100 rounded mb-2 w-32"></div>
                   <div className="h-4 bg-slate-100 rounded mb-1 w-24"></div>
                   <div className="h-3 bg-slate-100 rounded w-full"></div>

@@ -12,6 +12,7 @@ import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
 import { logger } from '../../utils/logger';
+import { useActivityLogger } from '../../hooks/useActivityLogger';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -40,6 +41,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const navigate = useLocalizedNavigate();
   const convex = useConvex();
   const { setSidebarHidden } = useApp();
+  const { logActivity } = useActivityLogger();
   const labels = getLabels(language);
 
   const [view, setView] = useState<
@@ -172,10 +174,16 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       userAnswers,
     };
     onSaveHistory(attempt);
+    const timeSpentSeconds = Math.max(0, currentExam.timeLimit * 60 - timeLeft);
+    const minutes = Math.max(1, Math.round(timeSpentSeconds / 60));
+    logActivity('EXAM', minutes, questions.length, {
+      examId: currentExam.id,
+      examType: currentExam.type,
+    });
 
     setView('RESULT');
     setSidebarHidden(false);
-  }, [currentExam, userAnswers, onSaveHistory, setView, setSidebarHidden]);
+  }, [currentExam, userAnswers, onSaveHistory, setView, setSidebarHidden, timeLeft, logActivity]);
 
   // Timer logic
   React.useEffect(() => {
