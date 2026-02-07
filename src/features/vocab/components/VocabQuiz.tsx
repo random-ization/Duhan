@@ -40,7 +40,7 @@ interface VocabQuizProps {
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
 
-interface QuizQuestion {
+export interface QuizQuestion {
   readonly type: QuestionType;
   readonly targetWord: VocabItem;
   readonly direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
@@ -48,9 +48,9 @@ interface QuizQuestion {
   readonly correctIndex?: number;
 }
 
-type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
+export type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
-type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
+export type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
 
 // Shuffle helper
 const shuffleArray = <T,>(array: readonly T[]): T[] => {
