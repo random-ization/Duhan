@@ -29,6 +29,8 @@ import type * as institutes from '../institutes.js';
 import type * as kiwi from '../kiwi.js';
 import type * as legal from '../legal.js';
 import type * as lemonsqueezy from '../lemonsqueezy.js';
+import type * as migrations_migrateAudioToSpaces from '../migrations/migrateAudioToSpaces.js';
+import type * as migrations_migrateAudioToSpacesQueries from '../migrations/migrateAudioToSpacesQueries.js';
 import type * as migrations_migrateVocabNotebooks from '../migrations/migrateVocabNotebooks.js';
 import type * as notebooks from '../notebooks.js';
 import type * as passwordReset from '../passwordReset.js';
@@ -86,6 +88,8 @@ declare const fullApi: ApiFromModules<{
   kiwi: typeof kiwi;
   legal: typeof legal;
   lemonsqueezy: typeof lemonsqueezy;
+  'migrations/migrateAudioToSpaces': typeof migrations_migrateAudioToSpaces;
+  'migrations/migrateAudioToSpacesQueries': typeof migrations_migrateAudioToSpacesQueries;
   'migrations/migrateVocabNotebooks': typeof migrations_migrateVocabNotebooks;
   notebooks: typeof notebooks;
   passwordReset: typeof passwordReset;
