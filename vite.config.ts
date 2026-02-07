@@ -52,7 +52,9 @@ export default defineConfig({
           if (
             normalized.includes('/node_modules/react-dom/') ||
             normalized.includes('/node_modules/react/') ||
-            normalized.includes('/node_modules/react-router-dom/')
+            normalized.includes('/node_modules/react-router-dom/') ||
+            // react-i18next depends on React context; keep it with React to avoid cyclic chunks.
+            normalized.includes('/node_modules/react-i18next/')
           ) {
             return 'vendor-react';
           }
@@ -94,7 +96,6 @@ export default defineConfig({
 
           // i18n
           if (normalized.includes('/node_modules/i18next/')) return 'vendor-i18n';
-          if (normalized.includes('/node_modules/react-i18next/')) return 'vendor-i18n';
           if (normalized.includes('/node_modules/i18next-http-backend/')) return 'vendor-i18n';
 
           // Toasts
