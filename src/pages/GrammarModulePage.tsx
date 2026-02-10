@@ -12,6 +12,8 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
 import { GRAMMARS, INSTITUTES } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import MobileGrammarView from '../components/mobile/MobileGrammarView';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Extracted constant for background style
 const LOADING_BACKGROUND_STYLE = {
@@ -22,6 +24,7 @@ const LOADING_BACKGROUND_STYLE = {
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,6 +146,28 @@ const GrammarModulePage: React.FC = () => {
       >
         <div className="text-xl font-bold text-slate-400 animate-pulse">加载中...</div>
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <MobileGrammarView
+        selectedUnit={selectedUnit}
+        totalUnits={totalUnits}
+        onSelectUnit={u => {
+          setSelectedUnit(u);
+          setSelectedGrammar(null); // Clear selection on unit change
+        }}
+        grammarPoints={isGrammarLoading ? [] : displayedPoints}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedGrammar={selectedGrammar}
+        onSelectGrammar={setSelectedGrammar}
+        onToggleStatus={handleToggleStatus}
+        isLoading={isGrammarLoading}
+        onProficiencyUpdate={handleProficiencyUpdate}
+        instituteId={instituteId || ''}
+      />
     );
   }
 

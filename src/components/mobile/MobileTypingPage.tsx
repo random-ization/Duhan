@@ -3,11 +3,13 @@ import { ArrowLeft, RefreshCw, X } from 'lucide-react';
 import { useKoreanTyping } from '../../features/typing/hooks/useKoreanTyping';
 import { HiddenInput } from '../../features/typing/components/HiddenInput';
 import { TypingArea } from '../../features/typing/components/TypingArea';
+import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { PRACTICE_CATEGORIES, PracticeCategory } from '../../features/typing/data/practiceTexts';
 
 export const MobileTypingPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
   const [gameState, setGameState] = useState<'lobby' | 'playing' | 'finished'>('lobby');
   const [selectedCategory, setSelectedCategory] = useState<PracticeCategory | null>(null);
   const [targetText, setTargetText] = useState('');
@@ -49,7 +51,7 @@ export const MobileTypingPage: React.FC = () => {
           <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-slate-900" />
           </button>
-          <h1 className="text-2xl font-black text-slate-900">Typing Practice</h1>
+          <h1 className="text-2xl font-black text-slate-900">{t('typingGame.title')}</h1>
         </div>
 
         <div className="space-y-4">
@@ -88,10 +90,10 @@ export const MobileTypingPage: React.FC = () => {
         </button>
         <div className="flex gap-4 font-mono font-bold text-sm">
           <div className="text-slate-900">
-            WPM: <span className="text-indigo-600">{wpm}</span>
+            {t('typingGame.wpm')}: <span className="text-indigo-600">{wpm}</span>
           </div>
           <div className="text-slate-900">
-            ACC: <span className="text-green-600">{accuracy}%</span>
+            {t('typingGame.acc')}: <span className="text-green-600">{accuracy}%</span>
           </div>
         </div>
       </div>
@@ -134,7 +136,7 @@ export const MobileTypingPage: React.FC = () => {
             className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform"
           >
             <RefreshCw className="w-4 h-4" />
-            Next Sentence
+            {t('typingGame.nextSentence')}
           </button>
           <button
             onClick={e => {
@@ -143,7 +145,7 @@ export const MobileTypingPage: React.FC = () => {
             }}
             className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold active:scale-95 transition-transform"
           >
-            Focus Input
+            {t('typingGame.focusInput')}
           </button>
         </div>
       </div>

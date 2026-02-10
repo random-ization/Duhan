@@ -59,9 +59,12 @@ interface SearchResult {
 
 // --- Component ---
 
+import { useTranslation } from 'react-i18next';
+
 export const MobileVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
   const { language } = useAuth();
   const { saveWord } = useUserActions();
   const labels = getLabels(language);
@@ -192,7 +195,8 @@ export const MobileVideoPlayerPage: React.FC = () => {
         <Loader2 className="animate-spin mx-auto" />
       </div>
     );
-  if (!video) return <div className="p-8 text-center text-slate-500">Video not found</div>;
+  if (!video)
+    return <div className="p-8 text-center text-slate-500">{t('dashboard.video.notFound')}</div>;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-white">
@@ -206,7 +210,9 @@ export const MobileVideoPlayerPage: React.FC = () => {
         </button>
         <Suspense
           fallback={
-            <div className="text-white flex items-center justify-center h-full">Loading...</div>
+            <div className="text-white flex items-center justify-center h-full">
+              {t('dashboard.common.loading', { defaultValue: 'Loading...' })}
+            </div>
           }
         >
           <LazyVideoPlayer
@@ -243,7 +249,9 @@ export const MobileVideoPlayerPage: React.FC = () => {
           )}
         >
           <Languages className="w-4 h-4" />
-          {showTranslation ? 'On' : 'Off'}
+          {showTranslation
+            ? t('common.on', { defaultValue: 'On' })
+            : t('common.off', { defaultValue: 'Off' })}
         </button>
       </div>
 
@@ -252,7 +260,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
         {!video.transcriptData || video.transcriptData.length === 0 ? (
           <div className="text-center py-10 text-slate-400">
             <Video className="w-12 h-12 mx-auto mb-2 opacity-20" />
-            <p>No subtitles available</p>
+            <p>{t('dashboard.video.noSubtitles', { defaultValue: 'No subtitles available' })}</p>
           </div>
         ) : (
           video.transcriptData.map((segment, index) => {
@@ -278,7 +286,14 @@ export const MobileVideoPlayerPage: React.FC = () => {
                       <span
                         key={i}
                         className="active:bg-yellow-200 rounded px-0.5 cursor-pointer"
+                        role="button"
+                        tabIndex={0}
                         onClick={e => handleWordClick(e, part)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            handleWordClick(e as any, part);
+                          }
+                        }}
                       >
                         {part}
                       </span>

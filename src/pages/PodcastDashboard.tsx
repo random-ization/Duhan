@@ -11,6 +11,8 @@ import { Skeleton } from '../components/ui/skeleton';
 import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobilePodcastDashboard } from '../components/mobile/MobilePodcastDashboard';
 
 interface PodcastChannel {
   _id?: string;
@@ -88,6 +90,7 @@ const useScrollButtons = () => {
 export default function PodcastDashboard() {
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
   const podcastMsgs = getPodcastMessages(labels);
 
@@ -350,6 +353,11 @@ export default function PodcastDashboard() {
       pod => pod.title && pod.title.trim() && pod.title.trim().toLowerCase() !== 'unknown'
     );
   }, [activeTab, activeTrending]);
+
+  // Mobile View (after all hooks)
+  if (isMobile) {
+    return <MobilePodcastDashboard />;
+  }
 
   return (
     <div

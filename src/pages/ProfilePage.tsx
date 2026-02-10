@@ -19,6 +19,8 @@ import { ProfileStatsTab } from './profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from './profile/tabs/ProfileSecurityTab';
 import { ProfileSettingsTab } from './profile/tabs/ProfileSettingsTab';
 import { useExamStats } from './profile/hooks/useExamStats';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileProfilePage } from '../components/mobile/MobileProfilePage';
 
 interface ProfileProps {
   language: Language;
@@ -27,6 +29,7 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ language }) => {
   const { user, updateUser } = useApp();
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
   const success = toast.success;
   const error = toast.error;
@@ -81,6 +84,10 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   );
 
   if (!user) return <Loading fullScreen size="lg" />;
+
+  if (isMobile) {
+    return <MobileProfilePage />;
+  }
 
   const displayName =
     user.name || user.email?.split('@')[0] || labels.profile?.unnamed || 'Unnamed';

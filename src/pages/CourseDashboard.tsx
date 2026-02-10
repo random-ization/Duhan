@@ -1,5 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileCourseDashboard } from '../components/mobile/MobileCourseDashboard';
 import { useQuery } from 'convex/react';
 import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +11,7 @@ import { getLocalizedContent } from '../utils/languageUtils';
 
 export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const { user, language } = useAuth();
@@ -78,6 +81,18 @@ export default function CourseDashboard() {
   const overallProgress = Math.round(
     progressParts.reduce((sum, value) => sum + value, 0) / progressParts.length
   );
+
+  if (isMobile && instituteId) {
+    return (
+      <MobileCourseDashboard
+        courseName={courseName || ''}
+        instituteId={instituteId}
+        overallProgress={overallProgress}
+        currentUnit={lastUnitIndex || 1}
+        totalUnits={unitTotal}
+      />
+    );
+  }
 
   // Module definitions with routes and progress data
   const modules = [

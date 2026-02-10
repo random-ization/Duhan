@@ -419,6 +419,7 @@
     "booksCount": "{{count}} books",
     "levelTag": "Lv {{level}}",
     "unitsCount": "{{count}} units",
+    "units": "Units",
     "otherPublisher": "Other"
   },
   "courseDashboard": {
@@ -767,6 +768,24 @@
         "intermediate": "Intermediate",
         "advanced": "Advanced"
       }
+    },
+    "mobile": {
+      "keepMomentum": "Keep up the momentum!",
+      "continue": "Continue",
+      "review": "Review",
+      "due": "Due",
+      "notes": "Notes",
+      "mistakes": "Mistakes",
+      "check": "Check",
+      "typing": "Typing",
+      "practice": "Practice",
+      "start": "Start",
+      "exam": "Exam",
+      "listen": "Listen",
+      "watch": "Watch",
+      "immersion": "Immersion",
+      "videoLibrary": "Video Library",
+      "latestEpisodes": "Latest Episodes"
     }
   },
   "plan": {
@@ -828,6 +847,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "Typing Practice",
+      "nextSentence": "Next Sentence",
+      "focusInput": "Focus Input",
+      "wpm": "WPM",
+      "acc": "ACC"
     },
     "hero": {
       "badge": "2,000+ learners preparing for TOPIK",

@@ -25,6 +25,9 @@ import { useTTS } from '../hooks/useTTS';
 import { extractBestMeaning, normalizeLookupWord } from '../utils/dictionaryMeaning';
 import { useUserActions } from '../hooks/useUserActions';
 
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileVideoPlayerPage } from '../components/mobile/MobileVideoPlayerPage';
+
 const LazyVideoPlayer = React.lazy(() => import('../components/media/VidstackVideoPlayer'));
 
 interface TranscriptSegment {
@@ -121,7 +124,7 @@ const WordPopup: React.FC<WordPopupProps> = ({
   );
 };
 
-const VideoPlayerPage: React.FC = () => {
+const DesktopVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -523,6 +526,12 @@ const VideoPlayerPage: React.FC = () => {
       )}
     </div>
   );
+};
+
+const VideoPlayerPage: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileVideoPlayerPage />;
+  return <DesktopVideoPlayerPage />;
 };
 
 export default VideoPlayerPage;

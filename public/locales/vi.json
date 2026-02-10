@@ -393,6 +393,7 @@
     "booksCount": "{{count}} sách",
     "levelTag": "Cấp {{level}}",
     "unitsCount": "{{count}} bài",
+    "units": "bài",
     "otherPublisher": "Khác"
   },
   "courseDashboard": {
@@ -482,7 +483,9 @@
       "addVocab": "Thêm vào từ vựng",
       "error": "Lỗi tải dữ liệu",
       "noMeaning": "Không có nghĩa",
-      "favorite": "Yêu thích"
+      "favorite": "Yêu thích",
+      "on": "Bật",
+      "off": "Tắt"
     },
     "tools": {
       "topik_mock": "TOPIK Mock",
@@ -743,7 +746,32 @@
         "intermediate": "Trung cấp",
         "advanced": "Cao cấp"
       }
+    },
+    "mobile": {
+      "keepMomentum": "Giữ vững phong độ!",
+      "continue": "Tiếp tục",
+      "review": "Ôn tập",
+      "due": "Cần ôn",
+      "notes": "Ghi chú",
+      "mistakes": "Lỗi sai",
+      "check": "Kiểm tra",
+      "typing": "Gõ phím",
+      "practice": "Luyện tập",
+      "start": "Bắt đầu",
+      "exam": "Bài thi",
+      "listen": "Nghe",
+      "watch": "Xem",
+      "immersion": "Thực hành",
+      "videoLibrary": "Thư viện Video",
+      "latestEpisodes": "Tập mới nhất"
     }
+  },
+  "typingGame": {
+    "title": "Luyện Gõ Phím",
+    "nextSentence": "Câu tiếp theo",
+    "focusInput": "Nhập liệu",
+    "wpm": "Tốc độ (WPM)",
+    "acc": "Độ chính xác"
   },
   "plan": {
     "monthly": "Gói Tháng",
@@ -961,6 +989,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "Luyen go phim",
+      "nextSentence": "Cau tiep theo",
+      "focusInput": "Tap trung nhap",
+      "wpm": "WPM",
+      "acc": "Do chinh xac"
     }
   },
   "pricing": {

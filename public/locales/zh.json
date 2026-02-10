@@ -419,7 +419,8 @@
     "booksCount": "{{count}} 本书",
     "levelTag": "{{level}}级",
     "unitsCount": "{{count}} 单元",
-    "otherPublisher": "其他教材"
+    "units": "单元",
+    "otherPublisher": "其他"
   },
   "courseDashboard": {
     "defaultCourseName": "首尔大学韩国语 1A",
@@ -776,7 +777,32 @@
         "advanced": "高级"
       }
     },
+    "mobile": {
+      "keepMomentum": "保持学习势头！",
+      "continue": "继续",
+      "review": "复习",
+      "due": "待复习",
+      "notes": "笔记",
+      "mistakes": "错题",
+      "check": "检查",
+      "typing": "打字",
+      "practice": "练习",
+      "start": "开始",
+      "exam": "测验",
+      "listen": "听力",
+      "watch": "视频",
+      "immersion": "沉浸",
+      "videoLibrary": "视频库",
+      "latestEpisodes": "最新剧集"
+    },
     "subtitle": "Ready to beat today's boss?"
+  },
+  "typingGame": {
+    "title": "打字练习",
+    "nextSentence": "下一句",
+    "focusInput": "聚焦输入框",
+    "wpm": "速度 (WPM)",
+    "acc": "准确率"
   },
   "plan": {
     "monthly": "月度会员",
@@ -804,7 +830,9 @@
     "close": "关闭",
     "prev": "上一词",
     "next": "下一词",
-    "back": "返回"
+    "back": "返回",
+    "on": "开启",
+    "off": "关闭"
   },
   "landing": {
     "nav": {
@@ -837,6 +865,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "打字练习",
+      "nextSentence": "下一句",
+      "focusInput": "聚焦输入框",
+      "wpm": "WPM",
+      "acc": "准确率"
     },
     "hero": {
       "badge": "已有 2,000+ 留学生加入备考",

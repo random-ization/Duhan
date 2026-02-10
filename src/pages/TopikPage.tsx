@@ -12,6 +12,8 @@ import BackButton from '../components/ui/BackButton';
 import { useTranslation } from 'react-i18next';
 import { qRef } from '../utils/convexRefs';
 import { Annotation, ExamAttempt } from '../types';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileTopikPage from '../components/mobile/MobileTopikPage';
 
 // Use any here to be compatible with the restricted type in routes.tsx (TextbookContent | TopikExam)
 // Defining specific union type here causes circular dependency or tight coupling with AuthContext
@@ -26,6 +28,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const { topikExams } = useData();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -76,7 +79,12 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
     );
   }
 
-  // Lobby View
+  // Mobile Lobby View
+  if (isMobile) {
+    return <MobileTopikPage onSelectExam={id => navigate(`/topik/${id}`)} />;
+  }
+
+  // Desktop Lobby View
   return (
     <div
       className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32"

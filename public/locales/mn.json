@@ -393,6 +393,7 @@
     "booksCount": "{{count}} ном",
     "levelTag": "{{level}}-р түвшин",
     "unitsCount": "{{count}} нэгж",
+    "units": "нэгж",
     "otherPublisher": "Бусад"
   },
   "courseDashboard": {
@@ -482,7 +483,9 @@
       "addVocab": "Үгийн санд нэмэх",
       "error": "Алдаа гарлаа",
       "noMeaning": "Утга байхгүй",
-      "favorite": "Хадгалах"
+      "favorite": "Хадгалах",
+      "on": "Асаах",
+      "off": "Унтраах"
     },
     "tools": {
       "topik_mock": "TOPIK Mock",
@@ -743,7 +746,32 @@
         "intermediate": "Дунд",
         "advanced": "Гүнзгий"
       }
+    },
+    "mobile": {
+      "keepMomentum": "Эрч хүчээ хадгалаарай!",
+      "continue": "Үргэлжлүүлэх",
+      "review": "Давтах",
+      "due": "Давтах",
+      "notes": "Тэмдэглэл",
+      "mistakes": "Алдаа",
+      "check": "Шалгах",
+      "typing": "Бичих",
+      "practice": "Дасгал",
+      "start": "Эхлэх",
+      "exam": "Шалгалт",
+      "listen": "Сонсох",
+      "watch": "Үзэх",
+      "immersion": "Дадлага",
+      "videoLibrary": "Видео сан",
+      "latestEpisodes": "Сүүлийн ангиуд"
     }
+  },
+  "typingGame": {
+    "title": "Бичих Дасгал",
+    "nextSentence": "Дараагийн өгүүлбэр",
+    "focusInput": "Бичих хэсэг",
+    "wpm": "Хурд (WPM)",
+    "acc": "Нарийвчлал"
   },
   "plan": {
     "monthly": "Сарын эрх",
@@ -961,6 +989,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "Bichih dasgal",
+      "nextSentence": "Daraagiin uguulber",
+      "focusInput": "Orolt deer tuvluruh",
+      "wpm": "WPM",
+      "acc": "ACC"
     }
   },
   "pricing": {
