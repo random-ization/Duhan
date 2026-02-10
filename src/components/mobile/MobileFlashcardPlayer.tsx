@@ -28,6 +28,7 @@ export default function MobileFlashcardPlayer({
   const { t } = useTranslation();
   const [isFlipped, setIsFlipped] = useState(false);
   const currentWord = words[currentIndex];
+  const korean = currentWord?.korean || currentWord?.word || '';
 
   if (!currentWord) {
     return (
@@ -46,7 +47,7 @@ export default function MobileFlashcardPlayer({
     <div className="flex flex-col h-full">
       {/* Card Container */}
       <div
-        className="flex-1 relative perspective-1000 mb-6"
+        className="flex-1 relative perspective-1000 mb-6 min-h-[340px]"
         onClick={() => setIsFlipped(!isFlipped)}
         role="button"
         tabIndex={0}
@@ -84,9 +85,7 @@ export default function MobileFlashcardPlayer({
             </button>
 
             <div className="flex-1 flex flex-col items-center justify-center">
-              <h2 className="text-4xl font-black text-slate-900 mb-2 break-all">
-                {currentWord.korean}
-              </h2>
+              <h2 className="text-4xl font-black text-slate-900 mb-2 break-all">{korean}</h2>
               {currentWord.pronunciation && (
                 <p className="text-lg text-slate-400 font-medium font-mono">
                   [{currentWord.pronunciation}]
@@ -99,7 +98,7 @@ export default function MobileFlashcardPlayer({
                 className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors active:scale-95"
                 onClick={e => {
                   e.stopPropagation();
-                  onSpeak(currentWord.korean);
+                  onSpeak(korean);
                 }}
               >
                 <Volume2 className="w-6 h-6" />
@@ -131,7 +130,7 @@ export default function MobileFlashcardPlayer({
                 className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider hover:text-white"
                 onClick={e => {
                   e.stopPropagation();
-                  onSpeak(currentWord.korean);
+                  onSpeak(korean);
                 }}
               >
                 <Volume2 className="w-4 h-4" /> Listen Again
