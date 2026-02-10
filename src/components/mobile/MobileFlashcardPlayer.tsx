@@ -29,6 +29,7 @@ export default function MobileFlashcardPlayer({
   const [isFlipped, setIsFlipped] = useState(false);
   const currentWord = words[currentIndex];
   const korean = currentWord?.korean || currentWord?.word || '';
+  const frontText = korean || currentWord?.meaning || currentWord?.english || '';
 
   if (!currentWord) {
     return (
@@ -65,7 +66,7 @@ export default function MobileFlashcardPlayer({
         >
           {/* Front */}
           <div
-            className="absolute inset-0 backface-hidden bg-white rounded-3xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex flex-col items-center justify-center p-8 text-center"
+            className="absolute inset-0 backface-hidden bg-white rounded-3xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
             style={{ backfaceVisibility: 'hidden' }}
           >
             <div className="absolute top-4 left-4 px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase">
@@ -84,28 +85,31 @@ export default function MobileFlashcardPlayer({
               />
             </button>
 
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <h2 className="text-4xl font-black text-slate-900 mb-2 break-all">{korean}</h2>
-              {currentWord.pronunciation && (
-                <p className="text-lg text-slate-400 font-medium font-mono">
-                  [{currentWord.pronunciation}]
-                </p>
-              )}
-            </div>
+            <div className="w-full h-full pt-14 grid grid-rows-[1fr,auto,auto]">
+              <div className="px-8 text-center flex flex-col items-center justify-center">
+                <h2 className="text-4xl font-black text-slate-900 mb-2 break-all">{frontText}</h2>
+                {currentWord.pronunciation && (
+                  <p className="text-lg text-slate-400 font-medium font-mono">
+                    [{currentWord.pronunciation}]
+                  </p>
+                )}
+              </div>
 
-            <div className="w-full flex justify-center pb-4">
-              <button
-                className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors active:scale-95"
-                onClick={e => {
-                  e.stopPropagation();
-                  onSpeak(korean);
-                }}
-              >
-                <Volume2 className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="text-xs text-slate-400 font-medium mt-2 uppercase tracking-wide">
-              Tap to Flip
+              <div className="w-full flex justify-center pb-4">
+                <button
+                  className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors active:scale-95"
+                  onClick={e => {
+                    e.stopPropagation();
+                    onSpeak(korean || frontText);
+                  }}
+                >
+                  <Volume2 className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="pb-6 text-xs text-slate-400 font-medium uppercase tracking-wide text-center">
+                Tap to Flip
+              </div>
             </div>
           </div>
 
