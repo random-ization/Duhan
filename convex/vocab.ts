@@ -148,17 +148,24 @@ export const getStats = query({
     const courseId = args.courseId.trim();
     if (!courseId) return { total: 0, mastered: 0 };
 
+    // Helpful when debugging "Server Error" from the client:
+    // check Convex logs for this line to confirm which deployment/version is running.
+    console.log(`[vocab:getStats] courseId=${courseId}`);
+
     // 1) Scan appearances with pagination to avoid full in-memory collect.
     // IMPORTANT: This query must be bounded to avoid Convex timeouts when datasets grow.
-    const MAX_UNIQUE_WORDS = 6000;
-    const MAX_APPEARANCE_DOCS = 20000;
+    // These caps intentionally bias toward reliability over perfect accuracy on very large datasets.
+    const MAX_UNIQUE_WORDS = 2500;
+    const MAX_APPEARANCE_DOCS = 8000;
 
     const courseWordIds = new Set<string>();
     let scanned = 0;
     let appearanceCursor: string | null = null;
+    // Explicit ordering keeps pagination deterministic.
     const appearancesQuery = ctx.db
       .query('vocabulary_appearances')
-      .withIndex('by_course_unit', q => q.eq('courseId', courseId));
+      .withIndex('by_course_unit', q => q.eq('courseId', courseId))
+      .order('desc');
     do {
       const page = await appearancesQuery.paginate({
         numItems: SCAN_PAGE_SIZE,
@@ -177,7 +184,7 @@ export const getStats = query({
     if (!userId || total === 0) return { total, mastered: 0 };
 
     // 2) Count mastered progress with paginated scan.
-    const MAX_PROGRESS_DOCS = 20000;
+    const MAX_PROGRESS_DOCS = 12000;
     let mastered = 0;
     let progressScanned = 0;
     let progressCursor: string | null = null;
@@ -185,6 +192,7 @@ export const getStats = query({
       const page = await ctx.db
         .query('user_vocab_progress')
         .withIndex('by_user', q => q.eq('userId', userId))
+        .order('desc')
         .paginate({ numItems: SCAN_PAGE_SIZE, cursor: progressCursor });
       progressScanned += page.page.length;
       for (const p of page.page) {
@@ -192,6 +200,7 @@ export const getStats = query({
           mastered++;
         }
       }
+      if (mastered >= total) break;
       if (progressScanned >= MAX_PROGRESS_DOCS) break;
       progressCursor = page.isDone ? null : page.continueCursor;
     } while (progressCursor);

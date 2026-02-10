@@ -1,13 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileCourseDashboard } from '../components/mobile/MobileCourseDashboard';
-import { useQuery } from 'convex/react';
+import { useConvex, useQuery } from 'convex/react';
 import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLocalizedContent } from '../utils/languageUtils';
+import { logger } from '../utils/logger';
 
 export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
@@ -15,6 +17,7 @@ export default function CourseDashboard() {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const { user, language } = useAuth();
+  const convex = useConvex();
 
   // Use same Convex query as CoursesOverview for consistency
   type Institute = {
@@ -32,7 +35,32 @@ export default function CourseDashboard() {
     GRAMMARS.getByCourse,
     instituteId ? { courseId: instituteId } : 'skip'
   );
-  const vocabData = useQuery(VOCAB.getStats, instituteId ? { courseId: instituteId } : 'skip');
+  // Avoid `useQuery(VOCAB.getStats)` throwing and taking down the whole page.
+  // This is a stats-only query; if it fails we can fall back to zeros.
+  const [vocabStatsState, setVocabStatsState] = useState<{
+    courseId: string;
+    data: { total: number; mastered: number };
+  } | null>(null);
+  useEffect(() => {
+    if (!instituteId) return;
+    let cancelled = false;
+    convex
+      .query(VOCAB.getStats, { courseId: instituteId })
+      .then(res => {
+        if (cancelled) return;
+        setVocabStatsState({ courseId: instituteId, data: res });
+      })
+      .catch(err => {
+        if (cancelled) return;
+        logger.error('[CourseDashboard] VOCAB.getStats failed', err);
+        setVocabStatsState({ courseId: instituteId, data: { total: 0, mastered: 0 } });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [convex, instituteId]);
+  const vocabData =
+    vocabStatsState && vocabStatsState.courseId === instituteId ? vocabStatsState.data : undefined;
   const courseProgress = useQuery(
     qRef<
       { courseId: string },
