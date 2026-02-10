@@ -48,7 +48,8 @@ export default function MobileFlashcardPlayer({
     <div className="flex flex-col h-full">
       {/* Card Container */}
       <div
-        className="flex-1 relative perspective-1000 mb-6 min-h-[340px]"
+        className="flex-1 relative mb-6 min-h-[340px] max-h-[420px] h-[52vh]"
+        style={{ perspective: '1000px' }}
         onClick={() => setIsFlipped(!isFlipped)}
         role="button"
         tabIndex={0}
@@ -59,7 +60,7 @@ export default function MobileFlashcardPlayer({
         }}
       >
         <motion.div
-          className="w-full h-full relative preserve-3d transition-all duration-500"
+          className="absolute inset-0 transition-all duration-500"
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={{ duration: 0.6, type: 'spring', stiffness: 260, damping: 20 }}
           style={{ transformStyle: 'preserve-3d' }}
