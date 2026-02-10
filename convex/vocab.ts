@@ -143,69 +143,56 @@ export const getStats = query({
     courseId: v.string(),
   },
   handler: async (ctx, args): Promise<VocabStatsDto> => {
-    const userId = await getOptionalAuthUserId(ctx);
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
 
-    const courseId = args.courseId.trim();
-    if (!courseId) return { total: 0, mastered: 0 };
+      const courseId = args.courseId.trim();
+      if (!courseId) return { total: 0, mastered: 0 };
 
-    // Helpful when debugging "Server Error" from the client:
-    // check Convex logs for this line to confirm which deployment/version is running.
-    console.log(`[vocab:getStats] courseId=${courseId}`);
+      // Helpful when debugging "Server Error" from the client:
+      // check Convex logs for this line to confirm which deployment/version is running.
+      console.log(`[vocab:getStats] courseId=${courseId}`);
 
-    // 1) Scan appearances with pagination to avoid full in-memory collect.
-    // IMPORTANT: This query must be bounded to avoid Convex timeouts when datasets grow.
-    // These caps intentionally bias toward reliability over perfect accuracy on very large datasets.
-    const MAX_UNIQUE_WORDS = 2500;
-    const MAX_APPEARANCE_DOCS = 8000;
+      // IMPORTANT: This query must be bounded to avoid Convex timeouts when datasets grow.
+      // These caps intentionally bias toward reliability over perfect accuracy on very large datasets.
+      const MAX_UNIQUE_WORDS = 2500;
+      const MAX_APPEARANCE_DOCS = 8000;
+      const MAX_PROGRESS_DOCS = 12000;
 
-    const courseWordIds = new Set<string>();
-    let scanned = 0;
-    let appearanceCursor: string | null = null;
-    // Explicit ordering keeps pagination deterministic.
-    const appearancesQuery = ctx.db
-      .query('vocabulary_appearances')
-      .withIndex('by_course_unit', q => q.eq('courseId', courseId))
-      .order('desc');
-    do {
-      const page = await appearancesQuery.paginate({
-        numItems: SCAN_PAGE_SIZE,
-        cursor: appearanceCursor,
-      });
-      scanned += page.page.length;
-      for (const app of page.page) courseWordIds.add(app.wordId.toString());
+      // 1) Scan appearances (bounded) and collect unique wordIds.
+      const courseWordIds = new Set<string>();
+      const appearances = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q => q.eq('courseId', courseId))
+        .order('desc')
+        .take(MAX_APPEARANCE_DOCS);
 
-      if (courseWordIds.size >= MAX_UNIQUE_WORDS) break;
-      if (scanned >= MAX_APPEARANCE_DOCS) break;
+      for (const app of appearances) {
+        courseWordIds.add(app.wordId.toString());
+        if (courseWordIds.size >= MAX_UNIQUE_WORDS) break;
+      }
 
-      appearanceCursor = page.isDone ? null : page.continueCursor;
-    } while (appearanceCursor);
+      const total = courseWordIds.size;
+      if (!userId || total === 0) return { total, mastered: 0 };
 
-    const total = courseWordIds.size;
-    if (!userId || total === 0) return { total, mastered: 0 };
-
-    // 2) Count mastered progress with paginated scan.
-    const MAX_PROGRESS_DOCS = 12000;
-    let mastered = 0;
-    let progressScanned = 0;
-    let progressCursor: string | null = null;
-    do {
-      const page = await ctx.db
+      // 2) Count mastered progress (bounded).
+      let mastered = 0;
+      const progressDocs = await ctx.db
         .query('user_vocab_progress')
         .withIndex('by_user', q => q.eq('userId', userId))
         .order('desc')
-        .paginate({ numItems: SCAN_PAGE_SIZE, cursor: progressCursor });
-      progressScanned += page.page.length;
-      for (const p of page.page) {
-        if (p.status === 'MASTERED' && courseWordIds.has(p.wordId.toString())) {
-          mastered++;
-        }
-      }
-      if (mastered >= total) break;
-      if (progressScanned >= MAX_PROGRESS_DOCS) break;
-      progressCursor = page.isDone ? null : page.continueCursor;
-    } while (progressCursor);
+        .take(MAX_PROGRESS_DOCS);
 
-    return { total, mastered };
+      for (const p of progressDocs) {
+        if (p.status === 'MASTERED' && courseWordIds.has(p.wordId.toString())) mastered++;
+        if (mastered >= total) break;
+      }
+
+      return { total, mastered };
+    } catch (err) {
+      console.error(`[vocab:getStats] failed: ${toErrorMessage(err)}`);
+      return { total: 0, mastered: 0 };
+    }
   },
 });
 
@@ -1063,150 +1050,124 @@ export const getVocabBook = query({
 
     const includeMastered = args.includeMastered ?? false;
     const hardCap = 2000;
+    const limit =
+      args.limit && args.limit > 0
+        ? Math.min(args.limit, hardCap)
+        : Math.min(DEFAULT_VOCAB_LIMIT, hardCap);
+    const searchQuery = args.search?.trim().toLowerCase() || '';
 
-    // 1. Get user progress (bounded work with pagination)
-    const filteredProgress: Doc<'user_vocab_progress'>[] = [];
+    type ProgressWithWord = { progress: Doc<'user_vocab_progress'>; word: Doc<'words'> };
+
+    // 1) Select up to `limit` progress entries (and join `words`) without unbounded fan-out.
+    const selected: ProgressWithWord[] = [];
     let cursor: string | null = null;
+    let scanned = 0;
+    const MAX_PROGRESS_SCAN = 12000;
+
     do {
       const page = await ctx.db
         .query('user_vocab_progress')
         .withIndex('by_user', q => q.eq('userId', userId))
+        .order('desc')
         .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
 
-      for (const p of page.page) {
-        if (!includeMastered && p.status === 'MASTERED') continue;
-        filteredProgress.push(p);
-        if (filteredProgress.length >= hardCap) break;
+      const progressPage = page.page.filter(p => includeMastered || p.status !== 'MASTERED');
+
+      if (!searchQuery) {
+        // No search: just take the first `limit` items (fast path).
+        const remaining = limit - selected.length;
+        const take = remaining > 0 ? progressPage.slice(0, remaining) : [];
+        const words = await Promise.all(take.map(p => ctx.db.get(p.wordId)));
+        for (let i = 0; i < take.length; i++) {
+          const word = words[i];
+          if (!word) continue;
+          selected.push({ progress: take[i], word });
+        }
+      } else {
+        // Search: scan a bounded amount and stop as soon as we have enough matches.
+        const words = await Promise.all(progressPage.map(p => ctx.db.get(p.wordId)));
+        for (let i = 0; i < progressPage.length; i++) {
+          const word = words[i];
+          if (!word) continue;
+
+          const w = word.word.toLowerCase();
+          const m = (word.meaning || '').toLowerCase();
+          if (!w.includes(searchQuery) && !m.includes(searchQuery)) continue;
+
+          selected.push({ progress: progressPage[i], word });
+          if (selected.length >= limit) break;
+        }
       }
 
-      cursor = page.isDone || filteredProgress.length >= hardCap ? null : page.continueCursor;
+      scanned += page.page.length;
+      cursor =
+        page.isDone || selected.length >= limit || scanned >= MAX_PROGRESS_SCAN
+          ? null
+          : page.continueCursor;
     } while (cursor);
 
-    const wordIds = [...new Set(filteredProgress.map(p => p.wordId))];
-    const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
-    const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
+    if (selected.length === 0) return [];
 
-    const appearanceMap = new Map<
-      string,
-      {
-        meaning?: string;
-        meaningEn?: string;
-        meaningVi?: string;
-        meaningMn?: string;
-        exampleSentence?: string;
-        exampleMeaning?: string;
-        exampleMeaningEn?: string;
-        exampleMeaningVi?: string;
-        exampleMeaningMn?: string;
-        createdAt: number;
-      }
-    >();
-
-    // Fetch latest appearance per word via index, avoiding full-table scans.
-    // Cap lookups to keep query cost bounded; fall back to base `words` fields for the rest.
-    const MAX_APPEARANCE_LOOKUPS = 400;
-    const lookupWordIds = wordIds.slice(0, MAX_APPEARANCE_LOOKUPS);
-    if (lookupWordIds.length > 0) {
-      const latestAppearances = await Promise.all(
-        lookupWordIds.map(async wordId => {
-          const app = await ctx.db
-            .query('vocabulary_appearances')
-            .withIndex('by_word_createdAt', q => q.eq('wordId', wordId))
-            .order('desc')
-            .first();
-
-          if (!app) return null;
-          return [
-            wordId.toString(),
-            {
-              meaning: app.meaning,
-              meaningEn: app.meaningEn,
-              meaningVi: app.meaningVi,
-              meaningMn: app.meaningMn,
-              exampleSentence: app.exampleSentence,
-              exampleMeaning: app.exampleMeaning,
-              exampleMeaningEn: app.exampleMeaningEn,
-              exampleMeaningVi: app.exampleMeaningVi,
-              exampleMeaningMn: app.exampleMeaningMn,
-              createdAt: app.createdAt,
-            },
-          ] as const;
-        })
-      );
-
-      for (const entry of latestAppearances) {
-        if (!entry) continue;
-        appearanceMap.set(entry[0], entry[1]);
-      }
-    }
-
-    const searchQuery = args.search?.trim().toLowerCase();
-    const items = filteredProgress
-      .map(progress => {
-        const word = wordsMap.get(progress.wordId.toString());
-        if (!word) return null;
-
-        const app = appearanceMap.get(progress.wordId.toString());
-
-        const meaning = app?.meaning || word.meaning;
-        const meaningEn = app?.meaningEn || word.meaningEn;
-        const meaningVi = app?.meaningVi || word.meaningVi;
-        const meaningMn = app?.meaningMn || word.meaningMn;
-
-        const item: VocabBookItemDto = {
-          id: word._id,
-          word: word.word,
-          meaning,
-          meaningEn,
-          meaningVi,
-          meaningMn,
-          partOfSpeech: word.partOfSpeech,
-          hanja: word.hanja,
-          pronunciation: word.pronunciation,
-          audioUrl: word.audioUrl,
-          exampleSentence: app?.exampleSentence,
-          exampleMeaning: app?.exampleMeaning,
-          exampleMeaningEn: app?.exampleMeaningEn,
-          exampleMeaningVi: app?.exampleMeaningVi,
-          exampleMeaningMn: app?.exampleMeaningMn,
-          progress: {
-            id: progress._id,
-            status: progress.status ?? 'LEARNING',
-            interval: progress.interval ?? progress.scheduled_days ?? 1,
-            streak: progress.streak ?? progress.reps ?? 0,
-            nextReviewAt: progress.nextReviewAt ?? progress.due ?? null,
-            lastReviewedAt: progress.lastReviewedAt ?? progress.last_review ?? null,
-            state: progress.state,
-            due: progress.due,
-            stability: progress.stability,
-            difficulty: progress.difficulty,
-            elapsed_days: progress.elapsed_days,
-            scheduled_days: progress.scheduled_days,
-            learning_steps: progress.learning_steps,
-            reps: progress.reps,
-            lapses: progress.lapses,
-            last_review: progress.last_review ?? null,
-          },
-        };
-
-        if (searchQuery) {
-          const w = item.word.toLowerCase();
-          const m = (item.meaning || '').toLowerCase();
-          const ex = (item.exampleSentence || '').toLowerCase();
-          if (!w.includes(searchQuery) && !m.includes(searchQuery) && !ex.includes(searchQuery)) {
-            return null;
-          }
-        }
-
-        return item;
+    // 2) Fetch latest appearance per selected word (bounded).
+    // This is optional for core functionality; keep it capped for reliability.
+    const MAX_APPEARANCE_LOOKUPS = 200;
+    const appearanceLookups = await Promise.all(
+      selected.slice(0, MAX_APPEARANCE_LOOKUPS).map(async ({ word }) => {
+        const app = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_word_createdAt', q => q.eq('wordId', word._id))
+          .order('desc')
+          .first();
+        return [word._id.toString(), app] as const;
       })
-      .filter((x): x is VocabBookItemDto => x !== null);
+    );
+    const appearanceMap = new Map<string, Doc<'vocabulary_appearances'> | null>();
+    for (const [id, app] of appearanceLookups) appearanceMap.set(id, app ?? null);
 
-    const limit =
-      args.limit && args.limit > 0
-        ? Math.min(args.limit, hardCap)
-        : Math.min(items.length, hardCap);
-    return items.slice(0, limit);
+    return selected.map(({ progress, word }) => {
+      const app = appearanceMap.get(word._id.toString()) ?? null;
+
+      const meaning = app?.meaning || word.meaning;
+      const meaningEn = app?.meaningEn || word.meaningEn;
+      const meaningVi = app?.meaningVi || word.meaningVi;
+      const meaningMn = app?.meaningMn || word.meaningMn;
+
+      return {
+        id: word._id,
+        word: word.word,
+        meaning,
+        meaningEn,
+        meaningVi,
+        meaningMn,
+        partOfSpeech: word.partOfSpeech,
+        hanja: word.hanja,
+        pronunciation: word.pronunciation,
+        audioUrl: word.audioUrl,
+        exampleSentence: app?.exampleSentence,
+        exampleMeaning: app?.exampleMeaning,
+        exampleMeaningEn: app?.exampleMeaningEn,
+        exampleMeaningVi: app?.exampleMeaningVi,
+        exampleMeaningMn: app?.exampleMeaningMn,
+        progress: {
+          id: progress._id,
+          status: progress.status ?? 'LEARNING',
+          interval: progress.interval ?? progress.scheduled_days ?? 1,
+          streak: progress.streak ?? progress.reps ?? 0,
+          nextReviewAt: progress.nextReviewAt ?? progress.due ?? null,
+          lastReviewedAt: progress.lastReviewedAt ?? progress.last_review ?? null,
+          state: progress.state,
+          due: progress.due,
+          stability: progress.stability,
+          difficulty: progress.difficulty,
+          elapsed_days: progress.elapsed_days,
+          scheduled_days: progress.scheduled_days,
+          learning_steps: progress.learning_steps,
+          reps: progress.reps,
+          lapses: progress.lapses,
+          last_review: progress.last_review ?? null,
+        },
+      };
+    });
   },
 });
 
@@ -1220,17 +1181,24 @@ export const getVocabBookCount = query({
 
     const includeMastered = args.includeMastered ?? true;
 
-    // Use collect() instead of paginated loop
-    const allProgress = await ctx.db
-      .query('user_vocab_progress')
-      .withIndex('by_user', q => q.eq('userId', userId))
-      .collect();
+    // Bounded scan; accuracy is best-effort on very large datasets.
+    const MAX_PROGRESS_DOCS = 20000;
+    let scanned = 0;
+    let count = 0;
+    let cursor: string | null = null;
+    do {
+      const page = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .order('desc')
+        .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
+      scanned += page.page.length;
+      for (const p of page.page) {
+        if (includeMastered || p.status !== 'MASTERED') count++;
+      }
+      cursor = page.isDone || scanned >= MAX_PROGRESS_DOCS ? null : page.continueCursor;
+    } while (cursor);
 
-    if (includeMastered) {
-      return { count: allProgress.length };
-    }
-
-    const count = allProgress.filter(p => p.status !== 'MASTERED').length;
     return { count };
   },
 });

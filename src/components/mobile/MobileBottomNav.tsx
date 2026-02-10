@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Trophy, Headphones, Video } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Trophy, Headphones, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { isValidLanguage } from '../LanguageRouter';
@@ -26,9 +26,9 @@ export function MobileBottomNav() {
       label: t('nav.dashboard', 'Dashboard'),
     },
     { key: 'courses', icon: BookOpen, path: '/courses', label: t('nav.courses', 'Courses') },
-    { key: 'topik', icon: Trophy, path: '/topik', label: t('nav.topik', 'TOPIK') },
-    { key: 'videos', icon: Video, path: '/videos', label: t('nav.videos', 'Videos') },
     { key: 'podcasts', icon: Headphones, path: '/podcasts', label: t('nav.podcasts', 'Podcasts') },
+    { key: 'topik', icon: Trophy, path: '/topik', label: t('nav.topik', 'TOPIK') },
+    { key: 'profile', icon: User, path: '/profile', label: t('nav.profile', 'Profile') },
   ];
 
   const pathSegments = location.pathname.split('/').filter(Boolean);
