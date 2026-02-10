@@ -140,49 +140,59 @@ const SCAN_PAGE_SIZE = 500;
 // Get Vocabulary Stats (Dashboard)
 export const getStats = query({
   args: {
-    courseId: v.optional(v.string()),
+    courseId: v.string(),
   },
   handler: async (ctx, args): Promise<VocabStatsDto> => {
     const userId = await getOptionalAuthUserId(ctx);
 
+    const courseId = args.courseId.trim();
+    if (!courseId) return { total: 0, mastered: 0 };
+
     // 1) Scan appearances with pagination to avoid full in-memory collect.
+    // IMPORTANT: This query must be bounded to avoid Convex timeouts when datasets grow.
+    const MAX_UNIQUE_WORDS = 6000;
+    const MAX_APPEARANCE_DOCS = 20000;
+
     const courseWordIds = new Set<string>();
-    let total = 0;
+    let scanned = 0;
     let appearanceCursor: string | null = null;
-    const appearancesQuery = args.courseId
-      ? ctx.db
-          .query('vocabulary_appearances')
-          .withIndex('by_course_unit', q => q.eq('courseId', args.courseId!))
-      : ctx.db.query('vocabulary_appearances');
+    const appearancesQuery = ctx.db
+      .query('vocabulary_appearances')
+      .withIndex('by_course_unit', q => q.eq('courseId', courseId));
     do {
       const page = await appearancesQuery.paginate({
         numItems: SCAN_PAGE_SIZE,
         cursor: appearanceCursor,
       });
-      total += page.page.length;
-      for (const app of page.page) {
-        courseWordIds.add(app.wordId.toString());
-      }
+      scanned += page.page.length;
+      for (const app of page.page) courseWordIds.add(app.wordId.toString());
+
+      if (courseWordIds.size >= MAX_UNIQUE_WORDS) break;
+      if (scanned >= MAX_APPEARANCE_DOCS) break;
+
       appearanceCursor = page.isDone ? null : page.continueCursor;
     } while (appearanceCursor);
 
-    if (!userId || courseWordIds.size === 0) {
-      return { total, mastered: 0 };
-    }
+    const total = courseWordIds.size;
+    if (!userId || total === 0) return { total, mastered: 0 };
 
     // 2) Count mastered progress with paginated scan.
+    const MAX_PROGRESS_DOCS = 20000;
     let mastered = 0;
+    let progressScanned = 0;
     let progressCursor: string | null = null;
     do {
       const page = await ctx.db
         .query('user_vocab_progress')
         .withIndex('by_user', q => q.eq('userId', userId))
         .paginate({ numItems: SCAN_PAGE_SIZE, cursor: progressCursor });
+      progressScanned += page.page.length;
       for (const p of page.page) {
         if (p.status === 'MASTERED' && courseWordIds.has(p.wordId.toString())) {
           mastered++;
         }
       }
+      if (progressScanned >= MAX_PROGRESS_DOCS) break;
       progressCursor = page.isDone ? null : page.continueCursor;
     } while (progressCursor);
 

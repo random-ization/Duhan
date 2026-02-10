@@ -69,7 +69,10 @@ const VocabDashboard: React.FC = () => {
     { initialNumItems: ITEMS_PER_PAGE }
   );
 
-  const stats = useQuery(VOCAB.getStats, { courseId: resolvedCourse || '' }) as any;
+  const stats = useQuery(
+    VOCAB.getStats,
+    resolvedCourse ? { courseId: resolvedCourse } : 'skip'
+  ) as any;
 
   const posOptions = useMemo(() => {
     if (!words) return [];

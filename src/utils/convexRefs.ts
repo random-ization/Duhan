@@ -131,7 +131,7 @@ export const GRAMMARS = {
 import { VocabStatsDto, VocabWordDto, DailyPhraseDto, VocabBookItemDto } from '../../convex/vocab';
 
 export const VOCAB = {
-  getStats: qRef<{ courseId?: string }, VocabStatsDto>('vocab:getStats'),
+  getStats: qRef<{ courseId: string }, VocabStatsDto>('vocab:getStats'),
   getOfCourse: qRef<{ courseId: string; unitId?: number; limit?: number }, VocabWordDto[]>(
     'vocab:getOfCourse'
   ),
