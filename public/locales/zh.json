@@ -163,7 +163,11 @@
   "native": "母语",
   "batchSize": "每组数量",
   "questionTypes": "题目类型",
-  "grammarTraining": "语法专项训练",
+  "grammarTraining": {
+    "label": "语法专项训练",
+    "explanation": "讲解",
+    "examples": "例句"
+  },
   "searchGrammar": "搜索语法点...",
   "status": "状态",
   "proficiency": "熟练度",
@@ -420,13 +424,15 @@
     "levelTag": "{{level}}级",
     "unitsCount": "{{count}} 单元",
     "units": "单元",
-    "otherPublisher": "其他"
+    "otherPublisher": "其他",
+    "viewAll": "查看全部"
   },
   "courseDashboard": {
     "defaultCourseName": "首尔大学韩国语 1A",
     "defaultDisplayLevel": "第一册",
     "backToShelf": "返回书架",
     "courseMeta": "{{level}} · 第 1-{{totalUnits}} 课",
+    "recentUnit": "最近学习：第 {unit} 单元",
     "overallProgress": "总进度",
     "trainingModules": "专项训练",
     "modules": {
@@ -547,6 +553,14 @@
       "label": "教材",
       "level": "{level} 级"
     },
+    "course": {
+      "unit": "第 {{n}} 单元",
+      "continueLearning": "继续学习",
+      "vocab": "单词",
+      "grammar": "语法",
+      "newEpisode": "播客",
+      "overallProgress": "总体进度"
+    },
     "topik": {
       "cardTitle": "TOPIK\n模拟考试",
       "bestLabel": "最高",
@@ -567,7 +581,80 @@
       "timeRemaining": "剩余时间",
       "submit": "提交试卷",
       "loadingExam": "正在下载试卷数据...",
-      "examLoadError": "无法加载试卷内容，请检查网络连接。"
+      "examLoadError": "无法加载试卷内容，请检查网络连接。",
+      "availableExams": "可用试卷",
+      "nextExam": "下一场考试",
+      "avgScore": "平均分",
+      "passRate": "通过率",
+      "total": "总计",
+      "mobile": {
+        "dDay": "D-{{count}}",
+        "roundBadge": "第{{round}}届",
+        "roundBadgeFallback": "TOPIK",
+        "nextExamName": "第 {{round}} 届 TOPIK II",
+        "nextExamNameFallback": "TOPIK II",
+        "typeReadingShort": "阅读",
+        "typeListeningShort": "听力",
+        "minuteShort": "{{minutes}}分",
+        "questionCountShort": "{{count}}题",
+        "bestScore": "{{score}}%",
+        "cover": {
+          "roundMock": "第 {{round}} 届真题模拟",
+          "time": "时间",
+          "items": "题量",
+          "score": "分值",
+          "noticeTitle": "考前须知",
+          "simulationTitle": "全真模拟环境",
+          "simulationDesc": "考试期间请勿离开页面，计时结束后会自动交卷。",
+          "submitTitle": "答案提交",
+          "submitDesc": "所有题目均为单选。交卷后可查看分数和 AI 解析。",
+          "listeningTip": "听力部分含音频播放，请开启声音或佩戴耳机。",
+          "readingTip": "阅读篇幅较长，建议在安静环境下完成。",
+          "startExam": "开始考试"
+        },
+        "session": {
+          "passageFor": "第{{start}}-{{end}}题材料",
+          "questionMap": "题号导航",
+          "answeredCount": "已作答 {{current}}/{{total}}",
+          "audioError": "音频错误",
+          "listeningAudio": "听力音频",
+          "audioLoadFailed": "音频加载失败",
+          "finish": "完成",
+          "next": "下一题"
+        },
+        "review": {
+          "mode": "复习模式",
+          "totalScore": "总分",
+          "correct": "正确",
+          "mistakes": "错误",
+          "reviewAll": "全部复习",
+          "reviewMistakes": "复习错题 ({{count}})",
+          "questionMap": "题号导航",
+          "badgeAnswer": "答案",
+          "badgeYou": "你选",
+          "questionTitleFallback": "TOPIK 第{{number}}题",
+          "back": "返回",
+          "mistakeProgress": "错题 {{current}}/{{total}}",
+          "allProgress": "/ 共{{total}}题",
+          "resultCorrect": "回答正确！",
+          "resultIncorrect": "回答错误",
+          "resultCorrectHint": "做得很好！",
+          "resultIncorrectHint": "请查看下方解析。",
+          "explanation": "解析",
+          "aiError": "AI 老师正在休息，请稍后再试。",
+          "aiThinking": "思考中...",
+          "aiTitle": "AI 解析",
+          "save": "保存",
+          "saved": "已保存",
+          "translation": "翻译",
+          "keyPoint": "关键点",
+          "prev": "上一题",
+          "next": "下一题",
+          "saveFailed": "保存失败，请重试。",
+          "saveFailedShort": "保存失败",
+          "savedToast": "已保存到错题本"
+        }
+      }
     },
     "video": {
       "cardTitle": "沉浸\n视频",
@@ -607,6 +694,8 @@
       "community": "韩语热榜",
       "editorPicks": "用户热播",
       "loginRequired": "请先登录",
+      "explore": "探索播客",
+      "desc": "收听韩语内容",
       "filters": {
         "all": "全部",
         "beginner": "初级"
@@ -771,6 +860,7 @@
       "hint": "输入韩语单词进行搜索",
       "noResults": "未找到结果",
       "searching": "搜索中...",
+      "error": "出错了",
       "grade": {
         "beginner": "初级",
         "intermediate": "中级",
@@ -793,6 +883,13 @@
       "watch": "视频",
       "immersion": "沉浸",
       "videoLibrary": "视频库",
+      "leftMinutes": "还剩 {{count}} 分钟",
+      "minutesShort": "分钟",
+      "dueShort": "待复习",
+      "streakShort": "连击",
+      "levelFallback": "1 级",
+      "chapterLabel": "第 {{unit}} 课",
+      "bestScoreLabel": "最高：{{score}}",
       "latestEpisodes": "最新剧集"
     },
     "subtitle": "Ready to beat today's boss?"
@@ -828,11 +925,21 @@
     "terms": "服务条款",
     "contact": "联系客服",
     "close": "关闭",
+    "menu": "菜单",
     "prev": "上一词",
     "next": "下一词",
     "back": "返回",
+    "backHome": "返回首页",
+    "continue": "继续",
+    "currentFocus": "当前焦点",
+    "gotIt": "知道了",
+    "noMatches": "没有匹配结果",
+    "notFound": "页面未找到",
+    "notFoundHint": "你访问的页面不存在。",
     "on": "开启",
-    "off": "关闭"
+    "off": "关闭",
+    "page": "页面",
+    "search": "搜索"
   },
   "landing": {
     "nav": {
@@ -989,7 +1096,9 @@
           "nowPlaying": "正在播放",
           "episodeTitle": "Talk To Me In Korean Ep.14",
           "tooltip": "好 (Good)",
-          "translation": "今天天气真的很好。"
+          "translation": "今天天气真的很好。",
+          "liveTranscript": "实时字幕",
+          "transcriptFragment": "今天天气真的很好。"
         },
         "video": {
           "aiTitle": "AI 语法分析",
@@ -998,7 +1107,8 @@
           "grammar": "语法",
           "grammarValue": "-아/어서 (表示原因)",
           "gloss": "“因为吃了泡菜...”",
-          "translation": "因为吃了泡菜，所以很辣。"
+          "translation": "因为吃了泡菜，所以很辣。",
+          "subtitle": "字幕"
         }
       }
     },
@@ -1258,13 +1368,23 @@
     "topik": "模拟考试",
     "videos": "沉浸视频",
     "podcasts": "韩语播客",
+    "typing": "打字练习",
     "profile": "个人资料",
     "viewProfile": "查看资料",
     "settings": "设置",
     "logout": "退出"
   },
+  "nav": {
+    "dashboard": "主页",
+    "courses": "课程",
+    "podcasts": "播客",
+    "topik": "TOPIK",
+    "profile": "我的",
+    "typing": "打字"
+  },
   "auth": {
     "loginFailed": "登录失败",
+    "signupFailed": "注册失败",
     "invalidCredentials": "邮箱或密码错误",
     "emailExists": "该邮箱已被注册",
     "emailNotVerified": "请先验证您的邮箱后再登录",
@@ -1346,8 +1466,37 @@
     "reloadPrompt": "如果问题持续存在，请尝试",
     "refreshPage": "刷新页面"
   },
+  "seo": {
+    "notFound": {
+      "title": "页面未找到",
+      "description": "你访问的页面不存在。"
+    }
+  },
   "loading": "正在加载...",
+  "search": "搜索",
+  "error": "错误",
+  "textbook": {
+    "level": "第 {{level}} 册"
+  },
+  "notes": {
+    "title": "笔记本",
+    "tabs": {
+      "all": "全部",
+      "grammar": "语法",
+      "wrong": "错题"
+    },
+    "searchPlaceholder": "搜索笔记...",
+    "noNotes": "暂无笔记",
+    "details": "笔记详情"
+  },
   "podcast": {
+    "title": "播客",
+    "nowPlaying": "正在播放",
+    "mySubscriptions": "我的订阅",
+    "viewAll": "查看全部",
+    "trendingThisWeek": "本周热门",
+    "history": "播放历史",
+    "clear": "清空",
     "searchTitle": "搜索播客",
     "searchPlaceholder": "输入关键词搜索...",
     "searching": "正在搜索精彩内容...",
@@ -1428,13 +1577,17 @@
   "vocabLabel": "词汇学习",
   "vocab": {
     "flashcard": "单词卡",
+    "flashcards": "单词卡",
     "quiz": "测验",
     "match": "配对",
+    "learn": "学习模式",
     "quickStudy": "速记",
     "currentScope": "当前范围",
     "allUnits": "全部单元",
+    "selectScope": "选择范围",
     "unit": "单元",
     "mastery": "掌握度",
+    "mastered": "已掌握",
     "noWords": "暂无单词",
     "noWordsDesc": "尚未添加词汇内容。",
     "settings": "设置",
@@ -1446,6 +1599,17 @@
     "wordsUnit": "个单词",
     "remembered": "认识",
     "forgot": "没记住",
+    "rating": {
+      "again": "忘记",
+      "hard": "困难",
+      "good": "一般",
+      "easy": "轻松"
+    },
+    "ratingMode": "评分模式",
+    "passFail": "对 / 错",
+    "fourButtons": "四档评分",
+    "passFailDesc": "简单模式：对或错",
+    "fourButtonsDesc": "详细模式：忘记 / 困难 / 一般 / 轻松",
     "restart": "重新开始",
     "flip": "翻转",
     "shortcuts": "快捷键",
@@ -1466,6 +1630,9 @@
     "unlearned": "未学习",
     "due": "待复习",
     "startLearning": "开始学习",
+    "testMode": "挑战一下",
+    "wordList": "单词列表",
+    "words": "个单词",
     "modeImmersive": "沉浸刷词",
     "modeImmersiveDesc": "全屏卡片",
     "modeListen": "随身听",
@@ -1477,6 +1644,8 @@
     "browseMode": "浏览",
     "recallMode": "回想",
     "tapToReveal": "点击空白处显示答案",
+    "tapToFlip": "点击翻面",
+    "listenAgain": "再听一遍",
     "tryAnotherFilter": "换个分类或搜索试试",
     "play": "播放",
     "playMeaning": "播放单词释义",

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
@@ -19,7 +19,7 @@ export default function AppLayout() {
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
   const labels = getLabels(language);
-  const { sidebarHidden, footerHidden } = useLayout();
+  const { sidebarHidden, setSidebarHidden, footerHidden } = useLayout();
   const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
     if (globalThis.window === undefined) return true;
     return globalThis.window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
@@ -34,8 +34,10 @@ export default function AppLayout() {
     '/podcasts',
     '/videos',
     '/topik',
+    '/dashboard',
     '/dashboard/',
     '/notebook',
+    '/vocab-book',
     '/vocabbook',
   ];
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -43,6 +45,25 @@ export default function AppLayout() {
     pathSegments[0] && isValidLanguage(pathSegments[0])
       ? `/${pathSegments.slice(1).join('/')}`
       : location.pathname;
+
+  // Safety net: some fullscreen flows toggle sidebarHidden to hide mobile chrome.
+  // If that state ever gets stuck (e.g. a component crashes/unmounts unexpectedly),
+  // restore it on normal pages so the bottom nav/header doesn't disappear.
+  useEffect(() => {
+    if (!sidebarHidden) return;
+
+    const allowHidden =
+      pathWithoutLang.startsWith('/typing') ||
+      pathWithoutLang.startsWith('/podcasts/player') ||
+      pathWithoutLang.startsWith('/video/') ||
+      // TOPIK exam flows can be fullscreen (cover, exam, result, review)
+      (pathWithoutLang.startsWith('/topik/') && !pathWithoutLang.startsWith('/topik/history'));
+
+    if (!allowHidden) {
+      setSidebarHidden(false);
+    }
+  }, [pathWithoutLang, sidebarHidden, setSidebarHidden]);
+
   const shouldHideFooter =
     footerHidden || hideFooterPaths.some(path => pathWithoutLang.startsWith(path));
   const hideMobileHeaderPaths = ['/video/', '/podcasts/player'];

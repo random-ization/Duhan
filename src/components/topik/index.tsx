@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';
@@ -13,6 +13,10 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
 import { logger } from '../../utils/logger';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { MobileExamSession } from '../mobile/topik/MobileExamSession';
+import { MobileExamReview } from '../mobile/topik/MobileExamReview';
+import { MobileExamCover } from '../mobile/topik/MobileExamCover';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -24,6 +28,7 @@ interface TopikModuleProps {
   canAccessContent?: (content: any) => boolean;
   onShowUpgradePrompt?: () => void;
   onDeleteHistory?: (id: string) => void;
+  initialView?: 'LIST' | 'HISTORY_LIST';
 }
 
 export const TopikModule: React.FC<TopikModuleProps> = ({
@@ -36,17 +41,20 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   canAccessContent,
   onShowUpgradePrompt,
   onDeleteHistory,
+  initialView = 'LIST',
 }) => {
+  const location = useLocation();
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
   const navigate = useLocalizedNavigate();
   const convex = useConvex();
   const { setSidebarHidden } = useApp();
   const { logActivity } = useActivityLogger();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
 
   const [view, setView] = useState<
     'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
-  >('LIST');
+  >(initialView);
   const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -59,6 +67,12 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   } | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const pathSegments = location.pathname.split('/').filter(Boolean);
+  const pathWithoutLang =
+    pathSegments[0] && ['en', 'zh', 'vi', 'mn'].includes(pathSegments[0])
+      ? `/${pathSegments.slice(1).join('/')}`
+      : location.pathname;
+  const isHistoryPath = pathWithoutLang === '/topik/history';
 
   // Custom handleSetView that also updates URL
   const handleSetView = useCallback(
@@ -112,6 +126,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
           setView('REVIEW');
         } else {
           setView('COVER');
+          // Hide sidebar for cover page
+          setSidebarHidden(true);
         }
       } catch (error) {
         console.error('Failed to load exam:', error);
@@ -119,11 +135,21 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         setLoading(false);
       }
     },
-    [fetchQuestions]
+    [fetchQuestions, setSidebarHidden]
   );
 
   // Sync URL params with view on mount
   useEffect(() => {
+    if (isHistoryPath && !examId) {
+      setCurrentExam(null);
+      setUserAnswers({});
+      setTimerActive(false);
+      setExamResult(null);
+      setView('HISTORY_LIST');
+      setSidebarHidden(false);
+      return;
+    }
+
     if (examId && !currentExam) {
       // Need to load exam from URL
       const exam = exams.find(e => e.id === examId);
@@ -132,9 +158,19 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
         selectExamFromUrl(exam, urlView);
       }
     } else if (!examId && view !== 'LIST' && view !== 'HISTORY_LIST') {
-      setView('LIST');
+      setView(initialView);
     }
-  }, [examId, urlView, exams, currentExam, view, selectExamFromUrl]);
+  }, [
+    examId,
+    urlView,
+    exams,
+    currentExam,
+    view,
+    selectExamFromUrl,
+    isHistoryPath,
+    initialView,
+    setSidebarHidden,
+  ]);
 
   const submitExam = useCallback(() => {
     setTimerActive(false);
@@ -210,9 +246,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
     setLoading(true); // 开始加载
     try {
-      console.log('[selectExam] Fetching fresh questions from Convex...');
       let fullQuestions: TopikQuestionDto[] = await fetchQuestions(exam.id);
-      console.log('[selectExam] Got questions:', fullQuestions?.length || 0, 'items');
 
       // 如果还是空的，给个默认空数组防止白屏
       if (!fullQuestions) {
@@ -374,6 +408,16 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   }
 
   if (view === 'COVER' && currentExam) {
+    if (isMobile) {
+      return (
+        <MobileExamCover
+          exam={currentExam}
+          language={language}
+          onStart={startExam}
+          onBack={resetExam}
+        />
+      );
+    }
     return (
       <ExamCoverView
         exam={currentExam}
@@ -386,6 +430,30 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   }
 
   if (view === 'EXAM' && currentExam) {
+    if (isMobile) {
+      return (
+        <MobileExamSession
+          exam={currentExam}
+          language={language}
+          userAnswers={userAnswers}
+          timeLeft={timeLeft}
+          timerActive={timerActive}
+          onAnswerChange={handleAnswerChange}
+          onSubmit={submitExam}
+          onExit={() => {
+            // Show confirmation dialog
+            if (
+              globalThis.window.confirm(
+                labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'
+              )
+            ) {
+              submitExam(); // Save and submit
+            }
+          }}
+        />
+      );
+    }
+
     return (
       <ExamSession
         exam={currentExam}
@@ -433,6 +501,23 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   }
 
   if (view === 'REVIEW' && currentExam) {
+    if (isMobile) {
+      return (
+        <MobileExamReview
+          exam={currentExam}
+          userAnswers={userAnswers}
+          language={language}
+          onBack={resetExam}
+          onReset={() => {
+            // Logic to try again (reset attempt)
+            setUserAnswers({});
+            setTimeLeft(currentExam.timeLimit * 60);
+            setExamResult(null);
+            handleSetView('COVER');
+          }}
+        />
+      );
+    }
     return (
       <ExamReviewView
         exam={currentExam}

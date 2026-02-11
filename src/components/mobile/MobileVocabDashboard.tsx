@@ -40,11 +40,11 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
           </div>
           <h1 className="text-3xl font-black text-slate-900 mb-1">
             {unitId === 'ALL'
-              ? t('vocab.allUnits') || 'All Units'
-              : `${t('vocab.unit') || 'Unit'} ${unitId}`}
+              ? t('vocab.allUnits', { defaultValue: 'All Units' })
+              : `${t('vocab.unit', { defaultValue: 'Unit' })} ${unitId}`}
           </h1>
           <p className="text-slate-500 font-medium">
-            {total} {t('vocab.wordsUnit') || 'words'}
+            {total} {t('vocab.wordsUnit', { defaultValue: 'words' })}
           </p>
 
           {/* Progress Card */}
@@ -53,7 +53,7 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
               <div>
                 <div className="text-3xl font-black text-green-400">{Math.round(progress)}%</div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  {t('vocab.mastered') || 'Mastered'}
+                  {t('vocab.mastered', { defaultValue: 'Mastered' })}
                 </div>
               </div>
               <Trophy className="w-8 h-8 text-yellow-400" />
@@ -82,10 +82,10 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-black text-lg text-slate-900">
-                  {t('vocab.learn') || 'Start Learning'}
+                  {t('vocab.learn', { defaultValue: 'Start Learning' })}
                 </div>
                 <div className="text-xs font-bold text-slate-400">
-                  {t('vocab.flashcards') || 'Flashcards'}
+                  {t('vocab.flashcards', { defaultValue: 'Flashcards' })}
                 </div>
               </div>
             </div>
@@ -107,10 +107,10 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-black text-lg text-slate-900">
-                  {t('vocab.quiz') || 'Take Quiz'}
+                  {t('vocab.quiz', { defaultValue: 'Take Quiz' })}
                 </div>
                 <div className="text-xs font-bold text-slate-400">
-                  {t('vocab.testMode') || 'Challenge yourself'}
+                  {t('vocab.testMode', { defaultValue: 'Challenge yourself' })}
                 </div>
               </div>
             </div>
@@ -127,7 +127,9 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
         >
           <div className="flex items-center gap-3">
             <ListIcon className="w-5 h-5 text-slate-400" />
-            <span className="font-bold text-slate-700">{t('vocab.wordList') || 'Word List'}</span>
+            <span className="font-bold text-slate-700">
+              {t('vocab.wordList', { defaultValue: 'Word List' })}
+            </span>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300" />
         </button>

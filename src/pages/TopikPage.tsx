@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +29,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const location = useLocation();
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -36,6 +37,12 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   );
   const examHistory = examAttempts ?? [];
   const { examId } = useParams();
+  const pathSegments = location.pathname.split('/').filter(Boolean);
+  const pathWithoutLang =
+    pathSegments[0] && ['en', 'zh', 'vi', 'mn'].includes(pathSegments[0])
+      ? `/${pathSegments.slice(1).join('/')}`
+      : location.pathname;
+  const isHistoryRoute = pathWithoutLang === '/topik/history';
   const topikAnnotations = useQuery(
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
     user && examId ? { prefix: `TOPIK-${examId}`, limit: 4000 } : 'skip'
@@ -63,7 +70,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
   // If examId is present, show the actual exam module (or if TopikModule handles it)
   // For now, let's assume TopikModule handles the actual taking of the exam.
   // We will wrap it.
-  if (examId) {
+  if (examId || isHistoryRoute) {
     return (
       <TopikModule
         exams={topikExams}
@@ -75,6 +82,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
         canAccessContent={canAccessContent}
         onShowUpgradePrompt={onShowUpgradePrompt}
         onDeleteHistory={deleteExamAttempt}
+        initialView={isHistoryRoute ? 'HISTORY_LIST' : 'LIST'}
       />
     );
   }

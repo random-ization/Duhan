@@ -11,6 +11,31 @@ const autoSubmitMutation = makeFunctionReference<'mutation', AutoSubmitArgs, voi
   'topik:autoSubmit'
 ) as unknown as FunctionReference<'mutation', 'internal', AutoSubmitArgs, void>;
 
+type StorageResolverContext = {
+  storage: {
+    getUrl: (storageId: string) => Promise<string | null>;
+  };
+};
+
+// Helper to resolve storage URL (handles ID or stale URL)
+async function resolveUrl(ctx: StorageResolverContext, urlOrId?: string) {
+  if (!urlOrId) return undefined;
+
+  // If it's effectively a URL
+  if (urlOrId.startsWith('http')) {
+    // Check if it's a convex storage URL (format: .../api/storage/<ID>)
+    const match = urlOrId.match(/\/api\/storage\/([^/]+)$/);
+    if (match && match[1]) {
+      // Refresh the signed URL using the ID
+      return (await ctx.storage.getUrl(match[1])) || urlOrId;
+    }
+    return urlOrId;
+  }
+
+  // Assume it's a Storage ID
+  return (await ctx.storage.getUrl(urlOrId)) || undefined;
+}
+
 // ============================================
 // TOPIK DTOs
 // ============================================
@@ -60,10 +85,10 @@ export const getExams = query({
 
     if (args.paginationOpts) {
       const results = await query.paginate(args.paginationOpts);
-      return {
-        ...results,
-        page: results.page.map(
-          exam =>
+
+      const pageWithUrls = await Promise.all(
+        results.page.map(
+          async exam =>
             ({
               id: exam.legacyId,
               _id: exam._id,
@@ -72,12 +97,17 @@ export const getExams = query({
               type: exam.type,
               paperType: exam.paperType,
               timeLimit: exam.timeLimit,
-              audioUrl: exam.audioUrl,
+              audioUrl: await resolveUrl(ctx, exam.audioUrl),
               description: exam.description,
               isPaid: exam.isPaid,
               createdAt: exam.createdAt,
             }) as TopikExamDto
-        ),
+        )
+      );
+
+      return {
+        ...results,
+        page: pageWithUrls,
       };
     }
 
@@ -89,22 +119,24 @@ export const getExams = query({
       cursor = batch.isDone ? null : batch.continueCursor;
     } while (cursor);
 
-    return exams.map(
-      exam =>
-        ({
-          id: exam.legacyId,
-          _id: exam._id,
-          title: exam.title,
-          round: exam.round,
-          type: exam.type,
-          paperType: exam.paperType,
-          timeLimit: exam.timeLimit,
-          audioUrl: exam.audioUrl,
-          description: exam.description,
-          isPaid: exam.isPaid,
-          createdAt: exam.createdAt,
-          // No questions array - loaded separately
-        }) as TopikExamDto
+    return Promise.all(
+      exams.map(
+        async exam =>
+          ({
+            id: exam.legacyId,
+            _id: exam._id,
+            title: exam.title,
+            round: exam.round,
+            type: exam.type,
+            paperType: exam.paperType,
+            timeLimit: exam.timeLimit,
+            audioUrl: await resolveUrl(ctx, exam.audioUrl),
+            description: exam.description,
+            isPaid: exam.isPaid,
+            createdAt: exam.createdAt,
+            // No questions array - loaded separately
+          }) as TopikExamDto
+      )
     );
   },
 });
@@ -130,7 +162,7 @@ export const getExamById = query({
       type: exam.type,
       paperType: exam.paperType,
       timeLimit: exam.timeLimit,
-      audioUrl: exam.audioUrl,
+      audioUrl: await resolveUrl(ctx, exam.audioUrl),
       description: exam.description,
       isPaid: exam.isPaid,
       createdAt: exam.createdAt,
@@ -159,10 +191,10 @@ export const getExamQuestions = query({
       .collect();
 
     // Sort by number and format for frontend
-    return questions
-      .slice()
-      .sort((a, b) => a.number - b.number)
-      .map(q => ({
+    const sortedQuestions = questions.slice().sort((a, b) => a.number - b.number);
+
+    return Promise.all(
+      sortedQuestions.map(async q => ({
         id: q.number,
         number: q.number,
         passage: q.passage || '',
@@ -170,14 +202,17 @@ export const getExamQuestions = query({
         contextBox: q.contextBox,
         options: q.options,
         correctAnswer: q.correctAnswer,
-        image: q.image,
-        optionImages: q.optionImages,
+        image: await resolveUrl(ctx, q.image),
+        optionImages: q.optionImages
+          ? ((await Promise.all(q.optionImages.map(img => resolveUrl(ctx, img)))) as string[])
+          : undefined,
         explanation: q.explanation,
         score: q.score,
         instruction: q.instruction,
         layout: q.layout,
         groupCount: q.groupCount,
-      }));
+      }))
+    );
   },
 });
 

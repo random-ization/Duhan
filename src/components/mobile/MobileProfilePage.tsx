@@ -82,10 +82,10 @@ export const MobileProfilePage: React.FC = () => {
 
       await updateProfileMutation({ avatar: publicUrl });
       updateUser({ avatar: publicUrl });
-      toast.success(t('avatarUpdated') || 'Avatar updated');
+      toast.success(t('avatarUpdated', { defaultValue: 'Avatar updated' }));
     } catch (err) {
       console.error(err);
-      toast.error(t('error') || 'Failed');
+      toast.error(t('error', { defaultValue: 'Failed' }));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -100,18 +100,18 @@ export const MobileProfilePage: React.FC = () => {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error(t('passwordMismatch') || 'Passwords do not match');
+      toast.error(t('passwordMismatch', { defaultValue: 'Passwords do not match' }));
       return;
     }
     setIsChangingPassword(true);
     try {
       await changePasswordMutation({ currentPassword, newPassword });
-      toast.success(t('passwordUpdated') || 'Password updated');
+      toast.success(t('passwordUpdated', { defaultValue: 'Password updated' }));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch {
-      toast.error(t('wrongPassword') || 'Failed to update password');
+      toast.error(t('wrongPassword', { defaultValue: 'Failed to update password' }));
     } finally {
       setIsChangingPassword(false);
     }

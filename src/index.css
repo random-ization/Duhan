@@ -34,6 +34,25 @@
   scrollbar-width: none;
 }
 
+/* 3D card utilities (used by flashcards on mobile/desktop) */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
 .bouncy {
   transition:
     transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),

@@ -43,7 +43,7 @@ export function MobileCourseDashboard({
       <div className="flex justify-between items-end py-2">
         <div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-            {t('common.currentFocus', 'Current Focus')}
+            {t('common.currentFocus', { defaultValue: 'Current Focus' })}
           </p>
           <h2 className="text-2xl font-black text-slate-900 leading-none">{courseName}</h2>
         </div>
@@ -76,7 +76,7 @@ export function MobileCourseDashboard({
                 {t('dashboard.course.continueLearning', { defaultValue: 'Continue Learning' })}
               </h3>
               <p className="text-slate-400 text-sm font-medium">
-                {t('dashboard.textbook.inProgress', 'In Progress')}
+                {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}
               </p>
             </div>
           </div>
@@ -156,24 +156,24 @@ export function MobileCourseDashboard({
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {t('common.continue', 'Continue')}
+                    {t('common.continue', { defaultValue: 'Continue' })}
                   </span>
                 </>
               ) : (
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {t('dashboard.course.newEpisode', 'Podcasts')}
+                  {t('dashboard.course.newEpisode', { defaultValue: 'Podcasts' })}
                 </span>
               )}
             </div>
             <h4 className="font-bold text-slate-900 leading-tight line-clamp-1">
               {latestPodcast
                 ? latestPodcast.channelName
-                : t('dashboard.podcast.explore', 'Explore Podcasts')}
+                : t('dashboard.podcast.explore', { defaultValue: 'Explore Podcasts' })}
             </h4>
             <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
               {latestPodcast
                 ? latestPodcast.episodeTitle
-                : t('dashboard.podcast.desc', 'Listen to Korean contents')}
+                : t('dashboard.podcast.desc', { defaultValue: 'Listen to Korean content' })}
             </p>
           </div>
           <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center">

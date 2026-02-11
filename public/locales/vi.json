@@ -394,13 +394,15 @@
     "levelTag": "Cấp {{level}}",
     "unitsCount": "{{count}} bài",
     "units": "bài",
-    "otherPublisher": "Khác"
+    "otherPublisher": "Khác",
+    "viewAll": "Xem tất cả"
   },
   "courseDashboard": {
     "defaultCourseName": "Tiếng Hàn 1A",
     "defaultDisplayLevel": "Quyển 1",
     "backToShelf": "Quay lại thư viện",
     "courseMeta": "{{level}} · Bài 1-{{totalUnits}}",
+    "recentUnit": "Học gần đây: Bài {unit}",
     "overallProgress": "Tiến độ tổng",
     "trainingModules": "Chuyên đề luyện tập",
     "modules": {
@@ -524,6 +526,14 @@
       "label": "Giáo trình",
       "level": "Cấp độ {level}"
     },
+    "course": {
+      "unit": "UNIT {{n}}",
+      "continueLearning": "Continue Learning",
+      "vocab": "Vocab",
+      "grammar": "Grammar",
+      "newEpisode": "Podcasts",
+      "overallProgress": "Overall Progress"
+    },
     "topik": {
       "title": "Thi thử\nTOPIK",
       "maxScore": "Điểm cao",
@@ -546,7 +556,80 @@
       "submit": "Nộp bài",
       "timeRemaining": "Thời gian còn lại",
       "loadingExam": "Đang tải dữ liệu đề thi...",
-      "examLoadError": "Không thể tải nội dung đề thi. Vui lòng kiểm tra kết nối."
+      "examLoadError": "Không thể tải nội dung đề thi. Vui lòng kiểm tra kết nối.",
+      "availableExams": "Đề thi khả dụng",
+      "nextExam": "Kỳ thi tiếp theo",
+      "avgScore": "Điểm TB",
+      "passRate": "Tỷ lệ đạt",
+      "total": "Tổng số",
+      "mobile": {
+        "dDay": "D-{{count}}",
+        "roundBadge": "K{{round}}",
+        "roundBadgeFallback": "TOPIK",
+        "nextExamName": "TOPIK II kỳ {{round}}",
+        "nextExamNameFallback": "TOPIK II",
+        "typeReadingShort": "ĐỌC",
+        "typeListeningShort": "NGHE",
+        "minuteShort": "{{minutes}}p",
+        "questionCountShort": "{{count}}C",
+        "bestScore": "{{score}}%",
+        "cover": {
+          "roundMock": "Mô phỏng đề kỳ {{round}}",
+          "time": "Thời gian",
+          "items": "Số câu",
+          "score": "Điểm",
+          "noticeTitle": "Lưu ý trước khi thi",
+          "simulationTitle": "Chế độ mô phỏng đầy đủ",
+          "simulationDesc": "Không rời khỏi trang trong lúc thi. Hết giờ hệ thống sẽ tự nộp bài.",
+          "submitTitle": "Nộp đáp án",
+          "submitDesc": "Tất cả câu hỏi là chọn một đáp án. Sau khi nộp bạn sẽ thấy điểm và phân tích AI.",
+          "listeningTip": "Phần nghe có âm thanh. Hãy bật loa hoặc dùng tai nghe.",
+          "readingTip": "Bài đọc khá dài, nên làm bài trong môi trường yên tĩnh.",
+          "startExam": "Bắt đầu thi"
+        },
+        "session": {
+          "passageFor": "Đoạn văn cho câu {{start}}-{{end}}",
+          "questionMap": "Bản đồ câu hỏi",
+          "answeredCount": "Đã trả lời {{current}}/{{total}}",
+          "audioError": "Lỗi âm thanh",
+          "listeningAudio": "Âm thanh phần nghe",
+          "audioLoadFailed": "Không thể tải tệp âm thanh",
+          "finish": "Kết thúc",
+          "next": "Tiếp theo"
+        },
+        "review": {
+          "mode": "Chế độ xem lại",
+          "totalScore": "Tổng điểm",
+          "correct": "Đúng",
+          "mistakes": "Sai",
+          "reviewAll": "Xem lại tất cả",
+          "reviewMistakes": "Xem lỗi sai ({{count}})",
+          "questionMap": "Bản đồ câu hỏi",
+          "badgeAnswer": "ĐÁP ÁN",
+          "badgeYou": "BẠN",
+          "questionTitleFallback": "TOPIK Câu {{number}}",
+          "back": "Quay lại",
+          "mistakeProgress": "Lỗi {{current}}/{{total}}",
+          "allProgress": "/ {{total}} câu",
+          "resultCorrect": "Đúng!",
+          "resultIncorrect": "Sai",
+          "resultCorrectHint": "Làm tốt lắm!",
+          "resultIncorrectHint": "Xem phần giải thích bên dưới.",
+          "explanation": "Giải thích",
+          "aiError": "AI đang bận, vui lòng thử lại sau.",
+          "aiThinking": "Đang phân tích...",
+          "aiTitle": "Phân tích AI",
+          "save": "Lưu",
+          "saved": "Đã lưu",
+          "translation": "Dịch nghĩa",
+          "keyPoint": "Ý chính",
+          "prev": "Trước",
+          "next": "Sau",
+          "saveFailed": "Lưu thất bại, vui lòng thử lại.",
+          "saveFailedShort": "Lưu thất bại",
+          "savedToast": "Đã lưu vào sổ tay"
+        }
+      }
     },
     "video": {
       "cardTitle": "Video\nNhập vai",
@@ -586,6 +669,8 @@
       "community": "Bảng xếp hạng tiếng Hàn",
       "editorPicks": "Hot người dùng",
       "loginRequired": "Vui lòng đăng nhập trước",
+      "explore": "Explore Podcasts",
+      "desc": "Listen to Korean content",
       "filters": {
         "all": "Tất cả",
         "beginner": "Sơ cấp"
@@ -741,6 +826,7 @@
       "hint": "Nhập từ tiếng Hàn để tìm kiếm",
       "noResults": "Không tìm thấy kết quả",
       "searching": "Đang tìm kiếm...",
+      "error": "Something went wrong",
       "grade": {
         "beginner": "Sơ cấp",
         "intermediate": "Trung cấp",
@@ -763,6 +849,13 @@
       "watch": "Xem",
       "immersion": "Thực hành",
       "videoLibrary": "Thư viện Video",
+      "leftMinutes": "Còn {{count}} phút",
+      "minutesShort": "Phút",
+      "dueShort": "Ôn",
+      "streakShort": "Chuỗi",
+      "levelFallback": "Cấp 1",
+      "chapterLabel": "Bài {{unit}}",
+      "bestScoreLabel": "Cao nhất: {{score}}",
       "latestEpisodes": "Tập mới nhất"
     }
   },
@@ -912,7 +1005,9 @@
           "nowPlaying": "Đang phát",
           "episodeTitle": "Talk To Me In Korean Ep.14",
           "tooltip": "Tốt (Good)",
-          "translation": "Hôm nay thời tiết thật sự rất đẹp."
+          "translation": "Hôm nay thời tiết thật sự rất đẹp.",
+          "liveTranscript": "Live Transcript",
+          "transcriptFragment": "Hôm nay thời tiết thật sự rất đẹp."
         },
         "video": {
           "aiTitle": "Phân tích ngữ pháp AI",
@@ -921,7 +1016,8 @@
           "grammar": "Ngữ pháp",
           "grammarValue": "-아/어서 (lý do)",
           "gloss": "\"Vì đã ăn kimchi...\"",
-          "translation": "Cay vì tôi đã ăn kimchi."
+          "translation": "Cay vì tôi đã ăn kimchi.",
+          "subtitle": "Subtitle"
         }
       }
     },
@@ -1210,13 +1306,23 @@
     "topik": "Thi thử TOPIK",
     "videos": "Video",
     "podcasts": "Podcast",
+    "typing": "Gõ phím",
     "profile": "Hồ sơ",
     "viewProfile": "Xem hồ sơ",
     "settings": "Cài đặt",
     "logout": "Đăng xuất"
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "podcasts": "Podcasts",
+    "topik": "TOPIK",
+    "profile": "Profile",
+    "typing": "Typing"
+  },
   "auth": {
     "loginFailed": "Đăng nhập thất bại",
+    "signupFailed": "Đăng ký thất bại",
     "invalidCredentials": "Email hoặc mật khẩu không đúng",
     "emailExists": "Email đã được đăng ký",
     "emailNotVerified": "Vui lòng xác minh email trước khi đăng nhập",
@@ -1289,9 +1395,21 @@
     "privacy": "Chính sách bảo mật",
     "terms": "Điều khoản dịch vụ",
     "close": "Đóng",
+    "menu": "Menu",
     "prev": "Trước",
     "next": "Tiếp",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "backHome": "Về trang chủ",
+    "continue": "Tiếp tục",
+    "currentFocus": "Current Focus",
+    "gotIt": "OK",
+    "noMatches": "Không có kết quả phù hợp",
+    "notFound": "Không tìm thấy trang",
+    "notFoundHint": "Trang bạn tìm không tồn tại.",
+    "off": "Off",
+    "on": "On",
+    "page": "Trang",
+    "search": "Tìm kiếm"
   },
   "copy": "Sao chép",
   "errors": {
@@ -1319,10 +1437,20 @@
     "reloadPrompt": "Nếu lỗi vẫn còn, vui lòng thử",
     "refreshPage": "tải lại trang"
   },
+  "seo": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for doesn't exist."
+    }
+  },
   "examples": "Ví dụ",
   "explanation": "Giải thích",
   "fontSize": "Kích cỡ chữ",
-  "grammarTraining": "Luyện tập ngữ pháp",
+  "grammarTraining": {
+    "label": "Luyện tập ngữ pháp",
+    "explanation": "Explanation",
+    "examples": "Examples"
+  },
   "highlight": "Làm nổi bật",
   "learning": "Đang học",
   "mastered": "Đã thành thạo",
@@ -1340,7 +1468,30 @@
   "translate": "Dịch",
   "wordLookup": "Tra từ",
   "loading": "Đang tải...",
+  "search": "Search",
+  "error": "Error",
+  "textbook": {
+    "level": "Level {{level}}"
+  },
+  "notes": {
+    "title": "Notebook",
+    "tabs": {
+      "all": "All",
+      "grammar": "Grammar",
+      "wrong": "Mistakes"
+    },
+    "searchPlaceholder": "Search notes...",
+    "noNotes": "No notes found",
+    "details": "Note Details"
+  },
   "podcast": {
+    "title": "Podcasts",
+    "nowPlaying": "Now Playing",
+    "mySubscriptions": "My Subscriptions",
+    "viewAll": "View All",
+    "trendingThisWeek": "Trending This Week",
+    "history": "History",
+    "clear": "Clear",
     "searchTitle": "Tìm kiếm Podcast",
     "searchPlaceholder": "Nhập từ khóa...",
     "searching": "Đang tìm kiếm nội dung...",
@@ -1414,13 +1565,17 @@
   "vocabLabel": "Từ vựng",
   "vocab": {
     "flashcard": "Thẻ từ",
+    "flashcards": "Flashcards",
     "quiz": "Trắc nghiệm",
     "match": "Ghép cặp",
+    "learn": "Learn",
     "quickStudy": "Học nhanh",
     "currentScope": "Phạm vi hiện tại",
     "allUnits": "Tất cả các bài",
+    "selectScope": "Select Scope",
     "unit": "Bài",
     "mastery": "Độ thông thạo",
+    "mastered": "Mastered",
     "noWords": "Không có từ",
     "noWordsDesc": "Chưa có nội dung từ vựng nào.",
     "settings": "Cài đặt",
@@ -1432,6 +1587,17 @@
     "wordsUnit": "từ",
     "remembered": "Đã nhớ",
     "forgot": "Quên",
+    "rating": {
+      "again": "Again",
+      "hard": "Hard",
+      "good": "Good",
+      "easy": "Easy"
+    },
+    "ratingMode": "Chế độ chấm điểm",
+    "passFail": "Đúng / Sai",
+    "fourButtons": "4 mức",
+    "passFailDesc": "Chế độ đơn giản: đúng hoặc sai",
+    "fourButtonsDesc": "Chế độ chi tiết: quên / khó / tốt / dễ",
     "restart": "Bắt đầu lại",
     "flip": "Lật",
     "shortcuts": "Phím tắt",
@@ -1452,6 +1618,9 @@
     "unlearned": "Chưa học",
     "due": "Cần ôn",
     "startLearning": "Bắt đầu học",
+    "testMode": "Challenge yourself",
+    "wordList": "Word List",
+    "words": "words",
     "modeImmersive": "Lướt từ",
     "modeImmersiveDesc": "Thẻ toàn màn hình",
     "modeListen": "Nghe",
@@ -1463,6 +1632,8 @@
     "browseMode": "Xem",
     "recallMode": "Gợi nhớ",
     "tapToReveal": "Chạm để hiện đáp án",
+    "tapToFlip": "Tap to Flip",
+    "listenAgain": "Listen Again",
     "tryAnotherFilter": "Thử bộ lọc hoặc tìm kiếm khác",
     "play": "Phát",
     "playMeaning": "Phát nghĩa",

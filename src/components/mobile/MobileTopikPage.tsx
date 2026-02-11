@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   History,
@@ -36,6 +36,11 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
   );
   const examHistory = examAttempts ?? [];
 
+  const upcomingExam = useMemo(() => {
+    if (topikExams.length === 0) return null;
+    return [...topikExams].sort((a, b) => b.round - a.round)[0];
+  }, [topikExams]);
+
   // Filter exams
   const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);
 
@@ -43,7 +48,12 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
   const totalAttempts = examHistory.length;
   const avgScore =
     totalAttempts > 0
-      ? Math.round(examHistory.reduce((sum, a) => sum + (a.score || 0), 0) / totalAttempts)
+      ? Math.round(
+          examHistory.reduce((sum, a) => {
+            const maxScore = a.maxScore || a.totalScore || 100;
+            return sum + (maxScore > 0 ? ((a.score || 0) / maxScore) * 100 : 0);
+          }, 0) / totalAttempts
+        )
       : 0;
   const passCount = examHistory.filter(a => {
     const maxScore = a.maxScore || a.totalScore || 100;
@@ -55,7 +65,12 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
   const getBestScore = (examId: string) => {
     const attempts = examHistory.filter(a => a.examId === examId);
     if (attempts.length === 0) return null;
-    return Math.max(...attempts.map(a => a.score || 0));
+    return Math.max(
+      ...attempts.map(a => {
+        const maxScore = a.maxScore || a.totalScore || 100;
+        return maxScore > 0 ? Math.round(((a.score || 0) / maxScore) * 100) : 0;
+      })
+    );
   };
 
   return (
@@ -84,10 +99,22 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
 
         {/* D-Day Banner */}
         <div className="bg-slate-900 rounded-xl p-3 flex items-center gap-3 text-white">
-          <div className="bg-indigo-500 px-2.5 py-1 rounded font-extrabold text-sm">D-42</div>
+          <div className="bg-indigo-500 px-2.5 py-1 rounded font-extrabold text-sm">
+            {upcomingExam
+              ? t('dashboard.topik.mobile.roundBadge', {
+                  round: upcomingExam.round,
+                  defaultValue: 'R{{round}}',
+                })
+              : t('dashboard.topik.mobile.roundBadgeFallback', { defaultValue: 'TOPIK' })}
+          </div>
           <div className="text-xs">
             <div className="font-medium text-slate-400">{t('dashboard.topik.nextExam')}</div>
-            <div className="font-bold">98th TOPIK II</div>
+            <div className="font-bold">
+              {upcomingExam?.title ||
+                t('dashboard.topik.mobile.nextExamNameFallback', {
+                  defaultValue: 'TOPIK II',
+                })}
+            </div>
           </div>
         </div>
       </header>
@@ -182,20 +209,33 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
                       isReading ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
                     )}
                   >
-                    {isReading ? 'READ' : 'LIST'}
+                    {isReading
+                      ? t('dashboard.topik.mobile.typeReadingShort', { defaultValue: 'READ' })
+                      : t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })}
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-2">
                   <span className="flex items-center gap-0.5">
                     <Clock className="w-3 h-3" />
-                    {exam.timeLimit}m
+                    {t('dashboard.topik.mobile.minuteShort', {
+                      minutes: exam.timeLimit,
+                      defaultValue: '{{minutes}}m',
+                    })}
                   </span>
                   <span className="flex items-center gap-0.5">
                     <HelpCircle className="w-3 h-3" />
-                    50Q
+                    {t('dashboard.topik.mobile.questionCountShort', {
+                      count: exam.questions?.length || 50,
+                      defaultValue: '{{count}}Q',
+                    })}
                   </span>
                   {bestScore !== null && (
-                    <span className="text-green-600 font-bold">{bestScore}/100</span>
+                    <span className="text-green-600 font-bold">
+                      {t('dashboard.topik.mobile.bestScore', {
+                        score: bestScore,
+                        defaultValue: '{{score}}%',
+                      })}
+                    </span>
                   )}
                 </div>
               </div>

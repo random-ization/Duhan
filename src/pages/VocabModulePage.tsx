@@ -395,6 +395,8 @@ export default function VocabModulePage() {
           }
         }}
         instituteId={instituteId || ''}
+        language={language}
+        userId={user?.id}
       />
     );
   }

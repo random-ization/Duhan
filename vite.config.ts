@@ -105,8 +105,9 @@ export default defineConfig({
         },
       },
     },
-    // Reduce chunk size warning threshold
-    chunkSizeWarningLimit: 300,
+    // Keep warnings focused on abnormal growth; some vendor bundles (e.g. xlsx/vidstack)
+    // are intentionally split and loaded on demand.
+    chunkSizeWarningLimit: 450,
     // Enable source maps for debugging (optional, remove in production for smaller builds)
     sourcemap: false,
     // Minify options

@@ -189,7 +189,12 @@ export const MobileDashboard: React.FC = () => {
               <span>
                 {stats.dailyMinutes} / {stats.dailyGoal} mins
               </span>
-              <span>{Math.max(0, stats.dailyGoal - stats.dailyMinutes)} left</span>
+              <span>
+                {t('dashboard.mobile.leftMinutes', {
+                  count: Math.max(0, stats.dailyGoal - stats.dailyMinutes),
+                  defaultValue: '{{count}} left',
+                })}
+              </span>
             </div>
             <div className="h-2.5 bg-black/20 rounded-full overflow-hidden">
               <div
@@ -201,15 +206,21 @@ export const MobileDashboard: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 border-t border-white/10 pt-3 relative z-10">
             <div className="text-center">
               <div className="text-xl font-black">{stats.dailyMinutes}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">Mins</div>
+              <div className="text-[10px] opacity-70 uppercase tracking-wide">
+                {t('dashboard.mobile.minutesShort', { defaultValue: 'Mins' })}
+              </div>
             </div>
             <div className="text-center border-l border-white/10">
               <div className="text-xl font-black">{stats.vocabStats.dueReviews}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">Due</div>
+              <div className="text-[10px] opacity-70 uppercase tracking-wide">
+                {t('dashboard.mobile.dueShort', { defaultValue: 'Due' })}
+              </div>
             </div>
             <div className="text-center border-l border-white/10">
               <div className="text-xl font-black">{stats.streak}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">Streak</div>
+              <div className="text-[10px] opacity-70 uppercase tracking-wide">
+                {t('dashboard.mobile.streakShort', { defaultValue: 'Streak' })}
+              </div>
             </div>
           </div>
         </section>
@@ -225,7 +236,7 @@ export const MobileDashboard: React.FC = () => {
                 {t('dashboard.textbook.label', { defaultValue: 'Current Course' })}
               </span>
               <span className="text-sky-600 font-bold text-xs bg-white px-2 py-0.5 rounded shadow-sm">
-                {selectedLevel || 'Lvl 1'}
+                {selectedLevel || t('dashboard.mobile.levelFallback', { defaultValue: 'Lvl 1' })}
               </span>
             </div>
             <h3 className="text-2xl font-black text-slate-900 leading-tight mb-1 pr-12">
@@ -233,7 +244,12 @@ export const MobileDashboard: React.FC = () => {
             </h3>
             <div className="mt-4 bg-white/60 backdrop-blur-sm p-3 rounded-xl border border-white/50">
               <div className="flex justify-between text-xs font-bold text-sky-700 mb-1.5">
-                <span>Chapter {currentUnit}</span>
+                <span>
+                  {t('dashboard.mobile.chapterLabel', {
+                    unit: currentUnit,
+                    defaultValue: 'Chapter {{unit}}',
+                  })}
+                </span>
                 <span>{progressPercent}%</span>
               </div>
               <div className="h-2 bg-sky-200 rounded-full overflow-hidden">
@@ -338,7 +354,12 @@ export const MobileDashboard: React.FC = () => {
                 {t('dashboard.mobile.exam')}
               </span>
               <h4 className="font-black text-lg text-slate-900 mt-1">{t('nav.topik')}</h4>
-              <p className="text-amber-700 text-xs font-bold mt-0.5">Best: {topScore}</p>
+              <p className="text-amber-700 text-xs font-bold mt-0.5">
+                {t('dashboard.mobile.bestScoreLabel', {
+                  score: topScore,
+                  defaultValue: 'Best: {{score}}',
+                })}
+              </p>
             </div>
             <img
               src={ASSETS.trophy}

@@ -22,9 +22,9 @@ export default function MobileUnitSelector({
   const [isOpen, setIsOpen] = useState(false);
 
   const getLabel = (unitId: number | 'ALL') => {
-    if (unitId === 'ALL') return t('vocab.allUnits') || 'All Units';
-    if (unitId === 0) return t('vocab.unassigned') || 'Unassigned';
-    return `${t('vocab.unit') || 'Unit'} ${unitId}`;
+    if (unitId === 'ALL') return t('vocab.allUnits', { defaultValue: 'All Units' });
+    if (unitId === 0) return t('vocab.unassigned', { defaultValue: 'Unassigned' });
+    return `${t('vocab.unit', { defaultValue: 'Unit' })} ${unitId}`;
   };
 
   return (
@@ -36,7 +36,7 @@ export default function MobileUnitSelector({
         <Book className="w-4 h-4 text-indigo-600" />
         <div className="text-left">
           <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">
-            {t('vocab.currentScope') || 'Current Scope'}
+            {t('vocab.currentScope', { defaultValue: 'Current Scope' })}
           </div>
           <div className="text-xs font-black text-slate-900 leading-none">
             {getLabel(currentUnitId)}
@@ -67,7 +67,7 @@ export default function MobileUnitSelector({
             >
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 className="font-black text-lg text-slate-900">
-                  {t('vocab.selectScope') || 'Select Scope'}
+                  {t('vocab.selectScope', { defaultValue: 'Select Scope' })}
                 </h3>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -94,10 +94,10 @@ export default function MobileUnitSelector({
                     <div
                       className={`font-bold ${currentUnitId === 'ALL' ? 'text-indigo-700' : 'text-slate-900'}`}
                     >
-                      {t('vocab.allUnits') || 'All Units'}
+                      {t('vocab.allUnits', { defaultValue: 'All Units' })}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      {allWordsCount} {t('vocab.words') || 'words'}
+                      {allWordsCount} {t('vocab.words', { defaultValue: 'words' })}
                     </div>
                   </div>
                   {currentUnitId === 'ALL' && (
@@ -136,11 +136,11 @@ export default function MobileUnitSelector({
                           className={`font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-900'}`}
                         >
                           {u === 0
-                            ? t('vocab.unassigned') || 'Unassigned'
-                            : `${t('vocab.unit') || 'Unit'} ${u}`}
+                            ? t('vocab.unassigned', { defaultValue: 'Unassigned' })
+                            : `${t('vocab.unit', { defaultValue: 'Unit' })} ${u}`}
                         </div>
                         <div className="text-xs text-slate-500 font-medium">
-                          {count} {t('vocab.words') || 'words'}
+                          {count} {t('vocab.words', { defaultValue: 'words' })}
                         </div>
                       </div>
                       {isSelected && (

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();

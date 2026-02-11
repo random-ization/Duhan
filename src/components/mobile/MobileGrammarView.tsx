@@ -71,7 +71,7 @@ export default function MobileGrammarView({
               type="text"
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
-              placeholder={t('search') || 'Search grammar...'}
+              placeholder={t('search', { defaultValue: 'Search grammar...' })}
               className="w-full bg-slate-100 border-2 border-transparent focus:bg-white focus:border-slate-900 rounded-xl pl-9 pr-4 py-2 text-sm font-bold transition-all outline-none"
             />
           </div>

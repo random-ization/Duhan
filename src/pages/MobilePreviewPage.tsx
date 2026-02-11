@@ -260,13 +260,16 @@ export default function MobilePreviewPage() {
 
       <button
         type="button"
-        aria-label="Close panel overlay"
+        aria-label="Dismiss overlay"
         className={`fixed inset-0 z-[80] bg-slate-900/35 transition-opacity ${
           isSheetOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsSheetOpen(false)}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="筛选 / 快捷操作"
         className={`fixed inset-x-0 bottom-0 z-[90] px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] transition-transform duration-300 ease-out ${
           isSheetOpen ? 'translate-y-0' : 'translate-y-[105%]'
         }`}

@@ -29,9 +29,17 @@ export const MobileNotebookPage: React.FC = () => {
 
   const tabs = useMemo(
     () => [
-      { key: 'ALL', label: t('notes.tabs.all') || 'All', icon: FileText },
-      { key: 'GRAMMAR', label: t('notes.tabs.grammar') || 'Grammar', icon: GraduationCap },
-      { key: 'MISTAKE', label: t('notes.tabs.wrong') || 'Mistakes', icon: Target },
+      { key: 'ALL', label: t('notes.tabs.all', { defaultValue: 'All' }), icon: FileText },
+      {
+        key: 'GRAMMAR',
+        label: t('notes.tabs.grammar', { defaultValue: 'Grammar' }),
+        icon: GraduationCap,
+      },
+      {
+        key: 'MISTAKE',
+        label: t('notes.tabs.wrong', { defaultValue: 'Mistakes' }),
+        icon: Target,
+      },
     ],
     [t]
   );
@@ -79,7 +87,9 @@ export const MobileNotebookPage: React.FC = () => {
           <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6 text-slate-900" />
           </button>
-          <h1 className="text-xl font-black text-slate-900">{t('notes.title') || 'Notebook'}</h1>
+          <h1 className="text-xl font-black text-slate-900">
+            {t('notes.title', { defaultValue: 'Notebook' })}
+          </h1>
         </div>
 
         {/* Search */}
@@ -89,7 +99,7 @@ export const MobileNotebookPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder={t('notes.searchPlaceholder') || 'Search notes...'}
+            placeholder={t('notes.searchPlaceholder', { defaultValue: 'Search notes...' })}
             className="w-full bg-slate-100 h-10 rounded-xl pl-9 pr-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
@@ -126,7 +136,7 @@ export const MobileNotebookPage: React.FC = () => {
         ) : filteredNotes.length === 0 ? (
           <div className="py-20 text-center text-slate-400">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-bold">{t('notes.noNotes') || 'No notes found'}</p>
+            <p className="font-bold">{t('notes.noNotes', { defaultValue: 'No notes found' })}</p>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -174,7 +184,9 @@ export const MobileNotebookPage: React.FC = () => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="font-bold">{t('notes.details') || 'Note Details'}</span>
+              <span className="font-bold">
+                {t('notes.details', { defaultValue: 'Note Details' })}
+              </span>
             </div>
             <NoteDetailModal
               noteId={selectedNoteId}

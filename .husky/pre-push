@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+echo "Running release gate checks before push..."
+npm run lint
+npm run typecheck
+npm run i18n:guard
+npm run test:run

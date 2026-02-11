@@ -54,9 +54,12 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
     <div className="pb-24 pt-4 px-4 bg-slate-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-black text-slate-900 mb-1">{t('grammar')}</h2>
+        <h2 className="text-2xl font-black text-slate-900 mb-1">
+          {t('grammar', { defaultValue: 'Grammar' })}
+        </h2>
         <p className="text-slate-500 text-sm font-medium">
-          {instituteName} {t('textbook.level', { level: course.level })}
+          {instituteName}{' '}
+          {t('textbook.level', { level: course.level, defaultValue: 'Level {{level}}' })}
         </p>
       </div>
 
@@ -66,7 +69,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             type="text"
-            placeholder={t('common.search') || 'Search...'}
+            placeholder={t('common.search', { defaultValue: 'Search...' })}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 py-3 text-base rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -88,7 +91,11 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
       {/* Content List */}
       {units.length === 0 ? (
         <div className="text-center py-10 text-slate-400">
-          <p>{searchQuery ? t('common.noMatches') : t('noGrammar')}</p>
+          <p>
+            {searchQuery
+              ? t('common.noMatches', { defaultValue: 'No matches' })
+              : t('noGrammar', { defaultValue: 'No grammar yet' })}
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -96,7 +103,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
             <div key={unit} className="space-y-3">
               <div className="flex items-center gap-2 pl-1">
                 <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider">
-                  {t('unit')} {unit}
+                  {t('unit', { defaultValue: 'Unit' })} {unit}
                 </span>
                 <div className="h-px bg-slate-200 flex-1" />
               </div>
@@ -141,7 +148,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                 <GraduationCap className="w-3 h-3" />
-                {t('grammarTraining.explanation')}
+                {t('grammarTraining.explanation', { defaultValue: 'Explanation' })}
               </h4>
               <p className="text-lg text-slate-800 leading-relaxed font-medium">
                 {getLocalizedContent(selectedPoint, 'explanation', language)}
@@ -152,7 +159,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
             <div className="space-y-4">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                 <BookOpen className="w-3 h-3" />
-                {t('grammarTraining.examples')}
+                {t('grammarTraining.examples', { defaultValue: 'Examples' })}
               </h4>
               <div className="space-y-3">
                 {selectedPoint.usages?.map((usage, idx) => (
@@ -172,7 +179,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
               className="w-full h-12 rounded-xl text-lg font-bold bg-slate-900 text-white shadow-lg mt-2"
               onClick={() => setSelectedPoint(null)}
             >
-              {t('common.gotIt')}
+              {t('common.gotIt', { defaultValue: 'Got it' })}
             </Button>
           </div>
         )}
