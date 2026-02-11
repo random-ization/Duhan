@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const projectRoot = process.cwd();
 const srcRoot = path.join(projectRoot, 'src');
+const baselineFile = path.join(projectRoot, 'scripts', 'i18n-baseline.txt');
 
 const excludedPathFragments = [
   `${path.sep}src${path.sep}components${path.sep}admin${path.sep}`,
@@ -11,7 +12,10 @@ const excludedPathFragments = [
   `${path.sep}src${path.sep}pages${path.sep}admin${path.sep}`,
 ];
 
-const shouldFail = process.argv.includes('--fail');
+const args = process.argv.slice(2);
+const shouldFail = args.includes('--fail');
+const shouldFailOnNew = args.includes('--fail-on-new');
+const printPathsOnly = args.includes('--paths-only');
 const cjkRegex = /[\u4e00-\u9fff]/;
 
 function* walk(dir) {
@@ -59,16 +63,57 @@ for (const filePath of walk(srcRoot)) {
   });
 }
 
+findings.sort((a, b) => a.filePath.localeCompare(b.filePath));
+
+if (printPathsOnly) {
+  for (const f of findings) {
+    console.log(f.filePath);
+  }
+  process.exit(0);
+}
+
 if (findings.length === 0) {
   console.log('[i18n-scan] No CJK hardcoded text found (excluding admin).');
   process.exit(0);
 }
 
-console.log(`[i18n-scan] Found ${findings.length} file(s) containing CJK characters (excluding admin):`);
-for (const f of findings) {
-  console.log(`- ${f.filePath}:${f.line} ${f.preview}`);
+if (!shouldFailOnNew) {
+  console.log(`[i18n-scan] Found ${findings.length} file(s) containing CJK characters (excluding admin):`);
+  for (const f of findings) {
+    console.log(`- ${f.filePath}:${f.line} ${f.preview}`);
+  }
+} else {
+  console.log(
+    `[i18n-scan] Baseline check mode: found ${findings.length} file(s) with existing hardcoded CJK text.`
+  );
 }
 
 if (shouldFail) {
   process.exit(1);
+}
+
+if (shouldFailOnNew) {
+  if (!fs.existsSync(baselineFile)) {
+    console.error(`[i18n-scan] Baseline file not found: ${path.relative(projectRoot, baselineFile)}`);
+    process.exit(1);
+  }
+
+  const baseline = new Set(
+    fs
+      .readFileSync(baselineFile, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'))
+  );
+  const newlyIntroduced = findings.filter(f => !baseline.has(f.filePath));
+
+  if (newlyIntroduced.length > 0) {
+    console.error('\n[i18n-scan] Newly introduced CJK hardcoded text found:');
+    for (const f of newlyIntroduced) {
+      console.error(`- ${f.filePath}:${f.line} ${f.preview}`);
+    }
+    process.exit(1);
+  }
+
+  console.log('[i18n-scan] No new hardcoded CJK text compared with baseline.');
 }

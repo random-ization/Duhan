@@ -6,6 +6,8 @@ import { useQuery } from 'convex/react';
 import NoteCard from '../components/notebook/NoteCard';
 import NoteDetailModal from '../components/notebook/NoteDetailModal';
 import { qRef } from '../utils/convexRefs';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
 
 // Tab configuration
 const TABS = [
@@ -23,7 +25,7 @@ interface Note {
   createdAt: string;
 }
 
-const NotebookPage: React.FC = () => {
+const DesktopNotebookPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -202,5 +204,11 @@ const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
     </p>
   </motion.div>
 );
+
+const NotebookPage: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileNotebookPage />;
+  return <DesktopNotebookPage />;
+};
 
 export default NotebookPage;

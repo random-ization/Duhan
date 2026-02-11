@@ -5,6 +5,8 @@ import { useQuery } from 'convex/react';
 import { NoArgs, qRef } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileCoursesOverview from '../components/mobile/MobileCoursesOverview';
 
 const PUBLISHER_THEMES: Record<
   string,
@@ -112,6 +114,7 @@ const PUBLISHER_TRANSLATIONS: Record<
 const CoursesOverview: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
   const currentLang = useMemo(() => (i18n.language || 'en').split('-')[0], [i18n.language]);
 
   // 1. Fetch Data
@@ -265,6 +268,11 @@ const CoursesOverview: React.FC = () => {
     }
     return PUBLISHER_THEMES['默认'];
   };
+
+  // Return mobile version on small screens (after all hooks)
+  if (isMobile) {
+    return <MobileCoursesOverview />;
+  }
 
   return (
     <div

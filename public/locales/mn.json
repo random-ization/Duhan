@@ -393,13 +393,16 @@
     "booksCount": "{{count}} ном",
     "levelTag": "{{level}}-р түвшин",
     "unitsCount": "{{count}} нэгж",
-    "otherPublisher": "Бусад"
+    "units": "нэгж",
+    "otherPublisher": "Бусад",
+    "viewAll": "View All"
   },
   "courseDashboard": {
     "defaultCourseName": "Солонгос хэл 1A",
     "defaultDisplayLevel": "Ном 1",
     "backToShelf": "Номын сан руу буцах",
     "courseMeta": "{{level}} · 1-{{totalUnits}}-р хичээл",
+    "recentUnit": "Recently studied: Unit {unit}",
     "overallProgress": "Нийт ахиц",
     "trainingModules": "Дасгалын модулиуд",
     "modules": {
@@ -482,7 +485,9 @@
       "addVocab": "Үгийн санд нэмэх",
       "error": "Алдаа гарлаа",
       "noMeaning": "Утга байхгүй",
-      "favorite": "Хадгалах"
+      "favorite": "Хадгалах",
+      "on": "Асаах",
+      "off": "Унтраах"
     },
     "tools": {
       "topik_mock": "TOPIK Mock",
@@ -521,6 +526,14 @@
       "label": "Сурах бичиг",
       "level": "Түвшин {level}"
     },
+    "course": {
+      "unit": "UNIT {{n}}",
+      "continueLearning": "Continue Learning",
+      "vocab": "Vocab",
+      "grammar": "Grammar",
+      "newEpisode": "Podcasts",
+      "overallProgress": "Overall Progress"
+    },
     "topik": {
       "title": "TOPIK\nШалгалт",
       "maxScore": "Дээд оноо",
@@ -543,7 +556,80 @@
       "submit": "Дуусгах",
       "timeRemaining": "Үлдсэн хугацаа",
       "loadingExam": "Шалгалтын өгөгдөл татаж байна...",
-      "examLoadError": "Шалгалтын агуулга ачаалж чадсангүй. Холболтоо шалгана уу."
+      "examLoadError": "Шалгалтын агуулга ачаалж чадсангүй. Холболтоо шалгана уу.",
+      "availableExams": "Боломжтой шалгалтууд",
+      "nextExam": "Дараагийн шалгалт",
+      "avgScore": "Дундаж оноо",
+      "passRate": "Давсан хувь",
+      "total": "Нийт",
+      "mobile": {
+        "dDay": "D-{{count}}",
+        "roundBadge": "{{round}}-р",
+        "roundBadgeFallback": "TOPIK",
+        "nextExamName": "{{round}}-р TOPIK II",
+        "nextExamNameFallback": "TOPIK II",
+        "typeReadingShort": "УНШ",
+        "typeListeningShort": "СОНС",
+        "minuteShort": "{{minutes}}м",
+        "questionCountShort": "{{count}}А",
+        "bestScore": "{{score}}%",
+        "cover": {
+          "roundMock": "{{round}}-р шалгалтын симуляци",
+          "time": "Хугацаа",
+          "items": "Асуулт",
+          "score": "Оноо",
+          "noticeTitle": "Шалгалтын өмнөх заавар",
+          "simulationTitle": "Бүрэн симуляц орчин",
+          "simulationDesc": "Шалгалтын үеэр хуудсаас бүү гар. Хугацаа дуусмагц автоматаар илгээнэ.",
+          "submitTitle": "Хариулт илгээх",
+          "submitDesc": "Бүх асуулт нэг сонголттой. Илгээсний дараа оноо болон AI тайлбарыг харна.",
+          "listeningTip": "Сонсголын хэсэгт аудио орно. Дуугаа асаах эсвэл чихэвч зүүхийг зөвлөе.",
+          "readingTip": "Уншлагын текст урт байж болно. Чимээгүй орчинд хийхийг зөвлөе.",
+          "startExam": "Шалгалт эхлүүлэх"
+        },
+        "session": {
+          "passageFor": "{{start}}-{{end}} асуултын эх",
+          "questionMap": "Асуултын зураглал",
+          "answeredCount": "Хариулсан {{current}}/{{total}}",
+          "audioError": "Аудио алдаа",
+          "listeningAudio": "Сонсголын аудио",
+          "audioLoadFailed": "Аудио файл ачаалж чадсангүй",
+          "finish": "Дуусгах",
+          "next": "Дараах"
+        },
+        "review": {
+          "mode": "Давтлагын горим",
+          "totalScore": "Нийт оноо",
+          "correct": "Зөв",
+          "mistakes": "Алдаа",
+          "reviewAll": "Бүгдийг давтах",
+          "reviewMistakes": "Алдааг давтах ({{count}})",
+          "questionMap": "Асуултын зураглал",
+          "badgeAnswer": "ХАРИУ",
+          "badgeYou": "ТА",
+          "questionTitleFallback": "TOPIK {{number}}-р асуулт",
+          "back": "Буцах",
+          "mistakeProgress": "Алдаа {{current}}/{{total}}",
+          "allProgress": "/ {{total}}",
+          "resultCorrect": "Зөв!",
+          "resultIncorrect": "Буруу",
+          "resultCorrectHint": "Сайн байна!",
+          "resultIncorrectHint": "Доорх тайлбарыг харна уу.",
+          "explanation": "Тайлбар",
+          "aiError": "AI одоогоор завгүй байна. Дараа дахин оролдоно уу.",
+          "aiThinking": "Бодож байна...",
+          "aiTitle": "AI шинжилгээ",
+          "save": "Хадгалах",
+          "saved": "Хадгалсан",
+          "translation": "Орчуулга",
+          "keyPoint": "Гол санаа",
+          "prev": "Өмнөх",
+          "next": "Дараах",
+          "saveFailed": "Хадгалж чадсангүй, дахин оролдоно уу.",
+          "saveFailedShort": "Хадгалж чадсангүй",
+          "savedToast": "Тэмдэглэлд хадгаллаа"
+        }
+      }
     },
     "video": {
       "cardTitle": "Видео\nСуралцах",
@@ -583,6 +669,8 @@
       "community": "Солонгосын топ жагсаалт",
       "editorPicks": "Хэрэглэгчдийн халуун",
       "loginRequired": "Эхлээд нэвтэрнэ үү",
+      "explore": "Explore Podcasts",
+      "desc": "Listen to Korean content",
       "filters": {
         "all": "Бүгд",
         "beginner": "Анхан шат"
@@ -738,12 +826,45 @@
       "hint": "Хайх үгээ оруулна уу",
       "noResults": "Илэрц олдсонгүй",
       "searching": "Хайж байна...",
+      "error": "Something went wrong",
       "grade": {
         "beginner": "Анхан",
         "intermediate": "Дунд",
         "advanced": "Гүнзгий"
       }
+    },
+    "mobile": {
+      "keepMomentum": "Эрч хүчээ хадгалаарай!",
+      "continue": "Үргэлжлүүлэх",
+      "review": "Давтах",
+      "due": "Давтах",
+      "notes": "Тэмдэглэл",
+      "mistakes": "Алдаа",
+      "check": "Шалгах",
+      "typing": "Бичих",
+      "practice": "Дасгал",
+      "start": "Эхлэх",
+      "exam": "Шалгалт",
+      "listen": "Сонсох",
+      "watch": "Үзэх",
+      "immersion": "Дадлага",
+      "videoLibrary": "Видео сан",
+      "leftMinutes": "{{count}} минут үлдлээ",
+      "minutesShort": "Мин",
+      "dueShort": "Давт",
+      "streakShort": "Цуврал",
+      "levelFallback": "Түвшин 1",
+      "chapterLabel": "Хичээл {{unit}}",
+      "bestScoreLabel": "Шилдэг: {{score}}",
+      "latestEpisodes": "Сүүлийн ангиуд"
     }
+  },
+  "typingGame": {
+    "title": "Бичих Дасгал",
+    "nextSentence": "Дараагийн өгүүлбэр",
+    "focusInput": "Бичих хэсэг",
+    "wpm": "Хурд (WPM)",
+    "acc": "Нарийвчлал"
   },
   "plan": {
     "monthly": "Сарын эрх",
@@ -884,7 +1005,9 @@
           "nowPlaying": "Тоглож байна",
           "episodeTitle": "Talk To Me In Korean Ep.14",
           "tooltip": "Сайн (Good)",
-          "translation": "Өнөөдөр цаг агаар үнэхээр сайхан байна."
+          "translation": "Өнөөдөр цаг агаар үнэхээр сайхан байна.",
+          "liveTranscript": "Live Transcript",
+          "transcriptFragment": "Өнөөдөр цаг агаар үнэхээр сайхан байна."
         },
         "video": {
           "aiTitle": "AI дүрмийн шинжилгээ",
@@ -893,7 +1016,8 @@
           "grammar": "Дүрэм",
           "grammarValue": "-아/어서 (шалтгаан)",
           "gloss": "\"Кимчи идсэн болохоор...\"",
-          "translation": "Кимчи идсэн болохоор халуун байна."
+          "translation": "Кимчи идсэн болохоор халуун байна.",
+          "subtitle": "Subtitle"
         }
       }
     },
@@ -961,6 +1085,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "Bichih dasgal",
+      "nextSentence": "Daraagiin uguulber",
+      "focusInput": "Orolt deer tuvluruh",
+      "wpm": "WPM",
+      "acc": "ACC"
     }
   },
   "pricing": {
@@ -1175,13 +1306,23 @@
     "topik": "TOPIK шалгалт",
     "videos": "Видео",
     "podcasts": "Подкаст",
+    "typing": "Typing",
     "profile": "Профайл",
     "viewProfile": "Профайл үзэх",
     "settings": "Тохиргоо",
     "logout": "Гарах"
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "podcasts": "Podcasts",
+    "topik": "TOPIK",
+    "profile": "Profile",
+    "typing": "Typing"
+  },
   "auth": {
     "loginFailed": "Нэвтрэх амжилтгүй",
+    "signupFailed": "Signup failed",
     "invalidCredentials": "Имэйл эсвэл нууц үг буруу",
     "emailExists": "Энэ имэйл бүртгэлтэй байна",
     "emailNotVerified": "Нэвтрэхийн өмнө имэйлээ баталгаажуулна уу",
@@ -1254,9 +1395,21 @@
     "privacy": "Нууцлалын бодлого",
     "terms": "Үйлчилгээний нөхцөл",
     "close": "Хаах",
+    "menu": "Menu",
     "prev": "Өмнөх",
     "next": "Дараах",
-    "back": "Буцах"
+    "back": "Буцах",
+    "backHome": "Back to Home",
+    "continue": "Continue",
+    "currentFocus": "Current Focus",
+    "gotIt": "Got it",
+    "noMatches": "No matches",
+    "notFound": "Page not found",
+    "notFoundHint": "The page you are looking for doesn't exist.",
+    "off": "Off",
+    "on": "On",
+    "page": "Page",
+    "search": "Search"
   },
   "copy": "Хуулах",
   "errors": {
@@ -1284,10 +1437,20 @@
     "reloadPrompt": "Хэрэв асуудал үргэлжилсээр байвал",
     "refreshPage": "хуудсыг дахин ачаална уу"
   },
+  "seo": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for doesn't exist."
+    }
+  },
   "examples": "Жишээ",
   "explanation": "Тайлбар",
   "fontSize": "Үсгийн хэмжээ",
-  "grammarTraining": "Дүрмийн дасгал",
+  "grammarTraining": {
+    "label": "Дүрмийн дасгал",
+    "explanation": "Explanation",
+    "examples": "Examples"
+  },
   "highlight": "Тодруулах",
   "learning": "Суралцаж буй",
   "mastered": "Эзэмшсэн",
@@ -1305,7 +1468,30 @@
   "translate": "Орчуулах",
   "wordLookup": "Үг хайх",
   "loading": "Уншиж байна...",
+  "search": "Search",
+  "error": "Error",
+  "textbook": {
+    "level": "Level {{level}}"
+  },
+  "notes": {
+    "title": "Notebook",
+    "tabs": {
+      "all": "All",
+      "grammar": "Grammar",
+      "wrong": "Mistakes"
+    },
+    "searchPlaceholder": "Search notes...",
+    "noNotes": "No notes found",
+    "details": "Note Details"
+  },
   "podcast": {
+    "title": "Podcasts",
+    "nowPlaying": "Now Playing",
+    "mySubscriptions": "My Subscriptions",
+    "viewAll": "View All",
+    "trendingThisWeek": "Trending This Week",
+    "history": "History",
+    "clear": "Clear",
     "searchTitle": "Подкаст хайх",
     "searchPlaceholder": "Tүлхүүр үг оруулна уу...",
     "searching": "Агуулга хайж байна...",
@@ -1379,13 +1565,17 @@
   "vocabLabel": "Үгсийн сан",
   "vocab": {
     "flashcard": "Үгсийн карт",
+    "flashcards": "Flashcards",
     "quiz": "Шалгалт",
     "match": "Хослох",
+    "learn": "Learn",
     "quickStudy": "Түргэн сурах",
     "currentScope": "Одоогийн хамрах хүрээ",
     "allUnits": "Бүх бүлгүүд",
+    "selectScope": "Select Scope",
     "unit": "Бүлэг",
     "mastery": "Эзэмшилт",
+    "mastered": "Mastered",
     "noWords": "Үг байхгүй",
     "noWordsDesc": "Үгсийн санг нэмээгүй байна.",
     "settings": "Тохиргоо",
@@ -1397,6 +1587,17 @@
     "wordsUnit": "үг",
     "remembered": "Мэднэ",
     "forgot": "Мэдэхгүй",
+    "rating": {
+      "again": "Again",
+      "hard": "Hard",
+      "good": "Good",
+      "easy": "Easy"
+    },
+    "ratingMode": "Үнэлгээний горим",
+    "passFail": "Зөв / Буруу",
+    "fourButtons": "4 түвшин",
+    "passFailDesc": "Энгийн горим: зөв эсвэл буруу",
+    "fourButtonsDesc": "Дэлгэрэнгүй горим: мартав / хэцүү / сайн / амар",
     "restart": "Дахин эхлүүлэх",
     "flip": "Эргүүлэх",
     "shortcuts": "Товчлуур",
@@ -1417,6 +1618,9 @@
     "unlearned": "Unlearned",
     "due": "Due",
     "startLearning": "Start Learning",
+    "testMode": "Challenge yourself",
+    "wordList": "Word List",
+    "words": "words",
     "modeImmersive": "Immersive",
     "modeImmersiveDesc": "Fullscreen cards",
     "modeListen": "Listen",
@@ -1428,6 +1632,8 @@
     "browseMode": "Browse",
     "recallMode": "Recall",
     "tapToReveal": "Tap to reveal",
+    "tapToFlip": "Tap to Flip",
+    "listenAgain": "Listen Again",
     "tryAnotherFilter": "Try another filter or search",
     "play": "Play",
     "playMeaning": "Play meaning",

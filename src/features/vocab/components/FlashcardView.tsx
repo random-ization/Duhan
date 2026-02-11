@@ -35,7 +35,6 @@ interface FlashcardViewProps {
   progressKey?: string;
 }
 
-
 const useFlashcardSettings = (settings: VocabSettings) => {
   const [localSettings, setLocalSettings] = useState(() => ({
     autoTTS: settings.flashcard.autoTTS,
@@ -62,10 +61,13 @@ const useFlashcardDrag = (onRate: (result: boolean) => void) => {
     setIsDragging(true);
   }, []);
 
-  const handleDragMove = useCallback((x: number, y: number) => {
-    if (!dragStart) return;
-    setDragOffset({ x: x - dragStart.x, y: y - dragStart.y });
-  }, [dragStart]);
+  const handleDragMove = useCallback(
+    (x: number, y: number) => {
+      if (!dragStart) return;
+      setDragOffset({ x: x - dragStart.x, y: y - dragStart.y });
+    },
+    [dragStart]
+  );
 
   const handleDragEnd = useCallback(() => {
     if (!dragStart) return;
@@ -81,20 +83,25 @@ const useFlashcardDrag = (onRate: (result: boolean) => void) => {
   return { dragOffset, isDragging, handleDragStart, handleDragMove, handleDragEnd };
 };
 
-const useFlashcardFullscreen = (setSidebarHidden: (hidden: boolean) => void, sidebarHidden: boolean) => {
+const useFlashcardFullscreen = (
+  setSidebarHidden: (hidden: boolean) => void,
+  sidebarHidden: boolean
+) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMenuOpen, setFullscreenMenuOpen] = useState(false);
   const sidebarHiddenRef = useRef(sidebarHidden);
 
   useEffect(() => {
-    if (!isFullscreen) {
-      sidebarHiddenRef.current = sidebarHidden;
-      return;
-    }
+    if (isFullscreen) return;
+    sidebarHiddenRef.current = sidebarHidden;
+  }, [sidebarHidden, isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
     const previous = sidebarHiddenRef.current;
     setSidebarHidden(true);
     return () => setSidebarHidden(previous);
-  }, [isFullscreen, setSidebarHidden, sidebarHidden]);
+  }, [isFullscreen, setSidebarHidden]);
 
   useEffect(() => {
     if (!isFullscreen) return;
@@ -118,14 +125,23 @@ const useFlashcardFullscreen = (setSidebarHidden: (hidden: boolean) => void, sid
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(prev => !prev), []);
 
-  return { isFullscreen, setIsFullscreen, fullscreenMenuOpen, setFullscreenMenuOpen, toggleFullscreen };
+  return {
+    isFullscreen,
+    setIsFullscreen,
+    fullscreenMenuOpen,
+    setFullscreenMenuOpen,
+    toggleFullscreen,
+  };
 };
 
 const useFlashcardStats = (
   initialWords: ExtendedVocabularyItem[],
   settings: VocabSettings,
   storageKey: string | null,
-  onComplete: (stats: { correct: ExtendedVocabularyItem[]; incorrect: ExtendedVocabularyItem[] }) => void,
+  onComplete: (stats: {
+    correct: ExtendedVocabularyItem[];
+    incorrect: ExtendedVocabularyItem[];
+  }) => void,
   onSaveWord?: (word: ExtendedVocabularyItem) => void,
   onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void
 ) => {
@@ -143,7 +159,9 @@ const useFlashcardStats = (
           if (typeof index === 'number' && index < initialWords.length) {
             return index;
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
     return 0;
@@ -162,7 +180,9 @@ const useFlashcardStats = (
         try {
           const { stats } = JSON.parse(saved);
           if (stats) return stats;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
     return { correct: [], incorrect: [] };
@@ -388,13 +408,9 @@ const Flashcard: React.FC<FlashcardProps> = ({
         <div className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 text-center">
           {speakerButton(card.korean)}
           {cardFront === 'KOREAN' ? (
-            <h3 className="text-5xl font-bold text-slate-900 leading-tight">
-              {card.korean}
-            </h3>
+            <h3 className="text-5xl font-bold text-slate-900 leading-tight">{card.korean}</h3>
           ) : (
-            <h3 className="text-4xl font-medium text-slate-800 leading-tight">
-              {meaning}
-            </h3>
+            <h3 className="text-4xl font-medium text-slate-800 leading-tight">{meaning}</h3>
           )}
         </div>
 
@@ -422,9 +438,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
           {card.exampleSentence && (
             <div className="bg-slate-50 p-3 rounded-lg w-full max-w-lg mt-4">
               <p className="text-slate-800 text-base mb-1">{card.exampleSentence}</p>
-              {exampleTranslation && (
-                <p className="text-slate-500 text-sm">{exampleTranslation}</p>
-              )}
+              {exampleTranslation && <p className="text-slate-500 text-sm">{exampleTranslation}</p>}
             </div>
           )}
         </div>
@@ -572,12 +586,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     const { speak: speakTTS, stop: stopTTS } = useTTS();
     const { sidebarHidden, setSidebarHidden } = useApp();
 
-    const {
-      localSettings,
-      setLocalSettings,
-      showSettings,
-      setShowSettings,
-    } = useFlashcardSettings(settings);
+    const { localSettings, setLocalSettings, showSettings, setShowSettings } =
+      useFlashcardSettings(settings);
 
     const storageKey = useMemo(() => {
       if (progressKey) return `flashcard_progress_${progressKey}`;
@@ -601,13 +611,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       toggleRandom,
     } = useFlashcardStats(initialWords, settings, storageKey, onComplete, onSaveWord, onCardReview);
 
-    const {
-      dragOffset,
-      isDragging,
-      handleDragStart,
-      handleDragMove,
-      handleDragEnd,
-    } = useFlashcardDrag(handleCardRate);
+    const { dragOffset, isDragging, handleDragStart, handleDragMove, handleDragEnd } =
+      useFlashcardDrag(handleCardRate);
 
     const {
       isFullscreen,

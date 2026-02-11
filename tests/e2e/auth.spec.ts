@@ -40,28 +40,17 @@ test.describe('Authentication Flow', () => {
   test('should have Google login option', async ({ page }) => {
     await page.goto(`${langPrefix}/login`);
 
-    // Look for Google login button (might be an icon or text)
-    const googleButton = page.locator(
-      'button:has-text("Google"), button[aria-label*="Google"], [data-provider="google"]'
-    );
-    // It's okay if this doesn't exist in all configurations
-    const count = await googleButton.count();
-    expect(count).toBeGreaterThanOrEqual(0);
+    const googleButton = page.getByRole('button', { name: /google/i });
+    await expect(googleButton.first()).toBeVisible();
   });
 
   test('should navigate to forgot password page', async ({ page }) => {
     await page.goto(`${langPrefix}/login`);
 
-    // Look for forgot password link
-    const forgotLink = page.locator(
-      'a:has-text("忘记密码"), a:has-text("Forgot"), a[href*="forgot"]'
-    );
-    const count = await forgotLink.count();
-
-    if (count > 0) {
-      await forgotLink.first().click();
-      await expect(page).toHaveURL(/forgot/);
-    }
+    const forgotLink = page.locator('a[href*="forgot-password"]').first();
+    await expect(forgotLink).toBeVisible();
+    await forgotLink.click();
+    await expect(page).toHaveURL(/forgot-password/);
   });
 });
 
@@ -80,6 +69,7 @@ test.describe('Landing Page', () => {
 
     // Wait for the nav to be visible (page fully loaded)
     await page.waitForSelector('nav', { state: 'visible', timeout: 15000 });
-    await expect(page.locator('button:visible').first()).toBeVisible();
+    const navLinks = page.locator('nav a');
+    expect(await navLinks.count()).toBeGreaterThan(0);
   });
 });

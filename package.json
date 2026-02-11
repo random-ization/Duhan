@@ -18,10 +18,12 @@
     "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
     "i18n:compare": "python3 compare_i18n.py",
     "i18n:scan": "node scripts/i18n-scan.mjs",
+    "i18n:guard": "node scripts/i18n-scan.mjs --fail-on-new",
     "phone:metadata": "node scripts/generate-phone-metadata.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "check:release": "npm run lint && npm run typecheck && npm run i18n:guard && npm run test:run && npm run build",
     "prepare": "husky"
   },
   "dependencies": {

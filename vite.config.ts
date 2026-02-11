@@ -52,7 +52,9 @@ export default defineConfig({
           if (
             normalized.includes('/node_modules/react-dom/') ||
             normalized.includes('/node_modules/react/') ||
-            normalized.includes('/node_modules/react-router-dom/')
+            normalized.includes('/node_modules/react-router-dom/') ||
+            // react-i18next depends on React context; keep it with React to avoid cyclic chunks.
+            normalized.includes('/node_modules/react-i18next/')
           ) {
             return 'vendor-react';
           }
@@ -94,7 +96,6 @@ export default defineConfig({
 
           // i18n
           if (normalized.includes('/node_modules/i18next/')) return 'vendor-i18n';
-          if (normalized.includes('/node_modules/react-i18next/')) return 'vendor-i18n';
           if (normalized.includes('/node_modules/i18next-http-backend/')) return 'vendor-i18n';
 
           // Toasts
@@ -104,8 +105,9 @@ export default defineConfig({
         },
       },
     },
-    // Reduce chunk size warning threshold
-    chunkSizeWarningLimit: 300,
+    // Keep warnings focused on abnormal growth; some vendor bundles (e.g. xlsx/vidstack)
+    // are intentionally split and loaded on demand.
+    chunkSizeWarningLimit: 450,
     // Enable source maps for debugging (optional, remove in production for smaller builds)
     sourcemap: false,
     // Minify options

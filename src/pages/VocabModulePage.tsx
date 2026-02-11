@@ -22,8 +22,10 @@ import VocabTest from '../features/vocab/components/VocabTest';
 const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 const VocabMatch = lazy(() => import('../features/vocab/components/VocabMatch'));
+import MobileVocabView from '../components/mobile/MobileVocabView';
+import { useIsMobile } from '../hooks/useIsMobile';
 
-interface ExtendedVocabItem extends VocabularyItem {
+export interface ExtendedVocabItem extends VocabularyItem {
   id: string;
   unit: number;
   mastered?: boolean;
@@ -59,6 +61,7 @@ export default function VocabModulePage() {
   const { institutes } = useData();
   const { speak: speakTTS } = useTTS();
   const { language } = useApp();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
 
   // Sync instituteId to context - only run when instituteId changes
@@ -368,6 +371,34 @@ export default function VocabModulePage() {
 
   if (isLoading) {
     return <VocabModuleSkeleton />;
+  }
+
+  if (isMobile) {
+    return (
+      <MobileVocabView
+        allWords={allWords}
+        filteredWords={filteredWords}
+        gameWords={gameWords}
+        currentUnitId={selectedUnitId}
+        availableUnits={availableUnits}
+        unitCounts={unitCounts}
+        masteryCount={masteryCount}
+        onSelectUnit={setSelectedUnitId}
+        onReview={handleReview}
+        onStar={toggleStar}
+        onSpeak={speakWord}
+        isStarred={id => starredIds.has(id)}
+        onFsrsReview={(wordId, isCorrect) => {
+          const w = wordById.get(wordId);
+          if (w) {
+            handleReview(w, isCorrect);
+          }
+        }}
+        instituteId={instituteId || ''}
+        language={language}
+        userId={user?.id}
+      />
+    );
   }
 
   const renderTopBar = () => (

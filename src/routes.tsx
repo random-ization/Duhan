@@ -30,6 +30,7 @@ const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PricingDetailsPage = lazy(() => import('./pages/PricingDetailsPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
+const DictionarySearchPage = lazy(() => import('./pages/DictionarySearchPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
 const VocabBookImmersivePage = lazy(() => import('./pages/VocabBookImmersivePage'));
@@ -197,6 +198,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
 
               {/* Typing Practice */}
               <Route path="typing" element={<TypingPage />} />
+              <Route path="dictionary/search" element={<DictionarySearchPage />} />
             </Route>
           </Route>
           {/* === 管理员路由 (独立页面，需要 Admin 权限) === */}

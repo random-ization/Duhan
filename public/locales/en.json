@@ -163,7 +163,11 @@
   "native": "Native",
   "batchSize": "Batch Size",
   "questionTypes": "Question Types",
-  "grammarTraining": "Grammar Training",
+  "grammarTraining": {
+    "label": "Grammar Training",
+    "explanation": "Explanation",
+    "examples": "Examples"
+  },
   "searchGrammar": "Search Grammar Points...",
   "status": "Status",
   "proficiency": "Proficiency",
@@ -419,13 +423,16 @@
     "booksCount": "{{count}} books",
     "levelTag": "Lv {{level}}",
     "unitsCount": "{{count}} units",
-    "otherPublisher": "Other"
+    "units": "Units",
+    "otherPublisher": "Other",
+    "viewAll": "View All"
   },
   "courseDashboard": {
     "defaultCourseName": "Korean 1A",
     "defaultDisplayLevel": "Book 1",
     "backToShelf": "Back to Library",
     "courseMeta": "{{level}} · Lesson 1-{{totalUnits}}",
+    "recentUnit": "Recently studied: Unit {unit}",
     "overallProgress": "Overall Progress",
     "trainingModules": "Training Modules",
     "modules": {
@@ -547,6 +554,14 @@
       "label": "Textbook",
       "level": "Level {level}"
     },
+    "course": {
+      "unit": "UNIT {{n}}",
+      "continueLearning": "Continue Learning",
+      "vocab": "Vocab",
+      "grammar": "Grammar",
+      "newEpisode": "Podcasts",
+      "overallProgress": "Overall Progress"
+    },
     "topik": {
       "cardTitle": "TOPIK\nMock Exam",
       "bestLabel": "Best",
@@ -567,7 +582,80 @@
       "timeRemaining": "Time Remaining",
       "submit": "Submit Exam",
       "loadingExam": "Downloading exam data...",
-      "examLoadError": "Failed to load exam content. Please check your connection."
+      "examLoadError": "Failed to load exam content. Please check your connection.",
+      "availableExams": "Available Exams",
+      "nextExam": "Next Exam",
+      "avgScore": "Avg Score",
+      "passRate": "Pass Rate",
+      "total": "Total",
+      "mobile": {
+        "dDay": "D-{{count}}",
+        "roundBadge": "R{{round}}",
+        "roundBadgeFallback": "TOPIK",
+        "nextExamName": "{{round}}th TOPIK II",
+        "nextExamNameFallback": "TOPIK II",
+        "typeReadingShort": "READ",
+        "typeListeningShort": "LIST",
+        "minuteShort": "{{minutes}}m",
+        "questionCountShort": "{{count}}Q",
+        "bestScore": "{{score}}%",
+        "cover": {
+          "roundMock": "Round {{round}} Past Exam",
+          "time": "Time",
+          "items": "Items",
+          "score": "Score",
+          "noticeTitle": "Before You Start",
+          "simulationTitle": "Full simulation mode",
+          "simulationDesc": "Do not leave the page during the exam. The paper will auto-submit when time runs out.",
+          "submitTitle": "Answer submission",
+          "submitDesc": "All questions are single-choice. You can view your score and AI analysis after submission.",
+          "listeningTip": "Listening section contains audio. Please turn on your sound or use headphones.",
+          "readingTip": "Reading passages can be long. A quiet environment is recommended.",
+          "startExam": "Start Exam"
+        },
+        "session": {
+          "passageFor": "Passage for Q{{start}}-{{end}}",
+          "questionMap": "Question Map",
+          "answeredCount": "Answered {{current}}/{{total}}",
+          "audioError": "Audio Error",
+          "listeningAudio": "Listening Audio",
+          "audioLoadFailed": "Failed to load audio file",
+          "finish": "Finish",
+          "next": "Next"
+        },
+        "review": {
+          "mode": "Review Mode",
+          "totalScore": "Total Score",
+          "correct": "Correct",
+          "mistakes": "Mistakes",
+          "reviewAll": "Review All",
+          "reviewMistakes": "Review Mistakes ({{count}})",
+          "questionMap": "Question Map",
+          "badgeAnswer": "ANS",
+          "badgeYou": "YOU",
+          "questionTitleFallback": "TOPIK Q{{number}}",
+          "back": "Back",
+          "mistakeProgress": "Mistake {{current}}/{{total}}",
+          "allProgress": "/ {{total}}",
+          "resultCorrect": "Correct!",
+          "resultIncorrect": "Incorrect",
+          "resultCorrectHint": "Good job!",
+          "resultIncorrectHint": "Review the explanation below.",
+          "explanation": "Explanation",
+          "aiError": "AI is busy right now. Please try again later.",
+          "aiThinking": "Thinking...",
+          "aiTitle": "AI Analysis",
+          "save": "Save",
+          "saved": "Saved",
+          "translation": "Translation",
+          "keyPoint": "Key Point",
+          "prev": "Prev",
+          "next": "Next",
+          "saveFailed": "Failed to save, please try again.",
+          "saveFailedShort": "Failed to Save",
+          "savedToast": "Saved to Notebook"
+        }
+      }
     },
     "video": {
       "cardTitle": "Immersion\nVideo",
@@ -607,6 +695,8 @@
       "community": "Korean Top Chart",
       "editorPicks": "User Hot",
       "loginRequired": "Please login first",
+      "explore": "Explore Podcasts",
+      "desc": "Listen to Korean content",
       "filters": {
         "all": "All",
         "beginner": "Beginner"
@@ -762,11 +852,37 @@
       "hint": "Enter a Korean word to search",
       "noResults": "No results found",
       "searching": "Searching...",
+      "error": "Something went wrong",
       "grade": {
         "beginner": "Beginner",
         "intermediate": "Intermediate",
         "advanced": "Advanced"
       }
+    },
+    "mobile": {
+      "keepMomentum": "Keep up the momentum!",
+      "continue": "Continue",
+      "review": "Review",
+      "due": "Due",
+      "notes": "Notes",
+      "mistakes": "Mistakes",
+      "check": "Check",
+      "typing": "Typing",
+      "practice": "Practice",
+      "start": "Start",
+      "exam": "Exam",
+      "listen": "Listen",
+      "watch": "Watch",
+      "immersion": "Immersion",
+      "videoLibrary": "Video Library",
+      "leftMinutes": "{{count}} left",
+      "minutesShort": "Mins",
+      "dueShort": "Due",
+      "streakShort": "Streak",
+      "levelFallback": "Lvl 1",
+      "chapterLabel": "Chapter {{unit}}",
+      "bestScoreLabel": "Best: {{score}}",
+      "latestEpisodes": "Latest Episodes"
     }
   },
   "plan": {
@@ -793,9 +909,21 @@
     "terms": "Terms of Service",
     "contact": "Contact Support",
     "close": "Close",
+    "menu": "Menu",
     "prev": "Previous",
     "next": "Next",
-    "back": "Back"
+    "back": "Back",
+    "backHome": "Back to Home",
+    "continue": "Continue",
+    "currentFocus": "Current Focus",
+    "gotIt": "Got it",
+    "noMatches": "No matches",
+    "notFound": "Page not found",
+    "notFoundHint": "The page you are looking for doesn't exist.",
+    "off": "Off",
+    "on": "On",
+    "page": "Page",
+    "search": "Search"
   },
   "landing": {
     "nav": {
@@ -828,6 +956,13 @@
         "nextKeyLabel": "NEXT KEY",
         "layoutLabel": "KOREAN 2-SET"
       }
+    },
+    "typingGame": {
+      "title": "Typing Practice",
+      "nextSentence": "Next Sentence",
+      "focusInput": "Focus Input",
+      "wpm": "WPM",
+      "acc": "ACC"
     },
     "hero": {
       "badge": "2,000+ learners preparing for TOPIK",
@@ -945,7 +1080,9 @@
           "nowPlaying": "Now playing",
           "episodeTitle": "Talk To Me In Korean Ep.14",
           "tooltip": "Good",
-          "translation": "The weather is really good today."
+          "translation": "The weather is really good today.",
+          "liveTranscript": "Live Transcript",
+          "transcriptFragment": "It's really nice weather today."
         },
         "video": {
           "aiTitle": "AI Grammar Analysis",
@@ -954,7 +1091,8 @@
           "grammar": "Grammar",
           "grammarValue": "-아/어서 (reason/cause)",
           "gloss": "\"Because I ate kimchi...\"",
-          "translation": "It's spicy because I ate Kimchi."
+          "translation": "It's spicy because I ate Kimchi.",
+          "subtitle": "Subtitle"
         }
       }
     },
@@ -1230,6 +1368,12 @@
     "reloadPrompt": "If the problem persists, please try",
     "refreshPage": "refresh the page"
   },
+  "seo": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for doesn't exist."
+    }
+  },
   "generalSettings": "General Settings",
   "language": "Display Language",
   "languageDescription": "Choose the language for the interface and learning materials.",
@@ -1239,13 +1383,23 @@
     "topik": "TOPIK Exams",
     "videos": "Videos",
     "podcasts": "Podcasts",
+    "typing": "Typing",
     "profile": "Profile",
     "viewProfile": "View Profile",
     "settings": "Settings",
     "logout": "Log Out"
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "podcasts": "Podcasts",
+    "topik": "TOPIK",
+    "profile": "Profile",
+    "typing": "Typing"
+  },
   "auth": {
     "loginFailed": "Authentication failed",
+    "signupFailed": "Signup failed",
     "invalidCredentials": "Invalid email or password",
     "emailExists": "An account with this email already exists",
     "emailNotVerified": "Please verify your email before logging in",
@@ -1303,7 +1457,37 @@
     "networkError": "Network error. Please check your connection and try again."
   },
   "loading": "Loading...",
+  "search": "Search",
+  "error": "Error",
+  "textbook": {
+    "level": "Level {{level}}"
+  },
+  "typingGame": {
+    "title": "Typing Practice",
+    "wpm": "WPM",
+    "acc": "ACC",
+    "nextSentence": "Next Sentence",
+    "focusInput": "Focus Input"
+  },
+  "notes": {
+    "title": "Notebook",
+    "tabs": {
+      "all": "All",
+      "grammar": "Grammar",
+      "wrong": "Mistakes"
+    },
+    "searchPlaceholder": "Search notes...",
+    "noNotes": "No notes found",
+    "details": "Note Details"
+  },
   "podcast": {
+    "title": "Podcasts",
+    "nowPlaying": "Now Playing",
+    "mySubscriptions": "My Subscriptions",
+    "viewAll": "View All",
+    "trendingThisWeek": "Trending This Week",
+    "history": "History",
+    "clear": "Clear",
     "searchTitle": "Search Podcasts",
     "searchPlaceholder": "Enter keywords...",
     "searching": "Searching content...",
@@ -1384,13 +1568,17 @@
   "vocabLabel": "Vocabulary",
   "vocab": {
     "flashcard": "Flashcard",
+    "flashcards": "Flashcards",
     "quiz": "Quiz",
     "match": "Match",
+    "learn": "Learn",
     "quickStudy": "Quick Study",
     "currentScope": "Current Scope",
     "allUnits": "All Units",
+    "selectScope": "Select Scope",
     "unit": "Unit",
     "mastery": "Mastery",
+    "mastered": "Mastered",
     "noWords": "No Words",
     "noWordsDesc": "No vocabulary content added yet.",
     "settings": "Settings",
@@ -1402,6 +1590,17 @@
     "wordsUnit": "words",
     "remembered": "Remembered",
     "forgot": "Forgot",
+    "rating": {
+      "again": "Again",
+      "hard": "Hard",
+      "good": "Good",
+      "easy": "Easy"
+    },
+    "ratingMode": "Rating Mode",
+    "passFail": "Pass / Fail",
+    "fourButtons": "4 Buttons",
+    "passFailDesc": "Simple mode: pass or fail",
+    "fourButtonsDesc": "Detailed mode: again / hard / good / easy",
     "restart": "Restart",
     "flip": "Flip",
     "shortcuts": "Shortcuts",
@@ -1422,6 +1621,9 @@
     "unlearned": "Unlearned",
     "due": "Due",
     "startLearning": "Start Learning",
+    "testMode": "Challenge yourself",
+    "wordList": "Word List",
+    "words": "words",
     "modeImmersive": "Immersive",
     "modeImmersiveDesc": "Fullscreen cards",
     "modeListen": "Listen",
@@ -1433,6 +1635,8 @@
     "browseMode": "Browse",
     "recallMode": "Recall",
     "tapToReveal": "Tap to reveal",
+    "tapToFlip": "Tap to Flip",
+    "listenAgain": "Listen Again",
     "tryAnotherFilter": "Try another filter or search",
     "play": "Play",
     "playMeaning": "Play meaning",

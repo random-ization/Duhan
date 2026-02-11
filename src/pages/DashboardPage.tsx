@@ -12,6 +12,8 @@ import { TextbookContent, TopikExam, ExamAttempt } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { qRef } from '../utils/convexRefs';
+import { MobileDashboard } from '../components/mobile/MobileDashboard';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // DnD Kit
 import {
@@ -99,6 +101,7 @@ export default function DashboardPage({
   _onShowUpgradePrompt: () => void;
 }>) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearning();
   const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
@@ -158,6 +161,10 @@ export default function DashboardPage({
     const inst = institutes.find(i => i.id === selectedInstitute);
     return inst ? inst.name : selectedInstitute;
   }, [selectedInstitute, institutes, t]);
+
+  if (isMobile) {
+    return <MobileDashboard />;
+  }
 
   const getGreeting = () => {
     const hour = new Date().getHours();

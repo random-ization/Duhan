@@ -11,6 +11,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { aRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobilePodcastSearch } from '../components/mobile/MobilePodcastSearch';
 
 interface SearchResultsContentProps {
   loading: boolean;
@@ -122,7 +124,7 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
   );
 };
 
-export default function PodcastSearchPage() {
+const DesktopPodcastSearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const navigate = useLocalizedNavigate();
@@ -233,4 +235,9 @@ export default function PodcastSearchPage() {
       </div>
     </div>
   );
+};
+
+export default function PodcastSearchPage() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobilePodcastSearch /> : <DesktopPodcastSearchPage />;
 }

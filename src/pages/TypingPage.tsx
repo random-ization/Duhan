@@ -19,6 +19,8 @@ import { api } from '../../convex/_generated/api';
 import { useTranslation } from 'react-i18next'; // Added i18n hook
 import { useNavigate } from 'react-router-dom';
 import { TypingLobby } from '../features/typing/components/TypingLobby';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileTypingPage } from '../components/mobile/MobileTypingPage';
 
 // Enhanced Keyboard & Page Theme Styles
 // Enhanced Keyboard & Page Theme Styles (Soft Pop V3)
@@ -191,7 +193,7 @@ const englishKeyStyles = Object.entries(englishKeys)
 type PracticeMode = 'sentence' | 'word' | 'paragraph';
 type GameState = 'lobby' | 'playing' | 'finished'; // Added GameState type
 
-const TypingPage: React.FC = () => {
+const DesktopTypingPage: React.FC = () => {
   // -- LAYOUT CONTROL --
   const { setSidebarHidden, setFooterHidden } = useLayout();
 
@@ -632,9 +634,7 @@ const TypingPage: React.FC = () => {
 
   // -- RENDER: GAME (SOFT POP REDESIGN V3) --
   return (
-    <div
-      className="typing-practice-container flex h-screen font-sans overflow-hidden bg-white"
-    >
+    <div className="typing-practice-container flex h-screen font-sans overflow-hidden bg-white">
       <style>
         {keyboardThemeStyles} {englishKeyStyles}
       </style>
@@ -732,7 +732,6 @@ const TypingPage: React.FC = () => {
                           >();
 
                           coursesByName[selectedCourseName]?.forEach(c => {
-
                             // Priority: displayLevel > levels array
                             let level = Number.parseInt(c.displayLevel || '0');
                             let volume = 0;
@@ -791,8 +790,7 @@ const TypingPage: React.FC = () => {
                                 {opt.label}
                               </option>
                             ));
-                        })()
-                        }
+                        })()}
                       </select>
                       <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
                         <svg
@@ -886,7 +884,6 @@ const TypingPage: React.FC = () => {
                   </svg>
                 </div>
               </div>
-
             )}
             {practiceMode === 'sentence' && (
               <div className="relative group">
@@ -1015,8 +1012,8 @@ const TypingPage: React.FC = () => {
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col relative z-10">
-        {practiceMode === 'word' && (
-          courseWords ? (
+        {practiceMode === 'word' &&
+          (courseWords ? (
             <WordPractice
               words={courseWords.map(w => ({ id: w._id, word: w.word, meaning: w.meaning }))}
               onComplete={handleWordComplete}
@@ -1034,252 +1031,245 @@ const TypingPage: React.FC = () => {
             <div className="flex-1 flex items-center justify-center text-slate-400 font-medium animate-pulse">
               Loading words...
             </div>
-          )
-        )}
-        {
-          practiceMode === 'paragraph' && (
-            /* PARAGRAPH MODE RENDERING */
-            <div className="flex-1 flex flex-col items-center justify-start bg-white min-h-0 w-full overflow-y-auto custom-scrollbar">
-              <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center gap-8 py-10 px-8 flex-1">
-                {/* Paragraph Text - Frameless */}
-                <button
-                  type="button"
-                  className="w-full leading-loose text-left relative cursor-text text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed border-0 bg-transparent p-0"
-                  onClick={() => inputRef.current?.focus()}
-                >
-                  <div className="text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed">
-                    {targetChars.map(({ char, id }, idx) => {
-                      const isCompleted = idx < currentTypingIndex;
-                      const isCurrent = idx === currentTypingIndex;
+          ))}
+        {practiceMode === 'paragraph' && (
+          /* PARAGRAPH MODE RENDERING */
+          <div className="flex-1 flex flex-col items-center justify-start bg-white min-h-0 w-full overflow-y-auto custom-scrollbar">
+            <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center gap-8 py-10 px-8 flex-1">
+              {/* Paragraph Text - Frameless */}
+              <button
+                type="button"
+                className="w-full leading-loose text-left relative cursor-text text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed border-0 bg-transparent p-0"
+                onClick={() => inputRef.current?.focus()}
+              >
+                <div className="text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed">
+                  {targetChars.map(({ char, id }, idx) => {
+                    const isCompleted = idx < currentTypingIndex;
+                    const isCurrent = idx === currentTypingIndex;
 
-                      const hasInput = userInput[idx];
-                      let displayChar = char;
-                      if (isCurrent && hasInput) {
-                        displayChar = hasInput;
-                      } else if (char === ' ') {
-                        displayChar = '\u00A0';
-                      }
+                    const hasInput = userInput[idx];
+                    let displayChar = char;
+                    if (isCurrent && hasInput) {
+                      displayChar = hasInput;
+                    } else if (char === ' ') {
+                      displayChar = '\u00A0';
+                    }
 
-                      return (
-                        <span
-                          key={id}
-                          id={isCurrent ? 'active-char' : undefined}
-                          className={`
+                    return (
+                      <span
+                        key={id}
+                        id={isCurrent ? 'active-char' : undefined}
+                        className={`
 transition-colors duration-100
                                                     ${isCompleted ? 'text-slate-900' : 'text-slate-300'}
                                                     ${isCurrent ? 'bg-blue-100 text-blue-600 relative rounded-sm' : ''}
 `}
-                        >
-                          {/* Show cursor on current char */}
-                          {isCurrent && isFocused && (
-                            <span className="absolute -left-[1px] top-1 bottom-1 w-[2px] bg-blue-500 animate-pulse"></span>
-                          )}
+                      >
+                        {/* Show cursor on current char */}
+                        {isCurrent && isFocused && (
+                          <span className="absolute -left-[1px] top-1 bottom-1 w-[2px] bg-blue-500 animate-pulse"></span>
+                        )}
 
-                          {/* If current and has input, show input, else target */}
-                          {displayChar}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </button>
-
-                <div className="text-slate-400 text-sm">
-                  {selectedParagraph?.title} • {formatTime(elapsedTime)}
-                </div>
-              </div>
-
-              {/* KEYBOARD AREA - Raised Deck (Shared Style) */}
-              <div className="flex-shrink-0 bg-white border-t border-slate-100 py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
-                <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
-                  {/* Helper Text */}
-                  <div className="flex justify-between items-center px-4">
-                    <div className="text-xs font-bold text-slate-400 flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`}
-                      ></span>
-                      <span>Next Key:</span>
-                      <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[11px] border border-blue-100">
-                        {nextJamo || 'Enter'}
+                        {/* If current and has input, show input, else target */}
+                        {displayChar}
                       </span>
-                    </div>
-                    <div className="text-[10px] text-slate-300 font-mono tracking-widest">
-                      2-SET KOREAN
-                    </div>
-                  </div>
+                    );
+                  })}
+                </div>
+              </button>
 
-                  {/* Keyboard Component */}
-                  <div className="p-3 bg-slate-100/50 rounded-3xl border border-slate-200/60 select-none">
-                    <KeyboardHints
-                      nextJamo={nextJamo}
-                      targetChar={currentTargetChar}
-                      hasError={hasError}
-                    />
+              <div className="text-slate-400 text-sm">
+                {selectedParagraph?.title} • {formatTime(elapsedTime)}
+              </div>
+            </div>
+
+            {/* KEYBOARD AREA - Raised Deck (Shared Style) */}
+            <div className="flex-shrink-0 bg-white border-t border-slate-100 py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
+              <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
+                {/* Helper Text */}
+                <div className="flex justify-between items-center px-4">
+                  <div className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`}
+                    ></span>
+                    <span>Next Key:</span>
+                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[11px] border border-blue-100">
+                      {nextJamo || 'Enter'}
+                    </span>
                   </div>
+                  <div className="text-[10px] text-slate-300 font-mono tracking-widest">
+                    2-SET KOREAN
+                  </div>
+                </div>
+
+                {/* Keyboard Component */}
+                <div className="p-3 bg-slate-100/50 rounded-3xl border border-slate-200/60 select-none">
+                  <KeyboardHints
+                    nextJamo={nextJamo}
+                    targetChar={currentTargetChar}
+                    hasError={hasError}
+                  />
                 </div>
               </div>
             </div>
-          )
-        }
-        {
-          practiceMode === 'sentence' && (
-            <>
-              {/* Center Stage - Flexible Layout */}
-              <div className="flex-1 flex flex-col items-center justify-evenly bg-white min-h-0 w-full">
-                <div className="w-full h-full flex flex-col items-center justify-center gap-4 lg:gap-10 flex-1">
-                  {/* Target Sentence Card - Hero Style (Full Screen) */}
-                  <div className="bg-white rounded-[2rem] p-8 lg:p-16 text-center relative overflow-visible shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] border border-white/80 group w-full transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent rounded-[2rem]"></div>
+          </div>
+        )}
+        {practiceMode === 'sentence' && (
+          <>
+            {/* Center Stage - Flexible Layout */}
+            <div className="flex-1 flex flex-col items-center justify-evenly bg-white min-h-0 w-full">
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 lg:gap-10 flex-1">
+                {/* Target Sentence Card - Hero Style (Full Screen) */}
+                <div className="bg-white rounded-[2rem] p-8 lg:p-16 text-center relative overflow-visible shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] border border-white/80 group w-full transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent rounded-[2rem]"></div>
 
-                    <div className="relative z-10">
-                      <p className="text-lg md:text-2xl lg:text-3xl font-bold leading-relaxed tracking-tight break-keep select-none">
-                        {targetChars.map(({ char, id }, idx) => {
-                          const isCompleted = idx < currentTypingIndex;
-                          const isCurrent = idx === currentTypingIndex;
-                          const isRemaining = idx > currentTypingIndex;
+                  <div className="relative z-10">
+                    <p className="text-lg md:text-2xl lg:text-3xl font-bold leading-relaxed tracking-tight break-keep select-none">
+                      {targetChars.map(({ char, id }, idx) => {
+                        const isCompleted = idx < currentTypingIndex;
+                        const isCurrent = idx === currentTypingIndex;
+                        const isRemaining = idx > currentTypingIndex;
 
-                          const hasInput = userInput[idx];
-                          let displayChar = char;
-                          if (isCurrent && hasInput) {
-                            displayChar = hasInput;
-                          } else if (char === ' ') {
-                            displayChar = '\u00A0';
-                          }
+                        const hasInput = userInput[idx];
+                        let displayChar = char;
+                        if (isCurrent && hasInput) {
+                          displayChar = hasInput;
+                        } else if (char === ' ') {
+                          displayChar = '\u00A0';
+                        }
 
-                          return (
-                            <span
-                              key={id}
-                              className={`
+                        return (
+                          <span
+                            key={id}
+                            className={`
 transition-all duration-150 inline-block
                                                             ${isCompleted ? 'text-slate-800' : ''}
                                                             ${isCurrent ? 'text-slate-900 scale-110 transform cursor-text relative' : ''}
                                                             ${isRemaining ? 'text-slate-300' : ''}
 `}
-                              style={
-                                isCurrent
-                                  ? {
+                            style={
+                              isCurrent
+                                ? {
                                     textShadow: '0 4px 12px rgba(0,0,0,0.1)',
                                   }
-                                  : undefined
-                              }
-                            >
-                              {/* If current and has input, show input. Otherwise show target char */}
-                              {displayChar}
+                                : undefined
+                            }
+                          >
+                            {/* If current and has input, show input. Otherwise show target char */}
+                            {displayChar}
 
-                              {/* Show target ghost if input is partial/different */}
-                              {isCurrent && hasInput && hasInput !== char && (
-                                <span className="absolute top-full left-1/2 -translate-x-1/2 text-xs text-blue-300 opacity-70 mt-1 pointer-events-none">
-                                  {char}
-                                </span>
-                              )}
+                            {/* Show target ghost if input is partial/different */}
+                            {isCurrent && hasInput && hasInput !== char && (
+                              <span className="absolute top-full left-1/2 -translate-x-1/2 text-xs text-blue-300 opacity-70 mt-1 pointer-events-none">
+                                {char}
+                              </span>
+                            )}
 
-                              {/* Blinking Cursor Caret */}
-                              {isCurrent && isFocused && (
-                                <span className="absolute -right-1 top-1 bottom-1 w-0.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(59,130,246,0.6)]"></span>
-                              )}
-                            </span>
-                          );
-                        })}
-                      </p>
-                    </div>
-
-                    {/* Focus Indicator */}
-                    {!isFocused && (
-                      <button
-                        className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-[2rem] z-20 transition-all cursor-pointer w-full border-0"
-                        onClick={() => inputRef.current?.focus()}
-                      >
-                        <div className="bg-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-lg transform -translate-y-2 animate-bounce">
-                          Click to Focus
-                        </div>
-                      </button>
-                    )}
+                            {/* Blinking Cursor Caret */}
+                            {isCurrent && isFocused && (
+                              <span className="absolute -right-1 top-1 bottom-1 w-0.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(59,130,246,0.6)]"></span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </p>
                   </div>
 
-                  {/* Input Visual - Floating Pill */}
-                  <div
-                    className={`
+                  {/* Focus Indicator */}
+                  {!isFocused && (
+                    <button
+                      className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-[2rem] z-20 transition-all cursor-pointer w-full border-0"
+                      onClick={() => inputRef.current?.focus()}
+                    >
+                      <div className="bg-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-lg transform -translate-y-2 animate-bounce">
+                        Click to Focus
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                {/* Input Visual - Floating Pill */}
+                <div
+                  className={`
 w-full max-w-xl bg-white rounded-2xl p-3 lg:p-4 flex items-center justify-center border-2 transition-all duration-200
                                     ${isFocused ? 'border-blue-100 shadow-lg shadow-blue-500/5 -translate-y-1' : 'border-transparent shadow-sm'}
 `}
-                  >
-                    <span className="text-lg lg:text-xl font-medium text-slate-800 mr-1 opacity-50 select-none">
-                      {userInput.slice(-15) || (
-                        <span className="text-slate-300 text-sm">Start typing...</span>
-                      )}
-                    </span>
-                    {/* Custom Cursor */}
-                    {isFocused && (
-                      <span className="w-0.5 h-6 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
+                >
+                  <span className="text-lg lg:text-xl font-medium text-slate-800 mr-1 opacity-50 select-none">
+                    {userInput.slice(-15) || (
+                      <span className="text-slate-300 text-sm">Start typing...</span>
                     )}
-                  </div>
+                  </span>
+                  {/* Custom Cursor */}
+                  {isFocused && (
+                    <span className="w-0.5 h-6 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
+                  )}
+                </div>
 
-                  {/* Upcoming Sentences - Faded Stack (Expanded) */}
-                  <div className="flex flex-col items-center gap-1.5 lg:gap-2 w-full mt-2">
-                    {sentenceQueue.slice(1, 4).map((sent, idx) => (
-                      <div
-                        key={`queue-${idx}-${sent.substring(0, 20)}`}
-                        className={`
+                {/* Upcoming Sentences - Faded Stack (Expanded) */}
+                <div className="flex flex-col items-center gap-1.5 lg:gap-2 w-full mt-2">
+                  {sentenceQueue.slice(1, 4).map((sent, idx) => (
+                    <div
+                      key={`queue-${idx}-${sent.substring(0, 20)}`}
+                      className={`
 rounded-xl text-center font-medium transition-all duration-500 truncate
                                                 ${idx === 0 ? 'w-[85%] bg-white/60 p-3 text-base text-slate-500 shadow-sm' : 'w-[75%] bg-white/30 p-2 text-sm text-slate-400'}
 `}
-                      >
-                        <p className="truncate px-2">{sent}</p>
-                      </div>
-                    ))}
-                  </div>
+                    >
+                      <p className="truncate px-2">{sent}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
+            </div>
 
-              {/* KEYBOARD AREA - Raised Deck */}
-              <div className="flex-shrink-0 bg-white border-t border-slate-100 py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
-                <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
-                  {/* Helper Text */}
-                  <div className="flex justify-between items-center px-4">
-                    <div className="text-xs font-bold text-slate-400 flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`}
-                      ></span>
-                      <span>Next Key:</span>
-                      <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[11px] border border-blue-100">
-                        {nextJamo || 'Enter'}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-300 font-mono tracking-widest">
-                      2-SET KOREAN
-                    </div>
+            {/* KEYBOARD AREA - Raised Deck */}
+            <div className="flex-shrink-0 bg-white border-t border-slate-100 py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
+              <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
+                {/* Helper Text */}
+                <div className="flex justify-between items-center px-4">
+                  <div className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`}
+                    ></span>
+                    <span>Next Key:</span>
+                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[11px] border border-blue-100">
+                      {nextJamo || 'Enter'}
+                    </span>
                   </div>
-
-                  {/* Keyboard Component */}
-                  <div className="p-3 bg-slate-100/50 rounded-3xl border border-slate-200/60 select-none">
-                    <KeyboardHints
-                      nextJamo={nextJamo}
-                      targetChar={currentTargetChar}
-                      hasError={hasError}
-                    />
+                  <div className="text-[10px] text-slate-300 font-mono tracking-widest">
+                    2-SET KOREAN
                   </div>
                 </div>
-              </div>
-            </>
-          )
-        }
 
-        {
-          (practiceMode === 'sentence' || practiceMode === 'paragraph') && (
-            <HiddenInput
-              ref={inputRef}
-              value={userInput}
-              onChange={() => { }}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-            />
-          )
-        }
+                {/* Keyboard Component */}
+                <div className="p-3 bg-slate-100/50 rounded-3xl border border-slate-200/60 select-none">
+                  <KeyboardHints
+                    nextJamo={nextJamo}
+                    targetChar={currentTargetChar}
+                    hasError={hasError}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {(practiceMode === 'sentence' || practiceMode === 'paragraph') && (
+          <HiddenInput
+            ref={inputRef}
+            value={userInput}
+            onChange={() => {}}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          />
+        )}
 
         <Toaster />
       </main>
 
       {/* Results Modal */}
-      < TypingResultsModal
+      <TypingResultsModal
         isOpen={showResultsModal}
         onClose={handleQuit}
         onRetry={handleRetry}
@@ -1291,8 +1281,14 @@ rounded-xl text-center font-medium transition-all duration-500 truncate
         highestWpm={userStats?.highestWpm || 0}
         userAvatar={user?.avatar}
       />
-    </div >
+    </div>
   );
+};
+
+const TypingPage: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileTypingPage />;
+  return <DesktopTypingPage />;
 };
 
 export default TypingPage;

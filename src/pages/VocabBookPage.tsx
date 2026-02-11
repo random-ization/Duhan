@@ -21,6 +21,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileVocabDashboard } from '../components/mobile/MobileVocabDashboard';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
@@ -606,6 +608,22 @@ const VocabBookPage: React.FC = () => {
       </div>
     </div>
   );
+
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <MobileVocabDashboard
+        unitId="ALL"
+        instituteName={labels.dashboard?.vocab?.title || 'Vocab Book'}
+        words={items}
+        masteredCount={stats.mastered}
+        language={language}
+        onStartLearn={() => startLearning('immerse')}
+        onStartTest={() => startLearning('dictation')}
+        onManageList={() => {}} // Placeholder or navigate to list view if exists
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
