@@ -880,6 +880,11 @@
     "upgrade": "Nâng cấp ngay"
   },
   "landing": {
+    "seo": {
+      "title": "DuHan - Học tiếng Hàn trực tuyến | Nền tảng học tương tác",
+      "description": "Học tiếng Hàn hiệu quả với DuHan. Luyện từ vựng, ngữ pháp, luyện thi TOPIK, podcast và video trong một nền tảng học tập tương tác.",
+      "keywords": "học tiếng Hàn, học tiếng Hàn online, TOPIK, từ vựng tiếng Hàn, ngữ pháp tiếng Hàn, khóa học tiếng Hàn"
+    },
     "nav": {
       "topik": "TOPIK",
       "fsrs": "Thuật toán ghi nhớ",
@@ -893,7 +898,7 @@
       "badge": "Hơn 2.000 người học đang ôn TOPIK",
       "titleLine1": "Làm chủ tiếng Hàn,",
       "titleGradient": "không có đường tắt.",
-      "desc": "Nhưng với phương pháp khoa học, bạn sẽ tiến nhanh hơn. DuHan kết hợp đề TOPIK với AI để tạo hệ thống tăng điểm hiệu quả.",
+      "desc": "Nhưng với phương pháp khoa học, bạn sẽ học tiếng Hàn nhanh hơn. DuHan kết hợp đề TOPIK, luyện từ vựng và AI để tạo hệ thống tăng điểm hiệu quả.",
       "ctaPrimary": "Dùng thử miễn phí",
       "ctaSecondary": "Xem cách hoạt động"
     },

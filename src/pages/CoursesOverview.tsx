@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronDown, Search, ChevronRight, Layers } from 'lucide-react';
+import { ChevronDown, Search, ChevronRight, Layers, BookMarked } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
 import { useQuery } from 'convex/react';
 import { NoArgs, qRef } from '../utils/convexRefs';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileCoursesOverview from '../components/mobile/MobileCoursesOverview';
+import { getCourseCoverTransitionName } from '../utils/viewTransitions';
 
 const PUBLISHER_THEMES: Record<
   string,
@@ -477,9 +478,29 @@ const CoursesOverview: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Right: Arrow Actions */}
-                          <div className="w-12 border-l-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 group-hover/card:bg-slate-100 transition-colors self-stretch">
-                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover/card:text-slate-900 transition-colors" />
+                          {/* Right: Shared Cover + Arrow */}
+                          <div className="w-[76px] border-l-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 bg-slate-50 group-hover/card:bg-slate-100 transition-colors self-stretch p-2">
+                            <div
+                              className="w-10 h-14 rounded-lg border border-slate-300 bg-white overflow-hidden shadow-sm"
+                              style={
+                                {
+                                  viewTransitionName: getCourseCoverTransitionName(course.id),
+                                } as React.CSSProperties
+                              }
+                            >
+                              {course.coverUrl ? (
+                                <img
+                                  src={course.coverUrl}
+                                  alt={course.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full grid place-items-center bg-indigo-50">
+                                  <BookMarked className="w-4 h-4 text-indigo-300" />
+                                </div>
+                              )}
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover/card:text-slate-900 transition-colors" />
                           </div>
                         </button>
                       ))}

@@ -926,6 +926,11 @@
     "search": "Search"
   },
   "landing": {
+    "seo": {
+      "title": "DuHan - Learn Korean Online | Interactive Korean Study Platform",
+      "description": "Master Korean with DuHan's interactive Korean study platform. Study vocabulary, grammar, TOPIK preparation, podcasts, and videos with AI support.",
+      "keywords": "Korean learning, Korean study, study Korean, learn Korean, Korean language, TOPIK, Korean vocabulary, Korean grammar, Korean courses"
+    },
     "nav": {
       "topik": "TOPIK",
       "fsrs": "Memory Algorithm",
@@ -966,9 +971,9 @@
     },
     "hero": {
       "badge": "2,000+ learners preparing for TOPIK",
-      "titleLine1": "Master Korean,",
+      "titleLine1": "Master Korean, ",
       "titleGradient": "there are no shortcuts.",
-      "desc": "But with a scientific method, you can move faster. DuHan combines TOPIK past papers with AI to build a serious score-boosting system.",
+      "desc": "But with a scientific method, you can move faster. DuHan helps you study Korean with TOPIK past papers, vocabulary drills, and AI coaching.",
       "ctaPrimary": "Start Free Trial",
       "ctaSecondary": "See How It Works"
     },

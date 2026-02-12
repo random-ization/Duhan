@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { disassemble } from 'es-hangul';
 
-export type TypingMode = 'sentence' | 'paragraph';
+export type TypingMode = 'sentence' | 'paragraph' | 'word';
 export type TypingPhase = 'start' | 'typing' | 'finish';
 export type ValidationStatus = 'correct' | 'incorrect' | 'pending';
 

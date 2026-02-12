@@ -16,7 +16,6 @@ import {
   Trophy,
   Check,
   BarChart3,
-  BarChart2,
   Lock,
   BrainCircuit,
   Volume2,
@@ -25,16 +24,33 @@ import {
   FileDown,
   Download,
   Mic2,
-  SkipBack,
-  SkipForward,
-  PauseCircle,
-  Play,
+
   ChevronDown,
   Gift,
   Menu,
   X,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" as const }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
 const useLandingScroll = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -151,9 +167,8 @@ const LandingNav = ({
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 h-20 transition-all duration-300 backdrop-blur-md border-b border-slate-200 ${
-        isScrolled ? 'bg-white/95 shadow-sm' : 'bg-white/90'
-      }`}
+      className={`fixed top-0 w-full z-50 h-20 transition-all duration-300 backdrop-blur-md border-b border-slate-200 ${isScrolled ? 'bg-white/95 shadow-sm' : 'bg-white/90'
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <LocalizedLink to="/" className="flex items-center gap-3">
@@ -247,44 +262,76 @@ const LandingNav = ({
   );
 };
 
+
+
 const LandingHero = () => {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
 
   return (
     <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(90deg,#f0f0f0_1px,transparent_1px)] [background-size:40px_40px]">
-      <div className="max-w-5xl mx-auto text-center relative z-10">
-        <h1 className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight">
-          {t('landing.hero.titleLine1')}
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={staggerContainer}
+        className="max-w-5xl mx-auto text-center relative z-10"
+      >
+        <motion.h1
+          variants={fadeInUp}
+          className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight"
+        >
+          {t('landing.hero.titleLine1')}{' '}
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-pink-500">
             {t('landing.hero.titleGradient')}
           </span>
-        </h1>
+        </motion.h1>
 
-        <p className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed">
+        <motion.p
+          variants={fadeInUp}
+          className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed"
+        >
           {t('landing.hero.desc')}
-        </p>
+        </motion.p>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-5">
-          <button
+        <motion.div
+          variants={fadeInUp}
+          className="flex flex-col sm:flex-row justify-center gap-5"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/register')}
-            className="px-10 py-5 bg-[#FFDE59] border-2 border-black text-black text-lg font-bold rounded-2xl shadow-pop hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all flex items-center justify-center gap-3"
+            className="px-10 py-5 bg-[#FFDE59] border-2 border-black text-black text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
           >
             {t('landing.hero.ctaPrimary')}
             <ArrowRight className="w-5 h-5" />
-          </button>
-          <a
+          </motion.button>
+          <motion.a
             href="#topik"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             className="px-10 py-5 bg-white text-slate-700 text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-black hover:text-black transition-all flex items-center justify-center gap-3"
           >
             <PlayCircle className="w-5 h-5" />
             {t('landing.hero.ctaSecondary')}
-          </a>
-        </div>
-      </div>
+          </motion.a>
+        </motion.div>
+      </motion.div>
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/5 rounded-full blur-3xl -z-10" />
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/5 rounded-full blur-3xl -z-10"
+      />
     </header>
   );
 };
@@ -294,40 +341,46 @@ const LandingStats = () => {
 
   return (
     <div className="border-y border-slate-200 bg-white py-8 md:py-12">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-        <div className="text-center">
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={staggerContainer}
+        className="max-w-6xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8"
+      >
+        <motion.div variants={fadeInUp} className="text-center">
           <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.topikCoverageValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.topikCoverageLabel')}
           </div>
-        </div>
-        <div className="text-center">
+        </motion.div>
+        <motion.div variants={fadeInUp} className="text-center">
           <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.aiValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.aiLabel')}
           </div>
-        </div>
-        <div className="text-center">
+        </motion.div>
+        <motion.div variants={fadeInUp} className="text-center">
           <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.fsrsValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.fsrsLabel')}
           </div>
-        </div>
-        <div className="text-center">
+        </motion.div>
+        <motion.div variants={fadeInUp} className="text-center">
           <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.levelRange')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.levelSupportLabel')}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
@@ -338,40 +391,52 @@ const LandingTopik = () => {
   return (
     <section id="topik" className="py-16 md:py-32 overflow-hidden bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <div className="md:w-1/2 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg font-bold text-sm mb-6">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="md:w-1/2 relative z-10"
+        >
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg font-bold text-sm mb-6">
             <Trophy className="w-4 h-4" />
             {t('landing.topik.badge')}
-          </div>
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
+          </motion.div>
+          <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
             {t('landing.topik.titleLine1')}
             <br />
             <span className="text-emerald-600">{t('landing.topik.titleHighlight')}</span>
-          </h2>
-          <p className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.topik.desc')}</p>
-          <ul className="space-y-4 mb-8">
-            <li className="flex items-start gap-4">
+          </motion.h2>
+          <motion.p variants={fadeInUp} className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.topik.desc')}</motion.p>
+          <motion.ul variants={staggerContainer} className="space-y-4 mb-8">
+            <motion.li variants={fadeInUp} className="flex items-start gap-4">
               <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600 mt-1">
                 <Check className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900">{t('landing.topik.point1Title')}</h4>
+                <h3 className="font-bold text-slate-900">{t('landing.topik.point1Title')}</h3>
                 <p className="text-sm text-slate-500">{t('landing.topik.point1Desc')}</p>
               </div>
-            </li>
-            <li className="flex items-start gap-4">
+            </motion.li>
+            <motion.li variants={fadeInUp} className="flex items-start gap-4">
               <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600 mt-1">
                 <BarChart3 className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900">{t('landing.topik.point2Title')}</h4>
+                <h3 className="font-bold text-slate-900">{t('landing.topik.point2Title')}</h3>
                 <p className="text-sm text-slate-500">{t('landing.topik.point2Desc')}</p>
               </div>
-            </li>
-          </ul>
-        </div>
+            </motion.li>
+          </motion.ul>
+        </motion.div>
 
-        <div className="md:w-1/2 relative">
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="md:w-1/2 relative"
+        >
           <div className="absolute inset-0 bg-emerald-500/10 rounded-[3rem] transform rotate-3 scale-105 -z-10" />
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex gap-2 items-center">
@@ -422,7 +487,7 @@ const LandingTopik = () => {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -434,20 +499,26 @@ const LandingFsrs = () => {
   return (
     <section id="fsrs" className="py-16 md:py-32 bg-slate-50 relative border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20">
-        <div className="md:w-1/2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFDE59]/30 text-slate-900 rounded-lg font-bold text-sm mb-6">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="md:w-1/2"
+        >
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFDE59]/30 text-slate-900 rounded-lg font-bold text-sm mb-6">
             <BrainCircuit className="w-4 h-4" />
             {t('landing.fsrs.badge')}
-          </div>
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
+          </motion.div>
+          <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
             {t('landing.fsrs.titleLine1')}
             <br />
             <span className="text-[#FFDE59] drop-shadow-sm [text-shadow:1px_1px_0_#000]">
               {t('landing.fsrs.titleHighlight')}
             </span>
-          </h2>
-          <p className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.fsrs.desc')}</p>
-          <div className="grid grid-cols-2 gap-6">
+          </motion.h2>
+          <motion.p variants={fadeInUp} className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.fsrs.desc')}</motion.p>
+          <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-6">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
               <div className="text-3xl font-bold text-slate-900 mb-1">
                 {t('landing.fsrs.stat1Value')}
@@ -460,10 +531,16 @@ const LandingFsrs = () => {
               </div>
               <div className="text-sm font-bold text-slate-400">{t('landing.fsrs.stat2Label')}</div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <div className="md:w-1/2 relative">
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="md:w-1/2 relative"
+        >
           <div className="absolute -inset-4 bg-gradient-to-tr from-[#FFDE59]/20 to-orange-100 rounded-full blur-3xl opacity-60" />
           <div className="relative grid gap-6">
             <div className="bg-white p-6 rounded-2xl shadow-2xl border-2 border-black transform md:-rotate-3 z-20">
@@ -506,7 +583,7 @@ const LandingFsrs = () => {
             </div>
             <div className="absolute top-4 left-4 w-full h-full bg-[#FFDE59]/30 rounded-2xl border-2 border-black -z-10 transform rotate-2" />
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -518,22 +595,28 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
   return (
     <section id="ai" className="py-16 md:py-32 bg-white border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <div className="md:w-1/2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 text-violet-600 rounded-lg font-bold text-sm mb-6">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="md:w-1/2"
+        >
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 text-violet-600 rounded-lg font-bold text-sm mb-6">
             <Sparkles className="w-4 h-4" />
             {t('landing.ai.badge')}
-          </div>
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
+          </motion.div>
+          <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
             {t('landing.ai.titleLine1')}
             <br />
             <span className="text-violet-600">{t('landing.ai.titleHighlight')}</span>
-          </h2>
-          <p className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.ai.desc')}</p>
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-            <h4 className="font-bold mb-2 flex items-center gap-2">
+          </motion.h2>
+          <motion.p variants={fadeInUp} className="text-lg text-slate-600 mb-8 leading-relaxed">{t('landing.ai.desc')}</motion.p>
+          <motion.div variants={fadeInUp} className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+            <h3 className="font-bold mb-2 flex items-center gap-2">
               <Zap className="w-4 h-4 text-violet-600" />
               {t('landing.ai.supportTitle')}
-            </h4>
+            </h3>
             <div className="flex flex-wrap gap-2">
               <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm">
                 {t('landing.ai.feature1')}
@@ -548,10 +631,16 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
                 {t('landing.ai.feature4')}
               </span>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <div className="md:w-1/2 relative">
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="md:w-1/2 relative"
+        >
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-w-md mx-auto">
             <div className="bg-violet-600 p-6 text-white">
               <div className="font-bold text-lg mb-1">{t('landing.ai.chatTitle')}</div>
@@ -582,7 +671,7 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -601,20 +690,38 @@ const LandingToolbox = ({
     <section className="py-16 md:py-24 px-4 md:px-6 relative overflow-hidden bg-white text-slate-900">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-7xl font-heading font-extrabold tracking-tight mb-5">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-4xl md:text-7xl font-heading font-extrabold tracking-tight mb-5"
+          >
             {t('landing.toolbox.title')}
-          </h2>
-          <p className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto">
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto"
+          >
             {t('landing.toolbox.subtitle')}
-          </p>
+          </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start"
+        >
           {/* Card 1: PDF */}
-          <div
-            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-amber-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
-              expandedFeatureCards.pdf ? 'ring-2 ring-amber-400 md:min-h-[760px] shadow-xl' : ''
-            }`}
+          <motion.div
+            variants={fadeInUp}
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-amber-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${expandedFeatureCards.pdf ? 'ring-2 ring-amber-400 md:min-h-[760px] shadow-xl' : ''
+              }`}
           >
             <button
               aria-expanded={expandedFeatureCards.pdf}
@@ -629,9 +736,8 @@ const LandingToolbox = ({
                   className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${expandedFeatureCards.pdf ? 'bg-slate-100' : ''}`}
                 >
                   <ChevronDown
-                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
-                      expandedFeatureCards.pdf ? 'rotate-180' : ''
-                    }`}
+                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${expandedFeatureCards.pdf ? 'rotate-180' : ''
+                      }`}
                   />
                 </div>
               </div>
@@ -644,11 +750,10 @@ const LandingToolbox = ({
             </button>
 
             <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.pdf
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
+              className={`grid transition-all duration-500 ease-in-out ${expandedFeatureCards.pdf
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+                }`}
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
@@ -748,13 +853,13 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 2: Podcast */}
-          <div
-            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-pink-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
-              expandedFeatureCards.podcast ? 'ring-2 ring-pink-400 md:min-h-[760px] shadow-xl' : ''
-            }`}
+          <motion.div
+            variants={fadeInUp}
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-pink-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${expandedFeatureCards.podcast ? 'ring-2 ring-pink-400 md:min-h-[760px] shadow-xl' : ''
+              }`}
           >
             <button
               aria-expanded={expandedFeatureCards.podcast}
@@ -769,9 +874,8 @@ const LandingToolbox = ({
                   className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${expandedFeatureCards.podcast ? 'bg-slate-100' : ''}`}
                 >
                   <ChevronDown
-                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
-                      expandedFeatureCards.podcast ? 'rotate-180' : ''
-                    }`}
+                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${expandedFeatureCards.podcast ? 'rotate-180' : ''
+                      }`}
                   />
                 </div>
               </div>
@@ -784,11 +888,10 @@ const LandingToolbox = ({
             </button>
 
             <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.podcast
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
+              className={`grid transition-all duration-500 ease-in-out ${expandedFeatureCards.podcast
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+                }`}
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
@@ -810,54 +913,7 @@ const LandingToolbox = ({
                       </li>
                     </ul>
 
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 relative shadow-lg">
-                      <div className="bg-slate-50 p-3 flex items-center gap-3 border-b border-slate-100">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center animate-pulse">
-                          <BarChart2 className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-[10px] text-slate-400">
-                            {t('landing.toolbox.demo.podcast.nowPlaying')}
-                          </div>
-                          <div className="text-xs font-bold text-slate-900">
-                            {t('landing.toolbox.demo.podcast.episodeTitle')}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="p-6">
-                        <div className="flex justify-center gap-6 items-center mb-6">
-                          <SkipBack className="w-5 h-5 text-slate-400" />
-                          <div className="w-12 h-12 rounded-full bg-pink-500 text-white flex items-center justify-center shadow-lg hover:bg-pink-600 transition-colors">
-                            <PauseCircle className="w-8 h-8" />
-                          </div>
-                          <SkipForward className="w-5 h-5 text-slate-400" />
-                        </div>
-                        <div className="space-y-3">
-                          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-pink-500 w-1/3 rounded-full relative">
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-pink-600 rounded-full shadow-lg" />
-                            </div>
-                          </div>
-                          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                            <span>04:12</span>
-                            <span>12:45</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 p-4 border-t border-slate-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
-                            {t('landing.toolbox.demo.podcast.liveTranscript')}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed italic">
-                          &quot;... {t('landing.toolbox.demo.podcast.transcriptFragment')} ...&quot;
-                        </p>
-                      </div>
-                    </div>
 
                     <button
                       type="button"
@@ -870,13 +926,13 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 3: Video */}
-          <div
-            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-violet-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
-              expandedFeatureCards.video ? 'ring-2 ring-violet-400 md:min-h-[760px] shadow-xl' : ''
-            }`}
+          <motion.div
+            variants={fadeInUp}
+            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-violet-400 hover:bg-slate-100 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${expandedFeatureCards.video ? 'ring-2 ring-violet-400 md:min-h-[760px] shadow-xl' : ''
+              }`}
           >
             <button
               aria-expanded={expandedFeatureCards.video}
@@ -887,11 +943,15 @@ const LandingToolbox = ({
                 <div className="w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
                   <PlayCircle className="w-7 h-7" />
                 </div>
-                <ChevronDown
-                  className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
-                    expandedFeatureCards.video ? 'rotate-180' : ''
-                  }`}
-                />
+                <div
+                  className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${expandedFeatureCards.video ? 'bg-slate-100' : ''
+                    }`}
+                >
+                  <ChevronDown
+                    className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${expandedFeatureCards.video ? 'rotate-180' : ''
+                      }`}
+                  />
+                </div>
               </div>
               <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-violet-600 transition-colors">
                 {t('landing.toolbox.card3Title')}
@@ -902,47 +962,15 @@ const LandingToolbox = ({
             </button>
 
             <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.video
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
+              className={`grid transition-all duration-500 ease-in-out ${expandedFeatureCards.video
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+                }`}
             >
               <div className="overflow-hidden">
                 <div className="px-8 pb-8 pt-0 flex flex-col">
                   <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
-                    <div className="bg-black rounded-xl overflow-hidden mb-6 aspect-video relative group/vid shadow-xl border border-slate-200">
-                      <img
-                        src="https://images.unsplash.com/photo-1540653542719-7243b614f1d9?auto=format&fit=crop&q=80&w=800"
-                        alt="Video learning demo"
-                        className="w-full h-full object-cover opacity-80 group-hover/vid:opacity-60 transition-opacity"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center text-white shadow-xl transform group-hover/vid:scale-110 transition-transform">
-                          <Play className="w-6 h-6 fill-current" />
-                        </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                        <div className="flex flex-col gap-2">
-                          <div className="bg-white/10 backdrop-blur-md p-2 rounded-lg border border-white/20">
-                            <div className="text-[10px] text-violet-300 font-bold mb-0.5">
-                              KOREAN
-                            </div>
-                            <div className="text-xs text-white font-medium">
-                              {t('landing.toolbox.demo.video.subtitle')}
-                            </div>
-                          </div>
-                          <div className="bg-violet-600/30 backdrop-blur-md p-2 rounded-lg border border-violet-500/30">
-                            <div className="text-[10px] text-violet-200 font-bold mb-0.5">
-                              TRANSLATION
-                            </div>
-                            <div className="text-xs text-white/90">
-                              {t('landing.toolbox.demo.video.translation')}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+
 
                     <button
                       type="button"
@@ -955,10 +983,10 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
-    </section>
+    </section >
   );
 };
 
@@ -968,68 +996,105 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
   return (
     <section className="py-16 md:py-24 bg-white relative overflow-hidden">
       {/* Background Blobs */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2
+        }}
+        className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none"
+      />
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
           {/* Left Content */}
-          <div className="lg:w-1/2 space-y-8 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold border border-blue-100">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+            className="lg:w-1/2 space-y-8 text-left"
+          >
+            <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold border border-blue-100">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
               {t('landing.typing.badge')}
-            </div>
+            </motion.div>
 
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
               {t('landing.typing.titleLine1')}
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
                 {t('landing.typing.titleHighlight')}
               </span>
-            </h2>
+            </motion.h2>
 
-            <p className="text-lg text-slate-600 leading-relaxed max-w-xl">
+            <motion.p variants={fadeInUp} className="text-lg text-slate-600 leading-relaxed max-w-xl">
               {t('landing.typing.desc')}
-            </p>
+            </motion.p>
 
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
+            <motion.div variants={staggerContainer} className="space-y-4">
+              <motion.div variants={fadeInUp} className="flex items-start gap-3">
                 <div className="mt-1 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800 text-sm">
+                  <h3 className="font-bold text-slate-800 text-sm">
                     {t('landing.typing.feature1Title')}
-                  </h4>
+                  </h3>
                   <p className="text-slate-500 text-sm">{t('landing.typing.feature1Desc')}</p>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
+              </motion.div>
+              <motion.div variants={fadeInUp} className="flex items-start gap-3">
                 <div className="mt-1 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800 text-sm">
+                  <h3 className="font-bold text-slate-800 text-sm">
                     {t('landing.typing.feature2Title')}
-                  </h4>
+                  </h3>
                   <p className="text-slate-500 text-sm">{t('landing.typing.feature2Desc')}</p>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
-            <div className="pt-4">
-              <button
+            <motion.div variants={fadeInUp} className="pt-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/learn?module=typing')}
                 className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center gap-2 group"
               >
                 <span>{t('landing.typing.cta')}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
           {/* Right Preview */}
-          <div className="lg:w-1/2 w-full">
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="lg:w-1/2 w-full"
+          >
             <div className="relative bg-slate-50 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden group">
               <div className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[400px]">
                 {/* Stats Header */}
@@ -1127,7 +1192,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
               </div>
             </div>
             <div className="absolute -z-10 top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100/30 via-transparent to-purple-100/30 rounded-full blur-3xl" />
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -1178,14 +1243,33 @@ const LandingPricing = ({
     <section id="pricing" className="py-16 md:py-32 bg-white">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="text-center mb-10 md:mb-16">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-heading font-bold mb-4"
+          >
             {t('landing.pricing.title')}
-          </h2>
-          <p className="text-slate-500">{t('landing.pricing.subtitle')}</p>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-slate-500"
+          >
+            {t('landing.pricing.subtitle')}
+          </motion.p>
         </div>
 
         {showLocalizedPromo && (
-          <div className="max-w-xl mx-auto bg-[#E9FBF4] border-2 border-[#10B981] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-xl mx-auto bg-[#E9FBF4] border-2 border-[#10B981] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
+          >
             <div className="flex items-start gap-4 min-w-0">
               <div className="w-12 h-12 bg-[#10B981] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
                 <Gift className="w-6 h-6 text-white" />
@@ -1213,11 +1297,17 @@ const LandingPricing = ({
             >
               {t('pricingDetails.promo.card.cta')}
             </button>
-          </div>
+          </motion.div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center">
-          <div className="p-6 md:p-8 border border-slate-200 rounded-3xl">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center"
+        >
+          <motion.div variants={fadeInUp} className="p-6 md:p-8 border border-slate-200 rounded-3xl">
             <div className="font-bold text-lg mb-2">{t('landing.pricing.free.title')}</div>
             <div className="text-4xl font-extrabold mb-6">{t('landing.pricing.free.price')}</div>
             <ul className="space-y-4 text-sm text-slate-600 mb-8">
@@ -1240,12 +1330,12 @@ const LandingPricing = ({
             >
               {t('landing.pricing.free.cta')}
             </button>
-          </div>
+          </motion.div>
 
-          <div
-            className={`p-8 text-white rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-[#FFDE59] overflow-hidden ${
-              showLocalizedPromo ? 'bg-[#173C41]' : 'bg-slate-900'
-            }`}
+          <motion.div
+            variants={fadeInUp}
+            className={`p-8 text-white rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-[#FFDE59] overflow-hidden ${showLocalizedPromo ? 'bg-[#173C41]' : 'bg-slate-900'
+              }`}
           >
             {showLocalizedPromo ? (
               <div className="absolute top-5 right-5 bg-[#10B981] text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
@@ -1303,7 +1393,9 @@ const LandingPricing = ({
               </li>
             </ul>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 if (showLocalizedPromo) {
                   open();
@@ -1316,10 +1408,10 @@ const LandingPricing = ({
               {showLocalizedPromo
                 ? t('pricingDetails.promo.verifyNow')
                 : t('landing.pricing.pro.cta')}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
-          <div className="p-6 md:p-8 border border-slate-200 rounded-3xl bg-slate-50">
+          <motion.div variants={fadeInUp} className="p-6 md:p-8 border border-slate-200 rounded-3xl bg-slate-50">
             <div className="font-bold text-lg mb-2">{t('landing.pricing.lifetime.title')}</div>
             <div className="text-4xl font-extrabold mb-6">${lifetimePriceDisplay}</div>
             <ul className="space-y-4 text-sm text-slate-600 mb-8">
@@ -1338,8 +1430,8 @@ const LandingPricing = ({
             >
               {t('landing.pricing.lifetime.cta')}
             </button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
@@ -1351,32 +1443,44 @@ const LandingFaq = () => {
   return (
     <section id="faq" className="py-24 bg-slate-50 border-t border-slate-200">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-3xl font-heading font-bold mb-12 text-center">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl font-heading font-bold mb-12 text-center"
+        >
           {t('landing.faq.title')}
-        </h2>
-        <div className="space-y-6">
-          <details className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
+        </motion.h2>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="space-y-6"
+        >
+          <motion.details variants={fadeInUp} className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
             <summary className="font-bold text-lg list-none flex justify-between items-center">
               {t('landing.faq.q1')}
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-600 leading-relaxed">{t('landing.faq.a1')}</p>
-          </details>
-          <details className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
+          </motion.details>
+          <motion.details variants={fadeInUp} className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
             <summary className="font-bold text-lg list-none flex justify-between items-center">
               {t('landing.faq.q2')}
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-600 leading-relaxed">{t('landing.faq.a2')}</p>
-          </details>
-          <details className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
+          </motion.details>
+          <motion.details variants={fadeInUp} className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer">
             <summary className="font-bold text-lg list-none flex justify-between items-center">
               {t('landing.faq.q3')}
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-600 leading-relaxed">{t('landing.faq.a3')}</p>
-          </details>
-        </div>
+          </motion.details>
+        </motion.div>
       </div>
     </section>
   );
@@ -1417,7 +1521,7 @@ const DEMO_ASSETS = {
 } as const;
 
 export default function Landing() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { open } = usePhoneVerifyModal();
   const location = useLocation();
@@ -1436,6 +1540,9 @@ export default function Landing() {
 
   // Condition return AFTER hooks
   const meta = getRouteMeta(location.pathname);
+  const localizedSeoTitle = t('landing.seo.title', { defaultValue: meta.title });
+  const localizedSeoDescription = t('landing.seo.description', { defaultValue: meta.description });
+  const localizedSeoKeywords = t('landing.seo.keywords', { defaultValue: meta.keywords || '' });
   const showLocalizedPromo =
     i18n.language === 'zh' ||
     i18n.language === 'vi' ||
@@ -1449,12 +1556,12 @@ export default function Landing() {
   return (
     <div className="min-h-screen font-landing antialiased text-slate-900 overflow-x-hidden bg-[#FAFAFA] selection:bg-[#FFDE59] selection:text-black">
       <Seo
-        title={meta.title}
-        description={meta.description}
-        keywords={meta.keywords}
+        title={localizedSeoTitle}
+        description={localizedSeoDescription}
+        keywords={localizedSeoKeywords}
         noIndex={meta.noIndex}
       />
-      <LandingJsonLd description={meta.description} prices={prices} />
+      <LandingJsonLd description={localizedSeoDescription} prices={prices} />
       <LandingNav
         isScrolled={isScrolled}
         mobileMenuOpen={mobileMenuOpen}

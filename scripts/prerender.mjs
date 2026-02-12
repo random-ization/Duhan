@@ -46,11 +46,32 @@ function replaceMetaContent(html, pattern, replacement) {
   return html;
 }
 
+function getPathWithoutLang(path) {
+  return path.replace(/^\/(en|zh|vi|mn)(\/|$)/, '/').replace(/\/+$/, '') || '/';
+}
+
+function getLangFromPath(path) {
+  const match = path.match(/^\/(en|zh|vi|mn)(\/|$)/);
+  return match ? match[1] : null;
+}
+
+function getLocalizedMeta(route, fallbackMeta) {
+  const lang = getLangFromPath(route.path);
+  if (!lang || lang === 'en') return fallbackMeta;
+  const localized = route.metaByLang?.[lang];
+  if (!localized) return fallbackMeta;
+  return {
+    ...fallbackMeta,
+    ...localized,
+  };
+}
+
 /**
  * Inject route-specific meta tags into HTML
  */
 function injectMetaTags(html, route) {
-  const { title, description, keywords } = route.meta;
+  const resolvedMeta = getLocalizedMeta(route, route.meta);
+  const { title, description, keywords } = resolvedMeta;
   const canonicalUrl = `${SITE_URL}${route.path}`;
   const hreflangLinks = (() => {
     const pathWithoutLang = route.path
@@ -59,11 +80,11 @@ function injectMetaTags(html, route) {
 
     const alternates = SUPPORTED_LANGUAGES.map((lng) => {
       const href = `${SITE_URL}/${lng}${pathWithoutLang === '/' ? '' : pathWithoutLang}`;
-      return `<link rel="alternate" hrefLang="${lng}" href="${href}" />`;
+      return `<link rel="alternate" hreflang="${lng}" href="${href}" />`;
     }).join('\n');
 
     const xDefaultHref = `${SITE_URL}/${DEFAULT_LANGUAGE}${pathWithoutLang === '/' ? '' : pathWithoutLang}`;
-    return `${alternates}\n<link rel="alternate" hrefLang="x-default" href="${xDefaultHref}" />`;
+    return `${alternates}\n<link rel="alternate" hreflang="x-default" href="${xDefaultHref}" />`;
   })();
 
   // Replace title

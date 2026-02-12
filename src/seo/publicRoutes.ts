@@ -5,6 +5,8 @@
 
 import { PUBLIC_ROUTES as PUBLIC_ROUTES_DATA } from './publicRoutesData.mjs';
 
+type SupportedLanguage = 'en' | 'zh' | 'vi' | 'mn';
+
 export interface PublicRoute {
   path: string;
   indexable?: boolean;
@@ -14,6 +16,16 @@ export interface PublicRoute {
     description: string;
     keywords?: string;
   };
+  metaByLang?: Partial<
+    Record<
+      Exclude<SupportedLanguage, 'en'>,
+      {
+        title: string;
+        description: string;
+        keywords?: string;
+      }
+    >
+  >;
 }
 
 export const PUBLIC_ROUTES: PublicRoute[] = PUBLIC_ROUTES_DATA as unknown as PublicRoute[];
@@ -32,6 +44,8 @@ export interface RouteMeta {
 }
 
 export const getRouteMeta = (path: string) => {
+  const languageMatch = path.match(/^\/(en|zh|vi|mn)(?:\/|$)/);
+  const pathLanguage = (languageMatch?.[1] as SupportedLanguage | undefined) ?? 'en';
   const normalizedPath = path.replace(/^\/(en|zh|vi|mn)(\/|$)/, '/').replace(/\/+$/, '') || '/';
   const route = PUBLIC_ROUTES.find(r => r.path === normalizedPath);
   const fallback: RouteMeta = {
@@ -44,8 +58,10 @@ export const getRouteMeta = (path: string) => {
 
   if (!route) return fallback;
 
+  const localizedMeta = pathLanguage !== 'en' ? route.metaByLang?.[pathLanguage] : undefined;
+
   return {
-    ...route.meta,
+    ...(localizedMeta || route.meta),
     noIndex: route.noIndex ?? false,
     indexable: route.indexable ?? false,
   } satisfies RouteMeta;

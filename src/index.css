@@ -2,10 +2,25 @@
 
 @import 'tailwindcss';
 
+:root {
+  --mobile-font-scale: 1;
+}
+
 @layer base {
   body {
     background-color: #f8fafc;
   }
+}
+
+@media (max-width: 767px) {
+  html {
+    font-size: calc(16px * var(--mobile-font-scale));
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
 }
 
 /* Cursor Blink Animation for Typing */

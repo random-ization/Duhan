@@ -36,31 +36,46 @@ export const useLocalizedNavigate = () => {
     // Get current language from URL or default
     const currentLang = lang && isValidLanguage(lang) ? lang : DEFAULT_LANGUAGE;
 
+    const runWithTransition = useCallback((cb: () => void) => {
+        if (typeof document === 'undefined') {
+            cb();
+            return;
+        }
+        const docWithTransition = document as Document & {
+            startViewTransition?: (updateCallback: () => void) => void;
+        };
+        if (typeof docWithTransition.startViewTransition === 'function') {
+            docWithTransition.startViewTransition(() => cb());
+            return;
+        }
+        cb();
+    }, []);
+
     const localizedNavigate = useCallback(
         (to: To | number, options?: NavigateOptions) => {
             // 1. Handle numeric navigation (back/forward)
             if (typeof to === 'number') {
-                navigate(to);
+                runWithTransition(() => navigate(to));
                 return;
             }
 
             // 2. Handle string paths
             if (typeof to === 'string') {
-                navigate(getLocalizedPath(to, currentLang), options);
+                runWithTransition(() => navigate(getLocalizedPath(to, currentLang), options));
                 return;
             }
 
             // 3. Handle object navigation (To type with pathname)
             if (typeof to === 'object' && to.pathname) {
                 const localizedPath = getLocalizedPath(to.pathname, currentLang);
-                navigate({ ...to, pathname: localizedPath }, options);
+                runWithTransition(() => navigate({ ...to, pathname: localizedPath }, options));
                 return;
             }
 
             // 4. Fallback
-            navigate(to, options);
+            runWithTransition(() => navigate(to, options));
         },
-        [navigate, currentLang]
+        [navigate, currentLang, runWithTransition]
     );
 
     return localizedNavigate;

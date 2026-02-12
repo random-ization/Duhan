@@ -1,90 +1,39 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import { AnimatePresence, motion } from 'framer-motion';
+import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
-import { isValidLanguage } from '../LanguageRouter';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
-import { useAuth } from '../../contexts/AuthContext';
-import { useMutation } from 'convex/react';
-import { mRef, NoArgs } from '../../utils/convexRefs';
-import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useLayout } from '../../contexts/LayoutContext';
-import { getLabels } from '../../utils/i18n';
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config';
+import { getPathWithoutLang } from '../../utils/pathname';
+import { GlobalModalContainer } from '../modals/GlobalModalContainer';
+import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 
 export default function AppLayout() {
   const location = useLocation();
-  const navigate = useLocalizedNavigate();
-  const { user, language } = useAuth();
-  const labels = getLabels(language);
   const { sidebarHidden, setSidebarHidden, footerHidden } = useLayout();
-  const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
-    if (globalThis.window === undefined) return true;
-    return globalThis.window.sessionStorage.getItem('profile_setup_prompt_dismissed') === '1';
-  });
-  const syncProfileFromIdentityMutation = useMutation(
-    mRef<NoArgs, { updated: boolean }>('auth:syncProfileFromIdentity')
-  );
-
-  // Hide footer on these pages and their sub-pages
-  const hideFooterPaths = [
-    '/courses',
-    '/podcasts',
-    '/videos',
-    '/topik',
-    '/dashboard',
-    '/dashboard/',
-    '/notebook',
-    '/vocab-book',
-    '/vocabbook',
-  ];
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const pathWithoutLang =
-    pathSegments[0] && isValidLanguage(pathSegments[0])
-      ? `/${pathSegments.slice(1).join('/')}`
-      : location.pathname;
+  const pathWithoutLang = getPathWithoutLang(location.pathname);
+  const routeUiConfig = getRouteUiConfig(pathWithoutLang);
 
   // Safety net: some fullscreen flows toggle sidebarHidden to hide mobile chrome.
   // If that state ever gets stuck (e.g. a component crashes/unmounts unexpectedly),
   // restore it on normal pages so the bottom nav/header doesn't disappear.
   useEffect(() => {
     if (!sidebarHidden) return;
-
-    const allowHidden =
-      pathWithoutLang.startsWith('/typing') ||
-      pathWithoutLang.startsWith('/podcasts/player') ||
-      pathWithoutLang.startsWith('/video/') ||
-      // TOPIK exam flows can be fullscreen (cover, exam, result, review)
-      (pathWithoutLang.startsWith('/topik/') && !pathWithoutLang.startsWith('/topik/history'));
-
-    if (!allowHidden) {
+    if (!canRouteHideChrome(pathWithoutLang)) {
       setSidebarHidden(false);
     }
   }, [pathWithoutLang, sidebarHidden, setSidebarHidden]);
 
-  const shouldHideFooter =
-    footerHidden || hideFooterPaths.some(path => pathWithoutLang.startsWith(path));
-  const hideMobileHeaderPaths = ['/video/', '/podcasts/player'];
-  const hideMobileNavPaths = ['/video/', '/podcasts/player'];
-  const shouldHideMobileHeader =
-    sidebarHidden || hideMobileHeaderPaths.some(path => pathWithoutLang.startsWith(path));
-  const shouldHideMobileNav =
-    sidebarHidden || hideMobileNavPaths.some(path => pathWithoutLang.startsWith(path));
-  const isProfilePage = pathWithoutLang === '/profile' || pathWithoutLang.startsWith('/profile/');
-  const shouldShowProfileSetupPrompt = useMemo(() => {
-    if (!user) return false;
-    if (profilePromptDismissed) return false;
-    if (isProfilePage) return false;
-    const nameMissing = !user.name?.trim();
-    const avatarMissing = !user.avatar;
-    return nameMissing || avatarMissing;
-  }, [user, profilePromptDismissed, isProfilePage]);
+  const shouldShowMobileHeader = !sidebarHidden && routeUiConfig.hasHeader;
+  const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;
+  const shouldShowFooter = !footerHidden && routeUiConfig.hasFooter;
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
-      {!pathWithoutLang.startsWith('/typing') && <Sidebar />}
+      {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
       <main
         className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth"
         style={{
@@ -92,96 +41,32 @@ export default function AppLayout() {
           backgroundSize: '24px 24px',
         }}
       >
-        {shouldShowProfileSetupPrompt && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-            <Card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-xl">
-              <CardContent className="p-6 sm:p-8">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                  {labels.profileSetupPrompt?.title || 'Complete your profile'}
-                </h2>
-                <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  {labels.profileSetupPrompt?.description ||
-                    'Import your current login profile (name/avatar) or create your own.'}
-                </p>
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={async () => {
-                      try {
-                        await syncProfileFromIdentityMutation();
-                      } finally {
-                        setProfilePromptDismissed(true);
-                        if (globalThis.window !== undefined) {
-                          globalThis.window.sessionStorage.setItem(
-                            'profile_setup_prompt_dismissed',
-                            '1'
-                          );
-                        }
-                      }
-                    }}
-                    className="flex-1 rounded-2xl px-5 py-3 font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 active:opacity-90 transition"
-                  >
-                    {labels.profileSetupPrompt?.useSocial || 'Use social profile'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() => {
-                      setProfilePromptDismissed(true);
-                      if (globalThis.window !== undefined) {
-                        globalThis.window.sessionStorage.setItem(
-                          'profile_setup_prompt_dismissed',
-                          '1'
-                        );
-                      }
-                      navigate('/profile');
-                    }}
-                    className="flex-1 rounded-2xl px-5 py-3 font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition"
-                  >
-                    {labels.profileSetupPrompt?.createMyself || 'Create myself'}
-                  </Button>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => {
-                    setProfilePromptDismissed(true);
-                    if (globalThis.window !== undefined) {
-                      globalThis.window.sessionStorage.setItem(
-                        'profile_setup_prompt_dismissed',
-                        '1'
-                      );
-                    }
-                  }}
-                  className="mt-4 w-full text-sm font-bold text-slate-500 hover:text-slate-700 transition"
-                >
-                  {labels.profileSetupPrompt?.maybeLater || 'Maybe later'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+        <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
+        <GlobalModalContainer />
+        {shouldShowMobileHeader && (
+          <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
         )}
-        {!shouldHideMobileHeader && <MobileHeader />}
 
         <div
-          className={`min-h-full flex flex-col ${pathWithoutLang.startsWith('/typing') ? 'p-0' : 'p-4 sm:p-6 md:p-10'}`}
+          className={`min-h-full flex flex-col ${routeUiConfig.hasDesktopSidebar ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
-          <div
-            className={`flex-1 w-full ${pathWithoutLang.startsWith('/typing') ? '' : 'max-w-[1400px] mx-auto'}`}
-          >
-            <Outlet />
-          </div>
-          {!shouldHideFooter && <Footer />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+          {shouldShowFooter && <Footer />}
         </div>
-        {!shouldHideMobileNav && (
-          <div className="h-[calc(env(safe-area-inset-bottom)+96px)] md:h-0" />
-        )}
+        {shouldShowMobileNav && <div className="h-[calc(env(safe-area-inset-bottom)+112px)] md:h-0" />}
       </main>
-      {!shouldHideMobileNav && <MobileBottomNav />}
+      {shouldShowMobileNav && <MobileBottomNav />}
     </div>
   );
 }

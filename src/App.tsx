@@ -12,6 +12,7 @@ import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
 import { PhoneVerifyModalProvider } from './contexts/PhoneVerifyModalContext';
+import { GlobalModalProvider } from './contexts/GlobalModalContext';
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -49,24 +50,26 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
         <PhoneVerifyModalProvider>
-          <Routes>
-            <Route
-              path="/*"
-              element={
-                <AppRoutes
-                  canAccessContent={canAccessContent}
-                  onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-                />
-              }
-            />
-          </Routes>
+          <GlobalModalProvider>
+            <Routes>
+              <Route
+                path="/*"
+                element={
+                  <AppRoutes
+                    canAccessContent={canAccessContent}
+                    onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+                  />
+                }
+              />
+            </Routes>
 
-          <UpgradePrompt
-            isOpen={showUpgradePrompt}
-            onClose={() => setShowUpgradePrompt(false)}
-            language={language}
-          />
-          <PhoneVerifyModal />
+            <UpgradePrompt
+              isOpen={showUpgradePrompt}
+              onClose={() => setShowUpgradePrompt(false)}
+              language={language}
+            />
+            <PhoneVerifyModal />
+          </GlobalModalProvider>
         </PhoneVerifyModalProvider>
       </ErrorBoundary>
     </QueryClientProvider>

@@ -2,6 +2,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   define: {
@@ -33,6 +34,31 @@ export default defineConfig({
       open: false, // Set to true to auto-open after build
       gzipSize: true,
       brotliSize: true,
+    }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'logo.png', 'robots.txt'],
+      manifest: {
+        name: 'DuHan - Korean Learning',
+        short_name: 'DuHan',
+        description: 'Interactive Korean Learning Platform',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'logo.png', // Temporary placeholder
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'logo.png', // Temporary placeholder
+            sizes: '512x512',
+            type: 'image/png',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+      },
     }),
   ],
   resolve: {

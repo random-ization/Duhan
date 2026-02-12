@@ -942,6 +942,11 @@
     "search": "搜索"
   },
   "landing": {
+    "seo": {
+      "title": "DuHan - 在线学习韩语 | 交互式韩语学习平台",
+      "description": "通过 DuHan 交互式平台高效学习韩语。系统化学习词汇、语法、TOPIK 备考、播客与视频内容，让韩语学习更高效。",
+      "keywords": "韩语学习, 在线学韩语, TOPIK, 韩语词汇, 韩语语法, 韩国语学习, 韩语课程"
+    },
     "nav": {
       "topik": "TOPIK",
       "fsrs": "记忆算法",
@@ -984,7 +989,7 @@
       "badge": "已有 2,000+ 留学生加入备考",
       "titleLine1": "掌握韩语，",
       "titleGradient": "从来没有捷径。",
-      "desc": "但如果有科学的方法，你可以走得更快。DuHan 将 TOPIK 真题与 AI 算法结合，为你打造最硬核的提分系统。",
+      "desc": "但如果有科学的方法，你可以学得更快。DuHan 将 TOPIK 真题、词汇学习与 AI 算法结合，为你打造系统化的韩语学习提分方案。",
       "ctaPrimary": "开始免费试用",
       "ctaSecondary": "了解它是如何工作的"
     },

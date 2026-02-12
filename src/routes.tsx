@@ -11,6 +11,8 @@ import { LanguageRouter, DEFAULT_LANGUAGE, isValidLanguage } from './components/
 import AppLayout from './components/layout/AppLayout';
 const Landing = lazy(() => import('./pages/Landing'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
+const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
+const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -136,6 +138,8 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
               <Route path="dashboard/:moduleParam" element={<ModulePage />} />
               {/* Courses (教材选择) */}
               <Route path="courses" element={<CoursesOverview />} />
+              <Route path="practice" element={<PracticeHubPage />} />
+              <Route path="media" element={<MediaHubPage />} />
               <Route path="course/:instituteId" element={<CourseDashboard />} />
               <Route path="course/:instituteId/vocab" element={<VocabModulePage />} />
               <Route path="course/:instituteId/grammar" element={<GrammarModulePage />} />

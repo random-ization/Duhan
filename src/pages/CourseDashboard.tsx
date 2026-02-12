@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -10,6 +10,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { logger } from '../utils/logger';
+import { getCourseCoverTransitionName } from '../utils/viewTransitions';
 
 export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
@@ -91,6 +92,7 @@ export default function CourseDashboard() {
     t('courseDashboard.defaultCourseName');
   const displayLevel = course?.displayLevel || t('courseDashboard.defaultDisplayLevel');
   const coverUrl = course?.coverUrl;
+  const coverTransitionName = getCourseCoverTransitionName(instituteId);
   const totalUnits = course?.totalUnits || 10;
   const completedUnits = courseProgress?.completedUnits ?? [];
   const completedCount = courseProgress?.completedCount ?? completedUnits.length;
@@ -233,7 +235,10 @@ export default function CourseDashboard() {
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FEE500] rounded-full border-4 border-black z-0" />
 
             {/* Cover Image */}
-            <div className="w-32 h-40 md:w-36 md:h-48 bg-slate-100 border-2 border-slate-900 rounded-2xl flex-shrink-0 relative z-10 shadow-sm -rotate-2 overflow-hidden">
+            <div
+              className="w-32 h-40 md:w-36 md:h-48 bg-slate-100 border-2 border-slate-900 rounded-2xl flex-shrink-0 relative z-10 shadow-sm -rotate-2 overflow-hidden"
+              style={{ viewTransitionName: coverTransitionName } as CSSProperties}
+            >
               {coverUrl ? (
                 <img
                   src={coverUrl}
