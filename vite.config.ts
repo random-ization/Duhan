@@ -37,27 +37,73 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.png', 'robots.txt'],
+      includeAssets: [
+        'favicon.ico',
+        'logo.png',
+        'robots.txt',
+        'pwa/apple-touch-icon-180x180.png',
+        'pwa/pwa-192x192.png',
+        'pwa/pwa-512x512.png',
+      ],
       manifest: {
+        id: '/',
         name: 'DuHan - Korean Learning',
         short_name: 'DuHan',
         description: 'Interactive Korean Learning Platform',
-        theme_color: '#ffffff',
-        icons: [
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        theme_color: '#0f172a',
+        background_color: '#f0f4f8',
+        categories: ['education', 'productivity'],
+        lang: 'en',
+        shortcuts: [
           {
-            src: 'logo.png', // Temporary placeholder
-            sizes: '192x192',
-            type: 'image/png',
+            name: 'Dashboard',
+            short_name: 'Home',
+            url: '/dashboard',
+            description: 'Open your learning dashboard',
           },
           {
-            src: 'logo.png', // Temporary placeholder
+            name: 'Vocabulary Book',
+            short_name: 'Vocab',
+            url: '/vocab-book',
+            description: 'Continue vocabulary practice',
+          },
+        ],
+        icons: [
+          {
+            src: 'pwa/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa/pwa-maskable-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: 'pwa/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,webmanifest}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],
