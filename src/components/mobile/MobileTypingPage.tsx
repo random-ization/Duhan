@@ -580,15 +580,64 @@ export const MobileTypingPage: React.FC = () => {
   const [gameData, setGameData] = useState<any>(null); // CourseId, Category object, etc
   const [lastStats, setLastStats] = useState<TypingStats | null>(null);
 
+  const saveRecord = useMutation(api.typing.saveRecord);
+
   const handleStart = (mode: TypingMode, data: any) => {
     setGameMode(mode);
     setGameData(data);
     setGameState('playing');
   };
 
-  const handleFinish = (stats: TypingStats) => {
+  const handleFinish = async (stats: TypingStats) => {
     setLastStats(stats);
     setGameState('results');
+
+    // Save Record
+    const duration = stats.startTime ? Date.now() - stats.startTime : 0;
+    const targetWpm = 40; // Default target
+    const isTargetAchieved = stats.wpm >= targetWpm;
+
+    // Determine Category ID
+    let categoryId = 'unknown';
+    if (gameMode === 'sentence' || gameMode === 'paragraph') {
+      categoryId = gameData?.id || 'unknown';
+    } else if (gameMode === 'word') {
+      categoryId = gameData?.courseId || 'vocab';
+    }
+
+    try {
+      console.log('[MobileTypingPage] Saving record...', {
+        practiceMode: gameMode,
+        categoryId,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errorCount: stats.errorCount,
+        duration,
+        charactersTyped: Math.round((stats.wpm * 5 * duration) / 60000) || 0,
+        sentencesCompleted: 1,
+        targetWpm,
+        isTargetAchieved,
+      });
+
+      await saveRecord({
+        practiceMode: gameMode,
+        categoryId,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errorCount: stats.errorCount,
+        duration,
+        charactersTyped: Math.round((stats.wpm * 5 * duration) / 60000) || 0,
+        sentencesCompleted: 1,
+        targetWpm,
+        isTargetAchieved,
+      });
+      console.log('[MobileTypingPage] Record saved successfully');
+      toast.success('Result saved!');
+    } catch (e: any) {
+      console.error('Failed to save record:', e);
+      const msg = e.data?.message || e.message || 'Unknown error';
+      toast.error(`Failed to save: ${msg}`);
+    }
   };
 
   const handleExit = () => {

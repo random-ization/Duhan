@@ -50,7 +50,7 @@ export default function PracticeHubPage() {
       subtitle: t('typing.subtitle', { defaultValue: 'Speed + accuracy drills' }),
       path: '/typing',
       icon: <Keyboard size={20} className="text-indigo-600" />,
-      badge: `${typingStats?.highestWpm || 0} WPM`,
+      badge: `${typingStats?.highestWpm || 0} ${t('typing.unit', { defaultValue: 'WPM' })}`,
       accent: 'from-indigo-50 to-blue-100 border-indigo-200',
     },
     {

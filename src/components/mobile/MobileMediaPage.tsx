@@ -2,18 +2,15 @@
 import React, { useState, useMemo } from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useAction } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { useQuery } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getLabels } from '../../utils/i18n';
-import { qRef, aRef, NoArgs } from '../../utils/convexRefs';
+import { qRef, NoArgs } from '../../utils/convexRefs';
 import {
     Video, Play, Eye, Clock,
     Search, Disc, Library, History as HistoryIcon,
     ChevronRight, Headphones, MonitorPlay
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { format } from 'date-fns';
 import { Toaster } from 'react-hot-toast';
 
 // --- TYPES ---
@@ -61,10 +58,10 @@ interface HistoryItem {
 // 1. VIDEO TAB
 const VideoTab: React.FC<{
     active: boolean;
-    labels: any;
     language: string;
-}> = ({ active, labels, language }) => {
+}> = ({ active, language }) => {
     const navigate = useLocalizedNavigate();
+    const { t } = useTranslation();
     const [activeLevel, setActiveLevel] = useState('');
 
     const convexVideos = useQuery(
@@ -98,6 +95,26 @@ const VideoTab: React.FC<{
         }
     };
 
+    const getLevelLabel = (level: string) => {
+        switch (level) {
+            case 'Beginner':
+                return t('dashboard.video.beginner', { defaultValue: 'Beginner' });
+            case 'Intermediate':
+                return t('dashboard.video.intermediate', { defaultValue: 'Intermediate' });
+            case 'Advanced':
+                return t('dashboard.video.advanced', { defaultValue: 'Advanced' });
+            default:
+                return level;
+        }
+    };
+
+    const getLocale = (lang: string) => {
+        if (lang === 'zh') return 'zh-CN';
+        if (lang === 'en') return 'en-US';
+        if (lang === 'vi') return 'vi-VN';
+        return 'mn-MN';
+    };
+
     if (!active) return null;
 
     return (
@@ -105,10 +122,10 @@ const VideoTab: React.FC<{
             {/* Filters */}
             <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2">
                 {[
-                    { key: '', label: 'All' },
-                    { key: 'Beginner', label: 'Beginner' },
-                    { key: 'Intermediate', label: 'Intermediate' },
-                    { key: 'Advanced', label: 'Advanced' }
+                    { key: '', label: t('notes.tabs.all', { defaultValue: 'All' }) },
+                    { key: 'Beginner', label: t('dashboard.video.beginner', { defaultValue: 'Beginner' }) },
+                    { key: 'Intermediate', label: t('dashboard.video.intermediate', { defaultValue: 'Intermediate' }) },
+                    { key: 'Advanced', label: t('dashboard.video.advanced', { defaultValue: 'Advanced' }) }
                 ].map(level => (
                     <button
                         key={level.key}
@@ -141,7 +158,9 @@ const VideoTab: React.FC<{
             ) : videos.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
                     <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="font-bold">No videos found</p>
+                    <p className="font-bold">
+                        {t('dashboard.video.noVideos', { defaultValue: 'No videos found' })}
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6">
@@ -165,7 +184,7 @@ const VideoTab: React.FC<{
                                 )}
 
                                 <div className={clsx("absolute top-3 left-3 px-2 py-1 text-[10px] font-bold rounded-md border", getLevelStyle(video.level))}>
-                                    {video.level}
+                                    {getLevelLabel(video.level)}
                                 </div>
                                 <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 text-white text-[10px] font-mono rounded-md backdrop-blur-sm">
                                     {formatDuration(video.duration)}
@@ -194,7 +213,10 @@ const VideoTab: React.FC<{
                                     </span>
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-3.5 h-3.5" />
-                                        {new Date(video.createdAt).toLocaleDateString()}
+                                        {new Date(video.createdAt).toLocaleDateString(getLocale(language), {
+                                            month: 'short',
+                                            day: 'numeric',
+                                        })}
                                     </span>
                                 </div>
                             </div>
@@ -210,8 +232,10 @@ const VideoTab: React.FC<{
 const PodcastTab: React.FC<{
     active: boolean;
     user: any;
-}> = ({ active, user }) => {
+    language: string;
+}> = ({ active, user, language }) => {
     const navigate = useLocalizedNavigate();
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
 
     // -- DATA FETCHING --
@@ -255,11 +279,14 @@ const PodcastTab: React.FC<{
         else if (trending.external.length > 0) featuredChannel = trending.external[0];
     }
 
-    const displayedTrending = activeTab === 'community' ? trending.external : trending.internal; // Actually use external for broader 'community' list usually? Or external is Top Charts?
-    // Let's assume community = external (Top Charts), weekly = internal (User activity) for now based on desktop logic typically.
-    // Desktop Logic: Community = Chart Channels (External), Editor Picks = Internal. 
-    // Adapting for simplify: 
     const listToShow = activeTab === 'community' ? trending.external : trending.internal;
+
+    const getLocale = (lang: string) => {
+        if (lang === 'zh') return 'zh-CN';
+        if (lang === 'en') return 'en-US';
+        if (lang === 'vi') return 'vi-VN';
+        return 'mn-MN';
+    };
 
 
     if (!active) return null;
@@ -288,7 +315,9 @@ const PodcastTab: React.FC<{
                 <div className="flex items-center gap-2 mb-3">
                     <Disc className="w-5 h-5 text-indigo-500 animate-spin-slow" />
                     <h3 className="font-black text-xl text-slate-900">
-                        {lastPlayed ? 'Continue Listening' : 'Featured Podcast'}
+                        {lastPlayed
+                            ? t('podcast.nowPlaying', { defaultValue: 'Now Playing' })
+                            : t('dashboard.podcast.editorPicks', { defaultValue: 'Featured Podcast' })}
                     </h3>
                 </div>
 
@@ -321,7 +350,7 @@ const PodcastTab: React.FC<{
                         <div className="flex-1 min-w-0 relative z-10">
                             <div className="text-[10px] font-bold text-green-400 mb-1 flex items-center gap-1 uppercase tracking-wider">
                                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                                Resume
+                                {t('common.continue', { defaultValue: 'Continue' })}
                             </div>
                             <h3 className="text-lg font-black leading-tight mb-1 truncate text-white">
                                 {lastPlayed.episodeTitle}
@@ -348,7 +377,7 @@ const PodcastTab: React.FC<{
                         <div className="flex-1 min-w-0 relative z-10">
                             <div className="text-[10px] font-bold text-yellow-400 mb-1 flex items-center gap-1 uppercase tracking-wider">
                                 <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
-                                Top Pick
+                                {t('dashboard.podcast.editorPicks', { defaultValue: 'Top Pick' })}
                             </div>
                             <h3 className="text-lg font-black leading-tight mb-1 truncate text-white">
                                 {featuredChannel.title}
@@ -360,7 +389,7 @@ const PodcastTab: React.FC<{
                     </button>
                 ) : (
                     <div className="bg-slate-100 rounded-[2rem] p-6 text-center text-slate-400 font-bold text-sm">
-                        Loading recommendations...
+                        {t('loading', { defaultValue: 'Loading...' })}
                     </div>
                 )}
             </div>
@@ -370,7 +399,9 @@ const PodcastTab: React.FC<{
                 <div className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
                         <Library className="w-5 h-5 text-indigo-500" />
-                        <h3 className="font-black text-xl text-slate-900">My Subscriptions</h3>
+                        <h3 className="font-black text-xl text-slate-900">
+                            {t('podcast.mySubscriptions', { defaultValue: 'My Subscriptions' })}
+                        </h3>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar -mx-6 px-6">
                         {subscriptions.map(sub => (
@@ -405,7 +436,9 @@ const PodcastTab: React.FC<{
                 <div className="flex flex-col mb-4 gap-3">
                     <div className="flex items-center gap-2">
                         <Headphones className="w-5 h-5 text-indigo-500" />
-                        <h3 className="font-black text-xl text-slate-900">Trending Now</h3>
+                        <h3 className="font-black text-xl text-slate-900">
+                            {t('podcast.trendingThisWeek', { defaultValue: 'Trending' })}
+                        </h3>
                     </div>
                     <div className="flex gap-2">
                         <button
@@ -414,7 +447,7 @@ const PodcastTab: React.FC<{
                                 "px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide transition-colors border",
                                 activeTab === 'community' ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-200"
                             )}>
-                            Top Charts
+                            {t('dashboard.podcast.community', { defaultValue: 'Top Charts' })}
                         </button>
                         <button
                             onClick={() => setActiveTab('weekly')}
@@ -422,7 +455,7 @@ const PodcastTab: React.FC<{
                                 "px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide transition-colors border",
                                 activeTab === 'weekly' ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-200"
                             )}>
-                            Editor Picks
+                            {t('dashboard.podcast.editorPicks', { defaultValue: 'Editor Picks' })}
                         </button>
                     </div>
                 </div>
@@ -465,7 +498,9 @@ const PodcastTab: React.FC<{
                 <div className="mb-4">
                     <div className="flex items-center gap-2 mb-3">
                         <HistoryIcon className="w-5 h-5 text-indigo-500" />
-                        <h3 className="font-black text-xl text-slate-900">Recently Played</h3>
+                        <h3 className="font-black text-xl text-slate-900">
+                            {t('podcast.history', { defaultValue: 'History' })}
+                        </h3>
                     </div>
                     <div className="space-y-3">
                         {history.slice(0, 5).map((record) => (
@@ -491,7 +526,10 @@ const PodcastTab: React.FC<{
                                         {record.episodeTitle}
                                     </h4>
                                     <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
-                                        {record.channelName} • {format(new Date(record.playedAt), 'MMM d')}
+                                        {record.channelName} • {new Date(record.playedAt).toLocaleDateString(getLocale(language), {
+                                            month: 'short',
+                                            day: 'numeric',
+                                        })}
                                     </p>
                                 </div>
                                 <Play className="w-4 h-4 text-indigo-500 fill-indigo-500" />
@@ -510,7 +548,7 @@ const PodcastTab: React.FC<{
 export const MobileMediaPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'video' | 'podcast'>('video');
     const { user, language } = useAuth();
-    const labels = getLabels(language);
+    const { t } = useTranslation();
 
     // Auto-update tab based on query param if needed, or simple local state
     // For now simple local state
@@ -527,7 +565,9 @@ export const MobileMediaPage: React.FC = () => {
             {/* Header */}
             <header className="px-6 pt-10 pb-4 relative z-10 bg-[#F0F4F8]/95 backdrop-blur-sm sticky top-0 shrink-0">
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Media Center</h1>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                        {t('nav.media', { defaultValue: 'Media' })}
+                    </h1>
                     {/* Placeholder for future context button */}
                 </div>
 
@@ -546,7 +586,7 @@ export const MobileMediaPage: React.FC = () => {
                         )}
                     >
                         <MonitorPlay className="w-4 h-4" />
-                        {activeTab === 'video' && "Videos"}
+                        {activeTab === 'video' && t('nav.videos', { defaultValue: 'Videos' })}
                     </button>
 
                     <button
@@ -557,7 +597,7 @@ export const MobileMediaPage: React.FC = () => {
                         )}
                     >
                         <Headphones className="w-4 h-4" />
-                        {activeTab === 'podcast' && "Podcasts"}
+                        {activeTab === 'podcast' && t('nav.podcasts', { defaultValue: 'Podcasts' })}
                     </button>
                 </div>
             </header>
@@ -566,13 +606,13 @@ export const MobileMediaPage: React.FC = () => {
             <main className="flex-1 overflow-hidden relative z-0 w-full">
                 <VideoTab
                     active={activeTab === 'video'}
-                    labels={labels}
                     language={language}
                 />
 
                 <PodcastTab
                     active={activeTab === 'podcast'}
                     user={user}
+                    language={language}
                 />
             </main>
 
