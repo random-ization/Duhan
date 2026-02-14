@@ -340,12 +340,12 @@ export const NEWS = {
       pollMinutes: number;
       enabled: boolean;
     }>
-  >('newsSources:listSources'),
+  >('newsAdmin:listSources'),
   triggerSource: mRef<{ sourceKey: string }, { scheduled: boolean; sourceKey: string }>(
-    'newsSources:triggerSource'
+    'newsAdmin:triggerSource'
   ),
   triggerAllSources: mRef<{ delayMs?: number }, { scheduled: number; delayMs: number }>(
-    'newsSources:triggerAllSources'
+    'newsAdmin:triggerAllSources'
   ),
   getSourceHealth: qRef<
     NoArgs,
@@ -365,7 +365,7 @@ export const NEWS = {
       lastError?: string;
       lastSuccessAt?: number;
     }>
-  >('newsSources:getSourceHealth'),
+  >('newsAdmin:getSourceHealth'),
   triggerProjection: mRef<
     { courseId?: string; limit?: number },
     { scheduled: boolean; jobId: string; courseId: string; limit: number }

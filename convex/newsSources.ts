@@ -3,21 +3,10 @@
 import Parser from 'rss-parser';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
-import { internalAction, internalMutation, mutation, query } from './_generated/server';
+import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { requireAdmin } from './utils';
 import { toErrorMessage } from './errors';
-
-type SourceType = 'rss' | 'api';
-
-type NewsSourceDefinition = {
-  key: string;
-  name: string;
-  type: SourceType;
-  endpoint: string;
-  pollMinutes: number;
-  enabled: boolean;
-};
+import { NEWS_SOURCES, type NewsSourceDefinition } from './newsConfig';
 
 type NormalizedArticleInput = {
   sourceGuid?: string;
@@ -68,10 +57,6 @@ type UpdateSourceHealthArgs = {
   lastError?: string;
 };
 
-type PollSourceArgs = {
-  sourceKey: string;
-};
-
 type PollSourceResult = {
   sourceKey: string;
   fetched: number;
@@ -109,67 +94,6 @@ type NaverResponse = {
   items?: NaverItem[];
 };
 
-const DEGRADE_FAILURE_THRESHOLD = 12;
-
-const NEWS_SOURCES: NewsSourceDefinition[] = [
-  {
-    key: 'khan',
-    name: 'Kyunghyang',
-    type: 'rss',
-    endpoint: 'https://www.khan.co.kr/rss/rssdata/total_news.xml',
-    pollMinutes: 10,
-    enabled: true,
-  },
-  {
-    key: 'donga',
-    name: 'Donga',
-    type: 'rss',
-    endpoint: 'https://rss.donga.com/total.xml',
-    pollMinutes: 10,
-    enabled: true,
-  },
-  {
-    key: 'hankyung',
-    name: 'Hankyung',
-    type: 'rss',
-    endpoint: 'https://www.hankyung.com/feed/all-news',
-    pollMinutes: 10,
-    enabled: true,
-  },
-  {
-    key: 'mk',
-    name: 'Maeil Business',
-    type: 'rss',
-    endpoint: 'https://www.mk.co.kr/rss/30000001/',
-    pollMinutes: 10,
-    enabled: true,
-  },
-  {
-    key: 'itdonga',
-    name: 'IT Donga',
-    type: 'rss',
-    endpoint: 'https://it.donga.com/feeds/rss',
-    pollMinutes: 20,
-    enabled: true,
-  },
-  {
-    key: 'voa_ko',
-    name: 'VOA Korean',
-    type: 'rss',
-    endpoint: 'https://www.voakorea.com/api/z$yquoeiom',
-    pollMinutes: 20,
-    enabled: true,
-  },
-  {
-    key: 'naver_news_search',
-    name: 'Naver News Search',
-    type: 'api',
-    endpoint: 'https://openapi.naver.com/v1/search/news.json',
-    pollMinutes: 30,
-    enabled: true,
-  },
-];
-
 const ingestBatchMutation = makeFunctionReference<'mutation', IngestBatchArgs, IngestBatchResult>(
   'newsIngestion:ingestBatch'
 ) as unknown as FunctionReference<'mutation', 'internal', IngestBatchArgs, IngestBatchResult>;
@@ -179,84 +103,8 @@ const logFetchRunMutation = makeFunctionReference<'mutation', LogFetchRunArgs, v
 ) as unknown as FunctionReference<'mutation', 'internal', LogFetchRunArgs, void>;
 
 const updateSourceHealthMutation = makeFunctionReference<'mutation', UpdateSourceHealthArgs, void>(
-  'newsSources:updateSourceHealth'
+  'newsAdmin:updateSourceHealth'
 ) as unknown as FunctionReference<'mutation', 'internal', UpdateSourceHealthArgs, void>;
-
-const pollSourceAction = makeFunctionReference<'action', PollSourceArgs, PollSourceResult>(
-  'newsSources:pollSource'
-) as unknown as FunctionReference<'action', 'internal', PollSourceArgs, PollSourceResult>;
-
-export const listSources = query({
-  args: {},
-  handler: async () => {
-    return NEWS_SOURCES;
-  },
-});
-
-export const getSourceHealth = query({
-  args: {},
-  handler: async ctx => {
-    const rows = await ctx.db
-      .query('news_source_health')
-      .withIndex('by_lastRunAt')
-      .order('desc')
-      .take(200);
-    const rowBySource = new Map(rows.map(row => [row.sourceKey, row]));
-
-    return NEWS_SOURCES.map(source => {
-      const health = rowBySource.get(source.key);
-      return {
-        sourceKey: source.key,
-        name: source.name,
-        enabled: source.enabled,
-        pollMinutes: source.pollMinutes,
-        degradeThreshold: DEGRADE_FAILURE_THRESHOLD,
-        totalRuns: health?.totalRuns ?? 0,
-        totalFailures: health?.totalFailures ?? 0,
-        consecutiveFailures: health?.consecutiveFailures ?? 0,
-        degraded: health?.degraded ?? false,
-        degradedSince: health?.degradedSince,
-        lastRunAt: health?.lastRunAt,
-        lastStatus: health?.lastStatus,
-        lastError: health?.lastError,
-        lastSuccessAt: health?.lastSuccessAt,
-      };
-    });
-  },
-});
-
-export const triggerSource = mutation({
-  args: {
-    sourceKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const source = NEWS_SOURCES.find(item => item.key === args.sourceKey && item.enabled);
-    if (!source) {
-      throw new Error(`Unknown source key: ${args.sourceKey}`);
-    }
-    await ctx.scheduler.runAfter(0, pollSourceAction, { sourceKey: source.key });
-    return { scheduled: true, sourceKey: source.key };
-  },
-});
-
-export const triggerAllSources = mutation({
-  args: {
-    delayMs: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const delayMs = Math.max(args.delayMs ?? 0, 0);
-    const enabledSources = NEWS_SOURCES.filter(source => source.enabled);
-    for (const source of enabledSources) {
-      await ctx.scheduler.runAfter(delayMs, pollSourceAction, { sourceKey: source.key });
-    }
-    return {
-      scheduled: enabledSources.length,
-      delayMs,
-    };
-  },
-});
 
 export const pollSource = internalAction({
   args: {
@@ -342,51 +190,6 @@ export const pollSource = internalAction({
         status: 'error',
         errors: [message],
       };
-    }
-  },
-});
-
-export const updateSourceHealth = internalMutation({
-  args: {
-    sourceKey: v.string(),
-    status: v.union(v.literal('ok'), v.literal('partial'), v.literal('error')),
-    lastRunAt: v.number(),
-    lastError: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query('news_source_health')
-      .withIndex('by_sourceKey', q => q.eq('sourceKey', args.sourceKey))
-      .first();
-
-    const totalRuns = (existing?.totalRuns ?? 0) + 1;
-    const failedThisRun = args.status === 'ok' ? 0 : 1;
-    const totalFailures = (existing?.totalFailures ?? 0) + failedThisRun;
-    const consecutiveFailures = args.status === 'ok' ? 0 : (existing?.consecutiveFailures ?? 0) + 1;
-    const degraded = consecutiveFailures >= DEGRADE_FAILURE_THRESHOLD;
-    const degradedSince = degraded
-      ? (existing?.degradedSince ?? (existing?.degraded ? existing.degradedSince : args.lastRunAt))
-      : undefined;
-    const lastSuccessAt = args.status === 'ok' ? args.lastRunAt : existing?.lastSuccessAt;
-
-    const next = {
-      sourceKey: args.sourceKey,
-      totalRuns,
-      totalFailures,
-      consecutiveFailures,
-      lastRunAt: args.lastRunAt,
-      lastStatus: args.status,
-      lastError: args.status === 'ok' ? undefined : args.lastError,
-      lastSuccessAt,
-      degraded,
-      degradedSince,
-      updatedAt: Date.now(),
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, next);
-    } else {
-      await ctx.db.insert('news_source_health', next);
     }
   },
 });
