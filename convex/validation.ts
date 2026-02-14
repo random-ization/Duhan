@@ -21,3 +21,37 @@ export const readNumber = (value: unknown, path: readonly string[]): number | un
 };
 
 export const parseJson = (text: string): unknown => JSON.parse(text) as unknown;
+
+export const normalizeFiniteNumberMap = (value: unknown): Record<string, number> => {
+  if (!isRecord(value)) {
+    throw new Error('INVALID_MAP_FORMAT');
+  }
+
+  const normalized: Record<string, number> = {};
+  for (const [key, entryValue] of Object.entries(value)) {
+    if (key.trim() === '') {
+      throw new Error('INVALID_MAP_KEY');
+    }
+    if (typeof entryValue !== 'number' || !Number.isFinite(entryValue)) {
+      throw new Error('INVALID_MAP_VALUE');
+    }
+    normalized[key] = entryValue;
+  }
+  return normalized;
+};
+
+export const normalizeAnswerMap = (value: unknown): Record<string, number> => {
+  const normalized = normalizeFiniteNumberMap(value);
+
+  for (const [questionKey, answer] of Object.entries(normalized)) {
+    const questionNumber = Number(questionKey);
+    if (!Number.isInteger(questionNumber) || questionNumber < 0) {
+      throw new Error('INVALID_ANSWER_KEY');
+    }
+    if (!Number.isInteger(answer) || answer < 0) {
+      throw new Error('INVALID_ANSWER_VALUE');
+    }
+  }
+
+  return normalized;
+};

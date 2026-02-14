@@ -4,6 +4,7 @@ import VocabImporter from '../../components/admin/VocabImporter';
 import GrammarImporter from '../../components/admin/GrammarImporter';
 import ReadingImporter from '../../components/admin/ReadingImporter';
 import TopikImporter from '../../components/admin/TopikImporter';
+import NewsPipelinePanel from '../../components/admin/NewsPipelinePanel';
 import { ReadingContentManager } from '../../components/admin/ReadingContentManager';
 import { ListeningContentManager } from '../../components/admin/ListeningContentManager';
 import { GrammarManager } from '../../components/admin/GrammarManager';
@@ -48,10 +49,11 @@ const SubTabLayout: React.FC<SubTabProps> = ({ activeSubTab, onSubTabChange, ite
         <button
           key={item.id}
           onClick={() => onSubTabChange(item.id)}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 transition-all ${activeSubTab === item.id
-            ? 'bg-zinc-900 border-zinc-900 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,0.3)]'
-            : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900'
-            }`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 transition-all ${
+            activeSubTab === item.id
+              ? 'bg-zinc-900 border-zinc-900 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,0.3)]'
+              : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900'
+          }`}
         >
           {item.icon}
           {item.label}
@@ -65,7 +67,7 @@ const SubTabLayout: React.FC<SubTabProps> = ({ activeSubTab, onSubTabChange, ite
 );
 
 const ReadingTab: React.FC = () => {
-  const [subTab, setSubTab] = useState<'manage' | 'import'>('manage');
+  const [subTab, setSubTab] = useState<'manage' | 'import' | 'news'>('manage');
   return (
     <SubTabLayout
       activeSubTab={subTab}
@@ -73,9 +75,12 @@ const ReadingTab: React.FC = () => {
       items={[
         { id: 'manage', label: '阅读管理', icon: <Book className="w-5 h-5" /> },
         { id: 'import', label: '批量导入', icon: <FileSpreadsheet className="w-5 h-5" /> },
+        { id: 'news', label: '新闻数据源', icon: <Activity className="w-5 h-5" /> },
       ]}
     >
-      {subTab === 'manage' ? <ReadingContentManager /> : <ReadingImporter />}
+      {subTab === 'manage' && <ReadingContentManager />}
+      {subTab === 'import' && <ReadingImporter />}
+      {subTab === 'news' && <NewsPipelinePanel />}
     </SubTabLayout>
   );
 };
@@ -155,10 +160,11 @@ const TabButton: React.FC<TabButtonProps> = ({ id, activeTab, onClick, icon: Ico
   return (
     <button
       onClick={() => onClick(id)}
-      className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${active
-        ? 'border-zinc-900 text-zinc-900'
-        : 'border-transparent text-zinc-400 hover:text-zinc-600'
-        }`}
+      className={`px-4 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
+        active
+          ? 'border-zinc-900 text-zinc-900'
+          : 'border-transparent text-zinc-400 hover:text-zinc-600'
+      }`}
     >
       <Icon size={16} />
       {label}

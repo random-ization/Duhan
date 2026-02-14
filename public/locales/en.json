@@ -1825,6 +1825,14 @@
     "createMyself": "Create myself",
     "maybeLater": "Maybe later"
   },
+  "pwa": {
+    "install": {
+      "title": "Install DuHan App",
+      "androidHint": "Install for faster launch and a full-screen mobile experience.",
+      "iosHint": "In Safari, tap Share and choose Add to Home Screen.",
+      "action": "Install now"
+    }
+  },
   "vocabTest": {
     "correct": "Correct",
     "wrong": "Wrong",

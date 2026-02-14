@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -28,10 +28,9 @@ const queryClient = new QueryClient({
 
 function App() {
   const { t } = useTranslation();
-  const { user, loading, language, canAccessContent } = useAuth();
+  const { user, loading, language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
   const { updateLearningProgress } = useUserActions();
   const { selectedInstitute, selectedLevel } = useLearning();
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Track learning progress when user changes institute/level
   useEffect(() => {
@@ -52,15 +51,7 @@ function App() {
         <PhoneVerifyModalProvider>
           <GlobalModalProvider>
             <Routes>
-              <Route
-                path="/*"
-                element={
-                  <AppRoutes
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-                  />
-                }
-              />
+              <Route path="/*" element={<AppRoutes />} />
             </Routes>
 
             <UpgradePrompt

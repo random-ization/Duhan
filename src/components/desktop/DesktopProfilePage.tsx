@@ -57,9 +57,6 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Convex Mutations & Actions
-  const updateProfileMutation = useMutation(
-    mRef<{ name?: string; avatar?: string }, void>('auth:updateProfile')
-  );
   const changePasswordMutation = useMutation(
     mRef<{ currentPassword: string; newPassword: string }, void>('auth:changePassword')
   );
@@ -110,8 +107,7 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
       return;
     }
     try {
-      await updateProfileMutation({ name: newName });
-      updateUser({ name: newName });
+      await updateUser({ name: newName });
       success(labels.profileUpdated || 'Profile updated');
       setIsEditingName(false);
     } catch (err) {
@@ -149,11 +145,8 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
         body: file,
       });
 
-      // 3. Update Profile with new Avatar URL (Fixes persistence bug)
-      await updateProfileMutation({ avatar: publicUrl });
-
-      // 4. Update local state
-      updateUser({ avatar: publicUrl });
+      // 3. Persist profile update
+      await updateUser({ avatar: publicUrl });
       success(labels.avatarUpdated || 'Avatar updated');
     } catch (err) {
       console.error('Avatar upload failed:', err);

@@ -56,8 +56,6 @@ const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
 // Typing
 const TypingPage = lazy(() => import('./pages/TypingPage'));
 
-import { TextbookContent, TopikExam } from './types';
-
 // Loading fallback component with skeleton screen
 const PageLoader = () => <ContentSkeleton />;
 
@@ -75,16 +73,8 @@ const RedirectToDefaultLanguage: React.FC = () => {
   );
 };
 
-interface AppRoutesProps {
-  canAccessContent: (content: TextbookContent | TopikExam) => boolean;
-  onShowUpgradePrompt: () => void;
-}
-
 // Inner routes component that uses language from URL params
-const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
-  canAccessContent,
-  onShowUpgradePrompt,
-}) => {
+const LanguageAwareRoutes: React.FC = () => {
   const { lang } = useParams<{ lang: string }>();
   const { language: authLanguage } = useAuth();
   const { t } = useTranslation();
@@ -125,15 +115,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="profile" element={<ProfilePage language={language} />} />
-              <Route
-                path="dashboard"
-                element={
-                  <DashboardPage
-                    _canAccessContent={canAccessContent}
-                    _onShowUpgradePrompt={onShowUpgradePrompt}
-                  />
-                }
-              />
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="dashboard/course" element={<CourseDashboard />} />
               <Route path="dashboard/:moduleParam" element={<ModulePage />} />
               {/* Courses (教材选择) */}
@@ -144,42 +126,10 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
               <Route path="course/:instituteId/vocab" element={<VocabModulePage />} />
               <Route path="course/:instituteId/grammar" element={<GrammarModulePage />} />
               <Route path="course/:instituteId/:moduleParam" element={<ModulePage />} />
-              <Route
-                path="topik"
-                element={
-                  <TopikPage
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={onShowUpgradePrompt}
-                  />
-                }
-              />
-              <Route
-                path="topik/history"
-                element={
-                  <TopikPage
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={onShowUpgradePrompt}
-                  />
-                }
-              />
-              <Route
-                path="topik/:examId"
-                element={
-                  <TopikPage
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={onShowUpgradePrompt}
-                  />
-                }
-              />
-              <Route
-                path="topik/:examId/:view"
-                element={
-                  <TopikPage
-                    canAccessContent={canAccessContent}
-                    onShowUpgradePrompt={onShowUpgradePrompt}
-                  />
-                }
-              />
+              <Route path="topik" element={<TopikPage />} />
+              <Route path="topik/history" element={<TopikPage />} />
+              <Route path="topik/:examId" element={<TopikPage />} />
+              <Route path="topik/:examId/:view" element={<TopikPage />} />
               <Route path="notebook" element={<NotebookPage />} />
               <Route path="vocab-book" element={<VocabBookPage />} />
               <Route path="vocab-book/immerse" element={<VocabBookImmersivePage />} />
@@ -224,7 +174,7 @@ const LanguageAwareRoutes: React.FC<AppRoutesProps> = ({
   );
 };
 
-export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
+export const AppRoutes: React.FC = () => {
   const location = useLocation();
   return (
     <Routes>
@@ -244,10 +194,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ canAccessContent, onShowUp
         path="/:lang/*"
         element={
           <LanguageRouter>
-            <LanguageAwareRoutes
-              canAccessContent={canAccessContent}
-              onShowUpgradePrompt={onShowUpgradePrompt}
-            />
+            <LanguageAwareRoutes />
           </LanguageRouter>
         }
       />

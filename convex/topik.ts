@@ -4,6 +4,7 @@ import { paginationOptsValidator, makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 import { getAuthUserId, requireAdmin } from './utils';
 import type { Id } from './_generated/dataModel';
+import { normalizeAnswerMap } from './validation';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
 
@@ -344,6 +345,15 @@ export const updateAnswers = mutation({
   },
   handler: async (ctx, args) => {
     await getAuthUserId(ctx); // Verify authentication
+    let normalizedAnswers: Record<string, number>;
+    try {
+      normalizedAnswers = normalizeAnswerMap(args.answers);
+    } catch (error) {
+      throw new ConvexError({
+        code: 'INVALID_ANSWERS_PAYLOAD',
+        message: (error as Error).message,
+      });
+    }
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
@@ -361,7 +371,7 @@ export const updateAnswers = mutation({
     }
 
     // Update answers
-    await ctx.db.patch(args.sessionId, { answers: args.answers });
+    await ctx.db.patch(args.sessionId, { answers: normalizedAnswers });
 
     return { success: true };
   },
@@ -375,6 +385,15 @@ export const submitExam = mutation({
   },
   handler: async (ctx, args) => {
     await getAuthUserId(ctx); // Verify authentication
+    let answers: Record<string, number>;
+    try {
+      answers = normalizeAnswerMap(args.answers);
+    } catch (error) {
+      throw new ConvexError({
+        code: 'INVALID_ANSWERS_PAYLOAD',
+        message: (error as Error).message,
+      });
+    }
 
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
@@ -398,7 +417,6 @@ export const submitExam = mutation({
 
     // Calculate score
     let score = 0;
-    const answers = args.answers || {};
     for (const q of questions) {
       if (answers[q.number] === q.correctAnswer) {
         score += q.score;

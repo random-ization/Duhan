@@ -57,7 +57,6 @@ export const MobileProfilePage: React.FC = () => {
   );
 
   // -- MUTATIONS --
-  const updateProfileMutation = useMutation(mRef('auth:updateProfile'));
   const changePasswordMutation = useMutation(mRef('auth:changePassword'));
   const unlinkAuthProviderMutation = useMutation(mRef('auth:unlinkAuthProvider'));
   const getUploadUrlAction = useAction(aRef('storage:getUploadUrl'));
@@ -80,8 +79,7 @@ export const MobileProfilePage: React.FC = () => {
         body: file,
       });
 
-      await updateProfileMutation({ avatar: publicUrl });
-      updateUser({ avatar: publicUrl });
+      await updateUser({ avatar: publicUrl });
       toast.success(t('avatarUpdated', { defaultValue: 'Avatar updated' }));
     } catch (err) {
       console.error(err);

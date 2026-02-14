@@ -1,0 +1,757 @@
+'use node';
+
+import Parser from 'rss-parser';
+import { makeFunctionReference } from 'convex/server';
+import type { FunctionReference } from 'convex/server';
+import { internalAction, internalMutation, mutation, query } from './_generated/server';
+import { v } from 'convex/values';
+import { requireAdmin } from './utils';
+import { toErrorMessage } from './errors';
+
+type SourceType = 'rss' | 'api';
+
+type NewsSourceDefinition = {
+  key: string;
+  name: string;
+  type: SourceType;
+  endpoint: string;
+  pollMinutes: number;
+  enabled: boolean;
+};
+
+type NormalizedArticleInput = {
+  sourceGuid?: string;
+  sourceUrl: string;
+  canonicalUrl?: string;
+  title: string;
+  summary?: string;
+  bodyText?: string;
+  bodyHtml?: string;
+  section?: string;
+  tags?: string[];
+  author?: string;
+  publishedAt?: number;
+};
+
+type IngestBatchArgs = {
+  sourceKey: string;
+  sourceType: string;
+  articles: NormalizedArticleInput[];
+};
+
+type IngestBatchResult = {
+  fetched: number;
+  inserted: number;
+  updated: number;
+  deduped: number;
+  failed: number;
+  errors: string[];
+};
+
+type LogFetchRunArgs = {
+  sourceKey: string;
+  runAt: number;
+  durationMs: number;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  deduped: number;
+  failed: number;
+  status: string;
+  errorSample?: string[];
+};
+
+type UpdateSourceHealthArgs = {
+  sourceKey: string;
+  status: 'ok' | 'partial' | 'error';
+  lastRunAt: number;
+  lastError?: string;
+};
+
+type PollSourceArgs = {
+  sourceKey: string;
+};
+
+type PollSourceResult = {
+  sourceKey: string;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  deduped: number;
+  failed: number;
+  durationMs: number;
+  status: 'ok' | 'partial' | 'error';
+  errors: string[];
+};
+
+type RssFeedItem = {
+  title?: string;
+  link?: string;
+  guid?: string;
+  pubDate?: string;
+  isoDate?: string;
+  creator?: string;
+  content?: string;
+  contentSnippet?: string;
+  categories?: string[];
+  category?: string;
+};
+
+type NaverItem = {
+  title: string;
+  originallink?: string;
+  link: string;
+  description?: string;
+  pubDate?: string;
+};
+
+type NaverResponse = {
+  items?: NaverItem[];
+};
+
+const DEGRADE_FAILURE_THRESHOLD = 12;
+
+const NEWS_SOURCES: NewsSourceDefinition[] = [
+  {
+    key: 'khan',
+    name: 'Kyunghyang',
+    type: 'rss',
+    endpoint: 'https://www.khan.co.kr/rss/rssdata/total_news.xml',
+    pollMinutes: 10,
+    enabled: true,
+  },
+  {
+    key: 'donga',
+    name: 'Donga',
+    type: 'rss',
+    endpoint: 'https://rss.donga.com/total.xml',
+    pollMinutes: 10,
+    enabled: true,
+  },
+  {
+    key: 'hankyung',
+    name: 'Hankyung',
+    type: 'rss',
+    endpoint: 'https://www.hankyung.com/feed/all-news',
+    pollMinutes: 10,
+    enabled: true,
+  },
+  {
+    key: 'mk',
+    name: 'Maeil Business',
+    type: 'rss',
+    endpoint: 'https://www.mk.co.kr/rss/30000001/',
+    pollMinutes: 10,
+    enabled: true,
+  },
+  {
+    key: 'itdonga',
+    name: 'IT Donga',
+    type: 'rss',
+    endpoint: 'https://it.donga.com/feeds/rss',
+    pollMinutes: 20,
+    enabled: true,
+  },
+  {
+    key: 'voa_ko',
+    name: 'VOA Korean',
+    type: 'rss',
+    endpoint: 'https://www.voakorea.com/api/z$yquoeiom',
+    pollMinutes: 20,
+    enabled: true,
+  },
+  {
+    key: 'naver_news_search',
+    name: 'Naver News Search',
+    type: 'api',
+    endpoint: 'https://openapi.naver.com/v1/search/news.json',
+    pollMinutes: 30,
+    enabled: true,
+  },
+];
+
+const ingestBatchMutation = makeFunctionReference<'mutation', IngestBatchArgs, IngestBatchResult>(
+  'newsIngestion:ingestBatch'
+) as unknown as FunctionReference<'mutation', 'internal', IngestBatchArgs, IngestBatchResult>;
+
+const logFetchRunMutation = makeFunctionReference<'mutation', LogFetchRunArgs, void>(
+  'newsIngestion:logFetchRun'
+) as unknown as FunctionReference<'mutation', 'internal', LogFetchRunArgs, void>;
+
+const updateSourceHealthMutation = makeFunctionReference<'mutation', UpdateSourceHealthArgs, void>(
+  'newsSources:updateSourceHealth'
+) as unknown as FunctionReference<'mutation', 'internal', UpdateSourceHealthArgs, void>;
+
+const pollSourceAction = makeFunctionReference<'action', PollSourceArgs, PollSourceResult>(
+  'newsSources:pollSource'
+) as unknown as FunctionReference<'action', 'internal', PollSourceArgs, PollSourceResult>;
+
+export const listSources = query({
+  args: {},
+  handler: async () => {
+    return NEWS_SOURCES;
+  },
+});
+
+export const getSourceHealth = query({
+  args: {},
+  handler: async ctx => {
+    const rows = await ctx.db
+      .query('news_source_health')
+      .withIndex('by_lastRunAt')
+      .order('desc')
+      .take(200);
+    const rowBySource = new Map(rows.map(row => [row.sourceKey, row]));
+
+    return NEWS_SOURCES.map(source => {
+      const health = rowBySource.get(source.key);
+      return {
+        sourceKey: source.key,
+        name: source.name,
+        enabled: source.enabled,
+        pollMinutes: source.pollMinutes,
+        degradeThreshold: DEGRADE_FAILURE_THRESHOLD,
+        totalRuns: health?.totalRuns ?? 0,
+        totalFailures: health?.totalFailures ?? 0,
+        consecutiveFailures: health?.consecutiveFailures ?? 0,
+        degraded: health?.degraded ?? false,
+        degradedSince: health?.degradedSince,
+        lastRunAt: health?.lastRunAt,
+        lastStatus: health?.lastStatus,
+        lastError: health?.lastError,
+        lastSuccessAt: health?.lastSuccessAt,
+      };
+    });
+  },
+});
+
+export const triggerSource = mutation({
+  args: {
+    sourceKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const source = NEWS_SOURCES.find(item => item.key === args.sourceKey && item.enabled);
+    if (!source) {
+      throw new Error(`Unknown source key: ${args.sourceKey}`);
+    }
+    await ctx.scheduler.runAfter(0, pollSourceAction, { sourceKey: source.key });
+    return { scheduled: true, sourceKey: source.key };
+  },
+});
+
+export const triggerAllSources = mutation({
+  args: {
+    delayMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const delayMs = Math.max(args.delayMs ?? 0, 0);
+    const enabledSources = NEWS_SOURCES.filter(source => source.enabled);
+    for (const source of enabledSources) {
+      await ctx.scheduler.runAfter(delayMs, pollSourceAction, { sourceKey: source.key });
+    }
+    return {
+      scheduled: enabledSources.length,
+      delayMs,
+    };
+  },
+});
+
+export const pollSource = internalAction({
+  args: {
+    sourceKey: v.string(),
+  },
+  handler: async (ctx, args): Promise<PollSourceResult> => {
+    const source = NEWS_SOURCES.find(item => item.key === args.sourceKey && item.enabled);
+    if (!source) {
+      throw new Error(`Unknown or disabled source key: ${args.sourceKey}`);
+    }
+
+    const runAt = Date.now();
+    let durationMs = 0;
+    try {
+      const articles = await pullSourceArticles(source);
+      const ingest = await ctx.runMutation(ingestBatchMutation, {
+        sourceKey: source.key,
+        sourceType: source.type,
+        articles,
+      });
+      durationMs = Date.now() - runAt;
+      const status: PollSourceResult['status'] = ingest.failed > 0 ? 'partial' : 'ok';
+
+      await ctx.runMutation(logFetchRunMutation, {
+        sourceKey: source.key,
+        runAt,
+        durationMs,
+        fetched: ingest.fetched,
+        inserted: ingest.inserted,
+        updated: ingest.updated,
+        deduped: ingest.deduped,
+        failed: ingest.failed,
+        status,
+        errorSample: ingest.errors,
+      });
+      await ctx.runMutation(updateSourceHealthMutation, {
+        sourceKey: source.key,
+        status,
+        lastRunAt: runAt,
+        lastError: ingest.errors[0],
+      });
+
+      return {
+        sourceKey: source.key,
+        fetched: ingest.fetched,
+        inserted: ingest.inserted,
+        updated: ingest.updated,
+        deduped: ingest.deduped,
+        failed: ingest.failed,
+        durationMs,
+        status,
+        errors: ingest.errors,
+      };
+    } catch (error: unknown) {
+      durationMs = Date.now() - runAt;
+      const message = toErrorMessage(error);
+      await ctx.runMutation(logFetchRunMutation, {
+        sourceKey: source.key,
+        runAt,
+        durationMs,
+        fetched: 0,
+        inserted: 0,
+        updated: 0,
+        deduped: 0,
+        failed: 1,
+        status: 'error',
+        errorSample: [message],
+      });
+      await ctx.runMutation(updateSourceHealthMutation, {
+        sourceKey: source.key,
+        status: 'error',
+        lastRunAt: runAt,
+        lastError: message,
+      });
+      return {
+        sourceKey: source.key,
+        fetched: 0,
+        inserted: 0,
+        updated: 0,
+        deduped: 0,
+        failed: 1,
+        durationMs,
+        status: 'error',
+        errors: [message],
+      };
+    }
+  },
+});
+
+export const updateSourceHealth = internalMutation({
+  args: {
+    sourceKey: v.string(),
+    status: v.union(v.literal('ok'), v.literal('partial'), v.literal('error')),
+    lastRunAt: v.number(),
+    lastError: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query('news_source_health')
+      .withIndex('by_sourceKey', q => q.eq('sourceKey', args.sourceKey))
+      .first();
+
+    const totalRuns = (existing?.totalRuns ?? 0) + 1;
+    const failedThisRun = args.status === 'ok' ? 0 : 1;
+    const totalFailures = (existing?.totalFailures ?? 0) + failedThisRun;
+    const consecutiveFailures = args.status === 'ok' ? 0 : (existing?.consecutiveFailures ?? 0) + 1;
+    const degraded = consecutiveFailures >= DEGRADE_FAILURE_THRESHOLD;
+    const degradedSince = degraded
+      ? (existing?.degradedSince ?? (existing?.degraded ? existing.degradedSince : args.lastRunAt))
+      : undefined;
+    const lastSuccessAt = args.status === 'ok' ? args.lastRunAt : existing?.lastSuccessAt;
+
+    const next = {
+      sourceKey: args.sourceKey,
+      totalRuns,
+      totalFailures,
+      consecutiveFailures,
+      lastRunAt: args.lastRunAt,
+      lastStatus: args.status,
+      lastError: args.status === 'ok' ? undefined : args.lastError,
+      lastSuccessAt,
+      degraded,
+      degradedSince,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, next);
+    } else {
+      await ctx.db.insert('news_source_health', next);
+    }
+  },
+});
+
+async function pullSourceArticles(source: NewsSourceDefinition): Promise<NormalizedArticleInput[]> {
+  if (source.type === 'rss') {
+    return pullFromRss(source);
+  }
+  return pullFromNaver(source);
+}
+
+async function pullFromRss(source: NewsSourceDefinition): Promise<NormalizedArticleInput[]> {
+  const parser = new Parser<Record<string, unknown>, RssFeedItem>({
+    timeout: 10_000,
+    customFields: {
+      item: ['category', 'creator'],
+    },
+  });
+  const feed = await parser.parseURL(source.endpoint);
+  const items = (feed.items || []).slice(0, 25);
+
+  const rows = await Promise.all(
+    items.map(async item => {
+      const sourceUrl = (item.link || '').trim();
+      if (!sourceUrl) return null;
+
+      const title = normalizeText(stripHtml(decodeHtml(item.title || '')));
+      if (!title) return null;
+
+      const summaryRaw = item.contentSnippet || item.content || '';
+      const summary = normalizeText(stripHtml(decodeHtml(summaryRaw)));
+      const body = await fetchArticleBody(sourceUrl, summary);
+      const publishedAt = parseDateMs(item.isoDate || item.pubDate);
+      const section = inferSection(item.categories, sourceUrl, item.category);
+
+      return {
+        sourceGuid: item.guid || `${source.key}:${sourceUrl}`,
+        sourceUrl,
+        canonicalUrl: sourceUrl,
+        title,
+        summary: summary || undefined,
+        bodyText: body || summary || title,
+        section,
+        author: item.creator,
+        publishedAt,
+      } satisfies NormalizedArticleInput;
+    })
+  );
+
+  const normalized: NormalizedArticleInput[] = [];
+  for (const row of rows) {
+    if (row) normalized.push(row);
+  }
+  return normalized;
+}
+
+async function pullFromNaver(source: NewsSourceDefinition): Promise<NormalizedArticleInput[]> {
+  const clientId = process.env.NAVER_CLIENT_ID?.trim();
+  const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
+    return [];
+  }
+
+  const queries = ['한국 뉴스', '한국 경제', '한국 사회'];
+  const unique = new Map<string, NormalizedArticleInput>();
+
+  for (const query of queries) {
+    const url = new URL(source.endpoint);
+    url.searchParams.set('query', query);
+    url.searchParams.set('display', '20');
+    url.searchParams.set('sort', 'date');
+
+    const response = await fetchWithTimeout(url.toString(), {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
+    });
+    if (!response.ok) continue;
+
+    const json = (await response.json()) as NaverResponse;
+    for (const item of json.items || []) {
+      const sourceUrl = (item.originallink || item.link || '').trim();
+      if (!sourceUrl) continue;
+      if (!sourceUrl.startsWith('http')) continue;
+
+      const title = normalizeText(stripHtml(decodeHtml(item.title || '')));
+      if (!title) continue;
+
+      const summary = normalizeText(stripHtml(decodeHtml(item.description || '')));
+      const body = await fetchArticleBody(sourceUrl, summary);
+
+      unique.set(sourceUrl, {
+        sourceGuid: sourceUrl,
+        sourceUrl,
+        canonicalUrl: sourceUrl,
+        title,
+        summary: summary || undefined,
+        bodyText: body || summary || title,
+        publishedAt: parseDateMs(item.pubDate),
+      });
+    }
+  }
+
+  return [...unique.values()];
+}
+
+const SOURCE_BODY_MARKERS: Record<string, string[]> = {
+  'khan.co.kr': [
+    'id=["\']articleBody["\']',
+    'class=["\'][^"\']*(art_body|article_body|news_view|content_view)[^"\']*["\']',
+  ],
+  'donga.com': [
+    'id=["\']article_txt["\']',
+    'class=["\'][^"\']*(article_txt|news_view|article_body)[^"\']*["\']',
+  ],
+  'hankyung.com': [
+    'id=["\']articletxt["\']',
+    'class=["\'][^"\']*(article-body|article_txt|news-view)[^"\']*["\']',
+  ],
+  'mk.co.kr': [
+    'class=["\'][^"\']*(news_cnt_detail_wrap|news_detail|art_txt)[^"\']*["\']',
+    'id=["\']article_body["\']',
+  ],
+  'it.donga.com': [
+    'class=["\'][^"\']*(view_text|article_txt|article_body)[^"\']*["\']',
+    'id=["\']article_txt["\']',
+  ],
+  'voakorea.com': [
+    'class=["\'][^"\']*(body-container|wsw|article-content)[^"\']*["\']',
+    'id=["\']article-content["\']',
+  ],
+};
+
+async function fetchArticleBody(url: string, fallback: string): Promise<string> {
+  try {
+    const response = await fetchWithTimeout(url, {
+      headers: {
+        'User-Agent': 'HangyeolNewsBot/1.0 (+https://hangyeol.com)',
+      },
+    });
+    if (!response.ok) {
+      return fallback;
+    }
+    const html = await response.text();
+    const text = extractBodyText(url, html, fallback);
+    if (text.length < 80) return fallback;
+    return text.slice(0, 12000);
+  } catch {
+    return fallback;
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: Parameters<typeof fetch>[1],
+  timeoutMs: number = 8_000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseDateMs(value?: string): number {
+  if (!value) return Date.now();
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
+function inferSection(
+  categories: string[] | undefined,
+  sourceUrl: string,
+  fallback?: string
+): string | undefined {
+  if (categories && categories.length > 0) {
+    const fromCategory = normalizeText(categories[0] || '');
+    if (fromCategory) return fromCategory;
+  }
+  if (fallback) {
+    const normalizedFallback = normalizeText(fallback);
+    if (normalizedFallback) return normalizedFallback;
+  }
+  try {
+    const pathname = new URL(sourceUrl).pathname.split('/').filter(Boolean);
+    return pathname[0] || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractBodyText(url: string, html: string, fallback: string): string {
+  const byJsonLd = extractFromJsonLd(html);
+  if (isUsableArticleText(byJsonLd)) {
+    return byJsonLd;
+  }
+
+  const host = normalizeHost(url);
+  const markers = SOURCE_BODY_MARKERS[host] || [];
+  for (const marker of markers) {
+    const byMarker = extractByMarkerWindow(html, marker);
+    if (isUsableArticleText(byMarker)) {
+      return byMarker;
+    }
+  }
+
+  const byArticleTag = extractFromTagBlock(html, 'article');
+  if (isUsableArticleText(byArticleTag)) {
+    return byArticleTag;
+  }
+
+  const byMainTag = extractFromTagBlock(html, 'main');
+  if (isUsableArticleText(byMainTag)) {
+    return byMainTag;
+  }
+
+  const wholePage = cleanupArticleText(stripHtml(html));
+  if (isUsableArticleText(wholePage)) {
+    return wholePage;
+  }
+
+  return cleanupArticleText(fallback);
+}
+
+function normalizeHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function extractFromJsonLd(html: string): string {
+  const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const candidates: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = scriptRegex.exec(html))) {
+    const raw = decodeHtml((match[1] || '').trim());
+    if (!raw) continue;
+    const parsed = safeJsonParse(raw);
+    if (!parsed) continue;
+    collectJsonLdArticleBodies(parsed, candidates, 0);
+  }
+
+  let best = '';
+  for (const candidate of candidates) {
+    const cleaned = cleanupArticleText(candidate);
+    if (cleaned.length > best.length) {
+      best = cleaned;
+    }
+  }
+  return best;
+}
+
+function collectJsonLdArticleBodies(node: unknown, out: string[], depth: number) {
+  if (depth > 8 || !node) return;
+  if (typeof node === 'string') return;
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectJsonLdArticleBodies(item, out, depth + 1);
+    }
+    return;
+  }
+
+  if (typeof node === 'object') {
+    const record = node as Record<string, unknown>;
+    const articleBody = record.articleBody;
+    if (typeof articleBody === 'string' && articleBody.trim().length > 40) {
+      out.push(articleBody);
+    }
+
+    const text = record.text;
+    const type = typeof record['@type'] === 'string' ? String(record['@type']).toLowerCase() : '';
+    if (type.includes('article') && typeof text === 'string' && text.trim().length > 120) {
+      out.push(text);
+    }
+
+    for (const value of Object.values(record)) {
+      collectJsonLdArticleBodies(value, out, depth + 1);
+    }
+  }
+}
+
+function safeJsonParse(value: string): unknown | null {
+  const trimmed = value.trim().replace(/^\uFEFF/, '');
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // Some pages append trailing semicolons.
+    try {
+      return JSON.parse(trimmed.replace(/;+$/, ''));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function extractByMarkerWindow(html: string, markerPattern: string): string {
+  let markerIndex = -1;
+  try {
+    const regex = new RegExp(markerPattern, 'i');
+    const found = regex.exec(html);
+    markerIndex = found?.index ?? -1;
+  } catch {
+    markerIndex = html.indexOf(markerPattern);
+  }
+
+  if (markerIndex < 0) return '';
+  const start = Math.max(0, markerIndex - 1500);
+  const end = Math.min(html.length, markerIndex + 32000);
+  return cleanupArticleText(stripHtml(html.slice(start, end)));
+}
+
+function extractFromTagBlock(html: string, tagName: 'article' | 'main'): string {
+  const regex = new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]{120,}?</${tagName}>`, 'gi');
+  let best = '';
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html))) {
+    const text = cleanupArticleText(stripHtml(match[0]));
+    if (text.length > best.length) {
+      best = text;
+    }
+  }
+  return best;
+}
+
+function cleanupArticleText(value: string): string {
+  return normalizeText(decodeHtml(value))
+    .replace(/(copyright|저작권자|무단전재|재배포 금지)[^ ]*/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function isUsableArticleText(value: string): boolean {
+  if (!value) return false;
+  if (value.length < 180) return false;
+  const sentenceCount = value.split(/[.!?。！？\n]+/).filter(Boolean).length;
+  return sentenceCount >= 2;
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ');
+}
+
+function normalizeText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}

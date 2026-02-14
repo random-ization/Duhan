@@ -1834,6 +1834,14 @@
     "createMyself": "自己创建",
     "maybeLater": "稍后再说"
   },
+  "pwa": {
+    "install": {
+      "title": "安装 DuHan 应用",
+      "androidHint": "安装后启动更快，并获得沉浸式全屏体验。",
+      "iosHint": "在 Safari 中点击“分享”，然后选择“添加到主屏幕”。",
+      "action": "立即安装"
+    }
+  },
   "vocabTest": {
     "correct": "正确",
     "wrong": "错误",

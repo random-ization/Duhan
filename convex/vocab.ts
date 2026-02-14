@@ -18,6 +18,10 @@ export type VocabStatsDto = {
   mastered: number;
 };
 
+const isVisibleInstitute = <T extends { isArchived?: boolean }>(
+  institute: T | null | undefined
+): institute is T => !!institute && institute.isArchived !== true;
+
 // ... DTOs ...
 export type VocabTips = {
   synonyms?: string[];
@@ -206,7 +210,7 @@ export const getAllPaginated = query({
   },
   handler: async (ctx, args) => {
     // 1. Get all institutes for course name lookup (small collection, cacheable)
-    const institutes = await ctx.db.query('institutes').collect();
+    const institutes = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
     const courseNameMap = new Map(institutes.map(i => [i.id, i.name]));
     // Note: courseNameMap uses _id as key.
     // In existing getAll, it used i.id ?? i._id. Let's assume _id for join consistency.
@@ -285,7 +289,7 @@ export const getAll = query({
     const limit = args.limit || 1000;
 
     // 1. Get all institutes for course name lookup
-    const institutes = await ctx.db.query('institutes').collect();
+    const institutes = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
     const courseNameMap = new Map(institutes.map(i => [i.id, i.name]));
 
     // 2. If courseId is provided, filter via appearances FIRST (before limit)
@@ -415,6 +419,9 @@ export const getOfCourse = query({
           .query('institutes')
           .withIndex('by_legacy_id', q => q.eq('id', effectiveCourseId))
           .unique();
+      }
+      if (!isVisibleInstitute(institute)) {
+        return [];
       }
 
       // 1. Get appearances with optional limit

@@ -18,6 +18,10 @@ export type GrammarStatsDto = {
   mastered: number;
 };
 
+const isVisibleInstitute = <T extends { isArchived?: boolean }>(
+  institute: T | null | undefined
+): institute is T => !!institute && institute.isArchived !== true;
+
 // Get Grammar stats for sidebar
 export const getStats = query({
   args: {
@@ -174,6 +178,9 @@ export const getUnitGrammar = query({
 
       if (institute) {
         effectiveCourseId = institute.id || institute._id;
+      }
+      if (!isVisibleInstitute(institute)) {
+        return [];
       }
 
       // SPECIAL HANDLING: Legacy Yonsei 1-2 & new Volume 2 courses
@@ -559,6 +566,9 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
       .query('institutes')
       .withIndex('by_legacy_id', q => q.eq('id', item.courseId))
       .unique();
+    if (!isVisibleInstitute(currentCourse)) {
+      return { success: false, isNew: false, error: 'COURSE_NOT_FOUND_OR_ARCHIVED' };
+    }
     const currentPublisher = currentCourse?.publisher || currentCourse?.name || 'unknown';
 
     // 2. Find all grammars with similar titles (base title without #N suffix)
@@ -730,6 +740,9 @@ async function checkUsage(
       .query('institutes')
       .withIndex('by_legacy_id', q => q.eq('id', link.courseId))
       .unique();
+    if (!isVisibleInstitute(linkedCourse)) {
+      continue;
+    }
     const linkedPublisher = linkedCourse?.publisher || linkedCourse?.name || 'unknown';
 
     if (linkedPublisher === currentPublisher) {

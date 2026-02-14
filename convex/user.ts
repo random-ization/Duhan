@@ -3,6 +3,7 @@ import { v, ConvexError } from 'convex/values';
 
 import { getAuthUserId } from './utils';
 import { asId } from './id';
+import { normalizeAnswerMap, normalizeFiniteNumberMap } from './validation';
 
 // Save a word to user's personal list
 export const saveSavedWord = mutation({
@@ -270,7 +271,19 @@ export const saveExamAttempt = mutation({
     const user = await ctx.db.get(userId);
     if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
 
-    const { examId, score, sectionScores, duration } = args;
+    const { examId, score, duration } = args;
+    let sectionScores: Record<string, number> | undefined;
+    let answers: Record<string, number> | undefined;
+    try {
+      sectionScores =
+        args.sectionScores === undefined ? undefined : normalizeFiniteNumberMap(args.sectionScores);
+      answers = args.answers === undefined ? undefined : normalizeAnswerMap(args.answers);
+    } catch (error) {
+      throw new ConvexError({
+        code: 'INVALID_EXAM_ATTEMPT_PAYLOAD',
+        message: (error as Error).message,
+      });
+    }
 
     // Resolve Exam ID
     let exam = await ctx.db
@@ -309,7 +322,7 @@ export const saveExamAttempt = mutation({
       totalQuestions,
       sectionScores,
       duration,
-      answers: args.answers,
+      answers,
       createdAt: Date.now(),
     });
 

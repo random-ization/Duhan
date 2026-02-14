@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import TopikModule from '../components/topik';
@@ -15,15 +15,8 @@ import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTopikPage from '../components/mobile/MobileTopikPage';
 
-// Use any here to be compatible with the restricted type in routes.tsx (TextbookContent | TopikExam)
-// Defining specific union type here causes circular dependency or tight coupling with AuthContext
-interface TopikPageProps {
-  canAccessContent: (content: any) => boolean;
-  onShowUpgradePrompt: () => void;
-}
-
-const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePrompt }) => {
-  const { user, language } = useAuth();
+const TopikPage: React.FC = () => {
+  const { user, language, canAccessContent, setShowUpgradePrompt } = useAuth();
   const { saveExamAttempt, saveAnnotation, deleteExamAttempt } = useUserActions();
   const { topikExams } = useData();
   const navigate = useLocalizedNavigate();
@@ -47,6 +40,7 @@ const TopikPage: React.FC<TopikPageProps> = ({ canAccessContent, onShowUpgradePr
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
     user && examId ? { prefix: `TOPIK-${examId}`, limit: 4000 } : 'skip'
   );
+  const onShowUpgradePrompt = useCallback(() => setShowUpgradePrompt(true), [setShowUpgradePrompt]);
 
   // Filter exams based on type
   const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);

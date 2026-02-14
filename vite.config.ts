@@ -104,6 +104,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        // Keep auth/API requests out of SPA navigation fallback in PWA mode.
+        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],

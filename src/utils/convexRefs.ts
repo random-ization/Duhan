@@ -328,3 +328,50 @@ export const TOPIK = {
   ),
   deleteExam: mRef<{ examId: string }, unknown>('topik:deleteExam'),
 };
+
+export const NEWS = {
+  listSources: qRef<
+    NoArgs,
+    Array<{
+      key: string;
+      name: string;
+      type: 'rss' | 'api';
+      endpoint: string;
+      pollMinutes: number;
+      enabled: boolean;
+    }>
+  >('newsSources:listSources'),
+  triggerSource: mRef<{ sourceKey: string }, { scheduled: boolean; sourceKey: string }>(
+    'newsSources:triggerSource'
+  ),
+  triggerAllSources: mRef<{ delayMs?: number }, { scheduled: number; delayMs: number }>(
+    'newsSources:triggerAllSources'
+  ),
+  getSourceHealth: qRef<
+    NoArgs,
+    Array<{
+      sourceKey: string;
+      name: string;
+      enabled: boolean;
+      pollMinutes: number;
+      degradeThreshold: number;
+      totalRuns: number;
+      totalFailures: number;
+      consecutiveFailures: number;
+      degraded: boolean;
+      degradedSince?: number;
+      lastRunAt?: number;
+      lastStatus?: string;
+      lastError?: string;
+      lastSuccessAt?: number;
+    }>
+  >('newsSources:getSourceHealth'),
+  triggerProjection: mRef<
+    { courseId?: string; limit?: number },
+    { scheduled: boolean; jobId: string; courseId: string; limit: number }
+  >('newsProjection:triggerProjection'),
+  getProjectionStats: qRef<
+    { courseId?: string },
+    { courseId: string; recentActiveCount: number; projectedCount: number; pendingCount: number }
+  >('newsProjection:getProjectionStats'),
+};

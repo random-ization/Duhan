@@ -13,7 +13,7 @@ export const getByCourse = query({
 
     // Return all fields for admin editing, exclude archived
     return units
-      .filter(u => !u.isArchived)
+      .filter(u => u.isArchived !== true)
       .map(u => ({
         _id: u._id,
         courseId: u.courseId,
@@ -51,6 +51,9 @@ export const getDetails = query({
     if (instituteId) {
       const institute = await ctx.db.get(instituteId);
       if (institute) {
+        if (institute.isArchived === true) {
+          return { unit: null, articles: [], vocabList: [], grammarList: [], annotations: [] };
+        }
         // If institute has a legacy ID, use it for lookups
         // If not, use the Convex ID (assuming data is linked via Convex ID)
         effectiveCourseId = institute.id || institute._id;
@@ -96,7 +99,8 @@ export const getDetails = query({
         : Promise.resolve([]),
     ]);
 
-    const mainUnit = articles[0] || null;
+    const visibleArticles = articles.filter(article => article.isArchived !== true);
+    const mainUnit = visibleArticles[0] || null;
 
     // OPTIMIZATION: Batch fetch vocabulary words
     const wordIds = [...new Set(vocabAppearances.map(a => a.wordId))];
@@ -148,7 +152,7 @@ export const getDetails = query({
 
     return {
       unit: mainUnit,
-      articles: articles,
+      articles: visibleArticles,
       vocabList: vocabList.filter(v => v !== null),
       grammarList: grammarList.filter(g => g !== null),
       annotations: annotations,

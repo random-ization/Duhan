@@ -8,7 +8,7 @@ import { useApp } from '../contexts/AppContext'; // Import Layout Context
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
-import { TextbookContent, TopikExam, ExamAttempt } from '../types';
+import { ExamAttempt } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { qRef } from '../utils/convexRefs';
@@ -93,13 +93,7 @@ const SortableItem = ({
   );
 };
 
-export default function DashboardPage({
-  _canAccessContent,
-  _onShowUpgradePrompt,
-}: Readonly<{
-  _canAccessContent: (content: TextbookContent | TopikExam) => boolean;
-  _onShowUpgradePrompt: () => void;
-}>) {
+export default function DashboardPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const { t } = useTranslation();

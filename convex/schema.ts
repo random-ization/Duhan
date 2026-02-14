@@ -687,4 +687,84 @@ export default defineSchema({
     .index('by_category', ['category'])
     .index('by_public', ['isPublic'])
     .index('by_createdAt', ['createdAt']),
+
+  // News Articles (Korean reading feed)
+  news_articles: defineTable({
+    sourceKey: v.string(), // e.g. "khan", "donga", "naver_news_search"
+    sourceType: v.string(), // "rss" | "api"
+    sourceGuid: v.optional(v.string()),
+    sourceUrl: v.string(),
+    canonicalUrl: v.string(),
+    urlHash: v.string(),
+
+    title: v.string(),
+    summary: v.optional(v.string()),
+    bodyText: v.string(),
+    bodyHtml: v.optional(v.string()),
+
+    language: v.string(), // "ko"
+    section: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    author: v.optional(v.string()),
+
+    publishedAt: v.number(),
+    fetchedAt: v.number(),
+
+    difficultyLevel: v.string(), // "L1" | "L2" | "L3"
+    difficultyScore: v.number(), // 0-100
+    difficultyReason: v.array(v.string()),
+
+    dedupeClusterId: v.string(),
+    normalizedTitle: v.optional(v.string()),
+    simhash: v.optional(v.string()),
+    projectedAt: v.optional(v.number()),
+    projectedCourseId: v.optional(v.string()),
+    projectedUnitIndex: v.optional(v.number()),
+    projectedArticleIndex: v.optional(v.number()),
+
+    status: v.string(), // "active" | "filtered" | "archived"
+    licenseTier: v.string(), // "unknown" | "internal_ok" | "restricted"
+  })
+    .index('by_url_hash', ['urlHash'])
+    .index('by_source_published', ['sourceKey', 'publishedAt'])
+    .index('by_difficulty_published', ['difficultyLevel', 'publishedAt'])
+    .index('by_status_published', ['status', 'publishedAt'])
+    .index('by_status_projected', ['status', 'projectedAt'])
+    .index('by_dedupe_cluster', ['dedupeClusterId'])
+    .index('by_published', ['publishedAt']),
+
+  // News Fetch Run Logs
+  news_fetch_logs: defineTable({
+    sourceKey: v.string(),
+    runAt: v.number(),
+    durationMs: v.number(),
+    fetched: v.number(),
+    inserted: v.number(),
+    updated: v.number(),
+    deduped: v.number(),
+    failed: v.number(),
+    status: v.string(), // "ok" | "partial" | "error"
+    errorSample: v.optional(v.array(v.string())),
+  })
+    .index('by_source_runAt', ['sourceKey', 'runAt'])
+    .index('by_runAt', ['runAt'])
+    .index('by_status_runAt', ['status', 'runAt']),
+
+  // News source runtime health / alert state
+  news_source_health: defineTable({
+    sourceKey: v.string(),
+    totalRuns: v.number(),
+    totalFailures: v.number(),
+    consecutiveFailures: v.number(),
+    lastRunAt: v.number(),
+    lastStatus: v.string(), // "ok" | "partial" | "error"
+    lastError: v.optional(v.string()),
+    lastSuccessAt: v.optional(v.number()),
+    degraded: v.boolean(),
+    degradedSince: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_sourceKey', ['sourceKey'])
+    .index('by_degraded', ['degraded'])
+    .index('by_lastRunAt', ['lastRunAt']),
 });

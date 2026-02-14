@@ -2,6 +2,10 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId } from './utils';
 
+const isVisibleInstitute = <T extends { isArchived?: boolean }>(
+  institute: T | null | undefined
+): institute is T => !!institute && institute.isArchived !== true;
+
 // Get course progress for a user
 export const getCourseProgress = query({
   args: {
@@ -18,7 +22,7 @@ export const getCourseProgress = query({
       .withIndex('by_legacy_id', q => q.eq('id', courseId))
       .first();
 
-    if (!institute) {
+    if (!isVisibleInstitute(institute)) {
       return null;
     }
 
@@ -170,21 +174,25 @@ export const getAllProgress = query({
           .first()
       )
     );
-    const institutesMap = new Map(institutesArray.filter(Boolean).map(i => [i!.id, i!]));
+    const institutesMap = new Map(
+      institutesArray.filter(isVisibleInstitute).map(institute => [institute.id, institute])
+    );
 
     // Enrich with institute data in memory
-    const result = progressRecords.map(p => {
-      const institute = institutesMap.get(p.courseId);
+    const result = progressRecords
+      .filter(progress => institutesMap.has(progress.courseId))
+      .map(p => {
+        const institute = institutesMap.get(p.courseId)!;
 
-      return {
-        courseId: p.courseId,
-        courseName: institute?.name || p.courseId,
-        completedUnits: p.completedUnits.length,
-        totalUnits: institute?.totalUnits || 0,
-        lastAccessAt: p.lastAccessAt,
-        lastUnitIndex: p.lastUnitIndex,
-      };
-    });
+        return {
+          courseId: p.courseId,
+          courseName: institute.name,
+          completedUnits: p.completedUnits.length,
+          totalUnits: institute.totalUnits || 0,
+          lastAccessAt: p.lastAccessAt,
+          lastUnitIndex: p.lastUnitIndex,
+        };
+      });
 
     return result;
   },

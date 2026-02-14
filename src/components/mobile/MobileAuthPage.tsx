@@ -12,10 +12,12 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { LocalizedLink } from '../../components/LocalizedLink';
+import { getLocalizedPath, useCurrentLanguage } from '../../hooks/useLocalizedNavigate';
 
 export const MobileAuthPage: React.FC = () => {
   const { t } = useTranslation();
   const { signIn } = useAuthActions();
+  const currentLanguage = useCurrentLanguage();
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,8 @@ export const MobileAuthPage: React.FC = () => {
     password: '',
   });
 
-  const postAuthRedirectUrl = `${globalThis.location.origin}/dashboard`;
+  const postAuthRedirectPath = getLocalizedPath('/dashboard', currentLanguage);
+  const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   const handleGoogleLogin = async () => {
     try {
