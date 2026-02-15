@@ -1,131 +1,125 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { getLabels } from '../utils/i18n';
-
 import { useAction } from 'convex/react';
-import { toErrorMessage } from '../utils/errors';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { PASSWORD_RESET } from '../utils/convexRefs';
-import { ResetPasswordForm } from './reset-password/components/ResetPasswordForm';
-import { ResetPasswordStatus } from './reset-password/components/ResetPasswordStatus';
+import { useTranslation } from 'react-i18next';
+import { aRef } from '../utils/convexRefs';
+import { LocalizedLink } from '../components/LocalizedLink';
 
 const ResetPasswordPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
-  const navigate = useLocalizedNavigate();
-  const { language, logout } = useAuth();
-  const labels = getLabels(language);
+  const token = useMemo(() => searchParams.get('token')?.trim() || '', [searchParams]);
 
-  const token = searchParams.get('token');
-  const email = searchParams.get('email');
+  const confirmPasswordReset = useAction(
+    aRef<{ token: string; newPassword: string }, { success: boolean }>(
+      'accountRecovery:confirmPasswordReset'
+    )
+  );
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<'form' | 'success' | 'error'>('form');
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const resetPassword = useAction(PASSWORD_RESET.resetPassword);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
 
-    if (newPassword !== confirmPassword) {
-      setError(labels.auth?.passwordsNotMatch);
+    if (!token) {
+      setError(t('auth.invalidResetToken', { defaultValue: 'Invalid or missing reset token.' }));
       return;
     }
-
-    if (newPassword.length < 6) {
-      setError(labels.auth?.passwordTooShort);
+    if (newPassword.length < 8) {
+      setError(
+        t('auth.passwordTooShort', {
+          defaultValue: 'Password must be at least 8 characters long.',
+        })
+      );
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError(
+        t('auth.passwordMismatch', { defaultValue: 'The two password fields do not match.' })
+      );
       return;
     }
 
     setLoading(true);
-
     try {
-      if (!email) {
-        setError(labels.auth?.invalidLinkDesc);
-        setStatus('error');
-        return;
-      }
-      if (!token) {
-        setError(labels.auth?.invalidLinkDesc);
-        setStatus('error');
-        return;
-      }
-      await resetPassword({ email, token, newPassword });
-
-      // Force logout to clear any existing session
-      logout();
-      setStatus('success');
-    } catch (err: unknown) {
-      const message = toErrorMessage(err);
-      setError(message || labels.auth?.resetFailed);
-
-      if (message?.includes('expired') || message?.includes('Invalid')) {
-        setStatus('error');
-      }
+      await confirmPasswordReset({ token, newPassword });
+      setSuccess(true);
+    } catch (err: any) {
+      const message =
+        err?.message === 'INVALID_OR_EXPIRED_TOKEN'
+          ? t('auth.invalidResetToken', { defaultValue: 'Invalid or expired reset token.' })
+          : err?.message === 'WEAK_PASSWORD'
+            ? t('auth.passwordTooShort', {
+                defaultValue: 'Password must be at least 8 characters long.',
+              })
+            : err?.message || t('common.error', { defaultValue: 'Something went wrong.' });
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!token || !email) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 font-sans">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-indigo-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-          <div className="absolute bottom-0 left-0 w-3/4 h-3/4 bg-violet-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-        </div>
-        <div className="w-full max-w-md p-6 relative z-10">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10 text-center">
-            <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
-            <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.invalidLink}</h1>
-            <p className="text-red-200 text-sm mb-8">{labels.auth?.invalidLinkDesc}</p>
-            <button
-              onClick={() => navigate('/forgot-password')}
-              className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-            >
-              {labels.auth?.requestAgain}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 font-sans">
-      {/* Background Effects */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-indigo-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-        <div className="absolute bottom-0 left-0 w-3/4 h-3/4 bg-violet-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h1 className="text-2xl font-black text-slate-900 mb-2">
+          {t('auth.resetPassword', { defaultValue: 'Reset password' })}
+        </h1>
+        <p className="text-sm text-slate-500 mb-6">
+          {t('auth.resetPasswordDescription', {
+            defaultValue: 'Set a new password for your account.',
+          })}
+        </p>
 
-      <div className="w-full max-w-md p-6 relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10">
-          {status === 'form' ? (
-            <ResetPasswordForm
-              labels={labels}
-              newPassword={newPassword}
-              setNewPassword={setNewPassword}
-              confirmPassword={confirmPassword}
-              setConfirmPassword={setConfirmPassword}
-              handleSubmit={handleSubmit}
-              loading={loading}
-              error={error}
+        {success ? (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-700">
+              {t('auth.passwordResetSuccess', {
+                defaultValue: 'Your password has been reset successfully.',
+              })}
+            </div>
+            <LocalizedLink
+              to="/login"
+              className="inline-block text-indigo-600 hover:text-indigo-700 font-semibold"
+            >
+              {t('auth.backToLogin', { defaultValue: 'Back to login' })}
+            </LocalizedLink>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <input
+              type="password"
+              required
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder={t('auth.newPassword', { defaultValue: 'New password' })}
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-          ) : (
-            <ResetPasswordStatus
-              status={status}
-              labels={labels}
-              error={error}
-              navigate={navigate}
+            <input
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder={t('auth.confirmPassword', { defaultValue: 'Confirm password' })}
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-          )}
-        </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-slate-900 text-white font-bold py-3 disabled:opacity-60"
+            >
+              {loading
+                ? t('common.loading', { defaultValue: 'Loading...' })
+                : t('auth.resetPassword', { defaultValue: 'Reset password' })}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

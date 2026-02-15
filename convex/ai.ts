@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use node';
 import { action, type ActionCtx } from './_generated/server';
-import { v } from 'convex/values';
-import { internal } from './_generated/api';
+import { ConvexError, v } from 'convex/values';
+import { api, internal } from './_generated/api';
 import OpenAI from 'openai';
 import { createClient } from '@deepgram/sdk';
+import { createHash } from 'node:crypto';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
+import { hasActiveSubscription } from './subscription';
+import { FREE_DAILY_AI_CALL_LIMIT, SUBSCRIBER_DAILY_AI_CALL_LIMIT } from './queryLimits';
 
 // Helper: No-op fallback for logging
 const logAI = (msg: string) => console.log(`[AI] ${msg}`);
@@ -15,14 +18,13 @@ const logAI = (msg: string) => console.log(`[AI] ${msg}`);
 const logUsageMutation = internal.aiUsageLogs.logUsage;
 const logInvocationMutation = internal.aiUsageLogs.logInvocation;
 const countRecentUsageQuery = internal.aiUsageLogs.countRecentByUser;
+const getAiCacheByKeyQuery = internal.aiCache.getByKey;
+const upsertAiCacheMutation = internal.aiCache.upsert;
 
-const readPositiveInteger = (value: string | undefined, fallback: number) => {
-  const parsed = Number.parseInt(value ?? '', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-
-const AI_RATE_LIMIT_WINDOW_MS = readPositiveInteger(process.env.AI_RATE_LIMIT_WINDOW_MS, 60_000);
-const AI_RATE_LIMIT_MAX_CALLS = readPositiveInteger(process.env.AI_RATE_LIMIT_MAX_CALLS, 120);
+const AI_CACHE_VERSION = 'v1';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const AI_DAILY_LIMIT_TIMEZONE = process.env.AI_DAILY_LIMIT_TIMEZONE === 'UTC' ? 'UTC' : 'KST';
 
 // Minimal error formatter
 function toErrorMessage(error: unknown): string {
@@ -33,25 +35,45 @@ function toErrorMessage(error: unknown): string {
 async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Id<'users'>> {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
-    throw new Error('UNAUTHORIZED');
+    throw new ConvexError('UNAUTHORIZED');
   }
   return userId as Id<'users'>;
 }
 
-async function enforceAiRateLimit(ctx: ActionCtx, userId: Id<'users'>, feature: string) {
+function resolveDayWindow(nowMs: number) {
+  const offsetMs = AI_DAILY_LIMIT_TIMEZONE === 'KST' ? KST_OFFSET_MS : 0;
+  const shiftedNow = nowMs + offsetMs;
+  const dayStartShifted = Math.floor(shiftedNow / DAY_MS) * DAY_MS;
+  const dayStartMs = dayStartShifted - offsetMs;
+  return {
+    dayStartMs,
+    dayEndMs: dayStartMs + DAY_MS,
+  };
+}
+
+async function enforceAiDailyLimit(ctx: ActionCtx, userId: Id<'users'>, feature: string) {
+  const nowMs = Date.now();
+  const { dayStartMs } = resolveDayWindow(nowMs);
+  const subscription = await ctx.runQuery(api.users.viewer, {});
+  const maxCalls = hasActiveSubscription(subscription, nowMs)
+    ? SUBSCRIBER_DAILY_AI_CALL_LIMIT
+    : FREE_DAILY_AI_CALL_LIMIT;
+
   const { count } = await ctx.runQuery(countRecentUsageQuery, {
     userId,
-    windowMs: AI_RATE_LIMIT_WINDOW_MS,
+    windowMs: Math.max(1_000, nowMs - dayStartMs + 1),
   });
-  if (count >= AI_RATE_LIMIT_MAX_CALLS) {
-    throw new Error('AI_RATE_LIMIT_EXCEEDED');
+
+  if (count >= maxCalls) {
+    throw new ConvexError('DAILY_LIMIT_REACHED');
   }
+
   await ctx.runMutation(logInvocationMutation, { userId, feature });
 }
 
 async function guardAiAction(ctx: ActionCtx, feature: string): Promise<Id<'users'>> {
   const userId = await requireAuthenticatedUser(ctx);
-  await enforceAiRateLimit(ctx, userId, feature);
+  await enforceAiDailyLimit(ctx, userId, feature);
   return userId;
 }
 
@@ -101,6 +123,103 @@ function normalizeTargetLanguage(lang?: string): string {
   }
 
   return SUPPORTED_TRANSLATION_LANGS.has(normalized) ? normalized : '';
+}
+
+type ReadingVocabularyItem = {
+  term: string;
+  meaning: string;
+  level: string;
+};
+
+type ReadingGrammarItem = {
+  pattern: string;
+  explanation: string;
+  example: string;
+};
+
+type ReadingAnalysisResult = {
+  summary: string;
+  vocabulary: ReadingVocabularyItem[];
+  grammar: ReadingGrammarItem[];
+};
+
+type ReadingTranslationResult = {
+  translations: string[];
+};
+
+function hashText(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function buildAiCacheKey(
+  kind: 'reading_analysis' | 'reading_translation',
+  language: string,
+  contentHash: string
+): string {
+  return hashText(`${AI_CACHE_VERSION}|${kind}|${language}|${contentHash}`);
+}
+
+function normalizeReadingAnalysisPayload(
+  payload: unknown,
+  fallbackSummary: string
+): ReadingAnalysisResult | null {
+  const parsed = payload as
+    | {
+        summary?: unknown;
+        vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
+        grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
+      }
+    | null
+    | undefined;
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const summary =
+    typeof parsed.summary === 'string' && parsed.summary.trim()
+      ? parsed.summary.trim()
+      : fallbackSummary;
+  const vocabulary = Array.isArray(parsed.vocabulary)
+    ? parsed.vocabulary
+        .map(item => ({
+          term: typeof item.term === 'string' ? item.term.trim() : '',
+          meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+          level: typeof item.level === 'string' ? item.level.trim() : '',
+        }))
+        .filter(item => Boolean(item.term))
+        .slice(0, 8)
+    : [];
+  const grammar = Array.isArray(parsed.grammar)
+    ? parsed.grammar
+        .map(item => ({
+          pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
+          explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
+          example: typeof item.example === 'string' ? item.example.trim() : '',
+        }))
+        .filter(item => Boolean(item.pattern))
+        .slice(0, 4)
+    : [];
+
+  return {
+    summary,
+    vocabulary,
+    grammar,
+  };
+}
+
+function normalizeReadingTranslationPayload(
+  payload: unknown,
+  expectedCount: number
+): ReadingTranslationResult | null {
+  const parsed = payload as { translations?: unknown } | null | undefined;
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.translations)) {
+    return null;
+  }
+  const translations = parsed.translations
+    .slice(0, expectedCount)
+    .map(item => (typeof item === 'string' ? item : ''));
+  if (translations.length < expectedCount) {
+    translations.push(...new Array(expectedCount - translations.length).fill(''));
+  }
+  return { translations };
 }
 
 type DeepgramWord = {
@@ -892,19 +1011,31 @@ export const analyzeReadingArticle = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_reading_article');
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return null;
-    }
-
-    const client = new OpenAI({ apiKey });
-    const { label: responseLanguageLabel } = resolveReadingResponseLanguage(args.language);
+    const { code: responseLanguageCode, label: responseLanguageLabel } =
+      resolveReadingResponseLanguage(args.language);
     const trimmedBody = args.bodyText.trim().slice(0, 7000);
     const trimmedSummary = args.summary?.trim() || '';
+    const fallbackSummary = trimmedSummary || args.title;
 
     if (!trimmedBody || trimmedBody.length < 20) {
       return null;
     }
+
+    const contentHash = hashText(
+      `${args.title.trim()}|${trimmedSummary}|${trimmedBody}|${responseLanguageCode}`
+    );
+    const cacheKey = buildAiCacheKey('reading_analysis', responseLanguageCode, contentHash);
+    const cached = await ctx.runQuery(getAiCacheByKeyQuery, { key: cacheKey });
+    const cachedResult = normalizeReadingAnalysisPayload(cached?.payload, fallbackSummary);
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return null;
+    }
+    const client = new OpenAI({ apiKey });
 
     try {
       const completion = await client.chat.completions.create({
@@ -959,36 +1090,19 @@ export const analyzeReadingArticle = action({
       const content = completion.choices[0].message.content;
       if (!content) return null;
 
-      const parsed = JSON.parse(content) as {
-        summary?: unknown;
-        vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
-        grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
-      };
+      const parsed = JSON.parse(content);
+      const result = normalizeReadingAnalysisPayload(parsed, fallbackSummary);
+      if (!result) return null;
 
-      const summary =
-        typeof parsed.summary === 'string' ? parsed.summary.trim() : trimmedSummary || args.title;
-      const vocabulary = Array.isArray(parsed.vocabulary)
-        ? parsed.vocabulary
-            .map(item => ({
-              term: typeof item.term === 'string' ? item.term.trim() : '',
-              meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
-              level: typeof item.level === 'string' ? item.level.trim() : '',
-            }))
-            .filter(item => Boolean(item.term))
-            .slice(0, 8)
-        : [];
-      const grammar = Array.isArray(parsed.grammar)
-        ? parsed.grammar
-            .map(item => ({
-              pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
-              explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
-              example: typeof item.example === 'string' ? item.example.trim() : '',
-            }))
-            .filter(item => Boolean(item.pattern))
-            .slice(0, 4)
-        : [];
+      await ctx.runMutation(upsertAiCacheMutation, {
+        key: cacheKey,
+        kind: 'reading_analysis',
+        language: responseLanguageCode,
+        contentHash,
+        payload: result,
+      });
 
-      return { summary, vocabulary, grammar };
+      return result;
     } catch (error) {
       console.error('[AI] analyzeReadingArticle failed:', toErrorMessage(error));
       return null;
@@ -1080,6 +1194,57 @@ export const explainWordFallback = action({
       };
     } catch (error) {
       console.error('[AI] explainWordFallback failed:', toErrorMessage(error));
+      return null;
+    }
+  },
+});
+
+export const translateReadingParagraphs = action({
+  args: {
+    title: v.string(),
+    paragraphs: v.array(v.string()),
+    language: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await guardAiAction(ctx, 'translate_reading_paragraphs');
+
+    const limitedParagraphs = args.paragraphs.slice(0, 36).map(item => item.trim());
+    if (limitedParagraphs.length === 0) {
+      return { translations: [] as string[] };
+    }
+
+    const normalizedTargetLang = normalizeTargetLanguage(args.language) || 'zh';
+    const contentHash = hashText(
+      `${args.title.trim()}|${normalizedTargetLang}|${limitedParagraphs.join('\n\n')}`
+    );
+    const cacheKey = buildAiCacheKey('reading_translation', normalizedTargetLang, contentHash);
+    const cached = await ctx.runQuery(getAiCacheByKeyQuery, { key: cacheKey });
+    const cachedResult = normalizeReadingTranslationPayload(
+      cached?.payload,
+      limitedParagraphs.length
+    );
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    try {
+      const segments = limitedParagraphs.map(text => ({ text }));
+      const translations = await translateSegmentTexts(segments, normalizedTargetLang);
+      const result: ReadingTranslationResult = {
+        translations: limitedParagraphs.map((_, index) => translations[index] || ''),
+      };
+
+      await ctx.runMutation(upsertAiCacheMutation, {
+        key: cacheKey,
+        kind: 'reading_translation',
+        language: normalizedTargetLang,
+        contentHash,
+        payload: result,
+      });
+
+      return result;
+    } catch (error) {
+      console.error('[AI] translateReadingParagraphs failed:', toErrorMessage(error));
       return null;
     }
   },

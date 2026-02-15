@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { useQuery } from 'convex/react';
-import { ChevronRight, Clock3 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery } from 'convex/react';
+import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NEWS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useAuth } from '../contexts/AuthContext';
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -32,62 +34,24 @@ type CuratedArticle = {
   tone: 'default' | 'warm' | 'dark';
 };
 
-const curatedArticles: CuratedArticle[] = [
-  {
-    id: 'wiki-hanok',
-    source: 'Wikipedia',
-    sourceType: '韩国文化百科',
-    icon: '🏛️',
-    title: '한옥 (韩屋)',
-    excerpt:
-      '한옥은 한국의 전통 건축 양식으로 지어진 집을 말한다. 자연과의 조화를 중요하게 생각하며, 온돌과 마루가 있는 것이 특징이다...',
-    badge: 'B2 中阶 • 说明文',
-    bookmarkText: '精读收藏',
-    tone: 'default',
-  },
-  {
-    id: 'folktale-sun-moon',
-    source: 'Folktale',
-    sourceType: '韩国传统童话',
-    icon: '🦊',
-    title: '해와 달이 된 오누이',
-    subtitle: '成为日月的兄妹',
-    excerpt:
-      '옛날 옛적에, 홀어머니와 오누이가 살고 있었어요. 어느 날 고개를 넘던 어머니는 무서운 호랑이를 만나고 말았답니다...',
-    badge: 'A1 初阶 • 记叙文',
-    bookmarkText: '睡前伴读',
-    tone: 'warm',
-  },
-  {
-    id: 'poem-seosi',
-    source: 'Literature',
-    sourceType: '公版名家名篇',
-    icon: '✍️',
-    title: '서시 (序诗)',
-    subtitle: '윤동주 (尹东柱)',
-    excerpt:
-      '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다...',
-    badge: 'C2 母语级 • 诗歌',
-    bookmarkText: '文学赏析',
-    tone: 'dark',
-  },
-];
-
-function getDifficultyChip(level: 'L1' | 'L2' | 'L3') {
+function getDifficultyChip(
+  level: 'L1' | 'L2' | 'L3',
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
   if (level === 'L1') {
     return {
-      text: 'A2 初阶',
+      text: t('readingDiscovery.difficulty.l1', { defaultValue: 'A2 Beginner' }),
       className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     };
   }
   if (level === 'L2') {
     return {
-      text: 'B2 中高阶',
+      text: t('readingDiscovery.difficulty.l2', { defaultValue: 'B2 Intermediate' }),
       className: 'bg-blue-50 text-blue-700 border-blue-200',
     };
   }
   return {
-    text: 'C1 高级',
+    text: t('readingDiscovery.difficulty.l3', { defaultValue: 'C1 Advanced' }),
     className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   };
 }
@@ -106,16 +70,25 @@ function getSourceLabel(sourceKey: string) {
   return map[sourceKey] || sourceKey;
 }
 
-function formatRelativeTime(publishedAt: number) {
+function formatRelativeTime(publishedAt: number, language: string) {
   const diffMs = Date.now() - publishedAt;
   const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return '刚刚';
-  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
+  const locale =
+    language === 'zh'
+      ? 'zh-CN'
+      : language === 'vi'
+        ? 'vi-VN'
+        : language === 'mn'
+          ? 'mn-MN'
+          : 'en-US';
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (diffMinutes < 1) return rtf.format(0, 'minute');
+  if (diffMinutes < 60) return rtf.format(-diffMinutes, 'minute');
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} 小时前`;
+  if (diffHours < 24) return rtf.format(-diffHours, 'hour');
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} 天前`;
-  return new Date(publishedAt).toLocaleDateString();
+  if (diffDays < 7) return rtf.format(-diffDays, 'day');
+  return new Date(publishedAt).toLocaleDateString(locale);
 }
 
 function estimateReadingMinutes(bodyText: string) {
@@ -124,21 +97,136 @@ function estimateReadingMinutes(bodyText: string) {
 }
 
 export default function ReadingDiscoveryPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const { user } = useAuth();
+  const language =
+    i18n.language === 'zh' ||
+    i18n.language === 'en' ||
+    i18n.language === 'vi' ||
+    i18n.language === 'mn'
+      ? i18n.language
+      : 'en';
+  const userId = user?.id;
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
+  const [feedReady, setFeedReady] = useState<boolean>(() => !userId);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string>('');
+  const autoRefreshLockRef = useRef(false);
+  const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
+  const refreshUserFeedIfEligible = useMutation(NEWS.refreshUserFeedIfEligible);
+  const manualRefreshUserFeed = useMutation(NEWS.manualRefreshUserFeed);
 
-  const newsQueryArgs =
-    difficultyFilter === 'ALL' ? { limit: 24 } : { difficultyLevel: difficultyFilter, limit: 24 };
-  const news = useQuery(NEWS.listRecent, newsQueryArgs) as NewsItem[] | undefined;
-  const featuredArticles = useQuery(NEWS.listRecent, {
-    sourceKey: 'wiki_ko_featured',
-    limit: 12,
-  }) as NewsItem[] | undefined;
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) {
+      setFeedReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setFeedReady(false);
+    setRefreshMessage('');
+    void ensureUserFeed({ newsLimit: 24, articleLimit: 12 })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) {
+          setFeedReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureUserFeed, userId]);
 
-  const topNews = useMemo(() => (news || []).slice(0, 8), [news]);
+  const feed = useQuery(
+    NEWS.getUserFeed,
+    feedReady ? { newsLimit: 24, articleLimit: 12 } : 'skip'
+  ) as
+    | {
+        news: NewsItem[];
+        articles: NewsItem[];
+        refresh: {
+          needsInitialization: boolean;
+          hasReadSinceRefresh: boolean;
+          autoRefreshEligible: boolean;
+          nextAutoRefreshAt: number | null;
+          manualRefreshLimit: number;
+          manualRefreshUsed: number;
+          manualRefreshRemaining: number;
+          lastRefreshedAt: number | null;
+          userScoped: boolean;
+        };
+      }
+    | undefined;
+
+  useEffect(() => {
+    if (!feedReady || !userId || !feed?.refresh.autoRefreshEligible || autoRefreshLockRef.current)
+      return;
+    autoRefreshLockRef.current = true;
+    void refreshUserFeedIfEligible({ newsLimit: 24, articleLimit: 12 })
+      .then(result => {
+        if (result?.refreshed) {
+          setRefreshMessage(
+            t('readingDiscovery.news.autoRefreshed', {
+              defaultValue: 'Recommendations updated automatically based on your reading activity',
+            })
+          );
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        autoRefreshLockRef.current = false;
+      });
+  }, [feed?.refresh.autoRefreshEligible, feedReady, refreshUserFeedIfEligible, t, userId]);
+
+  const onManualRefresh = async () => {
+    if (!userId || manualRefreshing) return;
+    setManualRefreshing(true);
+    setRefreshMessage('');
+    try {
+      const result = await manualRefreshUserFeed({ newsLimit: 24, articleLimit: 12 });
+      if (!result.refreshed) {
+        setRefreshMessage(
+          t('readingDiscovery.news.manualLimitReached', {
+            defaultValue: 'Manual refresh limit reached for today (3 times)',
+          })
+        );
+      } else {
+        setRefreshMessage(
+          t('readingDiscovery.news.manualRefreshed', {
+            defaultValue: 'Refreshed. Remaining today: {{count}}',
+            count: result.manualRefreshRemaining,
+          })
+        );
+      }
+    } catch {
+      setRefreshMessage(
+        t('readingDiscovery.news.manualRefreshFailed', {
+          defaultValue: 'Refresh failed. Please try again later.',
+        })
+      );
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
+
+  const news = useMemo(() => feed?.news ?? [], [feed?.news]);
+  const featuredArticles = feed?.articles;
+  const filteredNews = useMemo(
+    () =>
+      difficultyFilter === 'ALL'
+        ? news
+        : news.filter(item => item.difficultyLevel === difficultyFilter),
+    [difficultyFilter, news]
+  );
+  const topNews = useMemo(() => filteredNews.slice(0, 8), [filteredNews]);
   const featuredNews = topNews[0];
   const secondaryNews = topNews.slice(1, 3);
-  const weeklyReadCount = 5;
+  const weeklyReadCount = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return news.filter(item => item.publishedAt >= sevenDaysAgo).length;
+  }, [news]);
   const estimatedWords = useMemo(
     () =>
       topNews.slice(0, 5).reduce((sum, item) => {
@@ -147,34 +235,105 @@ export default function ReadingDiscoveryPage() {
       }, 0),
     [topNews]
   );
+  const curatedArticles = useMemo<CuratedArticle[]>(
+    () => [
+      {
+        id: 'wiki-hanok',
+        source: 'Wikipedia',
+        sourceType: t('readingDiscovery.fallback.wikipediaSource', {
+          defaultValue: 'Korean Culture Encyclopedia',
+        }),
+        icon: '🏛️',
+        title: '한옥 (韩屋)',
+        excerpt:
+          '한옥은 한국의 전통 건축 양식으로 지어진 집을 말한다. 자연과의 조화를 중요하게 생각하며, 온돌과 마루가 있는 것이 특징이다...',
+        badge: t('readingDiscovery.fallback.wikipediaBadge', {
+          defaultValue: 'B2 Intermediate • Expository',
+        }),
+        bookmarkText: t('readingDiscovery.fallback.wikipediaBookmark', {
+          defaultValue: 'Close Reading',
+        }),
+        tone: 'default',
+      },
+      {
+        id: 'folktale-sun-moon',
+        source: 'Folktale',
+        sourceType: t('readingDiscovery.fallback.folktaleSource', {
+          defaultValue: 'Korean Traditional Folktale',
+        }),
+        icon: '🦊',
+        title: '해와 달이 된 오누이',
+        subtitle: t('readingDiscovery.fallback.folktaleSubtitle', {
+          defaultValue: 'Siblings Who Became the Sun and Moon',
+        }),
+        excerpt:
+          '옛날 옛적에, 홀어머니와 오누이가 살고 있었어요. 어느 날 고개를 넘던 어머니는 무서운 호랑이를 만나고 말았답니다...',
+        badge: t('readingDiscovery.fallback.folktaleBadge', {
+          defaultValue: 'A1 Beginner • Narrative',
+        }),
+        bookmarkText: t('readingDiscovery.fallback.folktaleBookmark', {
+          defaultValue: 'Bedtime Reading',
+        }),
+        tone: 'warm',
+      },
+      {
+        id: 'poem-seosi',
+        source: 'Literature',
+        sourceType: t('readingDiscovery.fallback.literatureSource', {
+          defaultValue: 'Public Domain Classics',
+        }),
+        icon: '✍️',
+        title: '서시 (序诗)',
+        subtitle: '윤동주 (尹东柱)',
+        excerpt:
+          '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다...',
+        badge: t('readingDiscovery.fallback.literatureBadge', {
+          defaultValue: 'C2 Near-Native • Poetry',
+        }),
+        bookmarkText: t('readingDiscovery.fallback.literatureBookmark', {
+          defaultValue: 'Literary Notes',
+        }),
+        tone: 'dark',
+      },
+    ],
+    [t]
+  );
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-2 pb-16 pt-4 sm:px-4 lg:px-6">
       <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-            阅读发现
+            {t('readingDiscovery.title', { defaultValue: 'Reading Discovery' })}
           </h1>
           <p className="mt-2 text-sm font-medium text-slate-500 md:text-base">
-            同步韩国真实资讯，沉淀经典文化阅读
+            {t('readingDiscovery.subtitle', {
+              defaultValue: 'Sync real Korean news and build a long-term reading library',
+            })}
           </p>
         </div>
         <div className="flex items-center gap-6 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
           <div className="flex flex-col">
             <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              本周已读
+              {t('readingDiscovery.stats.weeklyRead', { defaultValue: 'Fresh this week' })}
             </span>
             <span className="text-xl font-black text-slate-800">
-              {weeklyReadCount} <span className="text-sm font-medium text-slate-400">篇</span>
+              {weeklyReadCount}{' '}
+              <span className="text-sm font-medium text-slate-400">
+                {t('readingDiscovery.stats.articles', { defaultValue: 'articles' })}
+              </span>
             </span>
           </div>
           <div className="h-8 w-px bg-slate-100" />
           <div className="flex flex-col">
             <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              估算新词
+              {t('readingDiscovery.stats.estimatedWords', { defaultValue: 'Estimated new words' })}
             </span>
             <span className="text-xl font-black text-indigo-600">
-              {estimatedWords} <span className="text-sm font-medium text-slate-400">词</span>
+              {estimatedWords}{' '}
+              <span className="text-sm font-medium text-slate-400">
+                {t('readingDiscovery.stats.words', { defaultValue: 'words' })}
+              </span>
             </span>
           </div>
         </div>
@@ -184,20 +343,50 @@ export default function ReadingDiscoveryPage() {
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900">
-              <span>📰 实时资讯</span>
+              <span>📰 {t('readingDiscovery.news.title', { defaultValue: 'Live News' })}</span>
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 animate-pulse">
                 LIVE
               </span>
             </h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              RSS 自动抓取，适合泛读与了解时事
+              {t('readingDiscovery.news.subtitle', {
+                defaultValue:
+                  'Auto-ingested by RSS, great for extensive reading and current affairs',
+              })}
             </p>
+            {refreshMessage && (
+              <p className="mt-2 text-xs font-semibold text-blue-600">{refreshMessage}</p>
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {userId && (
+              <button
+                type="button"
+                onClick={() => {
+                  void onManualRefresh();
+                }}
+                disabled={manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0}
+                className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                  manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300'
+                }`}
+              >
+                <RefreshCcw size={13} className={manualRefreshing ? 'animate-spin' : ''} />
+                {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
+                <span className="text-[11px]">{feed?.refresh.manualRefreshRemaining ?? 0}/3</span>
+              </button>
+            )}
             {(['ALL', 'L1', 'L2', 'L3'] as DifficultyFilter[]).map(item => {
               const selected = difficultyFilter === item;
               const label =
-                item === 'ALL' ? '全部' : item === 'L1' ? '初阶' : item === 'L2' ? '中阶' : '高阶';
+                item === 'ALL'
+                  ? t('readingDiscovery.filters.all', { defaultValue: 'All' })
+                  : item === 'L1'
+                    ? t('readingDiscovery.filters.l1', { defaultValue: 'Beginner' })
+                    : item === 'L2'
+                      ? t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' })
+                      : t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' });
               return (
                 <button
                   key={item}
@@ -216,7 +405,7 @@ export default function ReadingDiscoveryPage() {
           </div>
         </div>
 
-        {news === undefined ? (
+        {!feedReady || feed === undefined ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
             <div className="h-[280px] animate-pulse rounded-3xl bg-slate-200" />
             <div className="h-[280px] animate-pulse rounded-3xl bg-slate-100" />
@@ -224,7 +413,9 @@ export default function ReadingDiscoveryPage() {
           </div>
         ) : topNews.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center text-sm font-semibold text-slate-500">
-            暂无新闻数据，请先在管理后台触发一次抓取
+            {t('readingDiscovery.news.empty', {
+              defaultValue: 'No news available yet. Please run ingestion from admin.',
+            })}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
@@ -241,12 +432,12 @@ export default function ReadingDiscoveryPage() {
                       {getSourceLabel(featuredNews.sourceKey)}
                     </span>
                     <span className="text-xs font-medium text-slate-400">
-                      {formatRelativeTime(featuredNews.publishedAt)}
+                      {formatRelativeTime(featuredNews.publishedAt, language)}
                     </span>
                   </div>
                   <div>
                     {(() => {
-                      const chip = getDifficultyChip(featuredNews.difficultyLevel);
+                      const chip = getDifficultyChip(featuredNews.difficultyLevel, t);
                       return (
                         <span
                           className={`mb-3 inline-block rounded border px-2 py-1 text-[10px] font-bold ${chip.className}`}
@@ -260,10 +451,18 @@ export default function ReadingDiscoveryPage() {
                     </h3>
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
                       <span>
-                        AI 提取 {Math.max(5, Math.round(featuredNews.bodyText.length / 95))} 词
+                        {t('readingDiscovery.news.aiExtracted', {
+                          defaultValue: 'AI extracted {{count}} words',
+                          count: Math.max(5, Math.round(featuredNews.bodyText.length / 95)),
+                        })}
                       </span>
                       <span>•</span>
-                      <span>约 {estimateReadingMinutes(featuredNews.bodyText)} 分钟阅读</span>
+                      <span>
+                        {t('readingDiscovery.news.readingMinutes', {
+                          defaultValue: '~{{minutes}} min read',
+                          minutes: estimateReadingMinutes(featuredNews.bodyText),
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -271,7 +470,7 @@ export default function ReadingDiscoveryPage() {
             )}
 
             {secondaryNews.map(item => {
-              const chip = getDifficultyChip(item.difficultyLevel);
+              const chip = getDifficultyChip(item.difficultyLevel, t);
               return (
                 <button
                   key={item._id}
@@ -284,7 +483,7 @@ export default function ReadingDiscoveryPage() {
                       {getSourceLabel(item.sourceKey)}
                     </span>
                     <span className="text-xs font-medium text-slate-400">
-                      {formatRelativeTime(item.publishedAt)}
+                      {formatRelativeTime(item.publishedAt, language)}
                     </span>
                   </div>
                   <div>
@@ -295,9 +494,19 @@ export default function ReadingDiscoveryPage() {
                       {item.title}
                     </h3>
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                      <span>AI 提取 {Math.max(5, Math.round(item.bodyText.length / 95))} 词</span>
+                      <span>
+                        {t('readingDiscovery.news.aiExtracted', {
+                          defaultValue: 'AI extracted {{count}} words',
+                          count: Math.max(5, Math.round(item.bodyText.length / 95)),
+                        })}
+                      </span>
                       <span>•</span>
-                      <span>约 {estimateReadingMinutes(item.bodyText)} 分钟阅读</span>
+                      <span>
+                        {t('readingDiscovery.news.readingMinutes', {
+                          defaultValue: '~{{minutes}} min read',
+                          minutes: estimateReadingMinutes(item.bodyText),
+                        })}
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -312,21 +521,26 @@ export default function ReadingDiscoveryPage() {
       <section>
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-2xl font-black text-slate-900">📚 文化与典藏</h2>
+            <h2 className="text-2xl font-black text-slate-900">
+              📚 {t('readingDiscovery.articles.title', { defaultValue: 'Culture & Archive' })}
+            </h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              韩国传统故事、维基百科与文学作品，适合精读解析
+              {t('readingDiscovery.articles.subtitle', {
+                defaultValue:
+                  'Korean folktales, Wikipedia featured entries, and literature for close reading',
+              })}
             </p>
           </div>
           <button
             type="button"
             className="inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
           >
-            查看全部文章
+            {t('readingDiscovery.articles.viewAll', { defaultValue: 'View all articles' })}
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {featuredArticles === undefined ? (
+        {!feedReady || featuredArticles === undefined ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             <div className="h-[260px] animate-pulse rounded-3xl bg-slate-200" />
             <div className="h-[260px] animate-pulse rounded-3xl bg-slate-100" />
@@ -406,9 +620,15 @@ export default function ReadingDiscoveryPage() {
                     <span
                       className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
                     >
-                      {getDifficultyChip(item.difficultyLevel).text} • 百科条目
+                      {getDifficultyChip(item.difficultyLevel, t).text} •{' '}
+                      {t('readingDiscovery.articles.typeEncyclopedia', {
+                        defaultValue: 'Encyclopedia',
+                      })}
                     </span>
-                    <span className="text-xs font-semibold text-slate-500">🔖 推荐精读</span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      🔖{' '}
+                      {t('readingDiscovery.articles.recommended', { defaultValue: 'Recommended' })}
+                    </span>
                   </div>
                 </button>
               );
@@ -512,7 +732,10 @@ export default function ReadingDiscoveryPage() {
 
       <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-slate-400">
         <Clock3 size={14} />
-        数据来自 Convex `newsIngestion:listRecent`（新闻 + 维基典范条目）
+        {t('readingDiscovery.footer', {
+          defaultValue:
+            'Powered by Convex `newsIngestion:getUserFeed` (auto refresh after 24h post-read, manual refresh up to 3/day)',
+        })}
       </div>
     </div>
   );

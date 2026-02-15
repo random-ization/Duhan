@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
-import { useQuery, useConvexAuth, useMutation, useAction } from 'convex/react';
+import { useQuery, useConvexAuth, useMutation } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useTranslation } from 'react-i18next';
 import { User, Language, TextbookContent, TopikExam } from '../types';
-import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
+import { NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
 
 import i18n from '../utils/i18next-config';
@@ -20,7 +20,6 @@ interface AuthContextType {
   updateUser: (updates: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
   setLanguage: (lang: Language) => void;
-  resetPassword: (email: string) => Promise<void>;
 
   // User Actions
 
@@ -52,9 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const updateProfileMutation = useMutation(
     mRef<{ name?: string; avatar?: string }, void>('auth:updateProfile')
-  );
-  const requestPasswordResetAction = useAction(
-    aRef<{ email: string }, { success: boolean }>('passwordReset:requestPasswordReset')
   );
 
   const setLanguage = useCallback((lang: Language) => {
@@ -123,22 +119,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [updateProfileMutation]
   );
 
-  const resetPassword = useCallback(
-    async (email: string) => {
-      try {
-        const normalizedEmail = email.trim().toLowerCase();
-        if (!normalizedEmail) {
-          throw new Error('Email is required');
-        }
-        await requestPasswordResetAction({ email: normalizedEmail });
-      } catch (err: unknown) {
-        logger.error('Failed to request password reset:', err);
-        throw err;
-      }
-    },
-    [requestPasswordResetAction]
-  );
-
   const canAccessContent = useCallback(
     (content: TextbookContent | TopikExam): boolean => {
       if (!user) return false;
@@ -158,7 +138,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       updateUser,
       refreshUser,
-      resetPassword,
       setLanguage,
 
       canAccessContent,
@@ -173,7 +152,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       updateUser,
       refreshUser,
-      resetPassword,
       setLanguage,
       canAccessContent,
       showUpgradePrompt,

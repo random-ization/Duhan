@@ -267,6 +267,7 @@ export default function MobileVocabView({
             onNextUnit={() => {}}
             hasNextUnit={false}
             userId={userId}
+            onFsrsReview={onFsrsReview}
             language={language}
             variant="learn"
             currentUnitLabel={scopeTitle}

@@ -46,10 +46,6 @@ function replaceMetaContent(html, pattern, replacement) {
   return html;
 }
 
-function getPathWithoutLang(path) {
-  return path.replace(/^\/(en|zh|vi|mn)(\/|$)/, '/').replace(/\/+$/, '') || '/';
-}
-
 function getLangFromPath(path) {
   const match = path.match(/^\/(en|zh|vi|mn)(\/|$)/);
   return match ? match[1] : null;

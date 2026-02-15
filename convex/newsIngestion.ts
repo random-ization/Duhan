@@ -1,6 +1,14 @@
-import { internalMutation, query } from './_generated/server';
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server';
 import { v } from 'convex/values';
+import type { Doc, Id } from './_generated/dataModel';
 import { toErrorMessage } from './errors';
+import { getAuthUserId, getOptionalAuthUserId } from './utils';
 
 const normalizedArticleValidator = v.object({
   sourceGuid: v.optional(v.string()),
@@ -78,6 +86,14 @@ const BLOCKED_URL_PATTERNS = [
 const MIN_ARTICLE_BODY_LENGTH = 220;
 const MIN_ARTICLE_HANGUL_COUNT = 100;
 const MIN_ARTICLE_SENTENCE_COUNT = 3;
+const USER_FEED_NEWS_LIMIT = 24;
+const USER_FEED_ARTICLE_LIMIT = 12;
+const USER_FEED_MAX_NEWS_SCAN = 320;
+const USER_FEED_MAX_ARTICLE_SCAN = 120;
+const USER_FEED_AUTO_REFRESH_MS = 24 * 60 * 60 * 1000;
+const USER_FEED_MANUAL_LIMIT = 3;
+const USER_FEED_MANUAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+const WIKI_SOURCE_KEY = 'wiki_ko_featured';
 
 export const ingestBatch = internalMutation({
   args: {
@@ -310,6 +326,414 @@ export const getById = query({
     return row;
   },
 });
+
+const userFeedArgsValidator = {
+  newsLimit: v.optional(v.number()),
+  articleLimit: v.optional(v.number()),
+};
+
+type FeedLimits = {
+  newsLimit: number;
+  articleLimit: number;
+};
+
+type ManualWindowState = {
+  count: number;
+  windowStart: number;
+};
+
+type ReadCtx = QueryCtx | MutationCtx;
+
+type UserFeedState = Doc<'reading_user_feeds'>;
+type NewsArticleDoc = Doc<'news_articles'>;
+
+export const ensureUserFeed = mutation({
+  args: userFeedArgsValidator,
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limits = resolveUserFeedLimits(args);
+    const now = Date.now();
+
+    const existing = await getUserFeedState(ctx, userId);
+    if (existing) {
+      const manual = resolveManualWindow(existing, now);
+      return {
+        created: false,
+        hasReadSinceRefresh: existing.hasReadSinceRefresh,
+        manualRefreshRemaining: Math.max(0, USER_FEED_MANUAL_LIMIT - manual.count),
+      };
+    }
+
+    await createUserFeedState(ctx, userId, limits, now);
+    return {
+      created: true,
+      hasReadSinceRefresh: false,
+      manualRefreshRemaining: USER_FEED_MANUAL_LIMIT,
+    };
+  },
+});
+
+export const getUserFeed = query({
+  args: userFeedArgsValidator,
+  handler: async (ctx, args) => {
+    const limits = resolveUserFeedLimits(args);
+    const now = Date.now();
+    const userId = await getOptionalAuthUserId(ctx);
+
+    if (!userId) {
+      const selected = await selectFeedCandidates(ctx, limits);
+      return {
+        news: selected.newsArticles,
+        articles: selected.articleArticles,
+        refresh: {
+          needsInitialization: false,
+          hasReadSinceRefresh: false,
+          autoRefreshEligible: false,
+          nextAutoRefreshAt: null as number | null,
+          manualRefreshLimit: USER_FEED_MANUAL_LIMIT,
+          manualRefreshUsed: 0,
+          manualRefreshRemaining: USER_FEED_MANUAL_LIMIT,
+          lastRefreshedAt: null as number | null,
+          userScoped: false,
+        },
+      };
+    }
+
+    const state = await getUserFeedState(ctx, userId);
+    if (!state) {
+      const selected = await selectFeedCandidates(ctx, limits);
+      return {
+        news: selected.newsArticles,
+        articles: selected.articleArticles,
+        refresh: {
+          needsInitialization: true,
+          hasReadSinceRefresh: false,
+          autoRefreshEligible: false,
+          nextAutoRefreshAt: null as number | null,
+          manualRefreshLimit: USER_FEED_MANUAL_LIMIT,
+          manualRefreshUsed: 0,
+          manualRefreshRemaining: USER_FEED_MANUAL_LIMIT,
+          lastRefreshedAt: null as number | null,
+          userScoped: true,
+        },
+      };
+    }
+
+    const manual = resolveManualWindow(state, now);
+    const news = await hydrateFeedArticles(ctx, state.newsArticleIds, limits.newsLimit, 'news');
+    const articles = await hydrateFeedArticles(
+      ctx,
+      state.articleIds,
+      limits.articleLimit,
+      'articles'
+    );
+    const nextAutoRefreshAt = state.lastReadAt
+      ? state.lastReadAt + USER_FEED_AUTO_REFRESH_MS
+      : null;
+    const autoRefreshEligible = Boolean(
+      state.hasReadSinceRefresh && nextAutoRefreshAt && now >= nextAutoRefreshAt
+    );
+
+    return {
+      news,
+      articles,
+      refresh: {
+        needsInitialization: false,
+        hasReadSinceRefresh: state.hasReadSinceRefresh,
+        autoRefreshEligible,
+        nextAutoRefreshAt,
+        manualRefreshLimit: USER_FEED_MANUAL_LIMIT,
+        manualRefreshUsed: manual.count,
+        manualRefreshRemaining: Math.max(0, USER_FEED_MANUAL_LIMIT - manual.count),
+        lastRefreshedAt: state.lastRefreshedAt,
+        userScoped: true,
+      },
+    };
+  },
+});
+
+export const refreshUserFeedIfEligible = mutation({
+  args: userFeedArgsValidator,
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limits = resolveUserFeedLimits(args);
+    const now = Date.now();
+
+    const state =
+      (await getUserFeedState(ctx, userId)) ||
+      (await createUserFeedState(ctx, userId, limits, now));
+    const nextAutoRefreshAt = state.lastReadAt
+      ? state.lastReadAt + USER_FEED_AUTO_REFRESH_MS
+      : null;
+    const eligible = Boolean(
+      state.hasReadSinceRefresh && nextAutoRefreshAt && now >= nextAutoRefreshAt
+    );
+    if (!eligible) {
+      return {
+        refreshed: false,
+        reason: 'NOT_ELIGIBLE' as const,
+        nextAutoRefreshAt,
+      };
+    }
+
+    await refreshFeedState(ctx, state, limits, now);
+    return {
+      refreshed: true,
+      reason: 'OK' as const,
+      nextAutoRefreshAt: null as number | null,
+    };
+  },
+});
+
+export const manualRefreshUserFeed = mutation({
+  args: userFeedArgsValidator,
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limits = resolveUserFeedLimits(args);
+    const now = Date.now();
+
+    const state =
+      (await getUserFeedState(ctx, userId)) ||
+      (await createUserFeedState(ctx, userId, limits, now));
+    const manual = resolveManualWindow(state, now);
+    if (manual.count >= USER_FEED_MANUAL_LIMIT) {
+      return {
+        refreshed: false,
+        reason: 'DAILY_LIMIT' as const,
+        manualRefreshRemaining: 0,
+      };
+    }
+
+    await refreshFeedState(ctx, state, limits, now, {
+      manualRefreshCount: manual.count + 1,
+      manualRefreshWindowStart: manual.windowStart,
+    });
+
+    return {
+      refreshed: true,
+      reason: 'OK' as const,
+      manualRefreshRemaining: Math.max(0, USER_FEED_MANUAL_LIMIT - (manual.count + 1)),
+    };
+  },
+});
+
+export const markArticleRead = mutation({
+  args: {
+    articleId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const normalizedId = ctx.db.normalizeId('news_articles', args.articleId);
+    if (!normalizedId) {
+      return { marked: false };
+    }
+    const article = await ctx.db.get(normalizedId);
+    if (!article || article.status !== 'active') {
+      return { marked: false };
+    }
+
+    const now = Date.now();
+    const state =
+      (await getUserFeedState(ctx, userId)) ||
+      (await createUserFeedState(ctx, userId, resolveUserFeedLimits({}), now));
+    await ctx.db.patch(state._id, {
+      hasReadSinceRefresh: true,
+      lastReadAt: now,
+      updatedAt: now,
+    });
+    return { marked: true };
+  },
+});
+
+async function getUserFeedState(ctx: ReadCtx, userId: Id<'users'>): Promise<UserFeedState | null> {
+  return ctx.db
+    .query('reading_user_feeds')
+    .withIndex('by_user', q => q.eq('userId', userId))
+    .first();
+}
+
+async function createUserFeedState(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  limits: FeedLimits,
+  now: number
+): Promise<UserFeedState> {
+  const selected = await selectFeedCandidates(ctx, limits);
+  const id = await ctx.db.insert('reading_user_feeds', {
+    userId,
+    newsArticleIds: selected.newsIds,
+    articleIds: selected.articleIds,
+    hasReadSinceRefresh: false,
+    lastReadAt: undefined,
+    lastRefreshedAt: now,
+    manualRefreshCount: 0,
+    manualRefreshWindowStart: now,
+    updatedAt: now,
+  });
+  const created = await ctx.db.get(id);
+  if (!created) {
+    throw new Error('Failed to initialize user reading feed');
+  }
+  return created;
+}
+
+async function refreshFeedState(
+  ctx: MutationCtx,
+  state: UserFeedState,
+  limits: FeedLimits,
+  now: number,
+  options?: {
+    manualRefreshCount?: number;
+    manualRefreshWindowStart?: number;
+  }
+) {
+  const selected = await selectFeedCandidates(ctx, limits, {
+    avoidNewsIds: state.newsArticleIds,
+    avoidArticleIds: state.articleIds,
+  });
+  await ctx.db.patch(state._id, {
+    newsArticleIds: selected.newsIds,
+    articleIds: selected.articleIds,
+    hasReadSinceRefresh: false,
+    lastRefreshedAt: now,
+    manualRefreshCount: options?.manualRefreshCount ?? state.manualRefreshCount,
+    manualRefreshWindowStart: options?.manualRefreshWindowStart ?? state.manualRefreshWindowStart,
+    updatedAt: now,
+  });
+}
+
+function resolveUserFeedLimits(args: { newsLimit?: number; articleLimit?: number }): FeedLimits {
+  return {
+    newsLimit: Math.min(Math.max(args.newsLimit ?? USER_FEED_NEWS_LIMIT, 1), USER_FEED_NEWS_LIMIT),
+    articleLimit: Math.min(
+      Math.max(args.articleLimit ?? USER_FEED_ARTICLE_LIMIT, 1),
+      USER_FEED_ARTICLE_LIMIT
+    ),
+  };
+}
+
+function resolveManualWindow(state: UserFeedState, now: number): ManualWindowState {
+  if (now - state.manualRefreshWindowStart >= USER_FEED_MANUAL_WINDOW_MS) {
+    return { count: 0, windowStart: now };
+  }
+  return {
+    count: Math.max(0, state.manualRefreshCount || 0),
+    windowStart: state.manualRefreshWindowStart,
+  };
+}
+
+async function hydrateFeedArticles(
+  ctx: ReadCtx,
+  ids: Id<'news_articles'>[],
+  limit: number,
+  kind: 'news' | 'articles'
+): Promise<NewsArticleDoc[]> {
+  const loaded = await loadActiveArticlesByIds(ctx, ids);
+  if (loaded.length >= limit) {
+    return loaded.slice(0, limit);
+  }
+
+  const candidates =
+    kind === 'news'
+      ? await fetchNewsCandidates(ctx, Math.max(limit * 4, USER_FEED_NEWS_LIMIT))
+      : await fetchArticleCandidates(ctx, Math.max(limit * 4, USER_FEED_ARTICLE_LIMIT));
+  const seen = new Set(loaded.map(item => String(item._id)));
+  for (const candidate of candidates) {
+    if (loaded.length >= limit) break;
+    const key = String(candidate._id);
+    if (seen.has(key)) continue;
+    loaded.push(candidate);
+    seen.add(key);
+  }
+
+  return loaded.slice(0, limit);
+}
+
+async function selectFeedCandidates(
+  ctx: ReadCtx,
+  limits: FeedLimits,
+  options?: {
+    avoidNewsIds?: Id<'news_articles'>[];
+    avoidArticleIds?: Id<'news_articles'>[];
+  }
+) {
+  const [newsCandidates, articleCandidates] = await Promise.all([
+    fetchNewsCandidates(ctx, Math.max(limits.newsLimit * 4, USER_FEED_NEWS_LIMIT)),
+    fetchArticleCandidates(ctx, Math.max(limits.articleLimit * 4, USER_FEED_ARTICLE_LIMIT)),
+  ]);
+
+  const newsIds = pickFeedIds(newsCandidates, limits.newsLimit, options?.avoidNewsIds);
+  const articleIds = pickFeedIds(articleCandidates, limits.articleLimit, options?.avoidArticleIds);
+  const [newsArticles, articleArticles] = await Promise.all([
+    loadActiveArticlesByIds(ctx, newsIds),
+    loadActiveArticlesByIds(ctx, articleIds),
+  ]);
+
+  return {
+    newsIds,
+    articleIds,
+    newsArticles,
+    articleArticles,
+  };
+}
+
+async function fetchNewsCandidates(ctx: ReadCtx, limit: number): Promise<NewsArticleDoc[]> {
+  const rows = await ctx.db
+    .query('news_articles')
+    .withIndex('by_status_published', q => q.eq('status', 'active'))
+    .order('desc')
+    .take(Math.min(Math.max(limit, USER_FEED_NEWS_LIMIT), USER_FEED_MAX_NEWS_SCAN));
+
+  return rows.filter(row => row.sourceKey !== WIKI_SOURCE_KEY);
+}
+
+async function fetchArticleCandidates(ctx: ReadCtx, limit: number): Promise<NewsArticleDoc[]> {
+  const rows = await ctx.db
+    .query('news_articles')
+    .withIndex('by_source_published', q => q.eq('sourceKey', WIKI_SOURCE_KEY))
+    .order('desc')
+    .take(Math.min(Math.max(limit, USER_FEED_ARTICLE_LIMIT), USER_FEED_MAX_ARTICLE_SCAN));
+  return rows.filter(row => row.status === 'active');
+}
+
+function pickFeedIds(
+  candidates: NewsArticleDoc[],
+  limit: number,
+  avoidIds?: Id<'news_articles'>[]
+): Id<'news_articles'>[] {
+  const picked: Id<'news_articles'>[] = [];
+  const seen = new Set<string>();
+  const avoid = new Set((avoidIds || []).map(id => String(id)));
+
+  for (const row of candidates) {
+    const id = row._id as Id<'news_articles'>;
+    const key = String(id);
+    if (seen.has(key) || avoid.has(key)) continue;
+    seen.add(key);
+    picked.push(id);
+    if (picked.length >= limit) return picked;
+  }
+
+  for (const row of candidates) {
+    const id = row._id as Id<'news_articles'>;
+    const key = String(id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(id);
+    if (picked.length >= limit) return picked;
+  }
+
+  return picked;
+}
+
+async function loadActiveArticlesByIds(
+  ctx: ReadCtx,
+  ids: Id<'news_articles'>[]
+): Promise<NewsArticleDoc[]> {
+  if (ids.length === 0) return [];
+  const rows = await Promise.all(ids.map(id => ctx.db.get(id)));
+  return rows.filter((row): row is NewsArticleDoc => Boolean(row && row.status === 'active'));
+}
 
 function pickCanonical<T extends { sourceKey: string }>(a: T | null, b: T): T {
   if (!a) return b;

@@ -32,6 +32,7 @@ interface VocabQuizProps {
   readonly onNextUnit?: () => void;
   readonly currentUnitLabel?: string;
   readonly userId?: string; // For recording progress
+  readonly onFsrsReview?: (wordId: string, isCorrect: boolean) => void;
   readonly language?: Language;
   readonly variant?: 'quiz' | 'learn';
   readonly presetSettings?: Partial<QuizSettings>;
@@ -660,6 +661,7 @@ const useQuizGame = ({
   playCorrectSound,
   playWrongSound,
   userId,
+  onFsrsReview,
 }: {
   words: readonly VocabItem[];
   settings: QuizSettings;
@@ -669,6 +671,7 @@ const useQuizGame = ({
   playCorrectSound: () => void;
   playWrongSound: () => void;
   userId?: string;
+  onFsrsReview?: (wordId: string, isCorrect: boolean) => void;
 }) => {
   const [gameState, setGameState] = useState<GameState>('PLAYING');
   const [questions, setQuestions] = useState<readonly QuizQuestion[]>([]);
@@ -779,6 +782,19 @@ const useQuizGame = ({
   const totalQuestions = questions.length;
   const pendingAdvance = isLearn && pendingAdvanceReason !== null;
 
+  const commitProgress = useCallback(
+    (wordId: string, isCorrect: boolean) => {
+      if (onFsrsReview) {
+        onFsrsReview(wordId, isCorrect);
+        return;
+      }
+      if (userId) {
+        void recordProgress(wordId, isCorrect);
+      }
+    },
+    [onFsrsReview, recordProgress, userId]
+  );
+
   const nextQuestion = useCallback(() => {
     setTotalQuestionsAnswered(t => t + 1);
     setPendingAdvanceReason(null);
@@ -845,12 +861,12 @@ const useQuizGame = ({
       setOptionStates(prev => prev.map((_, i) => (i === index ? 'correct' : 'normal')));
       setCorrectCount(c => c + 1);
       playCorrectSound();
-      if (userId && currentQuestion.targetWord.id) {
-        recordProgress(currentQuestion.targetWord.id, true);
+      if (currentQuestion.targetWord.id) {
+        commitProgress(currentQuestion.targetWord.id, true);
       }
       setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
     },
-    [currentQuestion, playCorrectSound, userId, recordProgress]
+    [commitProgress, currentQuestion, playCorrectSound]
   );
 
   const handleWrongMC = useCallback(
@@ -865,8 +881,8 @@ const useQuizGame = ({
         })
       );
       playWrongSound();
-      if (userId && currentQuestion.targetWord.id) {
-        recordProgress(currentQuestion.targetWord.id, false);
+      if (currentQuestion.targetWord.id) {
+        commitProgress(currentQuestion.targetWord.id, false);
       }
       setWrongWords(prev => {
         if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
@@ -875,7 +891,7 @@ const useQuizGame = ({
         return prev;
       });
     },
-    [currentQuestion, isLearn, playWrongSound, userId, recordProgress]
+    [commitProgress, currentQuestion, isLearn, playWrongSound]
   );
 
   const handleOptionClick = useCallback(
@@ -909,8 +925,8 @@ const useQuizGame = ({
     setPendingAdvanceReason('DONT_KNOW');
     const correctIndex = currentQuestion.correctIndex ?? -1;
     setOptionStates(prev => prev.map((_, i) => (i === correctIndex ? 'correct' : 'normal')));
-    if (userId && currentQuestion.targetWord.id) {
-      recordProgress(currentQuestion.targetWord.id, false);
+    if (currentQuestion.targetWord.id) {
+      commitProgress(currentQuestion.targetWord.id, false);
     }
     setWrongWords(prev => {
       if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
@@ -918,7 +934,7 @@ const useQuizGame = ({
       }
       return prev;
     });
-  }, [isLocked, currentQuestion, isLearn, userId, recordProgress]);
+  }, [commitProgress, currentQuestion, isLearn, isLocked]);
 
   const handleWritingSubmit = useCallback(() => {
     if (currentQuestion?.type !== 'WRITING') return;
@@ -939,15 +955,15 @@ const useQuizGame = ({
       setWritingState('CORRECT');
       setCorrectCount(c => c + 1);
       playCorrectSound();
-      if (userId && currentQuestion.targetWord.id) {
-        recordProgress(currentQuestion.targetWord.id, true);
+      if (currentQuestion.targetWord.id) {
+        commitProgress(currentQuestion.targetWord.id, true);
       }
       setMasteredWordIds(prev => new Set([...prev, currentQuestion.targetWord.id]));
     } else {
       setWritingState('WRONG');
       playWrongSound();
-      if (userId && currentQuestion.targetWord.id) {
-        recordProgress(currentQuestion.targetWord.id, false);
+      if (currentQuestion.targetWord.id) {
+        commitProgress(currentQuestion.targetWord.id, false);
       }
       setWrongWords(prev => {
         if (!prev.some(w => w.id === currentQuestion.targetWord.id)) {
@@ -968,8 +984,7 @@ const useQuizGame = ({
     writingInput,
     playCorrectSound,
     playWrongSound,
-    userId,
-    recordProgress,
+    commitProgress,
     isLearn,
     nextQuestion,
     timersRef,
@@ -1396,6 +1411,7 @@ function VocabQuizComponent({
   onNextUnit,
   currentUnitLabel: _currentUnitLabel,
   userId,
+  onFsrsReview,
   language = 'zh',
   variant = 'quiz',
   presetSettings,
@@ -1455,6 +1471,7 @@ function VocabQuizComponent({
     playCorrectSound,
     playWrongSound,
     userId,
+    onFsrsReview,
   });
 
   const { speakWord } = useQuizTTS(settings.autoTTS, speakTTS);

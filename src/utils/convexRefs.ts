@@ -74,6 +74,16 @@ export const AI = {
       note: string;
     } | null
   >('ai:explainWordFallback'),
+  translateReadingParagraphs: aRef<
+    {
+      title: string;
+      paragraphs: string[];
+      language?: string;
+    },
+    {
+      translations: string[];
+    } | null
+  >('ai:translateReadingParagraphs'),
 };
 
 export const UNITS = {
@@ -158,13 +168,23 @@ export const GRAMMARS = {
 /**
  * VOCAB REFS
  */
-import { VocabStatsDto, VocabWordDto, DailyPhraseDto, VocabBookItemDto } from '../../convex/vocab';
+import {
+  VocabStatsDto,
+  VocabWordDto,
+  VocabReviewDeckDto,
+  DailyPhraseDto,
+  VocabBookItemDto,
+} from '../../convex/vocab';
 
 export const VOCAB = {
   getStats: qRef<{ courseId: string }, VocabStatsDto>('vocab:getStats'),
   getOfCourse: qRef<{ courseId: string; unitId?: number; limit?: number }, VocabWordDto[]>(
     'vocab:getOfCourse'
   ),
+  getReviewDeck: qRef<
+    { courseId: string; unitId?: number | string; limit?: number },
+    VocabReviewDeckDto[]
+  >('vocab:getReviewDeck'),
   getDailyPhrase: qRef<{ language?: string }, DailyPhraseDto | null>('vocab:getDailyPhrase'),
   getVocabBook: qRef<
     { search?: string; includeMastered?: boolean; limit?: number },
@@ -182,6 +202,18 @@ export const VOCAB = {
     },
     { success: boolean; progress?: FSRSProgressDto }
   >('vocab:updateProgressV2'),
+  updateProgressBatch: mRef<
+    {
+      items: Array<{
+        wordId: Id<'words'>;
+        rating: number;
+        fsrsState: FSRSCardState;
+        reviewDurationMs?: number;
+        reviewedAt?: number;
+      }>;
+    },
+    { success: boolean; processed: number; updated: number; inserted: number }
+  >('vocab:updateProgressBatch'),
   getAllPaginated: qRef<
     { paginationOpts: PaginationOptions; courseId?: string },
     PaginationResult<unknown>
@@ -317,16 +349,6 @@ export const FSRS = {
   >('fsrs:calculateNextSchedule'),
 };
 
-export const PASSWORD_RESET = {
-  requestPasswordReset: aRef<{ email: string }, { success: boolean }>(
-    'passwordReset:requestPasswordReset'
-  ),
-  resetPassword: aRef<
-    { email: string; token: string; newPassword: string },
-    { success: boolean; error?: string }
-  >('passwordReset:resetPassword'),
-};
-
 /**
  * TOPIK REFS
  */
@@ -428,6 +450,99 @@ export const NEWS = {
       licenseTier: string;
     }>
   >('newsIngestion:listRecent'),
+  getUserFeed: qRef<
+    { newsLimit?: number; articleLimit?: number },
+    {
+      news: Array<{
+        _id: string;
+        sourceKey: string;
+        sourceType: string;
+        sourceGuid?: string;
+        sourceUrl: string;
+        canonicalUrl: string;
+        urlHash: string;
+        title: string;
+        summary?: string;
+        bodyText: string;
+        bodyHtml?: string;
+        language: string;
+        section?: string;
+        tags?: string[];
+        author?: string;
+        publishedAt: number;
+        fetchedAt: number;
+        difficultyLevel: string;
+        difficultyScore: number;
+        difficultyReason: string[];
+        dedupeClusterId: string;
+        normalizedTitle?: string;
+        simhash?: string;
+        projectedAt?: number;
+        projectedCourseId?: string;
+        projectedUnitIndex?: number;
+        projectedArticleIndex?: number;
+        status: string;
+        licenseTier: string;
+      }>;
+      articles: Array<{
+        _id: string;
+        sourceKey: string;
+        sourceType: string;
+        sourceGuid?: string;
+        sourceUrl: string;
+        canonicalUrl: string;
+        urlHash: string;
+        title: string;
+        summary?: string;
+        bodyText: string;
+        bodyHtml?: string;
+        language: string;
+        section?: string;
+        tags?: string[];
+        author?: string;
+        publishedAt: number;
+        fetchedAt: number;
+        difficultyLevel: string;
+        difficultyScore: number;
+        difficultyReason: string[];
+        dedupeClusterId: string;
+        normalizedTitle?: string;
+        simhash?: string;
+        projectedAt?: number;
+        projectedCourseId?: string;
+        projectedUnitIndex?: number;
+        projectedArticleIndex?: number;
+        status: string;
+        licenseTier: string;
+      }>;
+      refresh: {
+        needsInitialization: boolean;
+        hasReadSinceRefresh: boolean;
+        autoRefreshEligible: boolean;
+        nextAutoRefreshAt: number | null;
+        manualRefreshLimit: number;
+        manualRefreshUsed: number;
+        manualRefreshRemaining: number;
+        lastRefreshedAt: number | null;
+        userScoped: boolean;
+      };
+    }
+  >('newsIngestion:getUserFeed'),
+  ensureUserFeed: mRef<
+    { newsLimit?: number; articleLimit?: number },
+    { created: boolean; hasReadSinceRefresh: boolean; manualRefreshRemaining: number }
+  >('newsIngestion:ensureUserFeed'),
+  refreshUserFeedIfEligible: mRef<
+    { newsLimit?: number; articleLimit?: number },
+    { refreshed: boolean; reason: 'OK' | 'NOT_ELIGIBLE'; nextAutoRefreshAt: number | null }
+  >('newsIngestion:refreshUserFeedIfEligible'),
+  manualRefreshUserFeed: mRef<
+    { newsLimit?: number; articleLimit?: number },
+    { refreshed: boolean; reason: 'OK' | 'DAILY_LIMIT'; manualRefreshRemaining: number }
+  >('newsIngestion:manualRefreshUserFeed'),
+  markArticleRead: mRef<{ articleId: string }, { marked: boolean }>(
+    'newsIngestion:markArticleRead'
+  ),
   listSources: qRef<
     NoArgs,
     Array<{

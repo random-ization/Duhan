@@ -16,6 +16,7 @@ interface UseKoreanTypingReturn {
   userInput: string;
   completedIndex: number; // Number of CORRECTLY completed characters
   phase: TypingPhase;
+  isComposing: boolean;
   stats: TypingStats;
   inputRef: React.RefObject<HTMLInputElement>;
   reset: () => void;
@@ -27,6 +28,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
   const [userInput, setUserInput] = useState('');
   const [completedIndex, setCompletedIndex] = useState(0); // Track completed chars
   const [phase, setPhase] = useState<TypingPhase>('start');
+  const [isComposing, setIsComposing] = useState(false);
   const [stats, setStats] = useState<TypingStats>({
     wpm: 0,
     accuracy: 100,
@@ -35,6 +37,13 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
   });
 
   const inputRef = useRef<HTMLInputElement>(null!);
+  const phaseRef = useRef<TypingPhase>('start');
+  const isComposingRef = useRef(false);
+  const lastProcessedValueRef = useRef('');
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // Stats Logic
   const calculateStats = useCallback(() => {
@@ -313,33 +322,99 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     const el = inputRef.current;
     if (!el) return;
 
-    const handleInput = () => {
-      const rawValue = el.value;
+    const applyCommittedInput = (rawValue: string) => {
+      // De-dup to avoid double-processing when compositionend and input fire with same final value.
+      if (rawValue === lastProcessedValueRef.current) {
+        return;
+      }
+      lastProcessedValueRef.current = rawValue;
 
       // Start timing on first input
-      if (phase === 'start' && rawValue.length > 0) {
+      if (phaseRef.current === 'start' && rawValue.length > 0) {
+        phaseRef.current = 'typing';
         setPhase('typing');
-        setStats(prev => ({ ...prev, startTime: Date.now() }));
+        setStats(prev => (prev.startTime ? prev : { ...prev, startTime: Date.now() }));
       }
 
-      setUserInput(rawValue);
       processInput(rawValue);
     };
 
+    const handleInput = () => {
+      const rawValue = el.value;
+      setUserInput(rawValue);
+
+      // IME composing text is UI-only; do not run validation/WPM progression yet.
+      if (isComposingRef.current) {
+        return;
+      }
+
+      applyCommittedInput(rawValue);
+    };
+
+    const handleCompositionStart = () => {
+      isComposingRef.current = true;
+      setIsComposing(true);
+    };
+
+    const handleCompositionUpdate = () => {
+      // Keep transient composing value visible in the UI.
+      setUserInput(el.value);
+    };
+
+    const handleCompositionEnd = () => {
+      isComposingRef.current = false;
+      setIsComposing(false);
+
+      const rawValue = el.value;
+      setUserInput(rawValue);
+      applyCommittedInput(rawValue);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // During IME composition, never run final validation on keydown.
+      if (isComposingRef.current) {
+        return;
+      }
+
+      // Backspace/Enter timing differs by browser+IME; re-sync after native value settles.
+      if (event.key === 'Backspace' || event.key === 'Enter') {
+        queueMicrotask(() => {
+          const rawValue = el.value;
+          setUserInput(rawValue);
+          applyCommittedInput(rawValue);
+        });
+      }
+    };
+
     el.addEventListener('input', handleInput);
-    return () => el.removeEventListener('input', handleInput);
-  }, [phase, processInput]);
+    el.addEventListener('compositionstart', handleCompositionStart);
+    el.addEventListener('compositionupdate', handleCompositionUpdate);
+    el.addEventListener('compositionend', handleCompositionEnd);
+    el.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      el.removeEventListener('input', handleInput);
+      el.removeEventListener('compositionstart', handleCompositionStart);
+      el.removeEventListener('compositionupdate', handleCompositionUpdate);
+      el.removeEventListener('compositionend', handleCompositionEnd);
+      el.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [processInput]);
 
   const reset = useCallback(() => {
     setUserInput('');
     setCompletedIndex(0);
     setPhase('start');
+    setIsComposing(false);
     setStats({
       wpm: 0,
       accuracy: 100,
       startTime: null,
       errorCount: 0,
     });
+    phaseRef.current = 'start';
+    isComposingRef.current = false;
+    lastProcessedValueRef.current = '';
     if (inputRef.current) {
       inputRef.current.value = '';
       inputRef.current.focus();
@@ -350,6 +425,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     userInput,
     completedIndex,
     phase,
+    isComposing,
     stats,
     inputRef,
     reset,

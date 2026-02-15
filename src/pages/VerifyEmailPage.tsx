@@ -1,102 +1,145 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useAction } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import { aRef } from '../utils/convexRefs';
+import { useCurrentLanguage } from '../hooks/useLocalizedNavigate';
+import { LocalizedLink } from '../components/LocalizedLink';
 import { useAuth } from '../contexts/AuthContext';
-import { getLabels } from '../utils/i18n';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+type VerifyState = 'idle' | 'loading' | 'success' | 'error';
 
 const VerifyEmailPage: React.FC = () => {
+  const { t } = useTranslation();
+  const language = useCurrentLanguage();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const navigate = useLocalizedNavigate();
-  const { language } = useAuth();
-  const labels = getLabels(language);
+  const token = useMemo(() => searchParams.get('token')?.trim() || '', [searchParams]);
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const requestEmailVerification = useAction(
+    aRef<{ language?: string }, { success: boolean; alreadyVerified?: boolean }>(
+      'accountRecovery:requestEmailVerification'
+    )
+  );
+  const confirmEmailVerification = useAction(
+    aRef<{ token: string }, { success: boolean }>('accountRecovery:confirmEmailVerification')
+  );
+
+  const [state, setState] = useState<VerifyState>('idle');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const verifyEmail = async () => {
-      const token = searchParams.get('token');
+    if (!token) return;
 
-      if (!token) {
-        setStatus('error');
-        setMessage(labels.auth?.invalidLinkDesc);
-        return;
-      }
-
+    let cancelled = false;
+    const run = async () => {
+      setState('loading');
       try {
-        const response = await fetch(`${API_URL}/auth/verify-email?token=${token}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setStatus('success');
-          setMessage(data.message || labels.auth?.verifySuccess);
-        } else {
-          setStatus('error');
-          setMessage(data.error || labels.auth?.verifyFailed);
-        }
-      } catch (err) {
-        console.error(err);
-        setStatus('error');
-        setMessage(labels.auth?.networkError);
+        await confirmEmailVerification({ token });
+        if (cancelled) return;
+        setState('success');
+        setMessage(
+          t('auth.verifyEmailSuccess', {
+            defaultValue: 'Your email has been verified successfully.',
+          })
+        );
+      } catch (err: any) {
+        if (cancelled) return;
+        setState('error');
+        setMessage(
+          err?.message === 'INVALID_OR_EXPIRED_TOKEN'
+            ? t('auth.verifyEmailInvalidToken', {
+                defaultValue: 'This verification link is invalid or expired.',
+              })
+            : err?.message || t('common.error', { defaultValue: 'Something went wrong.' })
+        );
       }
     };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, confirmEmailVerification, t]);
 
-    verifyEmail();
-  }, [
-    searchParams,
-    labels.auth?.invalidLinkDesc,
-    labels.auth?.verifySuccess,
-    labels.auth?.verifyFailed,
-    labels.auth?.networkError,
-  ]);
+  const handleRequest = async () => {
+    setState('loading');
+    try {
+      const result = await requestEmailVerification({ language });
+      setState('success');
+      setMessage(
+        result.alreadyVerified
+          ? t('auth.verifyEmailAlreadyVerified', {
+              defaultValue: 'Your email is already verified.',
+            })
+          : t('auth.verifyEmailSent', {
+              defaultValue: 'Verification email sent. Please check your inbox.',
+            })
+      );
+    } catch (err: any) {
+      setState('error');
+      setMessage(
+        err?.message === 'UNAUTHORIZED'
+          ? t('auth.loginRequired', { defaultValue: 'Please log in first.' })
+          : err?.message || t('common.error', { defaultValue: 'Something went wrong.' })
+      );
+    }
+  };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 font-sans">
-      {/* Background Effects */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-indigo-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-        <div className="absolute bottom-0 left-0 w-3/4 h-3/4 bg-violet-900/30 rounded-full mix-blend-screen filter blur-[100px]"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h1 className="text-2xl font-black text-slate-900 mb-2">
+          {t('auth.verifyEmail', { defaultValue: 'Verify email' })}
+        </h1>
 
-      <div className="w-full max-w-md p-6 relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-10 text-center">
-          {status === 'loading' && (
-            <>
-              <Loader2 className="w-16 h-16 text-indigo-400 mx-auto animate-spin mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifyingEmail}</h1>
-              <p className="text-indigo-200 text-sm">{labels.auth?.waitPlease}</p>
-            </>
-          )}
+        {!token && (
+          <p className="text-sm text-slate-500 mb-6">
+            {t('auth.verifyEmailDescription', {
+              defaultValue: 'Click the button below to send a verification email.',
+            })}
+          </p>
+        )}
 
-          {status === 'success' && (
-            <>
-              <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifySuccess}</h1>
-              <p className="text-indigo-200 text-sm mb-8">{message}</p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-              >
-                {labels.login}
-              </button>
-            </>
-          )}
+        {state !== 'idle' && (
+          <div
+            className={`mb-5 rounded-xl border p-4 text-sm ${
+              state === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : state === 'error'
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+            }`}
+          >
+            {message || t('common.loading', { defaultValue: 'Loading...' })}
+          </div>
+        )}
 
-          {status === 'error' && (
-            <>
-              <XCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-white mb-2">{labels.auth?.verifyFailed}</h1>
-              <p className="text-red-200 text-sm mb-8">{message}</p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-              >
-                {labels.auth?.backToLogin}
-              </button>
-            </>
+        {!token && (
+          <button
+            onClick={handleRequest}
+            disabled={state === 'loading'}
+            className="w-full rounded-xl bg-slate-900 text-white font-bold py-3 disabled:opacity-60"
+          >
+            {state === 'loading'
+              ? t('common.loading', { defaultValue: 'Loading...' })
+              : t('auth.sendVerificationEmail', { defaultValue: 'Send verification email' })}
+          </button>
+        )}
+
+        <div className="mt-6 text-sm flex gap-4">
+          <LocalizedLink
+            to="/login"
+            className="text-indigo-600 hover:text-indigo-700 font-semibold"
+          >
+            {t('auth.backToLogin', { defaultValue: 'Back to login' })}
+          </LocalizedLink>
+          {user && (
+            <LocalizedLink
+              to="/profile"
+              className="text-slate-600 hover:text-slate-700 font-semibold"
+            >
+              {t('profile.title', { defaultValue: 'Profile' })}
+            </LocalizedLink>
           )}
         </div>
       </div>

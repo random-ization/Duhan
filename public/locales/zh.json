@@ -656,6 +656,12 @@
         }
       }
     },
+    "readingHub": {
+      "title": "阅读发现",
+      "subtitle": "韩语资讯阅读与标注工具",
+      "tagNews": "新闻",
+      "tagArticles": "文章"
+    },
     "video": {
       "cardTitle": "沉浸\n视频",
       "title": "视频中心",
@@ -1896,5 +1902,142 @@
     "minWordsLearn": "至少需要 4 个单词才能开始学习",
     "minWordsQuiz": "至少需要 4 个单词才能开始测验",
     "dontKnow": "不知道？"
+  },
+  "readingDiscovery": {
+    "title": "阅读发现",
+    "subtitle": "同步韩国真实资讯，沉淀长期可读的内容库",
+    "stats": {
+      "weeklyRead": "本周已读",
+      "articles": "篇",
+      "estimatedWords": "估算新词",
+      "words": "词"
+    },
+    "difficulty": {
+      "l1": "A2 初阶",
+      "l2": "B2 中阶",
+      "l3": "C1 高阶"
+    },
+    "filters": {
+      "all": "全部",
+      "l1": "初阶",
+      "l2": "中阶",
+      "l3": "高阶"
+    },
+    "news": {
+      "title": "实时资讯",
+      "subtitle": "RSS 自动抓取，适合泛读与了解时事",
+      "manualRefresh": "手动刷新",
+      "empty": "暂无新闻数据，请先在管理后台触发一次抓取",
+      "aiExtracted": "AI 提取 {{count}} 词",
+      "readingMinutes": "约 {{minutes}} 分钟阅读",
+      "autoRefreshed": "已根据阅读记录自动更新推荐",
+      "manualLimitReached": "今日手动刷新已达上限（3次）",
+      "manualRefreshed": "刷新成功，今日剩余 {{count}} 次",
+      "manualRefreshFailed": "刷新失败，请稍后重试"
+    },
+    "articles": {
+      "title": "文化与典藏",
+      "subtitle": "韩国传统故事、维基百科与文学作品，适合精读解析",
+      "viewAll": "查看全部文章",
+      "typeEncyclopedia": "百科条目",
+      "recommended": "推荐精读"
+    },
+    "fallback": {
+      "wikipediaSource": "韩国文化百科",
+      "wikipediaBadge": "B2 中阶 • 说明文",
+      "wikipediaBookmark": "精读收藏",
+      "folktaleSource": "韩国传统童话",
+      "folktaleSubtitle": "成为日月的兄妹",
+      "folktaleBadge": "A1 初阶 • 记叙文",
+      "folktaleBookmark": "睡前伴读",
+      "literatureSource": "公版名家名篇",
+      "literatureBadge": "C2 母语级 • 诗歌",
+      "literatureBookmark": "文学赏析"
+    },
+    "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）"
+  },
+  "readingArticle": {
+    "difficulty": {
+      "l1": "A2 初阶",
+      "l2": "B1 中阶",
+      "l3": "C1 高阶"
+    },
+    "backToDiscovery": "返回发现页",
+    "untitled": "未命名文章",
+    "noteTitlePrefix": "阅读笔记",
+    "vocabFallbackMeaning": "上下文核心词汇（可点击查词）",
+    "vocabDefaultMeaning": "阅读词汇",
+    "dictionaryFallbackMeaning": "阅读词典释义",
+    "aiMeaningFallback": "AI 释义",
+    "meta": {
+      "words": "{{count}} 字",
+      "translationTarget": "翻译目标：{{language}}"
+    },
+    "toolbar": {
+      "lookup": "查词",
+      "note": "笔记"
+    },
+    "tabs": {
+      "ai": "AI 分析",
+      "notes": "词典/笔记"
+    },
+    "tts": {
+      "play": "朗读",
+      "stop": "停止朗读",
+      "status": "朗读状态"
+    },
+    "translation": {
+      "toggleAria": "切换翻译显示",
+      "label": "翻译",
+      "on": "开",
+      "off": "关",
+      "status": "翻译状态",
+      "preparing": "翻译准备中..."
+    },
+    "ai": {
+      "summaryTitle": "AI 全文摘要",
+      "loading": "正在生成 AI 分析...",
+      "fallbackNotice": "AI 不可用，已使用本地解析。",
+      "coreVocab": "本文核心词汇",
+      "grammarTitle": "关键语法解析"
+    },
+    "vocab": {
+      "save": "生词",
+      "saved": "已保存"
+    },
+    "dictionary": {
+      "title": "词典建议",
+      "currentSelection": "当前选中",
+      "selectionHint": "点击正文高亮词，或划词后添加笔记",
+      "emptySelection": "暂无选词。",
+      "queryWord": "查询词",
+      "loading": "词典查询中...",
+      "serviceError": "词典服务异常，已切换 AI 释义。",
+      "aiLoading": "AI 正在生成释义...",
+      "noMeaning": "暂无释义",
+      "unknownPos": "词性待判断",
+      "example": "例句",
+      "note": "提示",
+      "noResult": "未找到可用释义。"
+    },
+    "notes": {
+      "title": "笔记",
+      "syncError": "笔记已在阅读器保存，但同步到 Notebook 失败",
+      "newQuote": "新建引用笔记",
+      "placeholder": "写下你的理解、疑问或翻译...",
+      "cancel": "取消",
+      "save": "保存笔记",
+      "empty": "还没有笔记。划词后点击“笔记”，可创建带颜色下划线的引用并输入备注。",
+      "noComment": "（无备注）"
+    },
+    "errors": {
+      "missingArticleId": "缺少文章 ID",
+      "articleUnavailable": "文章不存在或暂不可访问",
+      "aiAnalysisFailed": "AI 分析失败",
+      "translationUnavailable": "当前翻译服务不可用",
+      "aiDictionaryFailed": "AI 释义失败",
+      "dictionaryLookupFailed": "词典查询失败",
+      "noteSyncFailed": "笔记同步 Notebook 失败"
+    }
   }
 }

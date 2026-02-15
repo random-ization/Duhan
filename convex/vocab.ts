@@ -77,6 +77,44 @@ export type VocabWordDto = {
   tips?: VocabTips;
 };
 
+export type VocabReviewDeckDto = {
+  _id: Id<'words'>;
+  word: string;
+  meaning: string;
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
+  pronunciation?: string;
+  audioUrl?: string;
+  hanja?: string;
+  partOfSpeech: string;
+  unitId: number;
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+  progress?: {
+    id: Id<'user_vocab_progress'>;
+    status?: string;
+    interval?: number;
+    streak?: number;
+    nextReviewAt?: number | null;
+    lastReviewedAt?: number | null;
+    state?: number;
+    due?: number;
+    stability?: number;
+    difficulty?: number;
+    elapsed_days?: number;
+    scheduled_days?: number;
+    learning_steps?: number;
+    reps?: number;
+    lapses?: number;
+    last_review?: number | null;
+  } | null;
+  mastered?: boolean;
+};
+
 export type DailyPhraseDto = {
   id: Id<'words'>;
   korean: string;
@@ -556,6 +594,141 @@ export const getOfCourse = query({
   },
 });
 
+// Lightweight query for high-frequency review views.
+// Returns only the fields needed by flashcards / learn / test flows.
+export const getReviewDeck = query({
+  args: {
+    courseId: v.string(),
+    unitId: v.optional(v.union(v.number(), v.string())),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<VocabReviewDeckDto[]> => {
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
+      let effectiveCourseId = args.courseId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let institute: any = null;
+      const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+
+      if (instituteId) {
+        institute = await ctx.db.get(instituteId);
+        if (institute) {
+          effectiveCourseId = institute.id || institute._id;
+        }
+      } else {
+        institute = await ctx.db
+          .query('institutes')
+          .withIndex('by_legacy_id', q => q.eq('id', effectiveCourseId))
+          .unique();
+      }
+      if (!isVisibleInstitute(institute)) {
+        return [];
+      }
+
+      const limit = args.limit || DEFAULT_VOCAB_LIMIT;
+      const normalizedUnitId = normalizeUnitIdParam(args.unitId);
+      if (args.unitId !== undefined && normalizedUnitId === undefined) {
+        return [];
+      }
+      const targetUnitId = resolveTargetUnitId(institute, normalizedUnitId);
+
+      let appearances;
+      if (typeof targetUnitId === 'number') {
+        appearances = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_course_unit', q =>
+            q.eq('courseId', effectiveCourseId).eq('unitId', targetUnitId)
+          )
+          .take(limit);
+      } else {
+        appearances = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
+          .take(limit);
+      }
+
+      if (appearances.length === 0) {
+        return [];
+      }
+
+      const wordIds = [
+        ...new Set(
+          appearances
+            .map(a => ctx.db.normalizeId('words', a.wordId))
+            .filter((id): id is Id<'words'> => id !== null)
+        ),
+      ];
+      const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+      const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
+
+      const progressMap = new Map<string, Doc<'user_vocab_progress'>>();
+      if (userId) {
+        const allProgress = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        for (const progress of allProgress) {
+          progressMap.set(progress.wordId.toString(), progress);
+        }
+      }
+
+      const rows: VocabReviewDeckDto[] = [];
+      for (const app of appearances) {
+        const normalizedWordId = ctx.db.normalizeId('words', app.wordId);
+        if (!normalizedWordId) continue;
+        const word = wordsMap.get(normalizedWordId.toString());
+        if (!word) continue;
+
+        const progress = progressMap.get(normalizedWordId.toString());
+        rows.push({
+          _id: word._id,
+          word: word.word,
+          meaning: app.meaning || word.meaning,
+          meaningEn: app.meaningEn || word.meaningEn,
+          meaningVi: app.meaningVi || word.meaningVi,
+          meaningMn: app.meaningMn || word.meaningMn,
+          pronunciation: word.pronunciation,
+          audioUrl: word.audioUrl,
+          hanja: word.hanja,
+          partOfSpeech: word.partOfSpeech,
+          unitId: app.unitId,
+          exampleSentence: app.exampleSentence,
+          exampleMeaning: app.exampleMeaning,
+          exampleMeaningEn: app.exampleMeaningEn,
+          exampleMeaningVi: app.exampleMeaningVi,
+          exampleMeaningMn: app.exampleMeaningMn,
+          progress: progress
+            ? {
+                id: progress._id,
+                status: progress.status,
+                interval: progress.interval,
+                streak: progress.streak,
+                nextReviewAt: progress.nextReviewAt,
+                lastReviewedAt: progress.lastReviewedAt,
+                state: progress.state,
+                due: progress.due,
+                stability: progress.stability,
+                difficulty: progress.difficulty,
+                elapsed_days: progress.elapsed_days,
+                scheduled_days: progress.scheduled_days,
+                learning_steps: progress.learning_steps,
+                reps: progress.reps,
+                lapses: progress.lapses,
+                last_review: progress.last_review,
+              }
+            : null,
+          mastered: progress?.status === 'MASTERED' || false,
+        });
+      }
+
+      return rows;
+    } catch (err) {
+      console.error(`[vocab:getReviewDeck] failed: ${toErrorMessage(err)}`);
+      return [];
+    }
+  },
+});
+
 // Get Daily Phrase (Word of the day)
 export const getDailyPhrase = query({
   args: {
@@ -830,6 +1003,116 @@ export const updateProgressV2 = mutation({
         },
       };
     }
+  },
+});
+
+// Batch FSRS progress updates to reduce mutation frequency during fast review sessions.
+export const updateProgressBatch = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        wordId: v.id('words'),
+        rating: v.number(),
+        fsrsState: v.object({
+          state: v.number(),
+          due: v.number(),
+          stability: v.number(),
+          difficulty: v.number(),
+          elapsed_days: v.number(),
+          scheduled_days: v.number(),
+          learning_steps: v.number(),
+          reps: v.number(),
+          lapses: v.number(),
+          last_review: v.union(v.number(), v.null()),
+        }),
+        reviewDurationMs: v.optional(v.number()),
+        reviewedAt: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (args.items.length === 0) {
+      return { success: true, processed: 0, updated: 0, inserted: 0 };
+    }
+
+    const latestByWord = new Map<
+      string,
+      {
+        wordId: Id<'words'>;
+        rating: number;
+        fsrsState: {
+          state: number;
+          due: number;
+          stability: number;
+          difficulty: number;
+          elapsed_days: number;
+          scheduled_days: number;
+          learning_steps: number;
+          reps: number;
+          lapses: number;
+          last_review: number | null;
+        };
+        reviewDurationMs?: number;
+        reviewedAt?: number;
+      }
+    >();
+
+    for (const item of args.items) {
+      latestByWord.set(item.wordId.toString(), item);
+    }
+
+    let updated = 0;
+    let inserted = 0;
+    const now = Date.now();
+    for (const item of latestByWord.values()) {
+      const reviewTs = typeof item.reviewedAt === 'number' ? item.reviewedAt : now;
+      const stateToStatus = (state: number): string => {
+        return mapFsrsStateToStatus(state, item.fsrsState.stability);
+      };
+
+      const progressData = {
+        state: item.fsrsState.state,
+        due: item.fsrsState.due,
+        stability: item.fsrsState.stability,
+        difficulty: item.fsrsState.difficulty,
+        elapsed_days: item.fsrsState.elapsed_days,
+        scheduled_days: item.fsrsState.scheduled_days,
+        learning_steps: item.fsrsState.learning_steps,
+        reps: item.fsrsState.reps,
+        lapses: item.fsrsState.lapses,
+        last_review: item.fsrsState.last_review ?? reviewTs,
+        status: stateToStatus(item.fsrsState.state),
+        interval: item.fsrsState.scheduled_days,
+        streak: item.fsrsState.reps,
+        nextReviewAt: item.fsrsState.due,
+        lastReviewedAt: reviewTs,
+      };
+
+      const existing = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', item.wordId))
+        .unique();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, progressData);
+        updated += 1;
+      } else {
+        await ctx.db.insert('user_vocab_progress', {
+          userId,
+          wordId: item.wordId,
+          ...progressData,
+        });
+        inserted += 1;
+      }
+    }
+
+    return {
+      success: true,
+      processed: latestByWord.size,
+      updated,
+      inserted,
+    };
   },
 });
 

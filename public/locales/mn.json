@@ -631,6 +631,12 @@
         }
       }
     },
+    "readingHub": {
+      "title": "Унших нээлт",
+      "subtitle": "Солонгос уншлагын feed ба тайлбарын хэрэгслүүд",
+      "tagNews": "Мэдээ",
+      "tagArticles": "Нийтлэл"
+    },
     "video": {
       "cardTitle": "Видео\nСуралцах",
       "title": "Видео төв",
@@ -1891,5 +1897,142 @@
       "switch": "чигээр горим солино"
     },
     "back": "Нүүр рүү буцах"
+  },
+  "readingDiscovery": {
+    "title": "Унших нээлт",
+    "subtitle": "Солонгосын бодит мэдээг синк хийж, урт хугацааны уншлагын сантай болно",
+    "stats": {
+      "weeklyRead": "Энэ долоо хоногт уншсан",
+      "articles": "нийтлэл",
+      "estimatedWords": "Тооцоолсон шинэ үг",
+      "words": "үг"
+    },
+    "difficulty": {
+      "l1": "A2 Анхан",
+      "l2": "B2 Дунд",
+      "l3": "C1 Ахисан"
+    },
+    "filters": {
+      "all": "Бүгд",
+      "l1": "Анхан",
+      "l2": "Дунд",
+      "l3": "Ахисан"
+    },
+    "news": {
+      "title": "Шуурхай мэдээ",
+      "subtitle": "RSS-ээр автоматаар татагдана, өргөн уншлага ба цаг үеийн мэдээлэлд тохиромжтой",
+      "manualRefresh": "Шинэчлэх",
+      "empty": "Мэдээний өгөгдөл алга. Админ хэсгээс ingestion ажиллуулна уу.",
+      "aiExtracted": "AI {{count}} үг ялгав",
+      "readingMinutes": "{{minutes}} минутын уншлага",
+      "autoRefreshed": "Таны уншлагын түүх дээр үндэслэн санал автоматаар шинэчлэгдлээ",
+      "manualLimitReached": "Өнөөдрийн гар шинэчлэлтийн дээд хязгаарт хүрлээ (3 удаа)",
+      "manualRefreshed": "Амжилттай шинэчлэгдлээ. Өнөөдөр үлдсэн: {{count}}",
+      "manualRefreshFailed": "Шинэчлэлт амжилтгүй. Дараа дахин оролдоно уу"
+    },
+    "articles": {
+      "title": "Соёл ба архив",
+      "subtitle": "Солонгос ардын үлгэр, Википедиагийн онцлох өгүүлэл, уран зохиолын нягт уншлага",
+      "viewAll": "Бүх нийтлэлийг харах",
+      "typeEncyclopedia": "Нэвтэрхий толь",
+      "recommended": "Санал болгосон"
+    },
+    "fallback": {
+      "wikipediaSource": "Солонгос соёлын нэвтэрхий толь",
+      "wikipediaBadge": "B2 Дунд • Танин мэдэхүй",
+      "wikipediaBookmark": "Нягт уншлага",
+      "folktaleSource": "Солонгос ардын үлгэр",
+      "folktaleSubtitle": "Нар, сар болсон ах дүү хоёр",
+      "folktaleBadge": "A1 Анхан • Өгүүлэмж",
+      "folktaleBookmark": "Унтахын өмнө унших",
+      "literatureSource": "Нийтийн өмчийн сонгодог зохиол",
+      "literatureBadge": "C2 Төрөлх түвшин • Шүлэг",
+      "literatureBookmark": "Уран зохиолын тэмдэглэл"
+    },
+    "footer": "Convex newsIngestion:getUserFeed-ээс өгөгдөл авна (уншсанаас 24 цагийн дараа автоматаар шинэчилнэ, гараар өдөрт 3 хүртэл)"
+  },
+  "readingArticle": {
+    "difficulty": {
+      "l1": "A2 Анхан",
+      "l2": "B1 Дунд",
+      "l3": "C1 Ахисан"
+    },
+    "backToDiscovery": "Нээлтийн хуудас руу буцах",
+    "untitled": "Нэргүй нийтлэл",
+    "noteTitlePrefix": "Уншлагын тэмдэглэл",
+    "vocabFallbackMeaning": "Контекстийн гол үг (товшоод хайх)",
+    "vocabDefaultMeaning": "Уншлагын үгс",
+    "dictionaryFallbackMeaning": "Уншлагын толь бичгийн утга",
+    "aiMeaningFallback": "AI тайлбар",
+    "meta": {
+      "words": "{{count}} тэмдэгт",
+      "translationTarget": "Орчуулгын хэл: {{language}}"
+    },
+    "toolbar": {
+      "lookup": "Үг хайх",
+      "note": "Тэмдэглэл"
+    },
+    "tabs": {
+      "ai": "AI шинжилгээ",
+      "notes": "Толь / Тэмдэглэл"
+    },
+    "tts": {
+      "play": "Чангаар унших",
+      "stop": "Зогсоох",
+      "status": "Уншлагын төлөв"
+    },
+    "translation": {
+      "toggleAria": "Орчуулга асаах/унтраах",
+      "label": "Орчуулга",
+      "on": "Асаалттай",
+      "off": "Унтраалттай",
+      "status": "Орчуулгын төлөв",
+      "preparing": "Орчуулга бэлдэж байна..."
+    },
+    "ai": {
+      "summaryTitle": "AI хураангуй",
+      "loading": "AI шинжилгээ үүсгэж байна...",
+      "fallbackNotice": "AI боломжгүй тул дотоод fallback ашиглаж байна.",
+      "coreVocab": "Гол үгс",
+      "grammarTitle": "Гол дүрэм"
+    },
+    "vocab": {
+      "save": "Хадгалах",
+      "saved": "Хадгалсан"
+    },
+    "dictionary": {
+      "title": "Толь бичгийн санал",
+      "currentSelection": "Одоогийн сонголт",
+      "selectionHint": "Тодруулсан үг дээр дарж эсвэл текст сонгоод тэмдэглэл нэмнэ үү.",
+      "emptySelection": "Одоогоор сонгосон үг алга.",
+      "queryWord": "Хайлтын үг",
+      "loading": "Толь бичиг хайж байна...",
+      "serviceError": "Толь бичиг ажиллахгүй байна, AI fallback руу шилжлээ.",
+      "aiLoading": "AI тайлбар үүсгэж байна...",
+      "noMeaning": "Тайлбар алга",
+      "unknownPos": "Үгийн аймаг тодорхойгүй",
+      "example": "Жишээ",
+      "note": "Тэмдэглэл",
+      "noResult": "Тохирох тайлбар олдсонгүй."
+    },
+    "notes": {
+      "title": "Тэмдэглэл",
+      "syncError": "Уншигч дээр хадгалагдсан боловч Notebook руу синк хийж чадсангүй",
+      "newQuote": "Шинэ ишлэлийн тэмдэглэл",
+      "placeholder": "Өөрийн ойлголт, асуулт, орчуулгаа бичнэ үү...",
+      "cancel": "Цуцлах",
+      "save": "Тэмдэглэл хадгалах",
+      "empty": "Одоогоор тэмдэглэл алга. Текст сонгоод Тэмдэглэл товшино уу.",
+      "noComment": "(Тайлбаргүй)"
+    },
+    "errors": {
+      "missingArticleId": "Нийтлэлийн ID алга",
+      "articleUnavailable": "Нийтлэл олдсонгүй эсвэл түр хандах боломжгүй байна",
+      "aiAnalysisFailed": "AI шинжилгээ амжилтгүй",
+      "translationUnavailable": "Орчуулгын үйлчилгээ одоогоор боломжгүй",
+      "aiDictionaryFailed": "AI толь fallback амжилтгүй",
+      "dictionaryLookupFailed": "Толь бичгийн хайлт амжилтгүй",
+      "noteSyncFailed": "Тэмдэглэлийг Notebook руу синк хийж чадсангүй"
+    }
   }
 }

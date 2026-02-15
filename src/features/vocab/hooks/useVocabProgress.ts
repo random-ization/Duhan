@@ -1,8 +1,17 @@
 import { useMutation, useQuery, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '../../../utils/logger';
-import { calculateNextReview, Rating } from '../../../utils/srsAlgorithm';
+import {
+  calculateNextReview,
+  calculateFSRSReview,
+  createEmptyCard,
+  deserializeCard,
+  Rating,
+  serializeCard,
+  stateToStatus,
+  type Grade,
+} from '../../../utils/srsAlgorithm';
 import { mRef, qRef, aRef } from '../../../utils/convexRefs';
 
 // ============================================================
@@ -282,6 +291,295 @@ export function useFSRSProgress(courseId: string) {
     updateProgressFSRS,
     getSchedulingPreview,
     isLoading: vocabData === undefined,
+  };
+}
+
+export type FSRSOptimisticProgress = {
+  status: string;
+  interval: number;
+  streak: number;
+  nextReviewAt: number;
+  lastReviewedAt: number;
+  state: number;
+  due: number;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  learning_steps: number;
+  reps: number;
+  lapses: number;
+  last_review: number | null;
+};
+
+type BatchQueueEntry = {
+  wordId: string;
+  rating: number;
+  fsrsState: FSRSCardState;
+  reviewDurationMs?: number;
+  reviewedAt?: number;
+};
+
+type FSRSBatchMutationArgs = {
+  items: Array<{
+    wordId: Id<'words'>;
+    rating: number;
+    fsrsState: FSRSCardState;
+    reviewDurationMs?: number;
+    reviewedAt?: number;
+  }>;
+};
+
+const DEFAULT_BATCH_SIZE = 10;
+const DEFAULT_FLUSH_DEBOUNCE_MS = 4000;
+
+const normalizeCardState = (
+  raw: FSRSCardState | undefined,
+  nowMs: number
+): FSRSCardState | null => {
+  if (!raw) return null;
+  return {
+    state: raw.state,
+    due: raw.due ?? nowMs,
+    stability: raw.stability ?? 0,
+    difficulty: raw.difficulty ?? 5,
+    elapsed_days: raw.elapsed_days ?? 0,
+    scheduled_days: raw.scheduled_days ?? 0,
+    learning_steps: raw.learning_steps ?? 0,
+    reps: raw.reps ?? 0,
+    lapses: raw.lapses ?? 0,
+    last_review: raw.last_review ?? null,
+  };
+};
+
+const toOptimisticProgress = (
+  fsrsState: FSRSCardState,
+  reviewedAt: number
+): FSRSOptimisticProgress => ({
+  status: stateToStatus(fsrsState.state as never, fsrsState.stability),
+  interval: fsrsState.scheduled_days,
+  streak: fsrsState.reps,
+  nextReviewAt: fsrsState.due,
+  lastReviewedAt: reviewedAt,
+  state: fsrsState.state,
+  due: fsrsState.due,
+  stability: fsrsState.stability,
+  difficulty: fsrsState.difficulty,
+  elapsed_days: fsrsState.elapsed_days,
+  scheduled_days: fsrsState.scheduled_days,
+  learning_steps: fsrsState.learning_steps,
+  reps: fsrsState.reps,
+  lapses: fsrsState.lapses,
+  last_review: fsrsState.last_review ?? reviewedAt,
+});
+
+/**
+ * Batch FSRS progress queue for high-frequency review flows.
+ * - Local FSRS compute for instant UI response
+ * - Buffered writes to Convex
+ * - Auto flush on threshold, timer, page hide, and unmount
+ */
+export function useFSRSBatchProgress(options?: {
+  maxBatchSize?: number;
+  flushDebounceMs?: number;
+  persistKey?: string;
+}) {
+  const maxBatchSize = options?.maxBatchSize ?? DEFAULT_BATCH_SIZE;
+  const flushDebounceMs = options?.flushDebounceMs ?? DEFAULT_FLUSH_DEBOUNCE_MS;
+  const persistKey = options?.persistKey ?? 'fsrs-progress-queue';
+
+  const updateProgressBatchRef = mRef<
+    FSRSBatchMutationArgs,
+    { success: boolean; processed: number; updated: number; inserted: number }
+  >('vocab:updateProgressBatch');
+  const updateProgressBatch = useMutation(updateProgressBatchRef);
+
+  const queueRef = useRef<BatchQueueEntry[]>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFlushingRef = useRef(false);
+
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isFlushing, setIsFlushing] = useState(false);
+  const [optimisticProgressMap, setOptimisticProgressMap] = useState<
+    Record<string, FSRSOptimisticProgress>
+  >({});
+
+  const saveQueueSnapshot = useCallback(
+    (entries: BatchQueueEntry[]) => {
+      if (typeof window === 'undefined') return;
+      try {
+        window.sessionStorage.setItem(persistKey, JSON.stringify(entries));
+      } catch (error) {
+        logger.warn('[FSRS Batch] Failed to persist queue:', error);
+      }
+    },
+    [persistKey]
+  );
+
+  const clearFlushTimer = useCallback(() => {
+    if (!flushTimerRef.current) return;
+    clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = null;
+  }, []);
+
+  const flushQueue = useCallback(async () => {
+    if (isFlushingRef.current) return;
+    if (queueRef.current.length === 0) return;
+
+    clearFlushTimer();
+    const snapshot = [...queueRef.current];
+    queueRef.current = [];
+    setPendingCount(0);
+    saveQueueSnapshot([]);
+
+    const deduped = new Map<string, BatchQueueEntry>();
+    for (const entry of snapshot) {
+      deduped.set(entry.wordId, entry);
+    }
+
+    if (deduped.size === 0) return;
+
+    isFlushingRef.current = true;
+    setIsFlushing(true);
+    try {
+      await updateProgressBatch({
+        items: Array.from(deduped.values()).map(item => ({
+          wordId: item.wordId as Id<'words'>,
+          rating: item.rating,
+          fsrsState: item.fsrsState,
+          reviewDurationMs: item.reviewDurationMs,
+          reviewedAt: item.reviewedAt,
+        })),
+      });
+    } catch (error) {
+      logger.warn('[FSRS Batch] Flush failed, restoring queue:', error);
+      queueRef.current = [...snapshot, ...queueRef.current];
+      setPendingCount(queueRef.current.length);
+      saveQueueSnapshot(queueRef.current);
+      throw error;
+    } finally {
+      isFlushingRef.current = false;
+      setIsFlushing(false);
+    }
+  }, [clearFlushTimer, saveQueueSnapshot, updateProgressBatch]);
+
+  const scheduleFlush = useCallback(() => {
+    clearFlushTimer();
+    flushTimerRef.current = setTimeout(() => {
+      void flushQueue();
+    }, flushDebounceMs);
+  }, [clearFlushTimer, flushDebounceMs, flushQueue]);
+
+  const enqueueReview = useCallback(
+    (args: {
+      wordId: Id<'words'>;
+      rating?: number;
+      isCorrect?: boolean;
+      currentCard?: FSRSCardState;
+      reviewDurationMs?: number;
+    }) => {
+      const finalRating = args.rating ?? (args.isCorrect ? Rating.Good : Rating.Again);
+      const reviewedAt = Date.now();
+      const cardState = normalizeCardState(args.currentCard, reviewedAt);
+
+      const next = calculateFSRSReview(
+        finalRating as Grade,
+        cardState ? deserializeCard(cardState) : createEmptyCard(new Date(reviewedAt)),
+        new Date(reviewedAt)
+      );
+      const fsrsState = serializeCard(next.card);
+      const normalizedFsrsState: FSRSCardState = {
+        state: fsrsState.state,
+        due: fsrsState.due,
+        stability: fsrsState.stability,
+        difficulty: fsrsState.difficulty,
+        elapsed_days: fsrsState.elapsed_days,
+        scheduled_days: fsrsState.scheduled_days,
+        learning_steps: fsrsState.learning_steps,
+        reps: fsrsState.reps,
+        lapses: fsrsState.lapses,
+        last_review: fsrsState.last_review ?? reviewedAt,
+      };
+
+      const optimistic = toOptimisticProgress(normalizedFsrsState, reviewedAt);
+      const wordKey = String(args.wordId);
+      setOptimisticProgressMap(prev => ({
+        ...prev,
+        [wordKey]: optimistic,
+      }));
+
+      queueRef.current.push({
+        wordId: wordKey,
+        rating: finalRating,
+        fsrsState: normalizedFsrsState,
+        reviewDurationMs: args.reviewDurationMs,
+        reviewedAt,
+      });
+      setPendingCount(queueRef.current.length);
+      saveQueueSnapshot(queueRef.current);
+
+      if (queueRef.current.length >= maxBatchSize) {
+        void flushQueue();
+      } else {
+        scheduleFlush();
+      }
+
+      return optimistic;
+    },
+    [flushQueue, maxBatchSize, saveQueueSnapshot, scheduleFlush]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.sessionStorage.getItem(persistKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as BatchQueueEntry[];
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+      queueRef.current = parsed.filter(entry => !!entry?.wordId && !!entry?.fsrsState);
+      setPendingCount(queueRef.current.length);
+      if (queueRef.current.length > 0) {
+        void flushQueue();
+      }
+    } catch (error) {
+      logger.warn('[FSRS Batch] Failed to restore queue:', error);
+    }
+  }, [flushQueue, persistKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPageHide = () => {
+      void flushQueue();
+    };
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (queueRef.current.length === 0) return;
+      void flushQueue();
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [flushQueue]);
+
+  useEffect(() => {
+    return () => {
+      clearFlushTimer();
+      void flushQueue();
+    };
+  }, [clearFlushTimer, flushQueue]);
+
+  return {
+    enqueueReview,
+    flushQueue,
+    optimisticProgressMap,
+    pendingCount,
+    isFlushing,
   };
 }
 

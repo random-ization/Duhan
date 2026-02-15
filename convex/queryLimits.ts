@@ -1,6 +1,6 @@
 /**
  * Shared Query Limits Configuration
- * 
+ *
  * Defines maximum limits for Convex queries to prevent excessive calls
  * and full table scans. Adjust these values based on application needs
  * and observed query performance.
@@ -30,3 +30,10 @@ export const DEFAULT_VOCAB_LIMIT = 500;
  * Prevents full table scans on institutes table
  */
 export const MAX_INSTITUTES_FALLBACK = 100;
+
+/**
+ * Daily AI invocation limits by subscription tier.
+ * Used by Convex actions before calling any AI provider.
+ */
+export const FREE_DAILY_AI_CALL_LIMIT = 5;
+export const SUBSCRIBER_DAILY_AI_CALL_LIMIT = 100;

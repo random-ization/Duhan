@@ -28,6 +28,7 @@ import { Slider } from '../components/ui/slider';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
+import { notify } from '../utils/notify';
 import { useFileUpload } from '../hooks/useFileUpload';
 import { useAuth } from '../contexts/AuthContext';
 import { getLanguageLabel } from '../utils/languageUtils';
@@ -181,7 +182,7 @@ const PodcastPlayerPage: React.FC = () => {
   const { state } = useLocation();
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
-  const { language } = useAuth();
+  const { language, user } = useAuth();
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
 
   const getEpisodeFromUrl = useCallback(() => {
@@ -339,6 +340,34 @@ const PodcastPlayerPage: React.FC = () => {
   };
   const historyData = useQuery(qRef<NoArgs, HistoryRecord[]>('podcasts:getHistory'));
   const history = useMemo(() => historyData ?? [], [historyData]);
+  type SubscriptionChannel = {
+    _id?: string;
+    id?: string;
+    itunesId?: string;
+    title?: string;
+    author?: string;
+    feedUrl?: string;
+    artworkUrl?: string;
+  };
+  const subscriptionsData = useQuery(
+    qRef<NoArgs, SubscriptionChannel[]>('podcasts:getSubscriptions')
+  );
+  const subscriptions = useMemo(() => subscriptionsData ?? [], [subscriptionsData]);
+  const toggleSubscription = useMutation(
+    mRef<
+      {
+        channel: {
+          itunesId?: string;
+          title: string;
+          author: string;
+          feedUrl: string;
+          artworkUrl?: string;
+        };
+      },
+      { success: boolean; isSubscribed: boolean }
+    >('podcasts:toggleSubscription')
+  );
+  const [subscriptionPending, setSubscriptionPending] = useState(false);
   const { uploadFile } = useFileUpload();
 
   // --- Helpers ---
@@ -922,6 +951,89 @@ const PodcastPlayerPage: React.FC = () => {
     return 'bg-amber-100 text-amber-700 border border-amber-200';
   }, [abLoop.active, abLoop.a]);
 
+  const isSubscribed = useMemo(() => {
+    const targetFeed = channel.feedUrl?.trim();
+    if (!targetFeed) return false;
+    return subscriptions.some(sub => sub.feedUrl?.trim() === targetFeed);
+  }, [channel.feedUrl, subscriptions]);
+
+  const handleToggleSubscription = async () => {
+    if (!user) {
+      const redirect = encodeURIComponent(
+        `${globalThis.location.pathname}${globalThis.location.search}`
+      );
+      navigate(`/auth?redirect=${redirect}`);
+      return;
+    }
+
+    const feedUrl = channel.feedUrl?.trim();
+    if (!feedUrl) {
+      notify.error('This episode has no channel feed URL, so it cannot be saved yet.');
+      return;
+    }
+
+    setSubscriptionPending(true);
+    try {
+      const result = await toggleSubscription({
+        channel: {
+          itunesId: channel.itunesId || channel.id,
+          title: channel.title || episode.channelTitle || 'Unknown Channel',
+          author: channel.author || '',
+          feedUrl,
+          artworkUrl:
+            channel.artworkUrl || channel.artwork || channel.image || episode.channelArtwork || '',
+        },
+      });
+      notify.success(result.isSubscribed ? 'Saved to your subscriptions' : 'Removed from saved');
+    } catch (error) {
+      console.error('Failed to toggle subscription', error);
+      notify.error('Failed to update saved status. Please try again.');
+    } finally {
+      setSubscriptionPending(false);
+    }
+  };
+
+  const handleShareEpisode = async () => {
+    if (!episode.audioUrl) {
+      notify.error('Missing episode URL');
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('audioUrl', encodeURIComponent(episode.audioUrl));
+    params.set('title', episode.title);
+    if (episode.guid) params.set('guid', episode.guid);
+    if (channel.title) params.set('channelTitle', channel.title);
+    if (channel.artworkUrl) params.set('channelArtwork', channel.artworkUrl);
+
+    const shareUrl = `${globalThis.location.origin}/podcasts/player?${params.toString()}`;
+
+    try {
+      if (globalThis.navigator.share) {
+        await globalThis.navigator.share({
+          title: episode.title,
+          text: channel.title || episode.channelTitle || 'Podcast episode',
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (globalThis.navigator.clipboard?.writeText) {
+        await globalThis.navigator.clipboard.writeText(shareUrl);
+        notify.success('Share link copied');
+        return;
+      }
+
+      notify.info(shareUrl);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to share episode', error);
+      notify.error('Unable to share this episode right now.');
+    }
+  };
+
   const regenerateTranscript = async () => {
     if (!confirm('重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？')) return;
 
@@ -1223,13 +1335,17 @@ const PodcastPlayerPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="md"
+                  onClick={handleToggleSubscription}
+                  disabled={subscriptionPending}
                   className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
                 >
-                  <Heart className="w-4 h-4" /> 收藏此集
+                  <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
+                  {subscriptionPending ? 'Saving...' : isSubscribed ? '已收藏' : '收藏此集'}
                 </Button>
                 <Button
                   variant="outline"
                   size="md"
+                  onClick={handleShareEpisode}
                   className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
                 >
                   <Share2 className="w-4 h-4" /> 分享

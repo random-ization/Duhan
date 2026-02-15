@@ -113,6 +113,7 @@ export const updateText = mutation({
     source: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { id, ...updates } = args;
     await ctx.db.patch(id, {
       ...updates,
@@ -124,6 +125,7 @@ export const updateText = mutation({
 export const deleteText = mutation({
   args: { id: v.id('typing_texts') },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.delete(args.id);
   },
 });

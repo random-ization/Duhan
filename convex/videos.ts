@@ -1,5 +1,29 @@
 import { mutation, query } from './_generated/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
+import { getAuthUserId, requireAdmin } from './utils';
+import { hasActiveSubscription } from './subscription';
+
+const PREMIUM_LEVELS = new Set(['ADVANCED', 'C1', 'C2', 'TOPIK5', 'TOPIK6']);
+
+function normalizeLevel(level: string | undefined): string {
+  return (level || '')
+    .trim()
+    .toUpperCase()
+    .replaceAll(' ', '')
+    .replaceAll('_', '')
+    .replaceAll('-', '');
+}
+
+function isPremiumVideoLevel(level: string | undefined): boolean {
+  const normalized = normalizeLevel(level);
+  if (!normalized) return false;
+  if (PREMIUM_LEVELS.has(normalized)) return true;
+  return (
+    normalized.includes('ADVANCED') ||
+    normalized.includes('TOPIK5') ||
+    normalized.includes('TOPIK6')
+  );
+}
 
 export const list = query({
   args: {
@@ -40,8 +64,17 @@ export const list = query({
 export const get = query({
   args: { id: v.id('videos') },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
     const video = await ctx.db.get(args.id);
     if (!video) return null;
+
+    if (isPremiumVideoLevel(video.level)) {
+      const user = await ctx.db.get(userId);
+      if (!hasActiveSubscription(user)) {
+        throw new ConvexError('SUBSCRIPTION_REQUIRED');
+      }
+    }
+
     return {
       ...video,
       id: video._id,
@@ -60,6 +93,7 @@ export const create = mutation({
     transcriptData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
     const id = await ctx.db.insert('videos', {
       title: args.title,
@@ -88,9 +122,10 @@ export const update = mutation({
     transcriptData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { id, ...rest } = args;
     const existing = await ctx.db.get(id);
-    if (!existing) throw new Error('Video not found');
+    if (!existing) throw new ConvexError({ code: 'VIDEO_NOT_FOUND' });
     await ctx.db.patch(id, rest);
     return { id };
   },
@@ -99,6 +134,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('videos') },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.delete(args.id);
     return { id: args.id };
   },

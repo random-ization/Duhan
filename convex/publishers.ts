@@ -1,6 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
+import { requireAdmin } from './utils';
 
 export const getAll = query({
   args: {},
@@ -30,6 +31,8 @@ export const save = mutation({
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
     const existing = await ctx.db
       .query('publishers')
       .withIndex('by_name', q => q.eq('name', args.name))
@@ -65,5 +68,6 @@ export const save = mutation({
 });
 
 export const generateUploadUrl = mutation(async ctx => {
+  await requireAdmin(ctx);
   return await ctx.storage.generateUploadUrl();
 });

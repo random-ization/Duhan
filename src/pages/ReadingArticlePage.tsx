@@ -1,11 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams } from 'react-router-dom';
-import { BookOpen, ChevronLeft, Languages, Volume2, VolumeX } from 'lucide-react';
-import { AI, DICTIONARY, NEWS } from '../utils/convexRefs';
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  Languages,
+  Loader2,
+  Star,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
+import { AI, DICTIONARY, NEWS, VOCAB, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
 import { useAuth } from '../contexts/AuthContext';
+import { useTTS } from '../hooks/useTTS';
+import { useTranslation } from 'react-i18next';
 
 type NewsArticle = {
   _id: string;
@@ -17,6 +28,7 @@ type NewsArticle = {
   publishedAt: number;
   difficultyLevel: 'L1' | 'L2' | 'L3';
   difficultyScore: number;
+  paragraphTranslations?: Partial<Record<'zh' | 'en' | 'vi' | 'mn', string[]>>;
 };
 
 type PanelTab = 'ai' | 'notes';
@@ -57,6 +69,10 @@ type ReadingAiResult = {
   summary: string;
   vocabulary: VocabularyItem[];
   grammar: GrammarItem[];
+};
+
+type ReadingTranslationResult = {
+  translations: string[];
 };
 
 type DictionaryFallbackResult = {
@@ -123,16 +139,56 @@ const STOPWORDS = new Set([
   '대한민국',
 ]);
 
-const TERM_GLOSSARY: Record<string, { meaning: string; level: string }> = {
-  기준금리: { meaning: '基准利率', level: 'TOPIK 4' },
-  동결: { meaning: '冻结，维持不变', level: 'TOPIK 3' },
-  동결하다: { meaning: '冻结，维持不变', level: 'TOPIK 3' },
-  가계부채: { meaning: '家庭债务', level: 'TOPIK 4' },
-  물가: { meaning: '物价', level: 'TOPIK 3' },
-  상승률: { meaning: '上涨率', level: 'TOPIK 4' },
-  가능성: { meaning: '可能性', level: 'TOPIK 3' },
-  배제: { meaning: '排除', level: 'TOPIK 5' },
-  충돌: { meaning: '冲突', level: 'TOPIK 4' },
+const TERM_GLOSSARY: Record<
+  string,
+  { meaning: Record<'zh' | 'en' | 'vi' | 'mn', string>; level: string }
+> = {
+  기준금리: {
+    meaning: { zh: '基准利率', en: 'base interest rate', vi: 'lãi suất cơ bản', mn: 'суурь хүү' },
+    level: 'TOPIK 4',
+  },
+  동결: {
+    meaning: {
+      zh: '冻结，维持不变',
+      en: 'freeze, keep unchanged',
+      vi: 'đóng băng, giữ nguyên',
+      mn: 'хэвээр барих',
+    },
+    level: 'TOPIK 3',
+  },
+  동결하다: {
+    meaning: {
+      zh: '冻结，维持不变',
+      en: 'freeze, keep unchanged',
+      vi: 'đóng băng, giữ nguyên',
+      mn: 'хэвээр барих',
+    },
+    level: 'TOPIK 3',
+  },
+  가계부채: {
+    meaning: { zh: '家庭债务', en: 'household debt', vi: 'nợ hộ gia đình', mn: 'өрхийн өр' },
+    level: 'TOPIK 4',
+  },
+  물가: {
+    meaning: { zh: '物价', en: 'prices', vi: 'giá cả', mn: 'үнийн түвшин' },
+    level: 'TOPIK 3',
+  },
+  상승률: {
+    meaning: { zh: '上涨率', en: 'growth rate', vi: 'tỷ lệ tăng', mn: 'өсөлтийн хувь' },
+    level: 'TOPIK 4',
+  },
+  가능성: {
+    meaning: { zh: '可能性', en: 'possibility', vi: 'khả năng', mn: 'боломж' },
+    level: 'TOPIK 3',
+  },
+  배제: {
+    meaning: { zh: '排除', en: 'exclude', vi: 'loại trừ', mn: 'үгүйсгэх' },
+    level: 'TOPIK 5',
+  },
+  충돌: {
+    meaning: { zh: '冲突', en: 'conflict', vi: 'xung đột', mn: 'мөргөлдөөн' },
+    level: 'TOPIK 4',
+  },
 };
 
 function sourceLabel(sourceKey: string) {
@@ -149,10 +205,13 @@ function sourceLabel(sourceKey: string) {
   return map[sourceKey] || sourceKey;
 }
 
-function difficultyLabel(level: 'L1' | 'L2' | 'L3') {
-  if (level === 'L1') return 'A2 初阶';
-  if (level === 'L2') return 'B1 中阶';
-  return 'C1 高阶';
+function difficultyLabel(
+  level: 'L1' | 'L2' | 'L3',
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  if (level === 'L1') return t('readingArticle.difficulty.l1', { defaultValue: 'A2 Beginner' });
+  if (level === 'L2') return t('readingArticle.difficulty.l2', { defaultValue: 'B1 Intermediate' });
+  return t('readingArticle.difficulty.l3', { defaultValue: 'C1 Advanced' });
 }
 
 function difficultyClass(level: 'L1' | 'L2' | 'L3') {
@@ -252,21 +311,36 @@ function toParagraphs(text: string) {
   return blocks;
 }
 
-function summarizeArticle(title: string, summary: string | undefined, bodyText: string) {
+function summarizeArticle(
+  title: string,
+  summary: string | undefined,
+  bodyText: string,
+  language: 'zh' | 'en' | 'vi' | 'mn'
+) {
   if (summary && summary.trim().length > 40) {
-    return `${title}。${summary.trim()}`;
+    return `${title}. ${summary.trim()}`;
   }
   const sentences = bodyText
     .split(/[.!?。！？]\s*/)
     .filter(Boolean)
     .slice(0, 2);
   if (sentences.length === 0) {
-    return `${title}。这篇文章聚焦韩国社会与经济动态。`;
+    if (language === 'en')
+      return `${title}. This article focuses on social and economic trends in Korea.`;
+    if (language === 'vi')
+      return `${title}. Bài viết tập trung vào các xu hướng xã hội và kinh tế tại Hàn Quốc.`;
+    if (language === 'mn')
+      return `${title}. Энэхүү нийтлэл нь Солонгосын нийгэм, эдийн засгийн чиг хандлагад төвлөрнө.`;
+    return `${title}。本文聚焦韩国社会与经济动态。`;
   }
-  return `${title}。${sentences.join('。')}。`;
+  return `${title}. ${sentences.join('. ')}.`;
 }
 
-function extractVocabulary(bodyText: string): VocabularyItem[] {
+function extractVocabulary(
+  bodyText: string,
+  language: 'zh' | 'en' | 'vi' | 'mn',
+  fallbackMeaning: string
+): VocabularyItem[] {
   const matches = bodyText.match(/[가-힣]{2,}/g) || [];
   const counts = new Map<string, number>();
   for (const token of matches) {
@@ -284,33 +358,54 @@ function extractVocabulary(bodyText: string): VocabularyItem[] {
     const gloss = TERM_GLOSSARY[term];
     return {
       term,
-      meaning: gloss?.meaning || '上下文核心词汇（可点击查词）',
+      meaning: gloss?.meaning?.[language] || fallbackMeaning,
       level: gloss?.level || 'TOPIK 3-5',
     };
   });
 }
 
-function extractGrammar(text: string): GrammarItem[] {
+function extractGrammar(text: string, language: 'zh' | 'en' | 'vi' | 'mn'): GrammarItem[] {
   const items: GrammarItem[] = [];
+  const explain = (zh: string, en: string, vi: string, mn: string) => {
+    if (language === 'en') return en;
+    if (language === 'vi') return vi;
+    if (language === 'mn') return mn;
+    return zh;
+  };
 
   if (/데다/.test(text)) {
     items.push({
       pattern: '-은/는 데다(가)',
-      explanation: '表示在前述基础上，又叠加了后面的情况。',
+      explanation: explain(
+        '表示在前述基础上，又叠加了后面的情况。',
+        'Adds another condition on top of the previous one.',
+        'Diễn tả thêm một tình huống chồng lên điều đã nêu trước đó.',
+        'Өмнөх нөхцөл дээр нэмэлт нөхцөл давхардаж байгааг илэрхийлнэ.'
+      ),
       example: '물가 상승률이 내려오지 않은 데다, 가계부채도 꺾이지 않고 있어...',
     });
   }
   if (/(으)?면서/.test(text)) {
     items.push({
       pattern: '-(으)면서',
-      explanation: '表示两个动作/状态同时进行。',
+      explanation: explain(
+        '表示两个动作/状态同时进行。',
+        'Indicates two actions or states happening at the same time.',
+        'Diễn tả hai hành động/trạng thái diễn ra đồng thời.',
+        'Хоёр үйлдэл/байдал зэрэгцэн явагдаж байгааг илэрхийлнэ.'
+      ),
       example: '국제 유가가 들썩이면서 물가 불안이 커지고 있다.',
     });
   }
   if (/수 없다/.test(text)) {
     items.push({
       pattern: '-(으)ㄹ 수 없다',
-      explanation: '表示“不可能/无法”。',
+      explanation: explain(
+        '表示“不可能/无法”。',
+        'Expresses impossibility or inability.',
+        'Diễn tả sự không thể hoặc không có khả năng.',
+        'Боломжгүй эсвэл чадваргүйг илэрхийлнэ.'
+      ),
       example: '가능성을 완전히 배제할 수는 없다.',
     });
   }
@@ -318,16 +413,17 @@ function extractGrammar(text: string): GrammarItem[] {
   if (items.length === 0) {
     items.push({
       pattern: '-기로 하다',
-      explanation: '表示决定做某事。',
+      explanation: explain(
+        '表示决定做某事。',
+        'Indicates a decision to do something.',
+        'Diễn tả quyết định làm việc gì đó.',
+        'Ямар нэг зүйл хийхээр шийдсэнийг илэрхийлнэ.'
+      ),
       example: '위원회는 금리를 동결하기로 했다.',
     });
   }
 
   return items.slice(0, 3);
-}
-
-function escapeRegExp(input: string) {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalizeInlineWhitespace(value: string) {
@@ -379,6 +475,64 @@ function noteColorDotClass(color: NoteColor) {
   return 'bg-pink-300';
 }
 
+function translationLanguageLabel(language?: string) {
+  if (language === 'en') return 'English';
+  if (language === 'vi') return 'Tiếng Việt';
+  if (language === 'mn') return 'Монгол';
+  return '中文';
+}
+
+function normalizePartOfSpeech(pos?: string) {
+  if (!pos) return 'UNKNOWN';
+  const normalized = pos.trim().toUpperCase();
+  if (!normalized) return 'UNKNOWN';
+  if (normalized.includes('NOUN') || normalized.includes('명사')) return 'NOUN';
+  if (normalized.includes('VERB') || normalized.includes('동사')) return 'VERB';
+  if (normalized.includes('ADJ') || normalized.includes('형용사')) return 'ADJECTIVE';
+  if (normalized.includes('ADV') || normalized.includes('부사')) return 'ADVERB';
+  return normalized;
+}
+
+function toTranslationErrorMessage(error: unknown, language: 'zh' | 'en' | 'vi' | 'mn') {
+  const text = (zh: string, en: string, vi: string, mn: string) => {
+    if (language === 'en') return en;
+    if (language === 'vi') return vi;
+    if (language === 'mn') return mn;
+    return zh;
+  };
+  const raw = error instanceof Error ? error.message : String(error);
+  if (raw.includes('AI_RATE_LIMIT_EXCEEDED')) {
+    return text(
+      '翻译请求过于频繁，请稍后重试',
+      'Too many translation requests. Please try again later.',
+      'Yêu cầu dịch quá nhiều. Vui lòng thử lại sau.',
+      'Орчуулгын хүсэлт хэт олон байна. Дараа дахин оролдоно уу.'
+    );
+  }
+  if (raw.includes('UNAUTHORIZED')) {
+    return text(
+      '请先登录后再使用翻译',
+      'Please sign in to use translation.',
+      'Vui lòng đăng nhập để dùng tính năng dịch.',
+      'Орчуулга ашиглахын тулд нэвтэрнэ үү.'
+    );
+  }
+  if (raw.includes("Could not find public function for 'ai:translateReadingParagraphs'")) {
+    return text(
+      '翻译服务尚未更新，请稍后刷新',
+      'Translation service is not updated yet. Please refresh later.',
+      'Dịch vụ dịch chưa được cập nhật. Vui lòng tải lại sau.',
+      'Орчуулгын үйлчилгээ шинэчлэгдээгүй байна. Дараа дахин шинэчилнэ үү.'
+    );
+  }
+  return text(
+    '当前翻译服务不可用',
+    'Translation service is currently unavailable.',
+    'Dịch vụ dịch hiện không khả dụng.',
+    'Орчуулгын үйлчилгээ одоогоор ашиглах боломжгүй байна.'
+  );
+}
+
 function createNoteId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -386,10 +540,19 @@ function createNoteId() {
 export default function ReadingArticlePage() {
   const { articleId = '' } = useParams<{ articleId: string }>();
   const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
   const { language } = useAuth();
+  const uiLanguage: 'zh' | 'en' | 'vi' | 'mn' =
+    language === 'zh' || language === 'en' || language === 'vi' || language === 'mn'
+      ? language
+      : 'en';
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>('ai');
   const [fontSize, setFontSize] = useState(18);
+  const [translationEnabled, setTranslationEnabled] = useState(false);
+  const [translations, setTranslations] = useState<string[]>([]);
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState>({
     visible: false,
     x: 0,
@@ -415,11 +578,29 @@ export default function ReadingArticlePage() {
   const [aiAnalysis, setAiAnalysis] = useState<ReadingAiResult | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null);
+  const [savedWords, setSavedWords] = useState<Record<string, boolean>>({});
+  const [savingWordKey, setSavingWordKey] = useState<string | null>(null);
+  const [noteSyncError, setNoteSyncError] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
 
   const analyzeReadingArticle = useAction(AI.analyzeReadingArticle);
   const explainWordFallback = useAction(AI.explainWordFallback);
+  const translateReadingParagraphs = useAction(AI.translateReadingParagraphs);
   const searchDictionary = useAction(DICTIONARY.searchDictionary);
+  const addToReview = useMutation(VOCAB.addToReview);
+  const markArticleRead = useMutation(NEWS.markArticleRead);
+  const saveNotebook = useMutation(
+    mRef<
+      {
+        type: string;
+        title: string;
+        content: unknown;
+        tags?: string[];
+      },
+      { success: boolean }
+    >('notebooks:save')
+  );
+  const { speak, stop, isLoading: speakingLoading, error: ttsError } = useTTS();
 
   const translationLang = useMemo(() => {
     if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
@@ -427,27 +608,48 @@ export default function ReadingArticlePage() {
     }
     return undefined;
   }, [language]);
+  const translationLabel = useMemo(
+    () => translationLanguageLabel(translationLang),
+    [translationLang]
+  );
+  const dateLocale = useMemo(() => {
+    if (uiLanguage === 'zh') return 'zh-CN';
+    if (uiLanguage === 'vi') return 'vi-VN';
+    if (uiLanguage === 'mn') return 'mn-MN';
+    return 'en-US';
+  }, [uiLanguage]);
 
   const article = useQuery(NEWS.getById, articleId ? { articleId } : 'skip') as
     | NewsArticle
     | null
     | undefined;
+  const markedArticleIdRef = useRef<string | null>(null);
 
   const cleanedBodyText = useMemo(
     () => (article ? cleanArticleBodyText(article.bodyText) : ''),
     [article]
   );
   const fallbackVocabulary = useMemo(
-    () => (cleanedBodyText ? extractVocabulary(cleanedBodyText) : []),
-    [cleanedBodyText]
+    () =>
+      cleanedBodyText
+        ? extractVocabulary(
+            cleanedBodyText,
+            uiLanguage,
+            t('readingArticle.vocabFallbackMeaning', {
+              defaultValue: 'Core contextual word (tap to look up)',
+            })
+          )
+        : [],
+    [cleanedBodyText, t, uiLanguage]
   );
   const fallbackGrammar = useMemo(
-    () => (cleanedBodyText ? extractGrammar(cleanedBodyText) : []),
-    [cleanedBodyText]
+    () => (cleanedBodyText ? extractGrammar(cleanedBodyText, uiLanguage) : []),
+    [cleanedBodyText, uiLanguage]
   );
   const fallbackSummary = useMemo(
-    () => (article ? summarizeArticle(article.title, article.summary, cleanedBodyText) : ''),
-    [article, cleanedBodyText]
+    () =>
+      article ? summarizeArticle(article.title, article.summary, cleanedBodyText, uiLanguage) : '',
+    [article, cleanedBodyText, uiLanguage]
   );
   const vocabulary = useMemo(
     () => (aiAnalysis?.vocabulary?.length ? aiAnalysis.vocabulary : fallbackVocabulary),
@@ -468,6 +670,16 @@ export default function ReadingArticlePage() {
   const articleConvexId = article?._id ?? '';
   const articleTitle = article?.title ?? '';
   const articleSummary = article?.summary;
+
+  useEffect(() => {
+    setTranslations([]);
+    setTranslationEnabled(false);
+    setTranslationError(null);
+    setSavedWords({});
+    setNoteSyncError(null);
+    setSpeaking(false);
+    stop();
+  }, [articleConvexId, stop]);
 
   useEffect(() => {
     if (!articleConvexId || !articleTitle || !cleanedBodyText) {
@@ -495,7 +707,10 @@ export default function ReadingArticlePage() {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : String(error);
         setAiAnalysis(null);
-        setAiAnalysisError(message || 'AI 分析失败');
+        setAiAnalysisError(
+          message ||
+            t('readingArticle.errors.aiAnalysisFailed', { defaultValue: 'AI analysis failed' })
+        );
       } finally {
         if (!cancelled) {
           setAiAnalysisLoading(false);
@@ -514,24 +729,86 @@ export default function ReadingArticlePage() {
     articleSummary,
     cleanedBodyText,
     translationLang,
+    t,
   ]);
 
-  const vocabularyMap = useMemo(() => {
-    const map = new Map<string, VocabularyItem>();
-    for (const item of vocabulary) map.set(item.term, item);
-    return map;
-  }, [vocabulary]);
+  useEffect(() => {
+    if (!article?._id) return;
+    if (markedArticleIdRef.current === article._id) return;
+    markedArticleIdRef.current = article._id;
+    void markArticleRead({ articleId: article._id }).catch(() => undefined);
+  }, [article?._id, markArticleRead]);
 
-  const highlightRegex = useMemo(() => {
-    if (vocabulary.length === 0) return null;
-    const pattern = vocabulary
-      .map(item => item.term)
-      .sort((a, b) => b.length - a.length)
-      .map(escapeRegExp)
-      .join('|');
-    if (!pattern) return null;
-    return new RegExp(`(${pattern})`, 'g');
-  }, [vocabulary]);
+  const requestTranslations = useCallback(async () => {
+    if (!articleTitle || paragraphs.length === 0) {
+      setTranslations([]);
+      setTranslationLoading(false);
+      setTranslationError(null);
+      return;
+    }
+
+    setTranslationLoading(true);
+    setTranslationError(null);
+    try {
+      const result = (await translateReadingParagraphs({
+        title: articleTitle,
+        paragraphs,
+        language: translationLang,
+      })) as ReadingTranslationResult | null;
+      const next = Array.isArray(result?.translations) ? result.translations : [];
+      const normalized = paragraphs.map((_, index) => next[index] || '');
+      setTranslations(normalized);
+      const hasAnyTranslation = normalized.some(item => item.trim().length > 0);
+      setTranslationError(
+        hasAnyTranslation
+          ? null
+          : t('readingArticle.errors.translationUnavailable', {
+              defaultValue: 'Translation service is currently unavailable.',
+            })
+      );
+    } catch (error) {
+      setTranslations([]);
+      setTranslationError(toTranslationErrorMessage(error, uiLanguage));
+    } finally {
+      setTranslationLoading(false);
+    }
+  }, [articleTitle, paragraphs, t, translateReadingParagraphs, translationLang, uiLanguage]);
+
+  const onToggleTranslation = useCallback(() => {
+    setTranslationEnabled(prev => {
+      const next = !prev;
+      if (
+        next &&
+        !translationLoading &&
+        (translations.length === 0 || !translations.some(item => item.trim().length > 0))
+      ) {
+        void requestTranslations();
+      }
+      return next;
+    });
+  }, [requestTranslations, translationLoading, translations]);
+
+  useEffect(() => {
+    if (!article || !articleTitle || paragraphs.length === 0) {
+      setTranslations([]);
+      setTranslationLoading(false);
+      setTranslationError(null);
+      return;
+    }
+
+    const pretranslated =
+      translationLang && article.paragraphTranslations?.[translationLang]
+        ? article.paragraphTranslations[translationLang]
+        : undefined;
+    if (Array.isArray(pretranslated) && pretranslated.length >= paragraphs.length) {
+      setTranslations(paragraphs.map((_, index) => pretranslated[index] || ''));
+      setTranslationLoading(false);
+      setTranslationError(null);
+      return;
+    }
+
+    void requestTranslations();
+  }, [article, articleTitle, paragraphs, requestTranslations, translationLang]);
 
   useEffect(() => {
     const onMouseUp = () => {
@@ -595,31 +872,28 @@ export default function ReadingArticlePage() {
 
   useEffect(() => {
     return () => {
-      if (typeof window !== 'undefined') {
-        window.speechSynthesis.cancel();
-      }
+      stop();
     };
-  }, []);
+  }, [stop]);
 
-  const toggleSpeak = () => {
-    if (!article || typeof window === 'undefined') return;
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-
-    if (speaking) {
-      synth.cancel();
+  const toggleSpeak = async () => {
+    if (!article) return;
+    if (speaking || speakingLoading) {
+      stop();
       setSpeaking(false);
       return;
     }
-
-    const utterance = new SpeechSynthesisUtterance(cleanedBodyText || article.bodyText);
-    utterance.lang = 'ko-KR';
-    utterance.rate = 0.95;
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    synth.cancel();
-    synth.speak(utterance);
+    const text = cleanedBodyText || article.bodyText;
+    if (!text.trim()) return;
     setSpeaking(true);
+    try {
+      await speak(text, {
+        voice: 'ko-KR-SunHiNeural',
+        rate: '-5.00%',
+      });
+    } finally {
+      setSpeaking(false);
+    }
   };
 
   const onWordClick = (word: string) => {
@@ -641,12 +915,17 @@ export default function ReadingArticlePage() {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setDictionaryFallback(null);
-        setDictionaryFallbackError(message || 'AI 释义失败');
+        setDictionaryFallbackError(
+          message ||
+            t('readingArticle.errors.aiDictionaryFailed', {
+              defaultValue: 'AI dictionary fallback failed',
+            })
+        );
       } finally {
         setDictionaryFallbackLoading(false);
       }
     },
-    [cleanedBodyText, explainWordFallback, translationLang]
+    [cleanedBodyText, explainWordFallback, t, translationLang]
   );
 
   const runDictionaryLookup = useCallback(
@@ -684,19 +963,99 @@ export default function ReadingArticlePage() {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setDictionaryResult(null);
-        setDictionaryError(message || '词典查询失败');
+        setDictionaryError(
+          message ||
+            t('readingArticle.errors.dictionaryLookupFailed', {
+              defaultValue: 'Dictionary lookup failed',
+            })
+        );
         await runAIDictionaryFallback(query);
       } finally {
         setDictionaryLoading(false);
       }
     },
-    [runAIDictionaryFallback, searchDictionary, translationLang]
+    [runAIDictionaryFallback, searchDictionary, t, translationLang]
   );
 
   useEffect(() => {
     if (!activeWord) return;
     void runDictionaryLookup(activeWord);
   }, [activeWord, runDictionaryLookup]);
+
+  const saveWordToReview = useCallback(
+    async ({
+      word,
+      meaning,
+      partOfSpeech,
+      source,
+    }: {
+      word: string;
+      meaning: string;
+      partOfSpeech?: string;
+      source: string;
+    }) => {
+      const normalizedWord = normalizeInlineWhitespace(word);
+      if (!normalizedWord) return;
+      const saveKey = normalizedWord.toLowerCase();
+      if (savedWords[saveKey]) return;
+      setSavingWordKey(saveKey);
+      try {
+        await addToReview({
+          word: normalizedWord,
+          meaning:
+            meaning.trim() ||
+            t('readingArticle.vocabDefaultMeaning', { defaultValue: 'Reading vocabulary' }),
+          partOfSpeech: normalizePartOfSpeech(partOfSpeech),
+          context: findContextSentence(cleanedBodyText, normalizedWord),
+          source,
+        });
+        setSavedWords(prev => ({ ...prev, [saveKey]: true }));
+      } finally {
+        setSavingWordKey(current => (current === saveKey ? null : current));
+      }
+    },
+    [addToReview, cleanedBodyText, savedWords, t]
+  );
+
+  const onSaveVocabularyItem = useCallback(
+    async (item: VocabularyItem) => {
+      await saveWordToReview({
+        word: item.term,
+        meaning: item.meaning,
+        partOfSpeech: 'NOUN',
+        source: 'READING_AI_CORE',
+      });
+    },
+    [saveWordToReview]
+  );
+
+  const onSaveDictionaryEntry = useCallback(
+    async (entry: DictionaryEntry) => {
+      await saveWordToReview({
+        word: entry.word,
+        meaning:
+          getDictionaryMeaning(entry) ||
+          t('readingArticle.dictionaryFallbackMeaning', {
+            defaultValue: 'Reading dictionary meaning',
+          }),
+        partOfSpeech: entry.pos,
+        source: 'READING_DICTIONARY',
+      });
+    },
+    [saveWordToReview, t]
+  );
+
+  const onSaveDictionaryFallback = useCallback(async () => {
+    if (!dictionaryFallback) return;
+    await saveWordToReview({
+      word: dictionaryFallback.word,
+      meaning:
+        dictionaryFallback.meaning ||
+        t('readingArticle.aiMeaningFallback', { defaultValue: 'AI explanation' }),
+      partOfSpeech: dictionaryFallback.pos,
+      source: 'READING_DICTIONARY_AI',
+    });
+  }, [dictionaryFallback, saveWordToReview, t]);
 
   const startNoteFromSelection = () => {
     const quote = normalizeInlineWhitespace(selectionToolbar.text);
@@ -719,20 +1078,46 @@ export default function ReadingArticlePage() {
     setDraftNote(prev => (prev ? { ...prev, comment: value } : prev));
   };
 
-  const onSaveDraftNote = () => {
+  const onSaveDraftNote = async () => {
     if (!draftNote) return;
-    setNotes(prev => [
-      {
-        id: createNoteId(),
-        quote: normalizeInlineWhitespace(draftNote.quote),
-        color: draftNote.color,
-        comment: draftNote.comment.trim(),
-        createdAt: Date.now(),
-        anchor: draftNote.anchor,
-      },
-      ...prev,
-    ]);
+    const nextNote: ReaderNote = {
+      id: createNoteId(),
+      quote: normalizeInlineWhitespace(draftNote.quote),
+      color: draftNote.color,
+      comment: draftNote.comment.trim(),
+      createdAt: Date.now(),
+      anchor: draftNote.anchor,
+    };
+    setNotes(prev => [nextNote, ...prev]);
     setDraftNote(null);
+    setNoteSyncError(null);
+    try {
+      await saveNotebook({
+        type: 'GENERAL',
+        title: `${t('readingArticle.noteTitlePrefix', { defaultValue: 'Reading Note' })}｜${
+          articleTitle || t('readingArticle.untitled', { defaultValue: 'Untitled Article' })
+        }`,
+        content: {
+          text: nextNote.quote,
+          notes: nextNote.comment,
+          source: 'READING',
+          articleId: articleConvexId || articleId,
+          articleTitle: articleTitle || '',
+          articleSource: article ? sourceLabel(article.sourceKey) : '',
+          color: nextNote.color,
+          createdAt: nextNote.createdAt,
+        },
+        tags: ['reading', article ? sourceLabel(article.sourceKey) : 'news'],
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setNoteSyncError(
+        message ||
+          t('readingArticle.errors.noteSyncFailed', {
+            defaultValue: 'Failed to sync note to Notebook',
+          })
+      );
+    }
   };
 
   const onDiscardDraftNote = () => {
@@ -762,7 +1147,7 @@ export default function ReadingArticlePage() {
   if (!articleId) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">
-        缺少文章 ID
+        {t('readingArticle.errors.missingArticleId', { defaultValue: 'Missing article ID' })}
       </div>
     );
   }
@@ -779,13 +1164,17 @@ export default function ReadingArticlePage() {
   if (article === null) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
-        <p className="text-base font-bold text-slate-800">文章不存在或暂不可访问</p>
+        <p className="text-base font-bold text-slate-800">
+          {t('readingArticle.errors.articleUnavailable', {
+            defaultValue: 'This article does not exist or is not available.',
+          })}
+        </p>
         <button
           type="button"
           onClick={() => navigate('/reading')}
           className="mt-4 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
         >
-          返回阅读发现页
+          {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
         </button>
       </div>
     );
@@ -818,40 +1207,7 @@ export default function ReadingArticlePage() {
         </span>
       );
     }
-    if (!highlightRegex)
-      return <React.Fragment key={`t-${paragraphIndex}-${segmentIndex}`}>{text}</React.Fragment>;
-
-    const tokens = text.split(highlightRegex);
-    return (
-      <React.Fragment key={`h-${paragraphIndex}-${segmentIndex}`}>
-        {tokens.map((token, tokenIndex) => {
-          const vocabItem = vocabularyMap.get(token);
-          if (!vocabItem)
-            return (
-              <React.Fragment key={`${paragraphIndex}-${segmentIndex}-${tokenIndex}`}>
-                {token}
-              </React.Fragment>
-            );
-
-          const yellow = tokenIndex % 2 === 0;
-          return (
-            <button
-              key={`${paragraphIndex}-${segmentIndex}-${tokenIndex}-${token}`}
-              type="button"
-              onClick={() => onWordClick(token)}
-              className={`group relative mx-[1px] rounded-sm px-[3px] text-left ${
-                yellow ? 'bg-yellow-200' : 'bg-green-200'
-              }`}
-            >
-              {token}
-              <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs font-semibold text-white group-hover:block">
-                {vocabItem.meaning} ({vocabItem.level})
-              </span>
-            </button>
-          );
-        })}
-      </React.Fragment>
-    );
+    return <React.Fragment key={`t-${paragraphIndex}-${segmentIndex}`}>{text}</React.Fragment>;
   };
 
   const renderParagraph = (paragraph: string, paragraphIndex: number) => {
@@ -960,12 +1316,12 @@ export default function ReadingArticlePage() {
               className="flex items-center gap-1 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
             >
               <ChevronLeft size={16} />
-              返回发现页
+              {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
             </button>
             <span
               className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${difficultyClass(article.difficultyLevel)}`}
             >
-              {difficultyLabel(article.difficultyLevel)} ({sourceLabel(article.sourceKey)})
+              {difficultyLabel(article.difficultyLevel, t)} ({sourceLabel(article.sourceKey)})
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -978,11 +1334,40 @@ export default function ReadingArticlePage() {
             </button>
             <button
               type="button"
-              onClick={toggleSpeak}
+              onClick={() => {
+                void toggleSpeak();
+              }}
               className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
             >
-              {speaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              {speaking ? '停止朗读' : '朗读'}
+              {speaking || speakingLoading ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {speaking || speakingLoading
+                ? t('readingArticle.tts.stop', { defaultValue: 'Stop' })
+                : t('readingArticle.tts.play', { defaultValue: 'Read aloud' })}
+            </button>
+            <button
+              type="button"
+              onClick={onToggleTranslation}
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold ${
+                translationEnabled
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-slate-500 hover:bg-slate-100'
+              }`}
+              aria-label={t('readingArticle.translation.toggleAria', {
+                defaultValue: 'Toggle translation',
+              })}
+              title={translationError || undefined}
+            >
+              {translationLoading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Languages size={15} />
+              )}
+              {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
+              <span className="text-xs font-bold">
+                {translationEnabled
+                  ? t('readingArticle.translation.on', { defaultValue: 'On' })
+                  : t('readingArticle.translation.off', { defaultValue: 'Off' })}
+              </span>
             </button>
           </div>
         </header>
@@ -993,15 +1378,56 @@ export default function ReadingArticlePage() {
               {article.title}
             </h1>
             <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-slate-500">
-              <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+              <span>{new Date(article.publishedAt).toLocaleDateString(dateLocale)}</span>
               <span>{sourceLabel(article.sourceKey)}</span>
-              <span>{wordCount.toLocaleString()}字</span>
+              <span>
+                {t('readingArticle.meta.words', {
+                  defaultValue: '{{count}} chars',
+                  count: wordCount.toLocaleString(),
+                })}
+              </span>
+              <span>
+                {t('readingArticle.meta.translationTarget', {
+                  defaultValue: 'Translation: {{language}}',
+                  language: translationLabel,
+                })}
+              </span>
             </div>
+            {ttsError && (
+              <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                {t('readingArticle.tts.status', { defaultValue: 'TTS status' })}: {ttsError}
+              </div>
+            )}
+            {translationError && (
+              <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                {t('readingArticle.translation.status', { defaultValue: 'Translation status' })}:{' '}
+                {translationError}
+              </div>
+            )}
 
             <div className="space-y-7 text-slate-700" style={{ lineHeight: 2.2, fontSize }}>
-              {paragraphs.map((paragraph, paragraphIndex) =>
-                renderParagraph(paragraph, paragraphIndex)
-              )}
+              {paragraphs.map((paragraph, paragraphIndex) => {
+                const translated = translations[paragraphIndex] || '';
+                return (
+                  <div key={`${paragraphIndex}-${paragraph.slice(0, 18)}`}>
+                    {renderParagraph(paragraph, paragraphIndex)}
+                    {translationEnabled &&
+                      (translated ? (
+                        <p className="mt-2 text-sm leading-relaxed text-slate-500 sm:text-base">
+                          {translated}
+                        </p>
+                      ) : paragraphIndex === 0 && translationLoading ? (
+                        <p className="mt-2 text-sm text-slate-400">
+                          {t('readingArticle.translation.preparing', {
+                            defaultValue: 'Preparing translation...',
+                          })}
+                        </p>
+                      ) : paragraphIndex === 0 && translationError ? (
+                        <p className="mt-2 text-sm text-amber-600">{translationError}</p>
+                      ) : null)}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1016,7 +1442,7 @@ export default function ReadingArticlePage() {
               onClick={onLookupSelection}
               className="rounded px-3 py-1.5 text-sm hover:bg-slate-700"
             >
-              🔍 查词
+              🔍 {t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' })}
             </button>
             <div className="mx-1 h-4 w-px bg-slate-600" />
             <button
@@ -1055,7 +1481,7 @@ export default function ReadingArticlePage() {
               }`}
               disabled={!selectionToolbar.anchor}
             >
-              📝 笔记
+              📝 {t('readingArticle.toolbar.note', { defaultValue: 'Note' })}
             </button>
           </div>
         )}
@@ -1072,7 +1498,7 @@ export default function ReadingArticlePage() {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            ✨ AI 分析
+            ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
           </button>
           <button
             type="button"
@@ -1083,7 +1509,7 @@ export default function ReadingArticlePage() {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📚 词典/笔记
+            📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
           </button>
         </div>
 
@@ -1092,41 +1518,73 @@ export default function ReadingArticlePage() {
             <>
               <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-2 flex items-center gap-2 font-bold text-slate-800">
-                  <span>💡</span> AI 全文摘要
+                  <span>💡</span>{' '}
+                  {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
                 </h3>
                 {aiAnalysisLoading && (
-                  <p className="mb-2 text-xs font-semibold text-blue-600">正在生成 AI 分析...</p>
+                  <p className="mb-2 text-xs font-semibold text-blue-600">
+                    {t('readingArticle.ai.loading', { defaultValue: 'Generating AI analysis...' })}
+                  </p>
                 )}
                 {aiAnalysisError && (
                   <p className="mb-2 text-xs font-semibold text-amber-600">
-                    AI 不可用，已使用本地解析。
+                    {t('readingArticle.ai.fallbackNotice', {
+                      defaultValue: 'AI unavailable, local fallback is used.',
+                    })}
                   </p>
                 )}
                 <p className="text-sm leading-relaxed text-slate-600">{summary}</p>
               </section>
 
               <section>
-                <h3 className="mb-3 px-1 text-sm font-bold text-slate-800">🔑 本文核心词汇</h3>
+                <h3 className="mb-3 px-1 text-sm font-bold text-slate-800">
+                  🔑 {t('readingArticle.ai.coreVocab', { defaultValue: 'Core Vocabulary' })}
+                </h3>
                 <div className="space-y-2">
                   {vocabulary.slice(0, 8).map(item => (
-                    <button
+                    <div
                       key={item.term}
-                      type="button"
-                      onClick={() => onWordClick(item.term)}
                       className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-white p-3 text-left shadow-sm transition hover:border-blue-300"
                     >
-                      <div>
+                      <button
+                        type="button"
+                        onClick={() => onWordClick(item.term)}
+                        className="flex-1 text-left"
+                      >
                         <div className="font-bold text-slate-800">{item.term}</div>
                         <div className="text-xs text-slate-500">{item.meaning}</div>
-                      </div>
-                      <span className="hidden text-slate-300 group-hover:block">★</span>
-                    </button>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void onSaveVocabularyItem(item);
+                        }}
+                        className={`ml-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+                          savedWords[item.term.toLowerCase()]
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                        {savingWordKey === item.term.toLowerCase() ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : savedWords[item.term.toLowerCase()] ? (
+                          <Check size={12} />
+                        ) : (
+                          <Star size={12} />
+                        )}
+                        {savedWords[item.term.toLowerCase()]
+                          ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                          : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-3 px-1 text-sm font-bold text-slate-800">📖 关键语法解析</h3>
+                <h3 className="mb-3 px-1 text-sm font-bold text-slate-800">
+                  📖 {t('readingArticle.ai.grammarTitle', { defaultValue: 'Grammar Points' })}
+                </h3>
                 <div className="space-y-3">
                   {grammar.map(item => (
                     <article
@@ -1147,33 +1605,61 @@ export default function ReadingArticlePage() {
             <>
               <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-2 flex items-center gap-2 font-bold text-slate-800">
-                  <BookOpen size={16} /> 当前选中
+                  <BookOpen size={16} />{' '}
+                  {t('readingArticle.dictionary.currentSelection', {
+                    defaultValue: 'Current Selection',
+                  })}
                 </h3>
                 <p className="text-sm text-slate-600">
-                  {activeWord || '点击正文高亮词，或划词后添加笔记'}
+                  {activeWord ||
+                    t('readingArticle.dictionary.selectionHint', {
+                      defaultValue: 'Tap highlighted words or select text to add notes.',
+                    })}
                 </p>
               </section>
 
               <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-2 flex items-center gap-2 font-bold text-slate-800">
-                  <Languages size={16} /> 词典建议
+                  <Languages size={16} />{' '}
+                  {t('readingArticle.dictionary.title', { defaultValue: 'Dictionary' })}
                 </h3>
-                {!activeWord && <p className="text-sm text-slate-600">暂无选词。</p>}
+                {!activeWord && (
+                  <p className="text-sm text-slate-600">
+                    {t('readingArticle.dictionary.emptySelection', {
+                      defaultValue: 'No selected word yet.',
+                    })}
+                  </p>
+                )}
 
                 {activeWord && (
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-slate-500">
-                      查询词：{dictionaryQuery || activeWord}
+                      {t('readingArticle.dictionary.queryWord', { defaultValue: 'Query' })}:{' '}
+                      {dictionaryQuery || activeWord}
                     </div>
 
-                    {dictionaryLoading && <p className="text-sm text-slate-500">词典查询中...</p>}
+                    {dictionaryLoading && (
+                      <p className="text-sm text-slate-500">
+                        {t('readingArticle.dictionary.loading', {
+                          defaultValue: 'Looking up dictionary...',
+                        })}
+                      </p>
+                    )}
 
                     {!dictionaryLoading && dictionaryError && (
-                      <p className="text-sm text-amber-600">词典服务异常，已切换 AI 释义。</p>
+                      <p className="text-sm text-amber-600">
+                        {t('readingArticle.dictionary.serviceError', {
+                          defaultValue: 'Dictionary unavailable, switched to AI fallback.',
+                        })}
+                      </p>
                     )}
 
                     {dictionaryFallbackLoading && (
-                      <p className="text-sm text-slate-500">AI 正在生成释义...</p>
+                      <p className="text-sm text-slate-500">
+                        {t('readingArticle.dictionary.aiLoading', {
+                          defaultValue: 'AI is generating explanation...',
+                        })}
+                      </p>
                     )}
 
                     {!dictionaryFallbackLoading &&
@@ -1184,22 +1670,52 @@ export default function ReadingArticlePage() {
 
                     {!dictionaryLoading && dictionaryEntries.length > 0 && (
                       <div className="space-y-2">
-                        {dictionaryEntries.slice(0, 3).map(entry => (
-                          <article
-                            key={entry.targetCode}
-                            className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-900">{entry.word}</span>
-                              <span className="text-xs text-slate-500">
-                                {[entry.pos, entry.pronunciation].filter(Boolean).join(' · ')}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm text-slate-700">
-                              {getDictionaryMeaning(entry) || '暂无释义'}
-                            </p>
-                          </article>
-                        ))}
+                        {dictionaryEntries.slice(0, 3).map(entry => {
+                          const saveKey = normalizeInlineWhitespace(entry.word).toLowerCase();
+                          return (
+                            <article
+                              key={entry.targetCode}
+                              className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-900">{entry.word}</span>
+                                  <span className="text-xs text-slate-500">
+                                    {[entry.pos, entry.pronunciation].filter(Boolean).join(' · ')}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void onSaveDictionaryEntry(entry);
+                                  }}
+                                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+                                    savedWords[saveKey]
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : 'bg-white text-slate-600 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {savingWordKey === saveKey ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                  ) : savedWords[saveKey] ? (
+                                    <Check size={12} />
+                                  ) : (
+                                    <Star size={12} />
+                                  )}
+                                  {savedWords[saveKey]
+                                    ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                                    : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+                                </button>
+                              </div>
+                              <p className="mt-1 text-sm text-slate-700">
+                                {getDictionaryMeaning(entry) ||
+                                  t('readingArticle.dictionary.noMeaning', {
+                                    defaultValue: 'No meaning available.',
+                                  })}
+                              </p>
+                            </article>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -1208,28 +1724,67 @@ export default function ReadingArticlePage() {
                       !dictionaryFallbackLoading &&
                       dictionaryFallback && (
                         <article className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900">
-                              {dictionaryFallback.word}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {dictionaryFallback.pos || '词性待判断'}
-                            </span>
-                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-                              AI
-                            </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">
+                                {dictionaryFallback.word}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {dictionaryFallback.pos ||
+                                  t('readingArticle.dictionary.unknownPos', {
+                                    defaultValue: 'Part of speech pending',
+                                  })}
+                              </span>
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                                AI
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void onSaveDictionaryFallback();
+                              }}
+                              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+                                savedWords[
+                                  normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
+                                ]
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-white text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {savingWordKey ===
+                              normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase() ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : savedWords[
+                                  normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
+                                ] ? (
+                                <Check size={12} />
+                              ) : (
+                                <Star size={12} />
+                              )}
+                              {savedWords[
+                                normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
+                              ]
+                                ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                                : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+                            </button>
                           </div>
                           <p className="mt-1 text-sm text-slate-700">
-                            {dictionaryFallback.meaning || '暂无释义'}
+                            {dictionaryFallback.meaning ||
+                              t('readingArticle.dictionary.noMeaning', {
+                                defaultValue: 'No meaning available.',
+                              })}
                           </p>
                           {dictionaryFallback.example && (
                             <p className="mt-2 text-xs text-slate-500">
-                              例句：{dictionaryFallback.example}
+                              {t('readingArticle.dictionary.example', { defaultValue: 'Example' })}:
+                              {dictionaryFallback.example}
                             </p>
                           )}
                           {dictionaryFallback.note && (
                             <p className="mt-1 text-xs text-slate-500">
-                              提示：{dictionaryFallback.note}
+                              {t('readingArticle.dictionary.note', { defaultValue: 'Tip' })}:
+                              {dictionaryFallback.note}
                             </p>
                           )}
                         </article>
@@ -1240,18 +1795,34 @@ export default function ReadingArticlePage() {
                       !dictionaryFallbackLoading &&
                       !dictionaryFallback &&
                       !dictionaryFallbackError && (
-                        <p className="text-sm text-slate-500">未找到可用释义。</p>
+                        <p className="text-sm text-slate-500">
+                          {t('readingArticle.dictionary.noResult', {
+                            defaultValue: 'No available definition found.',
+                          })}
+                        </p>
                       )}
                   </div>
                 )}
               </section>
 
               <section>
-                <h3 className="mb-3 text-sm font-bold text-slate-800">📝 笔记</h3>
+                <h3 className="mb-3 text-sm font-bold text-slate-800">
+                  📝 {t('readingArticle.notes.title', { defaultValue: 'Notes' })}
+                </h3>
+                {noteSyncError && (
+                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    {t('readingArticle.notes.syncError', {
+                      defaultValue: 'Saved locally, but failed to sync to Notebook',
+                    })}
+                    ：{noteSyncError}
+                  </div>
+                )}
                 {draftNote && (
                   <article className="mb-3 rounded-xl border border-sky-200 bg-white p-4 shadow-sm">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-sky-600">新建引用笔记</span>
+                      <span className="text-xs font-bold text-sky-600">
+                        {t('readingArticle.notes.newQuote', { defaultValue: 'New Quote Note' })}
+                      </span>
                       <span
                         className={`h-3 w-3 rounded-full ${noteColorDotClass(draftNote.color)}`}
                       />
@@ -1264,7 +1835,9 @@ export default function ReadingArticlePage() {
                     <textarea
                       value={draftNote.comment}
                       onChange={e => onDraftCommentChange(e.target.value)}
-                      placeholder="写下你的理解、疑问或翻译..."
+                      placeholder={t('readingArticle.notes.placeholder', {
+                        defaultValue: 'Write your understanding, questions, or translation...',
+                      })}
                       className="mt-3 h-24 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     />
                     <div className="mt-3 flex items-center justify-end gap-2">
@@ -1273,14 +1846,14 @@ export default function ReadingArticlePage() {
                         onClick={onDiscardDraftNote}
                         className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
                       >
-                        取消
+                        {t('readingArticle.notes.cancel', { defaultValue: 'Cancel' })}
                       </button>
                       <button
                         type="button"
                         onClick={onSaveDraftNote}
                         className="rounded-lg border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
                       >
-                        保存笔记
+                        {t('readingArticle.notes.save', { defaultValue: 'Save Note' })}
                       </button>
                     </div>
                   </article>
@@ -1288,7 +1861,10 @@ export default function ReadingArticlePage() {
                 <div className="space-y-2">
                   {notes.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
-                      还没有笔记。划词后点击“📝 笔记”，可创建带颜色下划线的引用并输入备注。
+                      {t('readingArticle.notes.empty', {
+                        defaultValue:
+                          'No notes yet. Select text and tap Note to create an underlined quote.',
+                      })}
                     </div>
                   ) : (
                     notes.map(note => (
@@ -1317,7 +1893,8 @@ export default function ReadingArticlePage() {
                           “{note.quote}”
                         </p>
                         <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
-                          {note.comment || '（无备注）'}
+                          {note.comment ||
+                            t('readingArticle.notes.noComment', { defaultValue: '(No comment)' })}
                         </p>
                       </button>
                     ))

@@ -47,7 +47,7 @@ export function MobileCourseDashboard({
           </p>
           <h2 className="text-2xl font-black text-slate-900 leading-none">{courseName}</h2>
         </div>
-        {/* Streak badge - TODO: Pass real streak */}
+        {/* Streak badge */}
         <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full border border-orange-100">
           <Flame size={16} className="fill-orange-500" />
           <span className="font-black text-sm">{user?.statistics?.dayStreak ?? 0}</span>

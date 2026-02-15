@@ -35,7 +35,6 @@ export const useApp = () => {
     logout: auth.logout,
     updateUser: auth.updateUser,
     refreshUser: auth.refreshUser,
-    resetPassword: auth.resetPassword,
     language: auth.language,
     setLanguage: auth.setLanguage,
     canAccessContent: auth.canAccessContent,

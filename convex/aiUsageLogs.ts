@@ -45,9 +45,10 @@ export const countRecentByUser = internalQuery({
     const since = Date.now() - Math.max(1_000, args.windowMs);
     const recent = await ctx.db
       .query('ai_usage_logs')
-      .withIndex('by_createdAt', q => q.gte('createdAt', since))
+      .withIndex('by_user_model_createdAt', q =>
+        q.eq('userId', args.userId).eq('model', 'invocation').gte('createdAt', since)
+      )
       .collect();
-    const count = recent.filter(log => log.userId === args.userId).length;
-    return { count };
+    return { count: recent.length };
   },
 });

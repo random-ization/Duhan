@@ -108,9 +108,9 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
 
   const payloadHash = crypto.createHash('sha256').update(audioBuffer).digest('hex');
 
-  // Removed x-amz-acl to avoid mismatch issues
-  const canonicalHeaders = `host:${endpointHost}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  const acl = 'public-read';
+  const canonicalHeaders = `host:${endpointHost}\nx-amz-acl:${acl}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-acl;x-amz-content-sha256;x-amz-date';
 
   const canonicalRequest = ['PUT', uri, '', canonicalHeaders, signedHeaders, payloadHash].join(
     '\n'
@@ -152,7 +152,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
     method: 'PUT',
     headers: {
       Host: endpointHost,
-      // Removed x-amz-acl header
+      'x-amz-acl': acl,
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
       Authorization: authorization,
@@ -197,6 +197,30 @@ async function checkS3Cache(key: string): Promise<string | null> {
   return null;
 }
 
+function normalizePublicAudioUrl(inputUrl: string): string {
+  try {
+    const url = new URL(inputUrl);
+    const host = url.host;
+    if (host.endsWith('.digitaloceanspaces.com') && !host.includes('.cdn.')) {
+      const cdnHost = host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com');
+      url.host = cdnHost;
+      return url.toString();
+    }
+    return inputUrl;
+  } catch {
+    return inputUrl;
+  }
+}
+
+async function isPublicUrlAccessible(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export const speak = action({
   args: {
     text: v.string(),
@@ -230,13 +254,21 @@ export const speak = action({
       if (!args.skipCache) {
         const cacheEntry = await ctx.runQuery(getCacheQuery, { key: cacheKey });
         if (cacheEntry?.url) {
-          return {
-            success: true,
-            audio: null,
-            url: cacheEntry.url,
-            format: 'audio/mp3',
-            cached: true,
-          };
+          const normalizedUrl = normalizePublicAudioUrl(cacheEntry.url);
+          const accessible = await isPublicUrlAccessible(normalizedUrl);
+          if (accessible) {
+            if (normalizedUrl !== cacheEntry.url) {
+              await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: normalizedUrl });
+            }
+            return {
+              success: true,
+              audio: null,
+              url: normalizedUrl,
+              format: 'audio/mp3',
+              cached: true,
+            };
+          }
+          console.warn('TTS cache URL inaccessible, regenerating:', normalizedUrl);
         }
 
         const cachedUrl = await checkS3Cache(cacheKey);
@@ -293,23 +325,32 @@ export const speak = action({
 
       // Return URL if available, otherwise base64
       if (cdnUrl) {
-        await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cdnUrl });
-        return {
-          success: true,
-          audio: null,
-          url: cdnUrl,
-          format: 'audio/mp3',
-          cached: false,
-        };
+        const publicAccessible = await isPublicUrlAccessible(cdnUrl);
+        if (publicAccessible) {
+          await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cdnUrl });
+          return {
+            success: true,
+            audio: null,
+            url: cdnUrl,
+            format: 'audio/mp3',
+            cached: false,
+          };
+        }
+        console.warn(
+          'Generated TTS URL is not publicly accessible, returning inline audio:',
+          cdnUrl
+        );
       } else {
-        return {
-          success: true,
-          audio: audioBuffer.toString('base64'),
-          url: null,
-          format: 'audio/mp3',
-          cached: false,
-        };
+        console.warn('TTS upload unavailable, returning inline audio');
       }
+
+      return {
+        success: true,
+        audio: audioBuffer.toString('base64'),
+        url: null,
+        format: 'audio/mp3',
+        cached: false,
+      };
     } catch (error) {
       console.error('TTS generation failed:', error);
       return {

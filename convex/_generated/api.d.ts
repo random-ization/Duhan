@@ -8,8 +8,11 @@
  * @module
  */
 
+import type * as accountRecovery from '../accountRecovery.js';
+import type * as accountRecoveryInternal from '../accountRecoveryInternal.js';
 import type * as admin from '../admin.js';
 import type * as ai from '../ai.js';
+import type * as aiCache from '../aiCache.js';
 import type * as aiUsageLogs from '../aiUsageLogs.js';
 import type * as annotations from '../annotations.js';
 import type * as auth from '../auth.js';
@@ -39,8 +42,6 @@ import type * as newsIngestion from '../newsIngestion.js';
 import type * as newsProjection from '../newsProjection.js';
 import type * as newsSources from '../newsSources.js';
 import type * as notebooks from '../notebooks.js';
-import type * as passwordReset from '../passwordReset.js';
-import type * as passwordResetMutations from '../passwordResetMutations.js';
 import type * as payments from '../payments.js';
 import type * as paymentsMutations from '../paymentsMutations.js';
 import type * as pdfHelpers from '../pdfHelpers.js';
@@ -54,6 +55,7 @@ import type * as queryLimits from '../queryLimits.js';
 import type * as settings from '../settings.js';
 import type * as storage from '../storage.js';
 import type * as storagePresign from '../storagePresign.js';
+import type * as subscription from '../subscription.js';
 import type * as topik from '../topik.js';
 import type * as tts from '../tts.js';
 import type * as ttsCache from '../ttsCache.js';
@@ -73,8 +75,11 @@ import type * as vocabPdfQueries from '../vocabPdfQueries.js';
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 
 declare const fullApi: ApiFromModules<{
+  accountRecovery: typeof accountRecovery;
+  accountRecoveryInternal: typeof accountRecoveryInternal;
   admin: typeof admin;
   ai: typeof ai;
+  aiCache: typeof aiCache;
   aiUsageLogs: typeof aiUsageLogs;
   annotations: typeof annotations;
   auth: typeof auth;
@@ -104,8 +109,6 @@ declare const fullApi: ApiFromModules<{
   newsProjection: typeof newsProjection;
   newsSources: typeof newsSources;
   notebooks: typeof notebooks;
-  passwordReset: typeof passwordReset;
-  passwordResetMutations: typeof passwordResetMutations;
   payments: typeof payments;
   paymentsMutations: typeof paymentsMutations;
   pdfHelpers: typeof pdfHelpers;
@@ -119,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   storage: typeof storage;
   storagePresign: typeof storagePresign;
+  subscription: typeof subscription;
   topik: typeof topik;
   tts: typeof tts;
   ttsCache: typeof ttsCache;

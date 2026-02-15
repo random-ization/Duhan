@@ -6,18 +6,19 @@ import { useLearning } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
 import EmptyState from '../components/common/EmptyState';
-import { useQuery, useMutation, useAction } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { useTTS } from '../hooks/useTTS';
 import { useApp } from '../contexts/AppContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
-import { FSRS, VOCAB } from '../utils/convexRefs';
+import { VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import type { Id } from '../../convex/_generated/dataModel';
 import VocabProgressSections from '../features/vocab/components/VocabProgressSections';
 import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
 import VocabTest from '../features/vocab/components/VocabTest';
+import { useFSRSBatchProgress } from '../features/vocab/hooks/useVocabProgress';
 
 const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
@@ -99,13 +100,15 @@ export default function VocabModulePage() {
   // Convex Integration
   // Pass user ID (token or Convex ID) to ensure progress data is loaded
   const convexWordsQuery = useQuery(
-    VOCAB.getOfCourse,
+    VOCAB.getReviewDeck,
     instituteId ? { courseId: instituteId } : 'skip'
   );
-  const updateProgressMutation = useMutation(VOCAB.updateProgress);
-  const updateProgressV2Mutation = useMutation(VOCAB.updateProgressV2);
   const addToReviewMutation = useMutation(VOCAB.addToReview);
-  const calculateNextSchedule = useAction(FSRS.calculateNextSchedule);
+  const { enqueueReview, flushQueue, optimisticProgressMap } = useFSRSBatchProgress({
+    maxBatchSize: 10,
+    flushDebounceMs: 4000,
+    persistKey: instituteId ? `fsrs-progress-queue:${instituteId}` : 'fsrs-progress-queue:default',
+  });
 
   // Derive loading state and allWords directly from query - no extra state needed
   const isLoading = convexWordsQuery === undefined;
@@ -114,8 +117,41 @@ export default function VocabModulePage() {
     return convexWordsQuery.map(w => {
       const unit = typeof w.unitId === 'number' ? w.unitId : Number(w.unitId);
       const normalizedUnit = Number.isNaN(unit) ? 0 : unit;
+      const wordId = String(w._id);
+      const baseProgress = w.progress
+        ? {
+            ...w.progress,
+            id: String(w.progress.id),
+            status: (w.progress.status || 'LEARNING') as UserWordProgress['status'],
+            interval: w.progress.interval ?? w.progress.scheduled_days ?? 1,
+            streak: w.progress.streak ?? w.progress.reps ?? 0,
+            nextReviewAt: w.progress.nextReviewAt ?? w.progress.due ?? null,
+            lastReviewedAt: w.progress.lastReviewedAt ?? w.progress.last_review ?? null,
+          }
+        : null;
+      const optimistic = optimisticProgressMap[wordId];
+      const mergedProgress = optimistic
+        ? {
+            id: baseProgress?.id || `optimistic-${wordId}`,
+            status: optimistic.status as UserWordProgress['status'],
+            interval: optimistic.interval,
+            streak: optimistic.streak,
+            nextReviewAt: optimistic.nextReviewAt,
+            lastReviewedAt: optimistic.lastReviewedAt,
+            state: optimistic.state,
+            due: optimistic.due,
+            stability: optimistic.stability,
+            difficulty: optimistic.difficulty,
+            elapsed_days: optimistic.elapsed_days,
+            scheduled_days: optimistic.scheduled_days,
+            learning_steps: optimistic.learning_steps,
+            reps: optimistic.reps,
+            lapses: optimistic.lapses,
+            last_review: optimistic.last_review,
+          }
+        : baseProgress;
       return {
-        id: w._id,
+        id: wordId,
         korean: w.word,
         english: w.meaning,
         word: w.word,
@@ -126,7 +162,6 @@ export default function VocabModulePage() {
         pronunciation: w.pronunciation,
         hanja: w.hanja,
         partOfSpeech: w.partOfSpeech as VocabularyItem['partOfSpeech'],
-        tips: w.tips as VocabularyItem['tips'],
         exampleSentence: w.exampleSentence,
         exampleMeaning: w.exampleMeaning,
         exampleTranslation: w.exampleMeaning,
@@ -136,16 +171,20 @@ export default function VocabModulePage() {
         unit: normalizedUnit,
         courseId: instituteId,
         unitId: String(normalizedUnit),
-        progress: w.progress
-          ? {
-              ...w.progress,
-              status: w.progress.status as UserWordProgress['status'],
-            }
-          : null,
-        mastered: w.mastered || false,
+        progress: mergedProgress,
+        state: mergedProgress?.state,
+        stability: mergedProgress?.stability,
+        difficulty: mergedProgress?.difficulty,
+        elapsed_days: mergedProgress?.elapsed_days,
+        scheduled_days: mergedProgress?.scheduled_days,
+        learning_steps: mergedProgress?.learning_steps,
+        reps: mergedProgress?.reps,
+        lapses: mergedProgress?.lapses,
+        last_review: mergedProgress?.last_review ?? null,
+        mastered: mergedProgress?.status === 'MASTERED' || w.mastered || false,
       };
     });
-  }, [convexWordsQuery, instituteId]);
+  }, [convexWordsQuery, instituteId, optimisticProgressMap]);
 
   // Initialize Mastered IDs when data arrives
   useEffect(() => {
@@ -182,6 +221,12 @@ export default function VocabModulePage() {
   useEffect(() => {
     setViewState(prev => ({ ...prev, cardIndex: 0, isFlipped: false, flashcardComplete: false }));
   }, [selectedUnitId]);
+
+  useEffect(() => {
+    return () => {
+      void flushQueue();
+    };
+  }, [flushQueue]);
 
   const availableUnits = useMemo(() => {
     // Check if this is a Volume 2 course
@@ -249,16 +294,15 @@ export default function VocabModulePage() {
       learning_steps: word.learning_steps || 0,
       reps: word.reps || 0,
       lapses: word.lapses || 0,
-      last_review: word.last_review ?? undefined,
+      last_review: word.last_review ?? null,
     };
   };
 
   const handleReview = useCallback(
-    async (word: ExtendedVocabItem, result: boolean | number) => {
+    (word: ExtendedVocabItem, result: boolean | number) => {
       if (!user) return;
 
       const isCorrect = typeof result === 'boolean' ? result : result > 1;
-
       if (isCorrect) {
         setMasteredIds(prev => new Set([...prev, word.id]));
       } else {
@@ -269,37 +313,24 @@ export default function VocabModulePage() {
         });
       }
 
+      let rating = 1;
+      if (typeof result === 'number') {
+        rating = result;
+      } else {
+        rating = result ? 3 : 1;
+      }
+
       try {
-        let rating = 1;
-        if (typeof result === 'number') {
-          rating = result;
-        } else {
-          rating = result ? 3 : 1;
-        }
-
-        const currentCardState = getFSRSState(word);
-
-        const nextState = await calculateNextSchedule({
-          currentCard: currentCardState,
-          rating,
-        });
-
-        const fsrsState = { ...nextState };
-        delete (fsrsState as any).review_log;
-
-        await updateProgressV2Mutation({
+        enqueueReview({
           wordId: word.id as Id<'words'>,
           rating,
-          fsrsState,
+          currentCard: getFSRSState(word),
         });
       } catch (err) {
-        console.error('FSRS Error:', err);
-        if (typeof result === 'boolean') {
-          updateProgressMutation({ wordId: word.id, quality: result ? 5 : 0 });
-        }
+        console.error('FSRS queue error:', err);
       }
     },
-    [calculateNextSchedule, updateProgressMutation, updateProgressV2Mutation, user]
+    [enqueueReview, user]
   );
 
   const toggleStar = useCallback(
@@ -406,7 +437,10 @@ export default function VocabModulePage() {
       <div className="flex items-center gap-4">
         {/* Back Button */}
         <button
-          onClick={() => navigate(`/course/${instituteId}`)}
+          onClick={() => {
+            void flushQueue();
+            navigate(`/course/${instituteId}`);
+          }}
           className="w-10 h-10 bg-white border-2 border-slate-200 rounded-xl flex items-center justify-center hover:border-slate-900 transition-colors shadow-sm text-slate-400 hover:text-slate-900"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -569,7 +603,10 @@ export default function VocabModulePage() {
     <>
       <VocabLearnOverlay
         open={learnOpen}
-        onClose={() => setLearnOpen(false)}
+        onClose={() => {
+          void flushQueue();
+          setLearnOpen(false);
+        }}
         language={language}
         title={labels.learn || 'Learn'}
         variant="fullscreen"
@@ -579,7 +616,10 @@ export default function VocabModulePage() {
             <VocabQuiz
               key={`learn-${selectedUnitId}-${gameWords.length}`}
               words={gameWords}
-              onComplete={stats => console.log('Learn completed:', stats)}
+              onComplete={stats => {
+                console.log('Learn completed:', stats);
+                void flushQueue();
+              }}
               hasNextUnit={
                 typeof selectedUnitId === 'number' &&
                 availableUnits.indexOf(selectedUnitId) < availableUnits.length - 1
@@ -600,6 +640,10 @@ export default function VocabModulePage() {
               userId={user?.id}
               language={language}
               variant="learn"
+              onFsrsReview={(wordId, isCorrect) => {
+                const w = wordById.get(wordId);
+                if (w) handleReview(w, isCorrect);
+              }}
             />
           </Suspense>
         </div>
@@ -607,7 +651,10 @@ export default function VocabModulePage() {
 
       <VocabLearnOverlay
         open={testOpen}
-        onClose={() => setTestOpen(false)}
+        onClose={() => {
+          void flushQueue();
+          setTestOpen(false);
+        }}
         language={language}
         title={labels.vocab?.quiz || 'Test'}
         variant="fullscreen"
@@ -737,6 +784,7 @@ export default function VocabModulePage() {
                     },
                   }}
                   onComplete={stats => {
+                    void flushQueue();
                     setViewState(prev => ({ ...prev, flashcardComplete: true }));
                     const newMastered = new Set(masteredIds);
                     stats.correct.forEach(w => newMastered.add(w.id));

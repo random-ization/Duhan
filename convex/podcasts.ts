@@ -362,7 +362,7 @@ async function resolvePodcastChannel(
       });
     }
   } else if (normalizedItunesId) {
-    const pseudoFeedUrl = `itunes:${normalizedItunesId} `;
+    const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
     const existingChannel = await ctx.db
       .query('podcast_channels')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

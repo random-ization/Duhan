@@ -5,6 +5,7 @@ import type { FunctionReference } from 'convex/server';
 import { getAuthUserId, requireAdmin } from './utils';
 import type { Id } from './_generated/dataModel';
 import { normalizeAnswerMap } from './validation';
+import { hasActiveSubscription } from './subscription';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
 
@@ -177,6 +178,8 @@ export const getExamQuestions = query({
     examId: v.string(), // Legacy ID
   },
   handler: async (ctx, args): Promise<TopikQuestionDto[]> => {
+    const userId = await getAuthUserId(ctx);
+
     // Find exam by legacy ID
     const exam = await ctx.db
       .query('topik_exams')
@@ -184,6 +187,12 @@ export const getExamQuestions = query({
       .first();
 
     if (!exam) return [];
+    if (exam.isPaid) {
+      const user = await ctx.db.get(userId);
+      if (!hasActiveSubscription(user)) {
+        throw new ConvexError('SUBSCRIPTION_REQUIRED');
+      }
+    }
 
     // Get all questions for this exam
     const questions = await ctx.db
@@ -237,6 +246,12 @@ export const startExam = mutation({
 
     if (!exam) {
       throw new ConvexError({ code: 'EXAM_NOT_FOUND' });
+    }
+    if (exam.isPaid) {
+      const user = await ctx.db.get(userId);
+      if (!hasActiveSubscription(user)) {
+        throw new ConvexError('SUBSCRIPTION_REQUIRED');
+      }
     }
 
     // Check if an active session already exists for this user+exam
@@ -296,8 +311,7 @@ export const getSession = query({
     examId: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const userId = await getAuthUserId(ctx);
 
     // Find exam
     const exam = await ctx.db
@@ -305,22 +319,17 @@ export const getSession = query({
       .withIndex('by_legacy_id', q => q.eq('legacyId', args.examId))
       .first();
     if (!exam) return null;
-
-    // Find user
-    let user = await ctx.db
-      .query('users')
-      .withIndex('by_token', q => q.eq('token', identity.subject))
-      .first();
-    user ??= await ctx.db
-      .query('users')
-      .withIndex('by_postgresId', q => q.eq('postgresId', identity.subject))
-      .first();
-    if (!user) return null;
+    if (exam.isPaid) {
+      const user = await ctx.db.get(userId);
+      if (!hasActiveSubscription(user)) {
+        throw new ConvexError('SUBSCRIPTION_REQUIRED');
+      }
+    }
 
     // Find session
     const session = await ctx.db
       .query('exam_sessions')
-      .withIndex('by_user_exam', q => q.eq('userId', user._id).eq('examId', exam._id))
+      .withIndex('by_user_exam', q => q.eq('userId', userId).eq('examId', exam._id))
       .first();
 
     if (!session) return null;
@@ -344,7 +353,7 @@ export const updateAnswers = mutation({
     answers: v.any(), // { [questionNumber]: selectedOption }
   },
   handler: async (ctx, args) => {
-    await getAuthUserId(ctx); // Verify authentication
+    const userId = await getAuthUserId(ctx);
     let normalizedAnswers: Record<string, number>;
     try {
       normalizedAnswers = normalizeAnswerMap(args.answers);
@@ -358,6 +367,9 @@ export const updateAnswers = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
       throw new ConvexError({ code: 'SESSION_NOT_FOUND' });
+    }
+    if (session.userId !== userId) {
+      throw new ConvexError({ code: 'FORBIDDEN' });
     }
 
     // Verify session is still in progress
@@ -384,7 +396,7 @@ export const submitExam = mutation({
     answers: v.any(),
   },
   handler: async (ctx, args) => {
-    await getAuthUserId(ctx); // Verify authentication
+    const userId = await getAuthUserId(ctx);
     let answers: Record<string, number>;
     try {
       answers = normalizeAnswerMap(args.answers);
@@ -398,6 +410,9 @@ export const submitExam = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
       throw new ConvexError({ code: 'SESSION_NOT_FOUND' });
+    }
+    if (session.userId !== userId) {
+      throw new ConvexError({ code: 'FORBIDDEN' });
     }
 
     if (session.status !== 'IN_PROGRESS') {

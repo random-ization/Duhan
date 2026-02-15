@@ -631,6 +631,12 @@
         }
       }
     },
+    "readingHub": {
+      "title": "Khám phá đọc hiểu",
+      "subtitle": "Nguồn đọc tiếng Hàn và công cụ chú thích",
+      "tagNews": "Tin tức",
+      "tagArticles": "Bài viết"
+    },
     "video": {
       "cardTitle": "Video\nNhập vai",
       "title": "Trung tâm video",
@@ -1891,5 +1897,142 @@
       "switch": "để chuyển chế độ"
     },
     "back": "Về Trang chủ"
+  },
+  "readingDiscovery": {
+    "title": "Khám phá bài đọc",
+    "subtitle": "Đồng bộ tin tức Hàn Quốc thực tế và xây thư viện đọc dài hạn",
+    "stats": {
+      "weeklyRead": "Đã đọc tuần này",
+      "articles": "bài",
+      "estimatedWords": "Từ mới ước tính",
+      "words": "từ"
+    },
+    "difficulty": {
+      "l1": "A2 Sơ cấp",
+      "l2": "B2 Trung cấp",
+      "l3": "C1 Cao cấp"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "l1": "Sơ cấp",
+      "l2": "Trung cấp",
+      "l3": "Cao cấp"
+    },
+    "news": {
+      "title": "Tin tức trực tiếp",
+      "subtitle": "Tự động lấy qua RSS, phù hợp đọc lướt và cập nhật thời sự",
+      "manualRefresh": "Làm mới",
+      "empty": "Chưa có dữ liệu tin tức. Hãy chạy ingest từ trang quản trị.",
+      "aiExtracted": "AI trích xuất {{count}} từ",
+      "readingMinutes": "Khoảng {{minutes}} phút đọc",
+      "autoRefreshed": "Đã tự động cập nhật đề xuất theo lịch sử đọc",
+      "manualLimitReached": "Đã đạt giới hạn làm mới thủ công hôm nay (3 lần)",
+      "manualRefreshed": "Làm mới thành công. Còn lại hôm nay: {{count}}",
+      "manualRefreshFailed": "Làm mới thất bại, vui lòng thử lại sau"
+    },
+    "articles": {
+      "title": "Văn hóa & lưu trữ",
+      "subtitle": "Truyện dân gian Hàn, bài chọn lọc Wikipedia và văn học để đọc sâu",
+      "viewAll": "Xem tất cả bài viết",
+      "typeEncyclopedia": "Bách khoa",
+      "recommended": "Đề xuất đọc kỹ"
+    },
+    "fallback": {
+      "wikipediaSource": "Bách khoa văn hóa Hàn Quốc",
+      "wikipediaBadge": "B2 Trung cấp • Thuyết minh",
+      "wikipediaBookmark": "Đọc kỹ",
+      "folktaleSource": "Truyện dân gian Hàn Quốc",
+      "folktaleSubtitle": "Anh em trở thành Mặt Trời và Mặt Trăng",
+      "folktaleBadge": "A1 Sơ cấp • Tự sự",
+      "folktaleBookmark": "Đọc trước khi ngủ",
+      "literatureSource": "Tác phẩm kinh điển công cộng",
+      "literatureBadge": "C2 Bản ngữ • Thơ",
+      "literatureBookmark": "Cảm thụ văn học"
+    },
+    "footer": "Dữ liệu từ Convex newsIngestion:getUserFeed (tự động làm mới sau 24h kể từ khi đọc, làm mới thủ công tối đa 3 lần/ngày)"
+  },
+  "readingArticle": {
+    "difficulty": {
+      "l1": "A2 Sơ cấp",
+      "l2": "B1 Trung cấp",
+      "l3": "C1 Cao cấp"
+    },
+    "backToDiscovery": "Quay lại trang khám phá",
+    "untitled": "Bài viết chưa đặt tên",
+    "noteTitlePrefix": "Ghi chú đọc",
+    "vocabFallbackMeaning": "Từ khóa trong ngữ cảnh (chạm để tra)",
+    "vocabDefaultMeaning": "Từ vựng bài đọc",
+    "dictionaryFallbackMeaning": "Nghĩa từ điển bài đọc",
+    "aiMeaningFallback": "Giải thích AI",
+    "meta": {
+      "words": "{{count}} ký tự",
+      "translationTarget": "Ngôn ngữ dịch: {{language}}"
+    },
+    "toolbar": {
+      "lookup": "Tra từ",
+      "note": "Ghi chú"
+    },
+    "tabs": {
+      "ai": "Phân tích AI",
+      "notes": "Từ điển / Ghi chú"
+    },
+    "tts": {
+      "play": "Đọc",
+      "stop": "Dừng",
+      "status": "Trạng thái đọc"
+    },
+    "translation": {
+      "toggleAria": "Bật/tắt bản dịch",
+      "label": "Dịch",
+      "on": "Bật",
+      "off": "Tắt",
+      "status": "Trạng thái dịch",
+      "preparing": "Đang chuẩn bị bản dịch..."
+    },
+    "ai": {
+      "summaryTitle": "Tóm tắt AI",
+      "loading": "Đang tạo phân tích AI...",
+      "fallbackNotice": "AI tạm không khả dụng, đang dùng phân tích cục bộ.",
+      "coreVocab": "Từ vựng trọng tâm",
+      "grammarTitle": "Ngữ pháp trọng tâm"
+    },
+    "vocab": {
+      "save": "Lưu",
+      "saved": "Đã lưu"
+    },
+    "dictionary": {
+      "title": "Gợi ý từ điển",
+      "currentSelection": "Đang chọn",
+      "selectionHint": "Bấm từ được tô sáng hoặc bôi chọn văn bản để thêm ghi chú.",
+      "emptySelection": "Chưa có từ được chọn.",
+      "queryWord": "Từ tra",
+      "loading": "Đang tra từ điển...",
+      "serviceError": "Từ điển lỗi, đã chuyển sang AI.",
+      "aiLoading": "AI đang tạo giải thích...",
+      "noMeaning": "Chưa có nghĩa",
+      "unknownPos": "Chưa xác định từ loại",
+      "example": "Ví dụ",
+      "note": "Gợi ý",
+      "noResult": "Không tìm thấy định nghĩa phù hợp."
+    },
+    "notes": {
+      "title": "Ghi chú",
+      "syncError": "Đã lưu trong trình đọc nhưng đồng bộ Notebook thất bại",
+      "newQuote": "Tạo ghi chú trích dẫn",
+      "placeholder": "Viết hiểu biết, thắc mắc hoặc bản dịch của bạn...",
+      "cancel": "Hủy",
+      "save": "Lưu ghi chú",
+      "empty": "Chưa có ghi chú. Hãy bôi chọn văn bản và nhấn Ghi chú.",
+      "noComment": "(Không có ghi chú)"
+    },
+    "errors": {
+      "missingArticleId": "Thiếu ID bài viết",
+      "articleUnavailable": "Bài viết không tồn tại hoặc tạm thời không thể truy cập",
+      "aiAnalysisFailed": "Phân tích AI thất bại",
+      "translationUnavailable": "Dịch vụ dịch hiện không khả dụng",
+      "aiDictionaryFailed": "AI giải thích từ thất bại",
+      "dictionaryLookupFailed": "Tra từ điển thất bại",
+      "noteSyncFailed": "Đồng bộ ghi chú sang Notebook thất bại"
+    }
   }
 }

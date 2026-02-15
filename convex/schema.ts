@@ -8,7 +8,6 @@ export default defineSchema({
   // Users (Merged with Auth)
   users: defineTable({
     email: v.string(),
-    password: v.optional(v.string()), // Made optional for OAuth users
     name: v.optional(v.string()),
     image: v.optional(v.string()), // Added for Auth compatibility
     emailVerificationTime: v.optional(v.number()), // Added for Auth compatibility
@@ -26,6 +25,11 @@ export default defineSchema({
     googleId: v.optional(v.string()),
     token: v.optional(v.string()), // Session token
     isVerified: v.optional(v.boolean()),
+    // Legacy auth fields kept as optional for backward compatibility with existing records.
+    password: v.optional(v.string()),
+    resetToken: v.optional(v.string()),
+    resetTokenExpires: v.optional(v.number()),
+    verifyCode: v.optional(v.string()),
 
     // Progress pointers
     lastInstitute: v.optional(v.string()),
@@ -33,13 +37,6 @@ export default defineSchema({
     lastUnit: v.optional(v.number()),
     lastModule: v.optional(v.string()), // Added
     postgresId: v.optional(v.string()),
-
-    // Password Reset
-    resetToken: v.optional(v.string()),
-    resetTokenExpires: v.optional(v.number()),
-
-    // Email Verification
-    verifyCode: v.optional(v.string()),
 
     // Regional promo eligibility (CN/VN/MN phone verification)
     phoneRegion: v.optional(v.string()), // "CN" | "VN" | "MN" | "OTHER"
@@ -556,7 +553,23 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index('by_createdAt', ['createdAt'])
-    .index('by_feature', ['feature']),
+    .index('by_feature', ['feature'])
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_user_model_createdAt', ['userId', 'model', 'createdAt']),
+
+  // One-time tokens for account recovery and email verification
+  auth_email_tokens: defineTable({
+    kind: v.union(v.literal('password_reset'), v.literal('email_verify')),
+    userId: v.id('users'),
+    email: v.string(),
+    tokenHash: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_kind_tokenHash', ['kind', 'tokenHash'])
+    .index('by_email_kind_createdAt', ['email', 'kind', 'createdAt'])
+    .index('by_user_kind_createdAt', ['userId', 'kind', 'createdAt']),
 
   // Activity Logs
   activity_logs: defineTable({
@@ -627,6 +640,17 @@ export default defineSchema({
   tts_cache: defineTable({
     key: v.string(),
     url: v.string(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
+  // AI response cache (reading analysis / translation)
+  ai_response_cache: defineTable({
+    key: v.string(),
+    kind: v.string(), // "reading_analysis" | "reading_translation"
+    language: v.string(),
+    contentHash: v.string(),
+    payload: v.any(),
+    createdAt: v.number(),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -767,4 +791,17 @@ export default defineSchema({
     .index('by_sourceKey', ['sourceKey'])
     .index('by_degraded', ['degraded'])
     .index('by_lastRunAt', ['lastRunAt']),
+
+  // Per-user reading feed state (refresh policy / quota)
+  reading_user_feeds: defineTable({
+    userId: v.id('users'),
+    newsArticleIds: v.array(v.id('news_articles')),
+    articleIds: v.array(v.id('news_articles')),
+    hasReadSinceRefresh: v.boolean(),
+    lastReadAt: v.optional(v.number()),
+    lastRefreshedAt: v.number(),
+    manualRefreshCount: v.number(),
+    manualRefreshWindowStart: v.number(),
+    updatedAt: v.number(),
+  }).index('by_user', ['userId']),
 });

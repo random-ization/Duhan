@@ -20,25 +20,28 @@ const projectBatchMutation = makeFunctionReference<'mutation', ProjectBatchArgs,
 
 const crons = cronJobs();
 
-crons.interval('news_poll_khan_10m', { minutes: 10 }, pollSourceAction, {
+// Low-frequency baseline polling:
+// user feed refresh is now user-scoped, so global ingestion can run much less often.
+// For urgent updates, use manual triggers in newsAdmin (triggerSource/triggerAllSources).
+crons.interval('news_poll_khan_daily', { minutes: 1440 }, pollSourceAction, {
   sourceKey: 'khan',
 });
-crons.interval('news_poll_donga_10m', { minutes: 10 }, pollSourceAction, {
+crons.interval('news_poll_donga_daily', { minutes: 1440 }, pollSourceAction, {
   sourceKey: 'donga',
 });
-crons.interval('news_poll_hankyung_10m', { minutes: 10 }, pollSourceAction, {
+crons.interval('news_poll_hankyung_daily', { minutes: 1440 }, pollSourceAction, {
   sourceKey: 'hankyung',
 });
-crons.interval('news_poll_mk_10m', { minutes: 10 }, pollSourceAction, {
+crons.interval('news_poll_mk_daily', { minutes: 1440 }, pollSourceAction, {
   sourceKey: 'mk',
 });
-crons.interval('news_poll_itdonga_20m', { minutes: 20 }, pollSourceAction, {
+crons.interval('news_poll_itdonga_12h', { minutes: 720 }, pollSourceAction, {
   sourceKey: 'itdonga',
 });
-crons.interval('news_poll_voa_20m', { minutes: 20 }, pollSourceAction, {
+crons.interval('news_poll_voa_12h', { minutes: 720 }, pollSourceAction, {
   sourceKey: 'voa_ko',
 });
-crons.interval('news_poll_naver_30m', { minutes: 30 }, pollSourceAction, {
+crons.interval('news_poll_naver_12h', { minutes: 720 }, pollSourceAction, {
   sourceKey: 'naver_news_search',
 });
 crons.interval('news_poll_wiki_featured_daily', { minutes: 1440 }, pollSourceAction, {
@@ -46,7 +49,7 @@ crons.interval('news_poll_wiki_featured_daily', { minutes: 1440 }, pollSourceAct
 });
 
 // Projection into textbook_units(courseId="news_ko_mvp")
-crons.interval('news_project_to_course_30m', { minutes: 30 }, projectBatchMutation, {
+crons.interval('news_project_to_course_daily', { minutes: 1440 }, projectBatchMutation, {
   courseId: 'news_ko_mvp',
   limit: 120,
 });

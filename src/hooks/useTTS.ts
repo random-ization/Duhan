@@ -16,7 +16,7 @@ import { aRef } from '../utils/convexRefs';
 export const useTTS = () => {
   const speakAction = useAction(
     aRef<
-      { text: string; voice?: string; rate?: string; pitch?: string },
+      { text: string; voice?: string; rate?: string; pitch?: string; skipCache?: boolean },
       { success: boolean; url?: string; audio?: string; format?: string; error?: string }
     >('tts:speak')
   );
@@ -25,6 +25,7 @@ export const useTTS = () => {
   const cacheRef = useRef<Map<string, string> | null>(null);
   const cacheReadyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const createdUrlsRef = useRef<string[]>([]);
 
   const stopCurrentAudio = useCallback(() => {
@@ -41,11 +42,7 @@ export const useTTS = () => {
   }, []);
 
   const handleAudioPlayback = useCallback(
-    async (
-      audioUrl: string,
-      shouldRevoke: boolean,
-      myRequestId: number
-    ): Promise<boolean> => {
+    async (audioUrl: string, shouldRevoke: boolean, myRequestId: number): Promise<boolean> => {
       if (myRequestId !== requestIdRef.current) {
         if (shouldRevoke) URL.revokeObjectURL(audioUrl);
         return false;
@@ -93,6 +90,7 @@ export const useTTS = () => {
     });
     createdUrlsRef.current = [];
     setIsLoading(false);
+    setError(null);
   }, [stopCurrentAudio]);
 
   const getCache = useCallback(() => {
@@ -119,6 +117,7 @@ export const useTTS = () => {
       const myRequestId = (requestIdRef.current += 1);
       stopCurrentAudio();
       setIsLoading(true);
+      setError(null);
 
       try {
         const voice = options?.voice || 'ko-KR-SunHiNeural';
@@ -127,49 +126,87 @@ export const useTTS = () => {
         const cachedUrl = touchCache(cache, cacheKey);
 
         if (cachedUrl) {
+          const cachedPlayed = await handleAudioPlayback(cachedUrl, false, myRequestId);
+          if (cachedPlayed) {
+            persistCache(cache);
+            return true;
+          }
+          // Remove stale/forbidden local cache URL and regenerate.
+          cache.delete(cacheKey);
           persistCache(cache);
-          return await handleAudioPlayback(cachedUrl, false, myRequestId);
         }
 
-        const result = (await speakAction({
-          text: normalizedText,
-          voice,
-          rate: options?.rate,
-          pitch: options?.pitch,
-        })) as {
+        const runSpeakAction = async (skipCache: boolean) =>
+          (await speakAction({
+            text: normalizedText,
+            voice,
+            rate: options?.rate,
+            pitch: options?.pitch,
+            skipCache,
+          })) as {
+            success: boolean;
+            url?: string;
+            audio?: string;
+            format?: string;
+            error?: string;
+          };
+
+        const playFromResult = async (result: {
           success: boolean;
           url?: string;
           audio?: string;
           format?: string;
-          error?: string;
+        }) => {
+          if (result.url) {
+            writeCache(cache, cacheKey, result.url);
+            persistCache(cache);
+            return await handleAudioPlayback(result.url, false, myRequestId);
+          }
+          if (result.audio) {
+            const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
+            const audioUrl = URL.createObjectURL(audioBlob);
+            createdUrlsRef.current.push(audioUrl);
+            return await handleAudioPlayback(audioUrl, true, myRequestId);
+          }
+          return false;
         };
+
+        let result = await runSpeakAction(false);
 
         if (myRequestId !== requestIdRef.current) {
           return false;
         }
 
         if (!result.success) {
+          setError(result.error || 'TTS service unavailable');
           if (myRequestId === requestIdRef.current) setIsLoading(false);
           return false;
         }
 
-        if (result.url) {
-          writeCache(cache, cacheKey, result.url);
-          persistCache(cache);
-          return await handleAudioPlayback(result.url, false, myRequestId);
-        }
+        let played = await playFromResult(result);
+        if (played) return true;
 
-        if (result.audio) {
-          const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
-          const audioUrl = URL.createObjectURL(audioBlob);
-          createdUrlsRef.current.push(audioUrl);
-          return await handleAudioPlayback(audioUrl, true, myRequestId);
+        // Retry once bypassing backend cache in case cached URL is stale.
+        cache.delete(cacheKey);
+        persistCache(cache);
+        result = await runSpeakAction(true);
+        if (myRequestId !== requestIdRef.current) {
+          return false;
         }
+        if (!result.success) {
+          setError(result.error || 'TTS service unavailable');
+          if (myRequestId === requestIdRef.current) setIsLoading(false);
+          return false;
+        }
+        played = await playFromResult(result);
+        if (played) return true;
 
+        setError('Audio playback failed');
         if (myRequestId === requestIdRef.current) setIsLoading(false);
         return false;
       } catch (error) {
         console.error('TTS error:', error);
+        setError(error instanceof Error ? error.message : String(error));
         if (myRequestId === requestIdRef.current) setIsLoading(false);
         return false;
       }
@@ -177,7 +214,7 @@ export const useTTS = () => {
     [getCache, handleAudioPlayback, speakAction, stopCurrentAudio]
   );
 
-  return { speak, stop, isLoading };
+  return { speak, stop, isLoading, error };
 };
 
 const CACHE_KEY = 'ttsCacheV1';

@@ -328,7 +328,7 @@ export const getOverviewStats = query({
   },
 });
 
-// Get AI usage stats (placeholder - can be enhanced with actual AI logging)
+// Get AI usage stats aggregated from ai_usage_logs
 export const getAiUsageStats = query({
   args: {
     days: v.number(),

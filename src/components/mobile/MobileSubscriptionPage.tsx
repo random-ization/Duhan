@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAction } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { aRef } from '../../utils/convexRefs'; // Assuming this util exists or I'll copy the type
+import { aRef, NoArgs } from '../../utils/convexRefs';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
@@ -17,6 +17,10 @@ export const MobileSubscriptionPage: React.FC = () => {
   const { user } = useAuth();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
   const [loading, setLoading] = useState(false);
+  const [prices, setPrices] = useState<{
+    GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
+    REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
+  } | null>(null);
 
   const createCheckoutSession = useAction(
     aRef<
@@ -30,27 +34,54 @@ export const MobileSubscriptionPage: React.FC = () => {
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
   );
+  const getVariantPrices = useAction(
+    aRef<
+      NoArgs,
+      {
+        GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
+        REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
+      }
+    >('lemonsqueezy:getVariantPrices')
+  );
 
   const showLocalizedPromo =
     i18n.language === 'zh' ||
     i18n.language === 'vi' ||
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
+  const priceRegion = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
+  const monthlyPrice =
+    prices?.[priceRegion]?.MONTHLY?.formatted ?? (showLocalizedPromo ? '$1.90' : '$6.90');
+  const annualPrice =
+    prices?.[priceRegion]?.ANNUAL?.formatted ?? (showLocalizedPromo ? '$19.90' : '$49.00');
+  const annualDiscountText = useMemo(() => {
+    const monthlyAmount = Number(prices?.[priceRegion]?.MONTHLY?.amount);
+    const annualAmount = Number(prices?.[priceRegion]?.ANNUAL?.amount);
+    if (!monthlyAmount || !annualAmount) return '-20%';
+    const discount = Math.max(0, Math.round((1 - annualAmount / (monthlyAmount * 12)) * 100));
+    return discount > 0 ? `-${discount}%` : '-20%';
+  }, [priceRegion, prices]);
 
-  // Prices (Hardcoded for display based on logic, or ideally fetched.
-  // Desktop uses 'PricingSection' which likely has hardcoded or fetched prices.
-  // For parity, assuming $9.99/$79.99 as per prototype/desktop common defaults)
-  // TODO: If prices are dynamic, this needs to fetch. But typically they are static in frontend for this app.
-  const monthlyPrice = '$9.99';
-  const annualPrice = '$79.99';
+  useEffect(() => {
+    getVariantPrices({})
+      .then(setPrices)
+      .catch(err => {
+        logger.warn('Failed to load variant prices for mobile subscription', err);
+      });
+  }, [getVariantPrices]);
 
   const handleSubscribe = async () => {
+    if (!user) {
+      navigate('/auth?redirect=%2Fsubscription');
+      return;
+    }
+
     setLoading(true);
     try {
       const { checkoutUrl } = await createCheckoutSession({
         plan: billingInterval,
-        userId: user?.id?.toString() || '',
-        userEmail: user?.email || '',
+        userId: user.id?.toString() || '',
+        userEmail: user.email || '',
         region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
       });
       globalThis.location.href = checkoutUrl;
@@ -243,7 +274,9 @@ export const MobileSubscriptionPage: React.FC = () => {
             className={`flex-1 py-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${billingInterval === 'ANNUAL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
           >
             Annual {annualPrice}{' '}
-            <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">-20%</span>
+            <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
+              {annualDiscountText}
+            </span>
           </button>
         </div>
 

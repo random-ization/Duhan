@@ -1,21 +1,38 @@
-
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { ArrowLeft, X, RefreshCw, ChevronRight, Check, Play, Pause, RotateCcw, Award } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { ArrowLeft, X, RefreshCw, ChevronRight, Play } from 'lucide-react';
 import { useKoreanTyping, TypingStats } from '../../features/typing/hooks/useKoreanTyping';
 import { HiddenInput } from '../../features/typing/components/HiddenInput';
-import { PRACTICE_CATEGORIES, PracticeCategory, PRACTICE_PARAGRAPHS, PracticeParagraph } from '../../features/typing/data/practiceTexts'; // Import data
+import {
+  PRACTICE_CATEGORIES,
+  PracticeCategory,
+  PRACTICE_PARAGRAPHS,
+  PracticeParagraph,
+} from '../../features/typing/data/practiceTexts'; // Import data
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { clsx } from 'clsx';
-import { useAuth } from '../../contexts/AuthContext';
-
 
 // --- TYPES ---
 type TypingMode = 'sentence' | 'word' | 'paragraph';
 type GameState = 'lobby' | 'playing' | 'results';
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function deterministicShuffle(items: string[]): string[] {
+  return items
+    .map((value, index) => ({ value, rank: hashString(`${value}:${index}`) }))
+    .sort((a, b) => a.rank - b.rank)
+    .map(item => item.value);
+}
 
 // --- COMPONENTS ---
 
@@ -23,14 +40,13 @@ type GameState = 'lobby' | 'playing' | 'results';
 const MobileLobby = ({
   onStart,
   activeTab,
-  setActiveTab
+  setActiveTab,
 }: {
   onStart: (mode: TypingMode, data: any) => void;
   activeTab: TypingMode;
-  setActiveTab: (m: TypingMode) => void
+  setActiveTab: (m: TypingMode) => void;
 }) => {
   const navigate = useLocalizedNavigate();
-  const { t } = useTranslation();
 
   // Word Mode Data Fetching
   const rawCourses = useQuery(api.institutes.getAll);
@@ -50,22 +66,9 @@ const MobileLobby = ({
   // Word Selection State
   const [selectedCourseName, setSelectedCourseName] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [selectedUnitId, setSelectedUnitId] = useState<number>(1);
-
-  // Initial Selection Effect
-  useEffect(() => {
-    if (courses.length > 0 && !selectedCourseName) {
-      const firstGroup = Object.keys(coursesByName)[0];
-      if (firstGroup) {
-        setSelectedCourseName(firstGroup);
-        const variants = coursesByName[firstGroup];
-        if (variants?.[0]) {
-          setSelectedCourseId(variants[0]._id);
-        }
-      }
-    }
-  }, [courses, coursesByName, selectedCourseName]);
-
+  const courseNames = useMemo(() => Object.keys(coursesByName), [coursesByName]);
+  const effectiveCourseName = selectedCourseName || courseNames[0] || '';
+  const effectiveCourseId = selectedCourseId || coursesByName[effectiveCourseName]?.[0]?._id || '';
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
@@ -89,15 +92,15 @@ const MobileLobby = ({
             className="absolute top-1 bottom-1 bg-white rounded-xl shadow-sm transition-all duration-300 ease-out"
             style={{
               left: activeTab === 'sentence' ? '1%' : activeTab === 'word' ? '34%' : '67%',
-              width: '32%'
+              width: '32%',
             }}
           />
 
           <button
             onClick={() => setActiveTab('sentence')}
             className={clsx(
-              "flex-1 relative z-10 py-2.5 text-sm transition-colors",
-              activeTab === 'sentence' ? "font-bold text-slate-800" : "font-medium text-slate-500"
+              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
+              activeTab === 'sentence' ? 'font-bold text-slate-800' : 'font-medium text-slate-500'
             )}
           >
             Sentence
@@ -105,8 +108,8 @@ const MobileLobby = ({
           <button
             onClick={() => setActiveTab('word')}
             className={clsx(
-              "flex-1 relative z-10 py-2.5 text-sm transition-colors",
-              activeTab === 'word' ? "font-bold text-slate-800" : "font-medium text-slate-500"
+              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
+              activeTab === 'word' ? 'font-bold text-slate-800' : 'font-medium text-slate-500'
             )}
           >
             Word
@@ -114,8 +117,8 @@ const MobileLobby = ({
           <button
             onClick={() => setActiveTab('paragraph')}
             className={clsx(
-              "flex-1 relative z-10 py-2.5 text-sm transition-colors",
-              activeTab === 'paragraph' ? "font-bold text-slate-800" : "font-medium text-slate-500"
+              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
+              activeTab === 'paragraph' ? 'font-bold text-slate-800' : 'font-medium text-slate-500'
             )}
           >
             Paragraph
@@ -125,7 +128,6 @@ const MobileLobby = ({
 
       {/* List Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 pb-24 no-scrollbar">
-
         {/* 1. Sentence Mode */}
         {activeTab === 'sentence' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -146,7 +148,9 @@ const MobileLobby = ({
                     <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600" />
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-slate-800 mb-1 relative z-10">{cat.title}</h3>
+                <h3 className="text-xl font-black text-slate-800 mb-1 relative z-10">
+                  {cat.title}
+                </h3>
                 <p className="text-sm text-slate-400 font-medium leading-relaxed relative z-10 max-w-[85%]">
                   {cat.description}
                 </p>
@@ -161,10 +165,12 @@ const MobileLobby = ({
             {/* Course Selectors */}
             <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1.5 block">Course</label>
+                <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1.5 block">
+                  Course
+                </label>
                 <select
-                  value={selectedCourseName}
-                  onChange={(e) => {
+                  value={effectiveCourseName}
+                  onChange={e => {
                     const name = e.target.value;
                     setSelectedCourseName(name);
                     const variants = coursesByName[name];
@@ -172,21 +178,25 @@ const MobileLobby = ({
                   }}
                   className="w-full p-4 rounded-2xl bg-slate-50 border-0 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
                 >
-                  {Object.keys(coursesByName).map(name => (
-                    <option key={name} value={name}>{name}</option>
+                  {courseNames.map(name => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {selectedCourseName && (
+              {effectiveCourseName && (
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1.5 block">Volume / Level</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1.5 block">
+                    Volume / Level
+                  </label>
                   <select
-                    value={selectedCourseId}
-                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                    value={effectiveCourseId}
+                    onChange={e => setSelectedCourseId(e.target.value)}
                     className="w-full p-4 rounded-2xl bg-slate-50 border-0 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
                   >
-                    {coursesByName[selectedCourseName]?.map(c => (
+                    {coursesByName[effectiveCourseName]?.map(c => (
                       <option key={c._id} value={c._id}>
                         {c.volume || c.displayLevel || 'Standard'}
                       </option>
@@ -196,8 +206,8 @@ const MobileLobby = ({
               )}
 
               <button
-                onClick={() => onStart('word', { courseId: selectedCourseId, unitId: selectedUnitId })}
-                disabled={!selectedCourseId}
+                onClick={() => onStart('word', { courseId: effectiveCourseId, unitId: 1 })}
+                disabled={!effectiveCourseId}
                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:scale-100"
               >
                 <Play className="w-5 h-5 fill-current" />
@@ -230,7 +240,9 @@ const MobileLobby = ({
                     <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-pink-600" />
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-slate-800 mb-1 relative z-10">{para.title}</h3>
+                <h3 className="text-xl font-black text-slate-800 mb-1 relative z-10">
+                  {para.title}
+                </h3>
                 <p className="text-sm text-slate-400 font-medium leading-relaxed relative z-10 line-clamp-2">
                   {para.description}
                 </p>
@@ -238,30 +250,24 @@ const MobileLobby = ({
             ))}
           </div>
         )}
-
       </div>
     </div>
   );
 };
-
 
 // 2. SESSION COMPONENT
 const MobileSession = ({
   mode,
   data,
   onFinish,
-  onExit
+  onExit,
 }: {
   mode: TypingMode;
   data: any;
   onFinish: (stats: TypingStats) => void;
   onExit: () => void;
 }) => {
-  const { t } = useTranslation();
-
-  // -- GAME STATE --
-  const [targetText, setTargetText] = useState('');
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
 
   // Init Setup
   const courseWords = useQuery(
@@ -269,41 +275,33 @@ const MobileSession = ({
     mode === 'word' && data.courseId ? { courseId: data.courseId, unitId: 1 } : 'skip'
   );
 
-  // Initial Load Logic
-  useEffect(() => {
+  const queue = useMemo(() => {
     if (mode === 'sentence') {
-      // Data is PracticeCategory
       const cat = data as PracticeCategory;
-      // Shuffle
-      const shuffled = [...cat.sentences].sort(() => 0.5 - Math.random());
-      setQueue(shuffled);
-      setTargetText(shuffled[0] || '');
-    } else if (mode === 'paragraph') {
-      const para = data as PracticeParagraph;
-      setTargetText(para.text);
-      setQueue([para.text]); // Single item queue
-    } else if (mode === 'word' && courseWords) {
-      // Extract Korean words
-      const words = courseWords.map(w => w.word).filter(Boolean);
-      const shuffled = words.sort(() => 0.5 - Math.random());
-      setQueue(shuffled);
-      setTargetText(shuffled[0] || '');
+      return deterministicShuffle(cat.sentences);
     }
+
+    if (mode === 'paragraph') {
+      const para = data as PracticeParagraph;
+      return [para.text];
+    }
+
+    if (mode === 'word' && courseWords) {
+      const words = courseWords.map(w => w.word).filter(Boolean);
+      return deterministicShuffle(words);
+    }
+
+    return [];
   }, [mode, data, courseWords]);
+  const targetText = queue[queueIndex] || '';
 
   // -- TYPING HOOK --
-  const {
-    userInput,
-    completedIndex,
-    phase,
-    stats,
-    inputRef,
-    reset,
-    checkInput
-  } = useKoreanTyping(targetText, mode);
+  const { userInput, completedIndex, phase, stats, inputRef, reset, checkInput } = useKoreanTyping(
+    targetText,
+    mode
+  );
 
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  const [showHint, setShowHint] = useState(false);
 
   // Focus Management
   const ensureFocus = () => {
@@ -320,20 +318,16 @@ const MobileSession = ({
   useEffect(() => {
     if (phase === 'finish') {
       const timer = setTimeout(() => {
-        // Next item
-        if (queue.length > 1) {
-          const nextQueue = queue.slice(1);
-          setQueue(nextQueue);
-          setTargetText(nextQueue[0]);
+        if (queueIndex < queue.length - 1) {
+          setQueueIndex(prev => prev + 1);
           reset();
         } else {
-          // Finished completely
           onFinish(stats);
         }
       }, 500); // 500ms delay to seeing "green" completion
       return () => clearTimeout(timer);
     }
-  }, [phase, queue, reset, onFinish, stats]);
+  }, [phase, queueIndex, queue.length, reset, onFinish, stats]);
 
   // Visualize Typing
   const renderTypingText = () => {
@@ -345,17 +339,15 @@ const MobileSession = ({
           const inputChar = userInput[i];
           const status = checkInput(char, inputChar, targetText[i + 1]);
 
-          let colorClass = "text-slate-300"; // Pending / Future
-          let borderClass = "border-transparent";
+          let colorClass = 'text-slate-300'; // Pending / Future
 
           if (i < userInput.length) {
             if (status === 'correct') {
-              colorClass = "text-slate-800";
+              colorClass = 'text-slate-800';
             } else if (status === 'incorrect') {
-              colorClass = "text-red-500";
-              borderClass = "border-red-200";
+              colorClass = 'text-red-500';
             } else if (status === 'pending') {
-              colorClass = "text-slate-800";
+              colorClass = 'text-slate-800';
             }
           }
 
@@ -364,11 +356,13 @@ const MobileSession = ({
 
           return (
             <span key={i} className="relative inline-block">
-              <span className={clsx(
-                "text-2xl md:text-3xl font-bold transition-colors duration-100",
-                colorClass,
-                status === 'correct' && "border-b-2 border-slate-900/10"
-              )}>
+              <span
+                className={clsx(
+                  'text-2xl md:text-3xl font-bold transition-colors duration-100',
+                  colorClass,
+                  status === 'correct' && 'border-b-2 border-slate-900/10'
+                )}
+              >
                 {char === ' ' ? '\u00A0' : char}
               </span>
               {isCursor && (
@@ -384,14 +378,17 @@ const MobileSession = ({
   return (
     <div
       className={clsx(
-        "flex flex-col h-[100dvh] bg-slate-50 relative overflow-hidden transition-all",
+        'flex flex-col h-[100dvh] bg-slate-50 relative overflow-hidden transition-all'
       )}
       onClick={ensureFocus}
     >
       {/* 1. Stats Header */}
       <div className="flex items-center justify-between px-6 pt-8 pb-4 bg-white/90 backdrop-blur-sm z-30 border-b border-slate-100">
         <button
-          onClick={(e) => { e.stopPropagation(); onExit(); }}
+          onClick={e => {
+            e.stopPropagation();
+            onExit();
+          }}
           className="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full active:bg-slate-100"
         >
           <X className="w-6 h-6" />
@@ -399,17 +396,27 @@ const MobileSession = ({
 
         <div className="flex items-center gap-6">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">WPM</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              WPM
+            </span>
             <span className="text-xl font-black text-slate-800 leading-none font-mono">
               {stats.wpm}
             </span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ACC</span>
-            <span className={clsx(
-              "text-xl font-black leading-none font-mono",
-              stats.accuracy >= 98 ? "text-green-500" : stats.accuracy >= 90 ? "text-indigo-500" : "text-amber-500"
-            )}>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              ACC
+            </span>
+            <span
+              className={clsx(
+                'text-xl font-black leading-none font-mono',
+                stats.accuracy >= 98
+                  ? 'text-green-500'
+                  : stats.accuracy >= 90
+                    ? 'text-indigo-500'
+                    : 'text-amber-500'
+              )}
+            >
               {stats.accuracy}%
             </span>
           </div>
@@ -417,15 +424,19 @@ const MobileSession = ({
       </div>
 
       {/* 2. Main Content */}
-      <div className={clsx(
-        "flex-1 flex flex-col items-center justify-center px-6 transition-all duration-300 relative",
-        isKeyboardOpen ? "pb-[40vh]" : "pb-20" // Add safe padding for keyboard
-      )}>
+      <div
+        className={clsx(
+          'flex-1 flex flex-col items-center justify-center px-6 transition-all duration-300 relative',
+          isKeyboardOpen ? 'pb-[40vh]' : 'pb-20' // Add safe padding for keyboard
+        )}
+      >
         {/* Progress Line */}
         <div className="absolute top-0 left-0 w-full h-1 bg-slate-100">
           <div
             className="h-full bg-indigo-500 transition-all duration-500"
-            style={{ width: `${(completedIndex / targetText.length) * 100}%` }}
+            style={{
+              width: `${targetText.length ? (completedIndex / targetText.length) * 100 : 0}%`,
+            }}
           />
         </div>
 
@@ -450,49 +461,18 @@ const MobileSession = ({
       <HiddenInput ref={inputRef} onBlur={handleBlur} />
     </div>
   );
-}
+};
 
 // 3. RESULTS COMPONENT
 const MobileResults = ({
   stats,
   onRetry,
-  onExit
+  onExit,
 }: {
   stats: TypingStats;
   onRetry: () => void;
   onExit: () => void;
 }) => {
-  // Save record on mount
-  const saveTypingRecord = useMutation(api.typing.saveRecord);
-  const { user } = useAuth();
-
-  // Convert duration (ms? No, stats doesn't have duration in hook usually, check hook)
-  // Hook stats: { wpm, accuracy, startTime, errorCount }
-  // We need to calculate duration from now - startTime
-  const durationSec = stats.startTime ? Math.floor((Date.now() - stats.startTime) / 1000) : 0;
-
-  // We need to save this potentially
-  // (Assuming saving is handled here or previously. Let's handle it here for simplicity)
-  const hasSaved = useRef(false);
-
-  useEffect(() => {
-    if (!hasSaved.current && user) {
-      hasSaved.current = true;
-      saveTypingRecord({
-        practiceMode: 'sentence', // TODO: Pass real mode
-        categoryId: 'mobile-practice', // Simplified
-        wpm: stats.wpm,
-        accuracy: stats.accuracy,
-        errorCount: stats.errorCount,
-        duration: durationSec,
-        charactersTyped: 0, // Simplified
-        sentencesCompleted: 1,
-        targetWpm: 200,
-        isTargetAchieved: stats.wpm >= 200
-      }).catch(console.error);
-    }
-  }, [stats, user, durationSec, saveTypingRecord]);
-
   const isHighScore = stats.wpm > 200; // Arbitrary target
 
   return (
@@ -503,16 +483,12 @@ const MobileResults = ({
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20" />
           <div className="relative z-10">
             <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ring-4 ring-slate-800 border-2 border-slate-700">
-              <span className="text-4xl">
-                {isHighScore ? '🏆' : '👍'}
-              </span>
+              <span className="text-4xl">{isHighScore ? '🏆' : '👍'}</span>
             </div>
             <h2 className="text-2xl font-black text-white mb-1">
               {isHighScore ? 'Great Job!' : 'Session Complete'}
             </h2>
-            <p className="text-slate-400 font-medium text-sm">
-              You're getting faster!
-            </p>
+            <p className="text-slate-400 font-medium text-sm">You&apos;re getting faster!</p>
           </div>
         </div>
 
@@ -534,9 +510,16 @@ const MobileResults = ({
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Accuracy</span>
+            <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+              Accuracy
+            </span>
             <div className="text-right">
-              <span className={clsx("text-3xl font-black mr-1", stats.accuracy >= 95 ? "text-green-500" : "text-amber-500")}>
+              <span
+                className={clsx(
+                  'text-3xl font-black mr-1',
+                  stats.accuracy >= 95 ? 'text-green-500' : 'text-amber-500'
+                )}
+              >
                 {stats.accuracy}%
               </span>
             </div>
@@ -544,7 +527,10 @@ const MobileResults = ({
           {/* Bar */}
           <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className={clsx("h-full rounded-full", stats.accuracy >= 95 ? "bg-green-500" : "bg-amber-500")}
+              className={clsx(
+                'h-full rounded-full',
+                stats.accuracy >= 95 ? 'bg-green-500' : 'bg-amber-500'
+              )}
               style={{ width: `${stats.accuracy}%` }}
             />
           </div>
@@ -570,7 +556,6 @@ const MobileResults = ({
     </div>
   );
 };
-
 
 // --- MAIN PAGE COMPONENT ---
 export const MobileTypingPage: React.FC = () => {
@@ -653,11 +638,7 @@ export const MobileTypingPage: React.FC = () => {
       <Toaster position="top-center" />
 
       {gameState === 'lobby' && (
-        <MobileLobby
-          onStart={handleStart}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <MobileLobby onStart={handleStart} activeTab={activeTab} setActiveTab={setActiveTab} />
       )}
 
       {gameState === 'playing' && gameData && (
@@ -670,11 +651,7 @@ export const MobileTypingPage: React.FC = () => {
       )}
 
       {gameState === 'results' && lastStats && (
-        <MobileResults
-          stats={lastStats}
-          onRetry={handleRetry}
-          onExit={handleExit}
-        />
+        <MobileResults stats={lastStats} onRetry={handleRetry} onExit={handleExit} />
       )}
     </div>
   );

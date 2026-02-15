@@ -657,6 +657,12 @@
         }
       }
     },
+    "readingHub": {
+      "title": "Reading Discovery",
+      "subtitle": "Korean reading feed and annotation tools",
+      "tagNews": "News",
+      "tagArticles": "Article"
+    },
     "video": {
       "cardTitle": "Immersion\nVideo",
       "title": "Video Center",
@@ -1887,5 +1893,142 @@
     "minWordsLearn": "Need at least 4 words to start learning",
     "minWordsQuiz": "Need at least 4 words to start quiz",
     "dontKnow": "I don't know"
+  },
+  "readingDiscovery": {
+    "title": "Reading Discovery",
+    "subtitle": "Sync real Korean news and build a long-term reading library",
+    "stats": {
+      "weeklyRead": "Read this week",
+      "articles": "articles",
+      "estimatedWords": "Estimated new words",
+      "words": "words"
+    },
+    "difficulty": {
+      "l1": "A2 Beginner",
+      "l2": "B2 Intermediate",
+      "l3": "C1 Advanced"
+    },
+    "filters": {
+      "all": "All",
+      "l1": "Beginner",
+      "l2": "Intermediate",
+      "l3": "Advanced"
+    },
+    "news": {
+      "title": "Live News",
+      "subtitle": "Auto-ingested by RSS, great for extensive reading and current affairs",
+      "manualRefresh": "Refresh",
+      "empty": "No news available yet. Please run ingestion from admin.",
+      "aiExtracted": "AI extracted {{count}} words",
+      "readingMinutes": "~{{minutes}} min read",
+      "autoRefreshed": "Recommendations updated automatically based on your reading activity",
+      "manualLimitReached": "Manual refresh limit reached for today (3 times)",
+      "manualRefreshed": "Refreshed. Remaining today: {{count}}",
+      "manualRefreshFailed": "Refresh failed. Please try again later."
+    },
+    "articles": {
+      "title": "Culture & Archive",
+      "subtitle": "Korean folktales, Wikipedia featured entries, and literature for close reading",
+      "viewAll": "View all articles",
+      "typeEncyclopedia": "Encyclopedia",
+      "recommended": "Recommended"
+    },
+    "fallback": {
+      "wikipediaSource": "Korean Culture Encyclopedia",
+      "wikipediaBadge": "B2 Intermediate • Expository",
+      "wikipediaBookmark": "Close Reading",
+      "folktaleSource": "Korean Traditional Folktale",
+      "folktaleSubtitle": "Siblings Who Became the Sun and Moon",
+      "folktaleBadge": "A1 Beginner • Narrative",
+      "folktaleBookmark": "Bedtime Reading",
+      "literatureSource": "Public Domain Classics",
+      "literatureBadge": "C2 Near-Native • Poetry",
+      "literatureBookmark": "Literary Notes"
+    },
+    "footer": "Powered by Convex newsIngestion:getUserFeed (auto refresh after 24h post-read, manual refresh up to 3/day)"
+  },
+  "readingArticle": {
+    "difficulty": {
+      "l1": "A2 Beginner",
+      "l2": "B1 Intermediate",
+      "l3": "C1 Advanced"
+    },
+    "backToDiscovery": "Back to discovery",
+    "untitled": "Untitled Article",
+    "noteTitlePrefix": "Reading Note",
+    "vocabFallbackMeaning": "Core contextual word (tap to look up)",
+    "vocabDefaultMeaning": "Reading vocabulary",
+    "dictionaryFallbackMeaning": "Reading dictionary meaning",
+    "aiMeaningFallback": "AI explanation",
+    "meta": {
+      "words": "{{count}} chars",
+      "translationTarget": "Translation: {{language}}"
+    },
+    "toolbar": {
+      "lookup": "Lookup",
+      "note": "Note"
+    },
+    "tabs": {
+      "ai": "AI Analysis",
+      "notes": "Dictionary / Notes"
+    },
+    "tts": {
+      "play": "Read aloud",
+      "stop": "Stop",
+      "status": "TTS status"
+    },
+    "translation": {
+      "toggleAria": "Toggle translation",
+      "label": "Translation",
+      "on": "On",
+      "off": "Off",
+      "status": "Translation status",
+      "preparing": "Preparing translation..."
+    },
+    "ai": {
+      "summaryTitle": "AI Summary",
+      "loading": "Generating AI analysis...",
+      "fallbackNotice": "AI unavailable, local fallback is used.",
+      "coreVocab": "Core Vocabulary",
+      "grammarTitle": "Grammar Points"
+    },
+    "vocab": {
+      "save": "Add",
+      "saved": "Saved"
+    },
+    "dictionary": {
+      "title": "Dictionary",
+      "currentSelection": "Current Selection",
+      "selectionHint": "Tap highlighted words or select text to add notes.",
+      "emptySelection": "No selected word yet.",
+      "queryWord": "Query",
+      "loading": "Looking up dictionary...",
+      "serviceError": "Dictionary unavailable, switched to AI fallback.",
+      "aiLoading": "AI is generating explanation...",
+      "noMeaning": "No meaning available.",
+      "unknownPos": "Part of speech pending",
+      "example": "Example",
+      "note": "Tip",
+      "noResult": "No available definition found."
+    },
+    "notes": {
+      "title": "Notes",
+      "syncError": "Saved locally, but failed to sync to Notebook",
+      "newQuote": "New Quote Note",
+      "placeholder": "Write your understanding, questions, or translation...",
+      "cancel": "Cancel",
+      "save": "Save Note",
+      "empty": "No notes yet. Select text and tap Note to create an underlined quote.",
+      "noComment": "(No comment)"
+    },
+    "errors": {
+      "missingArticleId": "Missing article ID",
+      "articleUnavailable": "This article does not exist or is not available.",
+      "aiAnalysisFailed": "AI analysis failed",
+      "translationUnavailable": "Translation service is currently unavailable.",
+      "aiDictionaryFailed": "AI dictionary fallback failed",
+      "dictionaryLookupFailed": "Dictionary lookup failed",
+      "noteSyncFailed": "Failed to sync note to Notebook"
+    }
   }
 }
