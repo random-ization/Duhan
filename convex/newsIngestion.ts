@@ -35,6 +35,30 @@ const SOURCE_PRIORITY: Record<string, number> = {
   naver_news_search: 7,
 };
 
+const BODY_NOISE_TOKENS = [
+  'addeventlistener(',
+  'tlistener(',
+  'oncontentready',
+  'contentaudio.load',
+  "soundobj.attr('data-on'",
+  'audioplayer.pause',
+  'location.href',
+  'membership/login',
+  'onclick=',
+  'function(',
+  'var ',
+  'const ',
+  '=>',
+];
+
+const BODY_TRAILING_MARKERS = [
+  '트렌드뉴스 많이 본 댓글 순',
+  '많이 본 뉴스',
+  '많이 본 기사',
+  '무단 전재',
+  '재배포 금지',
+];
+
 export const ingestBatch = internalMutation({
   args: {
     sourceKey: v.string(),
@@ -64,7 +88,8 @@ export const ingestBatch = internalMutation({
           continue;
         }
 
-        const bodyText = normalizeWhitespace(raw.bodyText || raw.summary || title);
+        const rawBody = raw.bodyText || raw.summary || title;
+        const bodyText = cleanArticleBodyText(rawBody);
         const summary = raw.summary ? normalizeWhitespace(raw.summary) : undefined;
         const section = raw.section ? normalizeWhitespace(raw.section) : undefined;
         const publishedAt = raw.publishedAt || now;
@@ -212,6 +237,20 @@ export const listRecent = query({
   },
 });
 
+export const getById = query({
+  args: {
+    articleId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalizedId = ctx.db.normalizeId('news_articles', args.articleId);
+    if (!normalizedId) return null;
+    const row = await ctx.db.get(normalizedId);
+    if (!row) return null;
+    if (row.status !== 'active') return null;
+    return row;
+  },
+});
+
 function pickCanonical<T extends { sourceKey: string }>(a: T | null, b: T): T {
   if (!a) return b;
   const aPriority = SOURCE_PRIORITY[a.sourceKey] ?? Number.MAX_SAFE_INTEGER;
@@ -238,6 +277,54 @@ function normalizeUrl(raw: string): string {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function isNoiseChunk(chunk: string): boolean {
+  const lower = chunk.toLowerCase();
+  if (BODY_NOISE_TOKENS.some(token => lower.includes(token))) return true;
+
+  const hangulCount = (chunk.match(/[가-힣]/g) || []).length;
+  const latinCount = (chunk.match(/[A-Za-z]/g) || []).length;
+  const symbolCount = (chunk.match(/[{};=_<>]/g) || []).length;
+
+  if (/https?:\/\/\S+/i.test(chunk) && hangulCount < 12) return true;
+  if (symbolCount >= 4 && hangulCount < 20) return true;
+  if (latinCount > hangulCount * 2 && hangulCount < 10) return true;
+
+  return false;
+}
+
+function cleanArticleBodyText(rawText: string): string {
+  const plain = rawText
+    .replace(/\r\n/g, '\n')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plain) return normalizeWhitespace(rawText);
+
+  const chunks = plain
+    .split(/(?<=[.!?。！？])\s+|\n+/)
+    .map(chunk => chunk.trim())
+    .filter(Boolean);
+  const filteredChunks = chunks.filter(chunk => !isNoiseChunk(chunk));
+
+  let cleaned = normalizeWhitespace(filteredChunks.join(' '));
+  if (!cleaned) cleaned = normalizeWhitespace(plain);
+
+  for (const marker of BODY_TRAILING_MARKERS) {
+    const markerIndex = cleaned.indexOf(marker);
+    if (markerIndex > 0) {
+      cleaned = cleaned.slice(0, markerIndex).trim();
+      break;
+    }
+  }
+
+  const firstHangulIndex = cleaned.search(/[가-힣]/);
+  if (firstHangulIndex > 40) {
+    cleaned = cleaned.slice(firstHangulIndex).trim();
+  }
+
+  return cleaned || normalizeWhitespace(rawText);
 }
 
 function normalizeTitle(title: string): string {

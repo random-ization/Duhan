@@ -223,7 +223,7 @@ function useSidebarNavItems(
         label: t('nav.media', { defaultValue: 'Media' }),
         icon: <EmojiIcon src="/emojis/Clapper_Board.png" grayscale />,
         activeClass: 'bg-red-100 text-red-700 border-red-100',
-        activePrefixes: ['/media', '/videos', '/video/', '/podcasts'],
+        activePrefixes: ['/media', '/reading', '/videos', '/video/', '/podcasts'],
       },
     ];
 

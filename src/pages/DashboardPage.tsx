@@ -41,6 +41,7 @@ const ASSETS = {
   gem: '/emojis/Gem_Stone.png',
   tiger: '/emojis/Tiger_Face.png',
   sparkles: '/emojis/Sparkles.png',
+  books: '/emojis/Books.png',
   book: '/emojis/Open_Book.png',
   trophy: '/emojis/Trophy.png',
   tv: '/emojis/Television.png',
@@ -251,6 +252,44 @@ export default function DashboardPage() {
               src={ASSETS.book}
               className="absolute -right-4 -bottom-4 w-28 h-28 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
               alt="books"
+            />
+          </BentoCard>
+        );
+      case 'reading':
+        return (
+          <BentoCard
+            onClickPath="/reading"
+            bgClass="bg-cyan-50"
+            borderClass="border-cyan-200"
+            className="h-full"
+          >
+            <div className="relative z-10 h-full flex flex-col justify-between">
+              <div>
+                <div className="inline-block bg-cyan-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                  {t('reading', { defaultValue: 'Reading' })}
+                </div>
+                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                  {t('dashboard.readingHub.title', { defaultValue: 'Reading Discovery' })}
+                </h3>
+                <p className="text-slate-500 font-bold text-sm mt-1">
+                  {t('dashboard.readingHub.subtitle', {
+                    defaultValue: 'Korean reading feed and annotation tools',
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 border border-cyan-100">
+                  {t('dashboard.readingHub.tagNews', { defaultValue: 'News' })}
+                </div>
+                <div className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 border border-cyan-100">
+                  {t('dashboard.readingHub.tagArticles', { defaultValue: 'Article' })}
+                </div>
+              </div>
+            </div>
+            <img
+              src={ASSETS.books}
+              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
+              alt="reading"
             />
           </BentoCard>
         );

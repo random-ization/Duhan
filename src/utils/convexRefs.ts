@@ -46,6 +46,36 @@ export const DICTIONARY = {
   >('dictionary:searchDictionary'),
 };
 
+export const AI = {
+  analyzeReadingArticle: aRef<
+    {
+      title: string;
+      summary?: string;
+      bodyText: string;
+      language?: string;
+    },
+    {
+      summary: string;
+      vocabulary: Array<{ term: string; meaning: string; level: string }>;
+      grammar: Array<{ pattern: string; explanation: string; example: string }>;
+    } | null
+  >('ai:analyzeReadingArticle'),
+  explainWordFallback: aRef<
+    {
+      word: string;
+      context?: string;
+      language?: string;
+    },
+    {
+      word: string;
+      pos: string;
+      meaning: string;
+      example: string;
+      note: string;
+    } | null
+  >('ai:explainWordFallback'),
+};
+
 export const UNITS = {
   bulkImport: mRef<
     {
@@ -330,6 +360,74 @@ export const TOPIK = {
 };
 
 export const NEWS = {
+  getById: qRef<
+    { articleId: string },
+    {
+      _id: string;
+      sourceKey: string;
+      sourceType: string;
+      sourceGuid?: string;
+      sourceUrl: string;
+      canonicalUrl: string;
+      urlHash: string;
+      title: string;
+      summary?: string;
+      bodyText: string;
+      bodyHtml?: string;
+      language: string;
+      section?: string;
+      tags?: string[];
+      author?: string;
+      publishedAt: number;
+      fetchedAt: number;
+      difficultyLevel: string;
+      difficultyScore: number;
+      difficultyReason: string[];
+      dedupeClusterId: string;
+      normalizedTitle?: string;
+      simhash?: string;
+      projectedAt?: number;
+      projectedCourseId?: string;
+      projectedUnitIndex?: number;
+      projectedArticleIndex?: number;
+      status: string;
+      licenseTier: string;
+    } | null
+  >('newsIngestion:getById'),
+  listRecent: qRef<
+    { difficultyLevel?: string; limit?: number },
+    Array<{
+      _id: string;
+      sourceKey: string;
+      sourceType: string;
+      sourceGuid?: string;
+      sourceUrl: string;
+      canonicalUrl: string;
+      urlHash: string;
+      title: string;
+      summary?: string;
+      bodyText: string;
+      bodyHtml?: string;
+      language: string;
+      section?: string;
+      tags?: string[];
+      author?: string;
+      publishedAt: number;
+      fetchedAt: number;
+      difficultyLevel: string;
+      difficultyScore: number;
+      difficultyReason: string[];
+      dedupeClusterId: string;
+      normalizedTitle?: string;
+      simhash?: string;
+      projectedAt?: number;
+      projectedCourseId?: string;
+      projectedUnitIndex?: number;
+      projectedArticleIndex?: number;
+      status: string;
+      licenseTier: string;
+    }>
+  >('newsIngestion:listRecent'),
   listSources: qRef<
     NoArgs,
     Array<{

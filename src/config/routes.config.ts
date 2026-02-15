@@ -78,6 +78,13 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerAction: 'filter',
     headerTitle: 'Media',
   }),
+  reading: () => ({
+    hasFooter: false,
+    hasHeader: false,
+    headerType: 'section',
+    headerAction: 'none',
+    headerTitle: 'Reading',
+  }),
   topik: segments => {
     if (segments.length <= 1 || segments[1] === 'history') {
       return {

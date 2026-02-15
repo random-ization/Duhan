@@ -5,6 +5,7 @@ export const DEFAULT_CARD_ORDER = [
   'summary', // LearnerSummaryCard (Added recently)
   'tiger', // Tiger Coach
   'textbook',
+  'reading', // 阅读入口
   'topik',
   'youtube',
   'podcast',

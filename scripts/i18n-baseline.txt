@@ -43,6 +43,8 @@ src/pages/Landing.tsx
 src/pages/MobilePreviewPage.tsx
 src/pages/NotebookPage.tsx
 src/pages/PodcastPlayerPage.tsx
+src/pages/ReadingArticlePage.tsx
+src/pages/ReadingDiscoveryPage.tsx
 src/pages/topik/TopikGuidePage.tsx
 src/pages/topik/TopikListeningGuidePage.tsx
 src/pages/topik/TopikReadingGuidePage.tsx

@@ -13,6 +13,8 @@ const Landing = lazy(() => import('./pages/Landing'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
 const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
 const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
+const ReadingDiscoveryPage = lazy(() => import('./pages/ReadingDiscoveryPage'));
+const ReadingArticlePage = lazy(() => import('./pages/ReadingArticlePage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -122,6 +124,8 @@ const LanguageAwareRoutes: React.FC = () => {
               <Route path="courses" element={<CoursesOverview />} />
               <Route path="practice" element={<PracticeHubPage />} />
               <Route path="media" element={<MediaHubPage />} />
+              <Route path="reading" element={<ReadingDiscoveryPage />} />
+              <Route path="reading/:articleId" element={<ReadingArticlePage />} />
               <Route path="course/:instituteId" element={<CourseDashboard />} />
               <Route path="course/:instituteId/vocab" element={<VocabModulePage />} />
               <Route path="course/:instituteId/grammar" element={<GrammarModulePage />} />

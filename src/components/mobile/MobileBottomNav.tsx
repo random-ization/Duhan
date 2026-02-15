@@ -71,6 +71,7 @@ export function MobileBottomNav() {
     if (tab.key === 'media') {
       return (
         pathWithoutLang.startsWith('/media') ||
+        pathWithoutLang.startsWith('/reading') ||
         pathWithoutLang.startsWith('/videos') ||
         pathWithoutLang.startsWith('/video/') ||
         pathWithoutLang.startsWith('/podcasts')

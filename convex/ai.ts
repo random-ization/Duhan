@@ -63,6 +63,21 @@ const TARGET_LANGUAGE_LABELS: Record<string, string> = {
   mn: 'Mongolian',
 };
 
+const READING_RESPONSE_LANGUAGE_LABELS: Record<string, string> = {
+  zh: '简体中文',
+  en: 'English',
+  vi: 'Tiếng Việt',
+  mn: 'Монгол хэл',
+};
+
+function resolveReadingResponseLanguage(lang?: string) {
+  const normalized = normalizeTargetLanguage(lang) || 'zh';
+  return {
+    code: normalized,
+    label: READING_RESPONSE_LANGUAGE_LABELS[normalized] || '简体中文',
+  };
+}
+
 function normalizeTargetLanguage(lang?: string): string {
   if (!lang) return '';
   const normalized = lang.trim().toLowerCase();
@@ -867,6 +882,209 @@ export const analyzeQuestion = action({
     }
   },
 });
+
+export const analyzeReadingArticle = action({
+  args: {
+    title: v.string(),
+    summary: v.optional(v.string()),
+    bodyText: v.string(),
+    language: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'analyze_reading_article');
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return null;
+    }
+
+    const client = new OpenAI({ apiKey });
+    const { label: responseLanguageLabel } = resolveReadingResponseLanguage(args.language);
+    const trimmedBody = args.bodyText.trim().slice(0, 7000);
+    const trimmedSummary = args.summary?.trim() || '';
+
+    if (!trimmedBody || trimmedBody.length < 20) {
+      return null;
+    }
+
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `你是韩语阅读教练。请基于文章生成学习卡片，并严格返回 JSON。
+
+输出语言：${responseLanguageLabel}
+返回格式：
+{
+  "summary": "string",
+  "vocabulary": [
+    { "term": "string", "meaning": "string", "level": "TOPIK level label" }
+  ],
+  "grammar": [
+    { "pattern": "string", "explanation": "string", "example": "string" }
+  ]
+}
+
+规则：
+1. summary 1~3 句，准确概括文章。
+2. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
+3. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
+4. 只返回 JSON，不要任何额外文本。`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              title: args.title,
+              summaryHint: trimmedSummary || null,
+              bodyText: trimmedBody,
+            }),
+          },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      });
+
+      const usage = completion.usage;
+      await ctx.runMutation(logUsageMutation, {
+        userId,
+        feature: 'analyze_reading_article',
+        model: 'gpt-4o-mini',
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens,
+        costUsd: 0,
+      });
+
+      const content = completion.choices[0].message.content;
+      if (!content) return null;
+
+      const parsed = JSON.parse(content) as {
+        summary?: unknown;
+        vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
+        grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
+      };
+
+      const summary =
+        typeof parsed.summary === 'string' ? parsed.summary.trim() : trimmedSummary || args.title;
+      const vocabulary = Array.isArray(parsed.vocabulary)
+        ? parsed.vocabulary
+            .map(item => ({
+              term: typeof item.term === 'string' ? item.term.trim() : '',
+              meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+              level: typeof item.level === 'string' ? item.level.trim() : '',
+            }))
+            .filter(item => Boolean(item.term))
+            .slice(0, 8)
+        : [];
+      const grammar = Array.isArray(parsed.grammar)
+        ? parsed.grammar
+            .map(item => ({
+              pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
+              explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
+              example: typeof item.example === 'string' ? item.example.trim() : '',
+            }))
+            .filter(item => Boolean(item.pattern))
+            .slice(0, 4)
+        : [];
+
+      return { summary, vocabulary, grammar };
+    } catch (error) {
+      console.error('[AI] analyzeReadingArticle failed:', toErrorMessage(error));
+      return null;
+    }
+  },
+});
+
+export const explainWordFallback = action({
+  args: {
+    word: v.string(),
+    context: v.optional(v.string()),
+    language: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'dictionary_fallback');
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return null;
+    }
+
+    const term = args.word.trim();
+    if (!term) return null;
+
+    const client = new OpenAI({ apiKey });
+    const { label: responseLanguageLabel } = resolveReadingResponseLanguage(args.language);
+
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `你是韩语词典助手。用户词典未命中时，你需要给出简洁、可学习的解释。严格返回 JSON。
+输出语言：${responseLanguageLabel}
+返回格式：
+{
+  "word": "string",
+  "pos": "string",
+  "meaning": "string",
+  "example": "string",
+  "note": "string"
+}
+规则：
+1. word 保持韩语原词。
+2. meaning 用输出语言，简洁准确。
+3. example 尽量结合给定上下文。
+4. note 给出一个学习提示（搭配、语感或近义区分）。`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              word: term,
+              context: args.context?.trim() || '',
+            }),
+          },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      });
+
+      const usage = completion.usage;
+      await ctx.runMutation(logUsageMutation, {
+        userId,
+        feature: 'dictionary_fallback',
+        model: 'gpt-4o-mini',
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens,
+        costUsd: 0,
+      });
+
+      const content = completion.choices[0].message.content;
+      if (!content) return null;
+
+      const parsed = JSON.parse(content) as {
+        word?: unknown;
+        pos?: unknown;
+        meaning?: unknown;
+        example?: unknown;
+        note?: unknown;
+      };
+
+      return {
+        word: typeof parsed.word === 'string' && parsed.word.trim() ? parsed.word.trim() : term,
+        pos: typeof parsed.pos === 'string' ? parsed.pos.trim() : '',
+        meaning: typeof parsed.meaning === 'string' ? parsed.meaning.trim() : '',
+        example: typeof parsed.example === 'string' ? parsed.example.trim() : '',
+        note: typeof parsed.note === 'string' ? parsed.note.trim() : '',
+      };
+    } catch (error) {
+      console.error('[AI] explainWordFallback failed:', toErrorMessage(error));
+      return null;
+    }
+  },
+});
+
 // Analyze video (transcribe + translate)
 export const generateVideoAnalysis = action({
   args: {
