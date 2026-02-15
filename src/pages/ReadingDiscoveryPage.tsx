@@ -101,6 +101,7 @@ function getSourceLabel(sourceKey: string) {
     itdonga: 'IT동아',
     voa_ko: 'VOA 한국어',
     naver_news_search: 'NAVER News',
+    wiki_ko_featured: '위키백과 알찬 글',
   };
   return map[sourceKey] || sourceKey;
 }
@@ -129,6 +130,10 @@ export default function ReadingDiscoveryPage() {
   const newsQueryArgs =
     difficultyFilter === 'ALL' ? { limit: 24 } : { difficultyLevel: difficultyFilter, limit: 24 };
   const news = useQuery(NEWS.listRecent, newsQueryArgs) as NewsItem[] | undefined;
+  const featuredArticles = useQuery(NEWS.listRecent, {
+    sourceKey: 'wiki_ko_featured',
+    limit: 12,
+  }) as NewsItem[] | undefined;
 
   const topNews = useMemo(() => (news || []).slice(0, 8), [news]);
   const featuredNews = topNews[0];
@@ -309,7 +314,7 @@ export default function ReadingDiscoveryPage() {
           <div>
             <h2 className="text-2xl font-black text-slate-900">📚 文化与典藏</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              韩国传统故事、维基百科与文学作品，适合精读解析（文章数据接入稍后完成）
+              韩国传统故事、维基百科与文学作品，适合精读解析
             </p>
           </div>
           <button
@@ -321,99 +326,193 @@ export default function ReadingDiscoveryPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {curatedArticles.map(item => {
-            const baseClass =
-              item.tone === 'dark'
-                ? 'bg-slate-900 border-slate-800 text-white'
-                : item.tone === 'warm'
-                  ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-orange-100'
-                  : 'bg-white border-slate-200';
-            const titleClass =
-              item.tone === 'dark'
-                ? 'text-white group-hover:text-indigo-300'
-                : item.tone === 'warm'
-                  ? 'text-slate-900 group-hover:text-orange-600'
-                  : 'text-slate-900 group-hover:text-blue-600';
-            const textClass = item.tone === 'dark' ? 'text-slate-400' : 'text-slate-600';
-            const badgeClass =
-              item.tone === 'dark'
-                ? 'bg-slate-700 text-slate-200 border-slate-600'
-                : item.tone === 'warm'
-                  ? 'bg-orange-100/70 text-orange-700 border-orange-200'
-                  : 'bg-blue-100/60 text-blue-700 border-blue-200';
+        {featuredArticles === undefined ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-200" />
+            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-100" />
+            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-100" />
+          </div>
+        ) : featuredArticles.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {featuredArticles.slice(0, 6).map((item, index) => {
+              const tone = index % 3;
+              const baseClass =
+                tone === 2
+                  ? 'bg-slate-900 border-slate-800 text-white'
+                  : tone === 1
+                    ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-orange-100'
+                    : 'bg-white border-slate-200';
+              const titleClass =
+                tone === 2
+                  ? 'text-white group-hover:text-indigo-300'
+                  : tone === 1
+                    ? 'text-slate-900 group-hover:text-orange-600'
+                    : 'text-slate-900 group-hover:text-blue-600';
+              const textClass = tone === 2 ? 'text-slate-400' : 'text-slate-600';
+              const badgeClass =
+                tone === 2
+                  ? 'bg-slate-700 text-slate-200 border-slate-600'
+                  : tone === 1
+                    ? 'bg-orange-100/70 text-orange-700 border-orange-200'
+                    : 'bg-blue-100/60 text-blue-700 border-blue-200';
+              const sourceTypeText = item.section || '위키백과 알찬 글';
 
-            return (
-              <article
-                key={item.id}
-                className={`group flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
-              >
-                <div className="mb-4 flex items-center gap-3">
+              return (
+                <button
+                  key={item._id}
+                  type="button"
+                  onClick={() => navigate(`/reading/${item._id}`)}
+                  className={`group flex h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <div
+                      className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
+                        tone === 2 ? 'border border-slate-600 bg-slate-700' : 'bg-white'
+                      }`}
+                    >
+                      🏛️
+                    </div>
+                    <div>
+                      <div
+                        className={`text-[11px] font-bold uppercase tracking-wider ${
+                          tone === 2 ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        Wikipedia
+                      </div>
+                      <div
+                        className={`text-sm font-bold ${tone === 2 ? 'text-slate-200' : 'text-slate-800'}`}
+                      >
+                        {sourceTypeText}
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3
+                    className={`mb-3 text-2xl font-black tracking-tight transition ${titleClass}`}
+                  >
+                    {item.title}
+                  </h3>
+
+                  <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${textClass}`}>
+                    {(item.summary || item.bodyText || '').slice(0, 160)}
+                  </p>
+
                   <div
-                    className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
-                      item.tone === 'dark' ? 'bg-slate-700 border border-slate-600' : 'bg-white'
+                    className={`mt-auto flex items-center justify-between border-t pt-4 ${
+                      tone === 2 ? 'border-slate-700/60' : 'border-slate-200/70'
                     }`}
                   >
-                    {item.icon}
-                  </div>
-                  <div>
-                    <div
-                      className={`text-[11px] font-bold uppercase tracking-wider ${
-                        item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      {item.source}
-                    </div>
-                    <div
-                      className={`text-sm font-bold ${
-                        item.tone === 'dark' ? 'text-slate-200' : 'text-slate-800'
-                      }`}
-                    >
-                      {item.sourceType}
-                    </div>
-                  </div>
-                </div>
-
-                <h3 className={`mb-3 text-2xl font-black tracking-tight transition ${titleClass}`}>
-                  {item.title}
-                  {item.subtitle && (
                     <span
-                      className={`mt-1 block text-lg font-bold ${
-                        item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
+                    >
+                      {getDifficultyChip(item.difficultyLevel).text} • 百科条目
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">🔖 推荐精读</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {curatedArticles.map(item => {
+              const baseClass =
+                item.tone === 'dark'
+                  ? 'bg-slate-900 border-slate-800 text-white'
+                  : item.tone === 'warm'
+                    ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-orange-100'
+                    : 'bg-white border-slate-200';
+              const titleClass =
+                item.tone === 'dark'
+                  ? 'text-white group-hover:text-indigo-300'
+                  : item.tone === 'warm'
+                    ? 'text-slate-900 group-hover:text-orange-600'
+                    : 'text-slate-900 group-hover:text-blue-600';
+              const textClass = item.tone === 'dark' ? 'text-slate-400' : 'text-slate-600';
+              const badgeClass =
+                item.tone === 'dark'
+                  ? 'bg-slate-700 text-slate-200 border-slate-600'
+                  : item.tone === 'warm'
+                    ? 'bg-orange-100/70 text-orange-700 border-orange-200'
+                    : 'bg-blue-100/60 text-blue-700 border-blue-200';
+
+              return (
+                <article
+                  key={item.id}
+                  className={`group flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <div
+                      className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
+                        item.tone === 'dark' ? 'bg-slate-700 border border-slate-600' : 'bg-white'
                       }`}
                     >
-                      ({item.subtitle})
-                    </span>
-                  )}
-                </h3>
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div
+                        className={`text-[11px] font-bold uppercase tracking-wider ${
+                          item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        {item.source}
+                      </div>
+                      <div
+                        className={`text-sm font-bold ${
+                          item.tone === 'dark' ? 'text-slate-200' : 'text-slate-800'
+                        }`}
+                      >
+                        {item.sourceType}
+                      </div>
+                    </div>
+                  </div>
 
-                <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${textClass}`}>
-                  {item.excerpt}
-                </p>
-
-                <div
-                  className={`mt-auto flex items-center justify-between border-t pt-4 ${
-                    item.tone === 'dark' ? 'border-slate-700/60' : 'border-slate-200/70'
-                  }`}
-                >
-                  <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}>
-                    {item.badge}
-                  </span>
-                  <span
-                    className={`text-xs font-semibold ${item.tone === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}
+                  <h3
+                    className={`mb-3 text-2xl font-black tracking-tight transition ${titleClass}`}
                   >
-                    🔖 {item.bookmarkText}
-                  </span>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                    {item.title}
+                    {item.subtitle && (
+                      <span
+                        className={`mt-1 block text-lg font-bold ${
+                          item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        ({item.subtitle})
+                      </span>
+                    )}
+                  </h3>
+
+                  <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${textClass}`}>
+                    {item.excerpt}
+                  </p>
+
+                  <div
+                    className={`mt-auto flex items-center justify-between border-t pt-4 ${
+                      item.tone === 'dark' ? 'border-slate-700/60' : 'border-slate-200/70'
+                    }`}
+                  >
+                    <span
+                      className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
+                    >
+                      {item.badge}
+                    </span>
+                    <span
+                      className={`text-xs font-semibold ${item.tone === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}
+                    >
+                      🔖 {item.bookmarkText}
+                    </span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-slate-400">
         <Clock3 size={14} />
-        新闻数据来自 Convex `newsIngestion:listRecent`
+        数据来自 Convex `newsIngestion:listRecent`（新闻 + 维基典范条目）
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ const SOURCE_PRIORITY: Record<string, number> = {
   itdonga: 5,
   voa_ko: 6,
   naver_news_search: 7,
+  wiki_ko_featured: 8,
 };
 
 const BODY_NOISE_TOKENS = [
@@ -58,6 +59,25 @@ const BODY_TRAILING_MARKERS = [
   '무단 전재',
   '재배포 금지',
 ];
+
+const BLOCKED_TOPIC_PATTERNS = [
+  /정치|국회|대통령|청와대|정당|총선|대선|지방선거|여야|국정감사|탄핵|청문회/i,
+  /사설|오피니언|칼럼|기고|논평|시론|editorial|opinion|column/i,
+];
+
+const BLOCKED_URL_PATTERNS = [
+  /\/politics?\//i,
+  /\/opinion\//i,
+  /\/editorial\//i,
+  /\/column\//i,
+  /\/정치\//i,
+  /\/사설\//i,
+  /\/오피니언\//i,
+];
+
+const MIN_ARTICLE_BODY_LENGTH = 220;
+const MIN_ARTICLE_HANGUL_COUNT = 100;
+const MIN_ARTICLE_SENTENCE_COUNT = 3;
 
 export const ingestBatch = internalMutation({
   args: {
@@ -97,11 +117,33 @@ export const ingestBatch = internalMutation({
         const simhash = computeSimhash(bodyText);
         const difficulty = scoreDifficulty(section, bodyText, args.sourceKey);
         const urlHash = hash32(canonicalUrl);
+        const contentPolicy = evaluateContentPolicy({
+          title,
+          section,
+          tags: raw.tags,
+          sourceUrl: raw.sourceUrl,
+          canonicalUrl,
+          bodyText,
+        });
 
         const existingByUrl = await ctx.db
           .query('news_articles')
           .withIndex('by_url_hash', q => q.eq('urlHash', urlHash))
           .first();
+
+        if (!contentPolicy.allowed) {
+          if (existingByUrl && existingByUrl.status !== 'filtered') {
+            const policyReason = `content_policy:${contentPolicy.reason}`;
+            const mergedReasons = [...(existingByUrl.difficultyReason || []), policyReason];
+            await ctx.db.patch(existingByUrl._id, {
+              status: 'filtered',
+              fetchedAt: now,
+              difficultyReason: [...new Set(mergedReasons)],
+            });
+            updated += 1;
+          }
+          continue;
+        }
 
         if (existingByUrl) {
           await ctx.db.patch(existingByUrl._id, {
@@ -219,16 +261,34 @@ export const logFetchRun = internalMutation({
 export const listRecent = query({
   args: {
     difficultyLevel: v.optional(v.string()),
+    sourceKey: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 30, 1), 100);
-    const rows = args.difficultyLevel
+    const effectiveDifficulty = args.difficultyLevel || undefined;
+    const effectiveSource = args.sourceKey || undefined;
+
+    if (effectiveSource) {
+      const rows = await ctx.db
+        .query('news_articles')
+        .withIndex('by_source_published', q => q.eq('sourceKey', effectiveSource))
+        .order('desc')
+        .take(Math.min(limit * 4, 320));
+
+      return rows
+        .filter(
+          row =>
+            row.status === 'active' &&
+            (!effectiveDifficulty || row.difficultyLevel === effectiveDifficulty)
+        )
+        .slice(0, limit);
+    }
+
+    const rows = effectiveDifficulty
       ? await ctx.db
           .query('news_articles')
-          .withIndex('by_difficulty_published', q =>
-            q.eq('difficultyLevel', args.difficultyLevel as string)
-          )
+          .withIndex('by_difficulty_published', q => q.eq('difficultyLevel', effectiveDifficulty))
           .order('desc')
           .take(limit)
       : await ctx.db.query('news_articles').withIndex('by_published').order('desc').take(limit);
@@ -391,6 +451,65 @@ function scoreDifficulty(
   score = Math.max(0, Math.min(100, score));
   const level = score <= 33 ? 'L1' : score <= 66 ? 'L2' : 'L3';
   return { level, score, reasons };
+}
+
+function evaluateContentPolicy(input: {
+  title: string;
+  section?: string;
+  tags?: string[];
+  sourceUrl: string;
+  canonicalUrl: string;
+  bodyText: string;
+}): { allowed: boolean; reason?: string } {
+  const sectionText = (input.section || '').toLowerCase();
+  const titleText = input.title.toLowerCase();
+  const tagsText = (input.tags || []).join(' ').toLowerCase();
+  const metadataText = `${sectionText} ${tagsText}`.trim();
+  const urlText = `${input.sourceUrl} ${input.canonicalUrl}`.toLowerCase();
+
+  if (matchesAnyPattern(metadataText, BLOCKED_TOPIC_PATTERNS)) {
+    return { allowed: false, reason: 'blocked_topic_section_or_tags' };
+  }
+  if (matchesAnyPattern(titleText, BLOCKED_TOPIC_PATTERNS)) {
+    return { allowed: false, reason: 'blocked_topic_title' };
+  }
+  if (matchesAnyPattern(urlText, BLOCKED_URL_PATTERNS)) {
+    return { allowed: false, reason: 'blocked_topic_url' };
+  }
+
+  if (isArticleTooShort(input.bodyText)) {
+    return { allowed: false, reason: 'body_too_short' };
+  }
+
+  return { allowed: true };
+}
+
+function matchesAnyPattern(value: string, patterns: RegExp[]): boolean {
+  if (!value) return false;
+  return patterns.some(pattern => pattern.test(value));
+}
+
+function isArticleTooShort(bodyText: string): boolean {
+  const normalized = normalizeWhitespace(bodyText);
+  if (!normalized) return true;
+
+  const sentenceCount = normalized.split(/[.!?。！？\n]+/).filter(Boolean).length;
+  const hangulCount = (normalized.match(/[가-힣]/g) || []).length;
+  const textLength = normalized.length;
+
+  if (textLength < MIN_ARTICLE_BODY_LENGTH) {
+    return true;
+  }
+
+  if (hangulCount < MIN_ARTICLE_HANGUL_COUNT && sentenceCount < MIN_ARTICLE_SENTENCE_COUNT) {
+    return true;
+  }
+
+  if (sentenceCount <= 1 && textLength < 320) {
+    return true;
+  }
+
+  return false;
 }
 
 function hash32(value: string): string {

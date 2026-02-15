@@ -41,6 +41,9 @@ crons.interval('news_poll_voa_20m', { minutes: 20 }, pollSourceAction, {
 crons.interval('news_poll_naver_30m', { minutes: 30 }, pollSourceAction, {
   sourceKey: 'naver_news_search',
 });
+crons.interval('news_poll_wiki_featured_daily', { minutes: 1440 }, pollSourceAction, {
+  sourceKey: 'wiki_ko_featured',
+});
 
 // Projection into textbook_units(courseId="news_ko_mvp")
 crons.interval('news_project_to_course_30m', { minutes: 30 }, projectBatchMutation, {

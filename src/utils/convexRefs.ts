@@ -395,7 +395,7 @@ export const NEWS = {
     } | null
   >('newsIngestion:getById'),
   listRecent: qRef<
-    { difficultyLevel?: string; limit?: number },
+    { difficultyLevel?: string; sourceKey?: string; limit?: number },
     Array<{
       _id: string;
       sourceKey: string;

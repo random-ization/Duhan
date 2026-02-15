@@ -68,4 +68,12 @@ export const NEWS_SOURCES: NewsSourceDefinition[] = [
     pollMinutes: 30,
     enabled: true,
   },
+  {
+    key: 'wiki_ko_featured',
+    name: 'Wikipedia KO Featured',
+    type: 'api',
+    endpoint: 'https://ko.wikipedia.org/w/api.php',
+    pollMinutes: 1440,
+    enabled: true,
+  },
 ];

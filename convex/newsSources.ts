@@ -94,6 +94,37 @@ type NaverResponse = {
   items?: NaverItem[];
 };
 
+type WikiCategoryMember = {
+  pageid: number;
+  title: string;
+};
+
+type WikiCategoryMembersResponse = {
+  query?: {
+    categorymembers?: WikiCategoryMember[];
+  };
+};
+
+type WikiPageCategory = {
+  title?: string;
+};
+
+type WikiPageDetail = {
+  pageid?: number;
+  title?: string;
+  fullurl?: string;
+  canonicalurl?: string;
+  touched?: string;
+  extract?: string;
+  categories?: WikiPageCategory[];
+};
+
+type WikiPageDetailResponse = {
+  query?: {
+    pages?: WikiPageDetail[];
+  };
+};
+
 const ingestBatchMutation = makeFunctionReference<'mutation', IngestBatchArgs, IngestBatchResult>(
   'newsIngestion:ingestBatch'
 ) as unknown as FunctionReference<'mutation', 'internal', IngestBatchArgs, IngestBatchResult>;
@@ -195,10 +226,16 @@ export const pollSource = internalAction({
 });
 
 async function pullSourceArticles(source: NewsSourceDefinition): Promise<NormalizedArticleInput[]> {
+  if (source.key === 'wiki_ko_featured') {
+    return pullFromWikipediaFeatured(source);
+  }
+  if (source.key === 'naver_news_search') {
+    return pullFromNaver(source);
+  }
   if (source.type === 'rss') {
     return pullFromRss(source);
   }
-  return pullFromNaver(source);
+  return [];
 }
 
 async function pullFromRss(source: NewsSourceDefinition): Promise<NormalizedArticleInput[]> {
@@ -295,6 +332,142 @@ async function pullFromNaver(source: NewsSourceDefinition): Promise<NormalizedAr
   }
 
   return [...unique.values()];
+}
+
+async function pullFromWikipediaFeatured(
+  source: NewsSourceDefinition
+): Promise<NormalizedArticleInput[]> {
+  const categoryMembers = await fetchWikipediaFeaturedMembers(source.endpoint);
+  if (categoryMembers.length === 0) {
+    return [];
+  }
+
+  const sampled = pickDailyMembers(categoryMembers, 1);
+  const rows = await Promise.all(
+    sampled.map(member => fetchWikipediaPageDetail(source.endpoint, member.title))
+  );
+
+  const normalized: NormalizedArticleInput[] = [];
+  for (const page of rows) {
+    if (!page) continue;
+
+    const title = normalizeText(page.title || '');
+    if (!title) continue;
+
+    const sourceUrl = (page.fullurl || page.canonicalurl || '').trim();
+    if (!sourceUrl) continue;
+
+    const body = cleanupArticleText(page.extract || '');
+    if (!isUsableArticleText(body)) continue;
+
+    const summary = summarizeBody(body);
+    const section = inferWikipediaSection(page.categories);
+
+    normalized.push({
+      sourceGuid: String(page.pageid || title),
+      sourceUrl,
+      canonicalUrl: page.canonicalurl || sourceUrl,
+      title,
+      summary: summary || undefined,
+      bodyText: body.slice(0, 12000),
+      section: section || '위키백과 알찬 글',
+      publishedAt: parseDateMs(page.touched),
+    });
+  }
+
+  return normalized;
+}
+
+async function fetchWikipediaFeaturedMembers(endpoint: string): Promise<WikiCategoryMember[]> {
+  const url = new URL(endpoint);
+  url.searchParams.set('action', 'query');
+  url.searchParams.set('list', 'categorymembers');
+  url.searchParams.set('cmtitle', 'Category:알찬 글');
+  url.searchParams.set('cmnamespace', '0');
+  url.searchParams.set('cmtype', 'page');
+  url.searchParams.set('cmlimit', '120');
+  url.searchParams.set('format', 'json');
+
+  const response = await fetchWithTimeout(
+    url.toString(),
+    {
+      headers: {
+        'User-Agent': 'HangyeolNewsBot/1.0 (+https://hangyeol.com)',
+      },
+    },
+    10_000
+  );
+  if (!response.ok) return [];
+
+  const json = (await response.json()) as WikiCategoryMembersResponse;
+  return (json.query?.categorymembers || [])
+    .filter(item => typeof item.pageid === 'number' && Boolean(item.title))
+    .sort((a, b) => a.title.localeCompare(b.title, 'ko'));
+}
+
+async function fetchWikipediaPageDetail(
+  endpoint: string,
+  title: string
+): Promise<WikiPageDetail | null> {
+  const url = new URL(endpoint);
+  url.searchParams.set('action', 'query');
+  url.searchParams.set('prop', 'extracts|info|categories');
+  url.searchParams.set('titles', title);
+  url.searchParams.set('inprop', 'url');
+  url.searchParams.set('clshow', '!hidden');
+  url.searchParams.set('cllimit', '10');
+  url.searchParams.set('explaintext', '1');
+  url.searchParams.set('exsectionformat', 'plain');
+  url.searchParams.set('exchars', '9000');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('formatversion', '2');
+
+  const response = await fetchWithTimeout(
+    url.toString(),
+    {
+      headers: {
+        'User-Agent': 'HangyeolNewsBot/1.0 (+https://hangyeol.com)',
+      },
+    },
+    10_000
+  );
+  if (!response.ok) return null;
+
+  const json = (await response.json()) as WikiPageDetailResponse;
+  const page = json.query?.pages?.[0];
+  if (!page || !page.title) return null;
+  return page;
+}
+
+function pickDailyMembers(list: WikiCategoryMember[], count: number): WikiCategoryMember[] {
+  if (list.length === 0 || count <= 0) return [];
+  if (list.length <= count) return [...list];
+
+  const kstDayNumber = Math.floor((Date.now() + 9 * 60 * 60 * 1000) / 86_400_000);
+  const selected: WikiCategoryMember[] = [];
+  for (let offset = 0; offset < count; offset += 1) {
+    const index = (kstDayNumber + offset) % list.length;
+    selected.push(list[index]);
+  }
+  return selected;
+}
+
+function summarizeBody(body: string): string {
+  const sentences = body
+    .split(/(?<=[.!?。！？])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+  return sentences.slice(0, 2).join(' ').slice(0, 280).trim();
+}
+
+function inferWikipediaSection(categories?: WikiPageCategory[]): string | undefined {
+  const names = (categories || [])
+    .map(item => normalizeText((item.title || '').replace(/^분류:/, '')))
+    .filter(Boolean);
+  const candidate = names.find(
+    value => !/알찬 글|위키백과|출처|문서|정리 필요|분류 필요|일반 문서|좋은 글|분야별/i.test(value)
+  );
+  return candidate;
 }
 
 const SOURCE_BODY_MARKERS: Record<string, string[]> = {

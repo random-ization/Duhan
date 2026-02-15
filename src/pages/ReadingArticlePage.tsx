@@ -144,6 +144,7 @@ function sourceLabel(sourceKey: string) {
     itdonga: 'IT동아',
     voa_ko: 'VOA 한국어',
     naver_news_search: 'NAVER News',
+    wiki_ko_featured: '위키백과 알찬 글',
   };
   return map[sourceKey] || sourceKey;
 }
