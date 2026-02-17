@@ -51,11 +51,11 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
   if (error || !document) {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
-        <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+        <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-muted-foreground mb-2">
           {labels.documentNotFound || 'Document Not Found'}
         </h2>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           {labels.documentNotFoundDesc || 'The requested document could not be found.'}
         </p>
       </div>
@@ -76,15 +76,15 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="bg-indigo-100 p-3 rounded-lg">
-            <FileText className="w-6 h-6 text-indigo-600" />
+          <div className="bg-indigo-100 dark:bg-indigo-400/15 p-3 rounded-lg">
+            <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-200" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">{document.title}</h1>
+            <h1 className="text-3xl font-bold text-muted-foreground">{document.title}</h1>
             {document.updatedAt && (
-              <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   Last updated: {new Date(document.updatedAt).toLocaleDateString()}
@@ -96,7 +96,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-8">
         <div
           className="prose prose-slate max-w-none"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatContent(document.content)) }}
@@ -128,7 +128,7 @@ function formatContent(content: string): string {
     parsed = parsed.replaceAll(/\*([^*]+)\*/g, '<em>$1</em>');
     parsed = parsed.replaceAll(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
+      '<a href="$2" class="text-indigo-600 dark:text-indigo-300 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
     );
     return parsed;
   };

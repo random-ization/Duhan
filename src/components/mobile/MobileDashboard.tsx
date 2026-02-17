@@ -8,6 +8,8 @@ import { useData } from '../../contexts/DataContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { qRef, NoArgs } from '../../utils/convexRefs';
 import { ExamAttempt } from '../../types';
+import { Button } from '../ui';
+import { Input } from '../ui';
 
 // Assets
 const ASSETS = {
@@ -113,9 +115,9 @@ export const MobileDashboard: React.FC = () => {
   const goalPercent = Math.min(100, (stats.dailyMinutes / (stats.dailyGoal || 1)) * 100);
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-24">
+    <div className="bg-muted min-h-screen pb-24">
       {/* 1. Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="flex justify-between items-center gap-3 mb-3">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -123,28 +125,30 @@ export const MobileDashboard: React.FC = () => {
                 <img
                   src={user.avatar}
                   alt="Avatar"
-                  className="w-9 h-9 rounded-full border border-slate-200"
+                  className="w-9 h-9 rounded-full border border-border"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:text-indigo-200 font-bold border border-indigo-200 dark:border-indigo-300/25">
                   {user?.name?.[0] || 'U'}
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-card"></div>
             </div>
             <div>
-              <h1 className="text-sm font-extrabold text-slate-900 leading-none">
+              <h1 className="text-sm font-extrabold text-foreground leading-none">
                 {getGreeting()},
               </h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
                 {user?.name?.split(' ')[0] || 'Learner'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">
-              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-              <span className="text-xs font-black text-orange-600">{stats.streak}</span>
+            <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-400/10 px-2 py-1 rounded-lg border border-orange-100 dark:border-orange-300/25">
+              <Flame className="w-3.5 h-3.5 text-orange-500 dark:text-orange-300 fill-orange-500 dark:fill-orange-300" />
+              <span className="text-xs font-black text-orange-600 dark:text-orange-200">
+                {stats.streak}
+              </span>
             </div>
           </div>
         </div>
@@ -152,40 +156,40 @@ export const MobileDashboard: React.FC = () => {
         {/* Dictionary Search Input */}
         <form onSubmit={handleSearch} className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Search className="w-4 h-4 text-slate-400" />
+            <Search className="w-4 h-4 text-muted-foreground" />
           </div>
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={t('dashboard.dictionary.placeholder', {
               defaultValue: 'Dictionary Search...',
             })}
-            className="w-full bg-slate-100 border border-slate-200 text-slate-900 text-sm rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm placeholder:text-slate-400 font-medium"
+            className="w-full bg-muted border border-border text-foreground text-sm rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-ring focus:bg-card transition-all shadow-sm placeholder:text-muted-foreground font-medium"
           />
         </form>
       </header>
 
       <main className="px-4 space-y-5 pt-5 animate-in fade-in duration-500">
         {/* 2. Learner Stats Card */}
-        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200/60 dark:shadow-slate-950/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div>
               <h2 className="font-bold text-lg">
                 {t('dashboard.summary.title', { defaultValue: "Today's Goal" })}
               </h2>
-              <p className="text-indigo-100 text-xs font-medium">
+              <p className="text-indigo-100 dark:text-indigo-200/80 text-xs font-medium">
                 {t('dashboard.mobile.keepMomentum')}
               </p>
             </div>
-            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10 flex items-center gap-1">
+            <div className="bg-card/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10 flex items-center gap-1">
               <Target className="w-3 h-3" />
               {Math.round(goalPercent)}%
             </div>
           </div>
           <div className="mb-4 relative z-10">
-            <div className="flex justify-between text-xs font-semibold text-indigo-100 mb-1.5">
+            <div className="flex justify-between text-xs font-semibold text-indigo-100 dark:text-indigo-200/80 mb-1.5">
               <span>
                 {stats.dailyMinutes} / {stats.dailyGoal} mins
               </span>
@@ -198,7 +202,7 @@ export const MobileDashboard: React.FC = () => {
             </div>
             <div className="h-2.5 bg-black/20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 rounded-full shadow-[0_0_10px_rgba(110,231,183,0.5)] transition-all duration-500"
+                className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 dark:from-emerald-400/75 dark:to-teal-400/75 rounded-full shadow-[0_0_10px_rgba(110,231,183,0.5)] dark:shadow-[0_0_8px_rgba(52,211,153,0.28)] transition-all duration-500"
                 style={{ width: `${goalPercent}%` }}
               ></div>
             </div>
@@ -226,24 +230,26 @@ export const MobileDashboard: React.FC = () => {
         </section>
 
         {/* 3. Textbook (Hero) */}
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => navigate('/courses')}
-          className="w-full text-left bg-sky-50 rounded-3xl p-5 border border-sky-100 relative overflow-hidden group active:scale-[0.98] transition-all duration-200"
+          className="w-full text-left bg-sky-50 dark:bg-sky-400/10 rounded-3xl p-5 border border-sky-100 dark:border-sky-300/20 relative overflow-hidden group active:scale-[0.98] transition-all duration-200"
         >
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-2">
-              <span className="bg-sky-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">
+              <span className="bg-sky-500 dark:bg-sky-400/30 text-white dark:text-sky-100 text-[10px] font-black px-2 py-0.5 rounded uppercase">
                 {t('dashboard.textbook.label', { defaultValue: 'Current Course' })}
               </span>
-              <span className="text-sky-600 font-bold text-xs bg-white px-2 py-0.5 rounded shadow-sm">
+              <span className="text-sky-600 dark:text-sky-200 font-bold text-xs bg-card dark:bg-sky-400/14 px-2 py-0.5 rounded shadow-sm">
                 {selectedLevel || t('dashboard.mobile.levelFallback', { defaultValue: 'Lvl 1' })}
               </span>
             </div>
-            <h3 className="text-2xl font-black text-slate-900 leading-tight mb-1 pr-12">
+            <h3 className="text-2xl font-black text-foreground leading-tight mb-1 pr-12">
               {instituteName}
             </h3>
-            <div className="mt-4 bg-white/60 backdrop-blur-sm p-3 rounded-xl border border-white/50">
-              <div className="flex justify-between text-xs font-bold text-sky-700 mb-1.5">
+            <div className="mt-4 bg-card/60 dark:bg-sky-400/10 backdrop-blur-sm p-3 rounded-xl border border-white/50 dark:border-sky-300/20">
+              <div className="flex justify-between text-xs font-bold text-sky-700 dark:text-sky-200 mb-1.5">
                 <span>
                   {t('dashboard.mobile.chapterLabel', {
                     unit: currentUnit,
@@ -252,14 +258,14 @@ export const MobileDashboard: React.FC = () => {
                 </span>
                 <span>{progressPercent}%</span>
               </div>
-              <div className="h-2 bg-sky-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-sky-200 dark:bg-sky-400/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-sky-500 transition-all duration-500"
+                  className="h-full bg-sky-500 dark:bg-sky-300/75 transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 ></div>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-sm font-bold text-slate-900">
+            <div className="mt-4 flex items-center gap-2 text-sm font-bold text-foreground">
               <span>{t('dashboard.common.continueLearning')}</span>
               <ArrowRight className="w-4 h-4" />
             </div>
@@ -269,23 +275,25 @@ export const MobileDashboard: React.FC = () => {
             className="absolute -right-6 -bottom-6 w-32 h-32 opacity-80 rotate-12"
             alt="book"
           />
-        </button>
+        </Button>
 
         {/* 4. Tools Grid */}
         <div className="grid grid-cols-2 gap-3">
           {/* Vocab */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/vocab-book')}
-            className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="bg-indigo-50 dark:bg-indigo-400/10 p-4 rounded-3xl border border-indigo-100 dark:border-indigo-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
             <div className="relative z-10">
-              <span className="bg-indigo-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+              <span className="bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.review')}
               </span>
-              <h4 className="font-black text-lg text-slate-900 mt-1">
+              <h4 className="font-black text-lg text-foreground mt-1">
                 {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
               </h4>
-              <p className="text-indigo-600 text-xs font-bold mt-0.5">
+              <p className="text-indigo-600 dark:text-indigo-200/90 text-xs font-bold mt-0.5">
                 {wordsToReview} {t('dashboard.mobile.due')}
               </p>
             </div>
@@ -294,22 +302,24 @@ export const MobileDashboard: React.FC = () => {
               className="absolute -right-3 -bottom-3 w-16 h-16 rotate-12"
               alt="vocab"
             />
-          </button>
+          </Button>
 
           {/* Notes */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/notebook')}
-            className="bg-orange-50 p-4 rounded-3xl border border-orange-100 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="bg-orange-50 dark:bg-orange-400/10 p-4 rounded-3xl border border-orange-100 dark:border-orange-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
             <div className="relative z-10">
-              <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+              <span className="bg-orange-500 dark:bg-orange-400/30 text-white dark:text-orange-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.notes')}
               </span>
-              <h4 className="font-black text-lg text-slate-900 mt-1">
+              <h4 className="font-black text-lg text-foreground mt-1">
                 {t('dashboard.mobile.mistakes')}
               </h4>
               <div className="flex gap-1 mt-1">
-                <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                <span className="bg-red-100 dark:bg-red-400/14 text-red-600 dark:text-red-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
                   {t('dashboard.mobile.check')}
                 </span>
               </div>
@@ -319,21 +329,23 @@ export const MobileDashboard: React.FC = () => {
               className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-6"
               alt="memo"
             />
-          </button>
+          </Button>
 
           {/* Typing */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/typing')}
-            className="bg-emerald-50 p-4 rounded-3xl border border-emerald-100 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="bg-emerald-50 dark:bg-emerald-400/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
             <div className="relative z-10">
-              <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+              <span className="bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.typing')}
               </span>
-              <h4 className="font-black text-lg text-slate-900 mt-1">
+              <h4 className="font-black text-lg text-foreground mt-1">
                 {t('dashboard.mobile.practice')}
               </h4>
-              <p className="text-emerald-700 text-xs font-bold mt-0.5">
+              <p className="text-emerald-700 dark:text-emerald-200/90 text-xs font-bold mt-0.5">
                 {t('dashboard.mobile.start')}
               </p>
             </div>
@@ -342,19 +354,21 @@ export const MobileDashboard: React.FC = () => {
               className="absolute -right-3 -bottom-3 w-16 h-16 rotate-6"
               alt="typing"
             />
-          </button>
+          </Button>
 
           {/* TOPIK */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/topik')}
-            className="bg-amber-50 p-4 rounded-3xl border border-amber-100 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="bg-amber-50 dark:bg-amber-400/10 p-4 rounded-3xl border border-amber-100 dark:border-amber-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
             <div className="relative z-10">
-              <span className="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+              <span className="bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.exam')}
               </span>
-              <h4 className="font-black text-lg text-slate-900 mt-1">{t('nav.topik')}</h4>
-              <p className="text-amber-700 text-xs font-bold mt-0.5">
+              <h4 className="font-black text-lg text-foreground mt-1">{t('nav.topik')}</h4>
+              <p className="text-amber-700 dark:text-amber-200/90 text-xs font-bold mt-0.5">
                 {t('dashboard.mobile.bestScoreLabel', {
                   score: topScore,
                   defaultValue: 'Best: {{score}}',
@@ -366,60 +380,64 @@ export const MobileDashboard: React.FC = () => {
               className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-12"
               alt="trophy"
             />
-          </button>
+          </Button>
         </div>
 
         {/* 5. Media Grid */}
         <div className="grid grid-cols-1 gap-3 pb-8">
           {/* Podcast */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/podcasts')}
-            className="bg-violet-50 p-4 rounded-3xl border border-violet-100 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
+            className="bg-violet-50 dark:bg-violet-400/10 p-4 rounded-3xl border border-violet-100 dark:border-violet-300/20 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-600">
+              <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-400/16 flex items-center justify-center text-violet-600 dark:text-violet-200">
                 <Headphones className="w-7 h-7" />
               </div>
               <div className="text-left">
-                <span className="bg-violet-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+                <span className="bg-violet-500 dark:bg-violet-400/30 text-white dark:text-violet-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                   {t('dashboard.mobile.listen')}
                 </span>
-                <h4 className="font-bold text-slate-900 text-lg leading-tight mt-1">
+                <h4 className="font-bold text-foreground text-lg leading-tight mt-1">
                   {t('dashboard.podcast.label')}
                 </h4>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[10px] font-bold text-violet-600">
+                  <span className="text-[10px] font-bold text-violet-600 dark:text-violet-200/90">
                     {t('dashboard.mobile.latestEpisodes')}
                   </span>
                 </div>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-400" />
-          </button>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Button>
 
           {/* Video */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/videos')}
-            className="bg-rose-50 p-4 rounded-3xl border border-rose-100 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
+            className="bg-rose-50 dark:bg-rose-400/10 p-4 rounded-3xl border border-rose-100 dark:border-rose-300/20 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600">
+              <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-400/16 flex items-center justify-center text-rose-600 dark:text-rose-200">
                 <Tv className="w-7 h-7" />
               </div>
               <div className="text-left">
-                <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+                <span className="bg-rose-500 dark:bg-rose-400/30 text-white dark:text-rose-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                   {t('dashboard.mobile.watch')}
                 </span>
-                <h4 className="font-bold text-slate-900 text-lg leading-tight mt-1">
+                <h4 className="font-bold text-foreground text-lg leading-tight mt-1">
                   {t('dashboard.mobile.videoLibrary')}
                 </h4>
-                <span className="text-[10px] font-bold text-rose-600 mt-1 block">
+                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-200/90 mt-1 block">
                   {t('dashboard.mobile.immersion')}
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-400" />
-          </button>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Button>
         </div>
       </main>
     </div>

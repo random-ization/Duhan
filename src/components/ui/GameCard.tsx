@@ -18,7 +18,7 @@ export function GameCard({ children, className, ...props }: GameCardProps) {
       whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        'bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-pop transition-all cursor-pointer relative overflow-hidden',
+        'bg-card rounded-[2.5rem] border-2 border-foreground shadow-pop transition-all cursor-pointer relative overflow-hidden',
         className
       )}
       {...props}

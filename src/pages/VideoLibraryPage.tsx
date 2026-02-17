@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VideoLibrarySkeleton } from '../components/common';
 import { qRef } from '../utils/convexRefs';
+import { Button } from '../components/ui';
 
 type ConvexVideoItem = {
   _id: string;
@@ -63,13 +64,13 @@ const VideoLibraryPage: React.FC = () => {
   const getLevelStyle = (level: string) => {
     switch (level) {
       case 'Beginner':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25';
       case 'Intermediate':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-400/12 dark:text-yellow-200 dark:border-yellow-300/25';
       case 'Advanced':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-400/12 dark:text-red-200 dark:border-red-300/25';
       default:
-        return 'bg-zinc-100 text-zinc-700 border-zinc-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -101,11 +102,11 @@ const VideoLibraryPage: React.FC = () => {
     if (videos.length === 0) {
       return (
         <div className="text-center py-20">
-          <Video className="w-20 h-20 mx-auto mb-4 text-zinc-300" />
-          <p className="text-xl font-bold text-zinc-400">
+          <Video className="w-20 h-20 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-xl font-bold text-muted-foreground">
             {labels.dashboard?.video?.noVideos || 'No Videos'}
           </p>
-          <p className="text-zinc-400 mt-2">
+          <p className="text-muted-foreground mt-2">
             {activeLevel
               ? labels.dashboard?.video?.noVideosLevel || 'No videos in this level'
               : labels.dashboard?.video?.preparing || 'Content is being prepared...'}
@@ -117,13 +118,15 @@ const VideoLibraryPage: React.FC = () => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {videos.map(video => (
-          <button
+          <Button
             key={video.id}
             onClick={() => navigate(`/video/${video.id}`)}
-            className="bg-[#FDFBF7] rounded-2xl border-2 border-zinc-900 overflow-hidden cursor-pointer hover:shadow-[6px_6px_0px_0px_#18181B] transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-left w-full p-0 block"
+            variant="ghost"
+            size="auto"
+            className="bg-[#FDFBF7] dark:bg-card rounded-2xl border-2 border-foreground dark:border-border overflow-hidden cursor-pointer hover:shadow-[6px_6px_0px_0px_#18181B] dark:hover:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.28)] transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-left w-full p-0 block !shadow-none !whitespace-normal"
           >
             {/* Thumbnail */}
-            <div className="aspect-video bg-zinc-200 relative overflow-hidden">
+            <div className="aspect-video bg-muted relative overflow-hidden">
               {video.thumbnailUrl ? (
                 <img
                   src={video.thumbnailUrl}
@@ -131,15 +134,15 @@ const VideoLibraryPage: React.FC = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                  <Video className="w-16 h-16 text-indigo-300" />
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-400/15 dark:to-purple-400/15">
+                  <Video className="w-16 h-16 text-indigo-300 dark:text-indigo-200" />
                 </div>
               )}
 
               {/* Play Button Overlay */}
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
-                  <Play className="w-7 h-7 text-indigo-600 ml-1" />
+                <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
+                  <Play className="w-7 h-7 text-indigo-600 dark:text-indigo-300 ml-1" />
                 </div>
               </div>
 
@@ -158,13 +161,15 @@ const VideoLibraryPage: React.FC = () => {
 
             {/* Content */}
             <div className="p-5">
-              <h3 className="font-black text-lg text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+              <h3 className="font-black text-lg text-foreground line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                 {video.title}
               </h3>
               {video.description && (
-                <p className="text-sm text-zinc-500 mt-2 line-clamp-2">{video.description}</p>
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                  {video.description}
+                </p>
               )}
-              <div className="flex items-center gap-4 mt-4 text-sm text-zinc-400">
+              <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
                   {(labels.dashboard?.video?.views || '{count} views').replace(
@@ -178,31 +183,24 @@ const VideoLibraryPage: React.FC = () => {
                 </span>
               </div>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     );
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundColor: '#f4f4f5',
-      }}
-    >
+    <div className="min-h-screen bg-background bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-background dark:bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] dark:bg-[length:20px_20px]">
       {/* Header */}
-      <div className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-8">
+      <div className="bg-[#FDFBF7] dark:bg-card/95 border-b-2 border-foreground dark:border-border px-6 py-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-black text-zinc-900 flex items-center gap-3">
-            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center border-2 border-zinc-900">
-              <Video className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-3xl font-black text-foreground flex items-center gap-3">
+            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-400/15 rounded-2xl flex items-center justify-center border-2 border-foreground dark:border-border">
+              <Video className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
             </div>
             {labels.dashboard?.video?.title || 'Video Center'}
           </h1>
-          <p className="text-zinc-500 mt-2 ml-15">
+          <p className="text-muted-foreground mt-2 ml-15">
             {labels.dashboard?.video?.subtitle ||
               'Immersive Korean video learning with subtitles and lookup.'}
           </p>
@@ -213,18 +211,20 @@ const VideoLibraryPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-6 py-6">
         <div className="flex flex-wrap gap-2">
           {LEVELS_KEYS.map(level => (
-            <button
+            <Button
               key={level.key}
               onClick={() => setActiveLevel(level.key)}
+              variant="ghost"
+              size="auto"
               className={`px-5 py-2.5 rounded-xl font-bold transition-all border-2 ${
                 activeLevel === level.key
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
-                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300'
+                  ? 'bg-indigo-600 text-primary-foreground border-indigo-600 shadow-lg dark:bg-indigo-400/80 dark:border-indigo-300/35'
+                  : 'bg-card text-muted-foreground border-border hover:border-indigo-300 dark:hover:border-indigo-300/35'
               }`}
             >
               {(labels.dashboard?.video as Record<string, string> | undefined)?.[level.labelKey] ||
                 level.labelKey}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

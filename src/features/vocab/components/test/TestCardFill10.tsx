@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, RefreshCw } from 'lucide-react';
 import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
+import { Button } from '../../../../components/ui';
 
 type Pair = { korean: string; native: string };
 
@@ -67,27 +68,29 @@ const FillSlot = ({
       ? ' bg-green-50 border-green-300 text-green-800'
       : ' bg-red-50 border-red-300 text-red-800';
   } else if (val) {
-    className += ' bg-slate-50 border-slate-300 text-slate-900 hover:border-slate-400';
+    className += ' bg-muted border-border text-foreground hover:border-border';
   } else if (isTarget) {
     className += ' bg-blue-50 border-blue-300 text-blue-800';
   } else {
-    className += ' bg-white border-slate-200 text-slate-400 hover:border-slate-400';
+    className += ' bg-card border-border text-muted-foreground hover:border-border';
   }
 
   return (
     <div className="w-full">
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         type="button"
         disabled={isReview}
         onClick={() => (val ? onClear(idx) : onSelect(idx))}
         className={className}
       >
         {label}
-      </button>
+      </Button>
       {isReview && !isCorrect ? (
-        <div className="mt-1 text-xs text-slate-500 font-bold">
+        <div className="mt-1 text-xs text-muted-foreground font-bold">
           {labels.vocabTest?.answerLabel || 'Answer: '}
-          <span className="font-black text-slate-900">{answer}</span>
+          <span className="font-black text-foreground">{answer}</span>
         </div>
       ) : null}
     </div>
@@ -193,31 +196,35 @@ export default function TestCardFill10({
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-xs font-black text-slate-400">
+        <div className="text-xs font-black text-muted-foreground">
           {labels.vocabTest?.pickFromList || 'Pick from the list below'}
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={toggleDirection}
             disabled={isReview}
-            className="px-3 py-2 rounded-xl bg-white border-2 border-slate-200 font-black text-sm text-slate-700 disabled:opacity-50"
+            className="px-3 py-2 rounded-xl bg-card border-2 border-border font-black text-sm text-muted-foreground disabled:opacity-50"
           >
             {switchLabel}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={reset}
             disabled={isReview}
-            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-50"
+            className="w-10 h-10 rounded-xl bg-muted hover:bg-muted flex items-center justify-center disabled:opacity-50"
             aria-label={labels.vocabTest?.reset || 'Reset'}
           >
-            <RefreshCw className="w-5 h-5 text-slate-700" />
-          </button>
+            <RefreshCw className="w-5 h-5 text-muted-foreground" />
+          </Button>
         </div>
       </div>
 
-      <div className="mt-4 bg-white rounded-3xl border-2 border-slate-200 overflow-hidden">
+      <div className="mt-4 bg-card rounded-3xl border-2 border-border overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_1px_1fr]">
           <div className="p-6 sm:p-8 space-y-3">
             {items.map((it, idx) => (
@@ -238,12 +245,12 @@ export default function TestCardFill10({
             ))}
           </div>
 
-          <div className="hidden sm:block bg-slate-200" />
+          <div className="hidden sm:block bg-muted" />
 
           <div className="p-6 sm:p-8 space-y-3">
             {derived.prompts.map((p, idx) => (
               <div key={`prompt-${p}-${idx}`} className="h-14 flex items-center">
-                <div className="text-xl font-black text-slate-900 truncate">{p}</div>
+                <div className="text-xl font-black text-foreground truncate">{p}</div>
               </div>
             ))}
           </div>
@@ -254,27 +261,31 @@ export default function TestCardFill10({
         <>
           <div className="mt-6 flex flex-wrap gap-2">
             {optionPool.map(opt => (
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 key={opt}
                 type="button"
                 onClick={() => takeOption(opt)}
-                className="px-4 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-slate-900 hover:border-slate-400"
+                className="px-4 py-3 rounded-2xl bg-card border-2 border-border font-black text-foreground hover:border-border"
               >
                 {opt}
-              </button>
+              </Button>
             ))}
           </div>
 
           <div className="mt-6 flex justify-end">
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={submit}
               disabled={!isComplete}
-              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-primary text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-5 h-5" />
               {labels.vocabTest?.confirm || 'Confirm'}
-            </button>
+            </Button>
           </div>
         </>
       )}

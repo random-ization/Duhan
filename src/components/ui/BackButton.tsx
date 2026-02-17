@@ -31,7 +31,7 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
       onClick={handleClick}
       className={`
         w-12 h-12 flex items-center justify-center
-        bg-white border-2 border-slate-900 rounded-xl
+        bg-card border-2 border-foreground rounded-xl
         shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
         hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]
         hover:translate-x-[2px] hover:translate-y-[2px]
@@ -41,7 +41,7 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
       `}
       aria-label="返回上一页"
     >
-      <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+      <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} />
     </Button>
   );
 };

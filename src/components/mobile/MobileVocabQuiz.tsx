@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Settings, Check, X, ChevronRight, HelpCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui';
+import { Input } from '../ui';
 import type {
   QuizQuestion,
   OptionState,
@@ -92,29 +94,31 @@ export function MobileVocabQuiz({
       case 'selected':
         return cn(base, 'bg-indigo-100 border-indigo-500 text-indigo-800');
       default:
-        return cn(base, 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50');
+        return cn(base, 'bg-card border-border text-muted-foreground hover:bg-muted');
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-muted">
       {/* Header / Progress */}
       <div className="px-6 pt-6 pb-2">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-slate-400 font-mono tracking-wider">
+          <span className="text-xs font-bold text-muted-foreground font-mono tracking-wider">
             {questionIndex + 1} / {totalQuestions}
           </span>
           {!settingsLocked && (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={() => setShowSettings(true)}
-              className="p-2 -mr-2 text-slate-400 hover:text-slate-600"
+              className="p-2 -mr-2 text-muted-foreground hover:text-muted-foreground"
             >
               <Settings size={18} />
-            </button>
+            </Button>
           )}
         </div>
         {/* Smooth Progress Bar */}
-        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div
             className="h-full bg-lime-500 transition-all duration-500 ease-out rounded-full"
             style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
@@ -126,10 +130,10 @@ export function MobileVocabQuiz({
       <div className="flex-1 flex flex-col px-6 py-4 overflow-y-auto">
         {/* Question Card */}
         <div className="flex-1 flex flex-col items-center justify-center min-h-[160px] max-h-[220px] mb-6">
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4">
             {promptText}
           </p>
-          <h1 className="text-4xl sm:text-5xl font-black text-slate-900 text-center leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-black text-foreground text-center leading-tight">
             {questionText}
           </h1>
         </div>
@@ -140,15 +144,15 @@ export function MobileVocabQuiz({
             <div className="space-y-4">
               <div
                 className={cn(
-                  'relative bg-white rounded-2xl border-2 p-4 transition-colors',
+                  'relative bg-card rounded-2xl border-2 p-4 transition-colors',
                   writingState === 'CORRECT'
                     ? 'border-lime-500 bg-lime-50'
                     : writingState === 'WRONG'
                       ? 'border-rose-500 bg-rose-50'
-                      : 'border-slate-200 focus-within:border-indigo-500 shadow-sm'
+                      : 'border-border focus-within:border-indigo-500 shadow-sm'
                 )}
               >
-                <input
+                <Input
                   ref={inputRef as any}
                   type="text"
                   value={writingInput}
@@ -156,7 +160,7 @@ export function MobileVocabQuiz({
                   onKeyDown={e =>
                     e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()
                   }
-                  className="w-full text-2xl font-bold text-center bg-transparent outline-none text-slate-800 placeholder:text-slate-300"
+                  className="w-full text-2xl font-bold text-center bg-transparent outline-none text-muted-foreground placeholder:text-muted-foreground"
                   placeholder={isWriting ? 'Type answer...' : ''}
                   disabled={writingState !== 'INPUT'}
                   autoCapitalize="none"
@@ -165,13 +169,15 @@ export function MobileVocabQuiz({
               </div>
 
               {writingState === 'INPUT' && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={handleWritingSubmit}
                   disabled={!writingInput.trim()}
-                  className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+                  className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
                 >
                   {labels.dashboard?.quiz?.submit || 'Check'}
-                </button>
+                </Button>
               )}
 
               {/* Feedback for Writing */}
@@ -186,8 +192,8 @@ export function MobileVocabQuiz({
                   <p className="text-rose-600 font-bold mb-1 flex items-center justify-center gap-2">
                     <X size={20} /> Wrong
                   </p>
-                  <p className="text-slate-500 text-sm">Correct answer:</p>
-                  <p className="text-slate-900 font-black text-lg">
+                  <p className="text-muted-foreground text-sm">Correct answer:</p>
+                  <p className="text-foreground font-black text-lg">
                     {currentQuestion.direction === 'KR_TO_NATIVE'
                       ? currentQuestion.targetWord.english
                       : currentQuestion.targetWord.korean}
@@ -203,7 +209,9 @@ export function MobileVocabQuiz({
                   currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
 
                 return (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     key={`${option.id}-${idx}`}
                     onClick={() => handleOptionClick(idx)}
                     className={getOptionClass(state)}
@@ -212,7 +220,7 @@ export function MobileVocabQuiz({
                     <span>{text}</span>
                     {state === 'correct' && <Check className="text-lime-600" size={24} />}
                     {state === 'wrong' && <X className="text-rose-600" size={24} />}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -220,25 +228,29 @@ export function MobileVocabQuiz({
 
           {/* I don't know button (Learn mode only) */}
           {isLearn && !isLocked && !isWriting && (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={handleDontKnow}
-              className="w-full mt-4 py-3 text-slate-400 font-bold text-sm hover:text-slate-600 flex items-center justify-center gap-2"
+              className="w-full mt-4 py-3 text-muted-foreground font-bold text-sm hover:text-muted-foreground flex items-center justify-center gap-2"
             >
               <HelpCircle size={16} />
               <span>I&apos;t know</span>
-            </button>
+            </Button>
           )}
 
           {/* Continue / Next Button (if Pending Advance) */}
           {pendingAdvance && (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 pb-safe shadow-lg animate-in slide-in-from-bottom-full z-50">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border pb-safe shadow-lg animate-in slide-in-from-bottom-full z-50">
               <div className="flex items-center justify-between mb-3 px-2">
                 <div>
-                  <p className="font-black text-slate-800">Review this later</p>
-                  <p className="text-xs text-slate-400">We&apos;ll ask you again soon.</p>
+                  <p className="font-black text-muted-foreground">Review this later</p>
+                  <p className="text-xs text-muted-foreground">We&apos;ll ask you again soon.</p>
                 </div>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={() => {
                   setPendingAdvanceReason(null);
                   nextQuestionRef.current?.();
@@ -247,7 +259,7 @@ export function MobileVocabQuiz({
               >
                 <span>Continue</span>
                 <ChevronRight size={20} />
-              </button>
+              </Button>
             </div>
           )}
         </div>

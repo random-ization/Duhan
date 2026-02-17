@@ -14,10 +14,12 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, checked = false, onCheckedChange, disabled, ...props }, ref) => {
     return (
       <button
+        data-slot="switch"
         ref={ref}
         type="button"
         role="switch"
         aria-checked={checked}
+        data-disabled={disabled ? '' : undefined}
         data-state={checked ? 'checked' : 'unchecked'}
         disabled={disabled}
         onClick={event => {
@@ -26,16 +28,17 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           onCheckedChange?.(!checked);
         }}
         className={cn(
-          'relative inline-flex h-6 w-11 items-center rounded-full border border-transparent transition-colors',
-          checked ? 'bg-indigo-600' : 'bg-slate-300',
+          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          checked ? 'bg-primary' : 'bg-muted',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           className
         )}
         {...props}
       >
         <span
+          data-slot="switch-thumb"
           className={cn(
-            'inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform',
+            'inline-block h-4 w-4 transform rounded-full bg-card shadow-sm transition-transform',
             checked ? 'translate-x-5' : 'translate-x-1'
           )}
         />

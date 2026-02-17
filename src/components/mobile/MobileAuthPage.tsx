@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthActions } from '@convex-dev/auth/react';
-import {
-  Mail,
-  Lock,
-  User,
-  ArrowRight,
-  HelpCircle,
-  Loader2,
-  Sparkles,
-  AlertCircle,
-} from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, HelpCircle, Sparkles, AlertCircle } from 'lucide-react';
 import { LocalizedLink } from '../../components/LocalizedLink';
 import { getLocalizedPath, useCurrentLanguage } from '../../hooks/useLocalizedNavigate';
+import { Button } from '../ui';
+import { Input } from '../ui';
 
 export const MobileAuthPage: React.FC = () => {
   const { t } = useTranslation();
@@ -81,8 +74,8 @@ export const MobileAuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center px-4 py-8">
-      <div className="max-w-md mx-auto w-full bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
+    <div className="min-h-screen bg-muted flex flex-col justify-center px-4 py-8">
+      <div className="max-w-md mx-auto w-full bg-card rounded-3xl border border-border shadow-xl shadow-slate-200/50 overflow-hidden">
         {/* Header / Brand Area */}
         <div className="bg-indigo-600 p-8 text-center relative overflow-hidden">
           <div
@@ -94,8 +87,8 @@ export const MobileAuthPage: React.FC = () => {
           ></div>
 
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-white rounded-2xl mx-auto mb-4 shadow-lg flex items-center justify-center">
-              {/* <span className="font-black text-2xl text-slate-900">HG</span> */}
+            <div className="w-16 h-16 bg-card rounded-2xl mx-auto mb-4 shadow-lg flex items-center justify-center">
+              {/* <span className="font-black text-2xl text-foreground">HG</span> */}
               <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-2xl font-black text-white mb-1">{t('auth.brand')}</h1>
@@ -106,7 +99,7 @@ export const MobileAuthPage: React.FC = () => {
         {/* Content */}
         <div className="p-6">
           {/* Toggle Title */}
-          <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
             {isLogin ? t('auth.welcomeBack') : t('auth.createCharacter')}
             <Sparkles className="w-4 h-4 text-yellow-400 fill-current" />
           </h2>
@@ -123,11 +116,11 @@ export const MobileAuthPage: React.FC = () => {
             {/* Name Field (Hidden on Login, Shown on Register) */}
             {!isLogin && (
               <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                <input
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                <Input
                   type="text"
                   placeholder={t('auth.placeholderName')}
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 pl-12 pr-4 font-bold text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400"
+                  className="w-full bg-muted border-2 border-border rounded-xl py-3 pl-12 pr-4 font-bold text-foreground focus:outline-none focus:border-indigo-500 focus:bg-card transition-all placeholder:text-muted-foreground"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   required={!isLogin}
@@ -137,11 +130,11 @@ export const MobileAuthPage: React.FC = () => {
 
             {/* Email */}
             <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+              <Input
                 type="email"
                 placeholder={t('auth.placeholderEmail')}
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 pl-12 pr-4 font-bold text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400"
+                className="w-full bg-muted border-2 border-border rounded-xl py-3 pl-12 pr-4 font-bold text-foreground focus:outline-none focus:border-indigo-500 focus:bg-card transition-all placeholder:text-muted-foreground"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                 required
@@ -150,11 +143,11 @@ export const MobileAuthPage: React.FC = () => {
 
             {/* Password */}
             <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+              <Input
                 type="password"
                 placeholder={t('auth.placeholderPassword')}
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 pl-12 pr-4 font-bold text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400"
+                className="w-full bg-muted border-2 border-border rounded-xl py-3 pl-12 pr-4 font-bold text-foreground focus:outline-none focus:border-indigo-500 focus:bg-card transition-all placeholder:text-muted-foreground"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -164,47 +157,54 @@ export const MobileAuthPage: React.FC = () => {
             {/* Forgot Password */}
             {isLogin && (
               <div className="flex justify-end">
-                <LocalizedLink
-                  to="/forgot-password"
-                  className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors"
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="text-xs font-bold text-muted-foreground hover:text-indigo-600 inline-flex items-center gap-1 transition-colors"
                 >
-                  <HelpCircle className="w-3 h-3" /> {t('auth.forgotPassword')}
-                </LocalizedLink>
+                  <LocalizedLink to="/forgot-password">
+                    <HelpCircle className="w-3 h-3" /> {t('auth.forgotPassword')}
+                  </LocalizedLink>
+                </Button>
               </div>
             )}
 
             {/* Submit */}
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               type="submit"
-              disabled={loading}
-              className="w-full bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-slate-950 hover:border-b-0 hover:translate-y-1 hover:mb-1 transition-all shadow-xl active:shadow-none active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+              loading={loading}
+              loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
+              className="w-full bg-primary text-white font-black py-4 rounded-xl border-b-4 border-border hover:border-b-0 hover:translate-y-1 hover:mb-1 transition-all shadow-xl active:shadow-none active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <span>{isLogin ? t('auth.loginButton') : t('auth.signupButton')}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+              <span>{isLogin ? t('auth.loginButton') : t('auth.signupButton')}</span>
+              <ArrowRight className="w-5 h-5" />
+            </Button>
           </form>
 
           {/* Divider */}
           <div className="flex items-center gap-4 my-8">
-            <div className="h-px bg-slate-200 flex-1"></div>
-            <span className="text-xs font-bold text-slate-400 uppercase">
+            <div className="h-px bg-muted flex-1"></div>
+            <span className="text-xs font-bold text-muted-foreground uppercase">
               {t('auth.orContinue')}
             </span>
-            <div className="h-px bg-slate-200 flex-1"></div>
+            <div className="h-px bg-muted flex-1"></div>
           </div>
 
           {/* Socials */}
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={handleGoogleLogin}
               type="button"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              disabled={loading}
+              loading={loading}
+              loadingText={t('auth.social.google')}
+              loadingIconClassName="w-4 h-4"
+              className="flex items-center justify-center gap-2 py-3 border-2 border-border rounded-xl font-bold text-muted-foreground hover:bg-muted transition-colors"
             >
               <img
                 src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -212,33 +212,42 @@ export const MobileAuthPage: React.FC = () => {
                 alt="Google"
               />
               <span className="text-sm">{t('auth.social.google')}</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={handleKakaoLogin}
               type="button"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              disabled={loading}
+              loading={loading}
+              loadingText={t('auth.social.kakao')}
+              loadingIconClassName="w-4 h-4"
+              className="flex items-center justify-center gap-2 py-3 border-2 border-border rounded-xl font-bold text-muted-foreground hover:bg-muted transition-colors"
             >
-              <span className="bg-[#FEE500] text-black font-black text-[10px] w-5 h-5 rounded flex items-center justify-center">
+              <span className="bg-[#FEE500] text-foreground font-black text-[10px] w-5 h-5 rounded flex items-center justify-center">
                 K
               </span>
               <span className="text-sm">{t('auth.social.kakao')}</span>
-            </button>
+            </Button>
           </div>
 
           {/* Toggle Mode */}
-          <div className="mt-8 text-center text-xs font-bold text-slate-400">
+          <div className="mt-8 text-center text-xs font-bold text-muted-foreground">
             {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={() => setIsLogin(!isLogin)}
+              disabled={loading}
               className="text-indigo-600 hover:underline uppercase ml-1"
             >
               {isLogin ? t('auth.registerAction') : t('auth.loginAction')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
-      <p className="text-center text-slate-400 text-xs font-bold mt-8">
+      <p className="text-center text-muted-foreground text-xs font-bold mt-8">
         &copy; {new Date().getFullYear()} {t('auth.brand')} All rights reserved.
       </p>
     </div>

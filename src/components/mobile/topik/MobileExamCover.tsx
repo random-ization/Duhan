@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 import { useLayout } from '../../../contexts/LayoutContext';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Info, AlertCircle, Headphones, BookOpen } from 'lucide-react';
+import { Button } from '../../ui';
 
 interface MobileExamCoverProps {
   exam: TopikExam;
@@ -40,7 +41,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
   // bgPattern removed as unused
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 relative flex flex-col">
+    <div className="min-h-[100dvh] bg-muted relative flex flex-col">
       {/* 1. Hero Section */}
       <div
         className={clsx(
@@ -49,17 +50,19 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
         )}
       >
         {/* Abstract Shapes */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-card/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
 
         {/* Header Nav */}
         <div className="pt-safe px-4 h-16 flex items-center">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md active:scale-95 transition-transform"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-card/20 text-white backdrop-blur-md active:scale-95 transition-transform"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div className="flex-1 text-center pr-10">
             <img
               src="/logo_BnW.svg"
@@ -72,7 +75,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 
         {/* Main Content */}
         <div className="px-8 mt-6 text-center text-white">
-          <div className="w-20 h-20 mx-auto bg-white/20 rounded-3xl flex items-center justify-center backdrop-blur-xl shadow-lg mb-6 ring-4 ring-white/10">
+          <div className="w-20 h-20 mx-auto bg-card/20 rounded-3xl flex items-center justify-center backdrop-blur-xl shadow-lg mb-6 ring-4 ring-white/10">
             <Icon className="w-10 h-10 text-white" />
           </div>
 
@@ -81,7 +84,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
             <div className="text-2xl font-bold opacity-90 mt-1">{examTypeLabel}</div>
           </h1>
 
-          <p className="text-white/80 font-medium bg-white/10 inline-block px-4 py-1.5 rounded-full text-sm backdrop-blur-sm border border-white/10 mt-2">
+          <p className="text-white/80 font-medium bg-card/10 inline-block px-4 py-1.5 rounded-full text-sm backdrop-blur-sm border border-white/10 mt-2">
             {t('dashboard.topik.mobile.cover.roundMock', {
               round: exam.round,
               defaultValue: 'Round {{round}} Past Exam',
@@ -90,7 +93,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-2 mt-10">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+            <div className="bg-card/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
                 {t('dashboard.topik.mobile.cover.time', { defaultValue: 'Time' })}
               </div>
@@ -104,13 +107,13 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
                 </span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+            <div className="bg-card/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
                 {t('dashboard.topik.mobile.cover.items', { defaultValue: 'Items' })}
               </div>
               <div className="text-xl font-black">{exam.questions.length || 50}</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+            <div className="bg-card/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
                 {t('dashboard.topik.mobile.cover.score', { defaultValue: 'Score' })}
               </div>
@@ -122,9 +125,9 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 
       {/* 2. Instructions Section */}
       <div className="flex-1 px-5 -mt-6 z-20 pb-28">
-        <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
-          <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <Info className="w-5 h-5 text-slate-400" />
+        <div className="bg-card rounded-3xl shadow-xl p-6 border border-border">
+          <h2 className="text-lg font-bold text-muted-foreground mb-6 flex items-center gap-2">
+            <Info className="w-5 h-5 text-muted-foreground" />
             {t('dashboard.topik.mobile.cover.noticeTitle', {
               defaultValue: 'Before You Start',
             })}
@@ -132,16 +135,16 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 
           <div className="space-y-6">
             <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-bold flex items-center justify-center shrink-0 text-sm border-2 border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border-2 border-border">
                 1
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 mb-1">
+                <h3 className="font-bold text-muted-foreground mb-1">
                   {t('dashboard.topik.mobile.cover.simulationTitle', {
                     defaultValue: 'Full simulation mode',
                   })}
                 </h3>
-                <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                <p className="text-sm text-muted-foreground leading-relaxed font-medium">
                   {t('dashboard.topik.mobile.cover.simulationDesc', {
                     defaultValue:
                       'Do not leave the page during the exam. The paper will auto-submit when time runs out.',
@@ -151,16 +154,16 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
             </div>
 
             <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-bold flex items-center justify-center shrink-0 text-sm border-2 border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border-2 border-border">
                 2
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 mb-1">
+                <h3 className="font-bold text-muted-foreground mb-1">
                   {t('dashboard.topik.mobile.cover.submitTitle', {
                     defaultValue: 'Answer submission',
                   })}
                 </h3>
-                <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                <p className="text-sm text-muted-foreground leading-relaxed font-medium">
                   {t('dashboard.topik.mobile.cover.submitDesc', {
                     defaultValue:
                       'All questions are single-choice. You can view your score and AI analysis after submission.',
@@ -193,8 +196,10 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
       </div>
 
       {/* 3. Sticky Start Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] z-30 shadow-nav-up">
-        <button
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] z-30 shadow-nav-up">
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onStart}
           className={clsx(
             'w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2',
@@ -205,7 +210,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
         >
           <Play className="w-5 h-5 fill-current" />
           {t('dashboard.topik.mobile.cover.startExam', { defaultValue: 'Start Exam' })}
-        </button>
+        </Button>
       </div>
     </div>
   );

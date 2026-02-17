@@ -14,6 +14,7 @@ import { qRef } from '../utils/convexRefs';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTopikPage from '../components/mobile/MobileTopikPage';
+import { Button } from '../components/ui';
 
 const TopikPage: React.FC = () => {
   const { user, language, canAccessContent, setShowUpgradePrompt } = useAuth();
@@ -89,9 +90,9 @@ const TopikPage: React.FC = () => {
   // Desktop Lobby View
   return (
     <div
-      className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans pb-32"
+      className="min-h-screen bg-background p-6 md:p-12 font-sans pb-32"
       style={{
-        backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+        backgroundImage: 'radial-gradient(hsl(var(--border) / 0.75) 1.5px, transparent 1.5px)',
         backgroundSize: '24px 24px',
       }}
     >
@@ -99,70 +100,82 @@ const TopikPage: React.FC = () => {
         <div className="flex items-center gap-4 mb-4">
           <BackButton onClick={() => navigate('/dashboard')} />
           <div>
-            <h2 className="text-4xl font-black font-display text-slate-900 tracking-tight">
+            <h2 className="text-4xl font-black font-display text-foreground tracking-tight">
               {t('dashboard.topik.examCenter')}
             </h2>
-            <p className="text-slate-500 font-bold">{t('dashboard.topik.realExam')}</p>
+            <p className="text-muted-foreground font-bold">{t('dashboard.topik.realExam')}</p>
           </div>
           <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border-2 border-slate-900 shadow-pop w-fit">
-          <button
+        <div className="flex items-center gap-2 bg-card p-1.5 rounded-xl border-2 border-foreground shadow-pop w-fit">
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('ALL')}
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all',
               filterType === 'ALL'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
           >
             {t('dashboard.topik.all')}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('READING')}
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
               filterType === 'READING'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+                ? 'bg-blue-600 dark:bg-blue-500 text-white dark:text-primary-foreground'
+                : 'text-muted-foreground hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/15'
             )}
           >
             <BookOpen size={16} /> {t('dashboard.topik.reading')}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setFilterType('LISTENING')}
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
               filterType === 'LISTENING'
-                ? 'bg-violet-600 text-white'
-                : 'text-slate-500 hover:text-violet-600 hover:bg-violet-50'
+                ? 'bg-violet-600 dark:bg-violet-500 text-white dark:text-primary-foreground'
+                : 'text-muted-foreground hover:text-violet-600 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/15'
             )}
           >
             <Headphones size={16} /> {t('dashboard.topik.listening')}
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Main Exam Card */}
           <div className="md:col-span-2 space-y-6">
-            <h3 className="font-black text-xl flex items-center gap-2 text-slate-900">
+            <h3 className="font-black text-xl flex items-center gap-2 text-foreground">
               <Target size={20} /> {t('dashboard.topik.recommended')}
             </h3>
 
             {filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredExams.map(exam => (
-                  <button
+                  <Button
                     key={exam.id}
+                    type="button"
+                    variant="ghost"
+                    size="auto"
                     onClick={() => navigate(`/topik/${exam.id}`)}
-                    className="bg-white rounded-2xl p-0 border-2 border-slate-900 shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
+                    className="!flex !items-stretch !justify-start bg-card rounded-2xl p-0 border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
                   >
                     <div
                       className={clsx(
                         'p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden',
-                        exam.type === 'READING' ? 'bg-slate-900' : 'bg-blue-800'
+                        exam.type === 'READING' ? 'bg-primary' : 'bg-blue-800 dark:bg-blue-700'
                       )}
                     >
                       <div
@@ -172,7 +185,7 @@ const TopikPage: React.FC = () => {
                             'repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 2px, transparent 10px)',
                         }}
                       ></div>
-                      <div className="text-3xl font-black text-yellow-400 font-display z-10">
+                      <div className="text-3xl font-black text-yellow-400 dark:text-amber-300 font-display z-10">
                         {exam.round}
                       </div>
                       <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
@@ -184,15 +197,15 @@ const TopikPage: React.FC = () => {
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-black text-lg text-slate-900 group-hover:text-indigo-600 transition">
+                          <h4 className="font-black text-lg text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition">
                             {exam.title}
                           </h4>
                           <span
                             className={clsx(
                               'text-[10px] font-black px-2 py-0.5 rounded border',
                               exam.type === 'READING'
-                                ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                : 'bg-rose-100 text-rose-600 border-rose-200'
+                                ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-400/40'
+                                : 'bg-rose-100 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/40'
                             )}
                           >
                             {exam.type === 'READING'
@@ -200,31 +213,31 @@ const TopikPage: React.FC = () => {
                               : t('dashboard.topik.listening')}
                           </span>
                         </div>
-                        <p className="text-slate-500 text-xs font-bold">
+                        <p className="text-muted-foreground text-xs font-bold">
                           {t('topikLobby.roundTitle', { round: exam.round })}
                         </p>
                         <div className="flex gap-4 mt-2">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
                             <Clock size={12} />{' '}
                             {t('topikLobby.timeLimit', { count: exam.timeLimit })}
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 flex justify-between items-center border-t border-slate-100 pt-3">
-                        <span className="text-[10px] font-bold text-slate-400">
+                      <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
+                        <span className="text-[10px] font-bold text-muted-foreground">
                           {t('dashboard.topik.clickStart')}
                         </span>
-                        <button className="bg-slate-900 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition flex items-center gap-1">
+                        <span className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
                           {t('dashboard.topik.startNow')} <ArrowRight size={12} />
-                        </button>
+                        </span>
                       </div>
                     </div>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-[2rem] p-8 border-2 border-slate-200 text-center">
-                <p className="text-slate-500 font-bold">{t('topikLobby.noExams')}</p>
+              <div className="bg-card rounded-[2rem] p-8 border-2 border-border text-center">
+                <p className="text-muted-foreground font-bold">{t('topikLobby.noExams')}</p>
               </div>
             )}
           </div>
@@ -232,11 +245,11 @@ const TopikPage: React.FC = () => {
           {/* Sidebar: Archive */}
           {/* Sidebar: Archive */}
           <div className="h-fit sticky top-6 space-y-6">
-            <h3 className="font-black text-xl text-slate-900 flex items-center gap-2">
+            <h3 className="font-black text-xl text-foreground flex items-center gap-2">
               <History size={20} /> {t('dashboard.topik.examHistory')}
             </h3>
 
-            <div className="bg-white rounded-2xl border-2 border-slate-900 p-4 shadow-sm">
+            <div className="bg-card rounded-2xl border-2 border-foreground p-4 shadow-sm">
               <div className="space-y-3">
                 {examHistory.length > 0 ? (
                   examHistory.slice(0, 3).map((attempt, index) => {
@@ -245,51 +258,57 @@ const TopikPage: React.FC = () => {
                     const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
                     const attemptKey = attempt.id || attempt.timestamp || `attempt-${index}`;
                     return (
-                      <button
+                      <Button
                         key={attemptKey}
+                        type="button"
+                        variant="ghost"
+                        size="auto"
                         onClick={() => navigate('/topik/history')}
-                        className="relative bg-slate-50 p-3 rounded-xl border border-slate-200 group cursor-pointer hover:bg-white hover:border-slate-900 transition w-full text-left"
+                        className="!block relative bg-muted p-3 rounded-xl border border-border group cursor-pointer hover:bg-card hover:border-foreground transition w-full text-left"
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <h5 className="font-bold text-slate-900 text-xs">
+                            <h5 className="font-bold text-foreground text-xs">
                               {attempt.examTitle || t('topikLobby.unknownExam')}
                             </h5>
-                            <p className="text-[10px] text-slate-500 font-bold mt-0.5">
+                            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">
                               {attempt.timestamp
                                 ? new Date(attempt.timestamp).toLocaleDateString()
                                 : 'N/A'}
                             </p>
                           </div>
-                          <span className="font-black text-sm text-slate-900">
+                          <span className="font-black text-sm text-foreground">
                             {score}
-                            <span className="text-[10px] text-slate-400">/{maxScore}</span>
+                            <span className="text-[10px] text-muted-foreground">/{maxScore}</span>
                           </span>
                         </div>
                         {percentage >= 60 && (
-                          <div className="absolute top-2 right-12 border border-green-600 text-green-600 text-[10px] font-black px-1 py-0 rounded rotate-[-15deg] opacity-80">
+                          <div className="absolute top-2 right-12 border border-green-600 text-green-600 dark:border-emerald-300 dark:text-emerald-200 text-[10px] font-black px-1 py-0 rounded rotate-[-15deg] opacity-80">
                             PASS
                           </div>
                         )}
-                      </button>
+                      </Button>
                     );
                   })
                 ) : (
                   <div className="text-center py-6">
-                    <Archive size={24} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 font-bold">
+                    <Archive size={24} className="mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground font-bold">
                       {t('dashboard.topik.noHistory')}
                     </p>
                   </div>
                 )}
               </div>
               {examHistory.length > 0 && (
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => navigate('/topik/history')}
-                  className="w-full mt-4 py-2 border-2 border-slate-200 rounded-xl font-bold text-xs text-slate-500 hover:border-slate-900 hover:text-slate-900 transition"
+                  className="w-full mt-4 py-2 border-2 border-border rounded-xl font-bold text-xs text-muted-foreground hover:border-foreground hover:text-foreground transition"
                 >
                   {t('topikLobby.viewAllHistory')}
-                </button>
+                </Button>
               )}
             </div>
           </div>

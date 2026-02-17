@@ -24,6 +24,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { Button } from '../components/ui';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'annual';
 
@@ -74,6 +75,9 @@ export default function PricingDetailsPage() {
   );
 
   const [prices, setPrices] = useState<any>(null);
+  const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<
+    'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME' | null
+  >(null);
 
   const getPrices = useAction(aRef('lemonsqueezy:getVariantPrices'));
 
@@ -181,6 +185,7 @@ export default function PricingDetailsPage() {
     }
 
     try {
+      setCheckoutPendingPlan(plan);
       const { checkoutUrl } = await createCheckoutSession({
         plan,
         userId: user.id,
@@ -192,6 +197,7 @@ export default function PricingDetailsPage() {
     } catch (err) {
       logger.error('Failed to create checkout', err);
       notify.error(t('pricingDetails.errors.checkoutFailed'));
+      setCheckoutPendingPlan(null);
     }
   };
 
@@ -210,7 +216,7 @@ export default function PricingDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-landing antialiased selection:bg-[#FFDE59] selection:text-black">
+    <div className="min-h-screen bg-muted text-foreground font-landing antialiased selection:bg-[#FFDE59] selection:text-foreground">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -219,10 +225,10 @@ export default function PricingDetailsPage() {
       />
 
       {showLocalizedPromo && (
-        <div className="w-full bg-[#EC4899] border-b-2 border-black h-12 sticky top-0 z-50">
+        <div className="w-full bg-[#EC4899] border-b-2 border-foreground h-12 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-7 h-7 bg-white rounded-lg border-2 border-black flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 bg-card rounded-lg border-2 border-foreground flex items-center justify-center flex-shrink-0">
                 <Gift className="w-4 h-4 text-[#EC4899]" />
               </div>
               <div className="text-white text-sm font-bold truncate">
@@ -231,26 +237,28 @@ export default function PricingDetailsPage() {
                 {t('pricingDetails.promo.banner.suffix')}
               </div>
             </div>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="auto"
               onClick={handleKyc}
-              className="bg-[#FFDE59] text-black border-2 border-black rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
+              className="bg-[#FFDE59] text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.banner.cta')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       <nav
-        className={`w-full bg-white border-b-2 border-black py-4 sticky z-40 ${showLocalizedPromo ? 'top-12' : 'top-0'}`}
+        className={`w-full bg-card border-b-2 border-foreground py-4 sticky z-40 ${showLocalizedPromo ? 'top-12' : 'top-0'}`}
       >
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <LocalizedLink to="/" className="flex items-center gap-2 group">
             <img src="/logo.png" alt={t('common.appName')} className="w-8 h-8 rounded-lg" />
             <span className="font-heading font-bold text-xl">{t('common.appName')}</span>
           </LocalizedLink>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-full border border-border">
             <ShieldCheck className="w-4 h-4 text-[#10B981]" />
             {t('pricingDetails.refundBadge')}
           </div>
@@ -262,30 +270,32 @@ export default function PricingDetailsPage() {
           <div className="max-w-7xl mx-auto">
             <div className="max-w-xl mx-auto bg-[#E9FBF4] border-2 border-[#10B981] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4">
               <div className="flex items-start gap-4 min-w-0">
-                <div className="w-12 h-12 bg-[#10B981] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-[#10B981] rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
                   <Gift className="w-6 h-6 text-white" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-heading font-extrabold text-slate-900">
+                    <h3 className="font-heading font-extrabold text-foreground">
                       {t('pricingDetails.promo.card.title')}
                     </h3>
-                    <span className="bg-[#FFDE59] text-black border border-black rounded px-2 py-0.5 text-[10px] font-black">
+                    <span className="bg-[#FFDE59] text-foreground border border-foreground rounded px-2 py-0.5 text-[10px] font-black">
                       {t('pricingDetails.promo.card.badge')}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {t('pricingDetails.promo.card.description')}
                   </p>
                 </div>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="auto"
                 onClick={handleKyc}
-                className="bg-white text-black border-2 border-black rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
+                className="bg-card text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
               >
                 {t('pricingDetails.promo.card.cta')}
-              </button>
+              </Button>
             </div>
           </div>
         </section>
@@ -296,105 +306,117 @@ export default function PricingDetailsPage() {
           {t('pricingDetails.hero.titlePrefix')}
           <span className="relative inline-block px-2">
             <span className="relative z-10">{t('pricingDetails.hero.titleHighlight')}</span>
-            <span className="absolute inset-0 bg-[#FFDE59] transform -rotate-2 -z-0 rounded border-2 border-black" />
+            <span className="absolute inset-0 bg-[#FFDE59] transform -rotate-2 -z-0 rounded border-2 border-foreground" />
           </span>
         </h1>
-        <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10">
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
           {t('pricingDetails.hero.subtitleLine1')}
           <br />
           {t('pricingDetails.hero.subtitleLine2')}
         </p>
 
-        <div className="inline-flex flex-col sm:flex-row bg-white p-1.5 rounded-xl border-2 border-black shadow-pop items-center relative gap-1 sm:gap-0">
-          <button
+        <div className="inline-flex flex-col sm:flex-row bg-card p-1.5 rounded-xl border-2 border-foreground shadow-pop items-center relative gap-1 sm:gap-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setBillingCycle('monthly')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
               billingCycle === 'monthly'
                 ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
+                : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
             {t('pricingDetails.billing.monthly')}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setBillingCycle('quarterly')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
               billingCycle === 'quarterly'
                 ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
+                : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
             {t('pricingDetails.billing.quarterly')}
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => setBillingCycle('annual')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
               billingCycle === 'annual'
                 ? 'bg-[#0F172A] text-white shadow-sm'
-                : 'text-slate-500 hover:text-black bg-white'
+                : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
             {t('pricingDetails.billing.annual')}
-          </button>
+          </Button>
         </div>
       </header>
 
       <section className="pb-12 md:pb-24 px-4 md:px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-start">
-          <div className="bg-white rounded-3xl border-2 border-slate-200 p-6 md:p-8 flex flex-col hover:border-slate-400 transition-colors order-2 md:order-1">
+          <div className="bg-card rounded-3xl border-2 border-border p-6 md:p-8 flex flex-col hover:border-border transition-colors order-2 md:order-1">
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-slate-500">
+              <h3 className="text-xl font-bold text-muted-foreground">
                 {t('pricingDetails.plans.free.title')}
               </h3>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('pricingDetails.plans.free.subtitle')}
               </p>
             </div>
             <div className="mb-8 h-16 flex items-end">
               <span className="text-5xl font-heading font-extrabold">$0</span>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               disabled={!user || isCurrentPlan(SubscriptionType.FREE)}
               onClick={() => navigate('/dashboard')}
-              className="w-full py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-500 mb-8 hover:border-black hover:text-black transition-all disabled:opacity-70 disabled:hover:border-slate-200 disabled:hover:text-slate-500"
+              className="w-full py-3 rounded-xl border-2 border-border font-bold text-muted-foreground mb-8 hover:border-foreground hover:text-foreground transition-all disabled:opacity-70 disabled:hover:border-border disabled:hover:text-muted-foreground"
             >
               {t('pricingDetails.plans.free.cta')}
-            </button>
-            <ul className="space-y-4 text-sm text-slate-600 flex-1">
+            </Button>
+            <ul className="space-y-4 text-sm text-muted-foreground flex-1">
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                <Check className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 {t('pricingDetails.plans.free.features.f1')}
               </li>
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                <Check className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 {t('pricingDetails.plans.free.features.f2')}
               </li>
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                <Check className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 {t('pricingDetails.plans.free.features.f3')}
               </li>
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                <Check className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 {t('pricingDetails.plans.free.features.f4')}
               </li>
               <li className="flex gap-3 opacity-50">
-                <X className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                <X className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 {t('pricingDetails.plans.free.features.f5')}
               </li>
             </ul>
           </div>
 
           <div
-            className={`rounded-3xl border-2 border-black p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
+            className={`rounded-3xl border-2 border-foreground p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
               showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
             }`}
           >
             {showLocalizedPromo ? (
-              <div className="absolute top-4 right-4 bg-[#10B981] text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
+              <div className="absolute top-4 right-4 bg-[#10B981] text-foreground border-2 border-foreground px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
                 {t('pricingDetails.promo.activated')}
               </div>
             ) : (
-              <div className="absolute top-0 right-0 bg-[#FFDE59] text-black border-l-2 border-b-2 border-black px-4 py-1.5 rounded-bl-xl font-bold text-xs uppercase tracking-wider">
+              <div className="absolute top-0 right-0 bg-[#FFDE59] text-foreground border-l-2 border-b-2 border-foreground px-4 py-1.5 rounded-bl-xl font-bold text-xs uppercase tracking-wider">
                 {t('pricingDetails.plans.pro.badge')}
               </div>
             )}
@@ -402,7 +424,7 @@ export default function PricingDetailsPage() {
               <h3 className="text-xl font-bold text-[#FFDE59]">
                 {t('pricingDetails.plans.pro.title')}
               </h3>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('pricingDetails.plans.pro.subtitle')}
               </p>
             </div>
@@ -413,11 +435,13 @@ export default function PricingDetailsPage() {
                   <span className="text-7xl font-heading font-extrabold text-[#10B981]">
                     {proPrice.amount}
                   </span>
-                  <span className="text-slate-400 font-medium">{proPrice.period}</span>
+                  <span className="text-muted-foreground font-medium">{proPrice.period}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-slate-400 font-bold text-sm">{proOriginalPrice.label}</span>
-                  <span className="text-slate-400 font-extrabold text-xl line-through decoration-red-500 decoration-wavy decoration-2">
+                  <span className="text-muted-foreground font-bold text-sm">
+                    {proOriginalPrice.label}
+                  </span>
+                  <span className="text-muted-foreground font-extrabold text-xl line-through decoration-red-500 decoration-wavy decoration-2">
                     ${proOriginalPrice.amount}
                   </span>
                 </div>
@@ -425,17 +449,20 @@ export default function PricingDetailsPage() {
             ) : (
               <>
                 <div className="mb-2 h-16 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-slate-400">$</span>
+                  <span className="text-2xl font-bold text-muted-foreground">$</span>
                   <span className="text-6xl font-heading font-extrabold text-white">
                     {proPrice.amount}
                   </span>
-                  <span className="text-slate-400 font-medium">{proPrice.period}</span>
+                  <span className="text-muted-foreground font-medium">{proPrice.period}</span>
                 </div>
                 <div className="mb-8 h-6" />
               </>
             )}
 
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => {
                 if (showLocalizedPromo && !isPromoVerified) {
                   handleKyc();
@@ -443,10 +470,14 @@ export default function PricingDetailsPage() {
                 }
                 startCheckout(proPlanId);
               }}
-              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${
+              disabled={checkoutPendingPlan !== null}
+              loading={checkoutPendingPlan === proPlanId}
+              loadingText={buttonLabel}
+              loadingIconClassName="w-5 h-5"
+              className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-foreground flex justify-center items-center gap-2 ${
                 showLocalizedPromo
                   ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
-                  : 'bg-[#FFDE59] text-black shadow-[4px_4px_0px_0px_#ffffff]'
+                  : 'bg-[#FFDE59] text-foreground shadow-[4px_4px_0px_0px_#ffffff]'
               }`}
             >
               {buttonLabel}
@@ -455,13 +486,13 @@ export default function PricingDetailsPage() {
               ) : (
                 <Zap className="w-5 h-5" />
               )}
-            </button>
+            </Button>
 
-            <div className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest border-b border-slate-700 pb-2">
+            <div className="text-xs font-bold text-muted-foreground mb-4 uppercase tracking-widest border-b border-border pb-2">
               {t('pricingDetails.plans.pro.unlockTitle')}
             </div>
 
-            <ul className="space-y-4 text-sm text-slate-200 flex-1">
+            <ul className="space-y-4 text-sm text-muted-foreground flex-1">
               {[
                 t('pricingDetails.plans.pro.features.f1'),
                 t('pricingDetails.plans.pro.features.f2'),
@@ -479,26 +510,33 @@ export default function PricingDetailsPage() {
             </ul>
           </div>
 
-          <div className="bg-white rounded-3xl border-2 border-black p-6 md:p-8 flex flex-col shadow-pop hover:shadow-[0_0_20px_rgba(255,222,89,0.5)] transition-shadow relative overflow-hidden order-3">
+          <div className="bg-card rounded-3xl border-2 border-foreground p-6 md:p-8 flex flex-col shadow-pop hover:shadow-[0_0_20px_rgba(255,222,89,0.5)] transition-shadow relative overflow-hidden order-3">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899]" />
             <div className="mb-4">
               <h3 className="text-xl font-bold text-[#8B5CF6]">
                 {t('pricingDetails.plans.lifetime.title')}
               </h3>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('pricingDetails.plans.lifetime.subtitle')}
               </p>
             </div>
             <div className="mb-8 h-16 flex items-end">
               <span className="text-5xl font-heading font-extrabold">$99</span>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => startCheckout('LIFETIME')}
-              className="w-full py-3 rounded-xl border-2 border-black bg-slate-100 font-bold text-slate-900 mb-8 hover:bg-white transition-all"
+              disabled={checkoutPendingPlan !== null}
+              loading={checkoutPendingPlan === 'LIFETIME'}
+              loadingText={t('pricingDetails.plans.lifetime.cta')}
+              loadingIconClassName="w-4 h-4"
+              className="w-full py-3 rounded-xl border-2 border-foreground bg-muted font-bold text-foreground mb-8 hover:bg-card transition-all"
             >
               {t('pricingDetails.plans.lifetime.cta')}
-            </button>
-            <ul className="space-y-4 text-sm text-slate-600 flex-1">
+            </Button>
+            <ul className="space-y-4 text-sm text-muted-foreground flex-1">
               <li className="flex gap-3">
                 <Check className="w-5 h-5 text-[#8B5CF6] flex-shrink-0" />
                 {t('pricingDetails.plans.lifetime.features.f1')}
@@ -516,155 +554,157 @@ export default function PricingDetailsPage() {
         </div>
       </section>
 
-      <section className="py-12 md:py-20 bg-white border-y-2 border-black">
+      <section className="py-12 md:py-20 bg-card border-y-2 border-foreground">
         <div className="max-w-5xl mx-auto px-4 md:px-6">
           <h2 className="text-3xl font-heading font-bold text-center mb-4">
             {t('pricingDetails.table.title')}
           </h2>
-          <p className="text-center text-slate-500 mb-12">{t('pricingDetails.table.subtitle')}</p>
+          <p className="text-center text-muted-foreground mb-12">
+            {t('pricingDetails.table.subtitle')}
+          </p>
 
-          <div className="overflow-x-auto border-2 border-black rounded-2xl shadow-pop bg-white">
+          <div className="overflow-x-auto border-2 border-foreground rounded-2xl shadow-pop bg-card">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-100 border-b-2 border-black">
-                  <th className="p-4 md:p-6 w-1/3 font-bold text-slate-600">
+                <tr className="bg-muted border-b-2 border-foreground">
+                  <th className="p-4 md:p-6 w-1/3 font-bold text-muted-foreground">
                     {t('pricingDetails.table.th1')}
                   </th>
-                  <th className="p-4 md:p-6 w-1/4 font-bold text-center text-slate-500">
+                  <th className="p-4 md:p-6 w-1/4 font-bold text-center text-muted-foreground">
                     {t('pricingDetails.table.th2')}
                   </th>
-                  <th className="p-4 md:p-6 w-1/4 font-bold text-center bg-[#FFDE59]/20 border-l-2 border-black text-black">
+                  <th className="p-4 md:p-6 w-1/4 font-bold text-center bg-[#FFDE59]/20 border-l-2 border-foreground text-foreground">
                     {t('pricingDetails.table.th3')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="text-sm md:text-base text-slate-700">
-                <tr className="bg-slate-50">
+              <tbody className="text-sm md:text-base text-muted-foreground">
+                <tr className="bg-muted">
                   <td
                     colSpan={3}
-                    className="px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200"
+                    className="px-6 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border"
                   >
                     {t('pricingDetails.table.section.fsrs')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.fsrs.dailyLimit')}
                   </td>
-                  <td className="p-4 text-center text-slate-500">
+                  <td className="p-4 text-center text-muted-foreground">
                     {t('pricingDetails.table.fsrs.dailyLimitFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black text-[#10B981]">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981]">
                     <div className="inline-flex items-center justify-center gap-1">
                       <InfinityIcon className="w-4 h-4" /> {t('pricingDetails.table.unlimited')}
                     </div>
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.fsrs.modes')}
                   </td>
-                  <td className="p-4 text-center text-slate-500 flex justify-center gap-1 items-center">
+                  <td className="p-4 text-center text-muted-foreground flex justify-center gap-1 items-center">
                     <Check className="w-4 h-4" /> {t('pricingDetails.table.freeOpen')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
                     <div className="inline-flex items-center justify-center gap-1">
                       <Check className="w-4 h-4" /> {t('pricingDetails.table.fullAccess')}
                     </div>
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.fsrs.testMode')}
                   </td>
-                  <td className="p-4 text-center text-slate-500">
-                    <span className="bg-slate-200 px-2 py-1 rounded text-xs">
+                  <td className="p-4 text-center text-muted-foreground">
+                    <span className="bg-muted px-2 py-1 rounded text-xs">
                       {t('pricingDetails.table.fsrs.testModeFree')}
                     </span>
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black text-[#10B981]">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981]">
                     {t('pricingDetails.table.fsrs.testModePro')}
                   </td>
                 </tr>
 
-                <tr className="bg-slate-50">
+                <tr className="bg-muted">
                   <td
                     colSpan={3}
-                    className="px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200"
+                    className="px-6 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border"
                   >
                     {t('pricingDetails.table.section.topik')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.topik.scope')}
                   </td>
-                  <td className="p-4 text-center text-slate-500 text-xs">
+                  <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.topik.scopeFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black text-[#10B981] text-xs">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981] text-xs">
                     {t('pricingDetails.table.topik.scopePro')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.topik.exam')}
                   </td>
-                  <td className="p-4 text-center text-slate-500 text-xs">
+                  <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.topik.examFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black text-xs">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-xs">
                     {t('pricingDetails.table.topik.examPro')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.topik.speed')}
                   </td>
-                  <td className="p-4 text-center text-slate-300">
+                  <td className="p-4 text-center text-muted-foreground">
                     <Minus className="w-5 h-5 mx-auto" />
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
                     {t('pricingDetails.table.supported')}
                   </td>
                 </tr>
 
-                <tr className="bg-slate-50">
+                <tr className="bg-muted">
                   <td
                     colSpan={3}
-                    className="px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200"
+                    className="px-6 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border"
                   >
                     {t('pricingDetails.table.section.tools')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">
                     {t('pricingDetails.table.tools.media')}
                   </td>
-                  <td className="p-4 text-center text-slate-500 text-xs">
+                  <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.tools.mediaFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black text-xs">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-xs">
                     {t('pricingDetails.table.tools.mediaPro')}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-200 hover:bg-slate-50">
+                <tr className="border-b border-border hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">{t('pricingDetails.table.tools.ai')}</td>
-                  <td className="p-4 text-center text-slate-500 text-xs">
+                  <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.tools.aiFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
                     <div className="inline-flex items-center justify-center gap-1">
                       <InfinityIcon className="w-4 h-4" /> {t('pricingDetails.table.unlimited')}
                     </div>
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-50">
+                <tr className="hover:bg-muted">
                   <td className="p-4 md:px-6 font-medium">{t('pricingDetails.table.tools.pdf')}</td>
-                  <td className="p-4 text-center text-slate-300">
+                  <td className="p-4 text-center text-muted-foreground">
                     <X className="w-4 h-4 mx-auto" />
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-black">
+                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
                     {t('pricingDetails.table.tools.pdfPro')}
                   </td>
                 </tr>
@@ -683,13 +723,13 @@ export default function PricingDetailsPage() {
             {(['q1', 'q2', 'q3'] as const).map(key => (
               <details
                 key={key}
-                className="bg-white border-2 border-slate-200 rounded-2xl p-6 group open:border-black open:shadow-pop transition-all"
+                className="bg-card border-2 border-border rounded-2xl p-6 group open:border-foreground open:shadow-pop transition-all"
               >
                 <summary className="font-bold text-lg cursor-pointer list-none flex justify-between items-center">
                   {t(`pricingDetails.faq.${key}.q`)}
                   <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
                 </summary>
-                <p className="mt-4 text-slate-600 leading-relaxed">
+                <p className="mt-4 text-muted-foreground leading-relaxed">
                   {t(`pricingDetails.faq.${key}.a`)}
                 </p>
               </details>
@@ -698,9 +738,9 @@ export default function PricingDetailsPage() {
         </div>
       </section>
 
-      <footer className="bg-slate-100 py-12 text-center border-t-2 border-slate-200">
+      <footer className="bg-muted py-12 text-center border-t-2 border-border">
         <div className="max-w-xl mx-auto px-6">
-          <p className="text-slate-500 font-bold mb-6 text-sm uppercase tracking-widest">
+          <p className="text-muted-foreground font-bold mb-6 text-sm uppercase tracking-widest">
             {t('pricingDetails.footer.poweredBy')}
           </p>
           <div className="flex justify-center items-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all">
@@ -711,7 +751,9 @@ export default function PricingDetailsPage() {
               <Wallet className="mr-2" /> {t('pricingDetails.footer.paypal')}
             </div>
           </div>
-          <p className="mt-8 text-xs text-slate-400">{t('pricingDetails.footer.copyright')}</p>
+          <p className="mt-8 text-xs text-muted-foreground">
+            {t('pricingDetails.footer.copyright')}
+          </p>
         </div>
       </footer>
     </div>

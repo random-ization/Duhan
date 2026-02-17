@@ -11,7 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { NoArgs, qRef } from '../../utils/convexRefs';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 
 const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
 
@@ -39,14 +39,14 @@ export const LearnerDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="text-center py-12 text-zinc-400">
+      <div className="text-center py-12 text-muted-foreground">
         <p>无法加载学习数据</p>
       </div>
     );
@@ -59,46 +59,46 @@ export const LearnerDashboard: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Streak */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-zinc-900 rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-foreground rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
           <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-3">
             <Flame className="w-5 h-5 text-white" />
           </div>
-          <div className="text-3xl font-black text-zinc-900">{stats.streak}</div>
-          <div className="text-sm text-zinc-600 font-medium">连续打卡天数</div>
+          <div className="text-3xl font-black text-foreground">{stats.streak}</div>
+          <div className="text-sm text-muted-foreground font-medium">连续打卡天数</div>
         </div>
 
         {/* Words Learned */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-zinc-900 rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-foreground rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
           <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
-          <div className="text-3xl font-black text-zinc-900">{stats.totalWordsLearned}</div>
-          <div className="text-sm text-zinc-600 font-medium">已学词汇</div>
+          <div className="text-3xl font-black text-foreground">{stats.totalWordsLearned}</div>
+          <div className="text-sm text-muted-foreground font-medium">已学词汇</div>
         </div>
 
         {/* Grammar Learned */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-zinc-900 rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-foreground rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
           <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <div className="text-3xl font-black text-zinc-900">{stats.totalGrammarLearned}</div>
-          <div className="text-sm text-zinc-600 font-medium">已学语法</div>
+          <div className="text-3xl font-black text-foreground">{stats.totalGrammarLearned}</div>
+          <div className="text-sm text-muted-foreground font-medium">已学语法</div>
         </div>
 
         {/* Today's Progress */}
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-zinc-900 rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-foreground rounded-xl p-5 shadow-[3px_3px_0px_0px_#18181B]">
           <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center mb-3">
             <Clock className="w-5 h-5 text-white" />
           </div>
-          <div className="text-3xl font-black text-zinc-900">{stats.todayMinutes}</div>
-          <div className="text-sm text-zinc-600 font-medium">今日学习(分钟)</div>
+          <div className="text-3xl font-black text-foreground">{stats.todayMinutes}</div>
+          <div className="text-sm text-muted-foreground font-medium">今日学习(分钟)</div>
         </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Weekly Chart (2/3) */}
-        <div className="lg:col-span-2 bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
+        <div className="lg:col-span-2 bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
           <h3 className="font-black text-lg mb-4">📊 本周学习时长</h3>
           <Suspense fallback={<div className="h-[220px]" />}>
             <WeeklyActivityChart data={stats.weeklyActivity} />
@@ -106,29 +106,29 @@ export const LearnerDashboard: React.FC = () => {
         </div>
 
         {/* Continue Learning Card (1/3) */}
-        <div className="bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B] flex flex-col">
+        <div className="bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B] flex flex-col">
           <h3 className="font-black text-lg mb-4">🚀 继续学习</h3>
 
           {stats.currentProgress ? (
             <div className="flex-1 flex flex-col justify-between">
               <div>
-                <div className="text-lg font-bold text-zinc-900 mb-1">
+                <div className="text-lg font-bold text-foreground mb-1">
                   {stats.currentProgress.instituteName}
                 </div>
-                <div className="text-sm text-zinc-500 mb-4">
+                <div className="text-sm text-muted-foreground mb-4">
                   第 {stats.currentProgress.unit} 课 · {getModuleName(stats.currentProgress.module)}
                 </div>
               </div>
               <Button
                 type="button"
                 size="auto"
-                className="w-full py-3 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all"
+                className="w-full py-3 bg-lime-300 border-2 border-foreground rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all"
               >
                 继续学习 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-zinc-400">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
               <Target className="w-12 h-12 mb-3 opacity-30" />
               <p className="font-medium">开始你的第一节课吧！</p>
             </div>
@@ -137,14 +137,14 @@ export const LearnerDashboard: React.FC = () => {
       </div>
 
       {/* Daily Goal Progress */}
-      <div className="bg-white border-2 border-zinc-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
+      <div className="bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-black text-lg">🎯 今日目标</h3>
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-muted-foreground">
             {stats.todayMinutes} / {stats.dailyGoal} 分钟
           </span>
         </div>
-        <div className="h-4 bg-zinc-100 rounded-full overflow-hidden">
+        <div className="h-4 bg-muted rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-lime-400 to-emerald-400 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}

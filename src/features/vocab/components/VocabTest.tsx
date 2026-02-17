@@ -7,6 +7,7 @@ import TestCardTrueFalse from './test/TestCardTrueFalse';
 import TestCardMultipleChoice from './test/TestCardMultipleChoice';
 import TestCardFill10 from './test/TestCardFill10';
 import TestCardWritten from './test/TestCardWritten';
+import { Button, Input, Select } from '../../../components/ui';
 
 type WordInScope = {
   id: string;
@@ -232,57 +233,61 @@ function ResultScreen({
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-8">
-        <div className="text-3xl font-black text-slate-900">
+      <div className="bg-card rounded-3xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-8">
+        <div className="text-3xl font-black text-foreground">
           {labels.vocabTest?.resultsTitle || 'Results'}
         </div>
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-            <div className="text-2xl font-black text-slate-900">
+          <div className="bg-muted border-2 border-border rounded-2xl p-4">
+            <div className="text-2xl font-black text-foreground">
               {stats.correctQuestions}/{Math.max(stats.totalQuestions, 1)}
             </div>
-            <div className="text-xs font-bold text-slate-500">
+            <div className="text-xs font-bold text-muted-foreground">
               {labels.vocabTest?.correct || 'Correct'}
             </div>
           </div>
-          <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-            <div className="text-2xl font-black text-slate-900">
+          <div className="bg-muted border-2 border-border rounded-2xl p-4">
+            <div className="text-2xl font-black text-foreground">
               {Math.round((stats.correctQuestions / Math.max(stats.totalQuestions, 1)) * 100)}%
             </div>
-            <div className="text-xs font-bold text-slate-500">
+            <div className="text-xs font-bold text-muted-foreground">
               {labels.vocabTest?.accuracy || 'Accuracy'}
             </div>
           </div>
-          <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-            <div className="text-2xl font-black text-slate-900">
+          <div className="bg-muted border-2 border-border rounded-2xl p-4">
+            <div className="text-2xl font-black text-foreground">
               {stats.seconds === null ? '--' : `${stats.seconds}s`}
             </div>
-            <div className="text-xs font-bold text-slate-500">
+            <div className="text-xs font-bold text-muted-foreground">
               {labels.vocabTest?.time || 'Time'}
             </div>
           </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={() => setStage('SETTINGS')}
-            className="px-5 py-3 rounded-2xl bg-white border-2 border-slate-900 text-slate-900 font-black"
+            className="px-5 py-3 rounded-2xl bg-card border-2 border-foreground text-foreground font-black"
           >
             {labels.vocabTest?.newTest || 'New test'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={onClose}
-            className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black"
+            className="px-5 py-3 rounded-2xl bg-primary text-white font-black"
           >
             {labels.common?.close || 'Close'}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="mt-8">
-        <div className="text-lg font-black text-slate-900 mb-3">
+        <div className="text-lg font-black text-foreground mb-3">
           {labels.vocabTest?.review || 'Review'}
         </div>
         <div className="space-y-6">
@@ -291,12 +296,9 @@ function ResultScreen({
             const correctness = getCorrectness(card, a);
 
             return (
-              <div
-                key={card.id}
-                className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8"
-              >
+              <div key={card.id} className="rounded-3xl border-2 border-border bg-card p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="text-xs font-black text-slate-400">
+                  <div className="text-xs font-black text-muted-foreground">
                     {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
                   </div>
                   {correctness && (
@@ -364,7 +366,7 @@ function RunningCard({
   const getStatusBadge = () => {
     if (isComplete) {
       return (
-        <div className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700">
+        <div className="px-3 py-1 rounded-full text-xs font-black bg-muted text-muted-foreground">
           {labels.vocabTest?.answered || 'Answered'}
         </div>
       );
@@ -458,9 +460,11 @@ function RunningCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-black text-slate-400">{getCardTypeText(card.type)}</div>
+          <div className="text-xs font-black text-muted-foreground">
+            {getCardTypeText(card.type)}
+          </div>
           {card.type === 'FILL_10' && (
-            <div className="text-2xl font-black text-slate-900 mt-2">
+            <div className="text-2xl font-black text-foreground mt-2">
               {(labels.vocabTest?.fillPrompt || 'Complete the blanks') +
                 ` (${card.items.length}/10)`}
             </div>
@@ -471,7 +475,7 @@ function RunningCard({
 
       {renderCardInput()}
 
-      <div className="mt-6 flex justify-between text-xs font-bold text-slate-400">
+      <div className="mt-6 flex justify-between text-xs font-bold text-muted-foreground">
         <div>
           {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
         </div>
@@ -504,10 +508,10 @@ function RunningScreen({
   const getCardClassName = (isActive: boolean, isMissing: boolean) => {
     if (isActive) {
       if (isMissing) return 'border-red-600 bg-red-50 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]';
-      return 'border-slate-900 bg-white shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]';
+      return 'border-foreground bg-card shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]';
     }
     if (isMissing) return 'border-red-300 bg-red-50';
-    return 'border-slate-200 bg-white';
+    return 'border-border bg-card';
   };
 
   const getCardTypeText = (type: QuestionType) => {
@@ -528,24 +532,28 @@ function RunningScreen({
       <div className="max-w-4xl mx-auto w-full px-4 sm:px-6">
         <div className="flex items-center justify-between pb-3">
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={() => goToCard(activeCardIndex - 1)}
               disabled={activeCardIndex === 0}
-              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-muted hover:bg-muted disabled:opacity-50 flex items-center justify-center"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-700" />
-            </button>
-            <button
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={() => goToCard(activeCardIndex + 1)}
               disabled={activeCardIndex >= cards.length - 1}
-              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-muted hover:bg-muted disabled:opacity-50 flex items-center justify-center"
             >
-              <ChevronRight className="w-5 h-5 text-slate-700" />
-            </button>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Button>
           </div>
-          <div className="text-sm font-black text-slate-700">
+          <div className="text-sm font-black text-muted-foreground">
             {activeCardIndex + 1}/{Math.max(cards.length, 1)} · {answeredCardCount}/
             {Math.max(cards.length, 1)}
           </div>
@@ -581,10 +589,10 @@ function RunningScreen({
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-white/80 backdrop-blur">
+      <div className="border-t border-border bg-card/80 backdrop-blur">
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-black text-slate-700">
+            <div className="text-sm font-black text-muted-foreground">
               {format(labels.vocabTest?.answeredCount || 'Answered {current}/{total}', {
                 current: answeredCardCount,
                 total: Math.max(cards.length, 1),
@@ -597,15 +605,17 @@ function RunningScreen({
               </div>
             )}
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={submitTest}
             className={`px-5 py-3 rounded-2xl text-white font-black ${
-              isAllAnswered ? 'bg-slate-900' : 'bg-red-600 hover:bg-red-700'
+              isAllAnswered ? 'bg-primary' : 'bg-red-600 hover:bg-red-700'
             }`}
           >
             {labels.vocabTest?.submitTest || 'Submit test'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -632,16 +642,16 @@ function SettingsScreen({
     template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
   const getToggleClass = (key: QuestionType, disabled: boolean) => {
     if (enabledTypes[key]) return 'bg-blue-600';
-    if (disabled) return 'bg-slate-200 cursor-not-allowed';
-    return 'bg-slate-300';
+    if (disabled) return 'bg-muted cursor-not-allowed';
+    return 'bg-muted';
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <div className="text-sm font-bold text-slate-500">{scopeTitle}</div>
-          <div className="text-4xl font-black text-slate-900 mt-2">
+          <div className="text-sm font-bold text-muted-foreground">{scopeTitle}</div>
+          <div className="text-4xl font-black text-foreground mt-2">
             {labels.vocabTest?.setupTitle || 'Set up your test'}
           </div>
         </div>
@@ -653,14 +663,14 @@ function SettingsScreen({
       <div className="mt-10 space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-black text-slate-900 text-lg">
+            <div className="font-black text-foreground text-lg">
               {labels.vocabTest?.questions || 'Questions'}
             </div>
-            <div className="text-slate-500 text-sm">
+            <div className="text-muted-foreground text-sm">
               {format(labels.vocabTest?.maxQuestions || 'Max {count}', { count: maxQuestions })}
             </div>
           </div>
-          <input
+          <Input
             type="number"
             value={effectiveQuestionCount}
             min={1}
@@ -670,27 +680,27 @@ function SettingsScreen({
                 Math.min(Math.max(1, Number(e.target.value)), Math.max(1, maxQuestions))
               )
             }
-            className="w-24 text-center text-2xl font-black bg-slate-50 border-2 border-slate-200 rounded-2xl py-3"
+            className="w-24 !h-auto !py-3 text-center text-2xl font-black !bg-muted !border-2 !border-border !rounded-2xl !shadow-none"
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="font-black text-slate-900 text-lg">
+          <div className="font-black text-foreground text-lg">
             {labels.vocabTest?.answers || 'Answers'}
           </div>
-          <select
+          <Select
             value={answerLanguage}
             onChange={e => setAnswerLanguage(e.target.value as AnswerLanguage)}
-            className="px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold"
+            className="!h-auto !px-4 !py-3 !bg-muted !border-2 !border-border !rounded-2xl font-bold !shadow-none"
           >
             <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
             <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
             <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
-          </select>
+          </Select>
         </div>
 
-        <div className="border-t border-slate-100 pt-6 space-y-5">
-          <div className="font-black text-slate-900 text-lg">
+        <div className="border-t border-border pt-6 space-y-5">
+          <div className="font-black text-foreground text-lg">
             {labels.vocabTest?.questionTypes || 'Question types'}
           </div>
 
@@ -705,7 +715,7 @@ function SettingsScreen({
             const disabled = row.key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice;
             return (
               <div key={row.key} className="flex items-center justify-between">
-                <div className="font-black text-slate-900 text-base">
+                <div className="font-black text-foreground text-base">
                   {row.key === 'TRUE_FALSE' &&
                     (labels.vocabTest?.questionTypeTrueFalse || 'True / False')}
                   {row.key === 'MULTIPLE_CHOICE' &&
@@ -713,12 +723,14 @@ function SettingsScreen({
                   {row.key === 'FILL_10' && (labels.vocabTest?.questionTypeFill || 'Fill')}
                   {row.key === 'WRITTEN' && (labels.vocabTest?.questionTypeWritten || 'Written')}
                   {disabled && (
-                    <span className="ml-2 text-xs font-bold text-slate-400">
+                    <span className="ml-2 text-xs font-bold text-muted-foreground">
                       {labels.vocabTest?.notEnoughWords || '(not enough words)'}
                     </span>
                   )}
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   type="button"
                   disabled={disabled}
                   onClick={() =>
@@ -730,11 +742,11 @@ function SettingsScreen({
                   className={`w-12 h-7 rounded-full relative transition-all ${getToggleClass(row.key, disabled)}`}
                 >
                   <span
-                    className={`absolute top-0.5 transition-all w-6 h-6 rounded-full bg-white shadow ${
+                    className={`absolute top-0.5 transition-all w-6 h-6 rounded-full bg-card shadow ${
                       enabledTypes[row.key] ? 'left-5' : 'left-0.5'
                     }`}
                   />
-                </button>
+                </Button>
               </div>
             );
           })}
@@ -747,14 +759,16 @@ function SettingsScreen({
         </div>
 
         <div className="flex justify-end pt-2">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={startTest}
             disabled={isStartDisabled}
             className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {labels.vocabTest?.startTest || 'Start test'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1206,16 +1220,18 @@ export default function VocabTest({
   return (
     <div className="p-2 sm:p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="font-black text-slate-900">{scopeTitle}</div>
+        <div className="font-black text-foreground">{scopeTitle}</div>
         {showCloseButton && onClose ? (
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-muted hover:bg-muted flex items-center justify-center"
             aria-label={labels.common?.close || 'Close'}
           >
-            <X className="w-5 h-5 text-slate-700" />
-          </button>
+            <X className="w-5 h-5 text-muted-foreground" />
+          </Button>
         ) : null}
       </div>
 

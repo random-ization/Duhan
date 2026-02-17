@@ -11,6 +11,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { logger } from '../utils/logger';
 import { getCourseCoverTransitionName } from '../utils/viewTransitions';
+import { useTheme } from '../contexts/ThemeContext';
+import { Button } from '../components/ui';
+import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 export default function CourseDashboard() {
   const navigate = useLocalizedNavigate();
@@ -18,6 +21,7 @@ export default function CourseDashboard() {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const { user, language } = useAuth();
+  const { resolvedTheme } = useTheme();
   const convex = useConvex();
 
   // Use same Convex query as CoursesOverview for consistency
@@ -131,13 +135,13 @@ export default function CourseDashboard() {
       label: t('courseDashboard.modules.vocabulary'),
       subtitle: 'VOCABULARY',
       emoji: '🧩',
-      stripeColor: 'bg-green-400',
-      iconBg: 'bg-green-50',
-      iconBorder: 'border-green-200',
-      hoverBg: 'bg-green-400/90',
+      stripeColor: 'bg-green-400 dark:bg-green-500/70',
+      iconBg: 'bg-green-50 dark:bg-green-500/15',
+      iconBorder: 'border-green-200 dark:border-green-400/35',
+      hoverBg: 'bg-green-400/90 dark:bg-green-500/55',
       progressLabel: t('courseDashboard.progress.totalWords'),
       progressValue: loadingVocab ? '...' : `${vocabStats.total}`,
-      progressColor: 'bg-green-400',
+      progressColor: 'bg-green-400 dark:bg-green-500/80',
       progressWidth:
         vocabStats.total > 0
           ? `${Math.min((vocabStats.mastered / vocabStats.total) * 100, 100)}%`
@@ -151,13 +155,13 @@ export default function CourseDashboard() {
       label: t('courseDashboard.modules.grammar'),
       subtitle: 'GRAMMAR',
       emoji: '⚡️',
-      stripeColor: 'bg-purple-400',
-      iconBg: 'bg-purple-50',
-      iconBorder: 'border-purple-200',
-      hoverBg: 'bg-purple-400/90',
+      stripeColor: 'bg-purple-400 dark:bg-purple-500/70',
+      iconBg: 'bg-purple-50 dark:bg-purple-500/15',
+      iconBorder: 'border-purple-200 dark:border-purple-400/35',
+      hoverBg: 'bg-purple-400/90 dark:bg-purple-500/55',
       progressLabel: t('courseDashboard.progress.grammarPoints'),
       progressValue: loadingGrammar ? '...' : `${grammarPoints.length}`,
-      progressColor: 'bg-purple-400',
+      progressColor: 'bg-purple-400 dark:bg-purple-500/80',
       progressWidth:
         grammarPoints.length > 0 ? `${(grammarMastered / grammarPoints.length) * 100}%` : '0%',
       hoverText: 'START',
@@ -169,16 +173,16 @@ export default function CourseDashboard() {
       label: t('courseDashboard.modules.reading'),
       subtitle: 'READING',
       emoji: '📖',
-      stripeColor: 'bg-blue-400',
-      iconBg: 'bg-blue-50',
-      iconBorder: 'border-blue-200',
-      hoverBg: 'bg-blue-400/90',
+      stripeColor: 'bg-blue-400 dark:bg-blue-500/70',
+      iconBg: 'bg-blue-50 dark:bg-blue-500/15',
+      iconBorder: 'border-blue-200 dark:border-blue-400/35',
+      hoverBg: 'bg-blue-400/90 dark:bg-blue-500/55',
       progressLabel: t('courseDashboard.progress.units'),
       progressValue:
         unitTotal > 0
           ? `${completedCount}/${unitTotal}`
           : t('courseDashboard.lessonCount', { count: totalUnits }),
-      progressColor: 'bg-blue-400',
+      progressColor: 'bg-blue-400 dark:bg-blue-500/80',
       progressWidth: `${Math.min(unitProgress, 100)}%`,
       hoverText: 'READ',
       hoverRotate: 'group-hover:scale-110',
@@ -189,16 +193,16 @@ export default function CourseDashboard() {
       label: t('courseDashboard.modules.listening'),
       subtitle: 'LISTENING',
       emoji: '🎧',
-      stripeColor: 'bg-[#FEE500]',
-      iconBg: 'bg-yellow-50',
-      iconBorder: 'border-yellow-200',
-      hoverBg: 'bg-[#FEE500]/90',
+      stripeColor: 'bg-[#FEE500] dark:bg-yellow-400/70',
+      iconBg: 'bg-yellow-50 dark:bg-yellow-500/15',
+      iconBorder: 'border-yellow-200 dark:border-yellow-400/35',
+      hoverBg: 'bg-[#FEE500]/90 dark:bg-yellow-500/55',
       progressLabel: t('courseDashboard.progress.units'),
       progressValue:
         unitTotal > 0
           ? `${completedCount}/${unitTotal}`
           : t('courseDashboard.lessonCount', { count: totalUnits }),
-      progressColor: 'bg-[#FEE500]',
+      progressColor: 'bg-[#FEE500] dark:bg-yellow-400/80',
       progressWidth: `${Math.min(unitProgress, 100)}%`,
       hoverText: 'LISTEN',
       hoverRotate: 'group-hover:-translate-y-1',
@@ -210,33 +214,48 @@ export default function CourseDashboard() {
     <div
       className="min-h-screen pb-20"
       style={{
-        backgroundColor: '#F0F4F8',
-        backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+        backgroundColor: resolvedTheme === 'dark' ? '#0b1220' : '#F0F4F8',
+        backgroundImage:
+          resolvedTheme === 'dark'
+            ? 'radial-gradient(rgba(148,163,184,0.22) 1.5px, transparent 1.5px)'
+            : 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
         backgroundSize: '24px 24px',
       }}
     >
       <div className="w-full max-w-[1400px] mx-auto p-6 md:p-10">
         {/* Header */}
         <header className="mb-10">
+          <AppBreadcrumb
+            className="mb-4"
+            items={[
+              {
+                label: t('coursesOverview.pageTitle', { defaultValue: 'Courses' }),
+                to: '/courses',
+              },
+              { label: courseName || instituteId || 'Course' },
+            ]}
+          />
           {/* Back Button */}
-          <button
+          <Button
             onClick={() => navigate('/courses')}
-            className="mb-6 flex items-center gap-2 font-bold text-slate-500 hover:text-slate-900 transition-colors"
+            variant="ghost"
+            size="auto"
+            className="mb-6 flex items-center gap-2 font-bold text-muted-foreground hover:text-foreground transition-colors"
           >
-            <span className="bg-white border-2 border-slate-300 rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
+            <span className="bg-card border-2 border-border rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
               ←
             </span>
             {t('courseDashboard.backToShelf')}
-          </button>
+          </Button>
 
           {/* Header Card */}
-          <div className="flex flex-col md:flex-row gap-8 items-center bg-white p-6 rounded-[2rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+          <div className="flex flex-col md:flex-row gap-8 items-center bg-card p-6 rounded-[2rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
             {/* Yellow Circle Decoration */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FEE500] rounded-full border-4 border-black z-0" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FEE500] dark:bg-yellow-400/35 rounded-full border-4 border-foreground dark:border-yellow-300/40 z-0" />
 
             {/* Cover Image */}
             <div
-              className="w-32 h-40 md:w-36 md:h-48 bg-slate-100 border-2 border-slate-900 rounded-2xl flex-shrink-0 relative z-10 shadow-sm -rotate-2 overflow-hidden"
+              className="w-32 h-40 md:w-36 md:h-48 bg-muted border-2 border-foreground rounded-2xl flex-shrink-0 relative z-10 shadow-sm -rotate-2 overflow-hidden"
               style={{ viewTransitionName: coverTransitionName } as CSSProperties}
             >
               {coverUrl ? (
@@ -246,24 +265,26 @@ export default function CourseDashboard() {
                   className="w-full h-full object-cover rounded-xl"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-indigo-50">
-                  <BookMarked className="w-12 h-12 text-indigo-300" />
+                <div className="w-full h-full flex items-center justify-center bg-indigo-50 dark:bg-indigo-500/15">
+                  <BookMarked className="w-12 h-12 text-indigo-300 dark:text-indigo-200/70" />
                 </div>
               )}
             </div>
 
             {/* Course Info */}
             <div className="flex-1 text-center md:text-left z-10">
-              <h1 className="font-display text-4xl font-black text-slate-900 mb-2 tracking-tight">
+              <h1 className="font-display text-4xl font-black text-foreground mb-2 tracking-tight">
                 {courseName || t('loading')}
-                <span className="text-xs text-slate-400 font-normal ml-2">ID: {instituteId}</span>
+                <span className="text-xs text-muted-foreground font-normal ml-2">
+                  ID: {instituteId}
+                </span>
               </h1>
-              <p className="text-slate-500 font-medium flex items-center gap-2">
+              <p className="text-muted-foreground font-medium flex items-center gap-2">
                 <span>{course?.publisher}</span>
                 {t('courseDashboard.courseMeta', { level: displayLevel, totalUnits })}
               </p>
               {lastUnitIndex ? (
-                <p className="text-xs text-slate-400 font-semibold mt-1">
+                <p className="text-xs text-muted-foreground font-semibold mt-1">
                   {t('courseDashboard.recentUnit', {
                     defaultValue: '最近学习：第 {unit} 课',
                     unit: lastUnitIndex,
@@ -277,9 +298,9 @@ export default function CourseDashboard() {
                   <span>{t('courseDashboard.overallProgress')}</span>
                   <span>{overallProgress}%</span>
                 </div>
-                <div className="w-full bg-slate-100 h-4 rounded-full border-2 border-slate-900 overflow-hidden relative">
+                <div className="w-full bg-muted h-4 rounded-full border-2 border-foreground overflow-hidden relative">
                   <div
-                    className="bg-[#FEE500] h-full border-r-2 border-slate-900"
+                    className="bg-[#FEE500] dark:bg-yellow-400/75 h-full border-r-2 border-foreground dark:border-yellow-300/40"
                     style={{ width: `${overallProgress}%` }}
                   />
                 </div>
@@ -289,20 +310,22 @@ export default function CourseDashboard() {
         </header>
 
         {/* Training Modules Section */}
-        <h2 className="text-3xl font-black mb-6 flex items-center gap-2">
+        <h2 className="text-3xl font-black mb-6 flex items-center gap-2 text-foreground">
           <span>🚀</span> {t('courseDashboard.trainingModules')}
         </h2>
 
         {/* 4-Grid Modules */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
           {modules.map(m => (
-            <button
+            <Button
               key={m.id}
               onClick={() => navigate(m.path)}
-              className="group h-[320px] bg-white rounded-[2rem] border-4 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative transition-all duration-200 hover:-translate-y-1.5 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-left"
+              variant="ghost"
+              size="auto"
+              className="group h-[320px] bg-card rounded-[2rem] border-4 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative transition-all duration-200 hover:-translate-y-1.5 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-left !justify-start !items-stretch !whitespace-normal"
             >
               {/* Top Color Stripe */}
-              <div className={`h-3 w-full ${m.stripeColor} border-b-4 border-slate-900`} />
+              <div className={`h-3 w-full ${m.stripeColor} border-b-4 border-foreground`} />
 
               {/* Content */}
               <div className="p-6 flex-1 flex flex-col items-center text-center relative z-10">
@@ -315,17 +338,17 @@ export default function CourseDashboard() {
 
                 {/* Labels */}
                 <h3 className="font-black text-2xl mb-1">{m.label}</h3>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4">
                   {m.subtitle}
                 </p>
 
                 {/* Progress Footer */}
                 <div className="mt-auto w-full">
-                  <div className="text-xs text-slate-500 font-bold mb-1 flex justify-between">
+                  <div className="text-xs text-muted-foreground font-bold mb-1 flex justify-between">
                     <span>{m.progressLabel}</span>
                     <span>{m.progressValue}</span>
                   </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full border border-slate-200">
+                  <div className="w-full bg-muted h-2 rounded-full border border-border">
                     <div
                       className={`${m.progressColor} h-full rounded-full`}
                       style={{ width: m.progressWidth }}
@@ -342,24 +365,28 @@ export default function CourseDashboard() {
                   {m.hoverText}
                 </span>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Grammar Section */}
-        <div className="border-t-2 border-slate-200 pt-10">
+        <div className="border-t-2 border-border pt-10">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h3 className="text-2xl font-black text-slate-900 mb-1">
+              <h3 className="text-2xl font-black text-foreground mb-1">
                 {t('courseDashboard.grammarTitle')}
               </h3>
-              <p className="text-slate-500 text-sm font-bold">
+              <p className="text-muted-foreground text-sm font-bold">
                 {t('courseDashboard.grammarSubtitle')}
               </p>
             </div>
-            <button className="text-sm font-bold text-slate-400 hover:text-slate-900 flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="auto"
+              className="text-sm font-bold text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
               {t('courseDashboard.viewAll')} <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
 
           <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory">
@@ -368,16 +395,18 @@ export default function CourseDashboard() {
               ['sk1', 'sk2', 'sk3', 'sk4'].map(id => (
                 <div
                   key={id}
-                  className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 animate-pulse"
+                  className="snap-start flex-shrink-0 w-64 bg-card border-2 border-border rounded-xl p-5 animate-pulse"
                 >
-                  <div className="h-8 bg-slate-100 rounded mb-2 w-32"></div>
-                  <div className="h-4 bg-slate-100 rounded mb-1 w-24"></div>
-                  <div className="h-3 bg-slate-100 rounded w-full"></div>
+                  <div className="h-8 bg-muted rounded mb-2 w-32"></div>
+                  <div className="h-4 bg-muted rounded mb-1 w-24"></div>
+                  <div className="h-3 bg-muted rounded w-full"></div>
                 </div>
               ))}
 
             {!loadingGrammar && grammarPoints.length === 0 && (
-              <div className="text-slate-400 text-sm py-4">{t('courseDashboard.noGrammar')}</div>
+              <div className="text-muted-foreground text-sm py-4">
+                {t('courseDashboard.noGrammar')}
+              </div>
             )}
 
             {!loadingGrammar &&
@@ -385,37 +414,39 @@ export default function CourseDashboard() {
               grammarPoints.map(gp => (
                 <div
                   key={gp.id}
-                  className="snap-start flex-shrink-0 w-64 bg-white border-2 border-slate-200 rounded-xl p-5 hover:border-purple-500 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer relative overflow-hidden"
+                  className="snap-start flex-shrink-0 w-64 bg-card border-2 border-border rounded-xl p-5 hover:border-purple-500 dark:hover:border-purple-400/45 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,0.55)] transition-all group cursor-pointer relative overflow-hidden"
                 >
                   {/* Unit Label */}
-                  <div className="absolute top-0 right-0 bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                  <div className="absolute top-0 right-0 bg-muted text-muted-foreground text-[10px] font-bold px-2 py-1 rounded-bl-lg">
                     UNIT {String(gp.unitId).padStart(2, '0')}
                   </div>
 
                   {/* Pattern (title) */}
-                  <div className="text-purple-600 font-black text-2xl mb-2">{gp.title}</div>
+                  <div className="text-purple-600 dark:text-purple-300 font-black text-2xl mb-2">
+                    {gp.title}
+                  </div>
 
                   {/* Summary */}
-                  <div className="text-slate-800 font-bold text-sm mb-1">{gp.summary}</div>
+                  <div className="text-muted-foreground font-bold text-sm mb-1">{gp.summary}</div>
 
                   {/* Status & Arrow */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                     {gp.status === 'MASTERED' && (
-                      <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200 px-2 py-0.5 rounded">
                         {t('courseDashboard.status.mastered')}
                       </span>
                     )}
                     {gp.status === 'LEARNING' && (
-                      <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-200 px-2 py-0.5 rounded">
                         {t('courseDashboard.status.learning')}
                       </span>
                     )}
                     {gp.status !== 'MASTERED' && gp.status !== 'LEARNING' && (
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded">
                         {t('courseDashboard.status.notStarted')}
                       </span>
                     )}
-                    <span className="text-slate-300 group-hover:text-purple-600 transition-colors">
+                    <span className="text-muted-foreground group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
                       →
                     </span>
                   </div>
@@ -424,12 +455,14 @@ export default function CourseDashboard() {
 
             {/* More Arrow Card */}
             {grammarPoints.length > 0 && (
-              <button
+              <Button
                 onClick={() => navigate(`/course/${instituteId}/grammar`)}
-                className="snap-start flex-shrink-0 w-24 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:border-slate-400"
+                variant="ghost"
+                size="auto"
+                className="snap-start flex-shrink-0 w-24 bg-muted border-2 border-dashed border-border rounded-xl flex items-center justify-center hover:bg-muted hover:border-border !shadow-none"
               >
-                <span className="text-2xl text-slate-300">➜</span>
-              </button>
+                <span className="text-2xl text-muted-foreground">➜</span>
+              </Button>
             )}
           </div>
         </div>

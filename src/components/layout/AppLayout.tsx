@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import DesktopSidebar from './DesktopSidebar';
@@ -11,6 +11,7 @@ import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config
 import { getPathWithoutLang } from '../../utils/pathname';
 import { GlobalModalContainer } from '../modals/GlobalModalContainer';
 import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
+import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -38,12 +39,13 @@ export default function AppLayout() {
       <main
         className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth"
         style={{
-          backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+          backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
           backgroundSize: '24px 24px',
         }}
       >
         <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
         <GlobalModalContainer />
+        <GlobalCommandPalette />
         {shouldShowMobileHeader && (
           <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
         )}

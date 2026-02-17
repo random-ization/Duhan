@@ -215,7 +215,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
     >
       {/* 韩语文本区域 - 使用 relative 定位以支持 Canvas 覆盖层 */}
       <div
-        className={`flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden`}
+        className={`flex-1 min-w-0 bg-card rounded-2xl shadow-sm border border-border relative overflow-hidden`}
       >
         {/* 文本内容层 */}
         <div
@@ -224,13 +224,13 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
           onMouseUp={canvasEnabled ? undefined : onTextSelection}
         >
           {title && (
-            <div className="mb-6 pb-4 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-              <span className="text-xs text-slate-400">Page {pageIndex + 1}</span>
+            <div className="mb-6 pb-4 border-b border-border">
+              <h2 className="text-xl font-bold text-muted-foreground">{title}</h2>
+              <span className="text-xs text-muted-foreground">Page {pageIndex + 1}</span>
             </div>
           )}
           <div
-            className={`${textSizeClass} ${lineHeightClass} text-slate-800 font-serif whitespace-pre-line select-text`}
+            className={`${textSizeClass} ${lineHeightClass} text-muted-foreground font-serif whitespace-pre-line select-text`}
           >
             {renderHighlightedText(content)}
           </div>
@@ -254,8 +254,8 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
 
       {/* 翻译区域（可选） */}
       {showTranslation && translation && (
-        <div className="flex-1 min-w-0 bg-slate-50 rounded-2xl border border-slate-200/60 p-8 md:p-12 overflow-y-auto">
-          <div className="sticky top-0 bg-slate-50 pb-4 border-b border-slate-200 mb-6 z-10 flex items-center gap-2 text-slate-400 font-bold text-sm uppercase tracking-widest">
+        <div className="flex-1 min-w-0 bg-muted rounded-2xl border border-border/60 p-8 md:p-12 overflow-y-auto">
+          <div className="sticky top-0 bg-muted pb-4 border-b border-border mb-6 z-10 flex items-center gap-2 text-muted-foreground font-bold text-sm uppercase tracking-widest">
             Translation
           </div>
           {translationSentences.length > 0 ? (
@@ -264,10 +264,10 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
               return (
                 <p
                   key={idx}
-                  className={`mb-6 text-slate-600 ${lineHeightClass} text-base transition-all duration-200 cursor-pointer p-3 rounded-xl border border-transparent ${
+                  className={`mb-6 text-muted-foreground ${lineHeightClass} text-base transition-all duration-200 cursor-pointer p-3 rounded-xl border border-transparent ${
                     isHovered
                       ? 'bg-indigo-50 border-indigo-100 text-indigo-900 shadow-sm'
-                      : 'hover:bg-slate-100'
+                      : 'hover:bg-muted'
                   }`}
                   onMouseEnter={() => onSentenceHover?.(idx)}
                   onMouseLeave={() => onSentenceHover?.(null)}
@@ -277,7 +277,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
               );
             })
           ) : (
-            <p className="text-slate-600 leading-relaxed">{translation}</p>
+            <p className="text-muted-foreground leading-relaxed">{translation}</p>
           )}
         </div>
       )}

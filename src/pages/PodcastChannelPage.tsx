@@ -3,9 +3,9 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play, Clock, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAction, useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui';
+import { Badge } from '../components/ui';
+import { Card, CardContent } from '../components/ui';
 import { getLabels } from '../utils/i18n';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -225,10 +225,10 @@ const PodcastChannelPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-card">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-3 border-indigo-500 border-t-transparent mx-auto" />
-          <p className="text-slate-500 text-sm">{labels.loading || 'Loading episodes...'}</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-3 border-indigo-500 dark:border-indigo-300 border-t-transparent mx-auto" />
+          <p className="text-muted-foreground text-sm">{labels.loading || 'Loading episodes...'}</p>
         </div>
       </div>
     );
@@ -239,14 +239,14 @@ const PodcastChannelPage: React.FC = () => {
 
   if (error && !displayChannel) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-        <p className="text-red-500">{error}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-card space-y-4">
+        <p className="text-red-500 dark:text-red-300">{error}</p>
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => navigate(-1)}
-          className="text-indigo-600 hover:underline flex items-center gap-1"
+          className="text-indigo-600 dark:text-indigo-300 hover:underline flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" /> {labels.errors?.backToHome || 'Back'}
         </Button>
@@ -256,8 +256,10 @@ const PodcastChannelPage: React.FC = () => {
 
   if (!displayChannel) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-        <p className="text-slate-500">{labels.podcast?.noChannelInfo || 'Channel not found'}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-card space-y-4">
+        <p className="text-muted-foreground">
+          {labels.podcast?.noChannelInfo || 'Channel not found'}
+        </p>
         <Button type="button" variant="ghost" size="sm" onClick={() => navigate(-1)}>
           {labels.errors?.backToHome || 'Back'}
         </Button>
@@ -272,9 +274,9 @@ const PodcastChannelPage: React.FC = () => {
     'https://placehold.co/400x400';
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen bg-card pb-24">
       {/* Header with Blur Effect */}
-      <div className="relative h-72 overflow-hidden bg-slate-900 text-white">
+      <div className="relative h-72 overflow-hidden bg-primary text-primary-foreground">
         {/* Blurred Background */}
         {channelImage && (
           <div
@@ -329,13 +331,13 @@ const PodcastChannelPage: React.FC = () => {
       </div>
 
       {/* Subscribe Button */}
-      <div className="px-4 py-4 border-b border-slate-100">
+      <div className="px-4 py-4 border-b border-border">
         <Button
           onClick={handleToggleSubscribe}
           className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${
             isSubscribed
-              ? 'bg-pink-100 text-pink-600 border border-pink-200'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-600'
+              ? 'bg-pink-100 text-pink-700 border border-pink-200 dark:bg-pink-500/20 dark:text-pink-200 dark:border-pink-400/30'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-600 dark:bg-indigo-400/75 dark:hover:bg-indigo-300/80 dark:border-indigo-300/35'
           }`}
         >
           <Heart className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`} />
@@ -347,10 +349,10 @@ const PodcastChannelPage: React.FC = () => {
 
       {/* Description */}
       {displayChannel.description && (
-        <Card className="mx-4 my-4 bg-slate-50 border-slate-100">
+        <Card className="mx-4 my-4 bg-muted border-border">
           <CardContent className="p-4">
             <p
-              className={`text-sm text-slate-600 leading-relaxed ${isDescExpanded ? '' : 'line-clamp-3'}`}
+              className={`text-sm text-muted-foreground leading-relaxed ${isDescExpanded ? '' : 'line-clamp-3'}`}
             >
               {displayChannel.description}
             </p>
@@ -360,7 +362,7 @@ const PodcastChannelPage: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsDescExpanded(!isDescExpanded)}
-                className="mt-2 text-xs text-indigo-600 font-medium flex items-center gap-1"
+                className="mt-2 text-xs text-indigo-600 dark:text-indigo-200 font-medium flex items-center gap-1"
               >
                 {isDescExpanded ? (
                   <>
@@ -379,11 +381,11 @@ const PodcastChannelPage: React.FC = () => {
 
       {/* Episode List */}
       <div className="p-4">
-        <h2 className="font-bold text-lg text-slate-800 mb-4">
+        <h2 className="font-bold text-lg text-muted-foreground mb-4">
           {labels.podcast?.episodes || 'Episodes'} ({data?.episodes?.length || 0})
         </h2>
         {(!data?.episodes || data.episodes.length === 0) && (
-          <Card className="text-center py-10 text-slate-400 border-dashed">
+          <Card className="text-center py-10 text-muted-foreground border-dashed">
             <CardContent className="py-4">
               <p>{labels.podcast?.noEpisodes || 'No episodes found'}</p>
               {!feedUrl && (
@@ -400,14 +402,16 @@ const PodcastChannelPage: React.FC = () => {
               size="auto"
               onClick={() => handlePlayEpisode(episode)}
               variant="ghost"
-              className="w-full text-left flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer border border-slate-100 hover:border-slate-200 hover:shadow-sm font-normal"
+              className="w-full text-left flex items-center gap-4 p-4 rounded-xl hover:bg-muted active:scale-[0.98] transition-all cursor-pointer border border-border hover:border-border hover:shadow-sm font-normal"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-400/14 dark:to-purple-400/14 flex items-center justify-center text-indigo-600 dark:text-indigo-200 flex-shrink-0">
                 <Play className="w-5 h-5" fill="currentColor" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-800 line-clamp-2 mb-1">{episode.title}</h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
+                <h3 className="font-semibold text-muted-foreground line-clamp-2 mb-1">
+                  {episode.title}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="secondary" className="gap-1 text-[11px] font-semibold">
                     <Clock className="w-3 h-3" />
                     {formatDuration(episode.duration)}

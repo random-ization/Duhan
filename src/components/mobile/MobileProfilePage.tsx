@@ -10,12 +10,12 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
 import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
 import { ProfileSettingsTab } from '../../pages/profile/tabs/ProfileSettingsTab';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useMutation, useAction, useQuery } from 'convex/react';
 import { aRef, mRef, NoArgs, qRef } from '../../utils/convexRefs';
 import { useExamStats } from '../../pages/profile/hooks/useExamStats';
@@ -24,9 +24,11 @@ import { toErrorMessage } from '../../utils/errors';
 import { Loading } from '../common/Loading';
 import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
+import { Button } from '../ui';
+import { Input } from '../ui';
 
 export const MobileProfilePage: React.FC = () => {
-  const { user, updateUser, language } = useApp();
+  const { user, updateUser, language } = useAuth();
   const navigate = useLocalizedNavigate();
   const { signOut, signIn } = useAuthActions();
   const { t } = useTranslation();
@@ -123,29 +125,36 @@ export const MobileProfilePage: React.FC = () => {
   // Helper for accounts
   const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);
   const getAccountButtonClass = (isLinked: boolean, _loading: boolean, _disable: boolean) =>
-    isLinked ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600';
+    isLinked
+      ? 'bg-red-50 text-red-600 dark:bg-red-400/12 dark:text-red-200'
+      : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-400/12 dark:text-indigo-200';
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 pb-20">
-      <Toaster position="bottom-center" />
-
+    <div className="min-h-[100dvh] bg-muted pb-20">
       {/* Header */}
-      <div className="bg-white p-6 pb-8 rounded-b-[2.5rem] shadow-sm z-10 relative">
+      <div className="bg-card p-6 pb-8 rounded-b-[2.5rem] shadow-sm z-10 relative">
         <div className="flex justify-between items-center mb-6">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/dashboard')}
-            className="p-2 -ml-2 bg-slate-50 rounded-full"
+            className="p-2 -ml-2 bg-muted rounded-full"
           >
-            <ArrowLeft className="w-6 h-6 text-slate-900" />
-          </button>
-          <button onClick={() => signOut()} className="p-2 -mr-2 text-slate-400">
+            <ArrowLeft className="w-6 h-6 text-foreground" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={() => signOut()}
+            className="p-2 -mr-2 text-muted-foreground"
+          >
             <LogOut className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-col items-center">
           <div className="relative mb-4">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-slate-100 relative">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-border shadow-lg bg-muted relative">
               {(() => {
                 if (isUploadingAvatar) return <Loading size="sm" />;
                 if (user.avatar)
@@ -153,17 +162,19 @@ export const MobileProfilePage: React.FC = () => {
                     <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
                   );
                 return (
-                  <UserIcon className="w-10 h-10 text-slate-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 );
               })()}
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-2 bg-indigo-600 rounded-full text-white shadow-md active:scale-95 transition-transform"
+              className="absolute bottom-0 right-0 p-2 bg-indigo-600 dark:bg-indigo-400/80 rounded-full text-primary-foreground shadow-md active:scale-95 transition-transform"
             >
               <Camera className="w-4 h-4" />
-            </button>
-            <input
+            </Button>
+            <Input
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -171,31 +182,33 @@ export const MobileProfilePage: React.FC = () => {
               onChange={handleAvatarUpload}
             />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mb-1">{displayName}</h1>
-          <p className="text-sm font-bold text-slate-400 font-mono">ID: {userIdDisplay}</p>
+          <h1 className="text-2xl font-black text-foreground mb-1">{displayName}</h1>
+          <p className="text-sm font-bold text-muted-foreground font-mono">ID: {userIdDisplay}</p>
         </div>
       </div>
 
       {/* Tab Nav */}
       <div className="px-4 -mt-6 relative z-20">
-        <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-100 flex justify-between">
+        <div className="bg-card/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-border flex justify-between">
           {[
             { id: 'info', icon: UserIcon },
             { id: 'stats', icon: BarChart3 },
             { id: 'security', icon: Lock },
             { id: 'settings', icon: Settings },
           ].map(item => (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
               className={`flex-1 flex items-center justify-center py-3 rounded-xl transition-all ${
                 activeTab === item.id
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-50'
+                  ? 'bg-indigo-600 dark:bg-indigo-400/80 text-primary-foreground shadow-md'
+                  : 'text-muted-foreground hover:bg-muted'
               }`}
             >
               <item.icon className="w-5 h-5" />
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -203,7 +216,7 @@ export const MobileProfilePage: React.FC = () => {
       {/* Content Body */}
       <div className="p-4 pt-6">
         {activeTab === 'info' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
             <ProfileInfoTab
               labels={labels}
               user={user}
@@ -214,7 +227,7 @@ export const MobileProfilePage: React.FC = () => {
         )}
 
         {activeTab === 'stats' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
             <ProfileStatsTab
               labels={labels}
               dayStreak={user.statistics?.dayStreak || 0}
@@ -227,7 +240,7 @@ export const MobileProfilePage: React.FC = () => {
         )}
 
         {activeTab === 'security' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
             <ProfileSecurityTab
               labels={labels}
               handlePasswordChange={handlePasswordChange}
@@ -257,7 +270,7 @@ export const MobileProfilePage: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
             <ProfileSettingsTab labels={labels} />
           </div>
         )}

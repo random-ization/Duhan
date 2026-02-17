@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import Konva from 'konva';
+import { Button } from '../../../components/ui';
 
 // 工具类型
 export type ToolType = 'pen' | 'highlighter' | 'eraser';
@@ -329,85 +330,103 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   const highlightColors = ['#fde047', '#86efac', '#93c5fd', '#fca5a5'];
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200">
+    <div className="flex items-center gap-2 p-2 bg-card/90 backdrop-blur-sm rounded-lg shadow-lg border border-border">
       {/* 工具切换 */}
-      <div className="flex bg-slate-100 rounded-lg p-0.5">
-        <button
+      <div className="flex bg-muted rounded-lg p-0.5">
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => onToolChange('pen')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'pen'
-            ? 'bg-white shadow-sm text-indigo-600'
-            : 'text-slate-500 hover:text-slate-700'
-            }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+            tool === 'pen'
+              ? 'bg-card shadow-sm text-indigo-600'
+              : 'text-muted-foreground hover:text-muted-foreground'
+          }`}
         >
           ✏️ 画笔
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => onToolChange('highlighter')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'highlighter'
-            ? 'bg-white shadow-sm text-yellow-600'
-            : 'text-slate-500 hover:text-slate-700'
-            }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+            tool === 'highlighter'
+              ? 'bg-card shadow-sm text-yellow-600'
+              : 'text-muted-foreground hover:text-muted-foreground'
+          }`}
         >
           🖍️ 高亮
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => onToolChange('eraser')}
           disabled={disabled}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${tool === 'eraser'
-            ? 'bg-white shadow-sm text-red-600'
-            : 'text-slate-500 hover:text-slate-700'
-            }`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+            tool === 'eraser'
+              ? 'bg-card shadow-sm text-red-600'
+              : 'text-muted-foreground hover:text-muted-foreground'
+          }`}
         >
           🧹 橡皮
-        </button>
+        </Button>
       </div>
 
       {/* 分隔线 */}
-      <div className="w-px h-6 bg-slate-200" />
+      <div className="w-px h-6 bg-muted" />
 
       {/* 颜色选择 */}
       <div className="flex gap-1">
         {(tool === 'highlighter' ? highlightColors : colors).map(c => (
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             key={c}
             onClick={() => onColorChange(c)}
             disabled={disabled || tool === 'eraser'}
-            className={`w-6 h-6 rounded-full border-2 transition-all ${color === c ? 'border-indigo-500 scale-110' : 'border-transparent hover:scale-105'
-              } ${tool === 'eraser' ? 'opacity-30' : ''}`}
+            className={`w-6 h-6 rounded-full border-2 transition-all ${
+              color === c ? 'border-indigo-500 scale-110' : 'border-transparent hover:scale-105'
+            } ${tool === 'eraser' ? 'opacity-30' : ''}`}
             style={{ backgroundColor: c }}
           />
         ))}
       </div>
 
       {/* 分隔线 */}
-      <div className="w-px h-6 bg-slate-200" />
+      <div className="w-px h-6 bg-muted" />
 
       {/* 操作按钮 */}
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={onUndo}
         disabled={disabled}
-        className="px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"
+        className="px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-md transition-all"
       >
         ↩️ 撤销
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={onClear}
         disabled={disabled}
         className="px-2 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-all"
       >
         🗑️ 清空
-      </button>
+      </Button>
 
       {onSave && (
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onSave}
           disabled={disabled}
           className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all shadow-sm"
         >
           💾 保存
-        </button>
+        </Button>
       )}
     </div>
   );

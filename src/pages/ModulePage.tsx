@@ -14,6 +14,7 @@ import BackButton from '../components/ui/BackButton';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 const useModuleState = (
   listParam: string | null,
@@ -152,7 +153,14 @@ const ModulePage: React.FC = () => {
       setSelectedInstitute(instituteId);
       if (!selectedLevel) setSelectedLevel(1);
     }
-  }, [isCourseRoute, instituteId, selectedInstitute, selectedLevel, setSelectedInstitute, setSelectedLevel]);
+  }, [
+    isCourseRoute,
+    instituteId,
+    selectedInstitute,
+    selectedLevel,
+    setSelectedInstitute,
+    setSelectedLevel,
+  ]);
 
   const effectiveInstitute = isCourseRoute && instituteId ? instituteId : selectedInstitute;
   const effectiveLevel = selectedLevel || 1;
@@ -176,11 +184,31 @@ const ModulePage: React.FC = () => {
 
   const institute = institutes.find(i => i.id === effectiveInstitute);
   const instituteName =
-    (institute ? getLocalizedContent(institute, 'name', language) || institute.name : null) || 'Korean';
+    (institute ? getLocalizedContent(institute, 'name', language) || institute.name : null) ||
+    'Korean';
+  const moduleLabel = useMemo(() => {
+    if (currentModule === LearningModuleType.READING) {
+      return t('courseDashboard.modules.reading', { defaultValue: 'Reading' });
+    }
+    if (currentModule === LearningModuleType.LISTENING) {
+      return t('courseDashboard.modules.listening', { defaultValue: 'Listening' });
+    }
+    if (currentModule === LearningModuleType.VOCABULARY) {
+      return t('courseDashboard.modules.vocabulary', { defaultValue: 'Vocabulary' });
+    }
+    if (currentModule === LearningModuleType.GRAMMAR) {
+      return t('courseDashboard.modules.grammar', { defaultValue: 'Grammar' });
+    }
+    return t('module.title', { defaultValue: 'Module' });
+  }, [currentModule, t]);
 
   const isCustomList = listParam === 'saved' || listParam === 'mistakes';
 
-  const { derivedCustomList, derivedListType } = useModuleState(listParam, savedWordsData, mistakesData);
+  const { derivedCustomList, derivedListType } = useModuleState(
+    listParam,
+    savedWordsData,
+    mistakesData
+  );
 
   useEffect(() => {
     if (!currentModule) return;
@@ -202,7 +230,10 @@ const ModulePage: React.FC = () => {
 
   const courseBase = effectiveInstitute ? `/course/${effectiveInstitute}` : '/courses';
 
-  if (currentModule === LearningModuleType.GRAMMAR || (currentModule === LearningModuleType.VOCABULARY && !isCustomList)) {
+  if (
+    currentModule === LearningModuleType.GRAMMAR ||
+    (currentModule === LearningModuleType.VOCABULARY && !isCustomList)
+  ) {
     const subPath = currentModule === LearningModuleType.GRAMMAR ? 'grammar' : 'vocab';
     return <Navigate to={`${courseBase}/${subPath}`} replace />;
   }
@@ -251,6 +282,14 @@ const ModulePage: React.FC = () => {
 
   return (
     <div className="p-6">
+      <AppBreadcrumb
+        className="mb-4"
+        items={[
+          { label: t('coursesOverview.pageTitle', { defaultValue: 'Courses' }), to: '/courses' },
+          { label: instituteName, to: courseBase },
+          { label: moduleLabel },
+        ]}
+      />
       <div className="mb-6">
         <BackButton onClick={handleBack} />
       </div>

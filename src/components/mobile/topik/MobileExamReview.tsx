@@ -12,13 +12,12 @@ import {
   List,
   RotateCcw,
   Sparkles,
-  Loader2,
   Bookmark,
   BookmarkCheck,
 } from 'lucide-react';
 import { useAction, useMutation } from 'convex/react';
 import { aRef, mRef } from '../../../utils/convexRefs';
-import { Button } from '../../ui/button';
+import { Button } from '../../ui';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 
 interface MobileExamReviewProps {
@@ -258,20 +257,22 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   // --- RENDERERS ---
 
   const renderOverview = () => (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-muted">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <button
+      <header className="bg-card/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-20 shrink-0">
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="text-center">
-          <h1 className="font-bold text-slate-800 text-base line-clamp-1 max-w-[200px]">
+          <h1 className="font-bold text-muted-foreground text-base line-clamp-1 max-w-[200px]">
             {exam.title}
           </h1>
-          <p className="text-[10px] text-slate-500 font-medium">
+          <p className="text-[10px] text-muted-foreground font-medium">
             {t('dashboard.topik.mobile.review.mode', { defaultValue: 'Review Mode' })}
           </p>
         </div>
@@ -281,34 +282,40 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
       <div className="flex-1 overflow-y-auto pb-safe">
         {/* Score Card */}
         <div className="p-6">
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden relative p-8 text-center flex flex-col items-center">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+          <div className="bg-card rounded-3xl shadow-lg border border-border overflow-hidden relative p-8 text-center flex flex-col items-center">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400/75 dark:to-purple-400/75"></div>
 
-            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">
+            <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-2">
               {t('dashboard.topik.mobile.review.totalScore', { defaultValue: 'Total Score' })}
             </span>
             <div className="flex items-baseline gap-2 mb-6">
               <span
                 className={clsx(
                   'text-6xl font-black tracking-tighter',
-                  stats.percentage >= 60 ? 'text-emerald-600' : 'text-slate-800'
+                  stats.percentage >= 60
+                    ? 'text-emerald-600 dark:text-emerald-300'
+                    : 'text-muted-foreground'
                 )}
               >
                 {stats.score}
               </span>
-              <span className="text-xl font-bold text-slate-400">/ {stats.totalScore}</span>
+              <span className="text-xl font-bold text-muted-foreground">/ {stats.totalScore}</span>
             </div>
 
             <div className="w-full grid grid-cols-2 gap-4">
-              <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex flex-col items-center">
-                <div className="text-2xl font-black text-emerald-600">{stats.correctCount}</div>
-                <div className="text-[10px] font-bold text-emerald-800/60 uppercase mt-1">
+              <div className="bg-emerald-50 dark:bg-emerald-500/14 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-300/25 flex flex-col items-center">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-300">
+                  {stats.correctCount}
+                </div>
+                <div className="text-[10px] font-bold text-emerald-800/60 dark:text-emerald-200/80 uppercase mt-1">
                   {t('dashboard.topik.mobile.review.correct', { defaultValue: 'Correct' })}
                 </div>
               </div>
-              <div className="bg-red-50 rounded-2xl p-4 border border-red-100 flex flex-col items-center">
-                <div className="text-2xl font-black text-red-500">{stats.mistakeCount}</div>
-                <div className="text-[10px] font-bold text-red-800/60 uppercase mt-1">
+              <div className="bg-red-50 dark:bg-red-500/14 rounded-2xl p-4 border border-red-100 dark:border-red-300/25 flex flex-col items-center">
+                <div className="text-2xl font-black text-red-500 dark:text-red-300">
+                  {stats.mistakeCount}
+                </div>
+                <div className="text-[10px] font-bold text-red-800/60 dark:text-red-200/80 uppercase mt-1">
                   {t('dashboard.topik.mobile.review.mistakes', { defaultValue: 'Mistakes' })}
                 </div>
               </div>
@@ -318,39 +325,45 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
         {/* Actions */}
         <div className="px-6 mb-8 flex gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => {
               setCurrentQuestionIndex(0);
               setViewMode('DETAIL');
             }}
-            className="flex-1 bg-indigo-600 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-indigo-200 active:scale-[0.98] transition-transform text-sm"
+            className="flex-1 bg-indigo-600 dark:bg-indigo-400/75 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-indigo-200/80 dark:shadow-indigo-950/30 active:scale-[0.98] transition-transform text-sm"
           >
             {t('dashboard.topik.mobile.review.reviewAll', { defaultValue: 'Review All' })}
-          </button>
+          </Button>
           {/* Review Wrong Only */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={handleReviewWrong}
             disabled={stats.mistakeCount === 0}
-            className="flex-1 bg-white border-2 border-slate-200 text-slate-700 rounded-xl py-3.5 font-bold active:bg-slate-50 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 bg-card border-2 border-border text-muted-foreground rounded-xl py-3.5 font-bold active:bg-muted text-sm flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {t('dashboard.topik.mobile.review.reviewMistakes', {
               count: stats.mistakeCount,
               defaultValue: 'Review Mistakes ({{count}})',
             })}
-          </button>
+          </Button>
           {onReset && (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={onReset}
-              className="bg-slate-100 text-slate-600 rounded-xl p-3.5 flex items-center justify-center"
+              className="bg-muted text-muted-foreground rounded-xl p-3.5 flex items-center justify-center"
             >
               <RotateCcw className="w-5 h-5" />
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Question Grid */}
         <div className="px-6 pb-20">
-          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
+          <h3 className="font-bold text-muted-foreground mb-4 flex items-center gap-2 text-sm">
             <Grid3x3 className="w-4 h-4" />
             {t('dashboard.topik.mobile.review.questionMap', { defaultValue: 'Question Map' })}
           </h3>
@@ -360,20 +373,22 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               const isAnswered = userAnswers[idx] !== undefined;
 
               return (
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   key={q.id}
                   onClick={() => handleQuestionClick(idx)}
                   className={clsx(
                     'aspect-square rounded-xl flex items-center justify-center font-bold text-sm transition-all border-b-4 active:border-b-0 active:translate-y-[4px]',
                     isCorrect
-                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                      ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/30'
                       : isAnswered
-                        ? 'bg-red-100 text-red-600 border-red-200'
-                        : 'bg-slate-100 text-slate-400 border-slate-200'
+                        ? 'bg-red-100 dark:bg-red-500/16 text-red-600 dark:text-red-200 border-red-200 dark:border-red-300/30'
+                        : 'bg-muted text-muted-foreground border-border'
                   )}
                 >
                   {q.number || idx + 1}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -418,12 +433,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
       const questionImage = q.imageUrl || q.image;
 
       return (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+        <div className="bg-card rounded-3xl shadow-sm border border-border overflow-hidden mb-6">
           {/* Question Text */}
-          <div className="p-5 border-b border-slate-100">
+          <div className="p-5 border-b border-border">
             <div className="flex items-start gap-3">
-              <div className="font-bold text-lg text-slate-900 leading-snug break-keep whitespace-pre-wrap">
-                <span className="inline-block mr-2 text-indigo-600 min-w-[20px]">{q.number}.</span>
+              <div className="font-bold text-lg text-foreground leading-snug break-keep whitespace-pre-wrap">
+                <span className="inline-block mr-2 text-indigo-600 dark:text-indigo-300 min-w-[20px]">
+                  {q.number}.
+                </span>
                 <span dangerouslySetInnerHTML={{ __html: sanitize(q.question) }} />
               </div>
             </div>
@@ -431,14 +448,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             {/* Optional Passage */}
             {q.passage && (
               <div
-                className="mt-4 bg-slate-50 rounded-xl p-5 text-slate-800 leading-8 text-base whitespace-pre-wrap border border-slate-100 font-serif break-keep text-justify"
+                className="mt-4 bg-muted rounded-xl p-5 text-muted-foreground leading-8 text-base whitespace-pre-wrap border border-border font-serif break-keep text-justify"
                 dangerouslySetInnerHTML={{ __html: sanitize(q.passage) }}
               />
             )}
 
             {/* Image */}
             {(q.layout === 'IMAGE' || !!questionImage) && questionImage && (
-              <div className="mt-4 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative aspect-[4/3] flex items-center justify-center">
+              <div className="mt-4 bg-muted rounded-xl overflow-hidden border border-border relative aspect-[4/3] flex items-center justify-center">
                 <img
                   src={questionImage}
                   alt="Question Visual"
@@ -449,7 +466,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
             {/* Context Box */}
             {q.contextBox && (
-              <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl p-5 font-serif text-base leading-8 text-slate-800 break-keep text-justify">
+              <div className="mt-4 bg-muted border border-border rounded-xl p-5 font-serif text-base leading-8 text-muted-foreground break-keep text-justify">
                 <div
                   className="whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: sanitize(q.contextBox) }}
@@ -459,7 +476,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
           </div>
 
           {/* Options */}
-          <div className="p-4 space-y-3 bg-slate-50/50">
+          <div className="p-4 space-y-3 bg-muted/50">
             {/* If image options */}
             {q.optionImages && q.optionImages.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
@@ -467,23 +484,24 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   const isSelected = userAnswer === idx;
                   const isCorrectOpt = idx === q.correctAnswer;
 
-                  let borderClass = 'border-slate-200';
+                  let borderClass = 'border-border';
                   let ringClass = '';
                   let badge = null;
 
                   if (isCorrectOpt) {
-                    borderClass = 'border-emerald-500 bg-emerald-50';
-                    ringClass = 'ring-2 ring-emerald-500 ring-offset-2';
+                    borderClass =
+                      'border-emerald-500 dark:border-emerald-300 bg-emerald-50 dark:bg-emerald-500/12';
+                    ringClass = 'ring-2 ring-emerald-500 dark:ring-emerald-300 ring-offset-2';
                     badge = (
-                      <span className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-sm z-10">
+                      <span className="absolute top-2 right-2 bg-emerald-500 dark:bg-emerald-400/80 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-sm z-10">
                         {t('dashboard.topik.mobile.review.badgeAnswer', { defaultValue: 'ANS' })}
                       </span>
                     );
                   } else if (isSelected) {
-                    borderClass = 'border-red-500 bg-red-50';
-                    ringClass = 'ring-2 ring-red-500 ring-offset-2';
+                    borderClass = 'border-red-500 dark:border-red-300 bg-red-50 dark:bg-red-500/12';
+                    ringClass = 'ring-2 ring-red-500 dark:ring-red-300 ring-offset-2';
                     badge = (
-                      <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-sm z-10">
+                      <span className="absolute top-2 right-2 bg-red-500 dark:bg-red-400/80 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-sm z-10">
                         {t('dashboard.topik.mobile.review.badgeYou', { defaultValue: 'YOU' })}
                       </span>
                     );
@@ -493,7 +511,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                     <div
                       key={idx}
                       className={clsx(
-                        'relative rounded-xl border-2 overflow-hidden aspect-[4/3] group bg-white',
+                        'relative rounded-xl border-2 overflow-hidden aspect-[4/3] group bg-card',
                         borderClass,
                         ringClass
                       )}
@@ -508,10 +526,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                         className={clsx(
                           'absolute top-2 left-2 w-6 h-6 rounded-full font-bold flex items-center justify-center text-xs shadow-sm border',
                           isCorrectOpt
-                            ? 'bg-emerald-500 text-white border-emerald-500'
+                            ? 'bg-emerald-500 dark:bg-emerald-400/80 text-white border-emerald-500 dark:border-emerald-300'
                             : isSelected
-                              ? 'bg-red-500 text-white border-red-500'
-                              : 'bg-white/90 text-slate-500 border-slate-200'
+                              ? 'bg-red-500 dark:bg-red-400/80 text-white border-red-500 dark:border-red-300'
+                              : 'bg-card/90 text-muted-foreground border-border'
                         )}
                       >
                         {idx + 1}
@@ -525,17 +543,19 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                 const isSelected = userAnswer === idx;
                 const isCorrectOpt = idx === q.correctAnswer;
 
-                let stateClass = 'bg-white border-slate-200 text-slate-600 opacity-80';
-                let numClass = 'bg-slate-100 text-slate-400 border-slate-200';
+                let stateClass = 'bg-card border-border text-muted-foreground opacity-80';
+                let numClass = 'bg-muted text-muted-foreground border-border';
 
                 if (isCorrectOpt) {
                   stateClass =
-                    'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500 z-10 opacity-100';
-                  numClass = 'bg-emerald-500 text-white border-emerald-500';
+                    'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-500 dark:border-emerald-300 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500 dark:ring-emerald-300 z-10 opacity-100';
+                  numClass =
+                    'bg-emerald-500 dark:bg-emerald-400/80 text-white border-emerald-500 dark:border-emerald-300';
                 } else if (isSelected) {
                   stateClass =
-                    'bg-red-50 border-red-500 text-red-900 ring-1 ring-red-500 z-10 opacity-100';
-                  numClass = 'bg-red-500 text-white border-red-500';
+                    'bg-red-50 dark:bg-red-500/12 border-red-500 dark:border-red-300 text-red-900 dark:text-red-100 ring-1 ring-red-500 dark:ring-red-300 z-10 opacity-100';
+                  numClass =
+                    'bg-red-500 dark:bg-red-400/80 text-white border-red-500 dark:border-red-300';
                 }
 
                 return (
@@ -556,12 +576,12 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                     </div>
                     <span className="text-sm font-medium flex-1 leading-relaxed">{opt}</span>
                     {isCorrectOpt && (
-                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded ml-auto shrink-0">
+                      <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-500/18 text-emerald-700 dark:text-emerald-200 px-2 py-0.5 rounded ml-auto shrink-0">
                         {t('dashboard.topik.mobile.review.badgeAnswer', { defaultValue: 'ANS' })}
                       </span>
                     )}
                     {isSelected && !isCorrectOpt && (
-                      <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded ml-auto shrink-0">
+                      <span className="text-[10px] font-bold bg-red-100 dark:bg-red-500/18 text-red-700 dark:text-red-200 px-2 py-0.5 rounded ml-auto shrink-0">
                         {t('dashboard.topik.mobile.review.badgeYou', { defaultValue: 'YOU' })}
                       </span>
                     )}
@@ -575,21 +595,23 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     };
 
     return (
-      <div className="flex flex-col h-full bg-slate-100 relative">
+      <div className="flex flex-col h-full bg-muted relative">
         {/* Detail Header */}
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-20">
-          <button
+        <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-20">
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => setViewMode('OVERVIEW')}
-            className="text-sm font-bold text-slate-500 flex items-center gap-1 hover:text-slate-800 transition-colors"
+            className="text-sm font-bold text-muted-foreground flex items-center gap-1 hover:text-muted-foreground transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             {t('dashboard.topik.mobile.review.back', { defaultValue: 'Back' })}
-          </button>
+          </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+            <span className="text-xs font-black bg-muted text-muted-foreground px-2 py-1 rounded-md">
               Q{exam.questions[currentQuestionIndex].number || currentQuestionIndex + 1}
             </span>
-            <span className="text-xs font-bold text-slate-400">
+            <span className="text-xs font-bold text-muted-foreground">
               {reviewFilter === 'WRONG'
                 ? t('dashboard.topik.mobile.review.mistakeProgress', {
                     current: currentFilterIndex + 1,
@@ -602,12 +624,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   })}
             </span>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => setViewMode('OVERVIEW')}
-            className="p-2 bg-slate-50 rounded-full text-slate-500"
+            className="p-2 bg-muted rounded-full text-muted-foreground"
           >
             <List className="w-4 h-4" />
-          </button>
+          </Button>
         </header>
 
         <div className="flex-1 overflow-y-auto pb-safe" ref={detailScrollRef}>
@@ -617,14 +641,16 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               className={clsx(
                 'mb-6 rounded-2xl p-4 flex items-center gap-3 border shadow-sm',
                 isCorrect
-                  ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                  : 'bg-red-50 border-red-100 text-red-800'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-300/25 text-emerald-800 dark:text-emerald-200'
+                  : 'bg-red-50 dark:bg-red-500/12 border-red-100 dark:border-red-300/25 text-red-800 dark:text-red-200'
               )}
             >
               <div
                 className={clsx(
                   'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-                  isCorrect ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'
+                  isCorrect
+                    ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-600 dark:text-emerald-300'
+                    : 'bg-red-100 dark:bg-red-500/16 text-red-500 dark:text-red-300'
                 )}
               >
                 {isCorrect ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
@@ -653,14 +679,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
             {/* Explanation */}
             {currentQuestion.explanation && (
-              <div className="bg-indigo-50/50 rounded-3xl p-6 border border-indigo-100 mb-8">
-                <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2 text-sm">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
+              <div className="bg-indigo-50/50 dark:bg-indigo-500/12 rounded-3xl p-6 border border-indigo-100 dark:border-indigo-300/20 mb-8">
+                <h3 className="font-bold text-indigo-900 dark:text-indigo-200 mb-2 flex items-center gap-2 text-sm">
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/18 flex items-center justify-center">
                     💡
                   </span>
                   {t('dashboard.topik.mobile.review.explanation', { defaultValue: 'Explanation' })}
                 </h3>
-                <p className="text-sm text-slate-700 leading-relaxed font-serif whitespace-pre-wrap">
+                <p className="text-sm text-muted-foreground leading-relaxed font-serif whitespace-pre-wrap">
                   {currentQuestion.explanation}
                 </p>
               </div>
@@ -673,32 +699,29 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   type="button"
                   size="auto"
                   onClick={() => handleAIAnalysis(currentQuestion)}
-                  disabled={aiLoading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl shadow-md active:scale-[0.98] transition-transform font-bold"
+                  loading={aiLoading}
+                  loadingText={t('dashboard.topik.mobile.review.aiThinking', {
+                    defaultValue: 'Thinking...',
+                  })}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400/75 dark:to-purple-400/75 text-white rounded-xl shadow-md dark:shadow-indigo-950/25 active:scale-[0.98] transition-transform font-bold"
                 >
-                  {aiLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-5 h-5" />
-                  )}
-                  {aiLoading
-                    ? t('dashboard.topik.mobile.review.aiThinking', { defaultValue: 'Thinking...' })
-                    : t('dashboard.topik.mobile.review.aiTitle', { defaultValue: 'AI Analysis' })}
+                  <Sparkles className="w-5 h-5" />
+                  {t('dashboard.topik.mobile.review.aiTitle', { defaultValue: 'AI Analysis' })}
                 </Button>
               )}
 
               {aiError && (
-                <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                <div className="mt-3 p-4 bg-red-50 dark:bg-red-500/12 border border-red-200 dark:border-red-300/25 rounded-xl text-red-700 dark:text-red-200 text-sm flex items-center gap-2">
                   <X className="w-4 h-4" /> {aiError}
                 </div>
               )}
 
               {aiAnalysis && (
-                <div className="mt-4 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl shadow-sm relative">
+                <div className="mt-4 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-500/12 dark:to-purple-500/12 border border-indigo-100 dark:border-indigo-300/20 rounded-2xl shadow-sm relative">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-indigo-600" />
-                      <span className="font-bold text-indigo-700">
+                      <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+                      <span className="font-bold text-indigo-700 dark:text-indigo-200">
                         {t('dashboard.topik.mobile.review.aiTitle', {
                           defaultValue: 'AI Analysis',
                         })}
@@ -710,11 +733,16 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                       size="auto"
                       onClick={() => handleSaveToNotebook(currentQuestion)}
                       disabled={isSaving || isSaved}
+                      loading={isSaving}
+                      loadingText={t('dashboard.topik.mobile.review.saving', {
+                        defaultValue: 'Saving...',
+                      })}
+                      loadingIconClassName="w-3.5 h-3.5"
                       className={clsx(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border',
                         isSaved
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          : 'bg-white text-indigo-600 border-indigo-200'
+                          ? 'bg-emerald-100 dark:bg-emerald-500/18 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/25'
+                          : 'bg-card text-indigo-600 dark:text-indigo-200 border-indigo-200 dark:border-indigo-300/25'
                       )}
                     >
                       {isSaved ? (
@@ -731,12 +759,12 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   {/* Translation */}
                   {aiAnalysis.translation && (
                     <div className="mb-4">
-                      <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
+                      <div className="text-xs font-bold text-indigo-400 dark:text-indigo-200 uppercase tracking-wider mb-1">
                         {t('dashboard.topik.mobile.review.translation', {
                           defaultValue: 'Translation',
                         })}
                       </div>
-                      <div className="text-slate-800 leading-relaxed bg-white/60 p-3 rounded-xl text-sm">
+                      <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-xl text-sm">
                         {aiAnalysis.translation}
                       </div>
                     </div>
@@ -745,10 +773,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   {/* Key Point */}
                   {aiAnalysis.keyPoint && (
                     <div className="mb-4">
-                      <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
+                      <div className="text-xs font-bold text-indigo-400 dark:text-indigo-200 uppercase tracking-wider mb-1">
                         {t('dashboard.topik.mobile.review.keyPoint', { defaultValue: 'Key Point' })}
                       </div>
-                      <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-lg text-sm font-bold">
+                      <div className="inline-block bg-indigo-100 dark:bg-indigo-500/18 text-indigo-800 dark:text-indigo-200 px-3 py-1.5 rounded-lg text-sm font-bold">
                         {aiAnalysis.keyPoint}
                       </div>
                     </div>
@@ -757,12 +785,12 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   {/* Analysis */}
                   {aiAnalysis.analysis && (
                     <div className="mb-4">
-                      <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
+                      <div className="text-xs font-bold text-indigo-400 dark:text-indigo-200 uppercase tracking-wider mb-1">
                         {t('dashboard.topik.mobile.review.explanation', {
                           defaultValue: 'Explanation',
                         })}
                       </div>
-                      <div className="text-slate-800 leading-relaxed bg-white/60 p-3 rounded-xl text-sm whitespace-pre-wrap">
+                      <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-xl text-sm whitespace-pre-wrap">
                         {aiAnalysis.analysis}
                       </div>
                     </div>
@@ -774,24 +802,28 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         </div>
 
         {/* Bottom Nav */}
-        <div className="bg-white border-t border-slate-200 px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-safe shadow-nav-up">
-          <button
+        <div className="bg-card border-t border-border px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-safe shadow-nav-up">
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={handlePrev}
             disabled={currentFilterIndex === 0}
-            className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold disabled:opacity-30 active:bg-slate-200 transition-colors flex items-center justify-center gap-2 text-sm"
+            className="flex-1 py-3 rounded-xl bg-muted text-muted-foreground font-bold disabled:opacity-30 active:bg-muted transition-colors flex items-center justify-center gap-2 text-sm"
           >
             <ChevronLeft className="w-4 h-4" />
             {t('dashboard.topik.mobile.review.prev', { defaultValue: 'Prev' })}
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={handleNext}
             disabled={currentFilterIndex === questionsToShow.length - 1}
-            className="flex-[2] py-3 rounded-xl bg-slate-900 text-white font-bold disabled:opacity-30 shadow-lg shadow-slate-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 text-sm"
+            className="flex-[2] py-3 rounded-xl bg-primary text-primary-foreground font-bold disabled:opacity-30 shadow-lg shadow-primary/25 dark:shadow-primary/15 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 text-sm"
           >
             {t('dashboard.topik.mobile.review.next', { defaultValue: 'Next' })}
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
         {/* Save Toast */}
         {showSaveToast && (
@@ -800,8 +832,8 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               className={clsx(
                 'px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border',
                 saveError
-                  ? 'bg-red-50 text-red-800 border-red-200'
-                  : 'bg-emerald-600 text-white border-emerald-500'
+                  ? 'bg-red-50 dark:bg-red-500/14 text-red-800 dark:text-red-200 border-red-200 dark:border-red-300/25'
+                  : 'bg-emerald-600 dark:bg-emerald-500/70 text-white border-emerald-500 dark:border-emerald-300/35'
               )}
             >
               {saveError ? (

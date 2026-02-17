@@ -5,8 +5,9 @@ import { useAction, useMutation } from 'convex/react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { aRef, mRef } from '../../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Button } from '../ui';
+import { Input } from '../ui';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
 interface GrammarDetailSheetProps {
   grammar: GrammarPointData | null;
@@ -153,8 +154,8 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
 
   if (!grammar) {
     return (
-      <aside className="w-96 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0 z-30">
-        <div className="flex-1 flex items-center justify-center text-slate-400 font-bold p-6">
+      <aside className="w-96 bg-card border-2 border-foreground rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0 z-30">
+        <div className="flex-1 flex items-center justify-center text-muted-foreground font-bold p-6">
           <div className="text-center">
             <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>选择一个语法点查看详情</p>
@@ -168,7 +169,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
 
   return (
-    <aside className="w-96 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0 z-30 relative">
+    <aside className="w-96 bg-card border-2 border-foreground rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0 z-30 relative">
       <Confetti show={showConfetti} />
 
       <DetailHeader
@@ -198,8 +199,8 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       />
 
       {/* AI Practice Section - Moved to Top */}
-      <div className="p-4 border-b-2 border-slate-900 bg-slate-50 shrink-0">
-        <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 mb-2">
+      <div className="p-4 border-b-2 border-foreground bg-muted shrink-0">
+        <label className="flex items-center gap-2 text-[10px] font-black text-foreground mb-2">
           <Sparkles className="w-3 h-3" />
           AI 陪练
         </label>
@@ -210,23 +211,26 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
             onChange={e => setPracticeSentence(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={`用 ${grammar.title} 造个句子...`}
-            className="flex-1 px-3 py-2 border-2 border-slate-900 rounded-lg text-sm font-bold bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="flex-1 px-3 py-2 border-2 border-foreground rounded-lg text-sm font-bold bg-card focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
             type="button"
             size="auto"
             onClick={handleCheck}
             disabled={isChecking || !practiceSentence.trim()}
-            className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg border-2 border-slate-900 text-sm hover:bg-white hover:text-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={isChecking}
+            loadingText="检查中..."
+            loadingIconClassName="w-3 h-3"
+            className="px-4 py-2 bg-primary text-white font-bold rounded-lg border-2 border-foreground text-sm hover:bg-card hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isChecking ? '...' : '检查'}
+            检查
           </Button>
         </div>
 
         {/* AI Feedback */}
         {aiFeedback && (
           <div
-            className={`mt-3 p-3 border-2 border-slate-900 rounded-lg ${
+            className={`mt-3 p-3 border-2 border-foreground rounded-lg ${
               aiFeedback.isCorrect ? 'bg-green-50' : 'bg-red-50'
             }`}
           >
@@ -242,21 +246,21 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
                 >
                   {aiFeedback.isCorrect ? '✓ 太棒了!' : '✗ 需要改进'}
                 </p>
-                <p className="text-xs text-slate-600 mt-1">{aiFeedback.feedback}</p>
+                <p className="text-xs text-muted-foreground mt-1">{aiFeedback.feedback}</p>
                 {!aiFeedback.isCorrect && aiFeedback.correctedSentence && (
-                  <div className="mt-2 p-2 bg-white rounded border border-slate-300">
-                    <span className="text-[10px] font-bold text-slate-500 block mb-1">
+                  <div className="mt-2 p-2 bg-card rounded border border-border">
+                    <span className="text-[10px] font-bold text-muted-foreground block mb-1">
                       建议写法:
                     </span>
-                    <span className="text-sm font-bold text-slate-800">
+                    <span className="text-sm font-bold text-muted-foreground">
                       {aiFeedback.correctedSentence}
                     </span>
                   </div>
                 )}
                 {aiFeedback.progress && (
-                  <div className="mt-2 text-[10px] text-slate-500">
+                  <div className="mt-2 text-[10px] text-muted-foreground">
                     熟练度:{' '}
-                    <span className="font-bold text-slate-700">
+                    <span className="font-bold text-muted-foreground">
                       {aiFeedback.progress.proficiency}%
                     </span>
                     {aiFeedback.progress.status === 'MASTERED' && (
@@ -272,7 +276,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
 
       {/* Content - Scrollable */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        <div className="text-sm text-slate-800 font-bold leading-relaxed">
+        <div className="text-sm text-muted-foreground font-bold leading-relaxed">
           <span className="bg-yellow-200 px-1 border border-yellow-300 rounded">
             {grammar.title}
           </span>
@@ -280,10 +284,10 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
         </div>
 
         <div>
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
+          <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
             📖 详细解释
           </h4>
-          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+          <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
             {grammar.explanation}
           </div>
         </div>
@@ -365,7 +369,7 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
       case 'CONNECTIVE':
         return { bg: 'bg-amber-50', label: 'text-amber-600', border: 'border-amber-200' };
       default:
-        return { bg: 'bg-slate-50', label: 'text-slate-600', border: 'border-slate-200' };
+        return { bg: 'bg-muted', label: 'text-muted-foreground', border: 'border-border' };
     }
   };
 
@@ -375,12 +379,12 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
   const getProgressColor = () => {
     if (status === 'MASTERED') return 'bg-green-500';
     if (status === 'LEARNING') return 'bg-amber-500';
-    return 'bg-slate-400';
+    return 'bg-muted';
   };
 
   return (
     <div
-      className={`p-4 border-b-2 border-slate-900 ${typeStyles.bg} flex justify-between items-start`}
+      className={`p-4 border-b-2 border-foreground ${typeStyles.bg} flex justify-between items-start`}
     >
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
@@ -390,43 +394,52 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
             {grammar.type}
           </span>
           {grammar.level && (
-            <span className="text-[10px] font-bold text-slate-500">{grammar.level}</span>
+            <span className="text-[10px] font-bold text-muted-foreground">{grammar.level}</span>
           )}
         </div>
-        <h2 className="text-2xl font-black text-slate-900">{grammar.title}</h2>
+        <h2 className="text-2xl font-black text-foreground">{grammar.title}</h2>
 
         <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
+          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden border border-border">
             <div
               className={`h-full transition-all duration-500 ${getProgressColor()}`}
               style={{ width: `${proficiency}%` }}
             />
           </div>
-          <span className="text-xs font-bold text-slate-600">{proficiency}%</span>
+          <span className="text-xs font-bold text-muted-foreground">{proficiency}%</span>
           {status === 'MASTERED' && <Trophy className="w-4 h-4 text-green-600" />}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={onStatusToggle}
-          className={`p-1.5 rounded-lg border-2 ${
-            status === 'MASTERED'
-              ? 'bg-green-100 border-green-500 text-green-700'
-              : 'bg-white border-slate-900 text-slate-400 hover:bg-slate-100'
-          } transition-colors`}
-          title={status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
-        >
-          <Trophy className={`w-4 h-4 ${status === 'MASTERED' ? 'fill-current' : ''}`} />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onStatusToggle}
+              aria-label={status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
+              className={`p-1.5 rounded-lg border-2 ${
+                status === 'MASTERED'
+                  ? 'bg-green-100 border-green-500 text-green-700'
+                  : 'bg-card border-foreground text-muted-foreground hover:bg-muted'
+              } transition-colors`}
+            >
+              <Trophy className={`w-4 h-4 ${status === 'MASTERED' ? 'fill-current' : ''}`} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">
+              {status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
         <Button
           type="button"
           variant="outline"
           size="auto"
           onClick={onClose}
-          className="w-6 h-6 rounded border-2 border-slate-900 bg-white flex items-center justify-center hover:bg-red-100 text-slate-900 transition-colors ml-2"
+          className="w-6 h-6 rounded border-2 border-foreground bg-card flex items-center justify-center hover:bg-red-100 text-foreground transition-colors ml-2"
         >
           <X className="w-3 h-3" />
         </Button>
@@ -437,18 +450,18 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
 
 const RulesSection: React.FC<{ rules: Record<string, unknown> }> = ({ rules }) => (
   <div>
-    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
+    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
       🧩 接续规则
     </h4>
     <div className="flex items-center gap-1 flex-wrap">
       {Object.entries(rules).map(([key, value], i) => (
         <React.Fragment key={key}>
-          {i > 0 && <span className="font-black text-lg mx-1 text-slate-400">/</span>}
-          <div className="px-3 py-1.5 bg-white border-2 border-slate-900 rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
+          {i > 0 && <span className="font-black text-lg mx-1 text-muted-foreground">/</span>}
+          <div className="px-3 py-1.5 bg-card border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
             {key}
           </div>
-          <span className="font-black text-lg text-slate-600">→</span>
-          <div className="px-3 py-1.5 bg-blue-100 text-blue-700 border-2 border-slate-900 rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
+          <span className="font-black text-lg text-muted-foreground">→</span>
+          <div className="px-3 py-1.5 bg-blue-100 text-blue-700 border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
             {String(value)}
           </div>
         </React.Fragment>
@@ -461,7 +474,7 @@ const ExamplesSection: React.FC<{ examples?: unknown[] }> = ({ examples }) => {
   const list = Array.isArray(examples) ? examples : [];
   return (
     <div>
-      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
+      <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
         💬 场景例句
       </h4>
       <div className="space-y-2">
@@ -474,14 +487,14 @@ const ExamplesSection: React.FC<{ examples?: unknown[] }> = ({ examples }) => {
           return (
             <div
               key={kr || i}
-              className="p-2.5 bg-slate-50 border-2 border-slate-900 rounded-lg relative group cursor-pointer hover:bg-white transition-colors"
+              className="p-2.5 bg-muted border-2 border-foreground rounded-lg relative group cursor-pointer hover:bg-card transition-colors"
             >
-              <div className="font-bold text-slate-900 text-sm">
+              <div className="font-bold text-foreground text-sm">
                 {kr.split(/(?=\d+\.)/).map((line, idx) => (
                   <div key={`kr-${i}-${idx}`}>{line.trim()}</div>
                 ))}
               </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
+              <div className="text-[10px] text-muted-foreground mt-0.5">
                 {cn.split(/(?=\d+\.)/).map((line, idx) => (
                   <div key={`cn-${i}-${idx}`}>{line.trim()}</div>
                 ))}

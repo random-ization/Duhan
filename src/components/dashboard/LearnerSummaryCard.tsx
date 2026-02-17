@@ -27,30 +27,28 @@ export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ classNam
   const loading = userStats === undefined;
   const stats = userStats
     ? {
-      streak: userStats.streak,
-      dailyMinutes: userStats.dailyMinutes,
-      dailyGoal: userStats.dailyGoal,
-      dueReviews: userStats.vocabStats.dueReviews,
-    }
+        streak: userStats.streak,
+        dailyMinutes: userStats.dailyMinutes,
+        dailyGoal: userStats.dailyGoal,
+        dueReviews: userStats.vocabStats.dueReviews,
+      }
     : null;
 
   // Legacy fetch removed
-
-
   if (loading) {
     return (
       <BentoCard
-        bgClass="bg-gradient-to-br from-indigo-500 to-purple-600"
-        borderClass="border-indigo-400/60"
+        bgClass="bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-slate-800 dark:to-indigo-950"
+        borderClass="border-indigo-400/60 dark:border-indigo-800/60"
         className={`text-white h-40 flex items-center justify-center ${className}`}
       >
         <div className="animate-pulse space-y-3 w-full">
           <div className="flex items-center justify-between">
-            <Skeleton className="h-5 w-20 bg-indigo-400" />
-            <Skeleton className="h-8 w-8 rounded-lg bg-indigo-400" />
+            <Skeleton className="h-5 w-20 bg-indigo-400 dark:bg-indigo-700/40" />
+            <Skeleton className="h-8 w-8 rounded-lg bg-indigo-400 dark:bg-indigo-700/40" />
           </div>
-          <Skeleton className="h-8 w-24 bg-indigo-400" />
-          <Skeleton className="h-4 w-full bg-indigo-400" />
+          <Skeleton className="h-8 w-24 bg-indigo-400 dark:bg-indigo-700/40" />
+          <Skeleton className="h-4 w-full bg-indigo-400 dark:bg-indigo-700/40" />
         </div>
       </BentoCard>
     );
@@ -62,15 +60,15 @@ export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ classNam
 
   return (
     <BentoCard
-      bgClass="bg-gradient-to-br from-indigo-500 to-purple-600"
-      borderClass="border-indigo-400/60"
+      bgClass="bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-slate-800 dark:to-indigo-950"
+      borderClass="border-indigo-400/60 dark:border-indigo-800/60"
       className={`text-white shadow-lg ${className}`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg">
           {labels.dashboard?.summary?.title || "Today's Overview"}
         </h3>
-        <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full">
+        <div className="flex items-center gap-1 bg-card/20 px-3 py-1 rounded-full">
           <Flame className="w-4 h-4 text-orange-300" />
           <span className="font-bold">
             {(labels.dashboard?.summary?.streak || '{count} day streak').replace(
@@ -89,9 +87,9 @@ export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ classNam
             {stats.dailyMinutes} / {stats.dailyGoal} {labels.dashboard?.summary?.minutes || 'mins'}
           </span>
         </div>
-        <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-3 bg-card/20 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-lime-300 to-emerald-300 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-lime-300 to-emerald-300 dark:from-emerald-500 dark:to-teal-500 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -125,7 +123,7 @@ export const LearnerSummaryCard: React.FC<LearnerSummaryCardProps> = ({ classNam
       </div>
 
       {progressPercent >= 100 && (
-        <div className="mt-3 text-center bg-white/20 rounded-lg py-2 font-bold">
+        <div className="mt-3 text-center bg-card/20 rounded-lg py-2 font-bold">
           {labels.dashboard?.summary?.completed || '✨ Goal Achieved!'}
         </div>
       )}

@@ -11,17 +11,17 @@ interface GrammarFeedProps {
 }
 
 const SkeletonCard = () => (
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-64 flex flex-col animate-pulse">
+  <div className="bg-card rounded-xl shadow-sm border border-border p-6 h-64 flex flex-col animate-pulse">
     <div className="flex justify-between items-start mb-4">
-      <div className="h-4 w-16 bg-slate-100 rounded"></div>
-      <div className="h-4 w-8 bg-slate-100 rounded"></div>
+      <div className="h-4 w-16 bg-muted rounded"></div>
+      <div className="h-4 w-8 bg-muted rounded"></div>
     </div>
-    <div className="h-8 w-3/4 bg-slate-200 rounded mb-2"></div>
-    <div className="h-4 w-1/2 bg-slate-100 rounded mb-8"></div>
+    <div className="h-8 w-3/4 bg-muted rounded mb-2"></div>
+    <div className="h-4 w-1/2 bg-muted rounded mb-8"></div>
 
-    <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
-      <div className="h-4 w-12 bg-slate-100 rounded"></div>
-      <div className="h-8 w-8 bg-slate-100 rounded"></div>
+    <div className="mt-auto pt-4 border-t border-border flex justify-between items-center">
+      <div className="h-4 w-12 bg-muted rounded"></div>
+      <div className="h-8 w-8 bg-muted rounded"></div>
     </div>
   </div>
 );
@@ -45,18 +45,18 @@ const GrammarFeed: React.FC<GrammarFeedProps> = ({
     <main className="flex-1 overflow-y-auto pb-20 pr-2">
       {/* Unit Header */}
       <div className="flex items-center justify-between mb-4 px-1">
-        <h2 className="text-lg font-black bg-white border-2 border-slate-900 px-3 py-1 rounded-lg shadow-[2px_2px_0px_0px_#0f172a] inline-block">
+        <h2 className="text-lg font-black bg-card border-2 border-foreground px-3 py-1 rounded-lg shadow-[2px_2px_0px_0px_#0f172a] inline-block">
           {displayTitle}
           {!isLoading && (
-            <span className="text-slate-400 font-medium ml-2 text-sm">
+            <span className="text-muted-foreground font-medium ml-2 text-sm">
               {grammarPoints.length} Grammar Points
             </span>
           )}
         </h2>
         {!isLoading && (
-          <div className="w-32 h-3 bg-white border-2 border-slate-900 rounded-full overflow-hidden">
+          <div className="w-32 h-3 bg-card border-2 border-foreground rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 border-r-2 border-slate-900 transition-all"
+              className="h-full bg-green-500 border-r-2 border-foreground transition-all"
               style={{ width: `${progressPercent}%` }}
             ></div>
           </div>
@@ -82,8 +82,8 @@ const GrammarFeed: React.FC<GrammarFeedProps> = ({
       </div>
 
       {!isLoading && grammarPoints.length === 0 && (
-        <div className="border-2 border-dashed border-slate-400 rounded-xl p-12 text-center bg-white">
-          <p className="text-slate-400 font-bold text-lg">此单元暂无语法点</p>
+        <div className="border-2 border-dashed border-border rounded-xl p-12 text-center bg-card">
+          <p className="text-muted-foreground font-bold text-lg">此单元暂无语法点</p>
         </div>
       )}
     </main>

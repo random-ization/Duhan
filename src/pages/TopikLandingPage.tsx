@@ -4,6 +4,7 @@ import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { isValidLanguage } from '../components/LanguageRouter';
+import { Button } from '../components/ui';
 
 type Lang = 'en' | 'zh' | 'vi' | 'mn';
 
@@ -151,30 +152,36 @@ export const TopikLandingPage: React.FC = () => {
       />
 
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-pop overflow-hidden">
+        <div className="bg-card rounded-3xl border-2 border-foreground shadow-pop overflow-hidden">
           <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-5">
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
                 {copy.heroTitle}
               </h1>
-              <p className="text-slate-600 font-semibold leading-relaxed">{copy.heroSubtitle}</p>
+              <p className="text-muted-foreground font-semibold leading-relaxed">
+                {copy.heroSubtitle}
+              </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <LocalizedLink
-                  to="/login?redirect=/topik"
-                  className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-slate-900 text-white border-2 border-slate-900 hover:bg-slate-800 transition"
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-primary text-white border-2 border-foreground hover:bg-muted transition"
                 >
-                  {copy.ctaPrimary}
-                </LocalizedLink>
-                <LocalizedLink
-                  to="/pricing"
-                  className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition"
+                  <LocalizedLink to="/login?redirect=/topik">{copy.ctaPrimary}</LocalizedLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-card text-foreground border-2 border-foreground hover:bg-muted transition"
                 >
-                  {copy.ctaSecondary}
-                </LocalizedLink>
+                  <LocalizedLink to="/pricing">{copy.ctaSecondary}</LocalizedLink>
+                </Button>
               </div>
             </div>
 
-            <div className="bg-slate-900 rounded-3xl p-8 text-white border-2 border-slate-900 relative overflow-hidden">
+            <div className="bg-primary rounded-3xl p-8 text-white border-2 border-foreground relative overflow-hidden">
               <div
                 className="absolute inset-0 opacity-20"
                 style={{
@@ -184,15 +191,15 @@ export const TopikLandingPage: React.FC = () => {
               />
               <div className="relative z-10">
                 <h2 className="text-xl font-black mb-4">{copy.highlightsTitle}</h2>
-                <ul className="space-y-3 text-sm font-semibold text-slate-100">
+                <ul className="space-y-3 text-sm font-semibold text-muted-foreground">
                   {copy.highlights.map((item, idx) => (
                     <li key={idx} className="flex gap-3">
-                      <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 shrink-0" />
+                      <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-amber-300 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
-                <p className="mt-6 text-xs text-slate-300 font-semibold">
+                <p className="mt-6 text-xs text-muted-foreground font-semibold">
                   {currentLang === 'en'
                     ? 'Tip: Link Google/Kakao in Profile to keep one account.'
                     : currentLang === 'zh'
@@ -205,21 +212,23 @@ export const TopikLandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 p-8 md:p-12">
-            <h2 className="text-2xl font-black text-slate-900 mb-4">{copy.faqTitle}</h2>
+          <div className="border-t border-border p-8 md:p-12">
+            <h2 className="text-2xl font-black text-foreground mb-4">{copy.faqTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {copy.faqs.map((f, idx) => (
-                <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <h3 className="font-black text-slate-900">{f.q}</h3>
-                  <p className="mt-2 text-sm text-slate-600 font-semibold leading-relaxed">{f.a}</p>
+                <div key={idx} className="rounded-2xl border border-border bg-card p-5">
+                  <h3 className="font-black text-foreground">{f.q}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground font-semibold leading-relaxed">
+                    {f.a}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="mt-8 text-center text-sm text-slate-500 font-semibold">
-          <LocalizedLink to="/courses" className="underline hover:text-slate-700">
+        <div className="mt-8 text-center text-sm text-muted-foreground font-semibold">
+          <LocalizedLink to="/courses" className="underline hover:text-muted-foreground">
             {currentLang === 'en'
               ? 'Explore courses'
               : currentLang === 'zh'

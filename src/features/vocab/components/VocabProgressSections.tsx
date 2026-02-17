@@ -3,6 +3,8 @@ import { Eye, EyeOff, Star, Volume2, X } from 'lucide-react';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import type { Language } from '../../../types';
+import { Dialog, DialogContent, DialogPortal } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 
 type FsrsProgress = {
   status?: string;
@@ -175,18 +177,20 @@ export default function VocabProgressSections({
     };
 
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+      <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-3">
             <div className="min-w-0">
-              <div className="text-slate-900 font-black text-xl truncate">{w.korean}</div>
+              <div className="text-foreground font-black text-xl truncate">{w.korean}</div>
               {w.exampleSentence && (
-                <div className="text-slate-500 text-xs mt-1 line-clamp-1">{w.exampleSentence}</div>
+                <div className="text-muted-foreground text-xs mt-1 line-clamp-1">
+                  {w.exampleSentence}
+                </div>
               )}
             </div>
             <div className="min-w-0">
               <div
-                className={`text-slate-700 text-sm font-bold transition-all ${
+                className={`text-muted-foreground text-sm font-bold transition-all ${
                   redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
                 }`}
               >
@@ -194,7 +198,7 @@ export default function VocabProgressSections({
               </div>
               {exampleMeaning && (
                 <div
-                  className={`text-slate-500 text-xs mt-1 transition-all ${
+                  className={`text-muted-foreground text-xs mt-1 transition-all ${
                     redEyeEnabled ? 'blur-sm hover:blur-none select-none' : ''
                   }`}
                 >
@@ -205,26 +209,32 @@ export default function VocabProgressSections({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={() => {
                 if (isStarred) return;
                 onToggleStar?.(w.id);
               }}
               disabled={isStarred}
-              className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center"
+              className="w-9 h-9 rounded-xl bg-card hover:bg-muted border border-border flex items-center justify-center"
               aria-label={getStarLabel()}
             >
-              <Star className={`w-4 h-4 ${isStarred ? 'text-yellow-500' : 'text-slate-400'}`} />
-            </button>
-            <button
+              <Star
+                className={`w-4 h-4 ${isStarred ? 'text-yellow-500' : 'text-muted-foreground'}`}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={() => speak(w.korean)}
-              className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center"
+              className="w-9 h-9 rounded-xl bg-card hover:bg-muted border border-border flex items-center justify-center"
               aria-label={labels.vocabProgress?.speak || 'Speak'}
             >
-              <Volume2 className="w-4 h-4 text-slate-500" />
-            </button>
+              <Volume2 className="w-4 h-4 text-muted-foreground" />
+            </Button>
           </div>
         </div>
       </div>
@@ -239,10 +249,10 @@ export default function VocabProgressSections({
     <div ref={containerRef} className="w-full">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="text-xl font-black text-slate-900">
+          <div className="text-xl font-black text-foreground">
             {labels.vocabProgress?.listTitle || labels.list || 'List'}
           </div>
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-muted-foreground">
             {format(
               labels.vocabProgress?.groupedByFsrs || 'Grouped by FSRS progress ({count} words)',
               { count: totalCount }
@@ -250,18 +260,20 @@ export default function VocabProgressSections({
           </div>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={() => onRedEyeEnabledChange(!redEyeEnabled)}
           className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
             redEyeEnabled
               ? 'bg-red-50 border-red-400 text-red-600'
-              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
+              : 'bg-card border-border text-muted-foreground hover:border-border'
           }`}
         >
           {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {labels.vocab?.redSheet || 'Red Eye'}
-        </button>
+        </Button>
       </div>
 
       <div className="space-y-8">
@@ -271,11 +283,14 @@ export default function VocabProgressSections({
           return (
             <div key={sec.key} className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <div className="text-lg font-black text-slate-900">
-                  {sec.title} <span className="text-slate-400 font-normal">({items.length})</span>
+                <div className="text-lg font-black text-foreground">
+                  {sec.title}{' '}
+                  <span className="text-muted-foreground font-normal">({items.length})</span>
                 </div>
               </div>
-              {sec.subtitle && <div className="text-sm text-slate-500 -mt-2">{sec.subtitle}</div>}
+              {sec.subtitle && (
+                <div className="text-sm text-muted-foreground -mt-2">{sec.subtitle}</div>
+              )}
               <div className="space-y-3">
                 {items.map((w, idx) => (
                   <React.Fragment key={`${w.id}:${idx}`}>{renderWordRow(w)}</React.Fragment>
@@ -286,64 +301,77 @@ export default function VocabProgressSections({
         })}
       </div>
 
-      {showPicker && (
-        <div className="fixed inset-0 z-[80] pointer-events-none">
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-6 w-[min(520px,calc(100vw-2rem))]">
-            <div className="pointer-events-auto bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-                <div className="font-black text-slate-900">
-                  {labels.vocab?.redSheet || 'Red Eye'}
+      <Dialog open={showPicker} onOpenChange={open => !open && setShowPicker(false)}>
+        <DialogPortal>
+          <DialogContent
+            unstyled
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-[80] pointer-events-none data-[state=closed]:pointer-events-none"
+          >
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-6 w-[min(520px,calc(100vw-2rem))]">
+              <div className="pointer-events-auto bg-card rounded-2xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <div className="font-black text-foreground">
+                    {labels.vocab?.redSheet || 'Red Eye'}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    type="button"
+                    onClick={() => setShowPicker(false)}
+                    className="w-9 h-9 rounded-xl bg-muted hover:bg-muted flex items-center justify-center"
+                    aria-label={labels.common?.close || 'Close'}
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </Button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowPicker(false)}
-                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
-                  aria-label={labels.common?.close || 'Close'}
-                >
-                  <X className="w-4 h-4 text-slate-700" />
-                </button>
-              </div>
 
-              <div className="p-3 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRedEyeEnabledChange(true);
-                    setShowPicker(false);
-                  }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                    redEyeEnabled
-                      ? 'bg-red-50 border-red-400 text-red-700'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                  }`}
-                >
-                  <span>{labels.vocabProgress?.redEyeEnable || 'Enable'}</span>
-                  <span className="text-xs font-bold text-slate-500">
-                    {labels.vocabProgress?.redEyeEnableDesc || 'Blur meanings'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRedEyeEnabledChange(false);
-                    setShowPicker(false);
-                  }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                    redEyeEnabled
-                      ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                      : 'bg-green-50 border-green-400 text-green-700'
-                  }`}
-                >
-                  <span>{labels.vocabProgress?.redEyeDisable || 'Disable'}</span>
-                  <span className="text-xs font-bold text-slate-500">
-                    {labels.vocabProgress?.redEyeDisableDesc || 'Show meanings'}
-                  </span>
-                </button>
+                <div className="p-3 space-y-2">
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    type="button"
+                    onClick={() => {
+                      onRedEyeEnabledChange(true);
+                      setShowPicker(false);
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                      redEyeEnabled
+                        ? 'bg-red-50 border-red-400 text-red-700'
+                        : 'bg-card border-border text-muted-foreground hover:border-border'
+                    }`}
+                  >
+                    <span>{labels.vocabProgress?.redEyeEnable || 'Enable'}</span>
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {labels.vocabProgress?.redEyeEnableDesc || 'Blur meanings'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    type="button"
+                    onClick={() => {
+                      onRedEyeEnabledChange(false);
+                      setShowPicker(false);
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                      redEyeEnabled
+                        ? 'bg-card border-border text-muted-foreground hover:border-border'
+                        : 'bg-green-50 border-green-400 text-green-700'
+                    }`}
+                  >
+                    <span>{labels.vocabProgress?.redEyeDisable || 'Disable'}</span>
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {labels.vocabProgress?.redEyeDisableDesc || 'Show meanings'}
+                    </span>
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
     </div>
   );
 }

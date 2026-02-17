@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
+import { Button } from '../../../../components/ui';
+import { Input } from '../../../../components/ui';
 
 type Answer = {
   input: string;
@@ -44,9 +46,9 @@ const ResultDisplay = ({
         {isCorrect ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
         {resultLabel}
       </div>
-      <div className="text-sm text-slate-500 font-bold">
+      <div className="text-sm text-muted-foreground font-bold">
         {labels.vocabTest?.answerLabel || 'Answer: '}
-        <span className="font-black text-slate-900">{correctAnswer}</span>
+        <span className="font-black text-foreground">{correctAnswer}</span>
       </div>
     </div>
   );
@@ -77,19 +79,19 @@ export default function TestCardWritten({
 
   return (
     <div className="mt-6">
-      <div className="text-xs font-black text-slate-400">
+      <div className="text-xs font-black text-muted-foreground">
         {labels.vocabTest?.writtenAnswer || 'Written answer'}
       </div>
-      <div className="text-3xl font-black text-slate-900 mt-3">{prompt}</div>
+      <div className="text-3xl font-black text-foreground mt-3">{prompt}</div>
 
       <div className="mt-6">
-        <input
+        <Input
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder={placeholder}
           disabled={isReview}
-          className="w-full px-5 py-4 rounded-2xl border-2 border-slate-200 bg-white text-lg font-bold text-slate-900 disabled:bg-slate-50"
+          className="w-full px-5 py-4 rounded-2xl border-2 border-border bg-card text-lg font-bold text-foreground disabled:bg-muted"
         />
 
         {isReview && correctAnswer && typeof isCorrectReview === 'boolean' ? (
@@ -100,15 +102,17 @@ export default function TestCardWritten({
           />
         ) : (
           <div className="mt-4 flex justify-end">
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               type="button"
               onClick={submit}
               disabled={input.trim().length === 0}
-              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-primary text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-5 h-5" />
               {labels.vocabTest?.confirm || 'Confirm'}
-            </button>
+            </Button>
           </div>
         )}
       </div>

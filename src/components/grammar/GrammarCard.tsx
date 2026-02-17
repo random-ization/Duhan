@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight, Trophy } from 'lucide-react';
 import { GrammarPointData } from '../../types';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 
 interface GrammarCardProps {
   grammar: GrammarPointData;
@@ -43,11 +43,11 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
     },
   };
   const config = typeConfig[grammar.type] || {
-    barColor: 'bg-slate-500',
-    bgColor: 'bg-slate-100',
-    textColor: 'text-slate-700',
+    barColor: 'bg-muted',
+    bgColor: 'bg-muted',
+    textColor: 'text-muted-foreground',
     label: grammar.type,
-    hoverColor: 'group-hover:text-slate-600',
+    hoverColor: 'group-hover:text-muted-foreground',
   };
 
   // Card number based on displayOrder or index
@@ -58,7 +58,7 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
   const getProgressBarColor = () => {
     if (isMastered) return 'bg-green-500';
     if (isLearning) return 'bg-amber-500';
-    return 'bg-slate-300';
+    return 'bg-muted';
   };
 
   // Helper to render status content
@@ -74,21 +74,21 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
     if (isLearning) {
       return (
         <>
-          <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-amber-400"></div>
+          <div className="w-1.5 h-1.5 rounded-full border border-foreground bg-amber-400"></div>
           <span className="text-[10px] font-bold text-amber-600">学习中</span>
         </>
       );
     }
     return (
       <>
-        <div className="w-1.5 h-1.5 rounded-full border border-slate-900 bg-slate-300"></div>
-        <span className="text-[10px] font-bold text-slate-500">未学习</span>
+        <div className="w-1.5 h-1.5 rounded-full border border-foreground bg-muted"></div>
+        <span className="text-[10px] font-bold text-muted-foreground">未学习</span>
       </>
     );
   };
 
   return (
-    <div className="group bg-white border-2 border-slate-900 rounded-xl p-0 shadow-[4px_4px_0px_0px_#0f172a] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer overflow-hidden flex flex-col h-52 relative">
+    <div className="group bg-card border-2 border-foreground rounded-xl p-0 shadow-[4px_4px_0px_0px_#0f172a] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer overflow-hidden flex flex-col h-52 relative">
       {/* Main Click Action (Stretched Link) */}
       <Button
         type="button"
@@ -101,40 +101,40 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
 
       {/* Top Colored Bar */}
       <div
-        className={`h-1.5 w-full ${config.barColor} border-b-2 border-slate-900 z-10 relative pointer-events-none`}
+        className={`h-1.5 w-full ${config.barColor} border-b-2 border-foreground z-10 relative pointer-events-none`}
       ></div>
 
       <div className="p-4 flex flex-col h-full z-10 relative pointer-events-none">
         {/* Top Row: Tag + Number */}
         <div className="flex justify-between items-start mb-2">
           <span
-            className={`px-1.5 py-0.5 ${config.bgColor} ${config.textColor} border border-slate-900 rounded text-[10px] font-black uppercase tracking-tight`}
+            className={`px-1.5 py-0.5 ${config.bgColor} ${config.textColor} border border-foreground rounded text-[10px] font-black uppercase tracking-tight`}
           >
             {config.label}
           </span>
-          <span className="text-[10px] font-bold text-slate-400">#{cardNumber}</span>
+          <span className="text-[10px] font-bold text-muted-foreground">#{cardNumber}</span>
         </div>
 
         {/* Title */}
         <h3
-          className={`text-lg font-black text-slate-900 leading-tight mb-1 ${config.hoverColor} transition-colors`}
+          className={`text-lg font-black text-foreground leading-tight mb-1 ${config.hoverColor} transition-colors`}
         >
           {grammar.title}
         </h3>
 
         {/* Summary */}
-        <p className="text-xs text-slate-500 font-bold line-clamp-2">{grammar.summary}</p>
+        <p className="text-xs text-muted-foreground font-bold line-clamp-2">{grammar.summary}</p>
 
         {/* Proficiency Bar */}
         <div className="mt-auto pt-3">
           <div className="flex items-center gap-2 mb-1">
-            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-300">
+            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden border border-border">
               <div
                 className={`h-full transition-all duration-300 ${getProgressBarColor()}`}
                 style={{ width: `${proficiency}%` }}
               />
             </div>
-            <span className="text-[10px] font-bold text-slate-500 w-8 text-right">
+            <span className="text-[10px] font-bold text-muted-foreground w-8 text-right">
               {proficiency}%
             </span>
           </div>
@@ -154,7 +154,7 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
           >
             {renderStatus()}
           </Button>
-          <div className="w-6 h-6 rounded border-2 border-slate-900 bg-white group-hover:bg-slate-900 group-hover:text-white flex items-center justify-center transition-colors">
+          <div className="w-6 h-6 rounded border-2 border-foreground bg-card group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-colors">
             <ArrowRight className="w-3 h-3" />
           </div>
         </div>

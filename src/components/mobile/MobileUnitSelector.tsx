@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Book, ChevronDown, Check, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
+import { Button } from '../ui';
 
 interface MobileUnitSelectorProps {
   currentUnitId: number | 'ALL';
@@ -29,57 +31,63 @@ export default function MobileUnitSelector({
 
   return (
     <>
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-slate-50 border-2 border-slate-900 rounded-xl px-3 py-1.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] active:translate-y-0.5 active:shadow-none transition-all"
+        className="flex items-center gap-2 bg-muted border-2 border-foreground rounded-xl px-3 py-1.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] active:translate-y-0.5 active:shadow-none transition-all"
       >
         <Book className="w-4 h-4 text-indigo-600" />
         <div className="text-left">
-          <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
             {t('vocab.currentScope', { defaultValue: 'Current Scope' })}
           </div>
-          <div className="text-xs font-black text-slate-900 leading-none">
+          <div className="text-xs font-black text-foreground leading-none">
             {getLabel(currentUnitId)}
           </div>
         </div>
-        <ChevronDown className="w-3 h-3 text-slate-400 ml-1" />
-      </button>
+        <ChevronDown className="w-3 h-3 text-muted-foreground ml-1" />
+      </Button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetPortal>
+          <SheetOverlay
+            unstyled
+            forceMount
+            className="fixed inset-0 bg-primary/50 z-[100] backdrop-blur-sm transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+          />
+          <SheetContent
+            unstyled
+            forceMount
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed bottom-0 left-0 right-0 z-[101] pointer-events-none data-[state=closed]:pointer-events-none"
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-slate-900/50 z-[100] backdrop-blur-sm"
-            />
-
-            {/* Sheet */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={false}
+              animate={isOpen ? { y: 0 } : { y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[101] max-h-[80vh] flex flex-col shadow-2xl"
+              className="pointer-events-auto bg-card rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl"
             >
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <h3 className="font-black text-lg text-slate-900">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+                <h3 className="font-black text-lg text-foreground">
                   {t('vocab.selectScope', { defaultValue: 'Select Scope' })}
                 </h3>
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center active:bg-slate-200"
+                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center active:bg-muted"
                 >
-                  <X className="w-4 h-4 text-slate-500" />
-                </button>
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {/* All Units Option */}
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={() => {
                     onSelect('ALL');
                     setIsOpen(false);
@@ -87,16 +95,16 @@ export default function MobileUnitSelector({
                   className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                     currentUnitId === 'ALL'
                       ? 'bg-indigo-50 border-indigo-500 shadow-sm'
-                      : 'bg-white border-slate-100 active:scale-[0.99]'
+                      : 'bg-card border-border active:scale-[0.99]'
                   }`}
                 >
                   <div className="text-left">
                     <div
-                      className={`font-bold ${currentUnitId === 'ALL' ? 'text-indigo-700' : 'text-slate-900'}`}
+                      className={`font-bold ${currentUnitId === 'ALL' ? 'text-indigo-700' : 'text-foreground'}`}
                     >
                       {t('vocab.allUnits', { defaultValue: 'All Units' })}
                     </div>
-                    <div className="text-xs text-slate-500 font-medium">
+                    <div className="text-xs text-muted-foreground font-medium">
                       {allWordsCount} {t('vocab.words', { defaultValue: 'words' })}
                     </div>
                   </div>
@@ -105,9 +113,9 @@ export default function MobileUnitSelector({
                       <Check className="w-4 h-4 text-white" />
                     </div>
                   )}
-                </button>
+                </Button>
 
-                <div className="h-px bg-slate-100 my-2" />
+                <div className="h-px bg-muted my-2" />
 
                 {/* Individual Units */}
                 {availableUnits.map(u => {
@@ -116,7 +124,9 @@ export default function MobileUnitSelector({
                   const isDisabled = count === 0;
 
                   return (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="auto"
                       key={u}
                       disabled={isDisabled}
                       onClick={() => {
@@ -127,19 +137,19 @@ export default function MobileUnitSelector({
                         isSelected
                           ? 'bg-indigo-50 border-indigo-500 shadow-sm'
                           : isDisabled
-                            ? 'bg-slate-50 border-transparent opacity-50'
-                            : 'bg-white border-slate-100 active:scale-[0.99]'
+                            ? 'bg-muted border-transparent opacity-50'
+                            : 'bg-card border-border active:scale-[0.99]'
                       }`}
                     >
                       <div className="text-left">
                         <div
-                          className={`font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-900'}`}
+                          className={`font-bold ${isSelected ? 'text-indigo-700' : 'text-foreground'}`}
                         >
                           {u === 0
                             ? t('vocab.unassigned', { defaultValue: 'Unassigned' })
                             : `${t('vocab.unit', { defaultValue: 'Unit' })} ${u}`}
                         </div>
-                        <div className="text-xs text-slate-500 font-medium">
+                        <div className="text-xs text-muted-foreground font-medium">
                           {count} {t('vocab.words', { defaultValue: 'words' })}
                         </div>
                       </div>
@@ -148,14 +158,14 @@ export default function MobileUnitSelector({
                           <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
             </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
     </>
   );
 }

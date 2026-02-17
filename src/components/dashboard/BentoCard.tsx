@@ -13,8 +13,8 @@ interface BentoCardProps {
 export const BentoCard: React.FC<BentoCardProps> = ({
   children,
   className = '',
-  bgClass = 'bg-white',
-  borderClass = 'border-slate-200',
+  bgClass = 'bg-card',
+  borderClass = 'border-border',
   onClickPath,
   onClick,
 }) => {
@@ -37,13 +37,13 @@ export const BentoCard: React.FC<BentoCardProps> = ({
                 ${bgClass} ${borderClass} ${className}
                 w-full h-full
                 ${isInteractive ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : ''}
-                ${isInteractive ? 'hover:bg-gray-50' : ''}
+                ${isInteractive ? 'hover:bg-accent' : ''}
             `}
     >
       {children}
       {/* Hover shine effect */}
       {isInteractive && (
-        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+        <div className="absolute inset-0 bg-card/0 group-hover:bg-card/10 transition-colors pointer-events-none" />
       )}
     </Component>
   );

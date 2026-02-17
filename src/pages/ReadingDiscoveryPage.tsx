@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NEWS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
+import { Button } from '../components/ui';
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -41,18 +42,21 @@ function getDifficultyChip(
   if (level === 'L1') {
     return {
       text: t('readingDiscovery.difficulty.l1', { defaultValue: 'A2 Beginner' }),
-      className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      className:
+        'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300',
     };
   }
   if (level === 'L2') {
     return {
       text: t('readingDiscovery.difficulty.l2', { defaultValue: 'B2 Intermediate' }),
-      className: 'bg-blue-50 text-blue-700 border-blue-200',
+      className:
+        'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300',
     };
   }
   return {
     text: t('readingDiscovery.difficulty.l3', { defaultValue: 'C1 Advanced' }),
-    className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    className:
+      'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300',
   };
 }
 
@@ -303,35 +307,35 @@ export default function ReadingDiscoveryPage() {
     <div className="mx-auto w-full max-w-[1400px] px-2 pb-16 pt-4 sm:px-4 lg:px-6">
       <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+          <h1 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
             {t('readingDiscovery.title', { defaultValue: 'Reading Discovery' })}
           </h1>
-          <p className="mt-2 text-sm font-medium text-slate-500 md:text-base">
+          <p className="mt-2 text-sm font-medium text-muted-foreground md:text-base">
             {t('readingDiscovery.subtitle', {
               defaultValue: 'Sync real Korean news and build a long-term reading library',
             })}
           </p>
         </div>
-        <div className="flex items-center gap-6 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+        <div className="flex items-center gap-6 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm">
           <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               {t('readingDiscovery.stats.weeklyRead', { defaultValue: 'Fresh this week' })}
             </span>
-            <span className="text-xl font-black text-slate-800">
+            <span className="text-xl font-black text-muted-foreground">
               {weeklyReadCount}{' '}
-              <span className="text-sm font-medium text-slate-400">
+              <span className="text-sm font-medium text-muted-foreground">
                 {t('readingDiscovery.stats.articles', { defaultValue: 'articles' })}
               </span>
             </span>
           </div>
-          <div className="h-8 w-px bg-slate-100" />
+          <div className="h-8 w-px bg-muted" />
           <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               {t('readingDiscovery.stats.estimatedWords', { defaultValue: 'Estimated new words' })}
             </span>
-            <span className="text-xl font-black text-indigo-600">
+            <span className="text-xl font-black text-primary">
               {estimatedWords}{' '}
-              <span className="text-sm font-medium text-slate-400">
+              <span className="text-sm font-medium text-muted-foreground">
                 {t('readingDiscovery.stats.words', { defaultValue: 'words' })}
               </span>
             </span>
@@ -342,40 +346,52 @@ export default function ReadingDiscoveryPage() {
       <section className="mb-14">
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900">
+            <h2 className="flex items-center gap-2 text-2xl font-black text-foreground">
               <span>📰 {t('readingDiscovery.news.title', { defaultValue: 'Live News' })}</span>
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 animate-pulse">
+              <span className="animate-pulse rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/50 dark:text-red-300">
                 LIVE
               </span>
             </h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
               {t('readingDiscovery.news.subtitle', {
                 defaultValue:
                   'Auto-ingested by RSS, great for extensive reading and current affairs',
               })}
             </p>
             {refreshMessage && (
-              <p className="mt-2 text-xs font-semibold text-blue-600">{refreshMessage}</p>
+              <p className="mt-2 text-xs font-semibold text-primary">{refreshMessage}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {userId && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => {
                   void onManualRefresh();
                 }}
                 disabled={manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0}
+                loading={manualRefreshing}
+                loadingText={
+                  <>
+                    {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
+                    <span className="text-[11px]">
+                      {feed?.refresh.manualRefreshRemaining ?? 0}/3
+                    </span>
+                  </>
+                }
+                loadingIconClassName="w-[13px] h-[13px]"
                 className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                   manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0
-                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                    : 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300'
+                    ? 'cursor-not-allowed border-border bg-muted text-muted-foreground'
+                    : 'border-primary/35 bg-primary/10 text-primary hover:border-primary/50 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground'
                 }`}
               >
                 <RefreshCcw size={13} className={manualRefreshing ? 'animate-spin' : ''} />
                 {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
                 <span className="text-[11px]">{feed?.refresh.manualRefreshRemaining ?? 0}/3</span>
-              </button>
+              </Button>
             )}
             {(['ALL', 'L1', 'L2', 'L3'] as DifficultyFilter[]).map(item => {
               const selected = difficultyFilter === item;
@@ -388,18 +404,20 @@ export default function ReadingDiscoveryPage() {
                       ? t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' })
                       : t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' });
               return (
-                <button
+                <Button
                   key={item}
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setDifficultyFilter(item)}
                   className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                     selected
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                      ? 'border-foreground bg-primary text-primary-foreground'
+                      : 'border-border bg-card text-muted-foreground hover:border-border'
                   }`}
                 >
                   {label}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -407,12 +425,12 @@ export default function ReadingDiscoveryPage() {
 
         {!feedReady || feed === undefined ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
-            <div className="h-[280px] animate-pulse rounded-3xl bg-slate-200" />
-            <div className="h-[280px] animate-pulse rounded-3xl bg-slate-100" />
-            <div className="h-[280px] animate-pulse rounded-3xl bg-slate-100" />
+            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
+            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
+            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
           </div>
         ) : topNews.length === 0 ? (
-          <div className="rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center text-sm font-semibold text-slate-500">
+          <div className="rounded-3xl border border-border bg-card px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
             {t('readingDiscovery.news.empty', {
               defaultValue: 'No news available yet. Please run ingestion from admin.',
             })}
@@ -420,18 +438,20 @@ export default function ReadingDiscoveryPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
             {featuredNews && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => navigate(`/reading/${featuredNews._id}`)}
-                className="group relative overflow-hidden rounded-3xl bg-slate-900 p-6 text-left transition hover:-translate-y-1 hover:shadow-2xl"
+                className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl bg-primary p-6 text-left transition hover:-translate-y-1 hover:shadow-2xl"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/25 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-foreground/20 to-transparent" />
                 <div className="relative z-10 flex h-full flex-col justify-between">
                   <div className="mb-16 flex items-start justify-between gap-2">
-                    <span className="rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-white">
+                    <span className="rounded-lg border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold text-primary-foreground">
                       {getSourceLabel(featuredNews.sourceKey)}
                     </span>
-                    <span className="text-xs font-medium text-slate-400">
+                    <span className="text-xs font-medium text-primary-foreground/80">
                       {formatRelativeTime(featuredNews.publishedAt, language)}
                     </span>
                   </div>
@@ -446,10 +466,10 @@ export default function ReadingDiscoveryPage() {
                         </span>
                       );
                     })()}
-                    <h3 className="mb-3 text-2xl font-black leading-snug text-white transition group-hover:text-blue-200">
+                    <h3 className="mb-3 text-2xl font-black leading-snug text-primary-foreground transition group-hover:text-primary-foreground/85">
                       {featuredNews.title}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground/75">
                       <span>
                         {t('readingDiscovery.news.aiExtracted', {
                           defaultValue: 'AI extracted {{count}} words',
@@ -466,34 +486,36 @@ export default function ReadingDiscoveryPage() {
                     </div>
                   </div>
                 </div>
-              </button>
+              </Button>
             )}
 
             {secondaryNews.map(item => {
               const chip = getDifficultyChip(item.difficultyLevel, t);
               return (
-                <button
+                <Button
                   key={item._id}
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => navigate(`/reading/${item._id}`)}
-                  className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 text-left transition hover:-translate-y-1 hover:shadow-xl"
+                  className="group !flex !items-stretch !justify-between flex-col rounded-3xl border border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:shadow-xl"
                 >
                   <div className="mb-6 flex items-start justify-between">
-                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                    <span className="rounded-lg border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
                       {getSourceLabel(item.sourceKey)}
                     </span>
-                    <span className="text-xs font-medium text-slate-400">
+                    <span className="text-xs font-medium text-muted-foreground">
                       {formatRelativeTime(item.publishedAt, language)}
                     </span>
                   </div>
                   <div>
-                    <span className="mb-3 inline-block rounded border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+                    <span className="mb-3 inline-block rounded border border-border bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
                       {chip.text}
                     </span>
-                    <h3 className="mb-3 text-lg font-black leading-snug text-slate-900 transition group-hover:text-indigo-600">
+                    <h3 className="mb-3 text-lg font-black leading-snug text-foreground transition group-hover:text-primary">
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                       <span>
                         {t('readingDiscovery.news.aiExtracted', {
                           defaultValue: 'AI extracted {{count}} words',
@@ -509,42 +531,44 @@ export default function ReadingDiscoveryPage() {
                       </span>
                     </div>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
         )}
       </section>
 
-      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <section>
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-black text-foreground">
               📚 {t('readingDiscovery.articles.title', { defaultValue: 'Culture & Archive' })}
             </h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
               {t('readingDiscovery.articles.subtitle', {
                 defaultValue:
                   'Korean folktales, Wikipedia featured entries, and literature for close reading',
               })}
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
+            variant="ghost"
+            size="auto"
+            className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
           >
             {t('readingDiscovery.articles.viewAll', { defaultValue: 'View all articles' })}
             <ChevronRight size={16} />
-          </button>
+          </Button>
         </div>
 
         {!feedReady || featuredArticles === undefined ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-200" />
-            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-100" />
-            <div className="h-[260px] animate-pulse rounded-3xl bg-slate-100" />
+            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
+            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
+            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
           </div>
         ) : featuredArticles.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -552,36 +576,40 @@ export default function ReadingDiscoveryPage() {
               const tone = index % 3;
               const baseClass =
                 tone === 2
-                  ? 'bg-slate-900 border-slate-800 text-white'
+                  ? 'border-border bg-primary text-primary-foreground'
                   : tone === 1
-                    ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-orange-100'
-                    : 'bg-white border-slate-200';
+                    ? 'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25'
+                    : 'bg-card border-border';
               const titleClass =
                 tone === 2
-                  ? 'text-white group-hover:text-indigo-300'
+                  ? 'text-primary-foreground group-hover:text-primary-foreground/85'
                   : tone === 1
-                    ? 'text-slate-900 group-hover:text-orange-600'
-                    : 'text-slate-900 group-hover:text-blue-600';
-              const textClass = tone === 2 ? 'text-slate-400' : 'text-slate-600';
+                    ? 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300'
+                    : 'text-foreground group-hover:text-primary';
+              const textClass = tone === 2 ? 'text-primary-foreground/75' : 'text-muted-foreground';
               const badgeClass =
                 tone === 2
-                  ? 'bg-slate-700 text-slate-200 border-slate-600'
+                  ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground'
                   : tone === 1
-                    ? 'bg-orange-100/70 text-orange-700 border-orange-200'
-                    : 'bg-blue-100/60 text-blue-700 border-blue-200';
+                    ? 'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300'
+                    : 'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300';
               const sourceTypeText = item.section || '위키백과 알찬 글';
 
               return (
-                <button
+                <Button
                   key={item._id}
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => navigate(`/reading/${item._id}`)}
-                  className={`group flex h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
+                  className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
                 >
                   <div className="mb-4 flex items-center gap-3">
                     <div
                       className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
-                        tone === 2 ? 'border border-slate-600 bg-slate-700' : 'bg-white'
+                        tone === 2
+                          ? 'border border-primary-foreground/25 bg-primary-foreground/10'
+                          : 'bg-card'
                       }`}
                     >
                       🏛️
@@ -589,13 +617,13 @@ export default function ReadingDiscoveryPage() {
                     <div>
                       <div
                         className={`text-[11px] font-bold uppercase tracking-wider ${
-                          tone === 2 ? 'text-slate-400' : 'text-slate-500'
+                          tone === 2 ? 'text-primary-foreground/75' : 'text-muted-foreground'
                         }`}
                       >
                         Wikipedia
                       </div>
                       <div
-                        className={`text-sm font-bold ${tone === 2 ? 'text-slate-200' : 'text-slate-800'}`}
+                        className={`text-sm font-bold ${tone === 2 ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
                       >
                         {sourceTypeText}
                       </div>
@@ -614,7 +642,7 @@ export default function ReadingDiscoveryPage() {
 
                   <div
                     className={`mt-auto flex items-center justify-between border-t pt-4 ${
-                      tone === 2 ? 'border-slate-700/60' : 'border-slate-200/70'
+                      tone === 2 ? 'border-border/60' : 'border-border/70'
                     }`}
                   >
                     <span
@@ -625,12 +653,12 @@ export default function ReadingDiscoveryPage() {
                         defaultValue: 'Encyclopedia',
                       })}
                     </span>
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className="text-xs font-semibold text-muted-foreground">
                       🔖{' '}
                       {t('readingDiscovery.articles.recommended', { defaultValue: 'Recommended' })}
                     </span>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -639,23 +667,24 @@ export default function ReadingDiscoveryPage() {
             {curatedArticles.map(item => {
               const baseClass =
                 item.tone === 'dark'
-                  ? 'bg-slate-900 border-slate-800 text-white'
+                  ? 'border-border bg-primary text-primary-foreground'
                   : item.tone === 'warm'
-                    ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-orange-100'
-                    : 'bg-white border-slate-200';
+                    ? 'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25'
+                    : 'bg-card border-border';
               const titleClass =
                 item.tone === 'dark'
-                  ? 'text-white group-hover:text-indigo-300'
+                  ? 'text-primary-foreground group-hover:text-primary-foreground/85'
                   : item.tone === 'warm'
-                    ? 'text-slate-900 group-hover:text-orange-600'
-                    : 'text-slate-900 group-hover:text-blue-600';
-              const textClass = item.tone === 'dark' ? 'text-slate-400' : 'text-slate-600';
+                    ? 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300'
+                    : 'text-foreground group-hover:text-primary';
+              const textClass =
+                item.tone === 'dark' ? 'text-primary-foreground/75' : 'text-muted-foreground';
               const badgeClass =
                 item.tone === 'dark'
-                  ? 'bg-slate-700 text-slate-200 border-slate-600'
+                  ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground'
                   : item.tone === 'warm'
-                    ? 'bg-orange-100/70 text-orange-700 border-orange-200'
-                    : 'bg-blue-100/60 text-blue-700 border-blue-200';
+                    ? 'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300'
+                    : 'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300';
 
               return (
                 <article
@@ -665,7 +694,9 @@ export default function ReadingDiscoveryPage() {
                   <div className="mb-4 flex items-center gap-3">
                     <div
                       className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
-                        item.tone === 'dark' ? 'bg-slate-700 border border-slate-600' : 'bg-white'
+                        item.tone === 'dark'
+                          ? 'border border-primary-foreground/25 bg-primary-foreground/10'
+                          : 'bg-card'
                       }`}
                     >
                       {item.icon}
@@ -673,14 +704,18 @@ export default function ReadingDiscoveryPage() {
                     <div>
                       <div
                         className={`text-[11px] font-bold uppercase tracking-wider ${
-                          item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                          item.tone === 'dark'
+                            ? 'text-primary-foreground/75'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         {item.source}
                       </div>
                       <div
                         className={`text-sm font-bold ${
-                          item.tone === 'dark' ? 'text-slate-200' : 'text-slate-800'
+                          item.tone === 'dark'
+                            ? 'text-primary-foreground/80'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         {item.sourceType}
@@ -695,7 +730,9 @@ export default function ReadingDiscoveryPage() {
                     {item.subtitle && (
                       <span
                         className={`mt-1 block text-lg font-bold ${
-                          item.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                          item.tone === 'dark'
+                            ? 'text-primary-foreground/80'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         ({item.subtitle})
@@ -709,7 +746,7 @@ export default function ReadingDiscoveryPage() {
 
                   <div
                     className={`mt-auto flex items-center justify-between border-t pt-4 ${
-                      item.tone === 'dark' ? 'border-slate-700/60' : 'border-slate-200/70'
+                      item.tone === 'dark' ? 'border-border/60' : 'border-border/70'
                     }`}
                   >
                     <span
@@ -718,7 +755,11 @@ export default function ReadingDiscoveryPage() {
                       {item.badge}
                     </span>
                     <span
-                      className={`text-xs font-semibold ${item.tone === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}
+                      className={`text-xs font-semibold ${
+                        item.tone === 'dark'
+                          ? 'text-primary-foreground/80'
+                          : 'text-muted-foreground'
+                      }`}
                     >
                       🔖 {item.bookmarkText}
                     </span>
@@ -730,7 +771,7 @@ export default function ReadingDiscoveryPage() {
         )}
       </section>
 
-      <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-slate-400">
+      <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-muted-foreground">
         <Clock3 size={14} />
         {t('readingDiscovery.footer', {
           defaultValue:

@@ -1,5 +1,6 @@
 import { Trophy } from 'lucide-react';
 import { GrammarPointData } from '../../types';
+import { Button } from '../ui';
 
 interface MobileGrammarFeedProps {
   readonly grammarPoints: GrammarPointData[];
@@ -18,7 +19,7 @@ export default function MobileGrammarFeed({
     return (
       <div className="p-4 space-y-3">
         {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="h-20 bg-white rounded-xl animate-pulse" />
+          <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -26,7 +27,7 @@ export default function MobileGrammarFeed({
 
   if (grammarPoints.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-slate-400">
+      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
         <p className="font-bold">No grammar points found.</p>
       </div>
     );
@@ -47,19 +48,21 @@ export default function MobileGrammarFeed({
             case 'CONNECTIVE':
               return 'bg-amber-50 text-amber-600';
             default:
-              return 'bg-slate-50 text-slate-500';
+              return 'bg-muted text-muted-foreground';
           }
         };
         const statusColor = getStatusColor(point.type);
 
         return (
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             key={point.id}
             onClick={() => onSelect(point)}
-            className="group w-full text-left bg-white rounded-xl border-2 border-slate-100 active:border-slate-300 active:scale-[0.99] transition-all p-4 flex items-center gap-4 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            className="group w-full text-left bg-card rounded-xl border-2 border-border active:border-border active:scale-[0.99] transition-all p-4 flex items-center gap-4 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             {/* Progress Bar Background */}
-            <div className="absolute bottom-0 left-0 h-1 bg-slate-100 w-full">
+            <div className="absolute bottom-0 left-0 h-1 bg-muted w-full">
               <div
                 className={`h-full transition-all duration-500 ${isMastered ? 'bg-green-500' : 'bg-amber-400'}`}
                 style={{ width: `${proficiency}%` }}
@@ -74,16 +77,18 @@ export default function MobileGrammarFeed({
                   {point.type}
                 </span>
                 {point.level && (
-                  <span className="text-[10px] font-bold text-slate-400">{point.level}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground">{point.level}</span>
                 )}
               </div>
-              <h3 className="text-lg font-black text-slate-900 leading-tight">{point.title}</h3>
-              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5 font-medium">
+              <h3 className="text-lg font-black text-foreground leading-tight">{point.title}</h3>
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5 font-medium">
                 {point.summary}
               </p>
             </div>
 
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={e => {
                 e.stopPropagation();
                 onToggleStatus(point.id);
@@ -91,7 +96,7 @@ export default function MobileGrammarFeed({
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 ${
                 isMastered
                   ? 'bg-green-100 text-green-600'
-                  : 'bg-slate-50 text-slate-300 hover:bg-slate-100 hover:text-slate-400'
+                  : 'bg-muted text-muted-foreground hover:bg-muted hover:text-muted-foreground'
               }`}
             >
               {isMastered ? (
@@ -99,8 +104,8 @@ export default function MobileGrammarFeed({
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-current" />
               )}
-            </button>
-          </button>
+            </Button>
+          </Button>
         );
       })}
     </div>

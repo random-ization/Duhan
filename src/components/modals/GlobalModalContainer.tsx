@@ -1,4 +1,3 @@
-import React from 'react';
 import { useGlobalModal } from '../../contexts/GlobalModalContext';
 import { ProfileSetupModal } from './ProfileSetupModal';
 
@@ -7,7 +6,10 @@ export function GlobalModalContainer() {
 
   return (
     <>
-      <ProfileSetupModal isOpen={isOpen('profile-setup')} onClose={() => hideModal('profile-setup')} />
+      <ProfileSetupModal
+        isOpen={isOpen('profile-setup')}
+        onClose={() => hideModal('profile-setup')}
+      />
     </>
   );
 }

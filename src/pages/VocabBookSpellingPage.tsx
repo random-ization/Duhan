@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
 import VocabQuiz from '../features/vocab/components/VocabQuiz';
+import { Button } from '../components/ui';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 
@@ -55,21 +56,23 @@ const VocabBookSpellingPage: React.FC = () => {
   }, [items, category]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
-      <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b-[3px] border-emerald-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:from-emerald-400/8 dark:via-background dark:to-emerald-300/8">
+      <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-emerald-100 dark:border-emerald-300/20">
         <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
-          <button
+          <Button
             onClick={() => navigate('/vocab-book')}
-            className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-emerald-300 transition-all duration-200"
+            variant="ghost"
+            size="auto"
+            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-emerald-300 dark:hover:border-emerald-300/35 transition-all duration-200"
             aria-label="返回"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+          </Button>
           <div className="text-center">
-            <p className="text-xs font-black text-emerald-600 tracking-wider uppercase">
+            <p className="text-xs font-black text-emerald-600 dark:text-emerald-300 tracking-wider uppercase">
               {labels.vocab?.modeSpelling || '拼写'}
             </p>
-            <p className="text-sm font-black text-slate-700">
+            <p className="text-sm font-black text-muted-foreground">
               {loading ? '' : `${words.length} words`}
             </p>
           </div>
@@ -79,7 +82,7 @@ const VocabBookSpellingPage: React.FC = () => {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         {loading ? (
-          <div className="py-20 text-center text-slate-500 font-bold">
+          <div className="py-20 text-center text-muted-foreground font-bold">
             {labels.common?.loading || 'Loading...'}
           </div>
         ) : (

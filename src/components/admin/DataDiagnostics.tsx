@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { RefreshCw, Database, AlertCircle, Activity, Wifi } from 'lucide-react';
 import { NoArgs, qRef } from '../../utils/convexRefs';

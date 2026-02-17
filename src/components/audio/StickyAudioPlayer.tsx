@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Slider } from '../ui/slider';
+import { Button } from '../ui';
+import { Slider } from '../ui';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
 interface StickyAudioPlayerProps {
   audioUrl: string;
@@ -131,13 +132,13 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-zinc-900 shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] z-50">
       <audio ref={audioRef} src={audioUrl} preload="metadata">
         <track kind="captions" src="" label="English" />
       </audio>
 
       {/* Progress Bar */}
-      <div className="h-1 bg-zinc-200 relative cursor-pointer group">
+      <div className="h-1 bg-muted relative cursor-pointer group">
         <div
           className="absolute h-full bg-lime-400 transition-all"
           style={{ width: `${progressPercent}%` }}
@@ -160,23 +161,30 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
       <div className="px-6 py-3 flex items-center justify-between gap-4">
         {/* Left: Play Controls */}
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={restart}
-            className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center transition-colors"
-            title="重新播放"
-          >
-            <RotateCcw size={18} className="text-zinc-600" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={restart}
+                aria-label="重新播放"
+                className="w-10 h-10 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"
+              >
+                <RotateCcw size={18} className="text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent side="top">重新播放</TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
 
           <Button
             type="button"
             variant="ghost"
             size="auto"
             onClick={togglePlay}
-            className="w-14 h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 flex items-center justify-center transition-colors shadow-[3px_3px_0px_0px_#4ADE80]"
+            className="w-14 h-14 rounded-full bg-primary hover:bg-muted flex items-center justify-center transition-colors shadow-[3px_3px_0px_0px_#4ADE80]"
           >
             {isPlaying ? (
               <Pause size={24} className="text-white" fill="white" />
@@ -188,40 +196,56 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
 
         {/* Center: Time Display */}
         <div className="flex-1 flex items-center justify-center gap-2">
-          <span className="font-mono text-sm font-bold text-zinc-500">
+          <span className="font-mono text-sm font-bold text-muted-foreground">
             {formatTime(currentTime)}
           </span>
-          <span className="text-zinc-300">/</span>
-          <span className="font-mono text-sm font-bold text-zinc-900">{formatTime(duration)}</span>
+          <span className="text-muted-foreground">/</span>
+          <span className="font-mono text-sm font-bold text-foreground">
+            {formatTime(duration)}
+          </span>
         </div>
 
         {/* Right: Rate & Volume */}
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={changePlaybackRate}
-            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-sm font-black text-zinc-700 transition-colors min-w-[50px]"
-            title="切换播放速度"
-          >
-            {playbackRate}x
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={changePlaybackRate}
+                aria-label="切换播放速度"
+                className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted text-sm font-black text-muted-foreground transition-colors min-w-[50px]"
+              >
+                {playbackRate}x
+              </Button>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent side="top">切换播放速度</TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={toggleMute}
-            className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center transition-colors"
-            title={isMuted ? '取消静音' : '静音'}
-          >
-            {isMuted ? (
-              <VolumeX size={18} className="text-zinc-400" />
-            ) : (
-              <Volume2 size={18} className="text-zinc-600" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={toggleMute}
+                aria-label={isMuted ? '取消静音' : '静音'}
+                className="w-10 h-10 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"
+              >
+                {isMuted ? (
+                  <VolumeX size={18} className="text-muted-foreground" />
+                ) : (
+                  <Volume2 size={18} className="text-muted-foreground" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent side="top">{isMuted ? '取消静音' : '静音'}</TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
         </div>
       </div>
     </div>

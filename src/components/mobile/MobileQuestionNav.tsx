@@ -1,6 +1,7 @@
 import React from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui';
 
 interface MobileQuestionNavProps {
   totalQuestions: number;
@@ -36,19 +37,22 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
               const isCurrent = currentQuestionIndex === index;
 
               return (
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   key={index}
                   onClick={() => {
                     onSelectQuestion(index);
                     handleClose();
                   }}
                   className={cn(
-                    'aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all',
+                    'w-full aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all',
                     isCurrent
-                      ? 'bg-slate-900 text-white shadow-lg scale-110 z-10'
+                      ? 'bg-primary text-white shadow-lg scale-110 z-10'
                       : isAnswered
                         ? 'bg-indigo-50 text-indigo-700 border-2 border-indigo-200'
-                        : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
+                        : 'bg-muted text-muted-foreground border border-border hover:bg-muted'
                   )}
                 >
                   <span
@@ -59,16 +63,16 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
                   {isAnswered && !isCurrent && (
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1" />
                   )}
-                </button>
+                </Button>
               );
             })}
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 bg-white">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-2">
+        <div className="pt-4 border-t border-border bg-card">
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-medium px-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-slate-900" />
+              <div className="w-3 h-3 rounded-full bg-primary" />
               <span>Current</span>
             </div>
             <div className="flex items-center gap-2">
@@ -76,7 +80,7 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
               <span>Answered</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-slate-50 border border-slate-200" />
+              <div className="w-3 h-3 rounded-full bg-muted border border-border" />
               <span>To do</span>
             </div>
           </div>

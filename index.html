@@ -43,6 +43,32 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="DuHan" />
 
+  <script>
+    (function () {
+      const storageKey = 'duhan-theme';
+      const root = document.documentElement;
+      const isTheme = theme => theme === 'light' || theme === 'dark' || theme === 'system';
+
+      try {
+        const storedTheme = localStorage.getItem(storageKey);
+        const theme = isTheme(storedTheme) ? storedTheme : 'system';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+
+        root.classList.toggle('dark', isDark);
+        root.style.colorScheme = isDark ? 'dark' : 'light';
+
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) {
+          themeMeta.setAttribute('content', isDark ? '#0f172a' : '#f0f4f8');
+        }
+      } catch {
+        root.classList.remove('dark');
+        root.style.colorScheme = 'light';
+      }
+    })();
+  </script>
+
   <!-- Preconnect to Google Fonts for faster font loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,7 +79,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon-180x180.png" />
 </head>
 
-<body class="font-sans bg-[#F0F4F8] text-slate-900 antialiased">
+<body class="font-sans bg-background text-foreground antialiased">
   <div id="root"></div>
   <script type="module" src="/src/index.tsx"></script>
 </body>

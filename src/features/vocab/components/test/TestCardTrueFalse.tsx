@@ -1,7 +1,7 @@
-import React from 'react';
 import { Check, X } from 'lucide-react';
 import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
+import { Button } from '../../../../components/ui';
 
 type Answer = {
   isTrue: boolean;
@@ -52,16 +52,18 @@ export default function TestCardTrueFalse({
       } else if (isTheCorrectAnswer) {
         className += ' bg-green-50 border-green-300 text-green-700';
       } else {
-        className += ' bg-white border-slate-200 text-slate-500';
+        className += ' bg-card border-border text-muted-foreground';
       }
     } else if (isSelected) {
       className += ' bg-blue-600 border-blue-700 text-white';
     } else {
-      className += ' bg-white border-slate-200 text-slate-900 hover:border-slate-400';
+      className += ' bg-card border-border text-foreground hover:border-border';
     }
 
     return (
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         type="button"
         disabled={isReview}
         onClick={() => onSubmit(isTrue)}
@@ -70,25 +72,27 @@ export default function TestCardTrueFalse({
         {isReview && correctIsTrue === isTrue ? <Check className="w-5 h-5" /> : null}
         {isReview && isSelected && correctIsTrue !== isTrue ? <X className="w-5 h-5" /> : null}
         {isTrue ? trueLabel : falseLabel}
-      </button>
+      </Button>
     );
   };
 
   return (
     <div className="mt-6">
-      <div className="bg-white rounded-3xl border-2 border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-3xl border-2 border-border overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2">
-          <div className="p-6 sm:p-8 border-b sm:border-b-0 sm:border-r border-slate-200">
-            <div className="text-xs font-black text-slate-400">
+          <div className="p-6 sm:p-8 border-b sm:border-b-0 sm:border-r border-border">
+            <div className="text-xs font-black text-muted-foreground">
               {labels.vocabTest?.definitionLabel || 'Definition'}
             </div>
-            <div className="mt-3 text-3xl font-black text-slate-900 leading-tight">{statement}</div>
+            <div className="mt-3 text-3xl font-black text-foreground leading-tight">
+              {statement}
+            </div>
           </div>
           <div className="p-6 sm:p-8">
-            <div className="text-xs font-black text-slate-400">
+            <div className="text-xs font-black text-muted-foreground">
               {labels.vocabTest?.termLabel || 'Term'}
             </div>
-            <div className="mt-3 text-3xl font-black text-slate-900 leading-tight">{prompt}</div>
+            <div className="mt-3 text-3xl font-black text-foreground leading-tight">{prompt}</div>
           </div>
         </div>
       </div>

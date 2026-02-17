@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CourseSelection, GrammarPoint, Language, TextbookContent } from '../types';
 import { BookOpen, Search, X } from 'lucide-react';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
+import { Input } from './ui';
+import { Button } from './ui';
 import { getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { logger } from '../utils/logger';
@@ -104,7 +104,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="text-slate-500">{labels.analyzingGrammar}</p>
+        <p className="text-muted-foreground">{labels.analyzingGrammar}</p>
       </div>
     );
   }
@@ -123,19 +123,19 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
       {/* Header with Search */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">{labels.grammar}</h2>
-          <p className="text-slate-500 text-sm mt-1">
+          <h2 className="text-2xl font-bold text-muted-foreground">{labels.grammar}</h2>
+          <p className="text-muted-foreground text-sm mt-1">
             {instituteName} Level {course.level} • {totalPoints} Points
           </p>
         </div>
         <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search grammar..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-8 py-2.5 text-sm w-full sm:w-72 bg-white shadow-sm transition-all"
+            className="pl-9 pr-8 py-2.5 text-sm w-full sm:w-72 bg-card shadow-sm transition-all"
           />
           {searchQuery && (
             <Button
@@ -143,7 +143,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
               variant="ghost"
               size="auto"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -153,7 +153,7 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
 
       {/* Content */}
       {units.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-slate-200 text-slate-500">
+        <div className="text-center py-12 bg-card rounded-xl border border-border text-muted-foreground">
           {searchQuery ? `No results found for "${searchQuery}"` : labels.noGrammar}
         </div>
       ) : (
@@ -164,22 +164,22 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                 <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold mr-4">
                   {labels.unit} {unit}
                 </span>
-                <div className="h-px bg-slate-200 flex-1"></div>
+                <div className="h-px bg-muted flex-1"></div>
               </div>
 
               <div className="grid gap-6">
                 {filteredData[unit].map(point => (
                   <div
                     key={`point-${unit}-${point.pattern}`}
-                    className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:border-indigo-300 transition-colors"
+                    className="bg-card rounded-xl shadow-sm border border-border overflow-hidden hover:border-indigo-300 transition-colors"
                   >
-                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center">
+                    <div className="bg-muted px-6 py-4 border-b border-border flex items-center">
                       <BookOpen className="w-5 h-5 text-indigo-600 mr-3" />
-                      <h3 className="text-xl font-bold text-slate-800">{point.pattern}</h3>
+                      <h3 className="text-xl font-bold text-muted-foreground">{point.pattern}</h3>
                     </div>
 
                     <div className="p-6">
-                      <p className="text-slate-700 mb-6 text-lg">
+                      <p className="text-muted-foreground mb-6 text-lg">
                         {getLocalizedContent(point, 'explanation', language)}
                       </p>
 
@@ -187,17 +187,17 @@ const GrammarModule: React.FC<GrammarModuleProps> = ({
                         {point.usages.map(usage => (
                           <div
                             key={`usage-${point.pattern}-${usage.example}`}
-                            className="bg-slate-50 p-4 rounded-lg border border-slate-100"
+                            className="bg-muted p-4 rounded-lg border border-border"
                           >
                             <div className="flex items-center mb-2">
-                              <span className="text-xs font-bold text-white bg-slate-400 px-2 py-0.5 rounded-full mr-2">
+                              <span className="text-xs font-bold text-white bg-muted px-2 py-0.5 rounded-full mr-2">
                                 {usage.situation}
                               </span>
                             </div>
-                            <p className="font-medium text-slate-800 text-lg mb-1">
+                            <p className="font-medium text-muted-foreground text-lg mb-1">
                               {usage.example}
                             </p>
-                            <p className="text-slate-500 italic">
+                            <p className="text-muted-foreground italic">
                               {getLocalizedContent(usage, 'translation', language)}
                             </p>
                           </div>

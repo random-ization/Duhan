@@ -51,17 +51,17 @@ const DailyPhrase: React.FC = () => {
 
       {/* Korean Sentence */}
       <div className="mb-3">
-        <p className="text-3xl font-bold text-slate-900 leading-tight mb-2">{phrase.korean}</p>
+        <p className="text-3xl font-bold text-foreground leading-tight mb-2">{phrase.korean}</p>
       </div>
 
       {/* Romanization */}
       <div className="mb-3">
-        <p className="text-base text-slate-600 font-medium italic">{phrase.romanization}</p>
+        <p className="text-base text-muted-foreground font-medium italic">{phrase.romanization}</p>
       </div>
 
       {/* Translation */}
       <div className="pt-3 border-t border-yellow-200/50">
-        <p className="text-slate-700 leading-relaxed">{phrase.translation}</p>
+        <p className="text-muted-foreground leading-relaxed">{phrase.translation}</p>
       </div>
     </div>
   );

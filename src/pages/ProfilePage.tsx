@@ -4,11 +4,11 @@ import { useMutation, useAction, useQuery } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { ExamAttempt, Language, User } from '../types';
 import { getLabels } from '../utils/i18n';
-import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { aRef, mRef, NoArgs, qRef } from '../utils/convexRefs';
 import { toErrorMessage } from '../utils/errors';
 
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Loading } from '../components/common/Loading';
 import { User as UserIcon, BarChart3, Lock, Settings } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
@@ -27,7 +27,7 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ language }) => {
-  const { user, updateUser } = useApp();
+  const { user, updateUser } = useAuth();
   const navigate = useLocalizedNavigate();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
@@ -214,7 +214,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       );
     }
     return (
-      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+      <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
         <UserIcon size={48} />
       </div>
     );
@@ -226,18 +226,16 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     disableUnlink: boolean
   ) => {
     if (accountsLoading || disableUnlink) {
-      return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+      return 'bg-muted text-muted-foreground cursor-not-allowed';
     }
     if (isLinked) {
-      return 'bg-red-50 text-red-600 hover:bg-red-100';
+      return 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-400/12 dark:text-red-200 dark:hover:bg-red-400/18';
     }
-    return 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100';
+    return 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-400/12 dark:text-indigo-200 dark:hover:bg-indigo-400/18';
   };
 
   return (
     <div className="max-w-[1000px] mx-auto pb-20">
-      <Toaster position="bottom-center" />
-
       {/* Back Button */}
       <div className="mb-6">
         <BackButton onClick={() => navigate('/dashboard')} />
@@ -298,7 +296,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       </div>
 
       {/* Content Area */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm min-h-[400px]">
+      <div className="bg-card rounded-3xl p-8 border border-border shadow-sm min-h-[400px]">
         {activeTab === 'info' && (
           <ProfileInfoTab
             labels={labels}

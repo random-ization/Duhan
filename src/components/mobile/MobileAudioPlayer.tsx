@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
-import { Slider } from '../ui/slider';
+import { Button } from '../ui';
+import { Slider } from '../ui';
 
 interface MobileAudioPlayerProps {
   readonly audioUrl: string;
@@ -109,11 +110,11 @@ export function MobileAudioPlayer({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       {/* Progress Info */}
-      <div className="flex justify-between text-xs font-bold text-slate-400 mb-2 px-1">
+      <div className="flex justify-between text-xs font-bold text-muted-foreground mb-2 px-1">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>
@@ -137,36 +138,42 @@ export function MobileAudioPlayer({
 
       {/* Controls */}
       <div className="flex items-center justify-between px-4">
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={() => skip(-10)}
-          className="w-12 h-12 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center active:bg-slate-100 active:scale-95 transition-all"
+          className="w-12 h-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center active:bg-muted active:scale-95 transition-all"
         >
           <RotateCcw size={20} />
           <span className="sr-only">Rewind 10s</span>
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={togglePlay}
-          className="w-16 h-16 rounded-[24px] bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-900/20 active:scale-95 transition-transform"
+          className="w-16 h-16 rounded-[24px] bg-primary text-white flex items-center justify-center shadow-xl shadow-slate-900/20 active:scale-95 transition-transform"
         >
           {isPlaying ? (
             <Pause size={28} fill="currentColor" />
           ) : (
             <Play size={28} fill="currentColor" className="ml-1" />
           )}
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={() => skip(10)}
-          className="w-12 h-12 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center active:bg-slate-100 active:scale-95 transition-all"
+          className="w-12 h-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center active:bg-muted active:scale-95 transition-all"
         >
           {/* Rotate icon flipped or just Forward icon */}
           <RotateCcw size={20} className="-scale-x-100" />
           <span className="sr-only">Forward 10s</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

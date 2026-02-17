@@ -12,6 +12,9 @@ import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryM
 import { useUserActions } from '../../hooks/useUserActions';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
 import { notify } from '../../utils/notify';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
+import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
+import { Button } from '../../components/ui';
 
 // =========================================
 // Types
@@ -132,54 +135,72 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
   const labels = getLabels(language);
   const headword = lemma || word;
   return (
-    <div
-      className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[200px]"
-      style={{ left: position.x, top: position.y }}
-    >
-      <button
-        onClick={onClose}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-900 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-      >
-        <X className="w-3 h-3" />
-      </button>
+    <Popover open onOpenChange={open => !open && onClose()}>
+      <PopoverPortal>
+        <PopoverContent
+          unstyled
+          data-popover
+          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-[#FDFBF7] p-4 shadow-[4px_4px_0px_0px_#18181B]"
+          style={{ left: position.x, top: position.y }}
+        >
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={onClose}
+            className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </Button>
 
-      <div className="text-xl font-black text-zinc-900 mb-1">{headword}</div>
-      {lemma && lemma !== word && <div className="text-xs text-zinc-500 mb-2">{word}</div>}
-      <div className="text-sm text-zinc-600 mb-3">{meaning}</div>
-      {grammarMatches && grammarMatches.length > 0 && (
-        <div className="mb-3">
-          <div className="text-xs font-bold text-zinc-900 mb-1">语法</div>
-          <div className="space-y-1">
-            {grammarMatches.slice(0, 5).map(g => (
-              <div key={g.id} className="text-xs text-zinc-700">
-                <span className="font-bold">{g.title}</span>
-                {g.summary ? <span className="text-zinc-500"> · {g.summary}</span> : null}
+          <div className="text-xl font-black text-foreground mb-1">{headword}</div>
+          {lemma && lemma !== word && (
+            <div className="text-xs text-muted-foreground mb-2">{word}</div>
+          )}
+          <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
+          {grammarMatches && grammarMatches.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-bold text-foreground mb-1">语法</div>
+              <div className="space-y-1">
+                {grammarMatches.slice(0, 5).map(g => (
+                  <div key={g.id} className="text-xs text-muted-foreground">
+                    <span className="font-bold">{g.title}</span>
+                    {g.summary ? (
+                      <span className="text-muted-foreground"> · {g.summary}</span>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {contextTranslation && (
-        <div className="text-xs text-zinc-500 mb-3 whitespace-pre-wrap">{contextTranslation}</div>
-      )}
+            </div>
+          )}
+          {contextTranslation && (
+            <div className="text-xs text-muted-foreground mb-3 whitespace-pre-wrap">
+              {contextTranslation}
+            </div>
+          )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={onSpeak}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
-        >
-          <Volume2 className="w-3 h-3" />
-          {labels.dashboard?.common?.read || '朗读'}
-        </button>
-        <button
-          onClick={onSave}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
-        >
-          <Plus className="w-3 h-3" />
-          {labels.dashboard?.common?.addVocab || '加入生词本'}
-        </button>
-      </div>
-    </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onSpeak}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+            >
+              <Volume2 className="w-3 h-3" />
+              {labels.dashboard?.common?.read || '朗读'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onSave}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              {labels.dashboard?.common?.addVocab || '加入生词本'}
+            </Button>
+          </div>
+        </PopoverContent>
+      </PopoverPortal>
+    </Popover>
   );
 };
 
@@ -202,53 +223,61 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const labels = getLabels(language);
   return (
-    <div className="absolute right-0 top-full mt-2 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56 z-50">
+    <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-black text-sm">
           {labels.dashboard?.listening?.settings || '听力设置'}
         </h4>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onClose}
-          className="w-6 h-6 rounded-full bg-white border-2 border-zinc-900 flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          className="w-6 h-6 rounded-full bg-card border-2 border-foreground flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 transition-all"
           aria-label={labels.dashboard?.common?.close || '关闭'}
         >
           <X className="w-3 h-3" />
-        </button>
+        </Button>
       </div>
 
       <div className="mb-4">
-        <label className="text-xs font-bold text-zinc-600 mb-2 block">
+        <label className="text-xs font-bold text-muted-foreground mb-2 block">
           {labels.dashboard?.listening?.fontSize || '字体大小'}
         </label>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => onFontSizeChange(Math.max(14, fontSize - 2))}
-            className="px-3 py-1 bg-white border-2 border-zinc-900 rounded font-bold text-sm hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+            className="px-3 py-1 bg-card border-2 border-foreground rounded font-bold text-sm text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
           >
             A-
-          </button>
+          </Button>
           <span className="flex-1 text-center font-bold">{fontSize}px</span>
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => onFontSizeChange(Math.min(28, fontSize + 2))}
-            className="px-3 py-1 bg-white border-2 border-zinc-900 rounded font-bold text-sm hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+            className="px-3 py-1 bg-card border-2 border-foreground rounded font-bold text-sm text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
           >
             A+
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-zinc-600">
+        <span className="text-xs font-bold text-muted-foreground">
           {labels.dashboard?.listening?.karaoke || '卡拉OK高亮'}
         </span>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onKaraokeModeToggle}
-          className={`w-12 h-6 rounded-full border-2 border-zinc-900 relative transition-colors ${isKaraokeMode ? 'bg-lime-300' : 'bg-zinc-200'}`}
+          className={`w-12 h-6 rounded-full border-2 border-foreground relative transition-colors ${isKaraokeMode ? 'bg-lime-300' : 'bg-muted'}`}
         >
           <div
-            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full border border-zinc-900 transition-all ${isKaraokeMode ? 'left-6' : 'left-0.5'}`}
+            className={`absolute top-0.5 w-4 h-4 bg-card rounded-full border border-foreground transition-all ${isKaraokeMode ? 'left-6' : 'left-0.5'}`}
           />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -283,23 +312,25 @@ const SegmentView: React.FC<SegmentViewProps> = ({
     getLocalizedContent(segment, 'translation', language) || segment.translation;
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="auto"
       ref={setRef}
       onClick={onClick}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onClick(e)}
-      className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left ${
+      className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left !block !whitespace-normal ${
         isActive
           ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
-          : 'bg-white border-zinc-200 hover:border-zinc-400'
+          : 'bg-card border-border hover:border-border'
       }`}
     >
       {/* Timestamp */}
-      <div className="text-xs font-mono text-zinc-400 mb-2">
+      <div className="text-xs font-mono text-muted-foreground mb-2">
         {formatTime(segment.start)} - {formatTime(segment.end)}
       </div>
 
       {/* Korean text with word click */}
-      <div className={`font-medium ${isActive ? 'text-zinc-900' : 'text-zinc-700'}`}>
+      <div className={`font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
         {segment.text.split(/\s+/).map((word, wordIndex) => {
           const normalizedWord = normalizeLookupWord(word);
           if (!normalizedWord) {
@@ -324,9 +355,9 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 
       {/* Translation */}
       {(showTranslation || isActive) && localizedTranslation && (
-        <div className="mt-2 text-sm text-zinc-500">{localizedTranslation}</div>
+        <div className="mt-2 text-sm text-muted-foreground">{localizedTranslation}</div>
       )}
-    </button>
+    </Button>
   );
 };
 
@@ -429,6 +460,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [isKaraokeMode, setIsKaraokeMode] = useState(true);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [completingUnit, setCompletingUnit] = useState(false);
 
   // Audio/Karaoke State
   const [currentTime, setCurrentTime] = useState(0);
@@ -729,20 +761,6 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     [speakTTS]
   );
 
-  // Close popup on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (selectedWord) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-popover]') && !target.closest('[data-word]')) {
-          setSelectedWord(null);
-        }
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedWord]);
-
   // ========================================
   // Render Transcript with Karaoke Highlighting
   // ========================================
@@ -772,7 +790,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
     // No transcript data - show empty state
     return (
-      <div className="text-center py-12 text-zinc-400">
+      <div className="text-center py-12 text-muted-foreground">
         <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
         <p className="font-bold">{labels.dashboard?.listening?.empty || '暂无听力内'}</p>
         <p className="text-sm mt-2">
@@ -798,15 +816,17 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       {!loading && (
         <>
           {/* Header */}
-          <header className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-3 flex items-center justify-between shrink-0">
+          <header className="bg-[#FDFBF7] border-b-2 border-foreground px-6 py-3 flex items-center justify-between shrink-0">
             {/* Left: Back + Title */}
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
-                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
               >
                 <ArrowLeft className="w-5 h-5" />
-              </button>
+              </Button>
               <h1 className="font-black text-lg flex items-center gap-2">
                 <Headphones className="w-5 h-5 text-lime-600" />
                 {unitData?.title || unitTitle}
@@ -815,48 +835,56 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
             {/* Center: Unit Info Badge */}
             <div className="flex gap-2">
-              <span className="px-3 py-1 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs shadow-[2px_2px_0px_0px_#18181B]">
+              <span className="px-3 py-1 bg-card border-2 border-foreground rounded-lg font-bold text-xs shadow-[2px_2px_0px_0px_#18181B]">
                 {(labels.dashboard?.listening?.title || '第 {index} 课 · 听力').replace(
                   '{index}',
                   String(unitIndex)
                 )}
               </span>
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={() => setShowTranslation(!showTranslation)}
-                className={`px-3 py-2 border-2 border-zinc-900 rounded-lg font-bold text-xs transition-colors ${
-                  showTranslation ? 'bg-blue-100' : 'bg-white'
+                className={`px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors ${
+                  showTranslation ? 'bg-blue-100' : 'bg-card'
                 }`}
               >
                 <Languages className="w-4 h-4 inline mr-1" />
                 {labels.dashboard?.listening?.translate || '译文'}
-              </button>
+              </Button>
             </div>
 
             {/* Right: Settings */}
             <div className="relative">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              {showSettings && (
-                <SettingsPanel
-                  fontSize={fontSize}
-                  isKaraokeMode={isKaraokeMode}
-                  onFontSizeChange={setFontSize}
-                  onKaraokeModeToggle={() => setIsKaraokeMode(!isKaraokeMode)}
-                  onClose={() => setShowSettings(false)}
-                  language={language}
-                />
-              )}
+              <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    type="button"
+                    className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
+                  <SettingsPanel
+                    fontSize={fontSize}
+                    isKaraokeMode={isKaraokeMode}
+                    onFontSizeChange={setFontSize}
+                    onKaraokeModeToggle={() => setIsKaraokeMode(!isKaraokeMode)}
+                    onClose={() => setShowSettings(false)}
+                    language={language}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
           {/* Main Content: Full Width Transcript Panel */}
           <div className="flex-1 overflow-y-auto p-8">
-            <div className="bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-3xl mx-auto">
-              <h2 className="text-2xl font-black mb-6 text-zinc-900 flex items-center gap-2">
+            <div className="bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-3xl mx-auto">
+              <h2 className="text-2xl font-black mb-6 text-foreground flex items-center gap-2">
                 <Headphones className="w-6 h-6 text-lime-600" />
                 {labels.dashboard?.listening?.transcript || '听力文稿'}
               </h2>
@@ -870,22 +898,32 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
               {renderTranscript()}
 
-              <div className="mt-8 pt-6 border-t-2 border-zinc-200 flex justify-center">
-                <button
+              <div className="mt-8 pt-6 border-t-2 border-border flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={async () => {
+                    if (completingUnit) return;
                     try {
+                      setCompletingUnit(true);
                       await completeUnitMutation({ courseId, unitIndex });
                       flushListeningTime(true);
                       notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
                     } catch (e) {
                       console.error('Failed to mark unit complete:', e);
                       notify.error(labels.dashboard?.common?.error || '操作失败，请稍后重试');
+                    } finally {
+                      setCompletingUnit(false);
                     }
                   }}
-                  className="px-8 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                  disabled={completingUnit}
+                  loading={completingUnit}
+                  loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || '完成本课学习'}`}
+                  loadingIconClassName="w-4 h-4"
+                  className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm text-foreground hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                 >
                   ✅ {labels.dashboard?.reading?.completeLesson || '完成本课学习'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -894,35 +932,33 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
       {/* Word Popover */}
       {selectedWord && (
-        <div data-popover>
-          <FlashcardPopover
-            word={selectedWord.word}
-            lemma={selectedWord.lemma}
-            meaning={selectedWord.meaning}
-            contextTranslation={selectedWord.contextTranslation}
-            grammarMatches={selectedWord.grammarMatches}
-            position={selectedWord.position}
-            onClose={() => setSelectedWord(null)}
-            onSave={async () => {
-              if (selectedWord) {
-                try {
-                  await saveWord(selectedWord.lemma || selectedWord.word, selectedWord.meaning);
-                  await addToReview({
-                    word: selectedWord.lemma || selectedWord.word,
-                    meaning: selectedWord.meaning,
-                    context: selectedWord.contextTranslation,
-                    source: 'LISTENING',
-                  });
-                } catch (err) {
-                  console.error('Failed to save word:', err);
-                }
+        <FlashcardPopover
+          word={selectedWord.word}
+          lemma={selectedWord.lemma}
+          meaning={selectedWord.meaning}
+          contextTranslation={selectedWord.contextTranslation}
+          grammarMatches={selectedWord.grammarMatches}
+          position={selectedWord.position}
+          onClose={() => setSelectedWord(null)}
+          onSave={async () => {
+            if (selectedWord) {
+              try {
+                await saveWord(selectedWord.lemma || selectedWord.word, selectedWord.meaning);
+                await addToReview({
+                  word: selectedWord.lemma || selectedWord.word,
+                  meaning: selectedWord.meaning,
+                  context: selectedWord.contextTranslation,
+                  source: 'LISTENING',
+                });
+              } catch (err) {
+                console.error('Failed to save word:', err);
               }
-              setSelectedWord(null);
-            }}
-            onSpeak={() => speak(selectedWord.word)}
-            language={language}
-          />
-        </div>
+            }
+            setSelectedWord(null);
+          }}
+          onSpeak={() => speak(selectedWord.word)}
+          language={language}
+        />
       )}
 
       {/* Sticky Audio Player */}

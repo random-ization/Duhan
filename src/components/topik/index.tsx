@@ -7,7 +7,7 @@ import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
 import { useConvex } from 'convex/react';
 import { TOPIK } from '../../utils/convexRefs';
 import { TopikQuestionDto } from '../../../convex/topik';
-import { useApp } from '../../contexts/AppContext';
+import { useLayout } from '../../contexts/LayoutContext';
 import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
@@ -17,6 +17,16 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileExamSession } from '../mobile/topik/MobileExamSession';
 import { MobileExamReview } from '../mobile/topik/MobileExamReview';
 import { MobileExamCover } from '../mobile/topik/MobileExamCover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui';
 
 interface TopikModuleProps {
   exams: TopikExam[];
@@ -47,7 +57,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
   const navigate = useLocalizedNavigate();
   const convex = useConvex();
-  const { setSidebarHidden } = useApp();
+  const { setSidebarHidden } = useLayout();
   const { logActivity } = useActivityLogger();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
@@ -65,6 +75,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     correctCount: number;
     totalQuestions: number;
   } | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -221,6 +232,15 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     setSidebarHidden(false);
   }, [currentExam, userAnswers, onSaveHistory, setView, setSidebarHidden, timeLeft, logActivity]);
 
+  const handleRequestExitExam = useCallback(() => {
+    setShowExitConfirm(true);
+  }, []);
+
+  const handleConfirmExitExam = useCallback(() => {
+    setShowExitConfirm(false);
+    submitExam();
+  }, [submitExam]);
+
   // Timer logic
   React.useEffect(() => {
     let interval: number;
@@ -368,7 +388,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
             ></path>
           </svg>
         </div>
-        <p className="text-slate-500 font-medium text-lg">
+        <p className="text-muted-foreground font-medium text-lg">
           {labels.dashboard?.topik?.loadingExam || 'Downloading exam data...'}
         </p>
       </div>
@@ -432,53 +452,79 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   if (view === 'EXAM' && currentExam) {
     if (isMobile) {
       return (
-        <MobileExamSession
+        <>
+          <MobileExamSession
+            exam={currentExam}
+            language={language}
+            userAnswers={userAnswers}
+            timeLeft={timeLeft}
+            timerActive={timerActive}
+            onAnswerChange={handleAnswerChange}
+            onSubmit={submitExam}
+            onExit={handleRequestExitExam}
+          />
+          <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+            <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-black text-foreground">
+                  {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+                  {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-row justify-end gap-2">
+                <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>
+                  {labels.common?.cancel || 'Cancel'}
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmExitExam}>
+                  {labels.common?.confirm || 'Confirm'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ExamSession
           exam={currentExam}
           language={language}
           userAnswers={userAnswers}
           timeLeft={timeLeft}
           timerActive={timerActive}
+          annotations={annotations}
           onAnswerChange={handleAnswerChange}
           onSubmit={submitExam}
-          onExit={() => {
-            // Show confirmation dialog
-            if (
-              globalThis.window.confirm(
-                labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'
-              )
-            ) {
-              submitExam(); // Save and submit
-            }
-          }}
+          onExit={handleRequestExitExam}
+          onSaveAnnotation={handleSaveAnnotation}
+          onDeleteAnnotation={handleDeleteAnnotation}
+          onPauseTimer={pauseTimer}
+          onResumeTimer={resumeTimer}
         />
-      );
-    }
-
-    return (
-      <ExamSession
-        exam={currentExam}
-        language={language}
-        userAnswers={userAnswers}
-        timeLeft={timeLeft}
-        timerActive={timerActive}
-        annotations={annotations}
-        onAnswerChange={handleAnswerChange}
-        onSubmit={submitExam}
-        onExit={() => {
-          // Show confirmation dialog
-          if (
-            globalThis.window.confirm(
-              labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'
-            )
-          ) {
-            submitExam(); // Save and submit
-          }
-        }}
-        onSaveAnnotation={handleSaveAnnotation}
-        onDeleteAnnotation={handleDeleteAnnotation}
-        onPauseTimer={pauseTimer}
-        onResumeTimer={resumeTimer}
-      />
+        <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+          <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-black text-foreground">
+                {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+                {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-end gap-2">
+              <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>
+                {labels.common?.cancel || 'Cancel'}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmExitExam}>
+                {labels.common?.confirm || 'Confirm'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 

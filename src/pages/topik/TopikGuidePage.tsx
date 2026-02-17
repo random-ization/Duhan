@@ -4,6 +4,7 @@ import { SEO as Seo } from '../../seo/SEO';
 import { getRouteMeta } from '../../seo/publicRoutes';
 import { LocalizedLink } from '../../components/LocalizedLink';
 import { isValidLanguage } from '../../components/LanguageRouter';
+import { Button } from '../../components/ui';
 
 type Lang = 'en' | 'zh' | 'vi' | 'mn';
 
@@ -261,13 +262,13 @@ function Section({
 }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <h2 className="text-2xl font-black text-slate-900">{title}</h2>
-      <p className="mt-3 text-slate-700 font-semibold leading-relaxed">{body}</p>
+      <h2 className="text-2xl font-black text-foreground">{title}</h2>
+      <p className="mt-3 text-muted-foreground font-semibold leading-relaxed">{body}</p>
       {bullets && bullets.length > 0 && (
         <ul className="mt-4 space-y-2">
           {bullets.map((b, idx) => (
-            <li key={idx} className="flex gap-3 text-slate-700 font-semibold">
-              <span className="mt-2 h-2.5 w-2.5 rounded-full bg-indigo-600 shrink-0" />
+            <li key={idx} className="flex gap-3 text-muted-foreground font-semibold">
+              <span className="mt-2 h-2.5 w-2.5 rounded-full bg-indigo-600 dark:bg-indigo-300 shrink-0" />
               <span>{b}</span>
             </li>
           ))}
@@ -286,9 +287,9 @@ export const TopikGuidePage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-[#F0F4F8] p-6 md:p-12 font-sans"
+      className="min-h-screen bg-[#F0F4F8] dark:bg-background p-6 md:p-12 font-sans"
       style={{
-        backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
+        backgroundImage: 'radial-gradient(hsl(var(--border) / 0.85) 1.5px, transparent 1.5px)',
         backgroundSize: '24px 24px',
       }}
     >
@@ -300,54 +301,62 @@ export const TopikGuidePage: React.FC = () => {
       />
 
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-pop overflow-hidden">
+        <div className="bg-card rounded-3xl border-2 border-foreground shadow-pop overflow-hidden">
           <div className="p-8 md:p-12">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="flex-1">
-                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
                   {copy.h1}
                 </h1>
-                <p className="mt-4 text-slate-700 font-semibold leading-relaxed max-w-3xl">
+                <p className="mt-4 text-muted-foreground font-semibold leading-relaxed max-w-3xl">
                   {copy.intro}
                 </p>
 
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <LocalizedLink
-                    to="/topik"
-                    className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-slate-900 text-white border-2 border-slate-900 hover:bg-slate-800 transition"
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="auto"
+                    className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-primary text-primary-foreground border-2 border-foreground hover:bg-muted transition"
                   >
-                    {currentLang === 'en'
-                      ? 'Go to TOPIK practice'
-                      : currentLang === 'zh'
-                        ? '前往 TOPIK 练习'
-                        : currentLang === 'vi'
-                          ? 'Đi tới luyện TOPIK'
-                          : 'TOPIK дасгал руу'}
-                  </LocalizedLink>
-                  <LocalizedLink
-                    to="/pricing"
-                    className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition"
+                    <LocalizedLink to="/topik">
+                      {currentLang === 'en'
+                        ? 'Go to TOPIK practice'
+                        : currentLang === 'zh'
+                          ? '前往 TOPIK 练习'
+                          : currentLang === 'vi'
+                            ? 'Đi tới luyện TOPIK'
+                            : 'TOPIK дасгал руу'}
+                    </LocalizedLink>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="auto"
+                    className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-card text-foreground border-2 border-foreground hover:bg-muted transition"
                   >
-                    {currentLang === 'en'
-                      ? 'See pricing'
-                      : currentLang === 'zh'
-                        ? '查看价格'
-                        : currentLang === 'vi'
-                          ? 'Xem bảng giá'
-                          : 'Үнийг харах'}
-                  </LocalizedLink>
+                    <LocalizedLink to="/pricing">
+                      {currentLang === 'en'
+                        ? 'See pricing'
+                        : currentLang === 'zh'
+                          ? '查看价格'
+                          : currentLang === 'vi'
+                            ? 'Xem bảng giá'
+                            : 'Үнийг харах'}
+                    </LocalizedLink>
+                  </Button>
                 </div>
               </div>
 
               <aside className="w-full md:w-72">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="font-black text-slate-900">{copy.tocTitle}</div>
+                <div className="rounded-2xl border border-border bg-muted p-5">
+                  <div className="font-black text-foreground">{copy.tocTitle}</div>
                   <ul className="mt-3 space-y-2">
                     {copy.toc.map(item => (
                       <li key={item.href}>
                         <a
                           href={item.href}
-                          className="text-sm font-bold text-slate-700 hover:text-slate-900 underline"
+                          className="text-sm font-bold text-muted-foreground hover:text-foreground underline"
                         >
                           {item.label}
                         </a>
@@ -364,45 +373,57 @@ export const TopikGuidePage: React.FC = () => {
               ))}
             </div>
 
-            <div className="mt-12 border-t border-slate-100 pt-8">
-              <h2 className="text-2xl font-black text-slate-900">{copy.nextTitle}</h2>
+            <div className="mt-12 border-t border-border pt-8">
+              <h2 className="text-2xl font-black text-foreground">{copy.nextTitle}</h2>
               <div className="mt-4 flex flex-col md:flex-row gap-3">
-                <LocalizedLink
-                  to="/topik/listening"
-                  className="rounded-2xl px-5 py-3 font-black bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-700 transition"
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="rounded-2xl px-5 py-3 font-black bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground border-2 border-indigo-700 dark:border-indigo-300/60 hover:bg-indigo-700 dark:hover:bg-indigo-400 transition"
                 >
-                  {currentLang === 'en'
-                    ? 'Listening strategy'
-                    : currentLang === 'zh'
-                      ? '听力策略'
-                      : currentLang === 'vi'
-                        ? 'Chiến lược nghe'
-                        : 'Сонсголын стратеги'}
-                </LocalizedLink>
-                <LocalizedLink
-                  to="/topik/reading"
-                  className="rounded-2xl px-5 py-3 font-black bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition"
+                  <LocalizedLink to="/topik/listening">
+                    {currentLang === 'en'
+                      ? 'Listening strategy'
+                      : currentLang === 'zh'
+                        ? '听力策略'
+                        : currentLang === 'vi'
+                          ? 'Chiến lược nghe'
+                          : 'Сонсголын стратеги'}
+                  </LocalizedLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="rounded-2xl px-5 py-3 font-black bg-card text-foreground border-2 border-foreground hover:bg-muted transition"
                 >
-                  {currentLang === 'en'
-                    ? 'Reading strategy'
-                    : currentLang === 'zh'
-                      ? '阅读策略'
-                      : currentLang === 'vi'
-                        ? 'Chiến lược đọc'
-                        : 'Уншлагын стратеги'}
-                </LocalizedLink>
-                <LocalizedLink
-                  to="/topik/study-plan"
-                  className="rounded-2xl px-5 py-3 font-black bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition"
+                  <LocalizedLink to="/topik/reading">
+                    {currentLang === 'en'
+                      ? 'Reading strategy'
+                      : currentLang === 'zh'
+                        ? '阅读策略'
+                        : currentLang === 'vi'
+                          ? 'Chiến lược đọc'
+                          : 'Уншлагын стратеги'}
+                  </LocalizedLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="auto"
+                  className="rounded-2xl px-5 py-3 font-black bg-card text-foreground border-2 border-foreground hover:bg-muted transition"
                 >
-                  {currentLang === 'en'
-                    ? '4-week plan'
-                    : currentLang === 'zh'
-                      ? '4 周计划'
-                      : currentLang === 'vi'
-                        ? 'Kế hoạch 4 tuần'
-                        : '4 долоо хоногийн төлөвлөгөө'}
-                </LocalizedLink>
+                  <LocalizedLink to="/topik/study-plan">
+                    {currentLang === 'en'
+                      ? '4-week plan'
+                      : currentLang === 'zh'
+                        ? '4 周计划'
+                        : currentLang === 'vi'
+                          ? 'Kế hoạch 4 tuần'
+                          : '4 долоо хоногийн төлөвлөгөө'}
+                  </LocalizedLink>
+                </Button>
               </div>
             </div>
           </div>

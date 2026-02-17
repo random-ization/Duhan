@@ -1,6 +1,8 @@
 import React from 'react';
 import { Camera, CheckCircle, XCircle, Crown, Calendar, Trophy } from 'lucide-react';
 import { User } from '../../../types';
+import { Button } from '../../../components/ui';
+import { Input } from '../../../components/ui';
 
 interface ProfileHeaderProps {
   user: User;
@@ -43,21 +45,26 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   error,
   navigate,
 }) => {
+  const [syncingProfile, setSyncingProfile] = React.useState(false);
+
   return (
-    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row items-center gap-8">
+    <div className="bg-card rounded-3xl p-8 border border-border shadow-sm mb-8 flex flex-col md:flex-row items-center gap-8">
       <div className="relative group">
-        <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-br from-indigo-500 to-purple-600">
-          <div className="w-full h-full rounded-full bg-white p-1 overflow-hidden relative">
+        <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-400/75 dark:to-violet-400/75">
+          <div className="w-full h-full rounded-full bg-card p-1 overflow-hidden relative">
             {renderAvatar()}
           </div>
         </div>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-0 right-0 bg-slate-900 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+          className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
         >
           <Camera size={16} />
-        </button>
-        <input
+        </Button>
+        <Input
           ref={fileInputRef}
           type="file"
           accept="image/*"
@@ -70,28 +77,36 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex flex-col md:flex-row items-center gap-3 mb-2">
           {isEditingName ? (
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 type="text"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleNameUpdate()}
-                className="border-b-2 border-indigo-500 text-2xl font-bold text-slate-900 outline-none bg-transparent w-40"
+                className="h-auto border-b-2 border-indigo-500 dark:border-indigo-300/70 text-2xl font-bold text-foreground outline-none bg-transparent w-40 p-0 rounded-none border-x-0 border-t-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 autoFocus
               />
-              <button onClick={handleNameUpdate}>
-                <CheckCircle size={20} className="text-green-500" />
-              </button>
-              <button onClick={() => setIsEditingName(false)}>
-                <XCircle size={20} className="text-red-500" />
-              </button>
+              <Button type="button" variant="ghost" size="auto" onClick={handleNameUpdate}>
+                <CheckCircle size={20} className="text-green-500 dark:text-emerald-300" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={() => setIsEditingName(false)}
+              >
+                <XCircle size={20} className="text-red-500 dark:text-rose-300" />
+              </Button>
             </div>
           ) : (
-            <h1 className="text-3xl font-extrabold text-slate-900">{displayName}</h1>
+            <h1 className="text-3xl font-extrabold text-foreground">{displayName}</h1>
           )}
           {!isEditingName && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => setIsEditingName(true)}
-              className="text-slate-400 hover:text-indigo-600 transition-colors"
+              className="text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
             >
               <svg
                 width="16"
@@ -104,22 +119,30 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
-            </button>
+            </Button>
           )}
           {(user.tier === 'PAID' || user.tier === 'PREMIUM') && (
-            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1">
+            <span className="px-3 py-1 bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200 text-xs font-bold rounded-full flex items-center gap-1">
               <Crown size={12} className="fill-current" />{' '}
               {labels.profile?.premiumBadge || 'Premium'}
             </span>
           )}
         </div>
-        <p className="text-slate-500 font-medium">{user.email}</p>
+        <p className="text-muted-foreground font-medium">{user.email}</p>
         {isProfileIncomplete && (
           <div className="mt-3 flex flex-wrap gap-2 justify-center md:justify-start">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="auto"
+              disabled={syncingProfile}
+              loading={syncingProfile}
+              loadingText={labels.profile?.importButton || 'Import social profile'}
+              loadingIconClassName="w-4 h-4"
               onClick={async () => {
+                if (syncingProfile) return;
                 try {
+                  setSyncingProfile(true);
                   const result = await syncProfileFromIdentityMutation();
                   if (result.updated) {
                     success(labels.profile?.importSuccess || 'Imported social profile');
@@ -131,28 +154,32 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   }
                 } catch {
                   error(labels.profile?.importFailed || 'Import failed');
+                } finally {
+                  setSyncingProfile(false);
                 }
               }}
-              className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+              className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-400/15 dark:text-indigo-200 dark:hover:bg-indigo-400/20 transition"
             >
               {labels.profile?.importButton || 'Import social profile'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => navigate('/profile')}
-              className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+              className="px-4 py-2 rounded-xl text-sm font-bold bg-muted text-muted-foreground hover:bg-muted transition"
             >
               {labels.profile?.createManually || 'Create manually'}
-            </button>
+            </Button>
           </div>
         )}
         <div className="mt-4 flex flex-wrap gap-4 justify-center md:justify-start">
-          <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-            <Calendar size={14} className="text-indigo-500" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1.5 rounded-lg border border-border">
+            <Calendar size={14} className="text-indigo-500 dark:text-indigo-300" />
             {labels.profile?.joined || 'Joined'} {joinedDateLabel}
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-            <Trophy size={14} className="text-orange-500" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1.5 rounded-lg border border-border">
+            <Trophy size={14} className="text-orange-500 dark:text-orange-300" />
             {examsTaken} {labels.profile?.examsCompleted || 'exams completed'}
           </div>
         </div>

@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowLeft, PlayCircle, Settings2, Sparkles, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { InteractiveWordChip } from './InteractiveWordChip';
+import { Button } from '../ui';
 
 interface MobileReadingModuleProps {
   readonly unitTitle: string;
@@ -42,30 +43,34 @@ export function MobileReadingModule({
   }, [unitData]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+    <div className="flex flex-col min-h-screen bg-muted font-sans">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 flex items-center justify-between">
-        <button
+      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b border-border px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={onBack}
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
         >
-          <ArrowLeft size={20} className="text-slate-600" />
-        </button>
+          <ArrowLeft size={20} className="text-muted-foreground" />
+        </Button>
 
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
             Reading Practice
           </span>
-          <h1 className="text-sm font-black text-slate-900 truncate max-w-[200px]">{unitTitle}</h1>
+          <h1 className="text-sm font-black text-foreground truncate max-w-[200px]">{unitTitle}</h1>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
         >
-          <Settings2 size={20} className="text-slate-600" />
-        </button>
+          <Settings2 size={20} className="text-muted-foreground" />
+        </Button>
       </div>
 
       {/* Chat Stream */}
@@ -73,10 +78,10 @@ export function MobileReadingModule({
         {/* Intro Card */}
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg shadow-indigo-200 mb-8">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-12 h-12 rounded-2xl bg-card/20 flex items-center justify-center backdrop-blur-sm">
               <BookOpen size={24} className="text-white" />
             </div>
-            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
+            <span className="bg-card/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
               LEVEL 1
             </span>
           </div>
@@ -89,7 +94,7 @@ export function MobileReadingModule({
         </div>
 
         {textSegments.length === 0 && (
-          <div className="text-center text-slate-400 py-10 font-bold">
+          <div className="text-center text-muted-foreground py-10 font-bold">
             No text content available.
           </div>
         )}
@@ -101,14 +106,14 @@ export function MobileReadingModule({
             style={{ animationDelay: `${segment.id * 100}ms` }}
           >
             {segment.speaker && (
-              <div className="ml-4 mb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <div className="ml-4 mb-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 {segment.speaker}
               </div>
             )}
             <div
               className={cn(
-                'relative p-5 rounded-[24px] text-lg font-medium leading-relaxed shadow-sm border border-slate-100',
-                'bg-white text-slate-800'
+                'relative p-5 rounded-[24px] text-lg font-medium leading-relaxed shadow-sm border border-border',
+                'bg-card text-muted-foreground'
               )}
             >
               {/* Content - Word Chip logic */}
@@ -120,12 +125,14 @@ export function MobileReadingModule({
 
               {/* Inline Action Button (Translation/Audio) */}
               <div className="absolute -right-2 -bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100">
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   type="button"
-                  className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md"
+                  className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md"
                 >
                   <PlayCircle size={14} className="fill-current" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -133,11 +140,13 @@ export function MobileReadingModule({
       </div>
 
       {/* Bottom Action Bar (Sticky) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] z-20 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <button
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] z-20 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="flex-1 h-14 bg-slate-900 rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-slate-900/20"
+          className="flex-1 h-14 bg-primary rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-slate-900/20"
         >
           {isPlaying ? (
             <>Stop Audio</>
@@ -146,14 +155,16 @@ export function MobileReadingModule({
               <PlayCircle className="fill-current" /> Play Full Audio
             </>
           )}
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           type="button"
-          className="h-14 w-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center active:scale-95 transition-transform"
+          className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center active:scale-95 transition-transform"
         >
           <Sparkles size={24} className="text-indigo-500" />
-        </button>
+        </Button>
       </div>
     </div>
   );

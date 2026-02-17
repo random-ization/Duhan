@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import {
   MediaPlayer,
   MediaProvider,
@@ -18,7 +17,9 @@ import {
   LogOut, // Exit icon
 } from 'lucide-react';
 import { TopikExam, TopikQuestion } from '../../types';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
+import { DialogPortal } from '../ui';
+import { Popover, PopoverAnchor, PopoverContent } from '../ui';
 
 interface ExamControllerProps {
   exam: TopikExam;
@@ -75,14 +76,14 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           className="relative flex flex-col items-center select-none touch-none w-6 h-full group/volume cursor-pointer"
           orientation="vertical"
         >
-          <VolumeSlider.Track className="relative w-1.5 h-full bg-slate-200 rounded-full overflow-hidden">
+          <VolumeSlider.Track className="relative w-1.5 h-full bg-muted rounded-full overflow-hidden">
             <VolumeSlider.TrackFill className="absolute bottom-0 w-full bg-indigo-500 rounded-full will-change-[height] h-[var(--slider-fill)]" />
           </VolumeSlider.Track>
           <VolumeSlider.Thumb className="absolute w-3 h-3 bg-indigo-600 rounded-full shadow-md opacity-0 group-hover/volume:opacity-100 left-1/2 -translate-x-1/2 focus:opacity-100" />
         </VolumeSlider.Root>
 
         {/* Playback speed label (decoration) */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-4 text-[9px] font-mono text-slate-400 font-bold whitespace-nowrap">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-4 text-[9px] font-mono text-muted-foreground font-bold whitespace-nowrap">
           Vol
         </div>
       </div>
@@ -90,7 +91,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
       <div className="w-full px-1 flex flex-col items-center gap-2 mt-4">
         {/* Progress Bar (Horizontal) */}
         <TimeSlider.Root className="group relative flex items-center w-full h-4 cursor-pointer touch-none select-none">
-          <TimeSlider.Track className="relative w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+          <TimeSlider.Track className="relative w-full h-1 bg-muted rounded-full overflow-hidden">
             <TimeSlider.TrackFill className="absolute h-full bg-indigo-500 rounded-full will-change-[width] w-[var(--slider-fill)]" />
             <TimeSlider.Progress className="absolute h-full bg-indigo-300 rounded-full w-[var(--slider-progress)] will-change-[width]" />
           </TimeSlider.Track>
@@ -101,20 +102,20 @@ export const ExamController: React.FC<ExamControllerProps> = ({
         <div className="flex items-center justify-between w-full px-1">
           <SeekButton
             seconds={-10}
-            className="text-slate-400 hover:text-slate-700 transition-colors"
+            className="text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <Rewind className="w-3 h-3" />
           </SeekButton>
           <SeekButton
             seconds={10}
-            className="text-slate-400 hover:text-slate-700 transition-colors"
+            className="text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <FastForward className="w-3 h-3" />
           </SeekButton>
         </div>
 
         {/* Play/Pause Button */}
-        <PlayButton className="w-12 h-12 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200 active:scale-95 group mt-1">
+        <PlayButton className="w-12 h-12 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all flex items-center justify-center shrink-0 shadow-pop active:scale-95 group mt-1">
           {/* Show Play when PAUSED (data-paused present) */}
           <Play className="w-5 h-5 ml-0.5 fill-current hidden group-data-[paused]:block" />
           {/* Show Pause when PLAYING (data-paused NOT present) */}
@@ -125,7 +126,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
   );
 
   const renderContent = () => (
-    <div className="flex flex-col h-full w-full items-center py-4 text-slate-700 select-none">
+    <div className="flex flex-col h-full w-full items-center py-4 text-muted-foreground select-none">
       {/* 1. Question Navigation List (Vertical Scroll) */}
       <div
         ref={listRef}
@@ -156,178 +157,186 @@ export const ExamController: React.FC<ExamControllerProps> = ({
       </div>
 
       {/* Divider */}
-      {audioUrl && <div className="w-12 h-[1px] bg-slate-200 my-3 shrink-0" />}
+      {audioUrl && <div className="w-12 h-[1px] bg-muted my-3 shrink-0" />}
 
       {/* 2. Audio Controls */}
       {audioUrl && renderAudioControls()}
     </div>
   );
 
-  return ReactDOM.createPortal(
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[50] flex flex-col items-center gap-4">
-      {/* Timer Badge (Floating above) */}
-      <div
-        className={`
-          px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm
-          text-xs font-mono font-bold mb-2
-          ${isLowTime ? 'text-red-500 animate-pulse border-red-200 bg-red-50' : 'text-slate-600'}
-        `}
-      >
-        {formatTime(timeLeft)}
-      </div>
-
-      {/* Main Controller Capsule */}
-      <div className="relative">
-        <div className="relative border border-slate-200 shadow-xl rounded-[40px] w-[90px] transition-all duration-300 ease-out flex flex-col overflow-hidden bg-white">
-          {audioUrl ? (
-            <MediaPlayer src={audioUrl} className="w-full h-full flex flex-col">
-              <MediaProvider />
-              {renderContent()}
-            </MediaPlayer>
-          ) : (
-            renderContent()
-          )}
-        </div>
-
-        {/* Overview Popover (Appears to the LEFT of the controller) */}
+  return (
+    <DialogPortal>
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[50] flex flex-col items-center gap-4">
+        {/* Timer Badge (Floating above) */}
         <div
           className={`
-            absolute top-0 right-[105px] w-[280px] bg-white/95 backdrop-blur-xl border border-slate-200 
-            rounded-3xl shadow-xl overflow-hidden transition-all duration-300 origin-right
+            px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-md border border-border shadow-sm
+            text-xs font-mono font-bold mb-2
             ${
-              showOverview
-                ? 'opacity-100 scale-100 translate-x-0 visible'
-                : 'opacity-0 scale-95 translate-x-4 invisible pointer-events-none'
+              isLowTime
+                ? 'text-red-500 dark:text-red-300 animate-pulse border-red-200 dark:border-red-400/30 bg-red-50 dark:bg-red-500/10'
+                : 'text-muted-foreground'
             }
           `}
-          style={{ maxHeight: '600px', height: 'auto' }}
         >
-          {/* Popover Header */}
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <span className="text-slate-800 font-bold text-sm">题目概览</span>
+          {formatTime(timeLeft)}
+        </div>
 
-            <div className="text-xs font-mono text-slate-500">
-              <span className="text-emerald-600 font-bold">{Object.keys(userAnswers).length}</span>
-              <span className="mx-1 text-slate-300">/</span>
-              <span>{questions.length}</span>
-              <span className="ml-1 text-[10px] uppercase opacity-70">Done</span>
-            </div>
-          </div>
+        {/* Main Controller Capsule */}
+        <Popover open={showOverview} onOpenChange={setShowOverview}>
+          <div className="relative">
+            <PopoverAnchor>
+              <div className="relative border border-border shadow-xl rounded-[40px] w-[90px] transition-all duration-300 ease-out flex flex-col overflow-hidden bg-card">
+                {audioUrl ? (
+                  <MediaPlayer src={audioUrl} className="w-full h-full flex flex-col">
+                    <MediaProvider />
+                    {renderContent()}
+                  </MediaPlayer>
+                ) : (
+                  renderContent()
+                )}
+              </div>
+            </PopoverAnchor>
 
-          {/* Popover Grid */}
-          <div className="p-4 grid grid-cols-5 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-            {questions.map((question, idx) => {
-              const isActive = currentQuestionIndex === idx;
-              const isAnswered = userAnswers[idx] !== undefined;
-              return (
+            {/* Overview Popover (Appears to the LEFT of the controller) */}
+            <PopoverContent
+              unstyled
+              forceMount
+              className="absolute top-0 right-[105px] w-[280px] bg-card/95 backdrop-blur-xl border border-border rounded-3xl shadow-xl overflow-hidden transition-all duration-300 origin-right data-[state=open]:opacity-100 data-[state=open]:scale-100 data-[state=open]:translate-x-0 data-[state=closed]:opacity-0 data-[state=closed]:scale-95 data-[state=closed]:translate-x-4 data-[state=closed]:invisible data-[state=closed]:pointer-events-none"
+              style={{ maxHeight: '600px', height: 'auto' }}
+            >
+              {/* Popover Header */}
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-muted/50">
+                <span className="text-muted-foreground font-bold text-sm">题目概览</span>
+
+                <div className="text-xs font-mono text-muted-foreground">
+                  <span className="text-emerald-600 font-bold">
+                    {Object.keys(userAnswers).length}
+                  </span>
+                  <span className="mx-1 text-muted-foreground">/</span>
+                  <span>{questions.length}</span>
+                  <span className="ml-1 text-[10px] uppercase opacity-70">Done</span>
+                </div>
+              </div>
+
+              {/* Popover Grid */}
+              <div className="p-4 grid grid-cols-5 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                {questions.map((question, idx) => {
+                  const isActive = currentQuestionIndex === idx;
+                  const isAnswered = userAnswers[idx] !== undefined;
+                  return (
+                    <Button
+                      key={question.id}
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => {
+                        onQuestionSelect(idx);
+                      }}
+                      className={`
+                          aspect-square rounded-lg flex items-center justify-center font-bold text-xs transition-all border
+                          ${getOverviewButtonClass(isActive, isAnswered)}
+                        `}
+                    >
+                      {idx + 1}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Popover Footer Legend */}
+              <div className="px-5 py-3 bg-muted border-t border-border text-[10px] text-muted-foreground flex justify-between items-center">
+                <div className="flex gap-3">
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-indigo-600"></div>当前
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-100 border border-emerald-300"></div>
+                    已做
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full border border-border bg-card"></div>未做
+                  </span>
+                </div>
+
+                {/* Close button inside popover */}
                 <Button
-                  key={question.id}
                   type="button"
                   variant="ghost"
                   size="auto"
-                  onClick={() => {
-                    onQuestionSelect(idx);
-                  }}
-                  className={`
-                        aspect-square rounded-lg flex items-center justify-center font-bold text-xs transition-all border
-                        ${getOverviewButtonClass(isActive, isAnswered)}
-                      `}
+                  onClick={() => setShowOverview(false)}
+                  className="hover:text-foreground transition-colors font-medium"
                 >
-                  {idx + 1}
+                  Close
                 </Button>
-              );
-            })}
+              </div>
+            </PopoverContent>
           </div>
+        </Popover>
 
-          {/* Popover Footer Legend */}
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex justify-between items-center">
-            <div className="flex gap-3">
-              <span className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-indigo-600"></div>当前
-              </span>
-              <span className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-100 border border-emerald-300"></div>
-                已做
-              </span>
-              <span className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full border border-slate-300 bg-white"></div>未做
-              </span>
-            </div>
-
-            {/* Close button inside popover */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setShowOverview(false)}
-              className="hover:text-slate-900 transition-colors font-medium"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Detached Action Buttons (Below Main Capsule) */}
-      <div className="flex flex-col gap-3">
-        {/* Overview Trigger Toggle */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={() => setShowOverview(!showOverview)}
-          className={`
-              w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border transition-all
-              ${
-                showOverview
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
-                  : 'bg-white border-slate-200 text-slate-500 hover:scale-105 active:scale-95 hover:text-indigo-600 hover:border-indigo-100'
-              }
-            `}
-        >
-          <Grid className="w-5 h-5" />
-          <span className="text-[9px] font-bold">概览</span>
-        </Button>
-
-        {/* Submit Button */}
-        <Button
-          type="button"
-          size="auto"
-          onClick={onSubmit}
-          className="w-14 h-14 rounded-full bg-indigo-600 border-2 border-indigo-100 flex flex-col items-center justify-center gap-0.5 text-white shadow-xl shadow-indigo-200 hover:scale-105 active:scale-95 transition-all group"
-        >
-          <Check className="w-6 h-6 stroke-[3]" />
-          <span className="text-[9px] font-bold opacity-90 group-hover:opacity-100">交卷</span>
-        </Button>
-
-        {/* Exit Button (Optional) */}
-        {onExit && (
+        {/* Detached Action Buttons (Below Main Capsule) */}
+        <div className="flex flex-col gap-3">
+          {/* Overview Trigger Toggle */}
           <Button
             type="button"
             variant="ghost"
             size="auto"
-            onClick={onExit}
-            className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border border-slate-200 bg-white text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 hover:scale-105 active:scale-95 transition-all mt-2"
+            onClick={() => setShowOverview(!showOverview)}
+            className={`
+              w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border transition-all
+              ${
+                showOverview
+                  ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-400/30 text-indigo-600 dark:text-indigo-300'
+                  : 'bg-card border-border text-muted-foreground hover:scale-105 active:scale-95 hover:text-indigo-600 dark:hover:text-indigo-300 hover:border-indigo-100 dark:hover:border-indigo-400/30'
+              }
+              `}
           >
-            <LogOut className="w-5 h-5 ml-0.5" />
-            <span className="text-[9px] font-bold">退出</span>
+            <Grid className="w-5 h-5" />
+            <span className="text-[9px] font-bold">概览</span>
           </Button>
-        )}
+
+          {/* Submit Button */}
+          <Button
+            type="button"
+            size="auto"
+            onClick={onSubmit}
+            className="w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 border-2 border-indigo-100 dark:border-indigo-300/30 flex flex-col items-center justify-center gap-0.5 text-white shadow-pop hover:scale-105 active:scale-95 transition-all group"
+          >
+            <Check className="w-6 h-6 stroke-[3]" />
+            <span className="text-[9px] font-bold opacity-90 group-hover:opacity-100">交卷</span>
+          </Button>
+
+          {/* Exit Button (Optional) */}
+          {onExit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onExit}
+              className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border border-border bg-card text-muted-foreground hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-red-500 dark:hover:text-red-300 hover:border-red-200 dark:hover:border-red-400/30 hover:scale-105 active:scale-95 transition-all mt-2"
+            >
+              <LogOut className="w-5 h-5 ml-0.5" />
+              <span className="text-[9px] font-bold">退出</span>
+            </Button>
+          )}
+        </div>
       </div>
-    </div>,
-    document.body
+    </DialogPortal>
   );
 };
 
 // Helper functions for class names
 const getQuestionButtonClass = (isActive: boolean, isAnswered: boolean) => {
-  if (isActive) return 'bg-indigo-600 text-white scale-110 shadow-indigo-200 z-10';
-  if (isAnswered) return 'bg-emerald-100 text-emerald-600 border border-emerald-200';
-  return 'bg-white text-slate-400 border border-slate-100 hover:border-slate-300 hover:text-slate-600';
+  if (isActive) return 'bg-indigo-600 dark:bg-indigo-500 text-white scale-110 shadow-pop-sm z-10';
+  if (isAnswered)
+    return 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-400/30';
+  return 'bg-card text-muted-foreground border border-border hover:border-border hover:text-muted-foreground';
 };
 
 const getOverviewButtonClass = (isActive: boolean, isAnswered: boolean) => {
-  if (isActive) return 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-200';
-  if (isAnswered) return 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100';
-  return 'bg-white border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700';
+  if (isActive)
+    return 'bg-indigo-600 dark:bg-indigo-500 border-indigo-500 dark:border-indigo-300/40 text-white shadow-pop-sm';
+  if (isAnswered)
+    return 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-400/30 text-emerald-600 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-500/20';
+  return 'bg-card border-border text-muted-foreground hover:border-border hover:text-muted-foreground';
 };

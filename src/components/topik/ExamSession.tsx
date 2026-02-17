@@ -294,12 +294,12 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
           {/* PDF 试卷纸张 */}
           <div
-            className={`bg-white w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen pb-16 relative border border-slate-300`}
+            className={`bg-card w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen pb-16 relative border border-border`}
           >
             {/* 试卷头部 (Header) */}
             <div className="p-8 md:p-12 pb-4 font-serif">
               {/* Title Box - Black rounded rectangle */}
-              <div className="bg-black text-white py-6 px-8 rounded-2xl mb-16 shadow-lg">
+              <div className="bg-primary text-primary-foreground py-6 px-8 rounded-2xl mb-16 shadow-pop">
                 <div className="flex items-baseline justify-center gap-4 mb-2">
                   <span className="text-xl md:text-2xl font-bold">제{exam.round}회</span>
                   <span className="text-3xl md:text-5xl font-bold tracking-wider">
@@ -314,11 +314,11 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
               {/* TOPIK II (B) Section - with double lines */}
               <div className="flex justify-center mb-16">
                 <div className="text-center">
-                  <div className="border-t-2 border-b-2 border-black py-4 px-16">
+                  <div className="border-t-2 border-b-2 border-foreground py-4 px-16">
                     <div className="flex items-center justify-center gap-4">
                       <span className="text-3xl md:text-5xl font-bold tracking-widest">TOPIK</span>
                       <span className="text-3xl md:text-5xl font-light">Ⅱ</span>
-                      <span className="border-2 border-black rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-xl md:text-2xl font-bold">
+                      <span className="border-2 border-foreground rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-xl md:text-2xl font-bold">
                         {exam.paperType || 'B'}
                       </span>
                     </div>
@@ -328,31 +328,31 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
               {/* Period Box */}
               <div className="flex justify-center mb-16">
-                <div className="border-2 border-black w-80 md:w-96">
+                <div className="border-2 border-foreground w-80 md:w-96">
                   <div className="flex">
-                    <div className="w-1/3 bg-gray-100 py-4 text-center font-bold text-2xl md:text-3xl border-r-2 border-black">
+                    <div className="w-1/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl border-r-2 border-foreground">
                       {exam.type === 'READING' ? '2교시' : '1교시'}
                     </div>
-                    <div className="w-2/3 bg-gray-100 py-4 text-center font-bold text-2xl md:text-3xl">
+                    <div className="w-2/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl">
                       {exam.type === 'READING' ? '읽기' : '듣기'}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="text-center text-sm text-gray-500 mb-8 font-sans">
+              <div className="text-center text-sm text-muted-foreground mb-8 font-sans">
                 [Scroll down to start]
               </div>
             </div>
 
             {/* Page Header */}
-            <div className="bg-white border-b border-black mx-8 md:mx-12 mb-8 pb-1">
+            <div className="bg-card border-b border-foreground mx-8 md:mx-12 mb-8 pb-1">
               <div className="flex justify-between items-end">
-                <div className="font-bold text-sm text-gray-500">
+                <div className="font-bold text-sm text-muted-foreground">
                   제{exam.round}회 한국어능력시험 II {exam.paperType || 'B'}형{' '}
                   {exam.type === 'READING' ? '2교시 (읽기)' : '1교시 (듣기)'}
                 </div>
-                <div className="font-bold bg-gray-200 px-4 py-1 rounded-full text-sm">
+                <div className="font-bold bg-muted px-4 py-1 rounded-full text-sm">
                   TOPIK Ⅱ {exam.type === 'READING' ? '읽기' : '듣기'} (1번 ~ {exam.questions.length}
                   번)
                 </div>
@@ -371,7 +371,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                 >
                   {/* Instruction Bar (每个 section 的第一题显示) */}
                   {shouldShowInstruction(idx) && (
-                    <div className="mb-4 font-bold text-lg leading-relaxed text-black font-['Batang','KoPubBatang','Times_New_Roman',serif]">
+                    <div className="mb-4 font-bold text-lg leading-relaxed text-foreground font-['Batang','KoPubBatang','Times_New_Roman',serif]">
                       {getInstructionForQuestion(idx)}
                     </div>
                   )}
@@ -400,7 +400,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
             {/* 试卷页脚 */}
             <div className="flex justify-center py-12">
-              <div className="bg-gray-300 rounded-full px-4 py-1 font-bold text-gray-700">
+              <div className="bg-muted rounded-full px-4 py-1 font-bold text-muted-foreground">
                 End of Section
               </div>
             </div>

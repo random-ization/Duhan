@@ -4,6 +4,7 @@ import { SEO as Seo } from '../../seo/SEO';
 import { getRouteMeta } from '../../seo/publicRoutes';
 import { LocalizedLink } from '../../components/LocalizedLink';
 import { isValidLanguage } from '../../components/LanguageRouter';
+import { Button } from '../../components/ui';
 
 type Lang = 'en' | 'zh' | 'vi' | 'mn';
 
@@ -188,23 +189,23 @@ export const TopikStudyPlanPage: React.FC = () => {
       />
 
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-pop overflow-hidden">
+        <div className="bg-card rounded-3xl border-2 border-foreground shadow-pop overflow-hidden">
           <div className="p-8 md:p-12">
-            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">
               {copy.h1}
             </h1>
-            <p className="mt-4 text-slate-700 font-semibold leading-relaxed max-w-3xl">
+            <p className="mt-4 text-muted-foreground font-semibold leading-relaxed max-w-3xl">
               {copy.intro}
             </p>
 
             <div className="mt-10 space-y-6">
               {copy.weeks.map(w => (
-                <section key={w.title} className="rounded-2xl border border-slate-200 bg-white p-6">
-                  <h2 className="text-xl font-black text-slate-900">{w.title}</h2>
+                <section key={w.title} className="rounded-2xl border border-border bg-card p-6">
+                  <h2 className="text-xl font-black text-foreground">{w.title}</h2>
                   <ul className="mt-4 space-y-2">
                     {w.items.map((item, idx) => (
-                      <li key={idx} className="flex gap-3 text-slate-700 font-semibold">
-                        <span className="mt-2 h-2.5 w-2.5 rounded-full bg-emerald-600 shrink-0" />
+                      <li key={idx} className="flex gap-3 text-muted-foreground font-semibold">
+                        <span className="mt-2 h-2.5 w-2.5 rounded-full bg-emerald-600 dark:bg-emerald-300 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -213,8 +214,8 @@ export const TopikStudyPlanPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-              <div className="font-black text-slate-900">
+            <div className="mt-8 rounded-2xl border border-border bg-muted p-6">
+              <div className="font-black text-foreground">
                 {currentLang === 'en'
                   ? 'Note'
                   : currentLang === 'zh'
@@ -223,34 +224,42 @@ export const TopikStudyPlanPage: React.FC = () => {
                       ? 'Ghi chú'
                       : 'Тэмдэглэл'}
               </div>
-              <p className="mt-2 text-slate-700 font-semibold">{copy.note}</p>
+              <p className="mt-2 text-muted-foreground font-semibold">{copy.note}</p>
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
-              <LocalizedLink
-                to="/topik"
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-slate-900 text-white border-2 border-slate-900 hover:bg-slate-800 transition"
+              <Button
+                asChild
+                variant="ghost"
+                size="auto"
+                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-primary text-white border-2 border-foreground hover:bg-muted transition"
               >
-                {currentLang === 'en'
-                  ? 'Start practice'
-                  : currentLang === 'zh'
-                    ? '开始练习'
-                    : currentLang === 'vi'
-                      ? 'Bắt đầu luyện'
-                      : 'Дасгал эхлэх'}
-              </LocalizedLink>
-              <LocalizedLink
-                to="/topik/guide"
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition"
+                <LocalizedLink to="/topik">
+                  {currentLang === 'en'
+                    ? 'Start practice'
+                    : currentLang === 'zh'
+                      ? '开始练习'
+                      : currentLang === 'vi'
+                        ? 'Bắt đầu luyện'
+                        : 'Дасгал эхлэх'}
+                </LocalizedLink>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="auto"
+                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-black bg-card text-foreground border-2 border-foreground hover:bg-muted transition"
               >
-                {currentLang === 'en'
-                  ? 'Back to guide'
-                  : currentLang === 'zh'
-                    ? '返回指南'
-                    : currentLang === 'vi'
-                      ? 'Quay lại hướng dẫn'
-                      : 'Гарын авлага руу'}
-              </LocalizedLink>
+                <LocalizedLink to="/topik/guide">
+                  {currentLang === 'en'
+                    ? 'Back to guide'
+                    : currentLang === 'zh'
+                      ? '返回指南'
+                      : currentLang === 'vi'
+                        ? 'Quay lại hướng dẫn'
+                        : 'Гарын авлага руу'}
+                </LocalizedLink>
+              </Button>
             </div>
           </div>
         </div>

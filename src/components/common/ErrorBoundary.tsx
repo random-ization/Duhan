@@ -3,8 +3,8 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { WithTranslation, withTranslation } from 'react-i18next';
 
 import { logger } from '../../utils/logger';
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { Button } from '../ui';
+import { Card, CardContent } from '../ui';
 
 interface ErrorBoundaryProps extends WithTranslation {
   children: ReactNode;
@@ -89,21 +89,21 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               </div>
 
               {/* Title */}
-              <h2 className="text-2xl font-black text-zinc-800 mb-2">{t('errors.oops')}</h2>
+              <h2 className="text-2xl font-black text-muted-foreground mb-2">{t('errors.oops')}</h2>
 
               {/* Description */}
-              <p className="text-zinc-500 font-medium mb-6">
+              <p className="text-muted-foreground font-medium mb-6">
                 {t('errors.loadError', { module: moduleName })}
               </p>
 
               {/* Error Details - Only in development */}
               {import.meta.env.DEV && this.state.error && (
-                <div className="mb-6 p-4 bg-zinc-100 rounded-xl text-left overflow-auto max-h-40">
+                <div className="mb-6 p-4 bg-muted rounded-xl text-left overflow-auto max-h-40">
                   <p className="text-xs font-mono text-red-600 break-all">
                     {this.state.error.toString()}
                   </p>
                   {this.state.errorInfo?.componentStack && (
-                    <pre className="text-xs text-zinc-500 mt-2 whitespace-pre-wrap">
+                    <pre className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}
@@ -116,7 +116,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   type="button"
                   size="auto"
                   onClick={this.handleReset}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                 >
                   <RefreshCw className="w-4 h-4" />
                   {t('errors.retry')}
@@ -126,7 +126,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   variant="outline"
                   size="auto"
                   onClick={this.handleGoHome}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-zinc-300 rounded-xl font-bold text-sm text-zinc-600 hover:border-zinc-900 transition-all"
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-card border-2 border-border rounded-xl font-bold text-sm text-muted-foreground hover:border-foreground transition-all"
                 >
                   <Home className="w-4 h-4" />
                   {t('errors.backToHome')}
@@ -134,7 +134,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               </div>
 
               {/* Reload hint */}
-              <p className="mt-6 text-xs text-zinc-400">
+              <p className="mt-6 text-xs text-muted-foreground">
                 {t('errors.reloadPrompt')}{' '}
                 <Button
                   type="button"

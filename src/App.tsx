@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Toaster } from 'react-hot-toast';
 
 import UpgradePrompt from './components/UpgradePrompt';
 import { PhoneVerifyModal } from './components/PhoneVerifyModal';
@@ -60,6 +61,14 @@ function App() {
               language={language}
             />
             <PhoneVerifyModal />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                duration: 2800,
+                className:
+                  'rounded-xl border border-border bg-card text-foreground font-bold shadow-pop-sm',
+              }}
+            />
           </GlobalModalProvider>
         </PhoneVerifyModalProvider>
       </ErrorBoundary>

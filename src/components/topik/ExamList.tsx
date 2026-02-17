@@ -17,8 +17,18 @@ import {
 } from 'lucide-react';
 import { TopikExam, ExamAttempt, Language } from '../../types';
 import { getLabel, getLabels } from '../../utils/i18n';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Input,
+} from '../ui';
 
 interface ExamListProps {
   exams: TopikExam[];
@@ -48,6 +58,7 @@ export const ExamList: React.FC<ExamListProps> = ({
   const labels = getLabels(language);
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingDeleteAttemptId, setPendingDeleteAttemptId] = useState<string | null>(null);
   const format = (template: string, vars: Record<string, string | number>) =>
     template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
@@ -88,18 +99,18 @@ export const ExamList: React.FC<ExamListProps> = ({
                 variant="ghost"
                 size="auto"
                 onClick={onBack}
-                className="group flex items-center justify-center w-10 h-10 rounded-full bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
+                className="group flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
               >
                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
               </Button>
             )}
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">
+              <h2 className="text-2xl font-bold text-foreground">
                 {getLabel(labels, ['topikExamList', 'historyTitle']) ||
                   labels.examHistory ||
                   'Exam History'}
               </h2>
-              <p className="text-slate-500 text-sm">
+              <p className="text-muted-foreground text-sm">
                 {getLabel(labels, ['topikExamList', 'historySubtitle']) ||
                   'Review your past performance'}
               </p>
@@ -109,11 +120,11 @@ export const ExamList: React.FC<ExamListProps> = ({
 
         <div className="space-y-4">
           {history.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 border-dashed">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <History className="w-8 h-8 text-slate-300" />
+            <div className="text-center py-20 bg-card rounded-3xl border border-border border-dashed">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <History className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-slate-500 font-medium">
+              <p className="text-muted-foreground font-medium">
                 {getLabel(labels, ['topikExamList', 'noHistory']) ||
                   labels.noHistory ||
                   'No exam history yet'}
@@ -140,7 +151,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             return (
               <div
                 key={attempt.id || idx}
-                className="group bg-white rounded-2xl p-6 border border-slate-200 hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                className="group bg-card rounded-2xl p-6 border border-border hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
                 <div className="flex items-start gap-4">
                   <div
@@ -151,8 +162,10 @@ export const ExamList: React.FC<ExamListProps> = ({
                     {percentage.toFixed(0)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 text-lg mb-1">{attempt.examTitle}</h3>
-                    <div className="flex flex-wrap gap-3 text-sm text-slate-500">
+                    <h3 className="font-bold text-muted-foreground text-lg mb-1">
+                      {attempt.examTitle}
+                    </h3>
+                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {attempt.timestamp
@@ -172,7 +185,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                     type="button"
                     size="auto"
                     onClick={() => onReviewAttempt(attempt)}
-                    className="px-5 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 rounded-xl font-bold transition-colors flex items-center gap-2"
+                    className="px-5 py-2.5 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 hover:text-indigo-700 dark:hover:text-indigo-200 rounded-xl font-bold transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     <span>{getLabel(labels, ['topikExamList', 'review']) || 'Review'}</span>
@@ -183,17 +196,8 @@ export const ExamList: React.FC<ExamListProps> = ({
                       type="button"
                       variant="ghost"
                       size="auto"
-                      onClick={() => {
-                        if (
-                          globalThis.window.confirm(
-                            getLabel(labels, ['topikExamList', 'deleteConfirm']) ||
-                              'Delete this attempt?'
-                          )
-                        ) {
-                          onDeleteAttempt(attempt.id);
-                        }
-                      }}
-                      className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                      onClick={() => setPendingDeleteAttemptId(attempt.id)}
+                      className="p-2.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/15 rounded-xl transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -203,6 +207,38 @@ export const ExamList: React.FC<ExamListProps> = ({
             );
           })}
         </div>
+        <AlertDialog
+          open={pendingDeleteAttemptId !== null}
+          onOpenChange={open => {
+            if (!open) setPendingDeleteAttemptId(null);
+          }}
+        >
+          <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-black text-foreground">
+                {getLabel(labels, ['topikExamList', 'deleteAttemptTitle']) || 'Delete attempt?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+                {getLabel(labels, ['topikExamList', 'deleteConfirm']) || 'Delete this attempt?'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-end gap-2">
+              <AlertDialogCancel onClick={() => setPendingDeleteAttemptId(null)}>
+                {getLabel(labels, ['common', 'cancel']) || 'Cancel'}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  if (pendingDeleteAttemptId && onDeleteAttempt)
+                    onDeleteAttempt(pendingDeleteAttemptId);
+                  setPendingDeleteAttemptId(null);
+                }}
+              >
+                {getLabel(labels, ['common', 'delete']) || 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -213,16 +249,16 @@ export const ExamList: React.FC<ExamListProps> = ({
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold mb-3 uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-xs font-bold mb-3 uppercase tracking-wider">
             <Trophy className="w-3 h-3" />{' '}
             {getLabel(labels, ['topikExamList', 'badge']) || 'TOPIK Preparation'}
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
             {getLabel(labels, ['topikExamList', 'title']) ||
               labels.topikExams ||
               'TOPIK Practice Exams'}
           </h1>
-          <p className="text-slate-500 mt-2 font-medium max-w-lg">
+          <p className="text-muted-foreground mt-2 font-medium max-w-lg">
             {getLabel(labels, ['topikExamList', 'subtitle']) ||
               'Practice with past exams to master the pace and find your weak spots.'}
           </p>
@@ -235,7 +271,7 @@ export const ExamList: React.FC<ExamListProps> = ({
               size="auto"
               variant="ghost"
               onClick={onViewHistory}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-card border border-border text-muted-foreground font-bold rounded-xl hover:bg-muted hover:border-border transition-all shadow-sm"
             >
               <History className="w-4 h-4" />
               {labels.history}
@@ -245,8 +281,8 @@ export const ExamList: React.FC<ExamListProps> = ({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-2">
-        <div className="flex p-1 bg-slate-100 rounded-xl">
+      <div className="bg-card p-2 rounded-2xl border border-border shadow-sm flex flex-col sm:flex-row gap-2">
+        <div className="flex p-1 bg-muted rounded-xl">
           <Button
             type="button"
             variant="ghost"
@@ -254,8 +290,8 @@ export const ExamList: React.FC<ExamListProps> = ({
             onClick={() => setFilterType('ALL')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
               filterType === 'ALL'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-card text-indigo-600 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
             }`}
           >
             {getLabel(labels, ['topikExamList', 'filterAll']) || 'All'}
@@ -267,8 +303,8 @@ export const ExamList: React.FC<ExamListProps> = ({
             onClick={() => setFilterType('READING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'READING'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-card text-blue-600 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
             }`}
           >
             <BookOpen className="w-4 h-4" />{' '}
@@ -281,8 +317,8 @@ export const ExamList: React.FC<ExamListProps> = ({
             onClick={() => setFilterType('LISTENING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'LISTENING'
-                ? 'bg-white text-violet-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-card text-violet-600 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
             }`}
           >
             <Headphones className="w-4 h-4" />{' '}
@@ -291,7 +327,7 @@ export const ExamList: React.FC<ExamListProps> = ({
         </div>
 
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder={
@@ -300,7 +336,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             }
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 h-full bg-transparent text-sm font-medium placeholder-slate-400 border-none shadow-none focus-visible:ring-0"
+            className="w-full pl-10 pr-4 py-2.5 h-full bg-transparent text-sm font-medium placeholder:text-muted-foreground border-none shadow-none focus-visible:ring-0"
           />
         </div>
       </div>
@@ -321,21 +357,23 @@ export const ExamList: React.FC<ExamListProps> = ({
               variant="ghost"
               onClick={() => !isLocked && onSelectExam(exam)}
               disabled={isLocked}
-              className={`group relative bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all text-left w-full ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full outline-none focus:ring-2 focus:ring-indigo-500/50`}
+              className={`group relative bg-card rounded-3xl p-6 border border-border shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all text-left w-full ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full outline-none focus:ring-2 focus:ring-indigo-500/50`}
             >
               {/* Top Decor */}
               <div
                 className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-colors ${
                   isReading
-                    ? 'bg-blue-50 group-hover:bg-blue-100'
-                    : 'bg-violet-50 group-hover:bg-violet-100'
+                    ? 'bg-blue-50 dark:bg-blue-500/10 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20'
+                    : 'bg-violet-50 dark:bg-violet-500/10 group-hover:bg-violet-100 dark:group-hover:bg-violet-500/20'
                 }`}
               ></div>
 
               <div className="relative z-10 flex justify-between items-start mb-6">
                 <div
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${
-                    isReading ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
+                    isReading
+                      ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300'
+                      : 'bg-violet-50 dark:bg-violet-500/15 text-violet-600 dark:text-violet-300'
                   }`}
                 >
                   {isReading ? (
@@ -345,13 +383,13 @@ export const ExamList: React.FC<ExamListProps> = ({
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg border border-slate-200">
+                  <span className="px-2.5 py-1 bg-muted text-muted-foreground text-xs font-bold rounded-lg border border-border">
                     {format(getLabel(labels, ['topikExamList', 'round']) || 'Round {round}', {
                       round: exam.round,
                     })}
                   </span>
                   {isLocked && (
-                    <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg flex items-center gap-1">
+                    <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-200 text-xs font-bold rounded-lg flex items-center gap-1">
                       <Lock className="w-3 h-3" /> Premium
                     </span>
                   )}
@@ -359,10 +397,10 @@ export const ExamList: React.FC<ExamListProps> = ({
               </div>
 
               <div className="relative z-10 flex-1">
-                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-indigo-600 transition-colors">
                   {exam.title}
                 </h3>
-                <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
                   <span className="flex items-center gap-1.5">
                     <FileText className="w-4 h-4" />
                     {format(
@@ -380,14 +418,14 @@ export const ExamList: React.FC<ExamListProps> = ({
               </div>
 
               {/* Footer / Stats */}
-              <div className="relative z-10 mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="relative z-10 mt-6 pt-4 border-t border-border flex items-center justify-between">
                 {attemptCount > 0 ? (
                   <div className="flex items-center gap-3">
                     <div
                       className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
                         (bestScore || 0) >= 60
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-200'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       <Trophy className="w-3 h-3" />
@@ -395,7 +433,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                         score: bestScore ? bestScore.toFixed(0) : '0',
                       })}
                     </div>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       {format(
                         getLabel(labels, ['topikExamList', 'attempts']) || '{count} attempts',
                         { count: attemptCount }
@@ -403,7 +441,7 @@ export const ExamList: React.FC<ExamListProps> = ({
                     </span>
                   </div>
                 ) : (
-                  <span className="text-xs text-slate-400 font-medium">
+                  <span className="text-xs text-muted-foreground font-medium">
                     {getLabel(labels, ['topikExamList', 'notStarted']) || 'Not started'}
                   </span>
                 )}
@@ -411,8 +449,8 @@ export const ExamList: React.FC<ExamListProps> = ({
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                     isReading
-                      ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
-                      : 'bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white'
+                      ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 group-hover:bg-blue-600 group-hover:text-white'
+                      : 'bg-violet-50 dark:bg-violet-500/15 text-violet-600 dark:text-violet-300 group-hover:bg-violet-600 group-hover:text-white'
                   }`}
                 >
                   <PlayCircle className="w-5 h-5 fill-current" />
@@ -425,10 +463,10 @@ export const ExamList: React.FC<ExamListProps> = ({
 
       {filteredExams.length === 0 && (
         <div className="text-center py-20">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Filter className="w-8 h-8 text-slate-300" />
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <Filter className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-slate-500 font-medium">
+          <p className="text-muted-foreground font-medium">
             {getLabel(labels, ['topikExamList', 'noResults']) || 'No exams match your filters'}
           </p>
           <Button

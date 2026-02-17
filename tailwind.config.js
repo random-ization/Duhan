@@ -4,7 +4,6 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: "#F0F4F8",
                 brand: {
                     yellow: "#FFDE59",
                     purple: "#8B5CF6",

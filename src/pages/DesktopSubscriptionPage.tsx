@@ -40,7 +40,7 @@ const DesktopSubscriptionPage: React.FC = () => {
     i18n.language.startsWith('zh-');
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-muted dark:bg-primary py-12 px-4 sm:px-6 lg:px-8">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -56,15 +56,15 @@ const DesktopSubscriptionPage: React.FC = () => {
         </div>
 
         <div className="text-center mb-16">
-          <span className="inline-block py-1 px-3 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm mb-4">
+          <span className="inline-block py-1 px-3 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200 font-bold text-sm mb-4">
             {t('coursesOverview.navTitle')}
           </span>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-foreground dark:text-white tracking-tight mb-6">
             <Trans i18nKey="coursesOverview.unlockTitle">
-              Unlock <span className="text-indigo-600">DuHan Premium</span>
+              Unlock <span className="text-indigo-600 dark:text-indigo-300">DuHan Premium</span>
             </Trans>
           </h2>
-          <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {t('coursesOverview.achieveGoal')}
           </p>
         </div>
@@ -72,8 +72,8 @@ const DesktopSubscriptionPage: React.FC = () => {
         {/* --- 1. Feature Breakdown Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
           {/* Feature 1: Textbooks */}
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
-            <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+          <div className="bg-card dark:bg-muted p-8 rounded-3xl border border-border dark:border-border shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
+            <div className="w-14 h-14 bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200 rounded-2xl flex items-center justify-center mb-6">
               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -83,13 +83,15 @@ const DesktopSubscriptionPage: React.FC = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+            <h3 className="text-xl font-bold text-foreground dark:text-white mb-3">
               {t('coursesOverview.feature1Title')}
             </h3>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
               <Trans i18nKey="coursesOverview.feature1Desc">
-                <span className="font-bold text-indigo-600">Premium Members</span> unlock full
-                digital textbooks...
+                <span className="font-bold text-indigo-600 dark:text-indigo-300">
+                  Premium Members
+                </span>{' '}
+                unlock full digital textbooks...
               </Trans>
             </p>
             <ul className="space-y-3">
@@ -100,10 +102,10 @@ const DesktopSubscriptionPage: React.FC = () => {
               ].map(item => (
                 <li
                   key={item}
-                  className="flex items-start gap-3 text-sm font-medium text-slate-700 dark:text-slate-300"
+                  className="flex items-start gap-3 text-sm font-medium text-muted-foreground dark:text-muted-foreground"
                 >
                   <svg
-                    className="w-5 h-5 text-green-500 shrink-0"
+                    className="w-5 h-5 text-green-500 dark:text-emerald-300 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -122,9 +124,9 @@ const DesktopSubscriptionPage: React.FC = () => {
           </div>
 
           {/* Feature 2: TOPIK */}
-          <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none hover:-translate-y-1 transition-transform relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-indigo-600 rounded-full blur-3xl opacity-30"></div>
-            <div className="w-14 h-14 bg-white/10 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-sm">
+          <div className="bg-primary text-primary-foreground p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none hover:-translate-y-1 transition-transform relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-indigo-600 dark:bg-indigo-400 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
+            <div className="w-14 h-14 bg-card/10 text-indigo-300 dark:text-indigo-200 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-sm">
               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -135,7 +137,7 @@ const DesktopSubscriptionPage: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3">{t('coursesOverview.feature2Title')}</h3>
-            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
               {t('coursesOverview.feature2Desc')}
             </p>
             <ul className="space-y-3">
@@ -146,10 +148,10 @@ const DesktopSubscriptionPage: React.FC = () => {
               ].map(item => (
                 <li
                   key={item}
-                  className="flex items-start gap-3 text-sm font-medium text-slate-200"
+                  className="flex items-start gap-3 text-sm font-medium text-muted-foreground"
                 >
                   <svg
-                    className="w-5 h-5 text-indigo-400 shrink-0"
+                    className="w-5 h-5 text-indigo-400 dark:text-indigo-200 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -168,8 +170,8 @@ const DesktopSubscriptionPage: React.FC = () => {
           </div>
 
           {/* Feature 3: Grammar */}
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
-            <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
+          <div className="bg-card dark:bg-muted p-8 rounded-3xl border border-border dark:border-border shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
+            <div className="w-14 h-14 bg-purple-50 text-purple-600 dark:bg-purple-400/12 dark:text-purple-200 rounded-2xl flex items-center justify-center mb-6">
               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -179,47 +181,49 @@ const DesktopSubscriptionPage: React.FC = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+            <h3 className="text-xl font-bold text-foreground dark:text-white mb-3">
               {t('coursesOverview.feature3Title')}
             </h3>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
               <Trans i18nKey="coursesOverview.feature3Desc">
                 Stuck on a sentence? <span className="font-bold">AI Analysis</span>...
               </Trans>
             </p>
-            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-600">
+            <div className="bg-muted dark:bg-muted/50 p-4 rounded-xl border border-border dark:border-border">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   {t('coursesOverview.booksDigitized')}
                 </span>
-                <span className="text-xl font-black text-slate-900 dark:text-white">100+</span>
+                <span className="text-xl font-black text-foreground dark:text-white">100+</span>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-600 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-purple-500 w-3/4 h-full"></div>
+              <div className="w-full bg-muted dark:bg-muted h-1.5 rounded-full overflow-hidden">
+                <div className="bg-purple-500 dark:bg-purple-300 w-3/4 h-full"></div>
               </div>
             </div>
           </div>
         </div>
 
         {/* --- 2. Benefit Comparison Table --- */}
-        <div className="mb-24 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700">
-          <div className="bg-slate-50 dark:bg-slate-800 p-6 border-b border-slate-200 dark:border-slate-700 text-center">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <div className="mb-24 overflow-hidden rounded-3xl border border-border dark:border-border">
+          <div className="bg-muted dark:bg-muted p-6 border-b border-border dark:border-border text-center">
+            <h3 className="text-2xl font-bold text-foreground dark:text-white">
               {t('coursesOverview.benefitComparison')}
             </h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-muted-foreground dark:text-muted-foreground mt-2">
               {t('coursesOverview.seeDifference')}
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full bg-white dark:bg-slate-900 text-sm">
+            <table className="w-full bg-card dark:bg-primary text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800">
-                  <th className="p-4 text-left text-slate-400 font-medium w-1/3 pl-8">
+                <tr className="border-b border-border dark:border-border">
+                  <th className="p-4 text-left text-muted-foreground font-medium w-1/3 pl-8">
                     {t('coursesOverview.featurePrivilege')}
                   </th>
-                  <th className="p-4 text-center text-slate-500 font-medium w-1/3">{t('free')}</th>
-                  <th className="p-4 text-center text-indigo-600 font-bold w-1/3 bg-indigo-50/30 dark:bg-indigo-900/10">
+                  <th className="p-4 text-center text-muted-foreground font-medium w-1/3">
+                    {t('free')}
+                  </th>
+                  <th className="p-4 text-center text-indigo-600 dark:text-indigo-300 font-bold w-1/3 bg-indigo-50/30 dark:bg-indigo-900/10">
                     Premium
                   </th>
                 </tr>
@@ -249,18 +253,18 @@ const DesktopSubscriptionPage: React.FC = () => {
                   {
                     label: t('coursesOverview.adFree'),
                     free: '—',
-                    premium: <span className="text-green-500">✔</span>,
+                    premium: <span className="text-green-500 dark:text-emerald-300">✔</span>,
                   },
                 ].map(row => (
                   <tr
                     key={row.label}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="hover:bg-muted dark:hover:bg-muted/50 transition-colors"
                   >
-                    <td className="p-4 pl-8 font-bold text-slate-700 dark:text-slate-200">
+                    <td className="p-4 pl-8 font-bold text-muted-foreground dark:text-muted-foreground">
                       {row.label}
                     </td>
-                    <td className="p-4 text-center text-slate-500">{row.free}</td>
-                    <td className="p-4 text-center font-bold text-slate-900 dark:text-white bg-indigo-50/30 dark:bg-indigo-900/10">
+                    <td className="p-4 text-center text-muted-foreground">{row.free}</td>
+                    <td className="p-4 text-center font-bold text-foreground dark:text-white bg-indigo-50/30 dark:bg-indigo-900/10">
                       {row.premium}
                     </td>
                   </tr>

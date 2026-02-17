@@ -3,6 +3,7 @@ import { useMutation } from 'convex/react';
 import type { Id } from '../../convex/_generated/dataModel';
 import { VocabularyItem, Mistake, Annotation, ExamAttempt } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
 import { toErrorMessage } from '../utils/errors';
 import { mRef } from '../utils/convexRefs';
 
@@ -30,6 +31,7 @@ const normalizeExamAnswers = (answers: Record<number, number> | undefined) => {
 
 export const useUserActions = () => {
   const { user } = useAuth();
+  const { confirm } = useConfirmDialog();
 
   const saveSavedWordMutation = useMutation(
     mRef<
@@ -146,13 +148,19 @@ export const useUserActions = () => {
     [user, saveMistakeMutation]
   );
 
-  const clearMistakes = useCallback(() => {
-    if (window.confirm('Are you sure?')) {
-      clearMistakesMutation({}).catch(e =>
-        console.error('Failed to clear mistakes', toErrorMessage(e))
-      );
-    }
-  }, [clearMistakesMutation]);
+  const clearMistakes = useCallback(async () => {
+    const confirmed = await confirm({
+      title: 'Clear all mistakes?',
+      description: 'This will remove all saved mistake records and cannot be undone.',
+      confirmText: 'Clear',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    clearMistakesMutation({}).catch(e =>
+      console.error('Failed to clear mistakes', toErrorMessage(e))
+    );
+  }, [clearMistakesMutation, confirm]);
 
   const saveAnnotation = useCallback(
     async (annotation: Annotation) => {

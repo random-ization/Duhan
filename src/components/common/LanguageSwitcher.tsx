@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe, Check } from 'lucide-react';
 import { isValidLanguage } from '../LanguageRouter';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 
 export const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
     { code: 'en', label: 'English' },
@@ -23,32 +23,26 @@ export const LanguageSwitcher = () => {
   const activeLang = firstSegment && isValidLanguage(firstSegment) ? firstSegment : i18n.language;
   const currentLang = languages.find(l => l.code === activeLang) || languages[0];
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <div className="relative" ref={dropdownRef}>
-      <Button
-        type="button"
-        variant="outline"
-        size="auto"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Language"
-        className="inline-flex items-center justify-center w-10 h-10 bg-white border-2 border-black rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all text-slate-900"
-      >
-        <Globe size={18} />
-        <span className="sr-only">{currentLang.label}</span>
-      </Button>
+    <div className="relative">
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="auto"
+            aria-label="Language"
+            className="inline-flex items-center justify-center w-10 h-10 bg-card border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all text-foreground"
+          >
+            <Globe size={18} />
+            <span className="sr-only">{currentLang.label}</span>
+          </Button>
+        </DropdownMenuTrigger>
 
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white border-2 border-black rounded-xl shadow-pop-card z-50 overflow-hidden">
+        <DropdownMenuContent
+          unstyled
+          className="absolute right-0 top-full mt-2 w-48 bg-card border-2 border-foreground rounded-xl shadow-pop-card z-50 overflow-hidden"
+        >
           {languages.map(lang => (
             <Button
               key={lang.code}
@@ -70,14 +64,14 @@ export const LanguageSwitcher = () => {
                 navigate(nextPath);
                 setIsOpen(false);
               }}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 transition-colors text-left font-bold text-sm border-b border-slate-100 last:border-0 text-slate-900"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 transition-colors text-left font-bold text-sm border-b border-border last:border-0 text-foreground"
             >
               <span>{lang.label}</span>
               {i18n.language === lang.code && <Check size={16} className="text-indigo-600" />}
             </Button>
           ))}
-        </div>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

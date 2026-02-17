@@ -28,7 +28,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       onClick={onClick}
     >
       {!focused && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10 text-lg font-bold text-gray-400">
+        <div className="absolute inset-0 flex items-center justify-center bg-card/50 z-10 text-lg font-bold text-muted-foreground">
           Click to focus
         </div>
       )}
@@ -36,17 +36,17 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       {chars.map((char, index) => {
         const inputChar = userInput[index];
         let status: ValidationStatus = 'pending';
-        let colorClass = 'text-gray-300'; // Default untyped color (lighter gray for cleaner look)
+        let colorClass = 'text-muted-foreground'; // Default untyped color (lighter gray for cleaner look)
 
         // Logic to determine visual state
         if (index < userInput.length) {
           status = checkInput(char, inputChar);
           if (status === 'correct') {
-            colorClass = 'text-gray-800'; // Typed Correct
+            colorClass = 'text-muted-foreground'; // Typed Correct
           } else if (status === 'incorrect') {
             colorClass = 'text-red-500'; // Typed Wrong
           } else if (status === 'pending') {
-            colorClass = 'text-gray-800'; // Pending (actively composing)
+            colorClass = 'text-muted-foreground'; // Pending (actively composing)
           }
         }
 
@@ -58,7 +58,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
 
         const showCursor = index === userInput.length;
         // Note: For 'pending', we might want a different background style or underline.
-        // Let's stick to the prompt Requirement: "Pending (Current): bg-gray-200"
+        // Let's stick to the prompt Requirement: "Pending (Current): bg-muted"
 
         return (
           <span
@@ -66,8 +66,8 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
             className={`
                 relative inline-block border-b-2 border-transparent transition-all
                 ${colorClass}
-                ${showCursor && focused ? 'bg-gray-200/50 animate-pulse rounded' : ''}
-                ${isPending ? 'bg-gray-200 rounded' : ''}
+                ${showCursor && focused ? 'bg-muted/50 animate-pulse rounded' : ''}
+                ${isPending ? 'bg-muted rounded' : ''}
                 ${status === 'incorrect' ? 'decoration-red-500 underline-offset-4' : ''}
             `}
           >

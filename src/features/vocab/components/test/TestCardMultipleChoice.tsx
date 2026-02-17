@@ -1,7 +1,7 @@
-import React from 'react';
 import { Check, X } from 'lucide-react';
 import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
+import { Button } from '../../../../components/ui';
 
 type Answer = {
   selectedIndex: number;
@@ -51,20 +51,27 @@ const OptionButton = ({
     } else if (isCorrect) {
       className += ' bg-green-50 border-green-300 text-green-700';
     } else {
-      className += ' bg-white border-slate-200 text-slate-600';
+      className += ' bg-card border-border text-muted-foreground';
     }
   } else if (isSelected) {
     className += ' bg-blue-600 border-blue-700 text-white';
   } else {
-    className += ' bg-white border-slate-200 text-slate-900 hover:border-slate-400';
+    className += ' bg-card border-border text-foreground hover:border-border';
   }
 
   return (
-    <button type="button" disabled={isReview} onClick={() => onSelect(idx)} className={className}>
+    <Button
+      variant="ghost"
+      size="auto"
+      type="button"
+      disabled={isReview}
+      onClick={() => onSelect(idx)}
+      className={className}
+    >
       <span className="min-w-0 truncate">{opt}</span>
       {isReview && isCorrect ? <Check className="w-5 h-5 shrink-0" /> : null}
       {isReview && isWrongChoice ? <X className="w-5 h-5 shrink-0" /> : null}
-    </button>
+    </Button>
   );
 };
 
@@ -81,10 +88,10 @@ export default function TestCardMultipleChoice({
   const isReview = mode === 'review' && typeof correctIndex === 'number';
   return (
     <div className="mt-6">
-      <div className="text-xs font-black text-slate-400">
+      <div className="text-xs font-black text-muted-foreground">
         {labels.vocabTest?.chooseAnswer || 'Choose an answer'}
       </div>
-      <div className="text-3xl font-black text-slate-900 mt-3">{prompt}</div>
+      <div className="text-3xl font-black text-foreground mt-3">{prompt}</div>
 
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
         {options.map((opt, idx) => (

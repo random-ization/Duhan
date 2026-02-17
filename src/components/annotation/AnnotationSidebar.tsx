@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { Annotation } from '../../types';
 import { Highlighter, MessageSquare, Trash2, Check } from 'lucide-react';
 import { MobileSheet } from '../mobile/MobileSheet';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
+import { Textarea } from '../ui';
 
 interface AnnotationSidebarProps {
   sidebarAnnotations: Annotation[];
@@ -62,11 +63,11 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
   const list =
     sidebarAnnotations.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-300">
+        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3 text-muted-foreground">
           <MessageSquare className="w-6 h-6" />
         </div>
-        <p className="text-sm font-medium text-slate-500 mb-1">暂无笔记</p>
-        <p className="text-xs text-slate-400">{labels.clickToAddNote}</p>
+        <p className="text-sm font-medium text-muted-foreground mb-1">暂无笔记</p>
+        <p className="text-xs text-muted-foreground">{labels.clickToAddNote}</p>
       </div>
     ) : (
       sidebarAnnotations.map(ann => {
@@ -90,8 +91,8 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
             className={`group p-4 rounded-xl border transition-all cursor-pointer relative scroll-mt-24
                   ${
                     isActive || isEditing
-                      ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
-                      : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm'
+                      ? 'bg-card border-indigo-500 shadow-md ring-1 ring-indigo-500/20'
+                      : 'bg-card border-border hover:border-indigo-300 hover:shadow-sm'
                   }`}
             onClick={handleCardClick}
             onKeyDown={e => {
@@ -123,17 +124,17 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                   return colorClassMap[key];
                 })()}`}
               ></div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider line-clamp-1 flex-1">
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider line-clamp-1 flex-1">
                 {ann.text}
               </div>
             </div>
 
             {isEditing ? (
               <div className="mt-2 animate-in fade-in zoom-in-95 duration-200">
-                <textarea
+                <Textarea
                   value={editNoteInput}
                   onChange={e => setEditNoteInput(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none mb-3 bg-slate-50"
+                  className="w-full border border-border rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none mb-3 bg-muted"
                   rows={3}
                   autoFocus
                   placeholder={labels.clickToAddNote}
@@ -154,7 +155,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                       e.stopPropagation();
                       onCancelEdit(ann.id);
                     }}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                   >
                     {labels.cancel}
                   </Button>
@@ -174,11 +175,13 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
             ) : (
               <>
                 {ann.note ? (
-                  <p className="text-sm text-slate-800 leading-relaxed pl-3.5 border-l-2 border-slate-100">
+                  <p className="text-sm text-muted-foreground leading-relaxed pl-3.5 border-l-2 border-border">
                     {ann.note}
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-400 italic pl-3.5">{labels.clickToAddNote}</p>
+                  <p className="text-xs text-muted-foreground italic pl-3.5">
+                    {labels.clickToAddNote}
+                  </p>
                 )}
                 <Button
                   type="button"
@@ -188,7 +191,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
                     e.stopPropagation();
                     onDelete(ann.id);
                   }}
-                  className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 rounded"
+                  className="absolute top-3 right-3 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-red-50 rounded"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
@@ -201,9 +204,9 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
 
   return (
     <>
-      <div className="hidden md:flex bg-white flex-col shrink-0 md:w-80 md:border-l md:border-slate-200 md:h-full md:relative md:rounded-none md:shadow-none">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h4 className="font-bold text-slate-700 flex items-center gap-2">
+      <div className="hidden md:flex bg-card flex-col shrink-0 md:w-80 md:border-l md:border-border md:h-full md:relative md:rounded-none md:shadow-none">
+        <div className="p-5 border-b border-border flex items-center justify-between bg-muted/50">
+          <h4 className="font-bold text-muted-foreground flex items-center gap-2">
             <Highlighter className="w-4 h-4 text-indigo-500" />
             {labels.annotate}
           </h4>
@@ -212,7 +215,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">{list}</div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30">{list}</div>
       </div>
 
       <MobileSheet

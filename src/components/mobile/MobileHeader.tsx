@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Flame,
@@ -15,7 +15,8 @@ import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
 import { qRef } from '../../utils/convexRefs';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { MobileHeaderAction, RouteUiConfig } from '../../config/routes.config';
 
 type HeaderStats = {
@@ -93,7 +94,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    document.documentElement.style.setProperty('--mobile-font-scale', String(FONT_SCALES[fontScaleIndex]));
+    document.documentElement.style.setProperty(
+      '--mobile-font-scale',
+      String(FONT_SCALES[fontScaleIndex])
+    );
   }, [fontScaleIndex]);
 
   const toggleFavorite = () => {
@@ -159,7 +163,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
           variant="outline"
           size="auto"
           onClick={() => handlePrimaryAction(routeUiConfig.headerAction)}
-          className="w-10 h-10 rounded-xl border border-slate-300 bg-white shadow-sm"
+          className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
           aria-label={t('common.search', { defaultValue: 'Search' })}
         >
           <Icon size={17} />
@@ -169,24 +173,28 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
 
     return (
       <div className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="auto"
-          onClick={() => setMenuOpen(prev => !prev)}
-          className="w-10 h-10 rounded-xl border border-slate-300 bg-white shadow-sm"
-          aria-label={t('common.more', { defaultValue: 'More actions' })}
-        >
-          <MoreHorizontal size={18} />
-        </Button>
-        {menuOpen && (
-          <div className="absolute right-0 top-12 z-50 min-w-[160px] rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl">
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="auto"
+              className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
+              aria-label={t('common.more', { defaultValue: 'More actions' })}
+            >
+              <MoreHorizontal size={18} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            unstyled
+            className="absolute right-0 top-12 z-50 min-w-[160px] rounded-2xl border border-border bg-card p-1.5 shadow-xl"
+          >
             <Button
               type="button"
               variant="ghost"
               size="auto"
               onClick={toggleFavorite}
-              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-foreground hover:bg-accent"
             >
               <Star size={16} className="mr-2" />
               {favorites.includes(pathWithoutLang)
@@ -198,7 +206,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
               variant="ghost"
               size="auto"
               onClick={handleShare}
-              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-foreground hover:bg-accent"
             >
               <Share2 size={16} className="mr-2" />
               {t('common.share', { defaultValue: 'Share' })}
@@ -211,13 +219,13 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
                 applyNextFontScale();
                 setMenuOpen(false);
               }}
-              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="w-full justify-start rounded-xl px-3 py-2 text-sm font-semibold text-foreground hover:bg-accent"
             >
               <Type size={16} className="mr-2" />
               {t('common.fontSize', { defaultValue: 'Font size' })}
             </Button>
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   };
@@ -230,11 +238,11 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
             <img
               src={user?.avatar || '/logo.png'}
               alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
-              className="w-10 h-10 rounded-xl border border-slate-300 bg-white object-cover"
+              className="w-10 h-10 rounded-xl border border-border bg-card object-cover"
             />
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-slate-900">{greeting}</p>
-              <p className="truncate text-xs font-semibold text-slate-500">
+              <p className="truncate text-sm font-black text-foreground">{greeting}</p>
+              <p className="truncate text-xs font-semibold text-muted-foreground">
                 {user?.name || t('common.appName', { defaultValue: 'Duhan' })}
               </p>
             </div>
@@ -254,7 +262,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
             variant="outline"
             size="auto"
             onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-xl border border-slate-300 bg-white shadow-sm"
+            className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
             aria-label={t('common.back', { defaultValue: 'Back' })}
           >
             <ArrowLeft size={17} />
@@ -262,7 +270,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
         ) : (
           <div />
         )}
-        <div className="truncate text-center text-base font-black tracking-tight text-slate-900">
+        <div className="truncate text-center text-base font-black tracking-tight text-foreground">
           {headerTitle}
         </div>
         <div className="justify-self-end">{renderRightAction()}</div>

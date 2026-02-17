@@ -1,4 +1,3 @@
-import React from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import DesktopAuthPage from './DesktopAuthPage';
 import { MobileAuthPage } from '../components/mobile/MobileAuthPage';

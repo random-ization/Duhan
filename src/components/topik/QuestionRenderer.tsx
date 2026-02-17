@@ -1,11 +1,11 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { useMutation, useAction } from 'convex/react';
 import { TopikQuestion, Language, Annotation } from '../../types';
-import { Check, X, Sparkles, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Check, X, Sparkles, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
 import { aRef, mRef } from '../../utils/convexRefs';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -75,8 +75,8 @@ const PassageView = ({
   if (!isInline && (question.imageUrl || question.image)) return null;
 
   const className = isInline
-    ? `mb-6 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`
-    : `mb-4 p-5 border border-gray-400 bg-white ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-black indent-8`;
+    ? `mb-6 p-5 border border-border bg-card ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-foreground indent-8`
+    : `mb-4 p-5 border border-border bg-card ${FONT_SERIF} text-lg leading-loose text-justify whitespace-pre-wrap text-foreground indent-8`;
 
   return (
     <div className={className}>
@@ -105,22 +105,22 @@ const ContextBoxView = ({
   const qNum = questionIndex + 1;
   const isNewFormat = question.instruction?.includes('주어진 문장이 들어갈 곳으로');
   const showBogiHeader = qNum >= 39 && qNum <= 41 && !isNewFormat;
-  const containerClass = isInline ? 'mb-4 bg-white ml-8' : 'mb-4 bg-white';
+  const containerClass = isInline ? 'mb-4 bg-card ml-8' : 'mb-4 bg-card';
 
   if (showBogiHeader) {
     return (
       <div className={containerClass}>
         <div className="flex items-center justify-center gap-2 mb-0">
-          <div className="flex-1 h-px bg-black"></div>
+          <div className="flex-1 h-px bg-foreground"></div>
           <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
             &lt;보 &nbsp; 기&gt;
           </span>
-          <div className="flex-1 h-px bg-black"></div>
+          <div className="flex-1 h-px bg-foreground"></div>
         </div>
-        <div className="border border-black border-t-0 p-4">
+        <div className="border border-foreground border-t-0 p-4">
           <TextSelectionWrapper onMouseUp={onTextSelect}>
             <div
-              className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black indent-8`}
+              className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-foreground indent-8`}
               dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
             />
           </TextSelectionWrapper>
@@ -131,10 +131,10 @@ const ContextBoxView = ({
 
   return (
     <div className={containerClass}>
-      <div className="border border-black p-4">
+      <div className="border border-foreground p-4">
         <TextSelectionWrapper onMouseUp={onTextSelect}>
           <div
-            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-black`}
+            className={`${FONT_SERIF} text-lg leading-loose whitespace-pre-wrap text-foreground`}
             dangerouslySetInnerHTML={{ __html: highlightText(question.contextBox) }}
           />
         </TextSelectionWrapper>
@@ -185,7 +185,7 @@ const OptionsView = ({
             if (status === 'correct') cls += 'border-green-500 ring-4 ring-green-200';
             else if (status === 'incorrect') cls += 'border-red-500 ring-4 ring-red-200';
             else if (isSelected) cls += 'border-blue-500 ring-4 ring-blue-200';
-            else cls += 'border-slate-200 hover:border-slate-400';
+            else cls += 'border-border hover:border-border';
             if (showCorrect) cls += ' cursor-default';
             return cls;
           };
@@ -196,7 +196,7 @@ const OptionsView = ({
             if (status === 'correct') return base + 'bg-green-500 text-white';
             if (status === 'incorrect') return base + 'bg-red-500 text-white';
             if (isSelected) return base + 'bg-blue-500 text-white';
-            return base + 'bg-white/80 text-slate-700 border border-slate-300';
+            return base + 'bg-card/80 text-muted-foreground border border-border';
           };
 
           const containerClass = getContainerClass();
@@ -208,19 +208,19 @@ const OptionsView = ({
                 <img
                   src={imgUrl}
                   alt={`Option ${optionIndex + 1}`}
-                  className="w-full h-full object-contain bg-white"
+                  className="w-full h-full object-contain bg-card"
                 />
               ) : (
-                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
                   <span className="text-4xl font-bold">{optionIndex + 1}</span>
                 </div>
               )}
               <div className={numberBadgeClass}>{CIRCLE_NUMBERS[optionIndex]}</div>
               {status === 'correct' && (
-                <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-white rounded-full p-0.5" />
+                <Check className="absolute top-2 right-2 w-6 h-6 text-green-600 bg-card rounded-full p-0.5" />
               )}
               {status === 'incorrect' && (
-                <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-white rounded-full p-0.5" />
+                <X className="absolute top-2 right-2 w-6 h-6 text-red-600 bg-card rounded-full p-0.5" />
               )}
             </>
           );
@@ -254,9 +254,13 @@ const OptionsView = ({
         const isSelected = userAnswer === optionIndex;
         let optionClass = `flex items-center cursor-pointer py-1 px-2 rounded -ml-2 transition-colors duration-150 relative `;
 
-        if (status === 'correct') optionClass += ' text-green-700 font-bold bg-green-50/50';
-        else if (status === 'incorrect') optionClass += ' text-red-700 font-bold bg-red-50/50';
-        else optionClass += ' hover:bg-blue-50';
+        if (status === 'correct')
+          optionClass +=
+            ' text-green-700 dark:text-green-200 font-bold bg-green-50/50 dark:bg-green-500/15';
+        else if (status === 'incorrect')
+          optionClass +=
+            ' text-red-700 dark:text-red-200 font-bold bg-red-50/50 dark:bg-red-500/15';
+        else optionClass += ' hover:bg-blue-50 dark:hover:bg-blue-500/15';
 
         if (showCorrect) optionClass += ' cursor-text';
 
@@ -264,7 +268,7 @@ const OptionsView = ({
           <React.Fragment>
             <CircleNumber num={optionIndex + 1} isSelected={isSelected || status === 'correct'} />
             <span
-              className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 underline decoration-blue-500 decoration-2 underline-offset-4' : ''}`}
+              className={`text-lg ${FONT_SERIF} ${isSelected ? 'font-bold text-blue-900 dark:text-blue-200 underline decoration-blue-500 dark:decoration-blue-300 decoration-2 underline-offset-4' : ''}`}
             >
               <span dangerouslySetInnerHTML={{ __html: highlightText(option) }} />
             </span>
@@ -327,19 +331,18 @@ const AIAnalysisSection = ({
           type="button"
           size="auto"
           onClick={handleAIAnalysis}
-          disabled={aiLoading}
+          loading={aiLoading}
+          loadingText="分析中..."
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {aiLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
+          <>
             <Sparkles className="w-4 h-4" />
-          )}
-          <span className="font-medium">{aiLoading ? '分析中...' : 'AI 老师解析'}</span>
+            <span className="font-medium">AI 老师解析</span>
+          </>
         </Button>
       )}
       {aiError && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="mt-3 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-400/30 rounded-lg text-red-700 dark:text-red-200 text-sm">
           {aiError}
         </div>
       )}
@@ -369,7 +372,7 @@ const ExplanationView = ({
   if (!showCorrect || !question.explanation) return null;
   return (
     <div
-      className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-gray-100 border-l-4 border-black text-sm font-sans`}
+      className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-muted border-l-4 border-foreground text-sm font-sans`}
     >
       <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
       <div className="leading-relaxed">{question.explanation}</div>
@@ -521,21 +524,24 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           switch (color) {
             case 'green':
               return (
-                base + 'bg-green-50/50 border-b-4 border-double border-green-500 hover:bg-green-100'
+                base +
+                'bg-green-50/50 dark:bg-green-500/15 border-b-4 border-double border-green-500 hover:bg-green-100 dark:hover:bg-green-500/25'
               );
             case 'blue':
               return (
-                base + 'bg-blue-50/50 border-b-4 border-double border-blue-500 hover:bg-blue-100'
+                base +
+                'bg-blue-50/50 dark:bg-blue-500/15 border-b-4 border-double border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-500/25'
               );
             case 'pink':
               return (
-                base + 'bg-pink-50/50 border-b-4 border-double border-pink-500 hover:bg-pink-100'
+                base +
+                'bg-pink-50/50 dark:bg-pink-500/15 border-b-4 border-double border-pink-500 hover:bg-pink-100 dark:hover:bg-pink-500/25'
               );
             case 'yellow':
             default:
               return (
                 base +
-                'bg-yellow-50/50 border-b-4 border-double border-yellow-500 hover:bg-yellow-100'
+                'bg-yellow-50/50 dark:bg-yellow-500/15 border-b-4 border-double border-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-500/25'
               );
           }
         }
@@ -635,7 +641,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                   {questionIndex + 1}.
                 </span>
                 <div
-                  className={`text-lg leading-loose flex-1 cursor-text text-black ${FONT_SERIF}`}
+                  className={`text-lg leading-loose flex-1 cursor-text text-foreground ${FONT_SERIF}`}
                 >
                   <TextSelectionWrapper onMouseUp={onTextSelect}>
                     <div
@@ -691,7 +697,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
             </span>
             <div className="flex-1">
               {(question.imageUrl || question.image) && (
-                <div className="mb-4 flex justify-center bg-white p-2 border border-black/10 rounded">
+                <div className="mb-4 flex justify-center bg-card p-2 border border-foreground/10 rounded">
                   <img
                     src={question.imageUrl || question.image}
                     alt={`Question ${questionIndex + 1}`}
@@ -706,7 +712,9 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                 hidePassage={hidePassage}
               />
               {question.question && (
-                <div className={`text-lg leading-loose mb-3 cursor-text text-black ${FONT_SERIF}`}>
+                <div
+                  className={`text-lg leading-loose mb-3 cursor-text text-foreground ${FONT_SERIF}`}
+                >
                   <TextSelectionWrapper onMouseUp={onTextSelect}>
                     <div
                       dangerouslySetInnerHTML={{
@@ -850,7 +858,7 @@ const SanitizedAIAnalysisDisplay = ({
     if (isSaved) return base + 'bg-emerald-100 text-emerald-700 cursor-default';
     if (isSaving) return base + 'bg-indigo-100 text-indigo-500 cursor-wait';
     return (
-      base + 'bg-white/70 text-indigo-600 hover:bg-white hover:shadow-sm border border-indigo-200'
+      base + 'bg-card/70 text-indigo-600 hover:bg-card hover:shadow-sm border border-indigo-200'
     );
   };
 
@@ -860,13 +868,6 @@ const SanitizedAIAnalysisDisplay = ({
         <>
           <BookmarkCheck className="w-4 h-4" />
           已收藏
-        </>
-      );
-    if (isSaving)
-      return (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          保存中...
         </>
       );
     return (
@@ -892,6 +893,8 @@ const SanitizedAIAnalysisDisplay = ({
           size="auto"
           onClick={onSave}
           disabled={isSaving || isSaved}
+          loading={isSaving}
+          loadingText="保存中..."
           className={getSaveBtnClass()}
         >
           {getSaveBtnContent()}
@@ -902,7 +905,7 @@ const SanitizedAIAnalysisDisplay = ({
       {translation && (
         <div className="mb-4">
           <div className="text-sm font-semibold text-indigo-700 mb-1.5">题干翻译</div>
-          <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+          <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {translation}
           </div>
         </div>
@@ -922,7 +925,7 @@ const SanitizedAIAnalysisDisplay = ({
       {analysisText && (
         <div className="mb-4">
           <div className="text-sm font-semibold text-indigo-700 mb-1.5">正解分析</div>
-          <div className="text-gray-700 leading-relaxed bg-white/60 p-3 rounded-lg">
+          <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {analysisText}
           </div>
         </div>
@@ -934,9 +937,9 @@ const SanitizedAIAnalysisDisplay = ({
           <div className="text-sm font-semibold text-indigo-700 mb-1.5">干扰项排除</div>
           <div className="space-y-2">
             {wrongOptions.map(([key, value]) => (
-              <div key={key} className="bg-white/60 p-3 rounded-lg">
-                <span className="font-medium text-gray-600">选项 {key}：</span>
-                <span className="text-gray-700">{value}</span>
+              <div key={key} className="bg-card/60 p-3 rounded-lg">
+                <span className="font-medium text-muted-foreground">选项 {key}：</span>
+                <span className="text-muted-foreground">{value}</span>
               </div>
             ))}
           </div>

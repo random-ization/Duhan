@@ -5,6 +5,7 @@ import { useAction } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { aRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { Button } from '../components/ui';
 
 const PaymentSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -71,36 +72,38 @@ const PaymentSuccessPage: React.FC = () => {
   }, [searchParams, navigate, refreshUser, verifyPaymentSession]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-card rounded-xl shadow-lg p-8 text-center">
         {status === 'loading' && (
           <div className="flex flex-col items-center">
-            <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Processing...</h2>
-            <p className="text-gray-600">{message}</p>
+            <Loader2 className="w-16 h-16 text-indigo-600 dark:text-indigo-300 animate-spin mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Processing...</h2>
+            <p className="text-muted-foreground">{message}</p>
           </div>
         )}
 
         {status === 'success' && (
           <div className="flex flex-col items-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-            <p className="text-gray-600 mb-6">Your subscription has been activated.</p>
-            <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
+            <CheckCircle className="w-16 h-16 text-green-500 dark:text-emerald-300 mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h2>
+            <p className="text-muted-foreground mb-6">Your subscription has been activated.</p>
+            <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
           </div>
         )}
 
         {status === 'error' && (
           <div className="flex flex-col items-center">
-            <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <button
+            <AlertCircle className="w-16 h-16 text-red-500 dark:text-rose-300 mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Something went wrong</h2>
+            <p className="text-muted-foreground mb-6">{message}</p>
+            <Button
               onClick={() => navigate('/pricing/details')}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              variant="ghost"
+              size="auto"
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-muted transition-colors"
             >
               Back to Pricing
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -8,7 +8,6 @@ import { UserWordProgress, VocabularyItem } from '../types';
 import EmptyState from '../components/common/EmptyState';
 import { useQuery, useMutation } from 'convex/react';
 import { useTTS } from '../hooks/useTTS';
-import { useApp } from '../contexts/AppContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
@@ -25,6 +24,9 @@ const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 const VocabMatch = lazy(() => import('../features/vocab/components/VocabMatch'));
 import MobileVocabView from '../components/mobile/MobileVocabView';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../components/ui';
+import { Button } from '../components/ui';
+import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 export interface ExtendedVocabItem extends VocabularyItem {
   id: string;
@@ -57,11 +59,10 @@ export default function VocabModulePage() {
   // Force Rebuild Trigger: 2026-01-02
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
-  const { user } = useAuth();
+  const { user, language } = useAuth();
   const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();
   const { institutes } = useData();
   const { speak: speakTTS } = useTTS();
-  const { language } = useApp();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
 
@@ -436,64 +437,80 @@ export default function VocabModulePage() {
     <div className="flex items-center justify-between mb-6 z-50 relative">
       <div className="flex items-center gap-4">
         {/* Back Button */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
           onClick={() => {
             void flushQueue();
             navigate(`/course/${instituteId}`);
           }}
-          className="w-10 h-10 bg-white border-2 border-slate-200 rounded-xl flex items-center justify-center hover:border-slate-900 transition-colors shadow-sm text-slate-400 hover:text-slate-900"
+          className="w-10 h-10 bg-card border-2 border-border rounded-xl flex items-center justify-center hover:border-foreground transition-colors shadow-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="w-5 h-5" />
-        </button>
+        </Button>
 
         {/* Scope Dropdown */}
         <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-3 bg-white border-2 border-slate-900 rounded-xl px-4 py-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all active:translate-y-0 active:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
-          >
-            <div className="w-8 h-8 rounded-lg bg-green-100 border border-green-200 flex items-center justify-center text-lg">
-              📚
-            </div>
-            <div className="text-left mr-2">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                {labels.vocab?.currentScope || 'Current Scope'}
-              </div>
-              <div className="font-black text-slate-900 leading-none">
-                {selectedUnitId === 'ALL'
-                  ? labels.vocab?.allUnits || 'All Units'
-                  : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}
-              </div>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                className="flex items-center gap-3 bg-card border-2 border-foreground rounded-xl px-4 py-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all active:translate-y-0 active:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
+              >
+                <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-400/14 border border-green-200 dark:border-green-300/25 flex items-center justify-center text-lg">
+                  📚
+                </div>
+                <div className="text-left mr-2">
+                  <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    {labels.vocab?.currentScope || 'Current Scope'}
+                  </div>
+                  <div className="font-black text-foreground leading-none">
+                    {selectedUnitId === 'ALL'
+                      ? labels.vocab?.allUnits || 'All Units'
+                      : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </Button>
+            </DropdownMenuTrigger>
 
-          {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden z-50">
+            <DropdownMenuContent
+              unstyled
+              className="absolute top-full left-0 mt-2 w-64 bg-card border-2 border-foreground rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden z-50"
+            >
               <div className="p-2 space-y-1">
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => {
                     setSelectedUnitId('ALL');
                     setDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-green-50 text-green-800 border border-green-200' : 'hover:bg-slate-50 text-slate-600'}`}
+                  className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25' : 'hover:bg-muted text-muted-foreground'}`}
                 >
                   <span>📚 {labels.vocab?.allUnits || 'All Units'} (Level 1A)</span>
                   <span
-                    className={`px-1.5 rounded text-[10px] ${selectedUnitId === 'ALL' ? 'bg-white border border-green-200' : 'text-slate-300'}`}
+                    className={`px-1.5 rounded text-[10px] ${selectedUnitId === 'ALL' ? 'bg-card border border-green-200 dark:border-green-300/25' : 'text-muted-foreground'}`}
                   >
                     {allWords.length}
                   </span>
-                </button>
-                <div className="h-px bg-slate-100 my-1" />
+                </Button>
+                <div className="h-px bg-muted my-1" />
                 {availableUnits.map(u => {
                   const count = unitCounts.get(u) || 0;
                   const disabled = count === 0;
                   return (
-                    <button
+                    <Button
                       key={u}
+                      type="button"
+                      variant="ghost"
+                      size="auto"
                       onClick={() => {
                         if (disabled) return;
                         setSelectedUnitId(u);
@@ -501,9 +518,9 @@ export default function VocabModulePage() {
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${(() => {
                         if (selectedUnitId === u)
-                          return 'bg-green-50 text-green-800 border border-green-200';
-                        if (disabled) return 'text-slate-300 cursor-not-allowed';
-                        return 'hover:bg-slate-50 text-slate-600 hover:text-slate-900';
+                          return 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25';
+                        if (disabled) return 'text-muted-foreground cursor-not-allowed';
+                        return 'hover:bg-muted text-muted-foreground hover:text-foreground';
                       })()}`}
                     >
                       <span>
@@ -512,23 +529,23 @@ export default function VocabModulePage() {
                           return `${labels.vocab?.unit || 'Unit'} ${u}`;
                         })()}
                       </span>
-                      <span className="text-slate-300 text-xs">{count}</span>
-                    </button>
+                      <span className="text-muted-foreground text-xs">{count}</span>
+                    </Button>
                   );
                 })}
               </div>
-            </div>
-          )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Mastery */}
-      <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200">
+      <div className="hidden md:flex items-center gap-3 bg-card px-4 py-2 rounded-xl border border-border">
         <div className="text-right">
-          <div className="text-[10px] font-bold text-slate-400 uppercase">
+          <div className="text-[10px] font-bold text-muted-foreground uppercase">
             {labels.vocab?.mastery || 'Mastery'}
           </div>
-          <div className="font-black text-sm text-slate-900">
+          <div className="font-black text-sm text-foreground">
             {masteryCount} / {filteredWords.length}
           </div>
         </div>
@@ -574,26 +591,31 @@ export default function VocabModulePage() {
           isActive = viewState.mode === tab.id;
         }
         return (
-          <button
+          <Button
             key={tab.id}
+            type="button"
+            variant="ghost"
+            size="auto"
             onClick={() => handleTabClick(tab.id)}
-            className={`bg-white border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${
+            className={`bg-card border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${
               isActive
-                ? 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
-                : 'border-transparent hover:border-slate-900 shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                ? 'border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                : 'border-transparent hover:border-foreground shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
             }`}
           >
-            {isActive && <div className="absolute inset-0 bg-green-50 z-0" />}
-            {isActive && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80]" />}
+            {isActive && <div className="absolute inset-0 bg-green-50 dark:bg-green-400/12 z-0" />}
+            {isActive && (
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80] dark:bg-green-300" />
+            )}
             <span className="relative z-10 text-xl">{tab.emoji}</span>
             <span
               className={`relative z-10 font-black text-sm ${
-                isActive ? 'text-slate-900' : 'text-slate-500'
+                isActive ? 'text-foreground' : 'text-muted-foreground'
               }`}
             >
               {tab.label}
             </span>
-          </button>
+          </Button>
         );
       })}
     </div>
@@ -708,56 +730,65 @@ export default function VocabModulePage() {
           <div className="w-full max-w-4xl mb-10 z-0">
             {viewState.flashcardComplete ? (
               /* Completion Card */
-              <div className="bg-white rounded-[1.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden min-h-[500px] flex flex-col relative z-0">
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-green-50 to-white">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+              <div className="bg-card rounded-[1.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden min-h-[500px] flex flex-col relative z-0">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-green-50 to-white dark:from-green-400/12 dark:to-card">
+                  <div className="w-20 h-20 bg-green-100 dark:bg-green-400/14 rounded-full flex items-center justify-center mb-6">
                     <span className="text-4xl">🎉</span>
                   </div>
-                  <h2 className="text-3xl font-black text-slate-900 mb-2">
+                  <h2 className="text-3xl font-black text-foreground mb-2">
                     {labels.sessionComplete || 'Session Complete!'}
                   </h2>
-                  <p className="text-slate-500 mb-2">
+                  <p className="text-muted-foreground mb-2">
                     {filteredWords.length} {labels.wordsUnit || 'words'} reviewed
                   </p>
                   <div className="flex gap-2 mb-8">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
+                    <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-400/14 dark:text-green-200 rounded-full text-sm font-bold">
                       ✓ {labels.vocab?.remembered || 'Remembered'} {masteredIds.size}
                     </span>
-                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+                    <span className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-400/14 dark:text-red-200 rounded-full text-sm font-bold">
                       ✕ {labels.vocab?.forgot || 'Forgot'} {filteredWords.length - masteredIds.size}
                     </span>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
                       onClick={() => setLearnOpen(true)}
-                      className="px-6 py-3 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
+                      className="px-6 py-3 bg-card border-2 border-foreground text-foreground font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
                     >
                       🧠 {labels.learn || 'Learn'}
-                    </button>
+                    </Button>
                     {typeof selectedUnitId === 'number' &&
                       availableUnits.indexOf(selectedUnitId) < availableUnits.length - 1 && (
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="auto"
                           onClick={() => {
                             const currentIdx = availableUnits.indexOf(selectedUnitId);
                             if (currentIdx < availableUnits.length - 1) {
                               setSelectedUnitId(availableUnits[currentIdx + 1]);
                             }
                           }}
-                          className="px-6 py-3 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
+                          className="px-6 py-3 bg-green-500 dark:bg-green-400/80 border-2 border-green-600 dark:border-green-300/35 text-primary-foreground font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] dark:shadow-[4px_4px_0px_0px_rgba(74,222,128,0.28)] hover:-translate-y-1 transition-all"
                         >
                           {labels.common?.next || 'Next Unit'} →
-                        </button>
+                        </Button>
                       )}
                   </div>
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
                     onClick={() => {
                       setViewState(prev => ({ ...prev, cardIndex: 0, flashcardComplete: false }));
                       setMasteredIds(new Set());
                     }}
-                    className="mt-4 text-sm text-slate-400 hover:text-slate-600"
+                    className="mt-4 text-sm text-muted-foreground hover:text-muted-foreground"
                   >
                     🔄 {labels.vocab?.restart || 'Restart'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -847,6 +878,21 @@ export default function VocabModulePage() {
   return (
     <div className="min-h-screen flex flex-col items-center py-6 px-4" style={BACKGROUND_STYLE}>
       <div className="w-full max-w-4xl mb-6">
+        <AppBreadcrumb
+          className="mb-4"
+          items={[
+            { label: labels.coursesOverview?.pageTitle || 'Courses', to: '/courses' },
+            {
+              label:
+                (course && getLocalizedContent(course, 'name', language)) ||
+                course?.name ||
+                instituteId ||
+                'Course',
+              to: instituteId ? `/course/${instituteId}` : '/courses',
+            },
+            { label: labels.vocab?.flashcard || 'Vocab' },
+          ]}
+        />
         {/* Top Bar */}
         {renderTopBar()}
 

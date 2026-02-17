@@ -22,10 +22,15 @@ import { getLocalizedContent } from '../../utils/languageUtils';
 import { getLabels } from '../../utils/i18n';
 import { ListeningModuleSkeleton } from '../../components/common';
 import { useTTS } from '../../hooks/useTTS';
+import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { notify } from '../../utils/notify';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 import { useUserActions } from '../../hooks/useUserActions';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../components/ui';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
+import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
+import { Button, Input, Select, Textarea } from '../../components/ui';
 
 // Legacy API removed - using Convex
 
@@ -152,6 +157,8 @@ interface MorphologyLookupResult {
   krdictError: string | null;
 }
 
+const POPOVER_DISMISS_SELECTORS = ['[data-popover]', '[data-word]'] as const;
+
 // =========================================
 // Constants & Utils
 // =========================================
@@ -206,54 +213,72 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
   const labels = getLabels(language);
   const headword = lemma || word;
   return (
-    <div
-      className="fixed z-50 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 min-w-[200px]"
-      style={{ left: position.x, top: position.y }}
-    >
-      <button
-        onClick={onClose}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-900 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-      >
-        <X className="w-3 h-3" />
-      </button>
+    <Popover open onOpenChange={open => !open && onClose()}>
+      <PopoverPortal>
+        <PopoverContent
+          unstyled
+          data-popover
+          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-[#FDFBF7] p-4 shadow-[4px_4px_0px_0px_#18181B]"
+          style={{ left: position.x, top: position.y }}
+        >
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={onClose}
+            className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </Button>
 
-      <div className="text-xl font-black text-zinc-900 mb-1">{headword}</div>
-      {lemma && lemma !== word && <div className="text-xs text-zinc-500 mb-2">{word}</div>}
-      <div className="text-sm text-zinc-600 mb-3">{meaning}</div>
-      {grammarMatches && grammarMatches.length > 0 && (
-        <div className="mb-3">
-          <div className="text-xs font-bold text-zinc-900 mb-1">语法</div>
-          <div className="space-y-1">
-            {grammarMatches.slice(0, 5).map(g => (
-              <div key={g.id} className="text-xs text-zinc-700">
-                <span className="font-bold">{g.title}</span>
-                {g.summary ? <span className="text-zinc-500"> · {g.summary}</span> : null}
+          <div className="text-xl font-black text-foreground mb-1">{headword}</div>
+          {lemma && lemma !== word && (
+            <div className="text-xs text-muted-foreground mb-2">{word}</div>
+          )}
+          <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
+          {grammarMatches && grammarMatches.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-bold text-foreground mb-1">语法</div>
+              <div className="space-y-1">
+                {grammarMatches.slice(0, 5).map(g => (
+                  <div key={g.id} className="text-xs text-muted-foreground">
+                    <span className="font-bold">{g.title}</span>
+                    {g.summary ? (
+                      <span className="text-muted-foreground"> · {g.summary}</span>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {contextTranslation && (
-        <div className="text-xs text-zinc-500 mb-3 whitespace-pre-wrap">{contextTranslation}</div>
-      )}
+            </div>
+          )}
+          {contextTranslation && (
+            <div className="text-xs text-muted-foreground mb-3 whitespace-pre-wrap">
+              {contextTranslation}
+            </div>
+          )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={onSpeak}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
-        >
-          <Volume2 className="w-3 h-3" />
-          {labels.dashboard?.common?.read || '朗读'}
-        </button>
-        <button
-          onClick={onSave}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-xs hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
-        >
-          <Plus className="w-3 h-3" />
-          {labels.dashboard?.common?.addVocab || '加入生词本'}
-        </button>
-      </div>
-    </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onSpeak}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+            >
+              <Volume2 className="w-3 h-3" />
+              {labels.dashboard?.common?.read || '朗读'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onSave}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+            >
+              <Plus className="w-3 h-3" />
+              {labels.dashboard?.common?.addVocab || '加入生词本'}
+            </Button>
+          </div>
+        </PopoverContent>
+      </PopoverPortal>
+    </Popover>
   );
 };
 
@@ -321,63 +346,85 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 
   return (
     <div
-      className="fixed z-50 bg-zinc-900 text-white rounded-lg shadow-lg flex items-center gap-1 p-1"
+      className="fixed z-50 bg-primary text-white rounded-lg shadow-lg flex items-center gap-1 p-1"
       style={{ left: position.x, top: position.y }}
     >
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={onTranslate}
-        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-zinc-700 text-xs font-bold transition-colors"
+        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <Languages className="w-3 h-3" />
         {labels.dashboard?.reading?.translate || '翻译'}
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={onSpeak}
-        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-zinc-700 text-xs font-bold transition-colors"
+        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <Volume2 className="w-3 h-3" />
         {labels.dashboard?.common?.read || '朗读'}
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="auto"
         onClick={onNote}
-        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-zinc-700 text-xs font-bold transition-colors"
+        className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <PenLine className="w-3 h-3" />
         {labels.dashboard?.reading?.note || '笔记'}
-      </button>
+      </Button>
       <div className="relative">
-        <button
-          onClick={() => setShowColors(!showColors)}
-          className="flex items-center gap-1 px-3 py-2 rounded hover:bg-zinc-700 text-xs font-bold transition-colors"
-        >
-          <Highlighter className="w-3 h-3" />
-          {labels.dashboard?.reading?.highlight || '高亮'}
-        </button>
-        {showColors && (
-          <div className="absolute top-full left-0 mt-1 bg-zinc-800 rounded-lg p-2 flex gap-2">
-            <button
+        <DropdownMenu open={showColors} onOpenChange={setShowColors}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
+            >
+              <Highlighter className="w-3 h-3" />
+              {labels.dashboard?.reading?.highlight || '高亮'}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            unstyled
+            className="absolute top-full left-0 mt-1 bg-muted rounded-lg p-2 flex gap-2"
+          >
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
               onClick={() => {
                 onHighlight('yellow');
                 setShowColors(false);
               }}
               className="w-5 h-5 bg-yellow-300 rounded-full border-2 border-white hover:scale-110 transition-transform"
             />
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
               onClick={() => {
                 onHighlight('green');
                 setShowColors(false);
               }}
               className="w-5 h-5 bg-green-300 rounded-full border-2 border-white hover:scale-110 transition-transform"
             />
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
               onClick={() => {
                 onHighlight('pink');
                 setShowColors(false);
               }}
               className="w-5 h-5 bg-pink-300 rounded-full border-2 border-white hover:scale-110 transition-transform"
             />
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -402,61 +449,77 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
   const [color, setColor] = useState<HighlightColor>('yellow');
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[8px_8px_0px_0px_#18181B] p-6 w-96">
-        <h3 className="font-black text-lg mb-4">
-          {labels.dashboard?.reading?.addNote || '添加笔记'}
-        </h3>
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogPortal>
+        <DialogOverlay unstyled closeOnClick={false} className="fixed inset-0 bg-black/50 z-50" />
+        <DialogContent
+          unstyled
+          closeOnEscape={false}
+          lockBodyScroll={false}
+          className="fixed inset-0 z-[51] flex items-center justify-center pointer-events-none"
+        >
+          <div className="pointer-events-auto bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[8px_8px_0px_0px_#18181B] p-6 w-96">
+            <h3 className="font-black text-lg mb-4">
+              {labels.dashboard?.reading?.addNote || '添加笔记'}
+            </h3>
 
-        <div className="bg-zinc-100 border-2 border-zinc-300 rounded-lg p-3 mb-4">
-          <p className="text-sm text-zinc-600 font-bold">
-            {labels.dashboard?.reading?.selectedText || '选中文本：'}
-          </p>
-          <p className="text-zinc-900 font-bold">{selectedText}</p>
-        </div>
+            <div className="bg-muted border-2 border-border rounded-lg p-3 mb-4">
+              <p className="text-sm text-muted-foreground font-bold">
+                {labels.dashboard?.reading?.selectedText || '选中文本：'}
+              </p>
+              <p className="text-foreground font-bold">{selectedText}</p>
+            </div>
 
-        <textarea
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          placeholder={labels.dashboard?.reading?.writeNote || '写下你的笔记...'}
-          className="w-full h-24 px-3 py-2 border-2 border-zinc-900 rounded-lg font-bold text-sm focus:shadow-[2px_2px_0px_0px_#18181B] outline-none resize-none mb-4"
-        />
+            <Textarea
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder={labels.dashboard?.reading?.writeNote || '写下你的笔记...'}
+              className="w-full !h-24 !px-3 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none resize-none mb-4 !shadow-none"
+            />
 
-        <div className="flex items-center gap-4 mb-4">
-          <span className="text-sm font-bold text-zinc-600">
-            {labels.dashboard?.reading?.color || '颜色：'}
-          </span>
-          <div className="flex gap-2">
-            {(['yellow', 'green', 'pink'] as HighlightColor[]).map(c => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  color === c ? 'border-zinc-900 scale-110' : 'border-zinc-400'
-                } ${HIGHLIGHT_CLASSES[c]} transition-all`}
-                aria-label={c}
-              />
-            ))}
+            <div className="flex items-center gap-4 mb-4">
+              <span className="text-sm font-bold text-muted-foreground">
+                {labels.dashboard?.reading?.color || '颜色：'}
+              </span>
+              <div className="flex gap-2">
+                {(['yellow', 'green', 'pink'] as HighlightColor[]).map(c => (
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    key={c}
+                    onClick={() => setColor(c)}
+                    className={`w-6 h-6 rounded-full border-2 ${
+                      color === c ? 'border-foreground scale-110' : 'border-border'
+                    } ${HIGHLIGHT_CLASSES[c]} transition-all`}
+                    aria-label={c}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                size="auto"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+              >
+                {labels.dashboard?.reading?.cancel || '取消'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="auto"
+                onClick={() => onSave(comment, color)}
+                disabled={!comment.trim()}
+                className="flex-1 px-4 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {labels.dashboard?.reading?.save || '保存'}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
-          >
-            {labels.dashboard?.reading?.cancel || '取消'}
-          </button>
-          <button
-            onClick={() => onSave(comment, color)}
-            disabled={!comment.trim()}
-            className="flex-1 px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {labels.dashboard?.reading?.save || '保存'}
-          </button>
-        </div>
-      </div>
-    </div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   );
 };
 
@@ -480,51 +543,59 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const labels = getLabels(language);
   return (
-    <div className="absolute right-0 top-full mt-2 bg-[#FDFBF7] border-2 border-zinc-900 rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56 z-50">
+    <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-black text-sm">{labels.dashboard?.reading?.settings || '阅读设置'}</h4>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onClose}
-          className="w-6 h-6 rounded-full bg-white border-2 border-zinc-900 flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          className="w-6 h-6 rounded-full bg-card border-2 border-foreground flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 transition-all"
           aria-label={labels.dashboard?.common?.close || '关闭'}
         >
           <X className="w-3 h-3" />
-        </button>
+        </Button>
       </div>
 
       <div className="mb-4">
-        <label className="text-xs font-bold text-zinc-600 mb-2 block">
+        <label className="text-xs font-bold text-muted-foreground mb-2 block">
           {labels.dashboard?.reading?.fontSize || '字体大小'}
         </label>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => onFontSizeChange(Math.max(14, fontSize - 2))}
-            className="px-3 py-1 bg-white border-2 border-zinc-900 rounded font-bold text-sm hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+            className="px-3 py-1 bg-card border-2 border-foreground rounded font-bold text-sm text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
           >
             A-
-          </button>
+          </Button>
           <span className="flex-1 text-center font-bold">{fontSize}px</span>
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => onFontSizeChange(Math.min(28, fontSize + 2))}
-            className="px-3 py-1 bg-white border-2 border-zinc-900 rounded font-bold text-sm hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+            className="px-3 py-1 bg-card border-2 border-foreground rounded font-bold text-sm text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
           >
             A+
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-zinc-600">
+        <span className="text-xs font-bold text-muted-foreground">
           {labels.dashboard?.reading?.serif || '衬线字体'}
         </span>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onSerifToggle}
-          className={`w-12 h-6 rounded-full border-2 border-zinc-900 relative transition-colors ${isSerif ? 'bg-lime-300' : 'bg-zinc-200'}`}
+          className={`w-12 h-6 rounded-full border-2 border-foreground relative transition-colors ${isSerif ? 'bg-lime-300' : 'bg-muted'}`}
         >
           <div
-            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full border border-zinc-900 transition-all ${isSerif ? 'left-6' : 'left-0.5'}`}
+            className={`absolute top-0.5 w-4 h-4 bg-card rounded-full border border-foreground transition-all ${isSerif ? 'left-6' : 'left-0.5'}`}
           />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -763,6 +834,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const [fontSize, setFontSize] = useState(18);
   const [isSerif, setIsSerif] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [completingUnit, setCompletingUnit] = useState(false);
 
   // Local word list (user's saved words for this session)
   const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
@@ -806,20 +878,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     position: { x: number; y: number };
     range: Range;
   } | null>(null);
-  const popoverStateRef = useRef<{
-    selectedWord: typeof selectedWord;
-    selectionToolbar: typeof selectionToolbar;
-  }>({ selectedWord: null, selectionToolbar: null });
   const [noteModal, setNoteModal] = useState<{
     text: string;
     startOffset: number;
     endOffset: number;
   } | null>(null);
-
-  useEffect(() => {
-    popoverStateRef.current.selectedWord = selectedWord;
-    popoverStateRef.current.selectionToolbar = selectionToolbar;
-  }, [selectedWord, selectionToolbar]);
 
   // Right panel tab
   const [activeTab, setActiveTab] = useState<'notes' | 'grammar' | 'ai'>('grammar');
@@ -1110,22 +1173,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     };
   }, [handleMouseUp, handleWordClick]);
 
-  // Close popovers on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const { selectedWord: currentSelectedWord, selectionToolbar: currentSelectionToolbar } =
-        popoverStateRef.current;
-      if (currentSelectedWord || currentSelectionToolbar) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-popover]') && !target.closest('[data-word]')) {
-          setSelectedWord(null);
-          setSelectionToolbar(null);
-        }
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useOutsideDismiss({
+    enabled: Boolean(selectedWord || selectionToolbar),
+    onDismiss: () => {
+      setSelectedWord(null);
+      setSelectionToolbar(null);
+    },
+    ignoreSelectors: POPOVER_DISMISS_SELECTORS,
+  });
 
   const speak = useCallback(
     (text: string) => {
@@ -1265,16 +1320,18 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       {/* Error State */}
       {error && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-zinc-400">
+          <div className="text-center text-muted-foreground">
             <p className="font-bold mb-4">
               {labels.dashboard?.common?.error || '加载失败，请重试'}
             </p>
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={onBack}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg font-bold"
+              className="px-4 py-2 bg-primary text-white rounded-lg font-bold"
             >
               {labels.dashboard?.common?.back || '返回'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1283,15 +1340,17 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       {!isLoading && !error && (
         <>
           {/* Header */}
-          <header className="bg-[#FDFBF7] border-b-2 border-zinc-900 px-6 py-3 flex items-center justify-between shrink-0">
+          <header className="bg-[#FDFBF7] border-b-2 border-foreground px-6 py-3 flex items-center justify-between shrink-0">
             {/* Left: Back + Title */}
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
-                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
               >
                 <ArrowLeft className="w-5 h-5" />
-              </button>
+              </Button>
               <h1 className="font-black text-lg">{unitData?.title || unitTitle}</h1>
             </div>
 
@@ -1299,10 +1358,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             <div className="flex gap-2 items-center">
               {/* Unit Selector - Green styled dropdown with arrow */}
               <div className="relative">
-                <select
+                <Select
                   value={selectedUnitIndex}
                   onChange={e => setSelectedUnitIndex(Number(e.target.value))}
-                  className="px-4 py-2 pr-8 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold text-sm cursor-pointer hover:bg-lime-400 transition-colors appearance-none"
+                  className="!h-auto !px-4 !py-2 !pr-8 !bg-lime-300 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
                 >
                   {(uniqueUnitIndices.length > 0 ? uniqueUnitIndices : [selectedUnitIndex]).map(
                     (idx: number) => (
@@ -1315,23 +1374,25 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       </option>
                     )
                   )}
-                </select>
+                </Select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
               </div>
 
               {/* Article Selector */}
               {articles.length > 1 && (
-                <div className="flex bg-white border-2 border-zinc-900 rounded-lg overflow-hidden">
+                <div className="flex bg-card border-2 border-foreground rounded-lg overflow-hidden">
                   {articles.map(article => {
                     const articleIndex = article.articleIndex ?? 1;
                     return (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="auto"
                         key={articleIndex}
                         onClick={() => setActiveArticleIndex(articleIndex)}
-                        className={`px-3 py-2 font-bold text-xs transition-colors border-r-2 border-zinc-900 last:border-r-0 ${
+                        className={`px-3 py-2 font-bold text-xs text-foreground transition-colors border-r-2 border-foreground last:border-r-0 ${
                           activeArticleIndex === article.articleIndex
-                            ? 'bg-zinc-900 text-white'
-                            : 'hover:bg-zinc-50'
+                            ? 'bg-primary text-white'
+                            : 'hover:bg-muted'
                         }`}
                       >
                         {(labels.dashboard?.reading?.article || '文章').replace(
@@ -1339,14 +1400,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                           articleIndex.toString()
                         )}{' '}
                         {articleIndex}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
               )}
 
               {grammarList.length > 0 && (
-                <span className="hidden md:inline-block px-3 py-2 bg-white border-2 border-zinc-900 rounded-lg font-bold text-xs">
+                <span className="hidden md:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
                   {(labels.dashboard?.reading?.grammarCount || '{count} 个语法点').replace(
                     '{count}',
                     grammarList.length.toString()
@@ -1357,43 +1418,49 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
             {/* Right: Settings */}
             <div className="relative">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="w-10 h-10 bg-white border-2 border-zinc-900 rounded-lg flex items-center justify-center hover:bg-zinc-100 active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              {showSettings && (
-                <SettingsPanel
-                  fontSize={fontSize}
-                  isSerif={isSerif}
-                  onFontSizeChange={setFontSize}
-                  onSerifToggle={() => setIsSerif(!isSerif)}
-                  onClose={() => setShowSettings(false)}
-                  language={language}
-                />
-              )}
+              <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    type="button"
+                    className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
+                  <SettingsPanel
+                    fontSize={fontSize}
+                    isSerif={isSerif}
+                    onFontSizeChange={setFontSize}
+                    onSerifToggle={() => setIsSerif(!isSerif)}
+                    onClose={() => setShowSettings(false)}
+                    language={language}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
           {/* Main Content: Split Screen */}
           <div className="flex-1 flex overflow-hidden">
             {/* Left: Reader Panel (65% desktop, full width mobile) */}
-            <div className="w-full md:w-[65%] md:border-r-2 border-zinc-900 overflow-y-auto p-4 md:p-8">
+            <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-4 md:p-8">
               <div
                 ref={readerRef}
-                className={`bg-[#FDFBF7] border-2 border-zinc-900 rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
+                className={`bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
                 aria-label={labels.dashboard?.reading?.readerLabel || '文章阅读器'}
               >
-                <h2 className="text-2xl font-black mb-6 text-zinc-900">
+                <h2 className="text-2xl font-black mb-6 text-foreground">
                   {unitData?.title || labels.dashboard?.reading?.noArticles || '暂无文章'}
                 </h2>
-                <div className="text-zinc-800 leading-loose">
+                <div className="text-muted-foreground leading-loose">
                   {unitData?.readingText ? (
                     renderContent(unitData.readingText)
                   ) : (
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {labels.dashboard?.reading?.noContent || '暂无内容'}
                     </p>
                   )}
@@ -1401,14 +1468,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
                 {/* Translation Toggle */}
                 {unitData?.translation && (
-                  <div className="mt-8 pt-6 border-t-2 border-zinc-200">
+                  <div className="mt-8 pt-6 border-t-2 border-border">
                     <details className="group">
-                      <summary className="cursor-pointer font-bold text-sm text-zinc-500 hover:text-zinc-700 flex items-center gap-2">
+                      <summary className="cursor-pointer font-bold text-sm text-muted-foreground hover:text-muted-foreground flex items-center gap-2">
                         <Languages className="w-4 h-4" />
                         {labels.dashboard?.reading?.showTranslation || '显示翻译'}
                         <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                       </summary>
-                      <div className="mt-4 p-4 bg-zinc-50 rounded-lg text-sm text-zinc-600 whitespace-pre-wrap">
+                      <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground whitespace-pre-wrap">
                         {getLocalizedContent(unitData, 'translation', language)}
                       </div>
                     </details>
@@ -1416,22 +1483,32 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 )}
 
                 {/* Complete Unit Button */}
-                <div className="mt-8 pt-6 border-t-2 border-zinc-200 flex justify-center">
-                  <button
+                <div className="mt-8 pt-6 border-t-2 border-border flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     onClick={async () => {
+                      if (completingUnit) return;
                       try {
+                        setCompletingUnit(true);
                         await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
                         flushReadingTime(true);
                         // Show success feedback
                         notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
                       } catch (e) {
                         console.error('Failed to mark unit complete:', e);
+                      } finally {
+                        setCompletingUnit(false);
                       }
                     }}
-                    className="px-8 py-3 bg-lime-300 border-2 border-zinc-900 rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                    disabled={completingUnit}
+                    loading={completingUnit}
+                    loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || '完成本课学习'}`}
+                    loadingIconClassName="w-4 h-4"
+                    className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                   >
                     ✅ {labels.dashboard?.reading?.completeLesson || '完成本课学习'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1439,7 +1516,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             {/* Right: Study Hub (35% - hidden on mobile) */}
             <div className="hidden md:flex w-[35%] bg-[#FDFBF7] flex-col overflow-hidden">
               {/* Tabs */}
-              <div className="flex border-b-2 border-zinc-900 shrink-0">
+              <div className="flex border-b-2 border-foreground shrink-0">
                 {(
                   [
                     {
@@ -1459,16 +1536,18 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     },
                   ] as const
                 ).map(tab => (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm border-r-2 border-zinc-900 last:border-r-0 transition-colors ${
-                      activeTab === tab.key ? 'bg-lime-300' : 'bg-white hover:bg-zinc-100'
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-foreground border-r-2 border-foreground last:border-r-0 transition-colors ${
+                      activeTab === tab.key ? 'bg-lime-300' : 'bg-card hover:bg-muted'
                     }`}
                   >
                     <tab.icon className="w-4 h-4" />
                     {tab.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -1477,7 +1556,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 {activeTab === 'notes' && (
                   <div className="space-y-3">
                     {notes.length === 0 ? (
-                      <div className="text-center text-zinc-400 py-8">
+                      <div className="text-center text-muted-foreground py-8">
                         <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="font-bold">
                           {labels.dashboard?.reading?.noNotes || '暂无笔记'}
@@ -1490,16 +1569,16 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       notes.map(note => (
                         <div
                           key={note.id}
-                          className="bg-white border-2 border-zinc-900 rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
+                          className="bg-card border-2 border-foreground rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
                           style={{
                             borderLeftColor: HIGHLIGHT_COLORS[note.color],
                             borderLeftWidth: 4,
                           }}
                         >
-                          <p className="font-bold text-sm text-zinc-900 mb-1 underline decoration-wavy decoration-amber-500">
+                          <p className="font-bold text-sm text-foreground mb-1 underline decoration-wavy decoration-amber-500">
                             {note.text}
                           </p>
-                          <p className="text-xs text-zinc-600">{note.comment}</p>
+                          <p className="text-xs text-muted-foreground">{note.comment}</p>
                         </div>
                       ))
                     )}
@@ -1509,7 +1588,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 {activeTab === 'grammar' && (
                   <div className="space-y-3">
                     {grammarList.length === 0 ? (
-                      <div className="text-center text-zinc-400 py-8">
+                      <div className="text-center text-muted-foreground py-8">
                         <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="font-bold">
                           {labels.dashboard?.reading?.noGrammar || '本课暂无语法点'}
@@ -1522,21 +1601,21 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       grammarList.map((grammar: GrammarItem) => (
                         <div
                           key={grammar.id}
-                          className="bg-white border-2 border-zinc-900 rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
+                          className="bg-card border-2 border-foreground rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
                               {grammar.type || '语法'}
                             </span>
-                            <h4 className="font-bold text-zinc-900">{grammar.title}</h4>
+                            <h4 className="font-bold text-foreground">{grammar.title}</h4>
                           </div>
-                          <p className="text-sm text-zinc-600">{grammar.summary}</p>
+                          <p className="text-sm text-muted-foreground">{grammar.summary}</p>
                           {grammar.explanation && (
                             <details className="mt-2">
-                              <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-700">
+                              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-muted-foreground">
                                 {labels.dashboard?.reading?.viewExplanation || '查看详细解释'}
                               </summary>
-                              <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 p-2 rounded">
+                              <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
                                 {grammar.explanation}
                               </p>
                             </details>
@@ -1553,8 +1632,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       {aiMessages.map(msg => (
                         <div
                           key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
-                          className={`p-3 rounded-lg border-2 border-zinc-900 ${
-                            msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-white mr-8'
+                          className={`p-3 rounded-lg border-2 border-foreground ${
+                            msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-card mr-8'
                           }`}
                         >
                           <p className="text-sm">{msg.content}</p>
@@ -1562,20 +1641,22 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       ))}
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <input
+                      <Input
                         type="text"
                         value={aiInput}
                         onChange={e => setAiInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && sendAiMessage()}
                         placeholder={labels.dashboard?.reading?.placeholder || '问我语法问题...'}
-                        className="flex-1 px-4 py-2 border-2 border-zinc-900 rounded-lg font-bold text-sm focus:shadow-[2px_2px_0px_0px_#18181B] outline-none"
+                        className="flex-1 !h-auto !px-4 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none !shadow-none"
                       />
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="auto"
                         onClick={sendAiMessage}
-                        className="px-4 py-2 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+                        className="px-4 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
                       >
                         <Send className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -1585,20 +1666,18 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
           {/* Popovers */}
           {selectedWord && (
-            <div data-popover>
-              <FlashcardPopover
-                word={selectedWord.word}
-                lemma={selectedWord.lemma}
-                meaning={selectedWord.meaning}
-                contextTranslation={selectedWord.contextTranslation}
-                grammarMatches={selectedWord.grammarMatches}
-                position={selectedWord.position}
-                onClose={() => setSelectedWord(null)}
-                onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
-                onSpeak={() => speak(selectedWord.word)}
-                language={language}
-              />
-            </div>
+            <FlashcardPopover
+              word={selectedWord.word}
+              lemma={selectedWord.lemma}
+              meaning={selectedWord.meaning}
+              contextTranslation={selectedWord.contextTranslation}
+              grammarMatches={selectedWord.grammarMatches}
+              position={selectedWord.position}
+              onClose={() => setSelectedWord(null)}
+              onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
+              onSpeak={() => speak(selectedWord.word)}
+              language={language}
+            />
           )}
 
           {selectionToolbar && (
@@ -1637,12 +1716,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           )}
 
           {/* Mobile: Floating Action Button for Study Hub */}
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => setMobileSheetOpen(true)}
-            className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-lime-400 border-2 border-zinc-900 rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+            className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-lime-400 border-2 border-foreground rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
           >
-            <Menu className="w-6 h-6 text-zinc-900" />
-          </button>
+            <Menu className="w-6 h-6 text-foreground" />
+          </Button>
 
           {/* Mobile: Bottom Sheet for Study Hub */}
           <BottomSheet
@@ -1652,7 +1733,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             height="half"
           >
             {/* Mobile Tabs */}
-            <div className="flex border-b border-zinc-200 mb-4 -mx-5 px-5">
+            <div className="flex border-b border-border mb-4 -mx-5 px-5">
               {(
                 [
                   {
@@ -1663,18 +1744,20 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   { key: 'notes', label: labels.dashboard?.reading?.note || '笔记', icon: PenLine },
                 ] as const
               ).map(tab => (
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${
                     activeTab === tab.key
                       ? 'border-lime-500 text-lime-600'
-                      : 'border-transparent text-zinc-400'
+                      : 'border-transparent text-muted-foreground'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
                   {tab.label}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -1683,9 +1766,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             {activeTab === 'grammar' && (
               <div className="space-y-2">
                 {grammarList.slice(0, 5).map((g: GrammarItem) => (
-                  <div key={g.id} className="p-3 bg-zinc-50 rounded-lg">
-                    <div className="font-bold text-zinc-900">{g.title}</div>
-                    <div className="text-sm text-zinc-500">{g.explanation}</div>
+                  <div key={g.id} className="p-3 bg-muted rounded-lg">
+                    <div className="font-bold text-foreground">{g.title}</div>
+                    <div className="text-sm text-muted-foreground">{g.explanation}</div>
                   </div>
                 ))}
               </div>
@@ -1693,7 +1776,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             {activeTab === 'notes' && (
               <div className="space-y-2">
                 {notes.length === 0 ? (
-                  <p className="text-center text-zinc-400 py-4">
+                  <p className="text-center text-muted-foreground py-4">
                     {labels.dashboard?.reading?.selectedText || '选中文本添加笔记'}
                   </p>
                 ) : (
@@ -1703,7 +1786,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400"
                     >
                       <div className="font-bold text-sm">{note.text}</div>
-                      <div className="text-xs text-zinc-500">{note.comment}</div>
+                      <div className="text-xs text-muted-foreground">{note.comment}</div>
                     </div>
                   ))
                 )}

@@ -6,8 +6,8 @@ import { getLabels } from '../../../utils/i18n';
 import { useTTS } from '../../../hooks/useTTS';
 import { cn } from '../../../lib/utils';
 import { BottomSheet } from '../../../components/common/BottomSheet';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
+import { Button } from '../../../components/ui';
+import { Input } from '../../../components/ui';
 import { ExtendedVocabularyItem, VocabSettings, SessionStats, QuestionType } from '../types';
 import { shuffleArray } from '../utils';
 
@@ -141,27 +141,29 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
 
   if (!currentItem)
     return (
-      <div className="p-8 text-center text-slate-500">{labels.noWords || 'No words yet.'}</div>
+      <div className="p-8 text-center text-muted-foreground">
+        {labels.noWords || 'No words yet.'}
+      </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-safe">
+    <div className="min-h-screen bg-muted flex flex-col pb-safe">
       {/* Header */}
-      <div className="bg-white px-4 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-card px-4 py-3 border-b border-border flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-400">
+          <span className="text-sm font-bold text-muted-foreground">
             {learnIndex + 1} / {learnQueue.length}
           </span>
         </div>
         {onExit && (
-          <Button variant="ghost" size="icon" onClick={onExit} className="text-slate-400">
+          <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground">
             <X className="w-5 h-5" />
           </Button>
         )}
       </div>
 
       {/* Top Progress */}
-      <div className="h-1.5 bg-slate-100 w-full">
+      <div className="h-1.5 bg-muted w-full">
         <div
           className="h-full bg-indigo-500 transition-all duration-300"
           style={{ width: `${progressPercent}%` }}
@@ -171,8 +173,8 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
       {/* Content */}
       <div className="flex-1 flex flex-col p-6 overflow-y-auto">
         {/* Question Card */}
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center min-h-[30vh] md:min-h-[40vh] mb-6 relative overflow-hidden">
-          <div className="absolute top-6 left-6 flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+        <div className="bg-card rounded-[2rem] shadow-sm border border-border p-8 flex flex-col items-center justify-center min-h-[30vh] md:min-h-[40vh] mb-6 relative overflow-hidden">
+          <div className="absolute top-6 left-6 flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
             {currentQuestionType.startsWith('WRITING') ? (
               <Pencil className="w-3 h-3" />
             ) : (
@@ -185,22 +187,24 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
 
           <h2
             className={cn(
-              'font-black text-slate-900 text-center leading-tight',
+              'font-black text-foreground text-center leading-tight',
               prompt && prompt.length > 20 ? 'text-2xl' : 'text-4xl'
             )}
           >
             {prompt}
           </h2>
           {currentQuestionType.includes('K_TO_N') && (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={() => speakTTS(prompt || '')}
-              className="mt-4 p-3 rounded-full bg-slate-50 text-indigo-600 active:scale-95 transition-transform"
+              className="mt-4 p-3 rounded-full bg-muted text-indigo-600 active:scale-95 transition-transform"
             >
               <Volume2 className="w-6 h-6" />
-            </button>
+            </Button>
           )}
           {currentItem.pos && (
-            <span className="mt-4 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase">
+            <span className="mt-4 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-bold uppercase">
               {currentItem.pos}
             </span>
           )}
@@ -215,20 +219,22 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
                 const isCorrectChoice = choice === correctAnswer;
                 const reveal = showFeedback;
 
-                let variantClass = 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50';
+                let variantClass = 'bg-card border-border text-muted-foreground hover:bg-muted';
                 if (reveal) {
                   if (isCorrectChoice)
                     variantClass = 'bg-emerald-100 border-emerald-500 text-emerald-700 shadow-none';
                   else if (isSelected)
                     variantClass = 'bg-red-100 border-red-500 text-red-700 shadow-none';
-                  else variantClass = 'opacity-50 bg-slate-50 border-slate-100';
+                  else variantClass = 'opacity-50 bg-muted border-border';
                 } else if (isSelected) {
                   variantClass =
                     'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-200';
                 }
 
                 return (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     key={idx}
                     disabled={reveal}
                     onClick={() => setSelectedAnswer(choice)}
@@ -242,7 +248,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
                     {reveal && isSelected && !isCorrectChoice && (
                       <X className="w-5 h-5 text-red-600" />
                     )}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -252,7 +258,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
                 autoFocus
                 value={userInput}
                 onChange={e => setUserInput(e.target.value)}
-                className="h-16 text-xl rounded-xl border-2 border-slate-200 bg-white focus:border-indigo-500 font-bold text-center"
+                className="h-16 text-xl rounded-xl border-2 border-border bg-card focus:border-indigo-500 font-bold text-center"
                 placeholder="Type answer..."
                 disabled={showFeedback}
               />
@@ -262,7 +268,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
       </div>
 
       {/* Footer Action */}
-      <div className="p-4 bg-white border-t border-slate-100 sticky bottom-0 z-20">
+      <div className="p-4 bg-card border-t border-border sticky bottom-0 z-20">
         {!showFeedback ? (
           <Button
             size="lg"
@@ -285,7 +291,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
               'w-full h-14 text-lg font-bold rounded-xl shadow-lg',
               isCorrect
                 ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'
-                : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'
+                : 'bg-primary hover:bg-muted shadow-slate-200'
             )}
             onClick={handleNext}
           >

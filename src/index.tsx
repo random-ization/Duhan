@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import App from './App';
 import { AppProvider } from './contexts/AppContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './utils/i18next-config'; // Initialize i18n
 import './index.css';
 import { ConvexReactClient } from 'convex/react';
@@ -21,12 +22,14 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ConvexAuthProvider client={convex}>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </ConvexAuthProvider>
-    </BrowserRouter>
+    <ThemeProvider defaultTheme="system" storageKey="duhan-theme">
+      <BrowserRouter>
+        <ConvexAuthProvider client={convex}>
+          <AppProvider>
+            <App />
+          </AppProvider>
+        </ConvexAuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   </React.StrictMode>
 );

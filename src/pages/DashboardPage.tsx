@@ -4,7 +4,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearning } from '../contexts/LearningContext';
-import { useApp } from '../contexts/AppContext'; // Import Layout Context
+import { useLayout } from '../contexts/LayoutContext';
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
@@ -14,6 +14,7 @@ import { useQuery } from 'convex/react';
 import { qRef } from '../utils/convexRefs';
 import { MobileDashboard } from '../components/mobile/MobileDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { Button } from '../components/ui';
 
 // DnD Kit
 import {
@@ -84,7 +85,7 @@ const SortableItem = ({
     >
       {children}
       {isEditing && (
-        <div className="absolute top-2 right-2 bg-white/80 p-1 rounded-full shadow-sm text-slate-400 z-50 pointer-events-none">
+        <div className="absolute top-2 right-2 bg-card/80 p-1 rounded-full shadow-sm text-muted-foreground z-50 pointer-events-none">
           <GripVertical size={16} />
         </div>
       )}
@@ -99,7 +100,7 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearning();
-  const { isEditing, cardOrder, updateCardOrder } = useApp(); // Layout Context
+  const { isEditing, cardOrder, updateCardOrder } = useLayout();
   const { institutes } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
   const vocabBookCount = useQuery(
@@ -177,8 +178,8 @@ export default function DashboardPage() {
         return (
           <BentoCard
             className="flex flex-col items-center justify-center text-center h-full"
-            bgClass="bg-[#FFE066]"
-            borderClass="border-amber-300"
+            bgClass="bg-[#FFE066] dark:bg-amber-400/12"
+            borderClass="border-amber-300 dark:border-amber-300/20"
           >
             <div
               className="absolute inset-0 opacity-10"
@@ -192,8 +193,8 @@ export default function DashboardPage() {
               className="w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500"
               alt="tiger coach"
             />
-            <div className="relative z-10 mt-4 bg-white border-2 border-slate-900 px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
-              <p className="font-bold text-slate-900 text-sm">
+            <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
+              <p className="font-bold text-foreground text-sm">
                 &quot;
                 {t('dashboard.tiger.quote', {
                   defaultValue: "Don't give up! Just 5 more minutes!",
@@ -201,22 +202,26 @@ export default function DashboardPage() {
                 &quot;
               </p>
             </div>
-            <button className="mt-4 bg-slate-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-black">
+            <Button
+              variant="ghost"
+              size="auto"
+              className="mt-4 bg-primary text-primary-foreground px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-foreground"
+            >
               {t('dashboard.tiger.action', { defaultValue: 'Start Quiz' })}
-            </button>
+            </Button>
           </BentoCard>
         );
       case 'textbook':
         return (
           <BentoCard
             onClickPath="/courses"
-            bgClass="bg-sky-50"
-            borderClass="border-sky-200"
+            bgClass="bg-sky-50 dark:bg-sky-400/10"
+            borderClass="border-sky-200 dark:border-sky-300/20"
             className="h-full"
           >
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div className="flex justify-between items-start">
-                <h3 className="font-black text-2xl text-slate-900 leading-tight">
+                <h3 className="font-black text-2xl text-foreground leading-tight">
                   {instituteName}
                   <br />
                   {selectedLevel
@@ -226,12 +231,12 @@ export default function DashboardPage() {
                       )
                     : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
                 </h3>
-                <div className="bg-white border-2 border-blue-200 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold">
+                <div className="bg-card dark:bg-blue-400/14 border-2 border-blue-200 dark:border-blue-300/25 text-blue-600 dark:text-blue-200 px-2 py-1 rounded-lg text-xs font-bold">
                   {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex justify-between text-xs font-bold text-blue-400 mb-1">
+                <div className="flex justify-between text-xs font-bold text-blue-400 dark:text-blue-200 mb-1">
                   <span>
                     {t('dashboard.textbook.chapter', { defaultValue: 'Chapter {unit}' }).replace(
                       '{unit}',
@@ -240,9 +245,9 @@ export default function DashboardPage() {
                   </span>
                   <span>{progressPercent}%</span>
                 </div>
-                <div className="w-full bg-white h-3 rounded-full border-2 border-blue-100 overflow-hidden">
+                <div className="w-full bg-card dark:bg-blue-400/14 h-3 rounded-full border-2 border-blue-100 dark:border-blue-300/20 overflow-hidden">
                   <div
-                    className="bg-blue-500 h-full border-r-2 border-blue-600"
+                    className="bg-blue-500 dark:bg-blue-300/75 h-full border-r-2 border-blue-600 dark:border-blue-300/40"
                     style={{ width: `${progressPercent}% ` }}
                   ></div>
                 </div>
@@ -259,29 +264,29 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/reading"
-            bgClass="bg-cyan-50"
-            borderClass="border-cyan-200"
+            bgClass="bg-cyan-50 dark:bg-cyan-400/10"
+            borderClass="border-cyan-200 dark:border-cyan-300/20"
             className="h-full"
           >
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
-                <div className="inline-block bg-cyan-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                <div className="inline-block bg-cyan-500 dark:bg-cyan-400/30 text-white dark:text-cyan-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
                   {t('reading', { defaultValue: 'Reading' })}
                 </div>
-                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                <h3 className="font-black text-xl text-foreground leading-tight">
                   {t('dashboard.readingHub.title', { defaultValue: 'Reading Discovery' })}
                 </h3>
-                <p className="text-slate-500 font-bold text-sm mt-1">
+                <p className="text-muted-foreground font-bold text-sm mt-1">
                   {t('dashboard.readingHub.subtitle', {
                     defaultValue: 'Korean reading feed and annotation tools',
                   })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 border border-cyan-100">
+                <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
                   {t('dashboard.readingHub.tagNews', { defaultValue: 'News' })}
                 </div>
-                <div className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 border border-cyan-100">
+                <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
                   {t('dashboard.readingHub.tagArticles', { defaultValue: 'Article' })}
                 </div>
               </div>
@@ -297,17 +302,17 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/topik"
-            bgClass="bg-amber-50"
-            borderClass="border-amber-200"
+            bgClass="bg-amber-50 dark:bg-amber-400/10"
+            borderClass="border-amber-200 dark:border-amber-300/20"
             className="h-full"
           >
             <div className="relative z-10">
-              <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">
+              <h3 className="font-black text-2xl text-foreground whitespace-pre-wrap">
                 {t('dashboard.topik.cardTitle', { defaultValue: 'TOPIK\nMock Exam' })}
               </h3>
-              <div className="mt-2 inline-block bg-white px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 shadow-sm border-2 border-yellow-100">
+              <div className="mt-2 inline-block bg-card dark:bg-amber-400/12 px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 dark:text-amber-200 shadow-sm border-2 border-yellow-100 dark:border-amber-300/20">
                 {t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}:{' '}
-                <span className="text-slate-900">{topScore}</span>
+                <span className="text-foreground">{topScore}</span>
               </div>
             </div>
             <img
@@ -321,15 +326,15 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/videos"
-            bgClass="bg-rose-50"
-            borderClass="border-rose-200"
+            bgClass="bg-rose-50 dark:bg-rose-400/10"
+            borderClass="border-rose-200 dark:border-rose-300/20"
             className="h-full"
           >
             <div className="relative z-10">
-              <h3 className="font-black text-2xl text-slate-900 whitespace-pre-wrap">
+              <h3 className="font-black text-2xl text-foreground whitespace-pre-wrap">
                 {t('dashboard.video.cardTitle', { defaultValue: 'Immersion\nVideo' })}
               </h3>
-              <div className="mt-2 inline-block bg-red-500 text-white px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 shadow-sm">
+              <div className="mt-2 inline-block bg-red-500 dark:bg-red-400/30 text-white dark:text-red-100 px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 dark:border-red-300/30 shadow-sm">
                 {t('dashboard.video.new', { defaultValue: 'New Updates' })}
               </div>
             </div>
@@ -344,16 +349,16 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/podcasts"
-            bgClass="bg-violet-100"
-            borderClass="border-violet-200"
+            bgClass="bg-violet-100 dark:bg-violet-400/12"
+            borderClass="border-violet-200 dark:border-violet-300/20"
             className="h-full"
           >
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
-                <div className="inline-block bg-violet-500 text-white border-2 border-violet-400 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
+                <div className="inline-block bg-violet-500 dark:bg-violet-400/30 text-white dark:text-violet-100 border-2 border-violet-400 dark:border-violet-300/25 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
                   {t('dashboard.podcast.label', { defaultValue: 'Podcast' })}
                 </div>
-                <h3 className="font-bold text-lg mt-2 leading-tight text-slate-900">
+                <h3 className="font-bold text-lg mt-2 leading-tight text-foreground">
                   {t('dashboard.podcast.title', { defaultValue: 'Latest Podcast' })}
                   <br />
                   {t('dashboard.podcast.subtitle', { defaultValue: 'Iyagi Series' })}
@@ -361,11 +366,11 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex gap-1 h-3 items-end">
-                  <div className="w-1 bg-violet-500 h-full animate-pulse"></div>
-                  <div className="w-1 bg-violet-500 h-2/3 animate-pulse"></div>
-                  <div className="w-1 bg-violet-500 h-full animate-pulse"></div>
+                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
+                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-2/3 animate-pulse"></div>
+                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
                 </div>
-                <span className="text-xs font-mono text-violet-600 font-bold">
+                <span className="text-xs font-mono text-violet-600 dark:text-violet-200 font-bold">
                   {t('dashboard.podcast.listen', { defaultValue: 'Listen Now' })}
                 </span>
               </div>
@@ -381,23 +386,23 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/vocab-book"
-            bgClass="bg-indigo-50"
-            borderClass="border-indigo-200"
+            bgClass="bg-indigo-50 dark:bg-indigo-400/10"
+            borderClass="border-indigo-200 dark:border-indigo-300/20"
             className="h-full"
           >
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
-                <div className="inline-block bg-indigo-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                <div className="inline-block bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
                   {t('dashboard.vocab.label', { defaultValue: 'Vocab Book' })}
                 </div>
-                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                <h3 className="font-black text-xl text-foreground leading-tight">
                   {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
                 </h3>
-                <p className="text-slate-500 font-bold text-sm mt-1">
+                <p className="text-muted-foreground font-bold text-sm mt-1">
                   {t('dashboard.vocab.subtitle', { defaultValue: 'Saved words and definitions' })}
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-200 font-bold text-sm">
                 {t('dashboard.vocab.count', { defaultValue: '{count} Words' }).replace(
                   '{count}',
                   String(wordsToReview)
@@ -415,30 +420,30 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/notebook"
-            bgClass="bg-orange-50"
-            borderClass="border-orange-200"
+            bgClass="bg-orange-50 dark:bg-orange-400/10"
+            borderClass="border-orange-200 dark:border-orange-300/20"
             className="h-full"
           >
             <div className="absolute -right-4 -bottom-4 opacity-10">
-              <FileText size={80} className="text-amber-600 rotate-12" />
+              <FileText size={80} className="text-amber-600 dark:text-amber-300/70 rotate-12" />
             </div>
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
-                <div className="inline-block bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                <div className="inline-block bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
                   {t('dashboard.notes.label', { defaultValue: 'Notebook' })}
                 </div>
-                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                <h3 className="font-black text-xl text-foreground leading-tight">
                   {t('dashboard.notes.title', { defaultValue: 'Study Notes' })}
                 </h3>
-                <p className="text-slate-500 font-bold text-sm mt-1">
+                <p className="text-muted-foreground font-bold text-sm mt-1">
                   {t('dashboard.notes.subtitle', { defaultValue: 'Mistakes and memos' })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[9px] font-bold text-red-600">
+                <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-400/14 flex items-center justify-center text-[9px] font-bold text-red-600 dark:text-red-200">
                   {t('dashboard.notes.mistake', { defaultValue: 'Err' })}
                 </div>
-                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-400/14 flex items-center justify-center text-[9px] font-bold text-emerald-600 dark:text-emerald-200">
                   {t('dashboard.notes.memo', { defaultValue: 'Mem' })}
                 </div>
               </div>
@@ -454,24 +459,24 @@ export default function DashboardPage() {
         return (
           <BentoCard
             onClickPath="/typing"
-            bgClass="bg-emerald-50"
-            borderClass="border-emerald-200"
+            bgClass="bg-emerald-50 dark:bg-emerald-400/10"
+            borderClass="border-emerald-200 dark:border-emerald-300/20"
             className="h-full"
           >
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
-                <div className="inline-block bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                <div className="inline-block bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
                   {t('typing.label', { defaultValue: 'Typing' })}
                 </div>
-                <h3 className="font-black text-xl text-slate-900 leading-tight">
+                <h3 className="font-black text-xl text-foreground leading-tight">
                   {t('typing.title', { defaultValue: 'Typing' })}
                 </h3>
-                <p className="text-slate-500 font-bold text-sm mt-1">
+                <p className="text-muted-foreground font-bold text-sm mt-1">
                   {t('typing.subtitle', { defaultValue: 'Practice' })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-white/80 px-2 py-1 rounded text-[10px] font-bold text-emerald-600 border border-emerald-100">
+                <div className="bg-card/80 dark:bg-emerald-400/12 px-2 py-1 rounded text-[10px] font-bold text-emerald-600 dark:text-emerald-200 border border-emerald-100 dark:border-emerald-300/20">
                   {t('typing.unit', { defaultValue: 'WPM' })}
                 </div>
               </div>
@@ -517,12 +522,12 @@ export default function DashboardPage() {
             alt="waving hand"
           />
           {/* SVG Underline Header */}
-          <h1 className="text-3xl md:text-4xl md:text-5xl font-black font-display text-slate-900 tracking-tight mb-2">
+          <h1 className="text-3xl md:text-4xl md:text-5xl font-black font-display text-foreground tracking-tight mb-2">
             {getGreeting()},{' '}
-            <span className="text-indigo-600 relative inline-block">
+            <span className="text-primary dark:text-primary-foreground relative inline-block">
               {user?.name?.split(' ')[0] || 'Learner'}
               <svg
-                className="absolute w-full h-3 -bottom-1 left-0 text-indigo-200 -z-10"
+                className="absolute -bottom-1 left-0 -z-10 h-3 w-full text-primary/25 dark:text-primary/30"
                 viewBox="0 0 100 10"
                 preserveAspectRatio="none"
               >
@@ -530,7 +535,7 @@ export default function DashboardPage() {
               </svg>
             </span>
           </h1>
-          <p className="text-slate-500 font-bold mt-1">
+          <p className="text-muted-foreground font-bold mt-1">
             {t('dashboard.subtitle', { defaultValue: "Ready to beat today's boss?" })}
           </p>
         </div>
@@ -541,15 +546,17 @@ export default function DashboardPage() {
 
           {/* Simplified Premium Badge */}
           {(user?.tier === 'PAID' || user?.tier === 'PREMIUM' || user?.subscriptionType) && (
-            <button
+            <Button
               onClick={() => navigate('/pricing/details')}
-              className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 hover:scale-110 transition cursor-pointer"
+              variant="ghost"
+              size="auto"
+              className="bg-gradient-to-r from-amber-400 to-yellow-500 dark:from-amber-400/70 dark:to-yellow-400/70 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm border border-amber-500 dark:border-amber-300/35 hover:scale-110 transition cursor-pointer"
             >
               <span className="text-lg">👑</span>
-              <span className="font-bold text-white text-sm">
+              <span className="text-sm font-bold text-white">
                 {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
               </span>
-            </button>
+            </Button>
           )}
         </div>
       </header>
@@ -558,7 +565,7 @@ export default function DashboardPage() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
           <div
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] ring-4 ring-indigo-500/20 rounded-3xl p-4 bg-slate-50' : ''} `}
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] rounded-3xl bg-muted p-4 ring-4 ring-primary/20' : ''} `}
           >
             {cardOrder.map(id => (
               <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>

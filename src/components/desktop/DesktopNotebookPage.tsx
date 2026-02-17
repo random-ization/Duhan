@@ -6,6 +6,9 @@ import { useQuery } from 'convex/react';
 import NoteCard from '../notebook/NoteCard';
 import NoteDetailModal from '../notebook/NoteDetailModal';
 import { qRef } from '../../utils/convexRefs';
+import { Button } from '../ui';
+import { Input } from '../ui';
+import { Tabs, TabsList, TabsTrigger } from '../ui';
 
 // Tab configuration
 const TABS = [
@@ -110,57 +113,61 @@ export const DesktopNotebookPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-slate-200">
+      <div className="sticky top-0 z-20 bg-card/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">智能笔记本</h1>
-              <p className="text-sm text-slate-500">你的学习笔记和生词收藏</p>
+              <h1 className="text-2xl font-bold text-muted-foreground">智能笔记本</h1>
+              <p className="text-sm text-muted-foreground">你的学习笔记和生词收藏</p>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
             >
               返回
-            </button>
+            </Button>
           </div>
 
           {/* Tabs & Search */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Tabs */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {TABS.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                      isActive
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="flex gap-2 overflow-x-auto scrollbar-hide">
+                {TABS.map(tab => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <TabsTrigger
+                      key={tab.key}
+                      value={tab.key}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                          : 'bg-muted text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {tab.label}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
 
             {/* Search */}
             <div className="flex-1 sm:max-w-xs">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
                   type="text"
                   placeholder="搜索笔记..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-muted border-0 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:bg-card transition-all"
                 />
               </div>
             </div>
@@ -193,10 +200,10 @@ const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
     <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
       <BookOpen className="w-12 h-12 text-indigo-400" />
     </div>
-    <h3 className="text-xl font-bold text-slate-700 mb-2">
+    <h3 className="text-xl font-bold text-muted-foreground mb-2">
       {hasFilter ? '没有找到匹配的笔记' : '笔记本是空的'}
     </h3>
-    <p className="text-slate-500 max-w-sm">
+    <p className="text-muted-foreground max-w-sm">
       {hasFilter
         ? '尝试调整搜索条件或切换分类'
         : '在复习模式中选中文字，点击「存入生词本」即可保存'}

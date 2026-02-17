@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
+import { Button } from '../ui';
 
 interface MobileFlashcardPlayerProps {
   readonly words: ExtendedVocabItem[]; // Current filtered words
@@ -50,7 +51,7 @@ export default function MobileFlashcardPlayer({
 
   if (!currentWord) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
         <p>{t('vocab.noWords', { defaultValue: 'No words available' })}</p>
       </div>
     );
@@ -87,15 +88,17 @@ export default function MobileFlashcardPlayer({
         >
           {/* Front */}
           <div
-            className="absolute inset-0 backface-hidden bg-white rounded-3xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
+            className="absolute inset-0 backface-hidden bg-card rounded-3xl border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           >
             <div className="absolute top-4 left-4 px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase">
               {currentWord.partOfSpeech || 'Word'}
             </div>
 
-            <button
-              className="absolute top-4 right-4 text-slate-300 hover:text-yellow-400 active:scale-90 transition-transform"
+            <Button
+              variant="ghost"
+              size="auto"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-yellow-400 active:scale-90 transition-transform"
               onClick={e => {
                 e.stopPropagation();
                 onStar(currentWord.id);
@@ -104,31 +107,33 @@ export default function MobileFlashcardPlayer({
               <Star
                 className={`w-6 h-6 ${isStarred(currentWord.id) ? 'fill-yellow-400 text-yellow-400' : ''}`}
               />
-            </button>
+            </Button>
 
             <div className="w-full h-full pt-14 grid grid-rows-[1fr,auto,auto]">
               <div className="px-8 text-center flex flex-col items-center justify-center">
-                <h2 className="text-4xl font-black text-slate-900 mb-2 break-all">{frontText}</h2>
+                <h2 className="text-4xl font-black text-foreground mb-2 break-all">{frontText}</h2>
                 {currentWord.pronunciation && (
-                  <p className="text-lg text-slate-400 font-medium font-mono">
+                  <p className="text-lg text-muted-foreground font-medium font-mono">
                     [{currentWord.pronunciation}]
                   </p>
                 )}
               </div>
 
               <div className="w-full flex justify-center pb-4">
-                <button
-                  className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors active:scale-95"
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  className="w-12 h-12 bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 transition-colors active:scale-95"
                   onClick={e => {
                     e.stopPropagation();
                     onSpeak(korean || frontText);
                   }}
                 >
                   <Volume2 className="w-6 h-6" />
-                </button>
+                </Button>
               </div>
 
-              <div className="pb-6 text-xs text-slate-400 font-medium uppercase tracking-wide text-center">
+              <div className="pb-6 text-xs text-muted-foreground font-medium uppercase tracking-wide text-center">
                 {t('vocab.tapToFlip', { defaultValue: 'Tap to Flip' })}
               </div>
             </div>
@@ -136,21 +141,25 @@ export default function MobileFlashcardPlayer({
 
           {/* Back */}
           <div
-            className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 rounded-3xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,0.2)] flex flex-col items-center justify-center p-8 text-center"
+            className="absolute inset-0 backface-hidden rotate-y-180 bg-primary rounded-3xl border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,0.2)] flex flex-col items-center justify-center p-8 text-center"
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           >
             <div className="flex-1 flex flex-col items-center justify-center">
               <h2 className="text-2xl font-black text-white mb-4 leading-tight">{backText}</h2>
               {currentWord.exampleSentence && (
-                <div className="text-sm text-slate-400 italic mt-4 border-t border-slate-700 pt-4 w-full">
-                  <p className="mb-1 text-slate-300">&quot;{currentWord.exampleSentence}&quot;</p>
+                <div className="text-sm text-muted-foreground italic mt-4 border-t border-border pt-4 w-full">
+                  <p className="mb-1 text-muted-foreground">
+                    &quot;{currentWord.exampleSentence}&quot;
+                  </p>
                   <p className="text-xs opacity-70">{currentWord.exampleMeaning}</p>
                 </div>
               )}
             </div>
             <div className="absolute bottom-6 w-full flex justify-center">
-              <button
-                className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider hover:text-white"
+              <Button
+                variant="ghost"
+                size="auto"
+                className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-wider hover:text-white"
                 onClick={e => {
                   e.stopPropagation();
                   onSpeak(korean);
@@ -158,7 +167,7 @@ export default function MobileFlashcardPlayer({
               >
                 <Volume2 className="w-4 h-4" />{' '}
                 {t('vocab.listenAgain', { defaultValue: 'Listen Again' })}
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>
@@ -217,17 +226,19 @@ function GradeButton({
 }) {
   const colorStyles = {
     red: 'bg-red-100 text-red-600 border-red-200 active:bg-red-200',
-    slate: 'bg-slate-200 text-slate-600 border-slate-300 active:bg-slate-300',
+    slate: 'bg-muted text-muted-foreground border-border active:bg-muted',
     blue: 'bg-blue-100 text-blue-600 border-blue-200 active:bg-blue-200',
     green: 'bg-green-100 text-green-600 border-green-200 active:bg-green-200',
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="auto"
       onClick={onClick}
       className={`flex flex-col items-center justify-center py-4 rounded-xl font-bold text-xs uppercase border-b-4 active:border-b-0 active:translate-y-1 transition-all h-20 whitespace-nowrap ${colorStyles[color]}`}
     >
       {label}
-    </button>
+    </Button>
   );
 }

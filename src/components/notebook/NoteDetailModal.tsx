@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Trash2,
-  BookOpen,
-  GraduationCap,
-  XCircle,
-  FileText,
-  Loader2,
-  AlertTriangle,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { X, Trash2, BookOpen, GraduationCap, XCircle, FileText, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useQuery, useMutation } from 'convex/react';
 import { mRef, qRef } from '../../utils/convexRefs';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+} from '../ui';
 
 // Type display config
 const TYPE_CONFIG: Record<
   string,
   { icon: React.ComponentType<{ className?: string }>; label: string; color: string }
 > = {
-  VOCAB: { icon: BookOpen, label: '生词', color: 'text-indigo-600' },
-  GRAMMAR: { icon: GraduationCap, label: '语法', color: 'text-emerald-600' },
-  MISTAKE: { icon: XCircle, label: '错题', color: 'text-red-500' },
-  GENERAL: { icon: FileText, label: '笔记', color: 'text-slate-600' },
+  VOCAB: { icon: BookOpen, label: '生词', color: 'text-indigo-600 dark:text-indigo-200' },
+  GRAMMAR: { icon: GraduationCap, label: '语法', color: 'text-emerald-600 dark:text-emerald-200' },
+  MISTAKE: { icon: XCircle, label: '错题', color: 'text-red-500 dark:text-rose-200' },
+  GENERAL: { icon: FileText, label: '笔记', color: 'text-muted-foreground' },
 };
 
 interface NoteDetailModalProps {
@@ -48,20 +52,20 @@ const NoteDetailHeader = ({
   handleDelete: () => void;
   onClose: () => void;
 }) => (
-  <div className="flex items-center justify-between p-5 border-b border-slate-100">
+  <div className="flex items-center justify-between p-5 border-b border-border">
     <div className="flex items-center gap-3">
       {loading ? (
-        <div className="w-10 h-10 rounded-lg bg-slate-100 animate-pulse" />
+        <div className="w-10 h-10 rounded-lg bg-muted animate-pulse" />
       ) : (
-        <div className={`w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center`}>
+        <div className={`w-10 h-10 rounded-lg bg-muted flex items-center justify-center`}>
           <Icon className={`w-5 h-5 ${config.color}`} />
         </div>
       )}
       <div>
         {loading ? (
-          <div className="h-6 w-48 bg-slate-100 rounded animate-pulse" />
+          <div className="h-6 w-48 bg-muted rounded animate-pulse" />
         ) : (
-          <h2 className="text-xl font-bold text-slate-800">{note?.title}</h2>
+          <h2 className="text-xl font-bold text-muted-foreground">{note?.title}</h2>
         )}
         <span className={`text-xs font-medium ${config.color} uppercase`}>
           {loading ? '' : config.label}
@@ -74,17 +78,19 @@ const NoteDetailHeader = ({
         variant="ghost"
         size="auto"
         onClick={handleDelete}
-        disabled={deleting || loading}
-        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+        disabled={loading}
+        loading={deleting}
+        loadingIconClassName="w-5 h-5"
+        className="p-2 rounded-lg text-muted-foreground hover:text-red-500 dark:hover:text-rose-300 hover:bg-red-50 dark:hover:bg-rose-400/12 transition-colors disabled:opacity-50"
       >
-        {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+        <Trash2 className="w-5 h-5" />
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="auto"
         onClick={onClose}
-        className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        className="p-2 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-colors"
       >
         <X className="w-5 h-5" />
       </Button>
@@ -93,18 +99,18 @@ const NoteDetailHeader = ({
 );
 
 const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number } }) => (
-  <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+  <div className="px-5 py-3 bg-muted border-t border-border flex items-center justify-between">
     <div className="flex gap-2">
       {note.tags?.map((tag: string, idx: number) => (
         <span
           key={`${tag}-${idx}`}
-          className="px-2 py-1 bg-white border border-slate-200 text-xs text-slate-500 rounded-full"
+          className="px-2 py-1 bg-card border border-border text-xs text-muted-foreground rounded-full"
         >
           {tag}
         </span>
       ))}
     </div>
-    <span className="text-xs text-slate-400">
+    <span className="text-xs text-muted-foreground">
       {new Date(note.createdAt).toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
@@ -118,6 +124,7 @@ const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number
 
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDelete }) => {
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Convex Integration
   type NoteDetailResponse = {
@@ -141,6 +148,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
     try {
       await deleteNotebook({ notebookId: noteId });
       onDelete(noteId);
+      setConfirmDeleteOpen(false);
       onClose();
     } catch (e) {
       console.error('Delete failed:', e);
@@ -158,17 +166,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
     if (loading) {
       return (
         <div className="space-y-4">
-          <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse" />
-          <div className="h-4 bg-slate-100 rounded w-full animate-pulse" />
-          <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse" />
-          <div className="h-20 bg-slate-100 rounded animate-pulse mt-6" />
+          <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-full animate-pulse" />
+          <div className="h-4 bg-muted rounded w-5/6 animate-pulse" />
+          <div className="h-20 bg-muted rounded animate-pulse mt-6" />
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <AlertTriangle className="w-12 h-12 mb-3" />
           <p>{error}</p>
         </div>
@@ -176,48 +184,79 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
     }
 
     if (!note) {
-      return <p className="text-slate-400">暂无内容</p>;
+      return <p className="text-muted-foreground">暂无内容</p>;
     }
 
     return <NoteContent type={note.type} content={note.content} />;
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        />
-
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
-        >
-          <NoteDetailHeader
-            loading={loading}
-            note={note}
-            config={config}
-            Icon={Icon}
-            deleting={deleting}
-            handleDelete={handleDelete}
-            onClose={onClose}
+    <>
+      <Dialog open={!!noteId} onOpenChange={open => !open && onClose()}>
+        <DialogPortal>
+          <DialogOverlay
+            unstyled
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
           />
+          <DialogContent
+            unstyled
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-[51] flex items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="pointer-events-auto relative bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <NoteDetailHeader
+                loading={loading}
+                note={note}
+                config={config}
+                Icon={Icon}
+                deleting={deleting}
+                handleDelete={() => setConfirmDeleteOpen(true)}
+                onClose={onClose}
+              />
 
-          <div className="flex-1 overflow-y-auto p-5">{renderContent()}</div>
+              <div className="flex-1 overflow-y-auto p-5">{renderContent()}</div>
 
-          {!loading && note && <NoteDetailFooter note={note} />}
-        </motion.div>
-      </div>
-    </AnimatePresence>
+              {!loading && note && <NoteDetailFooter note={note} />}
+            </motion.div>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogPortal>
+          <AlertDialogOverlay className="z-[60]" />
+          <AlertDialogContent className="z-[61] max-w-md rounded-2xl border-2 border-border shadow-pop">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-lg font-black text-foreground">
+                确认删除这条笔记？
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-muted-foreground">
+                删除后无法恢复，相关内容会立即从你的笔记本中移除。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-4">
+              <AlertDialogCancel onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                loading={deleting}
+                loadingText="删除中..."
+                className="bg-destructive border-destructive text-destructive-foreground hover:bg-destructive/90 hover:border-destructive/90"
+              >
+                确认删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogPortal>
+      </AlertDialog>
+    </>
   );
 };
 
@@ -226,10 +265,14 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
   <div className="space-y-5">
     {/* Word */}
     {typeof record.word === 'string' && (
-      <div className="bg-indigo-50 rounded-xl p-5">
-        <span className="text-3xl font-bold text-indigo-700">{record.word}</span>
+      <div className="bg-indigo-50 dark:bg-indigo-400/12 rounded-xl p-5">
+        <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-200">
+          {record.word}
+        </span>
         {typeof record.pronunciation === 'string' && (
-          <span className="ml-3 text-indigo-500 text-lg">[{record.pronunciation}]</span>
+          <span className="ml-3 text-indigo-500 dark:text-indigo-300 text-lg">
+            [{record.pronunciation}]
+          </span>
         )}
       </div>
     )}
@@ -237,14 +280,14 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
     {/* Meaning */}
     {typeof record.meaning === 'string' && record.meaning.trim() !== '' && (
       <Section title="释义">
-        <p className="text-slate-700">{record.meaning}</p>
+        <p className="text-muted-foreground">{record.meaning}</p>
       </Section>
     )}
 
     {/* Context / Original Sentence */}
     {typeof record.context === 'string' && record.context.trim() !== '' && (
       <Section title="原句">
-        <p className="text-slate-600 italic bg-slate-50 p-3 rounded-lg border-l-4 border-indigo-200">
+        <p className="text-muted-foreground italic bg-muted p-3 rounded-lg border-l-4 border-indigo-200 dark:border-indigo-300/40">
           {record.context}
         </p>
       </Section>
@@ -253,13 +296,13 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
     {/* Analysis */}
     {typeof record.analysis === 'string' && record.analysis.trim() !== '' && (
       <Section title="语法分析">
-        <p className="text-slate-700">{record.analysis}</p>
+        <p className="text-muted-foreground">{record.analysis}</p>
       </Section>
     )}
 
     {/* Extra info */}
     {typeof record.examTitle === 'string' && record.examTitle.trim() !== '' && (
-      <div className="text-xs text-slate-400 pt-4 border-t border-slate-100">
+      <div className="text-xs text-muted-foreground pt-4 border-t border-border">
         来源：{record.examTitle}
       </div>
     )}
@@ -281,8 +324,10 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
       <div className="space-y-4">
         {(questionText || question) && (
           <div>
-            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">题目</h4>
-            <div className="text-lg font-medium text-slate-800 leading-relaxed mb-4">
+            <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              题目
+            </h4>
+            <div className="text-lg font-medium text-muted-foreground leading-relaxed mb-4">
               {questionText || question}
             </div>
           </div>
@@ -294,7 +339,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
             <img
               src={imageUrl}
               alt="Question"
-              className="rounded-lg border border-slate-200 shadow-sm max-h-60 object-contain"
+              className="rounded-lg border border-border shadow-sm max-h-60 object-contain"
             />
           </div>
         )}
@@ -312,20 +357,22 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
                   key={`${idx}-${typeof option === 'string' ? option.slice(0, 10) : 'opt'}`}
                   className={`p-3 rounded-lg border flex items-center gap-3 ${
                     isCorrect
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                      : 'bg-white border-slate-200 text-slate-600'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-400/12 dark:border-emerald-300/40 dark:text-emerald-200'
+                      : 'bg-card border-border text-muted-foreground'
                   }`}
                 >
                   <span
                     className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                      isCorrect ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      isCorrect
+                        ? 'bg-emerald-200 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {idx + 1}
                   </span>
                   <span className="text-sm">{optionText}</span>
                   {isCorrect && (
-                    <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-400/15 dark:text-emerald-200 px-2 py-0.5 rounded-full">
                       正确答案
                     </span>
                   )}
@@ -341,7 +388,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
       {!aiAnalysis && analysis && (
         /* Legacy analysis support */
         <Section title="AI 解析">
-          <p className="text-slate-700">{analysis}</p>
+          <p className="text-muted-foreground">{analysis}</p>
         </Section>
       )}
     </div>
@@ -349,7 +396,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
 };
 
 const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, content }) => {
-  if (!content) return <p className="text-slate-400">暂无内容</p>;
+  if (!content) return <p className="text-muted-foreground">暂无内容</p>;
   const record = content as Record<string, unknown>;
 
   if (type === 'VOCAB') {
@@ -367,17 +414,17 @@ const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, conte
     <div className="space-y-5">
       {text && (
         <Section title="内容">
-          <p className="text-slate-700 whitespace-pre-wrap">{text}</p>
+          <p className="text-muted-foreground whitespace-pre-wrap">{text}</p>
         </Section>
       )}
       {notes && (
         <Section title="笔记">
-          <p className="text-slate-600 whitespace-pre-wrap">{notes}</p>
+          <p className="text-muted-foreground whitespace-pre-wrap">{notes}</p>
         </Section>
       )}
       {/* Fallback: render raw JSON for unknown structure */}
       {!text && !notes && (
-        <pre className="bg-slate-50 p-4 rounded-lg text-xs text-slate-600 overflow-x-auto">
+        <pre className="bg-muted p-4 rounded-lg text-xs text-muted-foreground overflow-x-auto">
           {JSON.stringify(content, null, 2)}
         </pre>
       )}
@@ -388,7 +435,9 @@ const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, conte
 // Section component
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div>
-    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">{title}</h4>
+    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">
+      {title}
+    </h4>
     {children}
   </div>
 );
@@ -435,20 +484,22 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
   const wrongOptions = safeWrongOptions(record.wrongOptions);
 
   return (
-    <div className="mt-6 pt-6 border-t border-slate-100">
+    <div className="mt-6 pt-6 border-t border-border">
       <div className="flex items-center gap-2 mb-4">
-        <div className="p-1.5 bg-indigo-100 rounded text-indigo-600">
+        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-400/15 rounded text-indigo-600 dark:text-indigo-200">
           <GraduationCap className="w-5 h-5" />
         </div>
-        <h3 className="text-lg font-bold text-indigo-900">AI 老师解析</h3>
+        <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-100">AI 老师解析</h3>
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-100 space-y-5">
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-400/10 dark:to-violet-400/10 rounded-xl p-5 border border-indigo-100 dark:border-indigo-300/20 space-y-5">
         {/* Translation */}
         {translation && (
           <div>
-            <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">题干翻译</div>
-            <p className="text-slate-700 bg-white/60 p-3 rounded-lg text-sm leading-relaxed">
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
+              题干翻译
+            </div>
+            <p className="text-muted-foreground bg-card/60 p-3 rounded-lg text-sm leading-relaxed">
               {translation}
             </p>
           </div>
@@ -457,8 +508,10 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {/* Key Point */}
         {keyPoint && (
           <div>
-            <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">核心考点</div>
-            <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
+              核心考点
+            </div>
+            <div className="inline-block bg-indigo-100 text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200 px-3 py-1 rounded-full text-sm font-medium">
               {keyPoint}
             </div>
           </div>
@@ -467,8 +520,10 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {/* Detailed Analysis */}
         {analysisText && (
           <div>
-            <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">正解分析</div>
-            <p className="text-slate-700 bg-white/60 p-3 rounded-lg text-sm leading-relaxed">
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
+              正解分析
+            </div>
+            <p className="text-muted-foreground bg-card/60 p-3 rounded-lg text-sm leading-relaxed">
               {analysisText}
             </p>
           </div>
@@ -477,15 +532,19 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {/* Wrong Options Analysis */}
         {wrongOptions.length > 0 && (
           <div>
-            <div className="text-xs font-bold text-indigo-700 uppercase mb-1.5">干扰项分析</div>
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
+              干扰项分析
+            </div>
             <div className="space-y-2">
               {wrongOptions.map(([key, value]) => (
                 <div
                   key={key}
-                  className="text-sm bg-white/40 p-2 rounded border border-indigo-50/50"
+                  className="text-sm bg-card/40 p-2 rounded border border-indigo-50/50 dark:border-indigo-300/20"
                 >
-                  <span className="font-bold text-indigo-600 mr-2">{key}:</span>
-                  <span className="text-slate-600">{value}</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-300 mr-2">
+                    {key}:
+                  </span>
+                  <span className="text-muted-foreground">{value}</span>
                 </div>
               ))}
             </div>

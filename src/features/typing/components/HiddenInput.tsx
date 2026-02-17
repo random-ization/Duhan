@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import { Input } from '../../../components/ui';
 
 interface HiddenInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   // No specific props needed yet
@@ -7,7 +8,7 @@ interface HiddenInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const HiddenInput = forwardRef<HTMLInputElement, HiddenInputProps>((props, ref) => {
   return (
-    <input
+    <Input
       ref={ref}
       type="text"
       style={{

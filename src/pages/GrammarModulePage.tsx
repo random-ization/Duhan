@@ -14,12 +14,8 @@ import { GRAMMARS, INSTITUTES } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import MobileGrammarView from '../components/mobile/MobileGrammarView';
 import { useIsMobile } from '../hooks/useIsMobile';
-
-// Extracted constant for background style
-const LOADING_BACKGROUND_STYLE = {
-  backgroundImage: 'radial-gradient(#CBD5E1 1.5px, transparent 1.5px)',
-  backgroundSize: '24px 24px',
-} as const;
+import { Button, Input } from '../components/ui';
+import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
@@ -140,11 +136,8 @@ const GrammarModulePage: React.FC = () => {
 
   if (instituteQuery === undefined) {
     return (
-      <div
-        className="min-h-screen bg-slate-100 flex items-center justify-center"
-        style={LOADING_BACKGROUND_STYLE}
-      >
-        <div className="text-xl font-bold text-slate-400 animate-pulse">加载中...</div>
+      <div className="min-h-screen bg-muted bg-[radial-gradient(#CBD5E1_1.5px,transparent_1.5px)] bg-[length:24px_24px] dark:bg-[radial-gradient(hsl(var(--border))_1.5px,transparent_1.5px)] dark:bg-[length:24px_24px] flex items-center justify-center">
+        <div className="text-xl font-bold text-muted-foreground animate-pulse">加载中...</div>
       </div>
     );
   }
@@ -172,21 +165,31 @@ const GrammarModulePage: React.FC = () => {
   }
 
   return (
-    <div className="text-slate-900 h-full flex overflow-hidden">
+    <div className="text-foreground h-full flex overflow-hidden">
       <div className="flex-1 flex flex-col h-full overflow-hidden p-6 gap-6">
         {/* Header */}
-        <header className="flex justify-between items-center bg-white border-2 border-slate-900 rounded-xl px-6 py-3 shadow-[4px_4px_0px_0px_#0f172a] shrink-0 z-20">
+        <header className="flex justify-between items-center bg-card border-2 border-foreground dark:border-border rounded-xl px-6 py-3 shadow-[4px_4px_0px_0px_#0f172a] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)] shrink-0 z-20">
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={() => navigate(-1)}
-              className="w-8 h-8 rounded-lg border-2 border-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors"
+              variant="ghost"
+              size="auto"
+              className="w-8 h-8 rounded-lg border-2 border-foreground dark:border-border hover:bg-muted flex items-center justify-center transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-            </button>
+            </Button>
             <div>
+              <AppBreadcrumb
+                className="mb-1"
+                items={[
+                  { label: 'Courses', to: '/courses' },
+                  { label: instituteName || 'Course', to: `/course/${instituteId}` },
+                  { label: 'Grammar' },
+                ]}
+              />
               <h1 className="font-black text-xl italic tracking-tight">
                 {instituteName}
-                <span className="not-italic text-sm font-bold text-slate-500 ml-2">
+                <span className="not-italic text-sm font-bold text-muted-foreground ml-2">
                   语法专项训练
                 </span>
               </h1>
@@ -194,14 +197,16 @@ const GrammarModulePage: React.FC = () => {
           </div>
 
           <div className="relative group w-80">
-            <input
+            <Input
               type="text"
               placeholder="搜索语法点..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border-2 border-slate-900 rounded-lg font-bold text-sm focus:shadow-[2px_2px_0px_0px_#0f172a] outline-none transition-all bg-slate-50 focus:bg-white"
+              className="w-full !h-auto !px-4 !py-2 !border-2 !border-foreground dark:!border-border !rounded-lg font-bold text-sm focus-visible:!shadow-[2px_2px_0px_0px_#0f172a] dark:focus-visible:!shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)] transition-all !bg-muted focus-visible:!bg-card !shadow-none"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              🔍
+            </span>
           </div>
         </header>
 

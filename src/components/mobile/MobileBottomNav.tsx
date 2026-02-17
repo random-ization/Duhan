@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { House, BookOpen, Dumbbell, Clapperboard, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 import { getPathWithoutLang } from '../../utils/pathname';
 
 type Tab = {
@@ -88,7 +88,7 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+20px)] z-50 h-[78px] rounded-[2rem] bg-white border-2 border-slate-900 shadow-2xl px-2 grid grid-cols-5 items-center pb-2">
+    <nav className="md:hidden fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+20px)] z-50 h-[78px] rounded-[2rem] bg-card border-2 border-foreground shadow-2xl px-2 grid grid-cols-5 items-center pb-2">
       {tabs.map(tab => {
         const isActive = isTabActive(tab);
         const Icon = tab.icon;
@@ -102,7 +102,7 @@ export function MobileBottomNav() {
             className={`h-14 w-full rounded-[22px] grid place-items-center gap-1 text-[11px] font-extrabold select-none transition ${
               isActive
                 ? 'bg-indigo-50 text-indigo-600 outline outline-2 outline-indigo-500'
-                : 'text-slate-400 active:bg-slate-50'
+                : 'text-muted-foreground active:bg-accent'
             }`}
             aria-label={tab.label}
           >

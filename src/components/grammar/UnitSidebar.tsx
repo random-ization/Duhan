@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 
 interface UnitSidebarProps {
   units: string[];
@@ -9,9 +9,9 @@ interface UnitSidebarProps {
 
 const UnitSidebar: React.FC<UnitSidebarProps> = ({ units, selectedUnit, onSelectUnit }) => {
   return (
-    <nav className="w-64 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0">
+    <nav className="w-64 bg-card border-2 border-foreground rounded-xl shadow-[4px_4px_0px_0px_#0f172a] flex flex-col overflow-hidden shrink-0">
       {/* Header */}
-      <div className="p-3 border-b-2 border-slate-900 bg-yellow-50 flex justify-between items-center">
+      <div className="p-3 border-b-2 border-foreground bg-yellow-50 flex justify-between items-center">
         <span className="font-black text-xs uppercase tracking-wider">Course Units</span>
         <span className="bg-black text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
           {units.length}
@@ -27,12 +27,12 @@ const UnitSidebar: React.FC<UnitSidebarProps> = ({ units, selectedUnit, onSelect
           size="auto"
           onClick={() => onSelectUnit(null)}
           className={`
-                        w-full text-left px-3 py-2 border-2 border-slate-900 rounded-lg font-bold text-sm 
+                        w-full text-left px-3 py-2 border-2 border-foreground rounded-lg font-bold text-sm 
                         flex justify-between items-center transition-colors
                         ${
                           selectedUnit === null
-                            ? 'bg-slate-900 text-white shadow-[2px_2px_0px_0px_#0f172a]'
-                            : 'bg-slate-100 hover:bg-slate-200'
+                            ? 'bg-primary text-white shadow-[2px_2px_0px_0px_#0f172a]'
+                            : 'bg-muted hover:bg-muted'
                         }
                     `}
         >
@@ -56,8 +56,8 @@ const UnitSidebar: React.FC<UnitSidebarProps> = ({ units, selectedUnit, onSelect
                                 w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 transition-all group
                                 ${
                                   isSelected
-                                    ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a]'
-                                    : 'bg-white hover:bg-slate-50 border-2 border-transparent hover:border-slate-900 text-slate-600'
+                                    ? 'bg-primary text-white border-2 border-foreground shadow-[2px_2px_0px_0px_#0f172a]'
+                                    : 'bg-card hover:bg-muted border-2 border-transparent hover:border-foreground text-muted-foreground'
                                 }
                             `}
             >
@@ -66,8 +66,8 @@ const UnitSidebar: React.FC<UnitSidebarProps> = ({ units, selectedUnit, onSelect
                                 w-6 h-6 rounded flex items-center justify-center font-black text-xs shrink-0 border-2
                                 ${
                                   isSelected
-                                    ? 'bg-yellow-400 text-black border-black'
-                                    : 'bg-slate-100 group-hover:bg-white border-transparent group-hover:border-slate-900 text-slate-400 group-hover:text-slate-900'
+                                    ? 'bg-yellow-400 text-foreground border-foreground'
+                                    : 'bg-muted group-hover:bg-card border-transparent group-hover:border-foreground text-muted-foreground group-hover:text-foreground'
                                 }
                             `}
               >

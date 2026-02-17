@@ -4,43 +4,45 @@ import { useQuery } from 'convex/react';
 import { NoArgs, qRef } from '../../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { Button } from '../ui';
+import { Input } from '../ui';
 
 // Publisher theme configuration
 const PUBLISHER_THEMES: Record<string, { gradient: string; bgLight: string; text: string }> = {
   延世大学: {
-    gradient: 'from-indigo-500 to-indigo-600',
-    bgLight: 'bg-indigo-100',
-    text: 'text-indigo-600',
+    gradient: 'from-indigo-500 to-indigo-600 dark:from-indigo-400/75 dark:to-indigo-500/75',
+    bgLight: 'bg-indigo-100 dark:bg-indigo-400/16',
+    text: 'text-indigo-600 dark:text-indigo-300',
   },
   연세대학교: {
-    gradient: 'from-indigo-500 to-indigo-600',
-    bgLight: 'bg-indigo-100',
-    text: 'text-indigo-600',
+    gradient: 'from-indigo-500 to-indigo-600 dark:from-indigo-400/75 dark:to-indigo-500/75',
+    bgLight: 'bg-indigo-100 dark:bg-indigo-400/16',
+    text: 'text-indigo-600 dark:text-indigo-300',
   },
   首尔大学: {
-    gradient: 'from-rose-500 to-rose-600',
-    bgLight: 'bg-rose-100',
-    text: 'text-rose-600',
+    gradient: 'from-rose-500 to-rose-600 dark:from-rose-400/75 dark:to-rose-500/75',
+    bgLight: 'bg-rose-100 dark:bg-rose-400/16',
+    text: 'text-rose-600 dark:text-rose-300',
   },
   서울대학교: {
-    gradient: 'from-rose-500 to-rose-600',
-    bgLight: 'bg-rose-100',
-    text: 'text-rose-600',
+    gradient: 'from-rose-500 to-rose-600 dark:from-rose-400/75 dark:to-rose-500/75',
+    bgLight: 'bg-rose-100 dark:bg-rose-400/16',
+    text: 'text-rose-600 dark:text-rose-300',
   },
   中央大学: {
-    gradient: 'from-emerald-500 to-emerald-600',
-    bgLight: 'bg-emerald-100',
-    text: 'text-emerald-600',
+    gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-400/75 dark:to-emerald-500/75',
+    bgLight: 'bg-emerald-100 dark:bg-emerald-400/16',
+    text: 'text-emerald-600 dark:text-emerald-300',
   },
   중앙대학교: {
-    gradient: 'from-emerald-500 to-emerald-600',
-    bgLight: 'bg-emerald-100',
-    text: 'text-emerald-600',
+    gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-400/75 dark:to-emerald-500/75',
+    bgLight: 'bg-emerald-100 dark:bg-emerald-400/16',
+    text: 'text-emerald-600 dark:text-emerald-300',
   },
   default: {
-    gradient: 'from-slate-500 to-slate-600',
-    bgLight: 'bg-slate-100',
-    text: 'text-slate-600',
+    gradient: 'from-muted-foreground to-foreground',
+    bgLight: 'bg-muted',
+    text: 'text-muted-foreground',
   },
 };
 
@@ -139,19 +141,21 @@ const MobileCoursesOverview: React.FC = () => {
   }, [courses, searchQuery, t]);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-muted pb-20">
       {/* Header */}
-      <header className="bg-white px-5 pt-5 pb-4 border-b border-slate-100 sticky top-0 z-20">
+      <header className="bg-card px-5 pt-5 pb-4 border-b border-border sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-4">
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => navigate('/dashboard')}
-            className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
           >
-            <ArrowLeft className="w-4 h-4 text-slate-600" />
-          </button>
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+          </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-extrabold text-slate-900">{t('coursesLibrary.title')}</h1>
-            <p className="text-xs text-slate-500 font-medium">
+            <h1 className="text-xl font-extrabold text-foreground">{t('coursesLibrary.title')}</h1>
+            <p className="text-xs text-muted-foreground font-medium">
               {isLoading
                 ? t('loading')
                 : t('coursesLibrary.summary', { count: courses?.length || 0 })}
@@ -160,14 +164,14 @@ const MobileCoursesOverview: React.FC = () => {
         </div>
         {/* Search */}
         <div className="relative">
-          <input
+          <Input
             type="text"
             placeholder={t('coursesLibrary.searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-100 rounded-lg py-2.5 pl-9 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+            className="w-full bg-muted rounded-lg py-2.5 pl-9 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
           />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
         </div>
       </header>
 
@@ -176,10 +180,10 @@ const MobileCoursesOverview: React.FC = () => {
         <div className="px-5 py-6 space-y-6">
           {[1, 2].map(i => (
             <div key={i} className="animate-pulse">
-              <div className="h-5 bg-slate-200 rounded w-32 mb-3" />
+              <div className="h-5 bg-muted rounded w-32 mb-3" />
               <div className="flex gap-3 overflow-hidden">
                 {[1, 2, 3].map(j => (
-                  <div key={j} className="min-w-[140px] h-40 bg-slate-200 rounded-xl" />
+                  <div key={j} className="min-w-[140px] h-40 bg-muted rounded-xl" />
                 ))}
               </div>
             </div>
@@ -189,7 +193,7 @@ const MobileCoursesOverview: React.FC = () => {
 
       {/* Empty State */}
       {!isLoading && Object.keys(groupedCourses).length === 0 && (
-        <div className="text-center py-20 text-slate-400 font-bold">
+        <div className="text-center py-20 text-muted-foreground font-bold">
           {t('coursesLibrary.noResults')}
         </div>
       )}
@@ -211,11 +215,15 @@ const MobileCoursesOverview: React.FC = () => {
                     {label.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <h2 className="font-bold text-slate-900 text-sm">{label}</h2>
+                <h2 className="font-bold text-foreground text-sm">{label}</h2>
               </div>
-              <button className={`text-xs font-bold ${theme.text} flex items-center gap-1`}>
+              <Button
+                variant="ghost"
+                size="auto"
+                className={`text-xs font-bold ${theme.text} flex items-center gap-1`}
+              >
                 {t('coursesLibrary.viewAll')} <ChevronRight className="w-3 h-3" />
-              </button>
+              </Button>
             </div>
 
             {/* Horizontal Scroll Row */}
@@ -229,10 +237,12 @@ const MobileCoursesOverview: React.FC = () => {
             >
               {groupCourses.map(course => {
                 return (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     key={course._id || course.id}
                     onClick={() => navigate(`/course/${course.id}`)}
-                    className="min-w-[140px] bg-white rounded-xl border border-slate-200 p-3 text-left snap-start active:scale-[0.98] transition-transform"
+                    className="min-w-[140px] bg-card rounded-xl border border-border p-3 text-left snap-start active:scale-[0.98] transition-transform"
                   >
                     {/* Level Badge */}
                     <div
@@ -241,21 +251,21 @@ const MobileCoursesOverview: React.FC = () => {
                       {course.displayLevel || '?'}
                     </div>
                     {/* Title */}
-                    <h3 className="font-bold text-slate-900 text-sm truncate">{course.name}</h3>
+                    <h3 className="font-bold text-foreground text-sm truncate">{course.name}</h3>
                     {/* Metadata */}
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 font-medium">
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground font-medium">
                       <span className="flex items-center gap-0.5">
                         <Layers className="w-3 h-3" />
                         {t('coursesLibrary.unitsCount', { count: course.totalUnits || 10 })}
                       </span>
                       {course.volume && (
                         <>
-                          <span className="text-slate-300">|</span>
+                          <span className="text-muted-foreground">|</span>
                           <span>VOL.{course.volume}</span>
                         </>
                       )}
                     </div>
-                  </button>
+                  </Button>
                 );
               })}
             </div>

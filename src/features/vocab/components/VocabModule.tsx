@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Filter, Layers, Brain, List as ListIcon, Settings as SettingsIcon } from 'lucide-react';
 import { CourseSelection, VocabularyItem, Language, TextbookContent } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
-import { useApp } from '../../../contexts/AppContext';
+import { useActivityLogger } from '../../../hooks/useActivityLogger';
 import FlashcardView from './FlashcardView';
 import LearnModeView from './LearnModeView';
 import ListView from './ListView';
@@ -12,6 +12,8 @@ import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from '../types';
 import { shuffleArray } from '../utils';
 import { logger } from '../../../utils/logger';
+import { Button } from '../../../components/ui';
+import { Select } from '../../../components/ui';
 
 interface VocabModuleProps {
   course: CourseSelection;
@@ -34,7 +36,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   onRecordMistake,
   onSaveWord,
 }) => {
-  const { logActivity } = useApp();
+  const { logActivity } = useActivityLogger();
   const labels = getLabels(language);
 
   // Helper function to get custom list title
@@ -165,8 +167,8 @@ const VocabModule: React.FC<VocabModuleProps> = ({
 
   if (allWords.length === 0) {
     return (
-      <div className="text-center p-12 bg-slate-50 rounded-xl border border-slate-200">
-        <p className="text-slate-600">{labels.noWords}</p>
+      <div className="text-center p-12 bg-muted rounded-xl border border-border">
+        <p className="text-muted-foreground">{labels.noWords}</p>
       </div>
     );
   }
@@ -174,36 +176,38 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-card p-6 rounded-xl shadow-sm border border-border">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">
+          <h2 className="text-2xl font-bold text-muted-foreground">
             {customWordList ? getCustomListTitle(customListType, labels) : labels.vocabLabel}
           </h2>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {filteredWords.length} {labels.term}
           </p>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => {
             setShowSettings(true);
           }}
-          className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors"
+          className="p-2 bg-muted hover:bg-muted rounded-full text-muted-foreground transition-colors"
         >
           <SettingsIcon className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Controls */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         {!customWordList && (
           <div className="relative flex-1 lg:flex-none min-w-[200px]">
-            <select
+            <Select
               value={selectedUnitFilter}
               onChange={e => {
                 setSelectedUnitFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value));
                 setReviewingIncorrect(false);
               }}
-              className="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
+              className="w-full appearance-none bg-card border border-border text-muted-foreground py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
             >
               <option value="ALL">{labels.allUnits}</option>
               {availableUnits.map(u => (
@@ -211,54 +215,63 @@ const VocabModule: React.FC<VocabModuleProps> = ({
                   {labels.unit} {u}
                 </option>
               ))}
-            </select>
-            <Filter className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+            </Select>
+            <Filter className="w-4 h-4 text-muted-foreground absolute right-3 top-2.5 pointer-events-none" />
           </div>
         )}
 
-        <div className="bg-slate-100 p-1 rounded-lg flex text-sm font-medium overflow-x-auto w-full lg:w-auto">
-          <button
+        <div className="bg-muted p-1 rounded-lg flex text-sm font-medium overflow-x-auto w-full lg:w-auto">
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => {
               setViewMode('CARDS');
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'CARDS'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'CARDS'
+                ? 'bg-card text-indigo-700 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
+            }`}
           >
             <Layers className="w-4 h-4 mr-2" />
             {labels.flashcards}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => {
               setViewMode('LEARN');
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LEARN'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'LEARN'
+                ? 'bg-card text-indigo-700 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
+            }`}
           >
             <Brain className="w-4 h-4 mr-2" />
             {labels.learn}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={() => {
               setViewMode('LIST');
               setIsSessionComplete(false);
               setReviewingIncorrect(false);
             }}
-            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${viewMode === 'LIST'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
+            className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
+              viewMode === 'LIST'
+                ? 'bg-card text-indigo-700 shadow-sm'
+                : 'text-muted-foreground hover:text-muted-foreground'
+            }`}
           >
             <ListIcon className="w-4 h-4 mr-2" />
             {labels.list}
-          </button>
+          </Button>
         </div>
       </div>
 

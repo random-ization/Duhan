@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Play, ChevronRight } from 'lucide-react';
+import { Button } from '../ui';
 
 interface MobileVocabDashboardProps {
   readonly unitId: string;
@@ -28,39 +29,41 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
   const progress = total > 0 ? (masteredCount / total) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-muted pb-20">
       {/* Header */}
-      <header className="bg-white p-6 pb-8 border-b border-slate-200 rounded-b-[2rem] shadow-sm relative overflow-hidden">
+      <header className="bg-card p-6 pb-8 border-b border-border rounded-b-[2rem] shadow-sm relative overflow-hidden">
         {/* Decor */}
-        <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-green-100 rounded-full opacity-50 z-0" />
+        <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-green-100 dark:bg-green-400/12 rounded-full opacity-50 z-0" />
 
         <div className="relative z-10">
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+          <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
             {instituteName}
           </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-1">
+          <h1 className="text-3xl font-black text-foreground mb-1">
             {unitId === 'ALL'
               ? t('vocab.allUnits', { defaultValue: 'All Units' })
               : `${t('vocab.unit', { defaultValue: 'Unit' })} ${unitId}`}
           </h1>
-          <p className="text-slate-500 font-medium">
+          <p className="text-muted-foreground font-medium">
             {total} {t('vocab.wordsUnit', { defaultValue: 'words' })}
           </p>
 
           {/* Progress Card */}
-          <div className="mt-6 bg-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+          <div className="mt-6 bg-primary rounded-2xl p-5 text-primary-foreground shadow-lg relative overflow-hidden">
             <div className="flex justify-between items-end mb-2">
               <div>
-                <div className="text-3xl font-black text-green-400">{Math.round(progress)}%</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <div className="text-3xl font-black text-green-400 dark:text-green-300">
+                  {Math.round(progress)}%
+                </div>
+                <div className="text-xs font-bold text-primary-foreground/75 uppercase tracking-wider">
                   {t('vocab.mastered', { defaultValue: 'Mastered' })}
                 </div>
               </div>
-              <Trophy className="w-8 h-8 text-yellow-400" />
+              <Trophy className="w-8 h-8 text-yellow-400 dark:text-yellow-300" />
             </div>
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-green-500 transition-all duration-500"
+                className="h-full bg-green-500 dark:bg-green-300 transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -71,68 +74,74 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
       {/* Actions */}
       <div className="p-6 grid gap-4">
         {/* Learn Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onStartLearn}
-          className="group w-full bg-white border-2 border-slate-200 rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
+          className="group w-full bg-card border-2 border-border rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
         >
-          <div className="bg-white rounded-xl p-5 flex items-center justify-between group-hover:bg-green-50 transition-colors">
+          <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-green-50 dark:group-hover:bg-green-400/12 transition-colors">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-400/14 flex items-center justify-center text-green-600 dark:text-green-300">
                 <BrainIcon />
               </div>
               <div className="text-left">
-                <div className="font-black text-lg text-slate-900">
+                <div className="font-black text-lg text-foreground">
                   {t('vocab.learn', { defaultValue: 'Start Learning' })}
                 </div>
-                <div className="text-xs font-bold text-slate-400">
+                <div className="text-xs font-bold text-muted-foreground">
                   {t('vocab.flashcards', { defaultValue: 'Flashcards' })}
                 </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-slate-100 flex items-center justify-center group-hover:border-green-200 group-hover:bg-white">
-              <Play className="w-4 h-4 text-green-500 ml-0.5" />
+            <div className="w-8 h-8 rounded-full border-2 border-border flex items-center justify-center group-hover:border-green-200 dark:group-hover:border-green-300/30 group-hover:bg-card">
+              <Play className="w-4 h-4 text-green-500 dark:text-green-300 ml-0.5" />
             </div>
           </div>
-        </button>
+        </Button>
 
         {/* Quiz Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onStartTest}
-          className="group w-full bg-white border-2 border-slate-200 rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
+          className="group w-full bg-card border-2 border-border rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
         >
-          <div className="bg-white rounded-xl p-5 flex items-center justify-between group-hover:bg-indigo-50 transition-colors">
+          <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 transition-colors">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
                 <Trophy className="w-6 h-6" />
               </div>
               <div className="text-left">
-                <div className="font-black text-lg text-slate-900">
+                <div className="font-black text-lg text-foreground">
                   {t('vocab.quiz', { defaultValue: 'Take Quiz' })}
                 </div>
-                <div className="text-xs font-bold text-slate-400">
+                <div className="text-xs font-bold text-muted-foreground">
                   {t('vocab.testMode', { defaultValue: 'Challenge yourself' })}
                 </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-slate-100 flex items-center justify-center group-hover:border-indigo-200 group-hover:bg-white">
-              <ChevronRight className="w-5 h-5 text-indigo-500" />
+            <div className="w-8 h-8 rounded-full border-2 border-border flex items-center justify-center group-hover:border-indigo-200 dark:group-hover:border-indigo-300/30 group-hover:bg-card">
+              <ChevronRight className="w-5 h-5 text-indigo-500 dark:text-indigo-300" />
             </div>
           </div>
-        </button>
+        </Button>
 
         {/* Word List Preview or Manage */}
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={onManageList}
-          className="mt-2 w-full bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between"
+          className="mt-2 w-full bg-card p-4 rounded-xl border border-border flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
-            <ListIcon className="w-5 h-5 text-slate-400" />
-            <span className="font-bold text-slate-700">
+            <ListIcon className="w-5 h-5 text-muted-foreground" />
+            <span className="font-bold text-muted-foreground">
               {t('vocab.wordList', { defaultValue: 'Word List' })}
             </span>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </button>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </Button>
       </div>
     </div>
   );

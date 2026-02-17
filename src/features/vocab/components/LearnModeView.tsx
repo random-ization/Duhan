@@ -5,6 +5,8 @@ import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { shuffleArray } from '../utils';
 import { useTTS } from '../../../hooks/useTTS';
+import { Button } from '../../../components/ui';
+import { Input } from '../../../components/ui';
 
 interface LearnModeViewProps {
   words: ExtendedVocabularyItem[];
@@ -41,19 +43,17 @@ const getChoiceButtonStyle = (
     return 'bg-red-100 border-2 border-red-500 text-red-700';
   }
   if (isSelected) {
-    return 'bg-white border-2 border-indigo-500 text-indigo-700';
+    return 'bg-card border-2 border-indigo-500 text-indigo-700';
   }
-  return 'bg-white border border-slate-300 hover:border-indigo-300 text-slate-700';
+  return 'bg-card border border-border hover:border-indigo-300 text-muted-foreground';
 };
 
 // Helper function to determine input styling
 const getInputStyle = (showFeedback: boolean, isCorrect: boolean): string => {
   if (!showFeedback) {
-    return 'border-slate-300 focus:border-indigo-500';
+    return 'border-border focus:border-indigo-500';
   }
-  return isCorrect
-    ? 'border-emerald-500 bg-emerald-50'
-    : 'border-red-500 bg-red-50';
+  return isCorrect ? 'border-emerald-500 bg-emerald-50' : 'border-red-500 bg-red-50';
 };
 
 const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
@@ -140,7 +140,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
     if (!currentItem) {
       return (
         <div className="flex items-center justify-center py-20">
-          <div className="text-center text-slate-400">
+          <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium">{labels.noWords}</p>
           </div>
         </div>
@@ -163,7 +163,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex flex-col gap-6">
           {/* Progress Bar */}
-          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
             <div
               className="bg-indigo-500 h-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
@@ -174,7 +174,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
           <div className="bg-[#E4DBCF] rounded-2xl p-8 min-h-[500px] flex flex-col relative shadow-sm">
             {/* Question Prompt */}
             <div className="flex-1 flex flex-col items-center justify-center mb-8">
-              <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
                 {currentQuestionType.startsWith('WRITING') ? (
                   <Pencil className="w-4 h-4" />
                 ) : (
@@ -186,19 +186,21 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
               </div>
 
               <div className="flex items-center gap-4 mb-8">
-                <h2 className="text-5xl font-bold text-slate-800 text-center">{prompt}</h2>
+                <h2 className="text-5xl font-bold text-muted-foreground text-center">{prompt}</h2>
                 {currentQuestionType.includes('K_TO_N') && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="auto"
                     onClick={() => speakKorean(prompt)}
-                    className="p-2 rounded-full bg-white hover:bg-slate-100 text-indigo-600 transition-colors"
+                    className="p-2 rounded-full bg-card hover:bg-muted text-indigo-600 transition-colors"
                   >
                     <Volume2 className="w-6 h-6" />
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {currentItem.pos && (
-                <div className="inline-block px-3 py-1 bg-white/70 text-slate-600 text-xs font-medium rounded-full">
+                <div className="inline-block px-3 py-1 bg-card/70 text-muted-foreground text-xs font-medium rounded-full">
                   {currentItem.pos}
                 </div>
               )}
@@ -216,34 +218,41 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
                     const showWrong = showFeedback && isSelected && !isCorrectChoice;
 
                     return (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="auto"
                         key={choice}
                         onClick={() => !showFeedback && setSelectedAnswer(choice)}
                         disabled={showFeedback}
-                        className={`p-4 rounded-xl text-left font-medium transition-all ${getChoiceButtonStyle(showCorrect, showWrong, isSelected)
-                          } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
+                        className={`p-4 rounded-xl text-left font-medium transition-all ${getChoiceButtonStyle(
+                          showCorrect,
+                          showWrong,
+                          isSelected
+                        )} ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-lg">{choice}</span>
                           {showCorrect && <Check className="w-5 h-5 text-emerald-500" />}
                           {showWrong && <X className="w-5 h-5 text-red-500" />}
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
               ) : (
                 // Writing Input
                 <div className="space-y-4">
-                  <input
+                  <Input
                     type="text"
                     value={userInput}
                     onChange={e => setUserInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !showFeedback && checkAnswer()}
                     disabled={showFeedback}
                     placeholder={labels.typeAnswer || 'Type your answer...'}
-                    className={`w-full p-4 text-lg rounded-xl border-2 transition-all ${getInputStyle(showFeedback, isCorrect)
-                      } focus:outline-none`}
+                    className={`w-full !h-auto !shadow-none p-4 text-lg rounded-xl border-2 transition-all ${getInputStyle(
+                      showFeedback,
+                      isCorrect
+                    )} focus:outline-none`}
                     autoFocus
                   />
                   {showFeedback && !isCorrect && (
@@ -263,12 +272,15 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
             {/* Action Button */}
             <div className="mt-8 flex justify-center">
               {showFeedback ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={handleNext}
-                  className={`px-8 py-3 font-bold rounded-xl transition-all flex items-center gap-2 ${isCorrect
-                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                    }`}
+                  className={`px-8 py-3 font-bold rounded-xl transition-all flex items-center gap-2 ${
+                    isCorrect
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  }`}
                 >
                   {learnIndex < learnQueue.length - 1 ? (
                     <>
@@ -278,22 +290,24 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
                   ) : (
                     <>{labels.finish || 'Finish'}</>
                   )}
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="ghost"
+                  size="auto"
                   onClick={checkAnswer}
                   disabled={
                     currentQuestionType.startsWith('CHOICE') ? !selectedAnswer : !userInput.trim()
                   }
-                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center gap-2"
+                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-muted disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center gap-2"
                 >
                   {labels.checkAnswer || 'Check Answer'}
-                </button>
+                </Button>
               )}
             </div>
 
             {/* Question Counter */}
-            <div className="mt-4 text-center text-slate-500 text-sm font-medium">
+            <div className="mt-4 text-center text-muted-foreground text-sm font-medium">
               {learnIndex + 1} / {learnQueue.length}
             </div>
           </div>

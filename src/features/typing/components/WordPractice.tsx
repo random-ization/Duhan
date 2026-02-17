@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { disassemble } from 'es-hangul';
 import { KeyboardHints } from './KeyboardHints';
 import { HiddenInput } from './HiddenInput';
+import { Button } from '../../../components/ui';
 
 interface WordItem {
   id: string;
@@ -300,7 +301,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
   }, []);
 
   if (!currentWord) {
-    return <div className="text-slate-500">No words available</div>;
+    return <div className="text-muted-foreground">No words available</div>;
   }
 
   return (
@@ -317,13 +318,15 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
             Word to Type
           </div>
 
-          <div className="word-prompt-card px-16 py-8 rounded-[2rem] flex flex-col items-center justify-center text-slate-800 relative min-w-[300px]">
+          <div className="word-prompt-card px-16 py-8 rounded-[2rem] flex flex-col items-center justify-center text-muted-foreground relative min-w-[300px]">
             {/* Main Word */}
-            <div className="text-5xl font-black tracking-tight mb-2 text-slate-900 drop-shadow-sm">
+            <div className="text-5xl font-black tracking-tight mb-2 text-foreground drop-shadow-sm">
               {currentWord.word}
             </div>
             {/* Meaning */}
-            <div className="text-slate-500 font-bold text-sm">{currentWord.meaning || '...'}</div>
+            <div className="text-muted-foreground font-bold text-sm">
+              {currentWord.meaning || '...'}
+            </div>
           </div>
         </div>
 
@@ -345,9 +348,9 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
                   <span className="relative inline-block">
                     <span
                       className={`text-6xl font-black transition-colors duration-150 leading-tight block
-                                      ${isCompleted ? 'text-slate-800' : ''}
+                                      ${isCompleted ? 'text-muted-foreground' : ''}
                                       ${isCurrent ? 'text-blue-600 scale-110' : ''} 
-                                      ${isRemaining ? 'text-slate-300 opacity-100' : ''}
+                                      ${isRemaining ? 'text-muted-foreground opacity-100' : ''}
                                   `}
                     >
                       {/* Show actual user input if current, otherwise target char */}
@@ -367,7 +370,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
 
                   {/* Ghost Target Hint (if typing) - Moved outside relative span to center correctly */}
                   {isCurrent && userInput[idx] && userInput[idx] !== char && (
-                    <div className="absolute top-full mt-2 text-sm font-bold text-slate-300 uppercase tracking-widest">
+                    <div className="absolute top-full mt-2 text-sm font-bold text-muted-foreground uppercase tracking-widest">
                       {char}
                     </div>
                   )}
@@ -377,14 +380,14 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
           </div>
 
           {/* Visual Guide / Underline */}
-          <div className="w-64 h-px bg-slate-200 mt-6 rounded-full"></div>
+          <div className="w-64 h-px bg-muted mt-6 rounded-full"></div>
         </div>
 
         {/* Peripheral Words (Floating Text) */}
         {/* Previous Word (Left) */}
         {currentIndex > 0 && (
           <div className="hidden lg:flex absolute left-10 top-1/2 -translate-y-1/2 flex-col items-end opacity-30 transform -translate-x-4 blur-[1px] transition-all duration-500">
-            <span className="text-4xl font-bold text-slate-400">
+            <span className="text-4xl font-bold text-muted-foreground">
               {words[currentIndex - 1].word}
             </span>
           </div>
@@ -393,10 +396,10 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
         {/* Next Word (Right) */}
         {currentIndex < words.length - 1 && (
           <div className="hidden lg:flex absolute right-10 top-1/2 -translate-y-1/2 flex-col items-start opacity-30 transform translate-x-4 blur-[0.5px] transition-all duration-500">
-            <span className="text-4xl font-bold text-slate-400">
+            <span className="text-4xl font-bold text-muted-foreground">
               {words[currentIndex + 1].word}
             </span>
-            <span className="text-sm font-bold text-slate-300 mt-1 ml-1">
+            <span className="text-sm font-bold text-muted-foreground mt-1 ml-1">
               {words[currentIndex + 1].meaning}
             </span>
           </div>
@@ -405,7 +408,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
         {/* Next + 1 (Far Right) */}
         {currentIndex < words.length - 2 && (
           <div className="hidden xl:flex absolute right-0 top-1/2 -translate-y-1/2 flex-col items-start opacity-10 transform translate-x-8 blur-[2px] transition-all duration-500">
-            <span className="text-3xl font-bold text-slate-400">
+            <span className="text-3xl font-bold text-muted-foreground">
               {words[currentIndex + 2].word}
             </span>
           </div>
@@ -422,13 +425,15 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
       >
         <div className="w-full max-w-[90rem] mx-auto">
           <div className="flex justify-between items-center mb-2 px-3">
-            <div className="flex items-center gap-4 text-slate-500 text-xs font-medium">
-              <button
+            <div className="flex items-center gap-4 text-muted-foreground text-xs font-medium">
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={onBack}
-                className="flex items-center gap-1.5 hover:text-slate-800 transition-colors"
+                className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors"
               >
                 ← <span className="flex items-center gap-1.5">📝 낱말연습</span>
-              </button>
+              </Button>
             </div>
             <div className="flex gap-1.5">
               <div className="w-2 h-2 rounded-full bg-orange-500 shadow-sm"></div>

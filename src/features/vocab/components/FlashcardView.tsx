@@ -14,10 +14,12 @@ import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import { useTTS } from '../../../hooks/useTTS';
-import { useApp } from '../../../contexts/AppContext';
+import { useLayout } from '../../../contexts/LayoutContext';
 import { useFlashcardKeyboard } from '../hooks/useFlashcardKeyboard';
 import FlashcardSettingsModal from './FlashcardSettingsModal';
 import FlashcardFullscreenOverlay from './FlashcardFullscreenOverlay';
+import { Button } from '../../../components/ui';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../../../components/ui';
 
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
@@ -111,17 +113,6 @@ const useFlashcardFullscreen = (
       document.body.style.overflow = previousOverflow;
     };
   }, [isFullscreen]);
-
-  useEffect(() => {
-    if (!isFullscreen || !fullscreenMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el?.closest?.('[data-flashcard-fullscreen-menu]')) return;
-      setFullscreenMenuOpen(false);
-    };
-    globalThis.addEventListener('mousedown', handler);
-    return () => globalThis.removeEventListener('mousedown', handler);
-  }, [fullscreenMenuOpen, isFullscreen]);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(prev => !prev), []);
 
@@ -339,7 +330,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
     if (pos === 'VERB_I') return 'bg-red-100 text-red-700';
     if (pos === 'ADJ') return 'bg-purple-100 text-purple-700';
     if (pos === 'NOUN') return 'bg-green-100 text-green-700';
-    return 'bg-slate-100 text-slate-700';
+    return 'bg-muted text-muted-foreground';
   };
 
   let transformStyle = '';
@@ -355,9 +346,11 @@ const Flashcard: React.FC<FlashcardProps> = ({
   const transitionStyle = isDragging ? 'none' : 'transform 0.5s';
 
   const speakerButton = (text: string) => (
-    <button
+    <Button
+      variant="ghost"
+      size="auto"
       type="button"
-      className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors z-10"
+      className="absolute top-4 right-4 p-2 rounded-full text-muted-foreground hover:bg-muted hover:text-indigo-600 transition-colors z-10"
       onClick={e => {
         e.stopPropagation();
         onSpeak(text);
@@ -366,11 +359,13 @@ const Flashcard: React.FC<FlashcardProps> = ({
       aria-label="Speak"
     >
       <Volume2 className="w-5 h-5" />
-    </button>
+    </Button>
   );
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="auto"
       type="button"
       className="perspective-1000 w-full max-w-2xl h-96 relative group select-none touch-none bg-transparent border-none p-0 outline-none"
       onClick={onFlip}
@@ -405,17 +400,17 @@ const Flashcard: React.FC<FlashcardProps> = ({
         )}
 
         {/* Front */}
-        <div className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 text-center">
+        <div className="absolute w-full h-full backface-hidden bg-card rounded-2xl shadow-xl border border-border flex flex-col items-center justify-center p-8 text-center">
           {speakerButton(card.korean)}
           {cardFront === 'KOREAN' ? (
-            <h3 className="text-5xl font-bold text-slate-900 leading-tight">{card.korean}</h3>
+            <h3 className="text-5xl font-bold text-foreground leading-tight">{card.korean}</h3>
           ) : (
-            <h3 className="text-4xl font-medium text-slate-800 leading-tight">{meaning}</h3>
+            <h3 className="text-4xl font-medium text-muted-foreground leading-tight">{meaning}</h3>
           )}
         </div>
 
         {/* Back */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+        <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-card rounded-2xl shadow-xl border border-border flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
           {speakerButton(card.korean)}
           {card.partOfSpeech && (
             <div
@@ -427,23 +422,29 @@ const Flashcard: React.FC<FlashcardProps> = ({
           {cardFront === 'KOREAN' ? (
             <>
               <p className="text-3xl font-medium text-indigo-600 mb-2">{meaning}</p>
-              {card.hanja && <p className="text-lg text-slate-500 mb-4">漢字: {card.hanja}</p>}
+              {card.hanja && (
+                <p className="text-lg text-muted-foreground mb-4">漢字: {card.hanja}</p>
+              )}
             </>
           ) : (
             <>
               <h3 className="text-5xl font-bold text-indigo-600 mb-2">{card.korean}</h3>
-              {card.hanja && <p className="text-lg text-slate-500 mb-2">漢字: {card.hanja}</p>}
+              {card.hanja && (
+                <p className="text-lg text-muted-foreground mb-2">漢字: {card.hanja}</p>
+              )}
             </>
           )}
           {card.exampleSentence && (
-            <div className="bg-slate-50 p-3 rounded-lg w-full max-w-lg mt-4">
-              <p className="text-slate-800 text-base mb-1">{card.exampleSentence}</p>
-              {exampleTranslation && <p className="text-slate-500 text-sm">{exampleTranslation}</p>}
+            <div className="bg-muted p-3 rounded-lg w-full max-w-lg mt-4">
+              <p className="text-muted-foreground text-base mb-1">{card.exampleSentence}</p>
+              {exampleTranslation && (
+                <p className="text-muted-foreground text-sm">{exampleTranslation}</p>
+              )}
             </div>
           )}
         </div>
       </div>
-    </button>
+    </Button>
   );
 };
 
@@ -465,32 +466,50 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
 }) => {
   const containerClass = isFullscreen
     ? 'flex items-center justify-between max-w-4xl mx-auto'
-    : 'w-full max-w-4xl bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-4';
+    : 'w-full max-w-4xl bg-card rounded-2xl border border-border px-4 py-3 flex items-center justify-between gap-4';
 
   const rateButtons =
     ratingMode === 'PASS_FAIL' ? (
       <>
-        <button
-          onClick={() => onRate(false)}
-          className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
-          title="Forgot (Left Arrow)"
-        >
-          <XCircle className="w-6 h-6" />
-        </button>
-        <span className="px-4 py-2 text-slate-600 font-medium">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={() => onRate(false)}
+              aria-label="Forgot (Left Arrow)"
+              className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">Forgot (Left Arrow)</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+        <span className="px-4 py-2 text-muted-foreground font-medium">
           {cardIndex + 1} / {totalCards}
         </span>
-        <button
-          onClick={() => onRate(true)}
-          className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
-          title="Remembered (Right Arrow)"
-        >
-          <CheckCircle className="w-6 h-6" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={() => onRate(true)}
+              aria-label="Remembered (Right Arrow)"
+              className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
+            >
+              <CheckCircle className="w-6 h-6" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">Remembered (Right Arrow)</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
       </>
     ) : (
       <div className="flex items-center gap-2">
-        <span className="mr-2 text-slate-400 font-medium text-sm">
+        <span className="mr-2 text-muted-foreground font-medium text-sm">
           {cardIndex + 1} / {totalCards}
         </span>
         {(
@@ -501,69 +520,108 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
             { val: 4, label: 'Easy', color: 'green' },
           ] as const
         ).map(b => (
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             key={b.val}
             onClick={() => onRate(b.val)}
             className={`px-3 py-2 rounded-lg bg-${b.color}-50 text-${b.color}-600 font-bold hover:bg-${b.color}-100 transition-colors`}
-            title={`${b.label} (${b.val})`}
           >
             {b.val}. {b.label}
-          </button>
+          </Button>
         ))}
       </div>
     );
 
   return (
     <div className={containerClass}>
-      <button
+      <Button
+        variant="ghost"
+        size="auto"
         type="button"
         className="flex items-center gap-2 cursor-pointer select-none group"
         onClick={onToggleTrackProgress}
       >
-        <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+        <span className="text-sm font-medium text-muted-foreground group-hover:text-muted-foreground transition-colors">
           {labels.trackProgress || '跟踪进度'}
         </span>
         <div
-          className={`w-10 h-6 rounded-full transition-colors relative ${trackProgress ? 'bg-indigo-600' : 'bg-slate-300'}`}
+          className={`w-10 h-6 rounded-full transition-colors relative ${trackProgress ? 'bg-indigo-600' : 'bg-muted'}`}
         >
           <div
-            className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${trackProgress ? 'translate-x-5' : 'translate-x-1'}`}
+            className={`absolute top-1 w-4 h-4 bg-card rounded-full shadow transition-transform ${trackProgress ? 'translate-x-5' : 'translate-x-1'}`}
           />
         </div>
-      </button>
+      </Button>
 
       <div className="flex items-center gap-2">{rateButtons}</div>
 
       <div className="flex items-center gap-1">
-        <button
-          onClick={onUndo}
-          className={`p-2.5 rounded-lg transition-colors ${canUndo ? 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' : 'text-slate-300 cursor-not-allowed'}`}
-          disabled={!canUndo}
-          title={labels.undo || '撤销'}
-        >
-          <Undo2 className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onToggleRandom}
-          className={`p-2.5 rounded-lg transition-colors ${isRandom ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
-          title={labels.randomMode || '随机模式'}
-        >
-          <Shuffle className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onShowSettings}
-          className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          title={labels.settings || '设置'}
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onToggleFullscreen}
-          className="p-2.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          title={labels.fullscreen || '全屏'}
-        >
-          {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onUndo}
+              aria-label={labels.undo || '撤销'}
+              className={`p-2.5 rounded-lg transition-colors ${canUndo ? 'text-muted-foreground hover:bg-muted hover:text-muted-foreground' : 'text-muted-foreground cursor-not-allowed'}`}
+              disabled={!canUndo}
+            >
+              <Undo2 className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">{labels.undo || '撤销'}</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onToggleRandom}
+              aria-label={labels.randomMode || '随机模式'}
+              className={`p-2.5 rounded-lg transition-colors ${isRandom ? 'bg-indigo-100 text-indigo-600' : 'text-muted-foreground hover:bg-muted hover:text-muted-foreground'}`}
+            >
+              <Shuffle className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">{labels.randomMode || '随机模式'}</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onShowSettings}
+              aria-label={labels.settings || '设置'}
+              className="p-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">{labels.settings || '设置'}</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={onToggleFullscreen}
+              aria-label={labels.fullscreen || '全屏'}
+              className="p-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors"
+            >
+              {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">{labels.fullscreen || '全屏'}</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
       </div>
     </div>
   );
@@ -584,7 +642,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
-    const { sidebarHidden, setSidebarHidden } = useApp();
+    const { sidebarHidden, setSidebarHidden } = useLayout();
 
     const { localSettings, setLocalSettings, showSettings, setShowSettings } =
       useFlashcardSettings(settings);
@@ -662,7 +720,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     }, [setTrackProgress]);
 
     if (!currentCard) {
-      return <div className="text-center text-slate-500">{labels.noWords}</div>;
+      return <div className="text-center text-muted-foreground">{labels.noWords}</div>;
     }
 
     const toolbar = (

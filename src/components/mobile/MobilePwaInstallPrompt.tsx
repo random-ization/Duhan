@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -90,22 +90,22 @@ export function MobilePwaInstallPrompt() {
 
   return (
     <div className="md:hidden fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+110px)] z-50">
-      <div className="rounded-2xl border-2 border-slate-900 bg-white shadow-2xl p-3 flex items-start gap-3">
+      <div className="rounded-2xl border-2 border-foreground bg-card shadow-2xl p-3 flex items-start gap-3">
         <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center shrink-0">
           <Download size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-slate-900">
+          <p className="text-sm font-black text-foreground">
             {t('pwa.install.title', { defaultValue: 'Install DuHan App' })}
           </p>
           {canPromptInstall ? (
-            <p className="mt-1 text-xs text-slate-600 leading-5">
+            <p className="mt-1 text-xs text-muted-foreground leading-5">
               {t('pwa.install.androidHint', {
                 defaultValue: 'Install for faster launch and a full-screen mobile experience.',
               })}
             </p>
           ) : (
-            <p className="mt-1 text-xs text-slate-600 leading-5">
+            <p className="mt-1 text-xs text-muted-foreground leading-5">
               {t('pwa.install.iosHint', {
                 defaultValue: 'In Safari, tap Share and choose Add to Home Screen.',
               })}
@@ -127,7 +127,7 @@ export function MobilePwaInstallPrompt() {
           variant="ghost"
           size="icon"
           onClick={dismiss}
-          className="h-8 w-8 rounded-lg text-slate-500"
+          className="h-8 w-8 rounded-lg text-muted-foreground"
           aria-label={t('common.close', { defaultValue: 'Close' })}
         >
           <X size={16} />

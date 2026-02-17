@@ -14,7 +14,7 @@ import {
   SpellCheck,
   X,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,9 @@ import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileVocabDashboard } from '../components/mobile/MobileVocabDashboard';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
+import { Button } from '../components/ui';
+import { Input } from '../components/ui';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
@@ -38,6 +41,7 @@ const VocabBookPage: React.FC = () => {
   const [exportMode, setExportMode] = useState<ExportMode>('A4_DICTATION');
   const [exportShuffle, setExportShuffle] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [masteryPendingId, setMasteryPendingId] = useState<string | null>(null);
   // Use state for 'now' to ensure purity during render
   const [now] = useState(() => Date.now());
 
@@ -203,25 +207,28 @@ const VocabBookPage: React.FC = () => {
   };
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b-[3px] border-indigo-100">
+    <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-indigo-100 dark:border-indigo-300/20">
       <div className="max-w-6xl mx-auto px-4 py-5">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => navigate('/dashboard')}
-              className="p-2.5 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)]"
+              className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.18)]"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
-            </button>
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            </Button>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)] border-[3px] border-indigo-300">
-                <BookOpen className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-300/70 dark:to-purple-300/70 rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)] dark:shadow-[0_8px_20px_rgba(165,180,252,0.2)] border-[3px] border-indigo-300 dark:border-indigo-300/35">
+                <BookOpen className="w-7 h-7 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-3xl font-black text-foreground tracking-tight">
                   {labels.dashboard?.vocab?.title || 'Vocab Book'}
                 </h1>
-                <p className="text-slate-500 font-bold text-sm">
+                <p className="text-muted-foreground font-bold text-sm">
                   {labels.dashboard?.vocab?.subtitle || 'SRS Smart Review'}
                 </p>
               </div>
@@ -230,39 +237,47 @@ const VocabBookPage: React.FC = () => {
 
           <div className="flex items-center gap-3">
             {stats.dueNow > 0 && (
-              <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-[3px] border-red-200 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)]">
-                <div className="p-2 bg-red-500 rounded-xl">
-                  <Zap className="w-5 h-5 text-white" />
+              <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-400/12 dark:to-orange-400/12 rounded-2xl border-[3px] border-red-200 dark:border-red-300/25 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_15px_rgba(252,165,165,0.12)]">
+                <div className="p-2 bg-red-500 dark:bg-red-400/75 rounded-xl">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-red-600">{stats.dueNow}</p>
-                  <p className="text-xs font-bold text-red-400">
+                  <p className="text-2xl font-black text-red-600 dark:text-red-200">
+                    {stats.dueNow}
+                  </p>
+                  <p className="text-xs font-bold text-red-400 dark:text-red-300">
                     {labels.vocab?.dueNow || labels.dashboard?.vocab?.dueNow || 'Due now'}
                   </p>
                 </div>
               </div>
             )}
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => setExportOpen(true)}
               disabled={visibleItems.length === 0 || loading}
-              className="px-4 py-3 rounded-2xl bg-white border-[3px] border-slate-200 hover:border-indigo-300 font-black text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              loading={loading}
+              loadingText={labels.vocabBook?.exportPdf || 'Export PDF'}
+              loadingIconClassName="w-5 h-5"
+              className="px-4 py-3 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 font-black text-muted-foreground shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.16)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
-              <FileDown className="w-5 h-5 text-indigo-600" />
+              <FileDown className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
               {labels.vocabBook?.exportPdf || 'Export PDF'}
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
               type="text"
               placeholder={labels.vocab?.search || 'Search words...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border-[3px] border-slate-200 rounded-2xl text-sm font-medium focus:ring-0 focus:border-indigo-300 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
+              className="h-auto w-full pl-12 pr-4 py-3 bg-card border-[3px] border-border rounded-2xl text-sm font-medium focus:ring-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] dark:focus:shadow-[0_0_0_4px_rgba(165,180,252,0.18)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
             />
           </div>
 
@@ -273,21 +288,24 @@ const VocabBookPage: React.FC = () => {
               if (isActive) {
                 if (btn.color === 'blue') {
                   activeClasses =
-                    'bg-blue-500 text-white border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)]';
+                    'bg-blue-500 text-primary-foreground border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)] dark:bg-blue-400/80 dark:border-blue-300/35 dark:shadow-[0_4px_12px_rgba(147,197,253,0.2)]';
                 } else if (btn.color === 'amber') {
                   activeClasses =
-                    'bg-amber-500 text-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)]';
+                    'bg-amber-500 text-primary-foreground border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)] dark:bg-amber-400/80 dark:border-amber-300/35 dark:shadow-[0_4px_12px_rgba(253,230,138,0.2)]';
                 } else {
                   activeClasses =
-                    'bg-emerald-600 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]';
+                    'bg-emerald-600 text-primary-foreground border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)] dark:bg-emerald-400/80 dark:border-emerald-300/35 dark:shadow-[0_4px_12px_rgba(110,231,183,0.2)]';
                 }
               } else {
                 activeClasses =
-                  'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+                  'bg-card text-muted-foreground border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
               }
 
               return (
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   key={btn.key}
                   onClick={() => setActiveCategory(btn.key)}
                   className={`px-4 py-2.5 rounded-xl font-bold text-sm border-[3px] transition-all duration-200 ${activeClasses}`}
@@ -295,12 +313,12 @@ const VocabBookPage: React.FC = () => {
                   {btn.label}
                   <span
                     className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
-                      isActive ? 'bg-white/20' : 'bg-slate-100'
+                      isActive ? 'bg-card/20' : 'bg-muted'
                     }`}
                   >
                     {btn.count}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -317,10 +335,12 @@ const VocabBookPage: React.FC = () => {
     if (loading) {
       return (
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4 animate-pulse">
-            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-400/14 rounded-2xl flex items-center justify-center mb-4 animate-pulse">
+            <Loader2 className="w-8 h-8 text-indigo-500 dark:text-indigo-300 animate-spin" />
           </div>
-          <p className="text-slate-400 font-bold">{labels.common?.loading || 'Loading...'}</p>
+          <p className="text-muted-foreground font-bold">
+            {labels.common?.loading || 'Loading...'}
+          </p>
         </div>
       );
     }
@@ -332,10 +352,10 @@ const VocabBookPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center py-20"
         >
-          <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-[28px] flex items-center justify-center mb-6 border-[3px] border-indigo-200 shadow-[0_8px_30px_rgba(99,102,241,0.15)]">
-            <BookOpen className="w-12 h-12 text-indigo-400" />
+          <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-400/12 dark:to-purple-400/12 rounded-[28px] flex items-center justify-center mb-6 border-[3px] border-indigo-200 dark:border-indigo-300/25 shadow-[0_8px_30px_rgba(99,102,241,0.15)] dark:shadow-[0_8px_30px_rgba(165,180,252,0.15)]">
+            <BookOpen className="w-12 h-12 text-indigo-400 dark:text-indigo-200" />
           </div>
-          <p className="text-xl font-black text-slate-700 mb-2">
+          <p className="text-xl font-black text-muted-foreground mb-2">
             {(() => {
               if (trimmedSearch) {
                 return labels.dashboard?.vocab?.noMatch || 'No results found';
@@ -343,7 +363,7 @@ const VocabBookPage: React.FC = () => {
               return labels.vocab?.noDueNow || labels.dashboard?.vocab?.noDueNow || 'No words yet';
             })()}
           </p>
-          <p className="text-slate-400 font-medium text-center max-w-md">
+          <p className="text-muted-foreground font-medium text-center max-w-md">
             {(() => {
               if (trimmedSearch) {
                 return '';
@@ -365,28 +385,48 @@ const VocabBookPage: React.FC = () => {
           const id = String(word.id);
           const isExpanded = expandedId === id;
           const isMastered = word.progress.status === 'MASTERED';
+          const isMasteryPending = masteryPendingId === id;
 
           return (
             <div
               key={id}
-              className="bg-white rounded-2xl border-[3px] border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
+              className="bg-card rounded-2xl border-[3px] border-border shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
             >
               <div className="flex items-center justify-between gap-3 px-5 py-4">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => toggleExpand(id)}
-                  className="flex-1 text-left min-w-0"
+                  className="flex-1 min-w-0 justify-start text-left"
                 >
-                  <div className="text-xl font-black text-slate-900 truncate">{word.word}</div>
-                </button>
+                  <div className="text-xl font-black text-foreground truncate">{word.word}</div>
+                </Button>
 
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={async e => {
+                    if (masteryPendingId !== null) return;
                     e.preventDefault();
                     e.stopPropagation();
-                    await setMastery({ wordId: word.id, mastered: !isMastered });
+                    try {
+                      setMasteryPendingId(id);
+                      await setMastery({ wordId: word.id, mastered: !isMastered });
+                    } finally {
+                      setMasteryPendingId(current => (current === id ? null : current));
+                    }
                   }}
-                  className="p-2 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                  disabled={masteryPendingId !== null}
+                  loading={isMasteryPending}
+                  loadingText={
+                    <span className="sr-only">
+                      {labels.vocabBook?.saving || labels.common?.loading || 'Saving'}
+                    </span>
+                  }
+                  loadingIconClassName="w-5 h-5"
+                  className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
                   aria-label={
                     isMastered
                       ? labels.vocabBook?.unmarkMastered || 'Unmark mastered'
@@ -394,17 +434,19 @@ const VocabBookPage: React.FC = () => {
                   }
                 >
                   {isMastered ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
                   ) : (
-                    <Circle className="w-5 h-5 text-slate-400" />
+                    <Circle className="w-5 h-5 text-muted-foreground" />
                   )}
-                </button>
+                </Button>
               </div>
 
               {isExpanded && (
                 <div className="px-5 pb-5">
-                  <div className="pt-3 border-t-2 border-dashed border-slate-100">
-                    <div className="text-slate-700 font-bold leading-relaxed">{word.meaning}</div>
+                  <div className="pt-3 border-t-2 border-dashed border-border">
+                    <div className="text-muted-foreground font-bold leading-relaxed">
+                      {word.meaning}
+                    </div>
                   </div>
                 </div>
               )}
@@ -422,187 +464,226 @@ const VocabBookPage: React.FC = () => {
     const currentButtonText = exporting ? exportingText : buttonText;
 
     return (
-      <AnimatePresence>
-        {exportOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-4"
-            onClick={() => {
-              if (!exporting) {
-                setExportOpen(false);
-              }
-            }}
+      <Dialog
+        open={exportOpen}
+        onOpenChange={open => {
+          if (!open && !exporting) {
+            setExportOpen(false);
+          }
+        }}
+      >
+        <DialogPortal>
+          <DialogOverlay
+            unstyled
+            forceMount
+            closeOnClick={!exporting}
+            className="fixed inset-0 z-[80] bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+          />
+          <DialogContent
+            unstyled
+            forceMount
+            closeOnEscape={!exporting}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-[81] flex items-end sm:items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
           >
             <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
+              initial={false}
+              animate={exportOpen ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-              className="w-full max-w-xl bg-white rounded-[28px] border-[3px] border-slate-200 shadow-2xl p-6"
-              onClick={e => e.stopPropagation()}
+              className="pointer-events-auto w-full max-w-xl bg-card rounded-[28px] border-[3px] border-border shadow-2xl p-6"
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-xs font-black text-slate-400 tracking-wider uppercase">
+                  <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
                     {labels.vocabBook?.exportPdfTitle || 'Export PDF'}
                   </p>
-                  <h2 className="text-2xl font-black text-slate-900">
+                  <h2 className="text-2xl font-black text-foreground">
                     {labels.vocabBook?.wordSheetTitle || 'Word Sheet'}
                   </h2>
-                  <p className="text-sm font-bold text-slate-500 mt-1">{exportSubtitle}</p>
+                  <p className="text-sm font-bold text-muted-foreground mt-1">{exportSubtitle}</p>
                 </div>
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => {
                     if (!exporting) {
                       setExportOpen(false);
                     }
                   }}
-                  className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-40"
+                  className="p-2 rounded-xl hover:bg-muted disabled:opacity-40"
                   aria-label={labels.common?.close || 'Close'}
                   disabled={exporting}
                 >
-                  <X className="w-5 h-5 text-slate-600" />
-                </button>
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setExportMode('A4_DICTATION')}
-                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
                     exportMode === 'A4_DICTATION'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                      : 'border-border bg-card hover:border-border'
                   }`}
                 >
-                  <p className="font-black text-slate-900">
+                  <p className="font-black text-foreground">
                     {labels.vocabBook?.exportModes?.a4Title || 'A4 Dictation'}
                   </p>
-                  <p className="text-xs font-bold text-slate-500 mt-1">
+                  <p className="text-xs font-bold text-muted-foreground mt-1">
                     {labels.vocabBook?.exportModes?.a4Desc || 'Two-way test'}
                   </p>
-                </button>
+                </Button>
 
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setExportMode('LANG_LIST')}
-                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
                     exportMode === 'LANG_LIST'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                      : 'border-border bg-card hover:border-border'
                   }`}
                 >
-                  <p className="font-black text-slate-900">{langListLabel}</p>
-                  <p className="text-xs font-bold text-slate-500 mt-1">{langListDesc}</p>
-                </button>
+                  <p className="font-black text-foreground">{langListLabel}</p>
+                  <p className="text-xs font-bold text-muted-foreground mt-1">{langListDesc}</p>
+                </Button>
 
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setExportMode('KO_LIST')}
-                  className={`p-4 rounded-2xl border-[3px] text-left transition-all ${
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
                     exportMode === 'KO_LIST'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)]'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                      : 'border-border bg-card hover:border-border'
                   }`}
                 >
-                  <p className="font-black text-slate-900">
+                  <p className="font-black text-foreground">
                     {labels.vocabBook?.exportModes?.koListTitle || 'Korean List'}
                   </p>
-                  <p className="text-xs font-bold text-slate-500 mt-1">
+                  <p className="text-xs font-bold text-muted-foreground mt-1">
                     {labels.vocabBook?.exportModes?.koListDesc || 'Write the meaning'}
                   </p>
-                </button>
+                </Button>
               </div>
 
-              <div className="mt-5 rounded-2xl border-2 border-slate-100 bg-slate-50 p-4 flex items-center justify-between">
-                <span className="font-black text-slate-800">
+              <div className="mt-5 rounded-2xl border-2 border-border bg-muted p-4 flex items-center justify-between">
+                <span className="font-black text-muted-foreground">
                   {labels.vocabBook?.exportModes?.shuffleLabel || 'Shuffle'}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="auto"
                   onClick={() => setExportShuffle(v => !v)}
                   className={`w-12 h-7 rounded-full transition-all relative ${
-                    exportShuffle ? 'bg-orange-500' : 'bg-slate-300'
+                    exportShuffle ? 'bg-orange-500 dark:bg-orange-400/80' : 'bg-muted'
                   }`}
                   aria-label="shuffle"
                 >
                   <span
-                    className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
+                    className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${
                       exportShuffle ? 'left-6' : 'left-1'
                     }`}
                   />
-                </button>
+                </Button>
               </div>
 
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={onExport}
                 disabled={exporting || visibleItems.length === 0}
-                className="mt-6 w-full py-4 rounded-2xl bg-orange-500 text-white font-black border-[3px] border-orange-400 shadow-[0_12px_35px_rgba(249,115,22,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
+                loading={exporting}
+                loadingText={currentButtonText}
+                loadingIconClassName="w-5 h-5"
+                className="mt-6 w-full py-4 rounded-2xl bg-orange-500 dark:bg-orange-400/80 text-primary-foreground font-black border-[3px] border-orange-400 dark:border-orange-300/35 shadow-[0_12px_35px_rgba(249,115,22,0.25)] dark:shadow-[0_12px_35px_rgba(253,186,116,0.2)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {currentButtonText}
-              </button>
+              </Button>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
     );
   };
 
   const renderFloatingActions = () => (
     <div className="fixed inset-x-0 bottom-4 z-[70] px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white/90 backdrop-blur-xl border-[3px] border-slate-200 rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
+        <div className="bg-card/90 backdrop-blur-xl border-[3px] border-border rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
           <div className="grid grid-cols-4 gap-2">
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => startLearning('immerse')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <Layers className="w-5 h-5 text-indigo-600" />
-                <span className="text-xs font-black text-slate-800">
+                <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+                <span className="text-xs font-black text-muted-foreground">
                   {labels.vocab?.modeImmersive || 'Immersive'}
                 </span>
               </div>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => startLearning('listen')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <Headphones className="w-5 h-5 text-amber-700" />
-                <span className="text-xs font-black text-slate-800">
+                <Headphones className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+                <span className="text-xs font-black text-muted-foreground">
                   {labels.vocab?.modeListen || 'Listen'}
                 </span>
               </div>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => startLearning('dictation')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <PencilLine className="w-5 h-5 text-rose-600" />
-                <span className="text-xs font-black text-slate-800">
+                <PencilLine className="w-5 h-5 text-rose-600 dark:text-rose-300" />
+                <span className="text-xs font-black text-muted-foreground">
                   {labels.vocab?.modeDictation || 'Dictation'}
                 </span>
               </div>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => startLearning('spelling')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <SpellCheck className="w-5 h-5 text-emerald-700" />
-                <span className="text-xs font-black text-slate-800">
+                <SpellCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
+                <span className="text-xs font-black text-muted-foreground">
                   {labels.vocab?.modeSpelling || 'Spelling'}
                 </span>
               </div>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -626,7 +707,7 @@ const VocabBookPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-400/8 dark:via-background dark:to-purple-400/8">
       {renderHeader()}
       <div className="max-w-6xl mx-auto px-4 py-8 pb-28">{renderContent()}</div>
       {renderExportModal()}

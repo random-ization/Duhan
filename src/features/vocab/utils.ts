@@ -21,7 +21,7 @@ export const getPosStyle = (pos: string | undefined) => {
   if (lower.includes('副') || lower.includes('adv')) return 'bg-amber-100 text-amber-800';
 
   // Others (Gray)
-  return 'bg-slate-100 text-slate-600';
+  return 'bg-muted text-muted-foreground';
 };
 
 export const shuffleArray = <T>(array: T[]): T[] => {

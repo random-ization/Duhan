@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Trophy, RefreshCw, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLabels } from '../../../utils/i18n';
+import { Button } from '../../../components/ui';
 
 interface VocabItem {
   id: string;
@@ -120,32 +121,35 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
   };
 
   // Helper function to handle successful match
-  const handleMatchSuccess = useCallback((firstId: string, secondId: string, currentMoves: number) => {
-    setCardStates(prev => ({
-      ...prev,
-      [firstId]: 'matched',
-      [secondId]: 'matched',
-    }));
-    setCards(prev =>
-      prev.map(c => (c.id === firstId || c.id === secondId ? { ...c, isMatched: true } : c))
-    );
-    setMatchedPairs(p => {
-      const newPairs = p + 1;
-      if (newPairs >= totalPairs) {
-        setGameState('COMPLETE');
-        onComplete?.(timer, currentMoves);
-      }
-      return newPairs;
-    });
-    setSelectedCards([]);
-    setIsLocked(false);
-  }, [onComplete, timer, totalPairs]);
+  const handleMatchSuccess = useCallback(
+    (firstId: string, secondId: string, currentMoves: number) => {
+      setCardStates(prev => ({
+        ...prev,
+        [firstId]: 'matched',
+        [secondId]: 'matched',
+      }));
+      setCards(prev =>
+        prev.map(c => (c.id === firstId || c.id === secondId ? { ...c, isMatched: true } : c))
+      );
+      setMatchedPairs(p => {
+        const newPairs = p + 1;
+        if (newPairs >= totalPairs) {
+          setGameState('COMPLETE');
+          onComplete?.(timer, currentMoves);
+        }
+        return newPairs;
+      });
+      setSelectedCards([]);
+      setIsLocked(false);
+    },
+    [onComplete, timer, totalPairs]
+  );
 
   // Helper function to get text color class based on card state
   const getTextColorClass = (state: CardState): string => {
     if (state === 'matched') return 'text-white';
     if (state === 'wrong') return 'text-red-600';
-    return 'text-slate-900';
+    return 'text-foreground';
   };
 
   const handleCardClick = (cardId: string) => {
@@ -205,8 +209,8 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
 
   if (words.length < totalPairs) {
     return (
-      <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
-        <p className="text-slate-500 font-medium">
+      <div className="bg-card rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-12 text-center">
+        <p className="text-muted-foreground font-medium">
           {(
             labels.vocab?.minWordsMatch || 'Need at least {count} words to start matching game'
           ).replace('{count}', String(totalPairs))}
@@ -218,40 +222,44 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
   // Victory Screen
   if (gameState === 'COMPLETE') {
     return (
-      <div className="bg-white rounded-[2.5rem] border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
+      <div className="bg-card rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-green-50" />
         <div className="relative z-10">
           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-yellow-100 flex items-center justify-center">
             <Trophy className="w-12 h-12 text-yellow-600" />
           </div>
-          <h2 className="text-4xl font-black text-slate-900 mb-2">
+          <h2 className="text-4xl font-black text-foreground mb-2">
             🎉 {labels.vocab?.matchTitle || 'Perfect Match!'}
           </h2>
-          <p className="text-slate-500 mb-6">
+          <p className="text-muted-foreground mb-6">
             {labels.vocab?.matchDesc || 'You matched all words!'}
           </p>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
-            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-              <div className="text-3xl font-black text-slate-900">{formatTime(timer)}</div>
-              <div className="text-xs text-slate-400 font-bold">{labels.vocab?.time || 'Time'}</div>
+            <div className="bg-card border-2 border-border rounded-xl p-4">
+              <div className="text-3xl font-black text-foreground">{formatTime(timer)}</div>
+              <div className="text-xs text-muted-foreground font-bold">
+                {labels.vocab?.time || 'Time'}
+              </div>
             </div>
-            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-              <div className="text-3xl font-black text-slate-900">{moves}</div>
-              <div className="text-xs text-slate-400 font-bold">
+            <div className="bg-card border-2 border-border rounded-xl p-4">
+              <div className="text-3xl font-black text-foreground">{moves}</div>
+              <div className="text-xs text-muted-foreground font-bold">
                 {labels.vocab?.moves || 'Moves'}
               </div>
             </div>
           </div>
 
-          <button
+          <Button
+            variant="ghost"
+            size="auto"
             onClick={restartGame}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-black rounded-xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-white font-black rounded-xl border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all"
           >
             <RefreshCw className="w-5 h-5" />
             {labels.vocab?.restart || 'Restart'}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -260,9 +268,9 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
   return (
     <div>
       {/* Stats Bar */}
-      <div className="bg-slate-900 text-white p-4 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex justify-between items-center mb-6">
+      <div className="bg-primary text-white p-4 rounded-2xl border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <Timer className="w-5 h-5 text-slate-400" />
+          <Timer className="w-5 h-5 text-muted-foreground" />
           <span className="font-black text-xl">{formatTime(timer)}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -271,7 +279,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
             {matchedPairs} / {totalPairs} {labels.vocab?.pairs || 'Pairs'}
           </span>
         </div>
-        <div className="text-sm font-medium text-slate-400">
+        <div className="text-sm font-medium text-muted-foreground">
           {labels.vocab?.moves || 'Moves'}: <span className="text-white font-black">{moves}</span>
         </div>
       </div>
@@ -285,10 +293,10 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
 
           if (state === 'normal') {
             cardClass +=
-              ' bg-white border-slate-900 border-b-[6px] hover:bg-slate-50 active:border-b-2 active:translate-y-1';
+              ' bg-card border-foreground border-b-[6px] hover:bg-muted active:border-b-2 active:translate-y-1';
           } else if (state === 'selected') {
             cardClass +=
-              ' bg-[#FEE500] border-slate-900 border-b-[2px] translate-y-[4px] shadow-none';
+              ' bg-[#FEE500] border-foreground border-b-[2px] translate-y-[4px] shadow-none';
           } else if (state === 'matched') {
             cardClass += ' bg-[#4ADE80] border-green-600 opacity-0 pointer-events-none';
           } else if (state === 'wrong') {
@@ -296,7 +304,9 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
           }
 
           return (
-            <button
+            <Button
+              variant="ghost"
+              size="auto"
               key={`${card.id}:${idx}`}
               onClick={() => handleCardClick(card.id)}
               disabled={state === 'matched' || isLocked}
@@ -307,7 +317,7 @@ export default function VocabMatch({ words, onComplete }: VocabMatchProps) {
               >
                 {card.content}
               </span>
-            </button>
+            </Button>
           );
         })}
       </div>

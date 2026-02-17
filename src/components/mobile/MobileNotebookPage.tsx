@@ -13,6 +13,9 @@ import { useQuery } from 'convex/react';
 import { qRef } from '../../utils/convexRefs';
 import NoteDetailModal from '../notebook/NoteDetailModal';
 import { useTranslation } from 'react-i18next';
+import { Sheet, SheetContent, SheetPortal } from '../ui';
+import { Button } from '../ui';
+import { Input } from '../ui';
 
 interface Note {
   id: string;
@@ -80,27 +83,32 @@ export const MobileNotebookPage: React.FC = () => {
   }, [notes, searchQuery]);
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 flex flex-col">
+    <div className="min-h-[100dvh] bg-muted flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10">
+      <div className="bg-card border-b border-border p-4 sticky top-0 z-10">
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2">
-            <ArrowLeft className="w-6 h-6 text-slate-900" />
-          </button>
-          <h1 className="text-xl font-black text-slate-900">
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={() => navigate('/dashboard')}
+            className="p-2 -ml-2"
+          >
+            <ArrowLeft className="w-6 h-6 text-foreground" />
+          </Button>
+          <h1 className="text-xl font-black text-foreground">
             {t('notes.title', { defaultValue: 'Notebook' })}
           </h1>
         </div>
 
         {/* Search */}
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={t('notes.searchPlaceholder', { defaultValue: 'Search notes...' })}
-            className="w-full bg-slate-100 h-10 rounded-xl pl-9 pr-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full bg-muted h-10 rounded-xl pl-9 pr-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
 
@@ -110,18 +118,20 @@ export const MobileNotebookPage: React.FC = () => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
                   isActive
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                    : 'bg-white text-slate-600 border-slate-200'
+                    : 'bg-card text-muted-foreground border-border'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -134,26 +144,28 @@ export const MobileNotebookPage: React.FC = () => {
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
           </div>
         ) : filteredNotes.length === 0 ? (
-          <div className="py-20 text-center text-slate-400">
+          <div className="py-20 text-center text-muted-foreground">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="font-bold">{t('notes.noNotes', { defaultValue: 'No notes found' })}</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {filteredNotes.map(note => (
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 key={note.id}
                 onClick={() => setSelectedNoteId(note.id)}
-                className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-all text-left"
+                className="bg-card p-4 rounded-2xl border-2 border-border shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-all text-left"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-slate-900 line-clamp-1 text-lg">{note.title}</h3>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-500 rounded-md shrink-0">
+                  <h3 className="font-bold text-foreground line-clamp-1 text-lg">{note.title}</h3>
+                  <span className="text-[10px] font-bold px-2 py-1 bg-muted text-muted-foreground rounded-md shrink-0">
                     {note.type}
                   </span>
                 </div>
                 {note.preview && (
-                  <p className="text-sm text-slate-500 line-clamp-2 mb-3 leading-relaxed">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
                     {note.preview}
                   </p>
                 )}
@@ -167,35 +179,47 @@ export const MobileNotebookPage: React.FC = () => {
                     </span>
                   ))}
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
         )}
       </div>
 
       {/* Detail Sheet/Modal */}
-      {selectedNoteId && (
-        <div className="fixed inset-0 z-50 bg-white md:hidden animate-in slide-in-from-bottom">
-          <div className="h-full overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center gap-3">
-              <button
-                onClick={() => setSelectedNoteId(null)}
-                className="p-2 -ml-2 bg-slate-100 rounded-full"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <span className="font-bold">
-                {t('notes.details', { defaultValue: 'Note Details' })}
-              </span>
-            </div>
-            <NoteDetailModal
-              noteId={selectedNoteId}
-              onClose={() => setSelectedNoteId(null)}
-              onDelete={() => {}} // Auto refresh
-            />
-          </div>
-        </div>
-      )}
+      <Sheet open={selectedNoteId !== null} onOpenChange={open => !open && setSelectedNoteId(null)}>
+        <SheetPortal>
+          <SheetContent
+            unstyled
+            forceMount
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-50 bg-card md:hidden transition-transform duration-300 data-[state=open]:translate-y-0 data-[state=closed]:translate-y-[105%] data-[state=closed]:pointer-events-none"
+          >
+            {selectedNoteId && (
+              <div className="h-full overflow-y-auto">
+                <div className="sticky top-0 bg-card border-b p-4 flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => setSelectedNoteId(null)}
+                    className="p-2 -ml-2 bg-muted rounded-full"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="font-bold">
+                    {t('notes.details', { defaultValue: 'Note Details' })}
+                  </span>
+                </div>
+                <NoteDetailModal
+                  noteId={selectedNoteId}
+                  onClose={() => setSelectedNoteId(null)}
+                  onDelete={() => {}} // Auto refresh
+                />
+              </div>
+            )}
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
     </div>
   );
 };

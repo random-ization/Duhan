@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { cleanDictionaryText } from '../../utils/dictionaryMeaning';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Button } from '../ui';
+import { Input } from '../ui';
+import { DropdownMenu, DropdownMenuAnchor, DropdownMenuContent } from '../ui';
 
 type DictionaryEntry = {
   targetCode: string;
@@ -30,7 +31,6 @@ type SearchResult = {
 const DictionarySearchDropdown: React.FC = () => {
   const { language } = useAuth();
   const { t } = useTranslation();
-  const containerRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -97,17 +97,6 @@ const DictionarySearchDropdown: React.FC = () => {
     return () => globalThis.clearTimeout(handle);
   }, [open, query, runSearch]);
 
-  useEffect(() => {
-    const onDocMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, []);
-
   const entries = results?.entries ?? [];
 
   const renderDropdownContent = () => {
@@ -117,7 +106,7 @@ const DictionarySearchDropdown: React.FC = () => {
 
     if (entries.length === 0) {
       return (
-        <div className="p-3 text-sm text-slate-500">
+        <div className="p-3 text-sm text-muted-foreground">
           {t('dashboard.dictionary.noResults', { defaultValue: 'No results' })}
         </div>
       );
@@ -143,16 +132,16 @@ const DictionarySearchDropdown: React.FC = () => {
                   setQuery(entry.word);
                   setOpen(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50"
+                className="w-full text-left px-3 py-2 hover:bg-accent"
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <div className="font-black text-slate-900">{entry.word}</div>
-                  <div className="text-xs text-slate-500 truncate">
+                  <div className="font-black text-foreground">{entry.word}</div>
+                  <div className="text-xs text-muted-foreground truncate">
                     {entry.pos || entry.pronunciation || ''}
                   </div>
                 </div>
                 {meaning && (
-                  <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{meaning}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{meaning}</div>
                 )}
               </Button>
             </li>
@@ -162,33 +151,41 @@ const DictionarySearchDropdown: React.FC = () => {
     );
   };
 
-  const showDropdown = open && (query.trim().length >= 2 || entries.length > 0 || error);
+  const showDropdown = open && (query.trim().length >= 2 || entries.length > 0 || Boolean(error));
 
   return (
-    <div ref={containerRef} className="relative w-[280px]">
-      <div className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-2xl px-3 py-2 shadow-sm">
-        {loading ? (
-          <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-        ) : (
-          <Search className="w-4 h-4 text-slate-400" />
-        )}
-        <Input
-          value={query}
-          onChange={e => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder={t('dashboard.dictionary.placeholder', { defaultValue: 'Search dictionary' })}
-          className="w-full border-none shadow-none p-0 h-auto text-sm font-medium text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
-        />
-      </div>
+    <div className="relative w-[280px]">
+      <DropdownMenu open={showDropdown} onOpenChange={setOpen}>
+        <DropdownMenuAnchor>
+          <div className="flex items-center gap-2 bg-card border-2 border-foreground rounded-2xl px-3 py-2 shadow-sm">
+            {loading ? (
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+            ) : (
+              <Search className="w-4 h-4 text-muted-foreground" />
+            )}
+            <Input
+              value={query}
+              onChange={e => {
+                setQuery(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
+              placeholder={t('dashboard.dictionary.placeholder', {
+                defaultValue: 'Search dictionary',
+              })}
+              className="w-full border-none shadow-none p-0 h-auto text-sm font-medium text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
+            />
+          </div>
+        </DropdownMenuAnchor>
 
-      {showDropdown && (
-        <div className="absolute left-0 right-0 mt-2 bg-white border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,0.25)] overflow-hidden z-50">
+        <DropdownMenuContent
+          unstyled
+          forceMount
+          className="absolute left-0 right-0 mt-2 bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,0.25)] overflow-hidden z-50 data-[state=closed]:hidden"
+        >
           {renderDropdownContent()}
-        </div>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

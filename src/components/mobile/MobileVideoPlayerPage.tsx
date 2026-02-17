@@ -13,6 +13,7 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 import { useUserActions } from '../../hooks/useUserActions';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -191,23 +192,27 @@ export const MobileVideoPlayerPage: React.FC = () => {
 
   if (!video && !convexVideo)
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         <Loader2 className="animate-spin mx-auto" />
       </div>
     );
   if (!video)
-    return <div className="p-8 text-center text-slate-500">{t('dashboard.video.notFound')}</div>;
+    return (
+      <div className="p-8 text-center text-muted-foreground">{t('dashboard.video.notFound')}</div>
+    );
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-white">
+    <div className="flex flex-col h-[100dvh] bg-card">
       {/* 1. Stick Video Player at Top */}
       <div className="w-full aspect-video bg-black shrink-0 relative z-10">
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full backdrop-blur-md"
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <Suspense
           fallback={
             <div className="text-white flex items-center justify-center h-full">
@@ -227,38 +232,40 @@ export const MobileVideoPlayerPage: React.FC = () => {
       </div>
 
       {/* 2. Controls & Info Bar */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
+      <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="min-w-0">
-          <h1 className="font-bold text-slate-900 text-lg truncate pr-2">{video.title}</h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <h1 className="font-bold text-foreground text-lg truncate pr-2">{video.title}</h1>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" /> {video.views}
             </span>
             {video.level && (
-              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-bold uppercase">
+              <span className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-bold uppercase">
                 {video.level}
               </span>
             )}
           </div>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="auto"
           onClick={() => setShowTranslation(!showTranslation)}
           className={cn(
             'p-2 rounded-lg font-bold text-xs transition-colors flex items-center gap-1 shrink-0',
-            showTranslation ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
+            showTranslation ? 'bg-indigo-100 text-indigo-700' : 'bg-muted text-muted-foreground'
           )}
         >
           <Languages className="w-4 h-4" />
           {showTranslation
             ? t('common.on', { defaultValue: 'On' })
             : t('common.off', { defaultValue: 'Off' })}
-        </button>
+        </Button>
       </div>
 
       {/* 3. Scrollable Transcript List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50" ref={scrollAreaRef}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted" ref={scrollAreaRef}>
         {!video.transcriptData || video.transcriptData.length === 0 ? (
-          <div className="text-center py-10 text-slate-400">
+          <div className="text-center py-10 text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-2 opacity-20" />
             <p>{t('dashboard.video.noSubtitles', { defaultValue: 'No subtitles available' })}</p>
           </div>
@@ -266,7 +273,9 @@ export const MobileVideoPlayerPage: React.FC = () => {
           video.transcriptData.map((segment, index) => {
             const isActive = index === activeSegmentIndex;
             return (
-              <button
+              <Button
+                variant="ghost"
+                size="auto"
                 key={index}
                 ref={el => {
                   segmentRefs.current[index] = el;
@@ -275,11 +284,11 @@ export const MobileVideoPlayerPage: React.FC = () => {
                 className={cn(
                   'w-full text-left p-4 rounded-2xl transition-all duration-300 border-2',
                   isActive
-                    ? 'bg-white border-indigo-500 shadow-lg scale-[1.02] z-10'
-                    : 'bg-white border-transparent shadow-sm opacity-80'
+                    ? 'bg-card border-indigo-500 shadow-lg scale-[1.02] z-10'
+                    : 'bg-card border-transparent shadow-sm opacity-80'
                 )}
               >
-                <div className="text-lg font-medium text-slate-900 leading-relaxed mb-1">
+                <div className="text-lg font-medium text-foreground leading-relaxed mb-1">
                   {segment.text.split(/(\s+)/).map((part, i) => {
                     if (!part.trim()) return part;
                     return (
@@ -301,9 +310,11 @@ export const MobileVideoPlayerPage: React.FC = () => {
                   })}
                 </div>
                 {showTranslation && segment.translation && (
-                  <div className="text-sm text-slate-500 font-medium">{segment.translation}</div>
+                  <div className="text-sm text-muted-foreground font-medium">
+                    {segment.translation}
+                  </div>
                 )}
-              </button>
+              </Button>
             );
           })
         )}

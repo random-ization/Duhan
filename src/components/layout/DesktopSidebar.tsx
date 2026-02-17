@@ -8,9 +8,10 @@ import {
   useCurrentLanguage,
   useLocalizedNavigate,
 } from '../../hooks/useLocalizedNavigate';
-import { Button } from '../ui/button';
+import { Button } from '../ui';
 import { useLayout } from '../../contexts/LayoutContext';
 import { getPathWithoutLang } from '../../utils/pathname';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
 const EmojiIcon = ({ src, grayscale = false }: { src: string; grayscale?: boolean }) => (
   <img
@@ -19,6 +20,28 @@ const EmojiIcon = ({ src, grayscale = false }: { src: string; grayscale?: boolea
     className={`w-6 h-6 transition shrink-0 ${grayscale ? 'grayscale group-hover:grayscale-0' : ''}`}
   />
 );
+
+const HoverTooltip = ({
+  label,
+  children,
+  enabled = true,
+  side = 'top',
+}: {
+  label: string;
+  children: React.ReactElement;
+  enabled?: boolean;
+  side?: 'top' | 'right' | 'bottom' | 'left';
+}) => {
+  if (!enabled) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent side={side}>{label}</TooltipContent>
+      </TooltipPortal>
+    </Tooltip>
+  );
+};
 
 const UserProfileHeader = ({
   user,
@@ -31,28 +54,32 @@ const UserProfileHeader = ({
   navigate: (path: string) => void;
   t: (key: string) => string;
 }) => (
-  <Button
-    type="button"
-    variant="ghost"
-    size="auto"
-    className={`p-6 flex items-center cursor-pointer hover:bg-slate-50 rounded-t-[2.3rem] transition text-left w-full ${collapsed ? 'justify-center' : 'gap-4'}`}
-    onClick={() => navigate('/profile')}
-    title={t('sidebar.profile')}
-  >
-    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border-2 border-slate-900 shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
-      {user?.avatar ? (
-        <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
-      ) : (
-        <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
-      )}
-    </div>
-    {!collapsed && (
-      <div className="overflow-hidden">
-        <p className="font-black text-slate-900 truncate">{user?.name || t('guest')}</p>
-        <p className="text-xs text-slate-400 truncate">{user?.email || t('sidebar.viewProfile')}</p>
+  <HoverTooltip label={t('sidebar.profile')} side={collapsed ? 'right' : 'top'}>
+    <Button
+      type="button"
+      variant="ghost"
+      size="auto"
+      className={`p-6 flex items-center cursor-pointer hover:bg-accent rounded-t-[2.3rem] transition text-left w-full ${collapsed ? 'justify-center' : 'gap-4'}`}
+      onClick={() => navigate('/profile')}
+      aria-label={t('sidebar.profile')}
+    >
+      <div className="w-12 h-12 bg-card rounded-2xl flex items-center justify-center border-2 border-foreground shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
+        {user?.avatar ? (
+          <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+        ) : (
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
+        )}
       </div>
-    )}
-  </Button>
+      {!collapsed && (
+        <div className="overflow-hidden">
+          <p className="font-black text-foreground truncate">{user?.name || t('guest')}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {user?.email || t('sidebar.viewProfile')}
+          </p>
+        </div>
+      )}
+    </Button>
+  </HoverTooltip>
 );
 
 const SidebarNav = ({
@@ -75,19 +102,20 @@ const SidebarNav = ({
     {items.map(item => {
       const isActive = item.activePrefixes.some(prefix => pathWithoutLang.startsWith(prefix));
       return (
-        <NavLink
-          key={item.path}
-          to={item.to}
-          title={collapsed ? item.label : undefined}
-          className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${
-            isActive
-              ? `${item.activeClass}`
-              : 'border-transparent text-slate-500 hover:bg-slate-50 hover:border-slate-200'
-          }`}
-        >
-          {item.icon}
-          {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
-        </NavLink>
+        <HoverTooltip key={item.path} label={item.label} enabled={collapsed} side="right">
+          <NavLink
+            to={item.to}
+            aria-label={item.label}
+            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${
+              isActive
+                ? `${item.activeClass}`
+                : 'border-transparent text-muted-foreground hover:bg-accent hover:border-border'
+            }`}
+          >
+            {item.icon}
+            {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+          </NavLink>
+        </HoverTooltip>
       );
     })}
   </nav>
@@ -110,37 +138,50 @@ const SidebarFooter = ({
   logout: () => void;
   t: (key: string) => string;
 }) => (
-  <div className={`p-4 border-t-2 border-slate-100 flex ${collapsed ? 'flex-col' : ''} gap-2`}>
-    <Button
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => {
-        if (pathWithoutLang === '/dashboard') {
-          toggleEditMode();
-        } else {
-          navigate('/profile');
+  <div className={`p-4 border-t-2 border-border flex ${collapsed ? 'flex-col' : ''} gap-2`}>
+    <HoverTooltip
+      label={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
+      side={collapsed ? 'right' : 'top'}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => {
+          if (pathWithoutLang === '/dashboard') {
+            toggleEditMode();
+          } else {
+            navigate('/profile');
+          }
+        }}
+        aria-label={
+          pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
         }
-      }}
-      title={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
-      className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${
-        pathWithoutLang === '/dashboard' && isEditing
-          ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
-          : 'text-slate-500 hover:bg-slate-50 border-transparent hover:border-slate-100'
-      } transition border-2`}
-    >
-      {pathWithoutLang === '/dashboard' && isEditing ? <Check size={20} /> : <Settings size={20} />}
-    </Button>
-    <Button
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={logout}
-      title={t('sidebar.logout')}
-      className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-50 transition border-2 border-transparent hover:border-red-100`}
-    >
-      <LogOut size={20} />
-    </Button>
+        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${
+          pathWithoutLang === '/dashboard' && isEditing
+            ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+            : 'text-muted-foreground hover:bg-accent border-transparent hover:border-border'
+        } transition border-2`}
+      >
+        {pathWithoutLang === '/dashboard' && isEditing ? (
+          <Check size={20} />
+        ) : (
+          <Settings size={20} />
+        )}
+      </Button>
+    </HoverTooltip>
+    <HoverTooltip label={t('sidebar.logout')} side={collapsed ? 'right' : 'top'}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={logout}
+        aria-label={t('sidebar.logout')}
+        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-50 transition border-2 border-transparent hover:border-red-100`}
+      >
+        <LogOut size={20} />
+      </Button>
+    </HoverTooltip>
   </div>
 );
 
@@ -160,7 +201,7 @@ export default function DesktopSidebar() {
   return (
     <aside
       className={`
-        hidden md:flex md:flex-col md:bg-white md:border-2 md:border-slate-900 md:shadow-pop md:sticky md:top-5 md:h-[95vh] md:m-5 md:rounded-[2.5rem] md:transition-all md:duration-300 md:z-40
+        hidden md:flex md:flex-col md:bg-card md:border-2 md:border-foreground md:shadow-pop md:sticky md:top-5 md:h-[95vh] md:m-5 md:rounded-[2.5rem] md:transition-all md:duration-300 md:z-40
         ${collapsed ? 'md:w-[76px]' : 'md:w-64'}
       `}
     >
@@ -171,7 +212,7 @@ export default function DesktopSidebar() {
         variant="outline"
         size="auto"
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 bg-white border-2 border-slate-900 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition shadow-sm z-30"
+        className="absolute -right-3 top-20 w-6 h-6 bg-card border-2 border-foreground rounded-full flex items-center justify-center text-muted-foreground hover:text-indigo-600 hover:bg-accent transition shadow-sm z-30"
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </Button>
@@ -212,14 +253,14 @@ function useSidebarNavItems(
         activePrefixes: ['/courses', '/course/'],
       },
       {
-        path: '/practice',
+        path: '/topik',
         label: t('nav.practice', { defaultValue: 'Practice' }),
         icon: <EmojiIcon src="/emojis/Trophy.png" grayscale />,
         activeClass: 'bg-yellow-100 text-yellow-700 border-yellow-100',
         activePrefixes: ['/practice', '/topik', '/typing', '/vocab-book', '/vocabbook'],
       },
       {
-        path: '/media',
+        path: '/videos',
         label: t('nav.media', { defaultValue: 'Media' }),
         icon: <EmojiIcon src="/emojis/Clapper_Board.png" grayscale />,
         activeClass: 'bg-red-100 text-red-700 border-red-100',

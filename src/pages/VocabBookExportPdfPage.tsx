@@ -165,7 +165,7 @@ const VocabBookExportPdfPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-600 font-bold">
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground font-bold">
         {labels.preparing}
       </div>
     );

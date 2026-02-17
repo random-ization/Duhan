@@ -20,11 +20,24 @@ import {
   ListMusic,
   RefreshCw,
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Switch } from '../components/ui/switch';
-import { Badge } from '../components/ui/badge';
-import { Card } from '../components/ui/card';
-import { Slider } from '../components/ui/slider';
+import { Button } from '../components/ui';
+import { Switch } from '../components/ui';
+import { Badge } from '../components/ui';
+import { Card } from '../components/ui';
+import { Slider } from '../components/ui';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui';
+import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../components/ui';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../components/ui';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
@@ -32,6 +45,7 @@ import { notify } from '../utils/notify';
 import { useFileUpload } from '../hooks/useFileUpload';
 import { useAuth } from '../contexts/AuthContext';
 import { getLanguageLabel } from '../utils/languageUtils';
+import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 // Types
 interface TranscriptLine {
@@ -55,8 +69,8 @@ const AnalysisContent: React.FC<{
 }> = ({ loading, data }) => {
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-3">
-        <Sparkles className="w-8 h-8 animate-spin text-indigo-400" />
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground space-y-3">
+        <Sparkles className="w-8 h-8 animate-spin text-indigo-400 dark:text-indigo-300" />
         <p className="text-sm">Analyzing context & grammar...</p>
       </div>
     );
@@ -67,24 +81,24 @@ const AnalysisContent: React.FC<{
       <>
         {/* Vocab Grid */}
         <section>
-          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-            <BookOpen className="w-5 h-5 text-indigo-500" />
+          <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
+            <BookOpen className="w-5 h-5 text-indigo-500 dark:text-indigo-300" />
             Core Vocabulary
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.vocabulary.map((v, i) => (
               <div
                 key={`${v.word}-${v.root}-${i}`}
-                className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-100 hover:shadow-sm transition-all"
+                className="p-3 rounded-xl border border-border bg-muted hover:border-indigo-200 dark:hover:border-indigo-400/40 hover:shadow-sm transition-all"
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="font-bold text-slate-900">{v.word}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500">
+                  <span className="font-bold text-foreground">{v.word}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-card border border-border rounded text-muted-foreground">
                     {v.type}
                   </span>
                 </div>
-                <div className="text-xs text-slate-500 mb-0.5">Root: {v.root}</div>
-                <div className="text-sm text-slate-700">{v.meaning}</div>
+                <div className="text-xs text-muted-foreground mb-0.5">Root: {v.root}</div>
+                <div className="text-sm text-muted-foreground">{v.meaning}</div>
               </div>
             ))}
           </div>
@@ -92,18 +106,22 @@ const AnalysisContent: React.FC<{
 
         {/* Grammar */}
         <section>
-          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-            <MessageSquare className="w-5 h-5 text-emerald-500" />
+          <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
+            <MessageSquare className="w-5 h-5 text-emerald-500 dark:text-emerald-300" />
             Grammar Points
           </div>
           <div className="space-y-3">
             {data.grammar.map((g, i) => (
               <div
                 key={`${g.structure}-${i}`}
-                className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100"
+                className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/30"
               >
-                <div className="font-bold text-emerald-800 mb-1">{g.structure}</div>
-                <div className="text-sm text-emerald-900/80 leading-relaxed">{g.explanation}</div>
+                <div className="font-bold text-emerald-800 dark:text-emerald-200 mb-1">
+                  {g.structure}
+                </div>
+                <div className="text-sm text-emerald-900/80 dark:text-emerald-100/90 leading-relaxed">
+                  {g.explanation}
+                </div>
               </div>
             ))}
           </div>
@@ -111,11 +129,11 @@ const AnalysisContent: React.FC<{
 
         {/* Nuance */}
         <section>
-          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold border-b border-slate-100 pb-2">
-            <Lightbulb className="w-5 h-5 text-amber-500" />
+          <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
+            <Lightbulb className="w-5 h-5 text-amber-500 dark:text-amber-300" />
             Cultural Nuance
           </div>
-          <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 text-sm text-amber-900/80 leading-relaxed italic">
+          <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-400/30 text-sm text-amber-900/80 dark:text-amber-100/90 leading-relaxed italic">
             &quot;{data.nuance}&quot;
           </div>
         </section>
@@ -123,7 +141,11 @@ const AnalysisContent: React.FC<{
     );
   }
 
-  return <div className="text-center py-12 text-slate-400">Analysis failed. Please try again.</div>;
+  return (
+    <div className="text-center py-12 text-muted-foreground">
+      Analysis failed. Please try again.
+    </div>
+  );
 };
 
 interface PodcastEpisode {
@@ -264,6 +286,7 @@ const PodcastPlayerPage: React.FC = () => {
   const [transcriptLoading, setTranscriptLoading] = useState(true);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
   const [isGeneratingTranscript, setIsGeneratingTranscript] = useState(false);
+  const [showTranscriptResetConfirm, setShowTranscriptResetConfirm] = useState(false);
 
   // AI Analysis State
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -945,10 +968,10 @@ const PodcastPlayerPage: React.FC = () => {
   }, [abLoop.active, abLoop.a]);
 
   const getAbLoopClassName = useCallback(() => {
-    if (abLoop.active) return 'bg-indigo-600 text-white shadow-md shadow-indigo-200';
+    if (abLoop.active) return 'bg-primary text-primary-foreground shadow-pop-sm';
     if (abLoop.a === null)
-      return 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300';
-    return 'bg-amber-100 text-amber-700 border border-amber-200';
+      return 'bg-card text-muted-foreground border border-border hover:border-border';
+    return 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-400/40';
   }, [abLoop.active, abLoop.a]);
 
   const isSubscribed = useMemo(() => {
@@ -1035,8 +1058,6 @@ const PodcastPlayerPage: React.FC = () => {
   };
 
   const regenerateTranscript = async () => {
-    if (!confirm('重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？')) return;
-
     const episodeId = getEpisodeId();
     setTranscriptLoading(true);
     setTranscriptError(null);
@@ -1059,6 +1080,11 @@ const PodcastPlayerPage: React.FC = () => {
       setTranscriptError('重置失败，请稍后重试');
       setTranscriptLoading(false);
     }
+  };
+
+  const handleConfirmRegenerateTranscript = () => {
+    setShowTranscriptResetConfirm(false);
+    void regenerateTranscript();
   };
 
   // Convex AI action
@@ -1120,8 +1146,8 @@ const PodcastPlayerPage: React.FC = () => {
                                         group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
                                         ${
                                           isActive
-                                            ? 'bg-white shadow-lg border-indigo-500 scale-[1.01] z-10'
-                                            : 'bg-transparent border-transparent hover:bg-white/60 hover:border-slate-200'
+                                            ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
+                                            : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
                                         }
                                     `}
       >
@@ -1136,8 +1162,8 @@ const PodcastPlayerPage: React.FC = () => {
                                                 flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
                                                 ${
                                                   isActive
-                                                    ? 'bg-indigo-100 text-indigo-700'
-                                                    : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'
+                                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
+                                                    : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
                                                 }
                                             `}
           >
@@ -1156,7 +1182,7 @@ const PodcastPlayerPage: React.FC = () => {
               <div
                 className={`
                                                     text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
-                                                    ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}
+                                                    ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
                                                 `}
               >
                 {line.words && line.words.length > 0 ? (
@@ -1169,8 +1195,8 @@ const PodcastPlayerPage: React.FC = () => {
                                                                         rounded px-0.5 transition-all duration-75
                                                                         ${
                                                                           isWordActive
-                                                                            ? 'bg-indigo-600 text-white shadow-sm scale-105'
-                                                                            : 'hover:bg-indigo-50'
+                                                                            ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
+                                                                            : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
                                                                         }
                                                                     `}
                       >
@@ -1190,13 +1216,13 @@ const PodcastPlayerPage: React.FC = () => {
                                                         text-base leading-relaxed transition-colors border-l-2 pl-3
                                                         ${
                                                           isActive
-                                                            ? 'text-indigo-600/80 border-indigo-200'
-                                                            : 'text-slate-500 border-slate-200'
+                                                            ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
+                                                            : 'text-muted-foreground border-border'
                                                         }
                                                     `}
                 >
                   {line.translation || (
-                    <span className="text-slate-300 italic text-sm">暂无翻译</span>
+                    <span className="text-muted-foreground italic text-sm">暂无翻译</span>
                   )}
                 </p>
               )}
@@ -1204,42 +1230,49 @@ const PodcastPlayerPage: React.FC = () => {
           </Button>
 
           {/* Analyze Button (Visible on Hover/Active) */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={e => {
-              e.stopPropagation();
-              analyze(line);
-            }}
-            className={`
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={e => {
+                  e.stopPropagation();
+                  analyze(line);
+                }}
+                aria-label="Analyze this sentence"
+                className={`
                                                 p-2 rounded-full transition-all flex-none
                                                 ${
                                                   isActive
-                                                    ? 'bg-indigo-100 text-indigo-600 opacity-100'
-                                                    : 'bg-white text-slate-600 opacity-0 group-hover:opacity-100 shadow-sm border border-slate-100'
+                                                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
+                                                    : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
                                                 }
-                                                hover:scale-110 hover:bg-indigo-600 hover:text-white
+                                                hover:scale-110 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-primary-foreground
                                             `}
-            title="Analyze this sentence"
-          >
-            <Sparkles className="w-4 h-4" />
-          </Button>
+              >
+                <Sparkles className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipPortal>
+              <TooltipContent side="top">Analyze this sentence</TooltipContent>
+            </TooltipPortal>
+          </Tooltip>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-screen h-[100dvh] bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen h-[100dvh] bg-muted text-foreground overflow-hidden font-sans">
       {/* Header - Fixed on Mobile, Part of layout on Desktop */}
-      <header className="flex-none flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 z-20 md:hidden">
+      <header className="flex-none flex items-center justify-between px-4 py-3 bg-card border-b border-border z-20 md:hidden">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-slate-100 rounded-full"
+          className="p-2 hover:bg-muted rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -1249,7 +1282,7 @@ const PodcastPlayerPage: React.FC = () => {
           variant="ghost"
           size="icon"
           onClick={() => setShowPlaylist(true)}
-          className="p-2 hover:bg-slate-100 rounded-full"
+          className="p-2 hover:bg-muted rounded-full"
         >
           <ListMusic className="w-5 h-5" />
         </Button>
@@ -1258,20 +1291,28 @@ const PodcastPlayerPage: React.FC = () => {
       {/* Main Layout: Stack on Mobile, Split on Desktop */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         {/* Left Column: Meta & Controls (Sticky on Desktop) */}
-        <aside className="w-full md:w-[320px] lg:w-[380px] flex-none bg-white md:border-r border-slate-200 flex flex-col z-10">
+        <aside className="w-full md:w-[320px] lg:w-[380px] flex-none bg-card md:border-r border-border flex flex-col z-10">
           <div className="p-6 md:p-8 flex flex-col items-center md:items-start text-center md:text-left h-full overflow-y-auto">
             {/* Desktop Back Button */}
-            <div className="hidden md:block mb-6">
+            <div className="hidden md:block mb-6 space-y-3">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={() => navigate(-1)}
-                className="w-12 h-12 border-2 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
+                className="w-12 h-12 border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
                 aria-label="Back"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+                <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} />
               </Button>
+              <AppBreadcrumb
+                className="max-w-[320px]"
+                items={[
+                  { label: 'Media', to: '/media' },
+                  { label: 'Podcasts', to: '/podcasts' },
+                  { label: episode.title || 'Player' },
+                ]}
+              />
             </div>
 
             {/* Cover Art */}
@@ -1294,10 +1335,10 @@ const PodcastPlayerPage: React.FC = () => {
 
             {/* Meta Info */}
             <div className="space-y-2 mb-8 w-full">
-              <h1 className="text-xl md:text-2xl font-bold leading-tight text-slate-800 line-clamp-2 md:line-clamp-none">
+              <h1 className="text-xl md:text-2xl font-bold leading-tight text-muted-foreground line-clamp-2 md:line-clamp-none">
                 {episode.title}
               </h1>
-              <p className="text-sm md:text-base font-medium text-indigo-600">
+              <p className="text-sm md:text-base font-medium text-indigo-600 dark:text-indigo-300">
                 {channel.title || episode.channelTitle}
               </p>
             </div>
@@ -1305,14 +1346,14 @@ const PodcastPlayerPage: React.FC = () => {
             {/* Sidebar Controls */}
             <div className="w-full space-y-4 md:mt-auto pb-4 md:pb-0">
               {/* Translation Switch */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-xl border border-border">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white rounded-lg shadow-sm text-indigo-500">
+                  <div className="p-2 bg-card rounded-lg shadow-sm text-indigo-500 dark:text-indigo-300">
                     <Languages className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold text-slate-700">翻译字幕</p>
-                    <p className="text-xs text-slate-400">显示{translationLabel}翻译</p>
+                    <p className="text-sm font-bold text-muted-foreground">翻译字幕</p>
+                    <p className="text-xs text-muted-foreground">显示{translationLabel}翻译</p>
                   </div>
                 </div>
                 <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
@@ -1320,33 +1361,66 @@ const PodcastPlayerPage: React.FC = () => {
 
               {/* Regenerate Button (For fixing broken subtitles) */}
               <Button
-                onClick={regenerateTranscript}
+                onClick={() => setShowTranscriptResetConfirm(true)}
                 disabled={transcriptLoading || isGeneratingTranscript}
+                loading={isGeneratingTranscript}
+                loadingText="生成中..."
+                loadingIconClassName="w-4 h-4"
                 variant="outline"
-                size="md"
-                className="w-full gap-2 border-dashed border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-600"
+                size="default"
+                className="w-full gap-2 border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300"
               >
-                <RefreshCw className={`w-4 h-4 ${isGeneratingTranscript ? 'animate-spin' : ''}`} />
-                {isGeneratingTranscript ? '生成中...' : '重新生成字幕 (修正排版)'}
+                <RefreshCw className="w-4 h-4" />
+                重新生成字幕 (修正排版)
               </Button>
+              <AlertDialog
+                open={showTranscriptResetConfirm}
+                onOpenChange={setShowTranscriptResetConfirm}
+              >
+                <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="font-black text-foreground">
+                      重新生成字幕？
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm font-semibold text-muted-foreground leading-relaxed">
+                      重新生成字幕可能需要 1-2 分钟，当前字幕缓存会被清空并重新请求。确定继续吗？
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-row justify-end gap-2">
+                    <AlertDialogCancel onClick={() => setShowTranscriptResetConfirm(false)}>
+                      取消
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleConfirmRegenerateTranscript}
+                      loading={isGeneratingTranscript || transcriptLoading}
+                      loadingText="处理中..."
+                    >
+                      确认重生成
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
-                  size="md"
+                  size="default"
                   onClick={handleToggleSubscription}
                   disabled={subscriptionPending}
-                  className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
+                  loading={subscriptionPending}
+                  loadingText="Saving..."
+                  loadingIconClassName="w-4 h-4"
+                  className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
                 >
                   <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
-                  {subscriptionPending ? 'Saving...' : isSubscribed ? '已收藏' : '收藏此集'}
+                  {isSubscribed ? '已收藏' : '收藏此集'}
                 </Button>
                 <Button
                   variant="outline"
-                  size="md"
+                  size="default"
                   onClick={handleShareEpisode}
-                  className="gap-2 border-slate-200 text-slate-600 hover:border-indigo-200"
+                  className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
                 >
                   <Share2 className="w-4 h-4" /> 分享
                 </Button>
@@ -1358,7 +1432,7 @@ const PodcastPlayerPage: React.FC = () => {
         {/* Right Column: Transcript Stream */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto scroll-smooth bg-slate-50/50 pb-10 md:pb-12 relative"
+          className="flex-1 overflow-y-auto scroll-smooth bg-muted/50 pb-10 md:pb-12 relative"
         >
           {/* Auto-Scroll Floating Toggle */}
           <div className="sticky top-4 right-4 z-20 flex justify-end px-4 pointer-events-none">
@@ -1371,8 +1445,8 @@ const PodcastPlayerPage: React.FC = () => {
                                 pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-md border transition-all
                                 ${
                                   autoScroll
-                                    ? 'bg-indigo-600/90 text-white border-indigo-500'
-                                    : 'bg-white/90 text-slate-600 border-slate-200 hover:bg-slate-50'
+                                    ? 'bg-indigo-600/90 dark:bg-indigo-500/85 text-white dark:text-primary-foreground border-indigo-500 dark:border-indigo-300/50'
+                                    : 'bg-card/90 text-muted-foreground border-border hover:bg-muted'
                                 }
                             `}
             >
@@ -1387,8 +1461,10 @@ const PodcastPlayerPage: React.FC = () => {
             {/* Loading State */}
             {showTranscriptLoader && (
               <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-                <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                <p className="text-slate-500 font-medium animate-pulse">AI 正在生成智能字幕...</p>
+                <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-400/30 border-t-indigo-600 rounded-full animate-spin" />
+                <p className="text-muted-foreground font-medium animate-pulse">
+                  AI 正在生成智能字幕...
+                </p>
                 {isGeneratingTranscript && (
                   <Badge variant="secondary" className="text-xs shadow-sm">
                     首次生成约需 1 分钟
@@ -1399,13 +1475,17 @@ const PodcastPlayerPage: React.FC = () => {
 
             {/* Error State */}
             {transcriptError && !transcriptLoading && (
-              <Card className="border border-red-100 p-6 text-center shadow-sm mx-4 mt-8">
-                <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3 text-red-500">
+              <Card className="border border-destructive/30 p-6 text-center shadow-sm mx-4 mt-8">
+                <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-3 text-destructive">
                   <Volume2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-slate-800 font-bold mb-1">无法加载字幕</h3>
-                <p className="text-sm text-slate-500 mb-4">{transcriptError}</p>
-                <Button onClick={() => loadTranscriptChunked(true)} size="md" className="px-6 py-2">
+                <h3 className="text-muted-foreground font-bold mb-1">无法加载字幕</h3>
+                <p className="text-sm text-muted-foreground mb-4">{transcriptError}</p>
+                <Button
+                  onClick={() => loadTranscriptChunked(true)}
+                  size="default"
+                  className="px-6 py-2"
+                >
                   重试
                 </Button>
               </Card>
@@ -1413,7 +1493,7 @@ const PodcastPlayerPage: React.FC = () => {
 
             {/* Empty State */}
             {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-              <Card className="text-center py-16 text-slate-400 border-dashed">
+              <Card className="text-center py-16 text-muted-foreground border-dashed">
                 <p>暂无字幕内容</p>
               </Card>
             )}
@@ -1424,7 +1504,7 @@ const PodcastPlayerPage: React.FC = () => {
 
             {/* Player Bar (Aligned with Transcript Width) */}
             <div className="sticky bottom-4 z-30 pt-6">
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-4 md:px-6 py-3">
+              <div className="bg-card border border-border rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-4 md:px-6 py-3">
                 {/* Progress Slider */}
                 <div className="relative group mb-1 pt-2">
                   <Button
@@ -1440,15 +1520,15 @@ const PodcastPlayerPage: React.FC = () => {
                   >
                     <span className="sr-only">Seek</span>
                   </Button>
-                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-indigo-600 rounded-full relative"
+                      className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full relative"
                       style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
                     >
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 rounded-full shadow border-2 border-white scale-0 group-hover:scale-100 transition-transform" />
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-full shadow border-2 border-card scale-0 group-hover:scale-100 transition-transform" />
                     </div>
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 font-medium mt-1 select-none">
+                  <div className="flex justify-between text-[10px] text-muted-foreground font-medium mt-1 select-none">
                     <span>{formatTime(currentTime)}</span>
                     <span>-{formatTime(duration - currentTime)}</span>
                   </div>
@@ -1463,7 +1543,7 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={changeSpeed}
-                      className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-slate-50 transition-colors w-8 h-auto"
+                      className="text-[10px] font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-muted transition-colors w-8 h-auto"
                     >
                       {speed}x
                     </Button>
@@ -1486,17 +1566,17 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => skip(-10)}
-                      className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
+                      className="text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
                     >
                       <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
                     </Button>
 
                     <Button
                       type="button"
-                      variant="solid"
+                      variant="default"
                       size="icon"
                       onClick={togglePlay}
-                      className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100 dark:hover:ring-indigo-300/35"
                     >
                       {isPlaying ? (
                         <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
@@ -1510,7 +1590,7 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => skip(10)}
-                      className="text-slate-400 hover:text-slate-700 transition-colors hover:scale-110"
+                      className="text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
                     >
                       <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
                     </Button>
@@ -1519,7 +1599,7 @@ const PodcastPlayerPage: React.FC = () => {
                   {/* Right: Tools / Volume */}
                   <div className="flex items-center justify-end gap-3 flex-1">
                     <div className="hidden md:flex items-center gap-2 group w-20">
-                      <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+                      <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
                       <Slider
                         min="0"
                         max="1"
@@ -1532,16 +1612,23 @@ const PodcastPlayerPage: React.FC = () => {
                         }}
                       />
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowPlaylist(true)}
-                      className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
-                      title="Playlist"
-                    >
-                      <ListMusic className="w-4 h-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowPlaylist(true)}
+                          aria-label="Playlist"
+                          className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15' : 'text-muted-foreground hover:text-muted-foreground'}`}
+                        >
+                          <ListMusic className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipPortal>
+                        <TooltipContent side="top">Playlist</TooltipContent>
+                      </TooltipPortal>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
@@ -1567,159 +1654,158 @@ const PodcastPlayerPage: React.FC = () => {
       </audio>
 
       {/* Playlist Drawer */}
-      <div
-        className={`
-                fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out border-l border-slate-200
-                ${showPlaylist ? 'translate-x-0' : 'translate-x-full'}
-            `}
-      >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-            <div className="flex items-center gap-2">
-              <ListMusic className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-bold text-slate-800">播放列表</h3>
-              <span className="text-xs font-medium px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full">
-                {playlist.length}
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowPlaylist(false)}
-              className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {playlist.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-slate-400 space-y-2">
-                <ListMusic className="w-8 h-8 opacity-20" />
-                <p className="text-sm">暂无其他剧集</p>
+      <Sheet open={showPlaylist} onOpenChange={setShowPlaylist}>
+        <SheetPortal>
+          <SheetOverlay
+            unstyled
+            forceMount
+            className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+          />
+          <SheetContent
+            unstyled
+            forceMount
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-card shadow-2xl z-[60] border-l border-border transform transition-transform duration-300 ease-in-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:pointer-events-none"
+          >
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <ListMusic className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+                  <h3 className="font-bold text-muted-foreground">播放列表</h3>
+                  <span className="text-xs font-medium px-2 py-0.5 bg-muted text-muted-foreground rounded-full">
+                    {playlist.length}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPlaylist(false)}
+                  className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-muted-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
-            ) : (
-              playlist.map(ep => {
-                const isCurrent =
-                  ep.guid === episode.guid ||
-                  ep.id === episode.id ||
-                  ep.audioUrl === episode.audioUrl;
-                return (
-                  <Button
-                    key={ep.guid || ep.id}
-                    onClick={() => playEpisode(ep)}
-                    variant="ghost"
-                    size="auto"
-                    className={`
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {playlist.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-40 text-muted-foreground space-y-2">
+                    <ListMusic className="w-8 h-8 opacity-20" />
+                    <p className="text-sm">暂无其他剧集</p>
+                  </div>
+                ) : (
+                  playlist.map(ep => {
+                    const isCurrent =
+                      ep.guid === episode.guid ||
+                      ep.id === episode.id ||
+                      ep.audioUrl === episode.audioUrl;
+                    return (
+                      <Button
+                        key={ep.guid || ep.id}
+                        onClick={() => playEpisode(ep)}
+                        variant="ghost"
+                        size="auto"
+                        className={`
                                             w-full text-left p-3 rounded-xl transition-all border justify-start items-start
                                             ${
                                               isCurrent
-                                                ? 'bg-indigo-50 border-indigo-100 ring-1 ring-indigo-200'
-                                                : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-100'
+                                                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-100 dark:border-indigo-400/30 ring-1 ring-indigo-200 dark:ring-indigo-400/30'
+                                                : 'bg-card border-transparent hover:bg-muted hover:border-border'
                                             }
                                             font-normal
                                         `}
-                  >
-                    <div className="flex gap-3">
-                      <div className="relative flex-none w-12 h-12 rounded-lg overflow-hidden bg-slate-100">
-                        <img
-                          src={ep.image || ep.itunes?.image || channel.artworkUrl || channel.image}
-                          className="w-full h-full object-cover"
-                          alt=""
-                        />
-                        {isCurrent && (
-                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      >
+                        <div className="flex gap-3">
+                          <div className="relative flex-none w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                            <img
+                              src={
+                                ep.image || ep.itunes?.image || channel.artworkUrl || channel.image
+                              }
+                              className="w-full h-full object-cover"
+                              alt=""
+                            />
+                            {isCurrent && (
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-card rounded-full animate-ping" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4
-                          className={`text-sm font-bold truncate mb-0.5 ${isCurrent ? 'text-indigo-900' : 'text-slate-700'}`}
-                        >
-                          {ep.title}
-                        </h4>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>{ep.pubDate ? new Date(ep.pubDate).toLocaleDateString() : ''}</span>
-                          <span>•</span>
-                          <span>
-                            {formatTime(typeof ep.duration === 'string' ? 0 : ep.duration || 0)}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <h4
+                              className={`text-sm font-bold truncate mb-0.5 ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}
+                            >
+                              {ep.title}
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                {ep.pubDate ? new Date(ep.pubDate).toLocaleDateString() : ''}
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {formatTime(typeof ep.duration === 'string' ? 0 : ep.duration || 0)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </Button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Backdrop for Playlist */}
-      {showPlaylist && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] w-full h-full border-none p-0 font-normal"
-          onClick={() => setShowPlaylist(false)}
-        >
-          <span className="sr-only">Close Playlist</span>
-        </Button>
-      )}
+                      </Button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
 
       {/* AI Analysis Modal/Sheet */}
-      {showAnalysis && analyzingLine && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center pointer-events-none">
-          {/* Backdrop */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity w-full h-full border-none p-0 z-[100] font-normal"
-            onClick={() => setShowAnalysis(false)}
-          >
-            <span className="sr-only">Close Analysis</span>
-          </Button>
-
-          {/* Modal Content */}
-          <div
-            className="
-                        relative z-[101] bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl 
-                        pointer-events-auto transform transition-transform duration-300 md:max-h-[80vh] max-h-[85vh] flex flex-col overflow-hidden
-                    "
-          >
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wide">
-                    AI Analysis
-                  </span>
+      {analyzingLine && (
+        <Dialog open={showAnalysis} onOpenChange={open => !open && setShowAnalysis(false)}>
+          <DialogPortal>
+            <DialogOverlay
+              unstyled
+              forceMount
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+            />
+            <DialogContent
+              unstyled
+              forceMount
+              closeOnEscape={false}
+              lockBodyScroll={false}
+              className="fixed inset-0 z-[101] flex items-end md:items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
+            >
+              <div className="relative bg-card w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl pointer-events-auto transform transition-transform duration-300 md:max-h-[80vh] max-h-[85vh] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-border flex items-start justify-between bg-muted/50">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 uppercase tracking-wide">
+                        AI Analysis
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground leading-snug">
+                      {analyzingLine.text}
+                    </h3>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowAnalysis(false)}
+                    className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-muted-foreground transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 leading-snug">
-                  {analyzingLine.text}
-                </h3>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowAnalysis(false)}
-                className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
 
-            {/* Body */}
-            <div className="overflow-y-auto p-6 space-y-8 bg-white flex-1">
-              <AnalysisContent loading={analysisLoading} data={analysisData} />
-            </div>
-          </div>
-        </div>
+                {/* Body */}
+                <div className="overflow-y-auto p-6 space-y-8 bg-card flex-1">
+                  <AnalysisContent loading={analysisLoading} data={analysisData} />
+                </div>
+              </div>
+            </DialogContent>
+          </DialogPortal>
+        </Dialog>
       )}
     </div>
   );
