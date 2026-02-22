@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import { MobileHeader } from '../mobile/MobileHeader';
@@ -12,6 +12,7 @@ import { getPathWithoutLang } from '../../utils/pathname';
 import { GlobalModalContainer } from '../modals/GlobalModalContainer';
 import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
+import { ContentSkeleton } from '../common';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -53,18 +54,22 @@ export default function AppLayout() {
         <div
           className={`min-h-full flex flex-col ${routeUiConfig.hasDesktopSidebar ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={location.pathname}
-              className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          <LayoutGroup id="app-route-layout">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={location.pathname}
+                className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16, ease: 'easeOut' }}
+              >
+                <Suspense fallback={<ContentSkeleton />}>
+                  <Outlet />
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
+          </LayoutGroup>
           {shouldShowFooter && <Footer />}
         </div>
         {shouldShowMobileNav && (

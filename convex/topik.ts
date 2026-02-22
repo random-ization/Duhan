@@ -350,7 +350,7 @@ export const getSession = query({
 export const updateAnswers = mutation({
   args: {
     sessionId: v.id('exam_sessions'),
-    answers: v.any(), // { [questionNumber]: selectedOption }
+    answers: v.record(v.string(), v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -393,7 +393,7 @@ export const updateAnswers = mutation({
 export const submitExam = mutation({
   args: {
     sessionId: v.id('exam_sessions'),
-    answers: v.any(),
+    answers: v.record(v.string(), v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

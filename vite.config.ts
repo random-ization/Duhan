@@ -4,12 +4,14 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     'import.meta.env.VITE_I18N_VERSION': JSON.stringify(
       process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || String(Date.now())
     ),
   },
+  // Keep dev logs intact; strip console/debugger only for production builds.
+  esbuild: command === 'build' ? { drop: ['console', 'debugger'] } : undefined,
   server: {
     port: 3000,
     host: '0.0.0.0',
@@ -37,6 +39,9 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false,
+      },
       includeAssets: [
         'favicon.ico',
         'logo.png',
@@ -159,6 +164,10 @@ export default defineConfig({
           // Animation
           if (normalized.includes('/node_modules/framer-motion/')) return 'vendor-motion';
 
+          // NLP / typing helpers
+          if (normalized.includes('/node_modules/es-hangul/')) return 'vendor-hangul';
+          if (normalized.includes('/node_modules/kiwi-nlp/')) return 'vendor-kiwi';
+
           // YouTube embeds
           if (normalized.includes('/node_modules/react-youtube/')) return 'vendor-youtube';
 
@@ -184,17 +193,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 450,
     // Enable source maps for debugging (optional, remove in production for smaller builds)
     sourcemap: false,
-    // Minify options
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true,
-      },
-    },
+    // Use esbuild minifier (much faster than terser in most projects).
+    minify: 'esbuild',
   },
   // Optimize dependencies
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
   },
-});
+}));
+
+// Config touched to trigger VITE_I18N_VERSION cache bust
+
+
+// bump 1771603658
+
+// bump 1771630714

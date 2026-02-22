@@ -723,11 +723,12 @@ export const handleDeepgramCallback = action({
   args: {
     episodeId: v.string(),
     language: v.optional(v.string()),
-    payload: v.any(),
+    payloadJson: v.string(),
   },
   handler: async (ctx, args) => {
     try {
-      const baseSegments = extractSegmentsFromDeepgramResult(args.payload);
+      const payload = JSON.parse(args.payloadJson);
+      const baseSegments = extractSegmentsFromDeepgramResult(payload);
       logAI(`Deepgram callback received. Segments: ${baseSegments.length}`);
 
       if (logUsageMutation) {

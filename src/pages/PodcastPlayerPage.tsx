@@ -63,6 +63,209 @@ interface AnalysisData {
   cached?: boolean;
 }
 
+type UiLang = 'en' | 'zh' | 'vi' | 'mn';
+
+type UiCopy = {
+  mockTranslations: [string, string, string, string, string];
+  readAudioFailed: string;
+  missingAudioLink: string;
+  audioLinkTooLong: string;
+  transcriptTimeout: string;
+  audioLinkTooLarge: string;
+  failedPrefix: string;
+  transcriptUnavailable: string;
+  resetFailed: string;
+  noTranslation: string;
+  translationSubtitle: string;
+  showTranslationTemplate: string;
+  generating: string;
+  regenerateSubtitle: string;
+  regenerateTitle: string;
+  regenerateDescription: string;
+  cancel: string;
+  processing: string;
+  confirmRegenerate: string;
+  saved: string;
+  saveEpisode: string;
+  share: string;
+  autoScrollOn: string;
+  autoScrollOff: string;
+  generatingSmartSubtitle: string;
+  firstGenerationHint: string;
+  cannotLoadSubtitle: string;
+  retry: string;
+  noSubtitleContent: string;
+  playlist: string;
+  noOtherEpisodes: string;
+};
+
+const UI_COPY: Record<UiLang, UiCopy> = {
+  en: {
+    mockTranslations: [
+      'Hello everyone, shall we start learning Korean today as well?',
+      'Consistency is the most important thing.',
+      'This sentence is a bit fast, so please listen again.',
+      'Today we will learn expressions commonly used in daily conversations.',
+      "For example, there is an expression like 'How have you been lately?'",
+    ],
+    readAudioFailed: 'Failed to read audio',
+    missingAudioLink: 'Missing audio URL',
+    audioLinkTooLong: 'Audio URL is too long to submit a transcription request',
+    transcriptTimeout: 'Subtitle generation timed out. Please try again later.',
+    audioLinkTooLarge:
+      'Audio URL is too large and the transcription request was blocked. Please upload audio first and try again.',
+    failedPrefix: 'Failed',
+    transcriptUnavailable: 'Subtitles are unavailable',
+    resetFailed: 'Reset failed. Please try again later.',
+    noTranslation: 'No translation yet',
+    translationSubtitle: 'Translated subtitles',
+    showTranslationTemplate: 'Show {{language}} translation',
+    generating: 'Generating...',
+    regenerateSubtitle: 'Regenerate subtitles (fix formatting)',
+    regenerateTitle: 'Regenerate subtitles?',
+    regenerateDescription:
+      'Regenerating subtitles may take 1-2 minutes. The current subtitle cache will be cleared and requested again. Continue?',
+    cancel: 'Cancel',
+    processing: 'Processing...',
+    confirmRegenerate: 'Confirm regenerate',
+    saved: 'Saved',
+    saveEpisode: 'Save this episode',
+    share: 'Share',
+    autoScrollOn: 'Auto-scroll: On',
+    autoScrollOff: 'Auto-scroll: Off',
+    generatingSmartSubtitle: 'AI is generating smart subtitles...',
+    firstGenerationHint: 'First generation may take about 1 minute',
+    cannotLoadSubtitle: 'Unable to load subtitles',
+    retry: 'Retry',
+    noSubtitleContent: 'No subtitle content',
+    playlist: 'Playlist',
+    noOtherEpisodes: 'No other episodes',
+  },
+  zh: {
+    mockTranslations: [
+      '\u5927\u5bb6\u597d\uff0c\u4eca\u5929\u4e5f\u5f00\u59cb\u5b66\u4e60\u97e9\u8bed\u5417\uff1f',
+      '\u575a\u6301\u662f\u6700\u91cd\u8981\u7684\u3002',
+      '\u8fd9\u53e5\u8bdd\u6709\u70b9\u5feb\uff0c\u8bf7\u518d\u542c\u4e00\u904d\u3002',
+      '\u4eca\u5929\u6211\u4eec\u6765\u5b66\u4e60\u65e5\u5e38\u5bf9\u8bdd\u4e2d\u5e38\u7528\u7684\u8868\u8fbe\u3002',
+      "\u6bd4\u5982\uff0c\u6709'\u60a8\u6700\u8fd1\u600e\u4e48\u6837\uff1f'\u8fd9\u6837\u7684\u8868\u8fbe\u3002",
+    ],
+    readAudioFailed: '\u8bfb\u53d6\u97f3\u9891\u5931\u8d25',
+    missingAudioLink: '\u7f3a\u5c11\u97f3\u9891\u94fe\u63a5',
+    audioLinkTooLong: '\u97f3\u9891\u94fe\u63a5\u8fc7\u957f\uff0c\u65e0\u6cd5\u63d0\u4ea4\u8f6c\u5199\u8bf7\u6c42',
+    transcriptTimeout: '\u5b57\u5e55\u751f\u6210\u8d85\u65f6\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5',
+    audioLinkTooLarge:
+      '\u97f3\u9891\u94fe\u63a5\u8fc7\u5927\uff0c\u8f6c\u5199\u8bf7\u6c42\u88ab\u62e6\u622a\uff0c\u8bf7\u5148\u4e0a\u4f20\u97f3\u9891\u540e\u518d\u8bd5',
+    failedPrefix: '\u5931\u8d25',
+    transcriptUnavailable: '\u5b57\u5e55\u4e0d\u53ef\u7528',
+    resetFailed: '\u91cd\u7f6e\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5',
+    noTranslation: '\u6682\u65e0\u7ffb\u8bd1',
+    translationSubtitle: '\u7ffb\u8bd1\u5b57\u5e55',
+    showTranslationTemplate: '\u663e\u793a{{language}}\u7ffb\u8bd1',
+    generating: '\u751f\u6210\u4e2d...',
+    regenerateSubtitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55 (\u4fee\u6b63\u6392\u7248)',
+    regenerateTitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55\uff1f',
+    regenerateDescription:
+      '\u91cd\u65b0\u751f\u6210\u5b57\u5e55\u53ef\u80fd\u9700\u8981 1-2 \u5206\u949f\uff0c\u5f53\u524d\u5b57\u5e55\u7f13\u5b58\u4f1a\u88ab\u6e05\u7a7a\u5e76\u91cd\u65b0\u8bf7\u6c42\u3002\u786e\u5b9a\u7ee7\u7eed\u5417\uff1f',
+    cancel: '\u53d6\u6d88',
+    processing: '\u5904\u7406\u4e2d...',
+    confirmRegenerate: '\u786e\u8ba4\u91cd\u751f\u6210',
+    saved: '\u5df2\u6536\u85cf',
+    saveEpisode: '\u6536\u85cf\u6b64\u96c6',
+    share: '\u5206\u4eab',
+    autoScrollOn: '\u81ea\u52a8\u6eda\u52a8: \u5f00',
+    autoScrollOff: '\u81ea\u52a8\u6eda\u52a8: \u5173',
+    generatingSmartSubtitle: 'AI \u6b63\u5728\u751f\u6210\u667a\u80fd\u5b57\u5e55...',
+    firstGenerationHint: '\u9996\u6b21\u751f\u6210\u7ea6\u9700 1 \u5206\u949f',
+    cannotLoadSubtitle: '\u65e0\u6cd5\u52a0\u8f7d\u5b57\u5e55',
+    retry: '\u91cd\u8bd5',
+    noSubtitleContent: '\u6682\u65e0\u5b57\u5e55\u5185\u5bb9',
+    playlist: '\u64ad\u653e\u5217\u8868',
+    noOtherEpisodes: '\u6682\u65e0\u5176\u4ed6\u5267\u96c6',
+  },
+  vi: {
+    mockTranslations: [
+      'Xin chao moi nguoi, hom nay minh tiep tuc hoc tieng Han nhe?',
+      'Su kien tri la dieu quan trong nhat.',
+      'Cau nay hoi nhanh, ban hay nghe lai mot lan nua.',
+      'Hom nay chung ta hoc nhung mau cau thuong dung trong hoi thoai hang ngay.',
+      "Vi du, co mau cau nhu 'Dao nay ban the nao?'",
+    ],
+    readAudioFailed: 'Khong the doc tep am thanh',
+    missingAudioLink: 'Thieu lien ket am thanh',
+    audioLinkTooLong: 'Lien ket am thanh qua dai, khong the gui yeu cau chuyen am',
+    transcriptTimeout: 'Tao phu de da het thoi gian. Vui long thu lai sau.',
+    audioLinkTooLarge:
+      'Lien ket am thanh qua lon va yeu cau chuyen am bi chan. Hay tai len tep am thanh truoc roi thu lai.',
+    failedPrefix: 'That bai',
+    transcriptUnavailable: 'Khong co san phu de',
+    resetFailed: 'Dat lai that bai. Vui long thu lai sau.',
+    noTranslation: 'Chua co ban dich',
+    translationSubtitle: 'Phu de dich',
+    showTranslationTemplate: 'Hien ban dich {{language}}',
+    generating: 'Dang tao...',
+    regenerateSubtitle: 'Tao lai phu de (sua dinh dang)',
+    regenerateTitle: 'Tao lai phu de?',
+    regenerateDescription:
+      'Tao lai phu de co the mat 1-2 phut. Bo nho dem phu de hien tai se duoc xoa va yeu cau lai. Ban co muon tiep tuc khong?',
+    cancel: 'Huy',
+    processing: 'Dang xu ly...',
+    confirmRegenerate: 'Xac nhan tao lai',
+    saved: 'Da luu',
+    saveEpisode: 'Luu tap nay',
+    share: 'Chia se',
+    autoScrollOn: 'Tu dong cuon: Bat',
+    autoScrollOff: 'Tu dong cuon: Tat',
+    generatingSmartSubtitle: 'AI dang tao phu de thong minh...',
+    firstGenerationHint: 'Lan tao dau tien mat khoang 1 phut',
+    cannotLoadSubtitle: 'Khong the tai phu de',
+    retry: 'Thu lai',
+    noSubtitleContent: 'Chua co noi dung phu de',
+    playlist: 'Danh sach phat',
+    noOtherEpisodes: 'Khong co tap nao khac',
+  },
+  mn: {
+    mockTranslations: [
+      'Сайн байцгаана уу, өнөөдөр ч солонгос хэлээ эхлэх үү?',
+      'Тууштай байх нь хамгийн чухал.',
+      'Энэ өгүүлбэр арай хурдан тул дахин сонсоорой.',
+      'Өнөөдөр бид өдөр тутмын ярианд түгээмэл хэрэглэдэг хэллэгүүдийг сурна.',
+      "Жишээлбэл, 'Сүүлийн үед сайн уу?' гэх мэт хэллэг бий.",
+    ],
+    readAudioFailed: 'Аудио уншиж чадсангүй',
+    missingAudioLink: 'Аудио холбоос алга',
+    audioLinkTooLong: 'Аудио холбоос хэт урт тул хөрвүүлэх хүсэлт илгээж чадсангүй',
+    transcriptTimeout: 'Хадмал үүсгэх хугацаа дууслаа. Дараа дахин оролдоно уу.',
+    audioLinkTooLarge:
+      'Аудио холбоос хэт том тул хөрвүүлэх хүсэлт хаагдлаа. Эхлээд аудиогоо байршуулж дахин оролдоно уу.',
+    failedPrefix: 'Амжилтгүй',
+    transcriptUnavailable: 'Хадмал боломжгүй',
+    resetFailed: 'Сэргээж чадсангүй. Дараа дахин оролдоно уу.',
+    noTranslation: 'Орчуулга алга',
+    translationSubtitle: 'Орчуулгын хадмал',
+    showTranslationTemplate: '{{language}} орчуулгыг харуулах',
+    generating: 'Үүсгэж байна...',
+    regenerateSubtitle: 'Хадмалыг дахин үүсгэх (формат засах)',
+    regenerateTitle: 'Хадмалыг дахин үүсгэх үү?',
+    regenerateDescription:
+      'Хадмалыг дахин үүсгэхэд 1-2 минут шаардагдаж магадгүй. Одоогийн хадмал кэшийг цэвэрлээд дахин хүсэлт илгээнэ. Үргэлжлүүлэх үү?',
+    cancel: 'Цуцлах',
+    processing: 'Боловсруулж байна...',
+    confirmRegenerate: 'Дахин үүсгэхийг батлах',
+    saved: 'Хадгалсан',
+    saveEpisode: 'Энэ дугаарыг хадгалах',
+    share: 'Хуваалцах',
+    autoScrollOn: 'Автоматаар гүйлгэх: Асаалттай',
+    autoScrollOff: 'Автоматаар гүйлгэх: Унтраалттай',
+    generatingSmartSubtitle: 'AI ухаалаг хадмал үүсгэж байна...',
+    firstGenerationHint: 'Эхний үүсгэлт ойролцоогоор 1 минут',
+    cannotLoadSubtitle: 'Хадмал ачаалж чадсангүй',
+    retry: 'Дахин оролдох',
+    noSubtitleContent: 'Хадмалын агуулга алга',
+    playlist: 'Тоглуулах жагсаалт',
+    noOtherEpisodes: 'Өөр дугаар алга',
+  },
+};
+
 const AnalysisContent: React.FC<{
   loading: boolean;
   data: AnalysisData | null;
@@ -167,36 +370,31 @@ const CDN_DOMAIN = import.meta.env.VITE_CDN_URL ?? '';
 const MAX_SAFE_URL_LENGTH = 8000;
 
 // Mock transcript for fallback
-const MOCK_TRANSCRIPT: TranscriptLine[] = [
+const MOCK_TRANSCRIPT_BASE: Omit<TranscriptLine, 'translation'>[] = [
   {
     start: 0,
     end: 4.5,
     text: '안녕하세요, 여러분. 오늘도 한국어 공부 시작해볼까요?',
-    translation: '大家好，今天也开始学习韩语吗？',
   },
   {
     start: 4.5,
     end: 8.2,
     text: '꾸준히 하는 것이 가장 중요합니다.',
-    translation: '坚持是最重要的。',
   },
   {
     start: 8.2,
     end: 12,
     text: '이 문장은 조금 빠르니까 다시 들어보세요.',
-    translation: '这句话有点快，请再听一遍。',
   },
   {
     start: 12,
     end: 16.5,
     text: '오늘은 일상 대화에서 많이 쓰는 표현을 배워볼 거예요.',
-    translation: '今天我们来学习日常对话中常用的表达。',
   },
   {
     start: 16.5,
     end: 21,
     text: "예를 들어, '어떻게 지내세요?'라는 표현이 있어요.",
-    translation: "比如，有'您最近怎么样？'这样的表达。",
   },
 ];
 
@@ -205,7 +403,17 @@ const PodcastPlayerPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const { language, user } = useAuth();
+  const uiLang: UiLang = language;
+  const copy = UI_COPY[uiLang];
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
+  const mockTranscript = useMemo(
+    () =>
+      MOCK_TRANSCRIPT_BASE.map((line, idx) => ({
+        ...line,
+        translation: copy.mockTranslations[idx] || '',
+      })),
+    [copy.mockTranslations]
+  );
 
   const getEpisodeFromUrl = useCallback(() => {
     // Try to reconstruct from URL params
@@ -526,7 +734,7 @@ const PodcastPlayerPage: React.FC = () => {
       if (isBlob || isData) {
         const res = await fetch(rawUrl);
         if (!res.ok) {
-          throw new Error('读取音频失败');
+          throw new Error(copy.readAudioFailed);
         }
         blob = await res.blob();
       } else {
@@ -554,7 +762,7 @@ const PodcastPlayerPage: React.FC = () => {
 
       return url;
     },
-    [uploadFile]
+    [copy.readAudioFailed, uploadFile]
   );
 
   // 2. Transcript Loading Logic
@@ -565,7 +773,7 @@ const PodcastPlayerPage: React.FC = () => {
       if (!episode.audioUrl) {
         setTranscript([]);
         setTranscriptLoading(false);
-        setTranscriptError('缺少音频链接');
+        setTranscriptError(copy.missingAudioLink);
         return;
       }
 
@@ -690,10 +898,10 @@ const PodcastPlayerPage: React.FC = () => {
 
         const transcriptAudioUrl = await resolveTranscriptAudioUrl(episode.audioUrl, episodeId);
         if (!transcriptAudioUrl) {
-          throw new Error('缺少音频链接');
+          throw new Error(copy.missingAudioLink);
         }
         if (transcriptAudioUrl.length > MAX_SAFE_URL_LENGTH) {
-          throw new Error('音频链接过长，无法提交转写请求');
+          throw new Error(copy.audioLinkTooLong);
         }
 
         const kickoff = await requestTranscript({
@@ -725,7 +933,7 @@ const PodcastPlayerPage: React.FC = () => {
             transcriptLoadedKeyRef.current = loadKey;
           }
         } else if (!s3Ready) {
-          throw new Error('字幕生成超时，请稍后重试');
+          throw new Error(copy.transcriptTimeout);
         }
       } catch (err) {
         console.error('Transcript failed:', err);
@@ -747,17 +955,17 @@ const PodcastPlayerPage: React.FC = () => {
         }
         if (typeof message === 'string' && message.includes('Maximum content size')) {
           setTranscript([]);
-          setTranscriptError('音频链接过大，转写请求被拦截，请先上传音频后再试');
+          setTranscriptError(copy.audioLinkTooLarge);
           setTranscriptLoading(false);
           setIsGeneratingTranscript(false);
           return;
         }
         if (import.meta.env.DEV) {
-          setTranscript(MOCK_TRANSCRIPT);
-          setTranscriptError(`失败: ${message}`);
+          setTranscript(mockTranscript);
+          setTranscriptError(`${copy.failedPrefix}: ${message}`);
         } else {
           setTranscript([]);
-          setTranscriptError('字幕不可用');
+          setTranscriptError(copy.transcriptUnavailable);
         }
       } finally {
         setTranscriptLoading(false);
@@ -766,10 +974,17 @@ const PodcastPlayerPage: React.FC = () => {
       }
     },
     [
+      copy.audioLinkTooLarge,
+      copy.audioLinkTooLong,
+      copy.failedPrefix,
+      copy.missingAudioLink,
+      copy.transcriptTimeout,
+      copy.transcriptUnavailable,
       episode.audioUrl,
       requestTranscript,
       getTranscript,
       getEpisodeId,
+      mockTranscript,
       resolveTranscriptAudioUrl,
       retryLoadTranscriptFromS3,
       waitForTranscriptFromS3,
@@ -1077,7 +1292,7 @@ const PodcastPlayerPage: React.FC = () => {
       await loadTranscriptChunked(true);
     } catch (e) {
       console.error(e);
-      setTranscriptError('重置失败，请稍后重试');
+      setTranscriptError(copy.resetFailed);
       setTranscriptLoading(false);
     }
   };
@@ -1222,7 +1437,7 @@ const PodcastPlayerPage: React.FC = () => {
                                                     `}
                 >
                   {line.translation || (
-                    <span className="text-muted-foreground italic text-sm">暂无翻译</span>
+                    <span className="text-muted-foreground italic text-sm">{copy.noTranslation}</span>
                   )}
                 </p>
               )}
@@ -1352,8 +1567,10 @@ const PodcastPlayerPage: React.FC = () => {
                     <Languages className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold text-muted-foreground">翻译字幕</p>
-                    <p className="text-xs text-muted-foreground">显示{translationLabel}翻译</p>
+                    <p className="text-sm font-bold text-muted-foreground">{copy.translationSubtitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
+                    </p>
                   </div>
                 </div>
                 <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
@@ -1364,14 +1581,14 @@ const PodcastPlayerPage: React.FC = () => {
                 onClick={() => setShowTranscriptResetConfirm(true)}
                 disabled={transcriptLoading || isGeneratingTranscript}
                 loading={isGeneratingTranscript}
-                loadingText="生成中..."
+                loadingText={copy.generating}
                 loadingIconClassName="w-4 h-4"
                 variant="outline"
                 size="default"
                 className="w-full gap-2 border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300"
               >
                 <RefreshCw className="w-4 h-4" />
-                重新生成字幕 (修正排版)
+                {copy.regenerateSubtitle}
               </Button>
               <AlertDialog
                 open={showTranscriptResetConfirm}
@@ -1380,22 +1597,22 @@ const PodcastPlayerPage: React.FC = () => {
                 <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
                   <AlertDialogHeader>
                     <AlertDialogTitle className="font-black text-foreground">
-                      重新生成字幕？
+                      {copy.regenerateTitle}
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-sm font-semibold text-muted-foreground leading-relaxed">
-                      重新生成字幕可能需要 1-2 分钟，当前字幕缓存会被清空并重新请求。确定继续吗？
+                      {copy.regenerateDescription}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter className="flex-row justify-end gap-2">
                     <AlertDialogCancel onClick={() => setShowTranscriptResetConfirm(false)}>
-                      取消
+                      {copy.cancel}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleConfirmRegenerateTranscript}
                       loading={isGeneratingTranscript || transcriptLoading}
-                      loadingText="处理中..."
+                      loadingText={copy.processing}
                     >
-                      确认重生成
+                      {copy.confirmRegenerate}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1414,7 +1631,7 @@ const PodcastPlayerPage: React.FC = () => {
                   className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
                 >
                   <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
-                  {isSubscribed ? '已收藏' : '收藏此集'}
+                  {isSubscribed ? copy.saved : copy.saveEpisode}
                 </Button>
                 <Button
                   variant="outline"
@@ -1422,7 +1639,7 @@ const PodcastPlayerPage: React.FC = () => {
                   onClick={handleShareEpisode}
                   className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
                 >
-                  <Share2 className="w-4 h-4" /> 分享
+                  <Share2 className="w-4 h-4" /> {copy.share}
                 </Button>
               </div>
             </div>
@@ -1452,7 +1669,7 @@ const PodcastPlayerPage: React.FC = () => {
             >
               <ListMusic className="w-4 h-4" />
               <span className="text-xs font-bold">
-                {autoScroll ? '自动滚动: 开' : '自动滚动: 关'}
+                {autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
               </span>
             </Button>
           </div>
@@ -1463,11 +1680,11 @@ const PodcastPlayerPage: React.FC = () => {
               <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
                 <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-400/30 border-t-indigo-600 rounded-full animate-spin" />
                 <p className="text-muted-foreground font-medium animate-pulse">
-                  AI 正在生成智能字幕...
+                  {copy.generatingSmartSubtitle}
                 </p>
                 {isGeneratingTranscript && (
                   <Badge variant="secondary" className="text-xs shadow-sm">
-                    首次生成约需 1 分钟
+                    {copy.firstGenerationHint}
                   </Badge>
                 )}
               </div>
@@ -1479,14 +1696,14 @@ const PodcastPlayerPage: React.FC = () => {
                 <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-3 text-destructive">
                   <Volume2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-muted-foreground font-bold mb-1">无法加载字幕</h3>
+                <h3 className="text-muted-foreground font-bold mb-1">{copy.cannotLoadSubtitle}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{transcriptError}</p>
                 <Button
                   onClick={() => loadTranscriptChunked(true)}
                   size="default"
                   className="px-6 py-2"
                 >
-                  重试
+                  {copy.retry}
                 </Button>
               </Card>
             )}
@@ -1494,7 +1711,7 @@ const PodcastPlayerPage: React.FC = () => {
             {/* Empty State */}
             {!transcriptLoading && !transcriptError && transcript.length === 0 && (
               <Card className="text-center py-16 text-muted-foreground border-dashed">
-                <p>暂无字幕内容</p>
+                <p>{copy.noSubtitleContent}</p>
               </Card>
             )}
 
@@ -1672,7 +1889,7 @@ const PodcastPlayerPage: React.FC = () => {
               <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2">
                   <ListMusic className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
-                  <h3 className="font-bold text-muted-foreground">播放列表</h3>
+                  <h3 className="font-bold text-muted-foreground">{copy.playlist}</h3>
                   <span className="text-xs font-medium px-2 py-0.5 bg-muted text-muted-foreground rounded-full">
                     {playlist.length}
                   </span>
@@ -1692,7 +1909,7 @@ const PodcastPlayerPage: React.FC = () => {
                 {playlist.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-40 text-muted-foreground space-y-2">
                     <ListMusic className="w-8 h-8 opacity-20" />
-                    <p className="text-sm">暂无其他剧集</p>
+                    <p className="text-sm">{copy.noOtherEpisodes}</p>
                   </div>
                 ) : (
                   playlist.map(ep => {

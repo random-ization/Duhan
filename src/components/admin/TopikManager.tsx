@@ -39,11 +39,13 @@ export const TopikManager: React.FC = () => {
     { initialNumItems: 20 }
   );
 
-  const exams: TopikExam[] = (results || []).map(e => ({
-    ...e,
-    questions: [], // Questions loaded separately
-    type: e.type as 'READING' | 'LISTENING', // Cast from string to union
-  }));
+  const exams: TopikExam[] = (results || [])
+    .filter(e => e.type === 'READING' || e.type === 'LISTENING')
+    .map(e => ({
+      ...e,
+      questions: [], // Questions loaded separately
+      type: e.type as 'READING' | 'LISTENING',
+    }));
 
   const loading = status === 'LoadingFirstPage';
 

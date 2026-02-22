@@ -81,7 +81,7 @@ export default function MobileGrammarDetailSheet({
         let feedback = typeof data.nuance === 'string' ? data.nuance : 'Analysis complete';
         const isFeedbackNegative =
           feedback.toLowerCase().startsWith('incorrect') ||
-          feedback.includes('错误') ||
+          feedback.includes('\u9519\u8BEF') ||
           feedback.includes('Incorrect');
 
         const finalIsCorrect = !isFeedbackNegative;

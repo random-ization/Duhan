@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Trophy } from 'lucide-react';
 import { GrammarPointData } from '../../types';
 import { Button } from '../ui';
@@ -11,6 +12,7 @@ interface GrammarCardProps {
 }
 
 const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onToggleStatus }) => {
+  const { t } = useTranslation();
   const isMastered = grammar.status === 'MASTERED';
   const isLearning = grammar.status === 'LEARNING';
   const proficiency = grammar.proficiency ?? 0;
@@ -24,21 +26,21 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
       barColor: 'bg-blue-500',
       bgColor: 'bg-blue-100',
       textColor: 'text-blue-700',
-      label: '终结词尾',
+      label: t('grammarCard.type.ending', { defaultValue: 'Sentence ending' }),
       hoverColor: 'group-hover:text-blue-600',
     },
     PARTICLE: {
       barColor: 'bg-purple-500',
       bgColor: 'bg-purple-100',
       textColor: 'text-purple-700',
-      label: '助词',
+      label: t('grammarCard.type.particle', { defaultValue: 'Particle' }),
       hoverColor: 'group-hover:text-purple-600',
     },
     CONNECTIVE: {
       barColor: 'bg-amber-500',
       bgColor: 'bg-amber-100',
       textColor: 'text-amber-700',
-      label: '连接词尾',
+      label: t('grammarCard.type.connective', { defaultValue: 'Connective ending' }),
       hoverColor: 'group-hover:text-amber-600',
     },
   };
@@ -67,7 +69,9 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
       return (
         <>
           <Trophy className="w-3 h-3 text-green-600" />
-          <span className="text-[10px] font-bold text-green-600">已掌握</span>
+          <span className="text-[10px] font-bold text-green-600">
+            {t('mastered', { defaultValue: 'Mastered' })}
+          </span>
         </>
       );
     }
@@ -75,14 +79,18 @@ const GrammarCard: React.FC<GrammarCardProps> = ({ grammar, index, onClick, onTo
       return (
         <>
           <div className="w-1.5 h-1.5 rounded-full border border-foreground bg-amber-400"></div>
-          <span className="text-[10px] font-bold text-amber-600">学习中</span>
+          <span className="text-[10px] font-bold text-amber-600">
+            {t('learning', { defaultValue: 'Learning' })}
+          </span>
         </>
       );
     }
     return (
       <>
         <div className="w-1.5 h-1.5 rounded-full border border-foreground bg-muted"></div>
-        <span className="text-[10px] font-bold text-muted-foreground">未学习</span>
+        <span className="text-[10px] font-bold text-muted-foreground">
+          {t('notStarted', { defaultValue: 'Not Started' })}
+        </span>
       </>
     );
   };

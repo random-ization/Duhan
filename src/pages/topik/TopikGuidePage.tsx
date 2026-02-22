@@ -77,61 +77,61 @@ const COPY: Record<
     nextTitle: 'Next: pick your focus',
   },
   zh: {
-    h1: 'TOPIK 备考指南：学什么，如何更快提分',
+    h1: 'TOPIK \u5907\u8003\u6307\u5357：\u5b66\u4ec0\u4e48，\u5982\u4f55\u66f4\u5feb\u63d0\u5206',
     intro:
-      '这份指南针对 TOPIK II，总结一个可重复的备考循环：学习 -> 计时练习 -> 错题复盘 -> 针对薄弱点修正。',
-    tocTitle: '目录',
+      '\u8fd9\u4efd\u6307\u5357\u9488\u5bf9 TOPIK II，\u603b\u7ed3\u4e00\u4e2a\u53ef\u91cd\u590d\u7684\u5907\u8003\u5faa\u73af：\u5b66\u4e60 -> \u8ba1\u65f6\u7ec3\u4e60 -> \u9519\u9898\u590d\u76d8 -> \u9488\u5bf9\u8584\u5f31\u70b9\u4fee\u6b63。',
+    tocTitle: '\u76ee\u5f55',
     toc: [
-      { label: 'TOPIK II 概览', href: '#overview' },
-      { label: '四步备考循环', href: '#loop' },
-      { label: '常见错误', href: '#mistakes' },
-      { label: 'DuHan 如何帮助', href: '#duhan' },
+      { label: 'TOPIK II \u6982\u89c8', href: '#overview' },
+      { label: '\u56db\u6b65\u5907\u8003\u5faa\u73af', href: '#loop' },
+      { label: '\u5e38\u89c1\u9519\u8bef', href: '#mistakes' },
+      { label: 'DuHan \u5982\u4f55\u5e2e\u52a9', href: '#duhan' },
     ],
     sections: [
       {
         id: 'overview',
-        title: 'TOPIK II 概览（听力 + 阅读）',
-        body: '很多人丢分不是因为不会，而是因为时间不够或题型规律不熟。你的目标是同时提升速度和准确率。',
+        title: 'TOPIK II \u6982\u89c8（\u542c\u529b + \u9605\u8bfb）',
+        body: '\u5f88\u591a\u4eba\u4e22\u5206\u4e0d\u662f\u56e0\u4e3a\u4e0d\u4f1a，\u800c\u662f\u56e0\u4e3a\u65f6\u95f4\u4e0d\u591f\u6216\u9898\u578b\u89c4\u5f8b\u4e0d\u719f。\u4f60\u7684\u76ee\u6807\u662f\u540c\u65f6\u63d0\u5347\u901f\u5ea6\u548c\u51c6\u786e\u7387。',
         bullets: [
-          '听力用音频优先的练习方式反复精听',
-          '阅读用计时训练题型与信息定位',
-          '复盘要趁记忆还新鲜立刻做',
+          '\u542c\u529b\u7528\u97f3\u9891\u4f18\u5148\u7684\u7ec3\u4e60\u65b9\u5f0f\u53cd\u590d\u7cbe\u542c',
+          '\u9605\u8bfb\u7528\u8ba1\u65f6\u8bad\u7ec3\u9898\u578b\u4e0e\u4fe1\u606f\u5b9a\u4f4d',
+          '\u590d\u76d8\u8981\u8d81\u8bb0\u5fc6\u8fd8\u65b0\u9c9c\u7acb\u523b\u505a',
         ],
       },
       {
         id: 'loop',
-        title: '真正有效的四步循环',
-        body: '计划越简单越容易坚持。建议每周 4 到 6 天重复以下循环：',
+        title: '\u771f\u6b63\u6709\u6548\u7684\u56db\u6b65\u5faa\u73af',
+        body: '\u8ba1\u5212\u8d8a\u7b80\u5355\u8d8a\u5bb9\u6613\u575a\u6301。\u5efa\u8bae\u6bcf\u5468 4 \u5230 6 \u5929\u91cd\u590d\u4ee5\u4e0b\u5faa\u73af：',
         bullets: [
-          '1）学习：30-45 分钟 词汇 + 语法',
-          '2）练习：20-40 分钟 计时做题',
-          '3）复盘：15-30 分钟 错题复盘',
-          '4）修正：针对薄弱题型重复训练',
+          '1）\u5b66\u4e60：30-45 \u5206\u949f \u8bcd\u6c47 + \u8bed\u6cd5',
+          '2）\u7ec3\u4e60：20-40 \u5206\u949f \u8ba1\u65f6\u505a\u9898',
+          '3）\u590d\u76d8：15-30 \u5206\u949f \u9519\u9898\u590d\u76d8',
+          '4）\u4fee\u6b63：\u9488\u5bf9\u8584\u5f31\u9898\u578b\u91cd\u590d\u8bad\u7ec3',
         ],
       },
       {
         id: 'mistakes',
-        title: '最常见的坑',
-        body: '这些错误会让你投入很多却提分很慢：',
+        title: '\u6700\u5e38\u89c1\u7684\u5751',
+        body: '\u8fd9\u4e9b\u9519\u8bef\u4f1a\u8ba9\u4f60\u6295\u5165\u5f88\u591a\u5374\u63d0\u5206\u5f88\u6162：',
         bullets: [
-          '只刷题不复盘',
-          '练习不计时（考试节奏感很关键）',
-          '听力不回放不核对文本',
-          '没有稳定的每日最小计划',
+          '\u53ea\u5237\u9898\u4e0d\u590d\u76d8',
+          '\u7ec3\u4e60\u4e0d\u8ba1\u65f6（\u8003\u8bd5\u8282\u594f\u611f\u5f88\u5173\u952e）',
+          '\u542c\u529b\u4e0d\u56de\u653e\u4e0d\u6838\u5bf9\u6587\u672c',
+          '\u6ca1\u6709\u7a33\u5b9a\u7684\u6bcf\u65e5\u6700\u5c0f\u8ba1\u5212',
         ],
       },
       {
         id: 'duhan',
-        title: 'DuHan 如何帮助你备考',
-        body: '你可以用 DuHan 做计时练习、听力音频训练，并通过历史记录复盘，按周看到进步。',
+        title: 'DuHan \u5982\u4f55\u5e2e\u52a9\u4f60\u5907\u8003',
+        body: '\u4f60\u53ef\u4ee5\u7528 DuHan \u505a\u8ba1\u65f6\u7ec3\u4e60、\u542c\u529b\u97f3\u9891\u8bad\u7ec3，\u5e76\u901a\u8fc7\u5386\u53f2\u8bb0\u5f55\u590d\u76d8，\u6309\u5468\u770b\u5230\u8fdb\u6b65。',
         bullets: [
-          'TOPIK 听力与阅读练习中心',
-          '历史记录与错题复盘',
-          '教材体系化课程用于日常词汇语法',
+          'TOPIK \u542c\u529b\u4e0e\u9605\u8bfb\u7ec3\u4e60\u4e2d\u5fc3',
+          '\u5386\u53f2\u8bb0\u5f55\u4e0e\u9519\u9898\u590d\u76d8',
+          '\u6559\u6750\u4f53\u7cfb\u5316\u8bfe\u7a0b\u7528\u4e8e\u65e5\u5e38\u8bcd\u6c47\u8bed\u6cd5',
         ],
       },
     ],
-    nextTitle: '下一步：选择你的训练重点',
+    nextTitle: '\u4e0b\u4e00\u6b65：\u9009\u62e9\u4f60\u7684\u8bad\u7ec3\u91cd\u70b9',
   },
   vi: {
     h1: 'Hướng dẫn TOPIK: học gì và tăng điểm nhanh hơn',
@@ -323,7 +323,7 @@ export const TopikGuidePage: React.FC = () => {
                       {currentLang === 'en'
                         ? 'Go to TOPIK practice'
                         : currentLang === 'zh'
-                          ? '前往 TOPIK 练习'
+                          ? '\u524d\u5f80 TOPIK \u7ec3\u4e60'
                           : currentLang === 'vi'
                             ? 'Đi tới luyện TOPIK'
                             : 'TOPIK дасгал руу'}
@@ -339,7 +339,7 @@ export const TopikGuidePage: React.FC = () => {
                       {currentLang === 'en'
                         ? 'See pricing'
                         : currentLang === 'zh'
-                          ? '查看价格'
+                          ? '\u67e5\u770b\u4ef7\u683c'
                           : currentLang === 'vi'
                             ? 'Xem bảng giá'
                             : 'Үнийг харах'}
@@ -386,7 +386,7 @@ export const TopikGuidePage: React.FC = () => {
                     {currentLang === 'en'
                       ? 'Listening strategy'
                       : currentLang === 'zh'
-                        ? '听力策略'
+                        ? '\u542c\u529b\u7b56\u7565'
                         : currentLang === 'vi'
                           ? 'Chiến lược nghe'
                           : 'Сонсголын стратеги'}
@@ -402,7 +402,7 @@ export const TopikGuidePage: React.FC = () => {
                     {currentLang === 'en'
                       ? 'Reading strategy'
                       : currentLang === 'zh'
-                        ? '阅读策略'
+                        ? '\u9605\u8bfb\u7b56\u7565'
                         : currentLang === 'vi'
                           ? 'Chiến lược đọc'
                           : 'Уншлагын стратеги'}
@@ -418,7 +418,7 @@ export const TopikGuidePage: React.FC = () => {
                     {currentLang === 'en'
                       ? '4-week plan'
                       : currentLang === 'zh'
-                        ? '4 周计划'
+                        ? '4 \u5468\u8ba1\u5212'
                         : currentLang === 'vi'
                           ? 'Kế hoạch 4 tuần'
                           : '4 долоо хоногийн төлөвлөгөө'}

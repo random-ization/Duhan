@@ -159,7 +159,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
           <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
           {grammarMatches && grammarMatches.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-bold text-foreground mb-1">语法</div>
+              <div className="text-xs font-bold text-foreground mb-1">Grammar</div>
               <div className="space-y-1">
                 {grammarMatches.slice(0, 5).map(g => (
                   <div key={g.id} className="text-xs text-muted-foreground">
@@ -186,7 +186,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
             >
               <Volume2 className="w-3 h-3" />
-              {labels.dashboard?.common?.read || '朗读'}
+              {labels.dashboard?.common?.read || 'Read'}
             </Button>
             <Button
               variant="ghost"
@@ -195,7 +195,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
             >
               <Plus className="w-3 h-3" />
-              {labels.dashboard?.common?.addVocab || '加入生词本'}
+              {labels.dashboard?.common?.addVocab || 'Save Word'}
             </Button>
           </div>
         </PopoverContent>
@@ -226,14 +226,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-black text-sm">
-          {labels.dashboard?.listening?.settings || '听力设置'}
+          {labels.dashboard?.listening?.settings || 'Listening Settings'}
         </h4>
         <Button
           variant="ghost"
           size="auto"
           onClick={onClose}
           className="w-6 h-6 rounded-full bg-card border-2 border-foreground flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 transition-all"
-          aria-label={labels.dashboard?.common?.close || '关闭'}
+          aria-label={labels.dashboard?.common?.close || 'Close'}
         >
           <X className="w-3 h-3" />
         </Button>
@@ -241,7 +241,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className="mb-4">
         <label className="text-xs font-bold text-muted-foreground mb-2 block">
-          {labels.dashboard?.listening?.fontSize || '字体大小'}
+          {labels.dashboard?.listening?.fontSize || 'Font Size'}
         </label>
         <div className="flex items-center gap-2">
           <Button
@@ -266,7 +266,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-muted-foreground">
-          {labels.dashboard?.listening?.karaoke || '卡拉OK高亮'}
+          {labels.dashboard?.listening?.karaoke || 'Karaoke Highlight'}
         </span>
         <Button
           variant="ghost"
@@ -406,7 +406,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   courseId,
   unitIndex = 1,
   unitTitle = 'Unit 1: Listening Practice',
-  language = 'zh',
+  language = 'en',
   onBack,
 }) => {
   const labels = getLabels(language);
@@ -682,7 +682,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       if (dictionaryRequestRef.current !== requestId) return;
 
       const lemma = normalizeLookupWordCb(res.token.lemma || query) || query;
-      let meaning = selectedWord?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+      let meaning = selectedWord?.meaning || labels.dashboard?.common?.noMeaning || 'No meaning';
 
       if (res.wordFromDb?.meaning) {
         meaning = res.wordFromDb.meaning;
@@ -709,7 +709,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
           ? {
               ...prev,
               meaning:
-                prev.meaning === labels.dashboard?.common?.loading ? '查询失败' : prev.meaning,
+                prev.meaning === labels.dashboard?.common?.loading ? 'Lookup failed' : prev.meaning,
             }
           : prev
       );
@@ -743,7 +743,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     setSelectedWord({
       word: clickedWord,
       lemma: baseForm,
-      meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || '查询中...',
+      meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || 'Looking up...',
       baseForm,
       grammarMatches: [],
       contextTranslation,
@@ -792,9 +792,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Headphones className="w-12 h-12 mx-auto mb-4 opacity-30" />
-        <p className="font-bold">{labels.dashboard?.listening?.empty || '暂无听力内'}</p>
+        <p className="font-bold">{labels.dashboard?.listening?.empty || 'No listening content yet'}</p>
         <p className="text-sm mt-2">
-          {labels.dashboard?.listening?.emptyDesc || '请在管理后台添加听力音频和时间戳文稿'}
+          {labels.dashboard?.listening?.emptyDesc ||
+            'Please add listening audio and timestamp transcript in admin panel'}
         </p>
       </div>
     );
@@ -836,7 +837,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             {/* Center: Unit Info Badge */}
             <div className="flex gap-2">
               <span className="px-3 py-1 bg-card border-2 border-foreground rounded-lg font-bold text-xs shadow-[2px_2px_0px_0px_#18181B]">
-                {(labels.dashboard?.listening?.title || '第 {index} 课 · 听力').replace(
+                {(labels.dashboard?.listening?.title || 'Unit {index} · Listening').replace(
                   '{index}',
                   String(unitIndex)
                 )}
@@ -850,7 +851,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                 }`}
               >
                 <Languages className="w-4 h-4 inline mr-1" />
-                {labels.dashboard?.listening?.translate || '译文'}
+                {labels.dashboard?.listening?.translate || 'Translation'}
               </Button>
             </div>
 
@@ -886,13 +887,13 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
             <div className="bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-3xl mx-auto">
               <h2 className="text-2xl font-black mb-6 text-foreground flex items-center gap-2">
                 <Headphones className="w-6 h-6 text-lime-600" />
-                {labels.dashboard?.listening?.transcript || '听力文稿'}
+                {labels.dashboard?.listening?.transcript || 'Transcript'}
               </h2>
 
               {/* Karaoke hint */}
               {unitData?.transcriptData && unitData.transcriptData.length > 0 && (
                 <div className="mb-6 p-3 bg-lime-50 border border-lime-200 rounded-lg text-sm text-lime-700">
-                  {labels.dashboard?.listening?.hint || '💡 点击任意句子可跳转到对应位置播放'}
+                  {labels.dashboard?.listening?.hint || '💡 Tap any sentence to seek playback'}
                 </div>
               )}
 
@@ -908,21 +909,21 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                       setCompletingUnit(true);
                       await completeUnitMutation({ courseId, unitIndex });
                       flushListeningTime(true);
-                      notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
+                      notify.success(labels.dashboard?.reading?.learned || '🎉 Lesson completed!');
                     } catch (e) {
                       console.error('Failed to mark unit complete:', e);
-                      notify.error(labels.dashboard?.common?.error || '操作失败，请稍后重试');
+                      notify.error(labels.dashboard?.common?.error || 'Action failed. Please try again.');
                     } finally {
                       setCompletingUnit(false);
                     }
                   }}
                   disabled={completingUnit}
                   loading={completingUnit}
-                  loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || '完成本课学习'}`}
+                  loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || 'Complete lesson'}`}
                   loadingIconClassName="w-4 h-4"
                   className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm text-foreground hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                 >
-                  ✅ {labels.dashboard?.reading?.completeLesson || '完成本课学习'}
+                  ✅ {labels.dashboard?.reading?.completeLesson || 'Complete lesson'}
                 </Button>
               </div>
             </div>

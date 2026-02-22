@@ -156,7 +156,7 @@ export default function DesktopAuthPage() {
               <img
                 src="/logo.png"
                 alt={t('common.alt.logo')}
-                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl"
+                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl dark:brightness-0 dark:invert"
               />
             )}
             <h1 className="text-5xl font-black font-display mb-2">{t('auth.brand')}</h1>

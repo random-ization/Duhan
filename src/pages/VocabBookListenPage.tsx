@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
+import { VocabBookListenSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
@@ -206,7 +207,7 @@ const VocabBookListenPage: React.FC = () => {
     }
   };
 
-  const title = labels.vocab?.modeListen || '随身听';
+  const title = labels.vocab?.modeListen || 'Listen';
 
   const renderHeader = () => (
     <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-amber-100 dark:border-amber-300/20">
@@ -217,7 +218,7 @@ const VocabBookListenPage: React.FC = () => {
           size="auto"
           onClick={() => navigate('/vocab-book')}
           className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-amber-300 dark:hover:border-amber-300/35 transition-all duration-200"
-          aria-label="返回"
+          aria-label={labels.dashboard?.common?.back || 'Back'}
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </Button>
@@ -237,7 +238,7 @@ const VocabBookListenPage: React.FC = () => {
           size="auto"
           onClick={() => setSettingsOpen(true)}
           className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-amber-300 dark:hover:border-amber-300/35 transition-all duration-200"
-          aria-label="设置"
+          aria-label={labels.settings || 'Settings'}
         >
           <Settings2 className="w-5 h-5 text-muted-foreground" />
         </Button>
@@ -266,9 +267,9 @@ const VocabBookListenPage: React.FC = () => {
             <Headphones className="w-6 h-6 text-amber-700 dark:text-amber-300" />
           </div>
           <div>
-            <p className="font-black text-foreground">{labels.vocab?.listenBasic || '基础模式'}</p>
+            <p className="font-black text-foreground">{labels.vocab?.listenBasic || 'Basic'}</p>
             <p className="text-xs font-bold text-muted-foreground">
-              {labels.vocab?.listenBasicDesc || '单词 + 例句'}
+              {labels.vocab?.listenBasicDesc || 'Word + example'}
             </p>
           </div>
         </div>
@@ -294,10 +295,10 @@ const VocabBookListenPage: React.FC = () => {
           </div>
           <div>
             <p className="font-black text-foreground">
-              {labels.vocab?.listenAdvanced || '进阶模式'}
+              {labels.vocab?.listenAdvanced || 'Advanced'}
             </p>
             <p className="text-xs font-bold text-muted-foreground">
-              {labels.vocab?.listenAdvancedDesc || '仅播单词'}
+              {labels.vocab?.listenAdvancedDesc || 'Word only'}
             </p>
           </div>
         </div>
@@ -309,7 +310,7 @@ const VocabBookListenPage: React.FC = () => {
     <div className="space-y-3">
       <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
         <span className="font-black text-muted-foreground">
-          {labels.vocab?.playMeaning || '播放单词释义'}
+          {labels.vocab?.playMeaning || 'Play meaning'}
         </span>
         <Switch
           checked={playMeaning}
@@ -320,7 +321,7 @@ const VocabBookListenPage: React.FC = () => {
 
       <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
         <span className="font-black text-muted-foreground">
-          {labels.vocab?.playExampleTranslation || '播放例句译文'}
+          {labels.vocab?.playExampleTranslation || 'Play example translation'}
         </span>
         <Switch
           checked={playExampleTranslation}
@@ -335,7 +336,7 @@ const VocabBookListenPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
-          {labels.vocab?.repeatCount || '单词播放次数'}
+          {labels.vocab?.repeatCount || 'Repeat count'}
         </p>
         <div className="grid grid-cols-4 gap-2">
           {([1, 2, 3, 'INFINITE'] as const).map(v => (
@@ -351,7 +352,7 @@ const VocabBookListenPage: React.FC = () => {
                   : 'border-border bg-card text-muted-foreground'
               }`}
             >
-              {v === 'INFINITE' ? labels.vocab?.infinite || '无限' : `${v}次`}
+              {v === 'INFINITE' ? labels.vocab?.infinite || 'Infinite' : `${v}x`}
             </Button>
           ))}
         </div>
@@ -359,7 +360,7 @@ const VocabBookListenPage: React.FC = () => {
 
       <div>
         <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
-          {labels.vocab?.speed || '倍速'}
+          {labels.vocab?.speed || 'Speed'}
         </p>
         <div className="grid grid-cols-4 gap-2">
           {([0.8, 1, 1.2, 1.4] as const).map(v => (
@@ -384,22 +385,13 @@ const VocabBookListenPage: React.FC = () => {
   );
 
   const renderPlayerCard = () => {
-    if (loading) {
-      return (
-        <div className="py-20 flex flex-col items-center justify-center space-y-4">
-          <div className="w-12 h-12 border-4 border-amber-200 dark:border-amber-300/25 border-t-amber-500 dark:border-t-amber-300 rounded-full animate-spin" />
-          <p className="text-muted-foreground font-bold">{labels.loading || '加载中...'}</p>
-        </div>
-      );
-    }
-
     if (total === 0 || !current) {
       return (
         <div className="py-20 text-center">
           <div className="w-20 h-20 bg-muted rounded-[32px] flex items-center justify-center mx-auto mb-4 border-[3px] border-border">
             <Headphones className="w-10 h-10 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground font-black">{labels.vocab?.noData || '暂无数据'}</p>
+          <p className="text-muted-foreground font-black">{labels.vocab?.noData || 'No data'}</p>
         </div>
       );
     }
@@ -425,7 +417,7 @@ const VocabBookListenPage: React.FC = () => {
             size="auto"
             onClick={goPrev}
             className="p-4 rounded-2xl bg-muted border-[3px] border-border text-muted-foreground hover:border-amber-300 dark:hover:border-amber-300/35 transition-all active:scale-95"
-            aria-label="上一个"
+            aria-label={labels.common?.prev || 'Previous'}
           >
             <ChevronLeft className="w-6 h-6" />
           </Button>
@@ -454,7 +446,7 @@ const VocabBookListenPage: React.FC = () => {
             size="auto"
             onClick={goNext}
             className="p-4 rounded-2xl bg-muted border-[3px] border-border text-muted-foreground hover:border-amber-300 dark:hover:border-amber-300/35 transition-all active:scale-95"
-            aria-label="下一个"
+            aria-label={labels.common?.next || 'Next'}
           >
             <ChevronRight className="w-6 h-6" />
           </Button>
@@ -503,7 +495,7 @@ const VocabBookListenPage: React.FC = () => {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
-                  {labels.settings || '设置'}
+                  {labels.settings || 'Settings'}
                 </p>
                 <h2 className="text-2xl font-black text-foreground">{title}</h2>
               </div>
@@ -513,7 +505,7 @@ const VocabBookListenPage: React.FC = () => {
                 size="auto"
                 onClick={() => setSettingsOpen(false)}
                 className="p-2 rounded-xl hover:bg-muted"
-                aria-label="关闭"
+                aria-label={labels.close || 'Close'}
               >
                 <X className="w-5 h-5 text-muted-foreground" />
               </Button>
@@ -528,13 +520,22 @@ const VocabBookListenPage: React.FC = () => {
               onClick={() => setSettingsOpen(false)}
               className="mt-6 w-full py-3 rounded-2xl bg-primary text-primary-foreground font-black"
             >
-              {labels.done || '完成'}
+              {labels.done || 'Done'}
             </Button>
           </motion.div>
         </DialogContent>
       </DialogPortal>
     </Dialog>
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 dark:from-amber-400/8 dark:via-background dark:to-amber-300/8">
+        {renderHeader()}
+        <VocabBookListenSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 dark:from-amber-400/8 dark:via-background dark:to-amber-300/8">

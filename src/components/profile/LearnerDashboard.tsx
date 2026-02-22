@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import {
   Flame,
   BookOpen,
@@ -32,6 +33,7 @@ interface LearnerStats {
 }
 
 export const LearnerDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const statsData = useQuery(qRef<NoArgs, LearnerStats | null>('userStats:getStats'));
   const loading = statsData === undefined;
   const stats = statsData ?? null;
@@ -47,7 +49,7 @@ export const LearnerDashboard: React.FC = () => {
   if (!stats) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>无法加载学习数据</p>
+        <p>{t('learnerDashboard.loadError', { defaultValue: 'Failed to load learning data' })}</p>
       </div>
     );
   }
@@ -64,7 +66,9 @@ export const LearnerDashboard: React.FC = () => {
             <Flame className="w-5 h-5 text-white" />
           </div>
           <div className="text-3xl font-black text-foreground">{stats.streak}</div>
-          <div className="text-sm text-muted-foreground font-medium">连续打卡天数</div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {t('learnerDashboard.streakDays', { defaultValue: 'Streak Days' })}
+          </div>
         </div>
 
         {/* Words Learned */}
@@ -73,7 +77,9 @@ export const LearnerDashboard: React.FC = () => {
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div className="text-3xl font-black text-foreground">{stats.totalWordsLearned}</div>
-          <div className="text-sm text-muted-foreground font-medium">已学词汇</div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {t('learnerDashboard.wordsLearned', { defaultValue: 'Words Learned' })}
+          </div>
         </div>
 
         {/* Grammar Learned */}
@@ -82,7 +88,9 @@ export const LearnerDashboard: React.FC = () => {
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div className="text-3xl font-black text-foreground">{stats.totalGrammarLearned}</div>
-          <div className="text-sm text-muted-foreground font-medium">已学语法</div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {t('learnerDashboard.grammarLearned', { defaultValue: 'Grammar Learned' })}
+          </div>
         </div>
 
         {/* Today's Progress */}
@@ -91,7 +99,9 @@ export const LearnerDashboard: React.FC = () => {
             <Clock className="w-5 h-5 text-white" />
           </div>
           <div className="text-3xl font-black text-foreground">{stats.todayMinutes}</div>
-          <div className="text-sm text-muted-foreground font-medium">今日学习(分钟)</div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {t('learnerDashboard.todayMinutes', { defaultValue: 'Today (minutes)' })}
+          </div>
         </div>
       </div>
 
@@ -99,7 +109,9 @@ export const LearnerDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Weekly Chart (2/3) */}
         <div className="lg:col-span-2 bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
-          <h3 className="font-black text-lg mb-4">📊 本周学习时长</h3>
+          <h3 className="font-black text-lg mb-4">
+            📊 {t('learnerDashboard.weeklyStudy', { defaultValue: 'Weekly Study Time' })}
+          </h3>
           <Suspense fallback={<div className="h-[220px]" />}>
             <WeeklyActivityChart data={stats.weeklyActivity} />
           </Suspense>
@@ -107,7 +119,9 @@ export const LearnerDashboard: React.FC = () => {
 
         {/* Continue Learning Card (1/3) */}
         <div className="bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B] flex flex-col">
-          <h3 className="font-black text-lg mb-4">🚀 继续学习</h3>
+          <h3 className="font-black text-lg mb-4">
+            🚀 {t('learnerDashboard.continueLearning', { defaultValue: 'Continue Learning' })}
+          </h3>
 
           {stats.currentProgress ? (
             <div className="flex-1 flex flex-col justify-between">
@@ -116,7 +130,11 @@ export const LearnerDashboard: React.FC = () => {
                   {stats.currentProgress.instituteName}
                 </div>
                 <div className="text-sm text-muted-foreground mb-4">
-                  第 {stats.currentProgress.unit} 课 · {getModuleName(stats.currentProgress.module)}
+                  {t('learnerDashboard.unitProgress', {
+                    defaultValue: 'Unit {{unit}} · {{module}}',
+                    unit: stats.currentProgress.unit,
+                    module: getModuleName(stats.currentProgress.module, t),
+                  })}
                 </div>
               </div>
               <Button
@@ -124,13 +142,18 @@ export const LearnerDashboard: React.FC = () => {
                 size="auto"
                 className="w-full py-3 bg-lime-300 border-2 border-foreground rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all"
               >
-                继续学习 <ChevronRight className="w-4 h-4" />
+                {t('learnerDashboard.continueButton', { defaultValue: 'Continue' })}{' '}
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
               <Target className="w-12 h-12 mb-3 opacity-30" />
-              <p className="font-medium">开始你的第一节课吧！</p>
+              <p className="font-medium">
+                {t('learnerDashboard.startFirstLesson', {
+                  defaultValue: 'Start your first lesson!',
+                })}
+              </p>
             </div>
           )}
         </div>
@@ -139,9 +162,12 @@ export const LearnerDashboard: React.FC = () => {
       {/* Daily Goal Progress */}
       <div className="bg-card border-2 border-foreground rounded-xl p-6 shadow-[4px_4px_0px_0px_#18181B]">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-black text-lg">🎯 今日目标</h3>
+          <h3 className="font-black text-lg">
+            🎯 {t('learnerDashboard.dailyGoal', { defaultValue: 'Daily Goal' })}
+          </h3>
           <span className="text-sm text-muted-foreground">
-            {stats.todayMinutes} / {stats.dailyGoal} 分钟
+            {stats.todayMinutes} / {stats.dailyGoal}{' '}
+            {t('learnerDashboard.minutesUnit', { defaultValue: 'min' })}
           </span>
         </div>
         <div className="h-4 bg-muted rounded-full overflow-hidden">
@@ -152,7 +178,7 @@ export const LearnerDashboard: React.FC = () => {
         </div>
         {progressPercent >= 100 && (
           <div className="mt-3 text-center text-emerald-600 font-bold">
-            ✨ 恭喜！今日目标已完成！
+            ✨ {t('learnerDashboard.goalCompleted', { defaultValue: 'Goal completed today!' })}
           </div>
         )}
       </div>
@@ -165,8 +191,17 @@ export const LearnerDashboard: React.FC = () => {
               <RefreshCw className="w-5 h-5 text-yellow-900" />
             </div>
             <div>
-              <div className="font-bold text-yellow-900">有 {stats.wordsToReview} 个单词待复习</div>
-              <div className="text-sm text-yellow-700">趁热打铁，巩固记忆！</div>
+              <div className="font-bold text-yellow-900">
+                {t('learnerDashboard.reviewWords', {
+                  defaultValue: '{{count}} words are waiting for review',
+                  count: stats.wordsToReview,
+                })}
+              </div>
+              <div className="text-sm text-yellow-700">
+                {t('learnerDashboard.reviewHint', {
+                  defaultValue: 'Keep momentum and lock in your memory.',
+                })}
+              </div>
             </div>
           </div>
           <Button
@@ -174,7 +209,7 @@ export const LearnerDashboard: React.FC = () => {
             size="auto"
             className="px-4 py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-500 transition-colors"
           >
-            去复习
+            {t('learnerDashboard.reviewNow', { defaultValue: 'Review now' })}
           </Button>
         </div>
       )}
@@ -182,14 +217,17 @@ export const LearnerDashboard: React.FC = () => {
   );
 };
 
-const getModuleName = (module: string) => {
+const getModuleName = (
+  module: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+) => {
   switch (module) {
     case 'vocab':
-      return '词汇';
+      return t('learnerDashboard.module.vocab', { defaultValue: 'Vocabulary' });
     case 'reading':
-      return '阅读';
+      return t('learnerDashboard.module.reading', { defaultValue: 'Reading' });
     case 'grammar':
-      return '语法';
+      return t('learnerDashboard.module.grammar', { defaultValue: 'Grammar' });
     default:
       return module;
   }

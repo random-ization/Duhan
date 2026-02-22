@@ -1,0 +1,9 @@
+export { default as ProfilePage } from '../ProfilePage';
+export { default as DashboardPage } from '../DashboardPage';
+export { default as PracticeHubPage } from '../PracticeHubPage';
+export { default as MediaHubPage } from '../MediaHubPage';
+export { default as ReadingDiscoveryPage } from '../ReadingDiscoveryPage';
+export { default as ReadingArticlePage } from '../ReadingArticlePage';
+export { default as NotebookPage } from '../NotebookPage';
+export { default as TypingPage } from '../TypingPage';
+export { default as DictionarySearchPage } from '../DictionarySearchPage';

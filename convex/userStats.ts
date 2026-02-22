@@ -35,7 +35,7 @@ export const getStats = query({
         const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
         // Fetch all progress stats concurrently
-        const [courseProgress, vocabProgress, grammarProgress, recentLogs] = await Promise.all([
+        const [courseProgress, vocabProgress, grammarProgress, recentLogs, allLogs] = await Promise.all([
             // Get user's course progress
             ctx.db
                 .query("user_course_progress")
@@ -54,11 +54,17 @@ export const getStats = query({
                 .withIndex("by_user_grammar", (q) => q.eq("userId", userId))
                 .collect(),
 
-            // Get activity logs
+            // Get activity logs (last 7 days)
             ctx.db
                 .query("activity_logs")
                 .withIndex("by_user", q => q.eq("userId", userId))
                 .filter(q => q.gte(q.field("createdAt"), sevenDaysAgo))
+                .collect(),
+
+            // Get ALL activity logs (for cumulative stats)
+            ctx.db
+                .query("activity_logs")
+                .withIndex("by_user", q => q.eq("userId", userId))
                 .collect(),
         ]);
 
@@ -67,24 +73,49 @@ export const getStats = query({
 
         const masteredGrammar = grammarProgress.filter((g) => g.status === "MASTERED").length;
 
-        // Calculate streak (simplified - could be more complex)
-        const lastAccess = courseProgress.length > 0
-            ? Math.max(...courseProgress.map(p => p.lastAccessAt || 0))
-            : 0;
-
+        // Calculate streak: count consecutive calendar days backwards from today that have activity
         const oneDayMs = 24 * 60 * 60 * 1000;
-        const daysSinceLastAccess = Math.floor((now - lastAccess) / oneDayMs);
-        // Simplified streak logic
+        const todayMidnight = new Date(now);
+        todayMidnight.setHours(0, 0, 0, 0);
+        const todayStartMs = todayMidnight.getTime();
+
+        // Get all distinct day timestamps (midnight) from activity_logs
+        const activeDaySet = new Set<number>();
+        for (const log of allLogs) {
+            const d = new Date(log.createdAt);
+            d.setHours(0, 0, 0, 0);
+            activeDaySet.add(d.getTime());
+        }
+
         let streak = 0;
-        if (daysSinceLastAccess <= 1) {
-            streak = 1;
+        let checkDay = todayStartMs;
+        while (activeDaySet.has(checkDay)) {
+            streak++;
+            checkDay -= oneDayMs;
+        }
+        // If no activity today yet, check if yesterday had activity (streak is still alive)
+        if (streak === 0 && activeDaySet.has(todayStartMs - oneDayMs)) {
+            let d = todayStartMs - oneDayMs;
+            while (activeDaySet.has(d)) {
+                streak++;
+                d -= oneDayMs;
+            }
         }
 
         // Calculate Study Time
         // Daily Minutes
         const todayLogs = recentLogs.filter(log => log.createdAt >= startOfDay);
         const todayMinutes = todayLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+        const totalMinutes = allLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
         const dailyProgress = Math.min(Math.round((todayMinutes / 30) * 100), 100); // 30 min goal
+
+        // Today's vocab/grammar study counts
+        const todayWordsStudied = vocabProgress.filter(
+            v => v.lastReviewedAt && v.lastReviewedAt >= startOfDay
+        ).length;
+        const todayGrammarStudied = grammarProgress.filter(
+            g => g.lastStudiedAt && g.lastStudiedAt >= startOfDay
+        ).length;
 
         // Weekly Minutes (Last 7 days buckets or Mon-Sun?)
         // Let's do Mon-Sun buckets for consistency with most calendars
@@ -182,6 +213,9 @@ export const getStats = query({
                 total: grammarProgress.length,
                 mastered: masteredGrammar,
             },
+            totalMinutes,
+            todayWordsStudied,
+            todayGrammarStudied,
         };
     }
 });
@@ -192,7 +226,7 @@ export const logActivity = mutation({
         activityType: v.string(),
         duration: v.optional(v.number()),
         itemsStudied: v.optional(v.number()),
-        metadata: v.optional(v.any()),
+        metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);

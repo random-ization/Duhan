@@ -168,6 +168,7 @@ type SheetContentProps = React.ComponentPropsWithoutRef<'div'> & {
   unstyled?: boolean;
   closeOnEscape?: boolean;
   lockBodyScroll?: boolean;
+  trapFocus?: boolean;
 };
 
 const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
@@ -178,38 +179,113 @@ const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
       unstyled = false,
       closeOnEscape = true,
       lockBodyScroll = true,
+      trapFocus = true,
       ...props
     },
     ref
   ) => {
     const { open, setOpen } = useSheetContext('SheetContent');
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+    const assignRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        contentRef.current = node;
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      },
+      [ref]
+    );
 
     React.useEffect(() => {
       if (!open) return;
 
       const previousOverflow = document.body.style.overflow;
+      const previousActiveElement = document.activeElement as HTMLElement | null;
+      const getFocusableElements = (container: HTMLElement) =>
+        Array.from(
+          container.querySelectorAll<HTMLElement>(
+            [
+              'a[href]',
+              'button:not([disabled])',
+              'textarea:not([disabled])',
+              'input:not([disabled]):not([type="hidden"])',
+              'select:not([disabled])',
+              '[tabindex]:not([tabindex="-1"])',
+            ].join(', ')
+          )
+        ).filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
+
+      const focusFirstElement = () => {
+        if (!trapFocus) return;
+        const container = contentRef.current;
+        if (!container) return;
+        const focusables = getFocusableElements(container);
+        const autoFocused = focusables.find(el => el.hasAttribute('autofocus'));
+        (autoFocused ?? focusables[0] ?? container).focus();
+      };
+
       const onEscape = (event: KeyboardEvent) => {
         if (event.key === 'Escape' && closeOnEscape) setOpen(false);
       };
+      const onTrapFocus = (event: KeyboardEvent) => {
+        if (!trapFocus || event.key !== 'Tab') return;
+        const container = contentRef.current;
+        if (!container) return;
+
+        const focusables = getFocusableElements(container);
+        if (focusables.length === 0) {
+          event.preventDefault();
+          container.focus();
+          return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        const isInside = !!active && container.contains(active);
+
+        if (event.shiftKey) {
+          if (!isInside || active === first) {
+            event.preventDefault();
+            last.focus();
+          }
+          return;
+        }
+
+        if (!isInside || active === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      };
 
       if (lockBodyScroll) document.body.style.overflow = 'hidden';
+      globalThis.requestAnimationFrame(focusFirstElement);
       document.addEventListener('keydown', onEscape);
+      document.addEventListener('keydown', onTrapFocus);
 
       return () => {
         if (lockBodyScroll) document.body.style.overflow = previousOverflow;
         document.removeEventListener('keydown', onEscape);
+        document.removeEventListener('keydown', onTrapFocus);
+        if (trapFocus && previousActiveElement && typeof previousActiveElement.focus === 'function') {
+          previousActiveElement.focus();
+        }
       };
-    }, [closeOnEscape, lockBodyScroll, open, setOpen]);
+    }, [closeOnEscape, lockBodyScroll, open, setOpen, trapFocus]);
 
     if (!open && !forceMount) return null;
 
     return (
       <div
-        ref={ref}
+        ref={assignRef}
         data-slot="sheet-content"
         data-state={open ? 'open' : 'closed'}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         className={cn(
           'data-[state=closed]:pointer-events-none',
           !unstyled && 'fixed z-50 bg-card shadow-lg',

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAction } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { aRef, NoArgs } from '../../utils/convexRefs';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
+import { getLanguageLabel } from '../../utils/languageUtils';
 import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { Button } from '../ui';
 
@@ -62,6 +63,16 @@ export const MobileSubscriptionPage: React.FC = () => {
     const discount = Math.max(0, Math.round((1 - annualAmount / (monthlyAmount * 12)) * 100));
     return discount > 0 ? `-${discount}%` : '-20%';
   }, [priceRegion, prices]);
+  const baseLang = (i18n.language || 'en').split('-')[0];
+  const languageLabel = getLanguageLabel(baseLang as 'en' | 'zh' | 'vi' | 'mn');
+  const feature1DescText = useMemo(
+    () => t('coursesOverview.feature1Desc').replace(/<[^>]+>/g, ''),
+    [t]
+  );
+  const feature3DescText = useMemo(
+    () => t('coursesOverview.feature3Desc').replace(/<[^>]+>/g, ''),
+    [t]
+  );
 
   useEffect(() => {
     getVariantPrices({})
@@ -89,8 +100,8 @@ export const MobileSubscriptionPage: React.FC = () => {
     } catch (error) {
       const err = error as Error;
       logger.error('Checkout failed:', err);
-      const msg = err.message || 'Unknown error';
-      notify.error(`Failed to start checkout: ${msg}`);
+      const msg = err.message || t('common.notFound', { defaultValue: 'Unknown error' });
+      notify.error(`${t('pricingDetails.errors.checkoutFailed')}: ${msg}`);
       setLoading(false);
     }
   };
@@ -109,18 +120,22 @@ export const MobileSubscriptionPage: React.FC = () => {
             <ArrowLeft className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-muted-foreground">Video</span>
+            <span className="text-xs font-bold text-muted-foreground">
+              {t('nav.videos', { defaultValue: 'Videos' })}
+            </span>
             <span className="w-px h-3 bg-muted"></span>
-            <span className="text-xs font-bold text-foreground">English</span>
+            <span className="text-xs font-bold text-foreground">{languageLabel}</span>
           </div>
         </div>
 
         <div className="text-center">
           <span className="inline-block py-1 px-3 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs mb-4">
-            PREMIUM
+            {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
           </span>
           <h1 className="text-3xl font-black text-foreground leading-tight mb-2">
-            Unlock <span className="text-indigo-600">DuHan Premium</span>
+            <Trans i18nKey="coursesOverview.unlockTitle">
+              Unlock <span className="text-indigo-600">DuHan Premium</span>
+            </Trans>
           </h1>
           <p className="text-muted-foreground font-medium text-sm leading-relaxed max-w-xs mx-auto">
             {t('coursesOverview.achieveGoal')}
@@ -141,8 +156,7 @@ export const MobileSubscriptionPage: React.FC = () => {
               {t('coursesOverview.feature1Title')}
             </h3>
             <p className="text-sm text-muted-foreground font-medium mb-4 leading-relaxed">
-              <span className="text-indigo-600 font-bold">Premium Members</span> unlock full digital
-              textbooks.
+              {feature1DescText}
             </p>
             <ul className="space-y-2">
               {[
@@ -197,7 +211,7 @@ export const MobileSubscriptionPage: React.FC = () => {
               {t('coursesOverview.feature3Title')}
             </h3>
             <p className="text-sm text-muted-foreground font-medium mb-4 leading-relaxed">
-              Stuck? Let AI explain grammar in context.
+              {feature3DescText}
             </p>
             <div className="bg-muted p-3 rounded-xl border border-border">
               <div className="flex justify-between items-center mb-2">
@@ -231,7 +245,7 @@ export const MobileSubscriptionPage: React.FC = () => {
                   {t('free')}
                 </th>
                 <th className="py-3 px-2 font-bold text-center text-indigo-600 bg-indigo-50/50 w-1/4">
-                  Pro
+                  {t('pricingDetails.plans.pro.title', { defaultValue: 'Pro' })}
                 </th>
               </tr>
             </thead>
@@ -252,7 +266,11 @@ export const MobileSubscriptionPage: React.FC = () => {
                   f: t('coursesOverview.limited'),
                   p: t('coursesOverview.unlimited'),
                 },
-                { l: t('coursesOverview.adFree'), f: 'Yes', p: 'None', isCheck: true },
+                {
+                  l: t('coursesOverview.adFree'),
+                  f: t('common.on', { defaultValue: 'On' }),
+                  p: t('common.off', { defaultValue: 'Off' }),
+                },
               ].map((row, i) => (
                 <tr key={i}>
                   <td className="py-3 px-4 text-muted-foreground">{row.l}</td>
@@ -278,7 +296,7 @@ export const MobileSubscriptionPage: React.FC = () => {
             onClick={() => setBillingInterval('MONTHLY')}
             className={`flex-1 py-3 rounded-lg text-xs font-bold transition-colors ${billingInterval === 'MONTHLY' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            Monthly {monthlyPrice}
+            {t('pricingDetails.billing.monthly', { defaultValue: 'Monthly' })} {monthlyPrice}
           </Button>
           <Button
             variant="ghost"
@@ -286,7 +304,7 @@ export const MobileSubscriptionPage: React.FC = () => {
             onClick={() => setBillingInterval('ANNUAL')}
             className={`flex-1 py-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${billingInterval === 'ANNUAL' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            Annual {annualPrice}{' '}
+            {t('pricingDetails.billing.annual', { defaultValue: 'Annual' })} {annualPrice}{' '}
             <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
               {annualDiscountText}
             </span>
@@ -298,13 +316,13 @@ export const MobileSubscriptionPage: React.FC = () => {
           size="auto"
           onClick={handleSubscribe}
           loading={loading}
-          loadingText="Processing..."
+          loadingText={t('loading', { defaultValue: 'Loading...' })}
           className="w-full bg-primary text-white py-4 rounded-xl font-black shadow-lg shadow-slate-200 active:scale-95 transition-transform disabled:opacity-70"
         >
-          Subscribe Now
+          {t('pricingDetails.plans.pro.cta', { defaultValue: 'Upgrade to Pro' })}
         </Button>
         <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
-          Recurring billing. Cancel anytime.
+          {t('pricingDetails.hero.subtitleLine2', { defaultValue: 'No hidden fees. Cancel anytime.' })}
         </p>
       </div>
     </div>

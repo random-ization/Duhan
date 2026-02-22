@@ -133,9 +133,9 @@ export interface Institute {
   levels: (LevelConfig | number)[]; // Support both old format and new format mixed array from Convex
   coverUrl?: string; // Cover image URL for all books in this series
   themeColor?: string; // Theme color for book styling (hex color)
-  publisher?: string; // University/Publisher name for filtering (e.g., "延世大学")
-  displayLevel?: string; // Display level like "一级", "1급", "Level 1"
-  volume?: string; // Volume like "上册", "下册", "A", "B"
+  publisher?: string; // University/Publisher name for filtering (e.g., "Yonsei University")
+  displayLevel?: string; // Display level like "Level 1" or localized variants
+  volume?: string; // Volume like "Part A", "Part B", "Volume 1", "Volume 2"
   totalUnits?: number; // Total number of units in this textbook (e.g., 10)
 }
 
@@ -255,7 +255,7 @@ export interface AdminStats {
 
 // --- TOPIK TYPES ---
 
-export type TopikType = 'READING' | 'LISTENING';
+export type TopikType = 'READING' | 'LISTENING' | 'WRITING';
 
 export type QuestionLayout =
   | 'DEFAULT'
@@ -287,6 +287,7 @@ export interface TopikQuestion {
 
 export interface TopikExam {
   id: string;
+  _id?: string;
   title: string; // e.g. "64th TOPIK II Reading"
   description?: string; // Optional description
   round: number; // e.g. 64

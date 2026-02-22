@@ -25,11 +25,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className = '',
 }) => {
   return (
-    <Card className={`border-dashed ${className}`}>
+    <Card className={`border-dashed ${className}`} role="status" aria-live="polite">
       <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
         {/* Icon Container */}
         <div className="w-20 h-20 bg-muted rounded-2xl border-2 border-border flex items-center justify-center mb-6">
-          <Icon className="w-10 h-10 text-muted-foreground" />
+          <Icon className="w-10 h-10 text-muted-foreground" aria-hidden="true" />
         </div>
 
         {/* Title */}
@@ -44,6 +44,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             type="button"
             size="auto"
             onClick={onAction}
+            aria-label={actionLabel}
             className="px-6 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
           >
             {actionLabel}

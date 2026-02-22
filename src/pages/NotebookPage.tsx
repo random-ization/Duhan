@@ -8,13 +8,14 @@ import NoteDetailModal from '../components/notebook/NoteDetailModal';
 import { qRef } from '../utils/convexRefs';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
+import { useTranslation } from 'react-i18next';
 import { Button, Input, Tabs, TabsList, TabsTrigger } from '../components/ui';
 
 // Tab configuration
 const TABS = [
-  { key: 'ALL', label: '全部', icon: FileText },
-  { key: 'GRAMMAR', label: '语法', icon: GraduationCap },
-  { key: 'MISTAKE', label: 'TOPIK', icon: Target },
+  { key: 'ALL', icon: FileText },
+  { key: 'GRAMMAR', icon: GraduationCap },
+  { key: 'MISTAKE', icon: Target },
 ];
 
 interface Note {
@@ -27,12 +28,13 @@ interface Note {
 }
 
 const DesktopNotebookPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-  // 使用Convex获取笔记列表
+  // Query notes list from Convex.
   const type = activeTab === 'ALL' ? undefined : activeTab;
   const notebooksResult = useQuery(
     qRef<
@@ -91,7 +93,19 @@ const DesktopNotebookPage: React.FC = () => {
     }
 
     if (filteredNotes.length === 0) {
-      return <EmptyState hasFilter={searchQuery.trim().length > 0 || activeTab !== 'ALL'} />;
+      return (
+        <EmptyState
+          hasFilter={searchQuery.trim().length > 0 || activeTab !== 'ALL'}
+          titleFiltered={t('notes.noMatchTitle', { defaultValue: 'No matching notes found' })}
+          titleEmpty={t('notes.emptyTitle', { defaultValue: 'Your notebook is empty' })}
+          descFiltered={t('notes.noMatchDesc', {
+            defaultValue: 'Try adjusting search terms or switching category',
+          })}
+          descEmpty={t('notes.emptyDesc', {
+            defaultValue: 'In review mode, select text and save it to your notebook.',
+          })}
+        />
+      );
     }
 
     return (
@@ -118,16 +132,22 @@ const DesktopNotebookPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-muted-foreground">智能笔记本</h1>
-              <p className="text-sm text-muted-foreground">你的学习笔记和生词收藏</p>
+              <h1 className="text-2xl font-bold text-muted-foreground">
+                {t('notes.title', { defaultValue: 'Notebook' })}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {t('dashboard.notes.subtitle', {
+                  defaultValue: 'Your study notes and saved vocabulary',
+                })}
+              </p>
             </div>
             <Button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/dashboard?view=practice')}
               variant="ghost"
               size="auto"
               className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
             >
-              返回
+              {t('dashboard.common.back', { defaultValue: 'Back' })}
             </Button>
           </div>
 
@@ -139,18 +159,23 @@ const DesktopNotebookPage: React.FC = () => {
                 {TABS.map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.key;
+                  const tabLabel =
+                    tab.key === 'ALL'
+                      ? t('notes.tabs.all', { defaultValue: 'All' })
+                      : tab.key === 'GRAMMAR'
+                        ? t('notes.tabs.grammar', { defaultValue: 'Grammar' })
+                        : t('notes.tabs.wrong', { defaultValue: 'Mistakes' });
                   return (
                     <TabsTrigger
                       key={tab.key}
                       value={tab.key}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                        isActive
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
                           ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:bg-indigo-500 dark:text-primary-foreground dark:shadow-indigo-500/20'
                           : 'bg-muted text-muted-foreground hover:bg-muted'
-                      }`}
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
-                      {tab.label}
+                      {tabLabel}
                     </TabsTrigger>
                   );
                 })}
@@ -163,7 +188,7 @@ const DesktopNotebookPage: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="搜索笔记..."
+                  placeholder={t('notes.searchPlaceholder', { defaultValue: 'Search notes...' })}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full !h-auto !pl-10 !pr-4 !py-2 !bg-muted !border-0 !rounded-lg text-sm focus-visible:!ring-2 focus-visible:!ring-indigo-200 dark:focus-visible:!ring-indigo-300/50 focus-visible:!bg-card !shadow-none transition-all"
@@ -190,7 +215,13 @@ const DesktopNotebookPage: React.FC = () => {
 };
 
 // Empty state component
-const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
+const EmptyState: React.FC<{
+  hasFilter: boolean;
+  titleFiltered: string;
+  titleEmpty: string;
+  descFiltered: string;
+  descEmpty: string;
+}> = ({ hasFilter, titleFiltered, titleEmpty, descFiltered, descEmpty }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -200,13 +231,9 @@ const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
       <BookOpen className="w-12 h-12 text-indigo-400 dark:text-indigo-200" />
     </div>
     <h3 className="text-xl font-bold text-muted-foreground mb-2">
-      {hasFilter ? '没有找到匹配的笔记' : '笔记本是空的'}
+      {hasFilter ? titleFiltered : titleEmpty}
     </h3>
-    <p className="text-muted-foreground max-w-sm">
-      {hasFilter
-        ? '尝试调整搜索条件或切换分类'
-        : '在复习模式中选中文字，点击「存入生词本」即可保存'}
-    </p>
+    <p className="text-muted-foreground max-w-sm">{hasFilter ? descFiltered : descEmpty}</p>
   </motion.div>
 );
 

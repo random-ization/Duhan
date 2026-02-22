@@ -3,10 +3,10 @@ import type { CanvasData, ToolType } from '../../annotation/components/CanvasLay
 
 const CanvasLayer = lazy(() => import('../../annotation/components/CanvasLayer'));
 
-// 字体大小类型
+// \u5b57\u4f53\u5927\u5c0f\u7c7b\u578b
 type FontSize = 'sm' | 'base' | 'lg';
 
-// 标注数据结构
+// \u6807\u6ce8\u6570\u636e\u7ed3\u6784
 interface AnnotationData {
   id: string;
   startOffset?: number;
@@ -17,60 +17,60 @@ interface AnnotationData {
 }
 
 interface TextbookViewerProps {
-  // 内容数据
-  content: string; // 韩语文本内容
-  translation?: string; // 翻译内容（可选）
-  title?: string; // 标题
+  // \u5185\u5bb9\u6570\u636e
+  content: string; // \u97e9\u8bed\u6587\u672c\u5185\u5bb9
+  translation?: string; // \u7ffb\u8bd1\u5185\u5bb9（\u53ef\u9009）
+  title?: string; // \u6807\u9898
 
-  // 显示控制
-  pageIndex: number; // 当前页码
-  fontSize: FontSize; // 字体大小
-  showTranslation?: boolean; // 是否显示翻译
+  // \u663e\u793a\u63a7\u5236
+  pageIndex: number; // \u5f53\u524d\u9875\u7801
+  fontSize: FontSize; // \u5b57\u4f53\u5927\u5c0f
+  showTranslation?: boolean; // \u662f\u5426\u663e\u793a\u7ffb\u8bd1
 
-  // 文本标注相关
-  annotations?: AnnotationData[]; // 当前页的文本标注
-  activeAnnotationId?: string | null; // 当前激活的标注
-  hoveredAnnotationId?: string | null; // 当前悬停的标注
+  // \u6587\u672c\u6807\u6ce8\u76f8\u5173
+  annotations?: AnnotationData[]; // \u5f53\u524d\u9875\u7684\u6587\u672c\u6807\u6ce8
+  activeAnnotationId?: string | null; // \u5f53\u524d\u6fc0\u6d3b\u7684\u6807\u6ce8
+  hoveredAnnotationId?: string | null; // \u5f53\u524d\u60ac\u505c\u7684\u6807\u6ce8
 
-  // Canvas 画板相关（新增）
-  canvasData?: CanvasData | null; // 画板笔迹数据
-  onCanvasChange?: (data: CanvasData) => void; // 画板数据变化回调
-  onCanvasSave?: (data: CanvasData) => void; // 画板保存回调
-  canvasEnabled?: boolean; // 是否启用画板
-  canvasTool?: ToolType; // 画板工具
-  canvasColor?: string; // 画板颜色
-  canvasReadOnly?: boolean; // 画板只读模式
+  // Canvas \u753b\u677f\u76f8\u5173（\u65b0\u589e）
+  canvasData?: CanvasData | null; // \u753b\u677f\u7b14\u8ff9\u6570\u636e
+  onCanvasChange?: (data: CanvasData) => void; // \u753b\u677f\u6570\u636e\u53d8\u5316\u56de\u8c03
+  onCanvasSave?: (data: CanvasData) => void; // \u753b\u677f\u4fdd\u5b58\u56de\u8c03
+  canvasEnabled?: boolean; // \u662f\u5426\u542f\u7528\u753b\u677f
+  canvasTool?: ToolType; // \u753b\u677f\u5de5\u5177
+  canvasColor?: string; // \u753b\u677f\u989c\u8272
+  canvasReadOnly?: boolean; // \u753b\u677f\u53ea\u8bfb\u6a21\u5f0f
 
-  // 句子悬停（用于翻译对照）
+  // \u53e5\u5b50\u60ac\u505c（\u7528\u4e8e\u7ffb\u8bd1\u5bf9\u7167）
   hoveredSentenceIndex?: number | null;
   sentenceRanges?: { start: number; end: number }[];
   translationSentences?: string[];
 
-  // 事件回调 - 纯展示组件只暴露事件，不处理逻辑
+  // \u4e8b\u4ef6\u56de\u8c03 - \u7eaf\u5c55\u793a\u7ec4\u4ef6\u53ea\u66b4\u9732\u4e8b\u4ef6，\u4e0d\u5904\u7406\u903b\u8f91
   onAnnotationClick?: (annotationId: string) => void;
   onSentenceHover?: (index: number | null) => void;
 
-  // 容器 ref（用于文本选择）
+  // \u5bb9\u5668 ref（\u7528\u4e8e\u6587\u672c\u9009\u62e9）
   contentRef?: React.RefObject<HTMLDivElement>;
   onTextSelection?: (e: React.MouseEvent) => void;
 
-  // 选中颜色（用于 CSS 样式）
+  // \u9009\u4e2d\u989c\u8272（\u7528\u4e8e CSS \u6837\u5f0f）
   selectedColor?: string;
 }
 
 /**
- * TextbookViewer - 纯展示组件
+ * TextbookViewer - \u7eaf\u5c55\u793a\u7ec4\u4ef6
  *
- * 职责：
- * - 渲染教科书内容（韩语文本 + 可选翻译）
- * - 显示文本标注高亮
- * - 支持句子悬停对照
- * - 集成 Canvas 画板层
+ * \u804c\u8d23：
+ * - \u6e32\u67d3\u6559\u79d1\u4e66\u5185\u5bb9（\u97e9\u8bed\u6587\u672c + \u53ef\u9009\u7ffb\u8bd1）
+ * - \u663e\u793a\u6587\u672c\u6807\u6ce8\u9ad8\u4eae
+ * - \u652f\u6301\u53e5\u5b50\u60ac\u505c\u5bf9\u7167
+ * - \u96c6\u6210 Canvas \u753b\u677f\u5c42
  *
- * 不包含：
- * - API 请求
- * - 状态管理逻辑
- * - 副作用
+ * \u4e0d\u5305\u542b：
+ * - API \u8bf7\u6c42
+ * - \u72b6\u6001\u7ba1\u7406\u903b\u8f91
+ * - \u526f\u4f5c\u7528
  */
 const TextbookViewer: React.FC<TextbookViewerProps> = ({
   content,
@@ -82,7 +82,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
   annotations = [],
   activeAnnotationId,
   hoveredAnnotationId,
-  // Canvas 相关
+  // Canvas \u76f8\u5173
   canvasData,
   onCanvasChange,
   onCanvasSave,
@@ -90,7 +90,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
   canvasTool = 'pen',
   canvasColor,
   canvasReadOnly = false,
-  // 其他
+  // \u5176\u4ed6
   hoveredSentenceIndex,
   sentenceRanges = [],
   translationSentences = [],
@@ -100,18 +100,18 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
   onTextSelection,
   selectedColor,
 }) => {
-  // 字体大小样式类
+  // \u5b57\u4f53\u5927\u5c0f\u6837\u5f0f\u7c7b
   const textSizeClass = fontSize === 'sm' ? 'text-base' : fontSize === 'lg' ? 'text-xl' : 'text-lg';
   const lineHeightClass =
     fontSize === 'sm' ? 'leading-relaxed' : fontSize === 'lg' ? 'leading-loose' : 'leading-loose';
 
   /**
-   * 渲染带标注高亮的文本
+   * \u6e32\u67d3\u5e26\u6807\u6ce8\u9ad8\u4eae\u7684\u6587\u672c
    */
   const renderHighlightedText = (fullText: string) => {
     if (!fullText) return null;
 
-    // 构建字符到标注的映射
+    // \u6784\u5efa\u5b57\u7b26\u5230\u6807\u6ce8\u7684\u6620\u5c04
     const charMap: { annotation?: AnnotationData }[] = new Array(fullText.length).fill({});
     annotations.forEach(ann => {
       if (ann.startOffset === undefined || ann.endOffset === undefined) return;
@@ -122,7 +122,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
       }
     });
 
-    // 计算悬停句子范围
+    // \u8ba1\u7b97\u60ac\u505c\u53e5\u5b50\u8303\u56f4
     let hoverStart = -1;
     let hoverEnd = -1;
     if (
@@ -141,7 +141,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
       const currentAnn = charMap[i].annotation;
       const isHovered = i >= hoverStart && i < hoverEnd;
 
-      // 找到相同属性的连续字符
+      // \u627e\u5230\u76f8\u540c\u5c5e\u6027\u7684\u8fde\u7eed\u5b57\u7b26
       let j = i + 1;
       while (j < fullText.length) {
         const nextAnn = charMap[j].annotation;
@@ -213,11 +213,11 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
     <div
       className={`flex gap-10 h-full transition-all duration-500 ${showTranslation ? 'max-w-full' : 'max-w-4xl mx-auto'}`}
     >
-      {/* 韩语文本区域 - 使用 relative 定位以支持 Canvas 覆盖层 */}
+      {/* \u97e9\u8bed\u6587\u672c\u533a\u57df - \u4f7f\u7528 relative \u5b9a\u4f4d\u4ee5\u652f\u6301 Canvas \u8986\u76d6\u5c42 */}
       <div
         className={`flex-1 min-w-0 bg-card rounded-2xl shadow-sm border border-border relative overflow-hidden`}
       >
-        {/* 文本内容层 */}
+        {/* \u6587\u672c\u5185\u5bb9\u5c42 */}
         <div
           ref={contentRef}
           className={`p-8 md:p-12 ${selectedColor ? `selection-${selectedColor}` : ''}`}
@@ -236,7 +236,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
           </div>
         </div>
 
-        {/* Canvas 画板覆盖层 - z-index 最高 */}
+        {/* Canvas \u753b\u677f\u8986\u76d6\u5c42 - z-index \u6700\u9ad8 */}
         {canvasEnabled && (
           <Suspense fallback={null}>
             <CanvasLayer
@@ -252,7 +252,7 @@ const TextbookViewer: React.FC<TextbookViewerProps> = ({
         )}
       </div>
 
-      {/* 翻译区域（可选） */}
+      {/* \u7ffb\u8bd1\u533a\u57df（\u53ef\u9009） */}
       {showTranslation && translation && (
         <div className="flex-1 min-w-0 bg-muted rounded-2xl border border-border/60 p-8 md:p-12 overflow-y-auto">
           <div className="sticky top-0 bg-muted pb-4 border-b border-border mb-6 z-10 flex items-center gap-2 text-muted-foreground font-bold text-sm uppercase tracking-widest">

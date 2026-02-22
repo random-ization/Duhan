@@ -1,6 +1,82 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
+import { transcriptArrayValidator } from './transcriptSchema';
+
+const ReadingAnalysisPayloadValidator = v.object({
+  summary: v.string(),
+  vocabulary: v.array(
+    v.object({
+      term: v.string(),
+      meaning: v.string(),
+      level: v.string(),
+    })
+  ),
+  grammar: v.array(
+    v.object({
+      pattern: v.string(),
+      explanation: v.string(),
+      example: v.string(),
+    })
+  ),
+});
+
+const ReadingTranslationPayloadValidator = v.object({
+  translations: v.array(v.string()),
+});
+
+const NotebookGeneralContentValidator = v.object({
+  text: v.string(),
+  notes: v.optional(v.string()),
+  source: v.optional(v.string()),
+  articleId: v.optional(v.string()),
+  articleTitle: v.optional(v.string()),
+  articleSource: v.optional(v.string()),
+  color: v.optional(v.string()),
+  createdAt: v.optional(v.number()),
+});
+
+const NotebookMistakeContentValidator = v.object({
+  questionText: v.string(),
+  options: v.array(v.string()),
+  correctAnswer: v.number(),
+  imageUrl: v.optional(v.string()),
+  aiAnalysis: v.object({
+    translation: v.string(),
+    keyPoint: v.string(),
+    analysis: v.string(),
+    wrongOptions: v.array(v.string()),
+  }),
+});
+
+const NotebookVocabContentValidator = v.object({
+  word: v.string(),
+  pronunciation: v.optional(v.string()),
+  meaning: v.optional(v.string()),
+  context: v.optional(v.string()),
+  analysis: v.optional(v.string()),
+  examTitle: v.optional(v.string()),
+});
+
+const NotebookContentValidator = v.union(
+  v.string(),
+  NotebookGeneralContentValidator,
+  NotebookMistakeContentValidator,
+  NotebookVocabContentValidator
+);
+
+const SettingPrimitiveValidator = v.union(v.string(), v.number(), v.boolean(), v.null());
+const SettingValueValidator = v.union(
+  SettingPrimitiveValidator,
+  v.array(v.string()),
+  v.record(v.string(), SettingPrimitiveValidator)
+);
+
+const GrammarConjugationRulesValidator = v.union(
+  v.record(v.string(), v.string()),
+  v.array(v.string()),
+  v.array(v.record(v.string(), v.string()))
+);
 
 export default defineSchema({
   ...authTables,
@@ -100,26 +176,11 @@ export default defineSchema({
 
     audioUrl: v.optional(v.string()),
 
-    // JSON data
-    transcriptData: v.optional(
-      v.array(
-        v.object({
-          start: v.number(),
-          end: v.number(),
-          text: v.string(),
-          translation: v.optional(v.string()),
-          words: v.optional(
-            v.array(
-              v.object({
-                word: v.string(),
-                start: v.number(),
-                end: v.number(),
-              })
-            )
-          ),
-        })
-      )
-    ),
+    // Legacy inline transcript payload (new writes use chunk tables)
+    transcriptData: v.optional(transcriptArrayValidator),
+    transcriptStorage: v.optional(v.union(v.literal('inline'), v.literal('chunked'))),
+    transcriptChunkCount: v.optional(v.number()),
+    transcriptSegmentCount: v.optional(v.number()),
     analysisData: v.optional(
       v.object({
         vocabulary: v.array(
@@ -150,7 +211,30 @@ export default defineSchema({
     .index('by_postgresId', ['postgresId'])
     .index('by_archived', ['isArchived']),
 
+  textbook_unit_transcript_chunks: defineTable({
+    unitId: v.id('textbook_units'),
+    chunkIndex: v.number(),
+    segments: transcriptArrayValidator,
+    segmentCount: v.number(),
+    approxBytes: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_unit', ['unitId'])
+    .index('by_unit_chunk', ['unitId', 'chunkIndex']),
+
   // Words (Master Dictionary)
+  daily_phrases: defineTable({
+    korean: v.string(),
+    romanization: v.string(),
+    translation: v.string(), // English/Default
+    translationZh: v.optional(v.string()),
+    translationVi: v.optional(v.string()),
+    translationMn: v.optional(v.string()),
+    author: v.optional(v.string()),
+    category: v.optional(v.string()),
+  }),
+
   words: defineTable({
     word: v.string(),
     meaning: v.string(), // Chinese meaning (primary)
@@ -231,11 +315,15 @@ export default defineSchema({
     nextReviewAt: v.optional(v.number()), // Legacy alias for due
     lastReviewedAt: v.optional(v.number()), // Last review timestamp
     last_review: v.optional(v.number()), // FSRS alias for lastReviewedAt
+
+    // Source tracking
+    savedByUser: v.optional(v.boolean()), // true = manually added to Vocab Book
   })
     .index('by_user_word', ['userId', 'wordId'])
     .index('by_user_next_review', ['userId', 'nextReviewAt'])
     .index('by_user_due', ['userId', 'due'])
-    .index('by_user', ['userId']),
+    .index('by_user', ['userId'])
+    .index('by_user_saved', ['userId', 'savedByUser']),
 
   // Grammar Points (Master Library)
   grammar_points: defineTable({
@@ -261,7 +349,7 @@ export default defineSchema({
     explanationVi: v.optional(v.string()),
     explanationMn: v.optional(v.string()),
 
-    conjugationRules: v.optional(v.any()), // Map<string, string> - keeping any as Convex lacks v.record
+    conjugationRules: v.optional(GrammarConjugationRulesValidator),
     // Examples format: [{ kr: string, cn: string, en?: string, vi?: string, mn?: string }]
     examples: v.array(
       v.object({
@@ -336,25 +424,11 @@ export default defineSchema({
     duration: v.optional(v.number()),
     views: v.number(),
 
-    transcriptData: v.optional(
-      v.array(
-        v.object({
-          start: v.number(),
-          end: v.number(),
-          text: v.string(),
-          translation: v.optional(v.string()),
-          words: v.optional(
-            v.array(
-              v.object({
-                word: v.string(),
-                start: v.number(),
-                end: v.number(),
-              })
-            )
-          ),
-        })
-      )
-    ),
+    // Legacy inline transcript payload (new writes use chunk tables)
+    transcriptData: v.optional(transcriptArrayValidator),
+    transcriptStorage: v.optional(v.union(v.literal('inline'), v.literal('chunked'))),
+    transcriptChunkCount: v.optional(v.number()),
+    transcriptSegmentCount: v.optional(v.number()),
 
     postgresId: v.optional(v.string()),
     youtubeId: v.optional(v.string()),
@@ -362,6 +436,18 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   }).index('by_level', ['level']),
+
+  video_transcript_chunks: defineTable({
+    videoId: v.id('videos'),
+    chunkIndex: v.number(),
+    segments: transcriptArrayValidator,
+    segmentCount: v.number(),
+    approxBytes: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_video', ['videoId'])
+    .index('by_video_chunk', ['videoId', 'chunkIndex']),
 
   // Podcast Channels
   podcast_channels: defineTable({
@@ -406,7 +492,23 @@ export default defineSchema({
   // Podcast Transcripts (server-stored fallback)
   podcast_transcripts: defineTable({
     episodeId: v.string(),
-    segments: v.any(),
+    segments: v.array(
+      v.object({
+        start: v.number(),
+        end: v.number(),
+        text: v.string(),
+        translation: v.optional(v.string()),
+        words: v.optional(
+          v.array(
+            v.object({
+              word: v.string(),
+              start: v.number(),
+              end: v.number(),
+            })
+          )
+        ),
+      })
+    ),
     translations: v.optional(
       v.object({
         zh: v.optional(v.array(v.string())),
@@ -464,7 +566,7 @@ export default defineSchema({
     userId: v.id('users'),
     type: v.string(), // "WORD", "GRAMMAR", "NOTE", etc.
     title: v.string(),
-    content: v.any(), // Rich text content (likely JSON)
+    content: NotebookContentValidator,
     preview: v.optional(v.string()),
     tags: v.array(v.string()),
     createdAt: v.number(),
@@ -526,9 +628,9 @@ export default defineSchema({
     examId: v.id('topik_exams'),
     score: v.number(),
     totalQuestions: v.number(),
-    sectionScores: v.optional(v.any()), // Map<string, number>
+    sectionScores: v.optional(v.record(v.string(), v.number())),
     duration: v.optional(v.number()),
-    answers: v.optional(v.any()), // Map<string, number>
+    answers: v.optional(v.record(v.string(), v.number())),
     createdAt: v.number(),
   }).index('by_user', ['userId']),
 
@@ -577,7 +679,7 @@ export default defineSchema({
     activityType: v.string(),
     duration: v.optional(v.number()),
     itemsStudied: v.optional(v.number()),
-    metadata: v.optional(v.any()), // Dynamic metadata
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     createdAt: v.number(),
   }).index('by_user', ['userId']),
 
@@ -588,7 +690,7 @@ export default defineSchema({
     status: v.string(), // "IN_PROGRESS" | "COMPLETED" | "AUTO_SUBMITTED"
     startTime: v.number(), // timestamp
     endTime: v.number(), // calculated: startTime + exam.timeLimit
-    answers: v.optional(v.any()), // Map<string, number>
+    answers: v.optional(v.record(v.string(), v.number())),
     score: v.optional(v.number()),
     scheduledJobId: v.optional(v.id('_scheduled_functions')), // For auto-submit scheduler
     createdAt: v.number(),
@@ -649,7 +751,7 @@ export default defineSchema({
     kind: v.string(), // "reading_analysis" | "reading_translation"
     language: v.string(),
     contentHash: v.string(),
-    payload: v.any(),
+    payload: v.union(ReadingAnalysisPayloadValidator, ReadingTranslationPayloadValidator),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
@@ -657,7 +759,7 @@ export default defineSchema({
   // Global Site Settings
   site_settings: defineTable({
     key: v.string(), // "logo", "theme", "meta"
-    value: v.any(),
+    value: SettingValueValidator,
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -804,4 +906,127 @@ export default defineSchema({
     manualRefreshWindowStart: v.number(),
     updatedAt: v.number(),
   }).index('by_user', ['userId']),
+
+  user_badges: defineTable({
+    userId: v.id('users'),
+    category: v.string(), // e.g., "STREAK", "VOCAB", "TYPING", "NIGHT_OWL"
+    tier: v.union(
+      v.literal('BRONZE'),
+      v.literal('SILVER'),
+      v.literal('GOLD'),
+      v.literal('DIAMOND')
+    ),
+    milestoneValue: v.number(),
+    unlockedAt: v.number(),
+    isNew: v.boolean(), // Core state machine: controls frontend popup
+    metadata: v.optional(
+      v.object({
+        wpm: v.optional(v.number()),
+        accuracy: v.optional(v.number()),
+        vocabCount: v.optional(v.number()),
+      })
+    ),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_and_new', ['userId', 'isNew'])
+    .index('by_user_category_tier', ['userId', 'category', 'tier']),
+
+  xp_logs: defineTable({
+    userId: v.id('users'),
+    amount: v.number(),
+    source: v.union(
+      v.literal('FSRS_REVIEW'),
+      v.literal('TYPING_TEST'),
+      v.literal('PODCAST'),
+      v.literal('TOPIK_MOCK')
+    ),
+    timestamp: v.number(),
+  }).index('by_user_timestamp', ['userId', 'timestamp']),
+
+  user_xp_stats: defineTable({
+    userId: v.id('users'),
+    weekIdentifier: v.string(), // Format: "YYYY-Wxx" (e.g., "2024-W10")
+    currentWeekXp: v.number(),
+    totalXp: v.number(),
+  })
+    .index('by_user_week', ['userId', 'weekIdentifier'])
+    .index('by_week_and_xp', ['weekIdentifier', 'currentWeekXp']),
+
+  friendships: defineTable({
+    followerId: v.id('users'),
+    followingId: v.id('users'),
+    createdAt: v.number(),
+  })
+    .index('by_follower', ['followerId'])
+    .index('by_following', ['followingId'])
+    .index('by_both', ['followerId', 'followingId']),
+
+  referral_codes: defineTable({
+    userId: v.id('users'),
+    code: v.string(), // Globally unique
+    totalInvites: v.number(),
+  })
+    .index('by_code', ['code'])
+    .index('by_user', ['userId']),
+
+  referral_rewards: defineTable({
+    referrerId: v.id('users'),
+    referredId: v.id('users'),
+    rewardGranted: v.boolean(),
+    createdAt: v.number(),
+  }).index('by_referrer', ['referrerId']),
+
+  // ───────────────────────────────────────────
+  // TOPIK II Writing Exam Tables
+  // ───────────────────────────────────────────
+
+  // Writing questions (fill-blank, graph essay, opinion essay)
+  topik_writing_questions: defineTable({
+    examId: v.id('topik_exams'),
+    number: v.number(),
+    questionType: v.string(), // "FILL_BLANK" | "GRAPH_ESSAY" | "OPINION_ESSAY"
+    instruction: v.optional(v.string()),
+    contextBox: v.optional(v.string()),
+    image: v.optional(v.string()),
+    score: v.number(),
+    modelAnswer: v.optional(v.string()),
+    gradingCriteria: v.optional(v.any()),
+  })
+    .index('by_exam', ['examId'])
+    .index('by_exam_number', ['examId', 'number']),
+
+  // User writing sessions (one session per user per exam attempt)
+  topik_writing_sessions: defineTable({
+    userId: v.id('users'),
+    examId: v.id('topik_exams'),
+    status: v.string(), // "IN_PROGRESS" | "COMPLETED" | "EVALUATING" | "EVALUATED"
+    answers: v.optional(v.any()),
+    startTime: v.number(),
+    endTime: v.number(),
+    completedAt: v.optional(v.number()),
+    totalScore: v.optional(v.number()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_exam', ['userId', 'examId'])
+    .index('by_status', ['status']),
+
+  // AI evaluation results per question per session
+  topik_writing_evaluations: defineTable({
+    sessionId: v.id('topik_writing_sessions'),
+    userId: v.id('users'),
+    questionNumber: v.number(),
+    score: v.number(),
+    dimensions: v.object({
+      taskAccomplishment: v.number(),
+      developmentStructure: v.number(),
+      languageUse: v.number(),
+      wongojiRules: v.optional(v.number()),
+    }),
+    feedbackText: v.string(),
+    correctedText: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index('by_session', ['sessionId'])
+    .index('by_user', ['userId']),
 });
+

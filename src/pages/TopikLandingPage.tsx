@@ -50,25 +50,25 @@ const COPY: Record<
     ],
   },
   zh: {
-    heroTitle: '用真实计时模考高效练 TOPIK',
-    heroSubtitle: '在 DuHan 训练 TOPIK 听力与阅读，复盘错题，并持续追踪进度。',
-    ctaPrimary: '开始练习',
-    ctaSecondary: '查看价格',
-    highlightsTitle: '你可以做什么',
-    highlights: ['TOPIK II 听力与阅读计时练习', '考试记录与错题复盘', '以听力为核心的练习流程'],
-    faqTitle: '常见问题',
+    heroTitle: '\u7528\u771f\u5b9e\u8ba1\u65f6\u6a21\u8003\u9ad8\u6548\u7ec3 TOPIK',
+    heroSubtitle: '\u5728 DuHan \u8bad\u7ec3 TOPIK \u542c\u529b\u4e0e\u9605\u8bfb，\u590d\u76d8\u9519\u9898，\u5e76\u6301\u7eed\u8ffd\u8e2a\u8fdb\u5ea6。',
+    ctaPrimary: '\u5f00\u59cb\u7ec3\u4e60',
+    ctaSecondary: '\u67e5\u770b\u4ef7\u683c',
+    highlightsTitle: '\u4f60\u53ef\u4ee5\u505a\u4ec0\u4e48',
+    highlights: ['TOPIK II \u542c\u529b\u4e0e\u9605\u8bfb\u8ba1\u65f6\u7ec3\u4e60', '\u8003\u8bd5\u8bb0\u5f55\u4e0e\u9519\u9898\u590d\u76d8', '\u4ee5\u542c\u529b\u4e3a\u6838\u5fc3\u7684\u7ec3\u4e60\u6d41\u7a0b'],
+    faqTitle: '\u5e38\u89c1\u95ee\u9898',
     faqs: [
       {
-        q: '需要注册才能练习吗？',
-        a: '开始完整考试并保存记录需要登录。你仍可以在不登录的情况下浏览此页面。',
+        q: '\u9700\u8981\u6ce8\u518c\u624d\u80fd\u7ec3\u4e60\u5417？',
+        a: '\u5f00\u59cb\u5b8c\u6574\u8003\u8bd5\u5e76\u4fdd\u5b58\u8bb0\u5f55\u9700\u8981\u767b\u5f55。\u4f60\u4ecd\u53ef\u4ee5\u5728\u4e0d\u767b\u5f55\u7684\u60c5\u51b5\u4e0b\u6d4f\u89c8\u6b64\u9875\u9762。',
       },
       {
-        q: '这是 TOPIK I 还是 TOPIK II？',
-        a: 'DuHan 主要提供 TOPIK II 风格的听力与阅读练习。',
+        q: '\u8fd9\u662f TOPIK I \u8fd8\u662f TOPIK II？',
+        a: 'DuHan \u4e3b\u8981\u63d0\u4f9b TOPIK II \u98ce\u683c\u7684\u542c\u529b\u4e0e\u9605\u8bfb\u7ec3\u4e60。',
       },
       {
-        q: '怎样提升最快？',
-        a: '坚持计时练习，然后复盘错题与薄弱题型，循环强化。',
+        q: '\u600e\u6837\u63d0\u5347\u6700\u5feb？',
+        a: '\u575a\u6301\u8ba1\u65f6\u7ec3\u4e60，\u7136\u540e\u590d\u76d8\u9519\u9898\u4e0e\u8584\u5f31\u9898\u578b，\u5faa\u73af\u5f3a\u5316。',
       },
     ],
   },
@@ -203,7 +203,7 @@ export const TopikLandingPage: React.FC = () => {
                   {currentLang === 'en'
                     ? 'Tip: Link Google/Kakao in Profile to keep one account.'
                     : currentLang === 'zh'
-                      ? '提示：在个人资料页绑定 Google/Kakao，保持同一账号。'
+                      ? '\u63d0\u793a：\u5728\u4e2a\u4eba\u8d44\u6599\u9875\u7ed1\u5b9a Google/Kakao，\u4fdd\u6301\u540c\u4e00\u8d26\u53f7。'
                       : currentLang === 'vi'
                         ? 'Mẹo: Liên kết Google/Kakao trong hồ sơ để dùng một tài khoản.'
                         : 'Зөвлөгөө: Профайл дээр Google/Kakao-г холбоод нэг бүртгэлээр ашигла.'}
@@ -232,7 +232,7 @@ export const TopikLandingPage: React.FC = () => {
             {currentLang === 'en'
               ? 'Explore courses'
               : currentLang === 'zh'
-                ? '查看课程'
+                ? '\u67e5\u770b\u8bfe\u7a0b'
                 : currentLang === 'vi'
                   ? 'Khám phá khóa học'
                   : 'Курсуудыг үзэх'}

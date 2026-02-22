@@ -4,6 +4,7 @@ import VocabImporter from '../../components/admin/VocabImporter';
 import GrammarImporter from '../../components/admin/GrammarImporter';
 import ReadingImporter from '../../components/admin/ReadingImporter';
 import TopikImporter from '../../components/admin/TopikImporter';
+import TopikWritingImporter from '../../components/admin/TopikWritingImporter';
 import NewsPipelinePanel from '../../components/admin/NewsPipelinePanel';
 import { ReadingContentManager } from '../../components/admin/ReadingContentManager';
 import { ListeningContentManager } from '../../components/admin/ListeningContentManager';
@@ -102,7 +103,7 @@ const GrammarTab: React.FC = () => {
 };
 
 const TopikTab: React.FC = () => {
-  const [subTab, setSubTab] = useState<'manage' | 'import'>('manage');
+  const [subTab, setSubTab] = useState<'manage' | 'import' | 'writing'>('manage');
   return (
     <SubTabLayout
       activeSubTab={subTab}
@@ -110,9 +111,12 @@ const TopikTab: React.FC = () => {
       items={[
         { id: 'manage', label: '试卷管理', icon: <ClipboardCheck className="w-5 h-5" /> },
         { id: 'import', label: '批量导入', icon: <FileSpreadsheet className="w-5 h-5" /> },
+        { id: 'writing', label: '写作上传', icon: <FileText className="w-5 h-5" /> },
       ]}
     >
-      {subTab === 'manage' ? <TopikManager /> : <TopikImporter />}
+      {subTab === 'manage' && <TopikManager />}
+      {subTab === 'import' && <TopikImporter />}
+      {subTab === 'writing' && <TopikWritingImporter />}
     </SubTabLayout>
   );
 };

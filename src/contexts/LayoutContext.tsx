@@ -2,16 +2,14 @@ import React, { createContext, useContext, useState, ReactNode, useCallback, use
 
 // Default order of cards on the dashboard
 export const DEFAULT_CARD_ORDER = [
-  'summary', // LearnerSummaryCard (Added recently)
   'tiger', // Tiger Coach
   'textbook',
-  'reading', // 阅读入口
-  'topik',
+  'reading', // Reading entry
   'youtube',
   'podcast',
-  'vocab', // 生词本
-  'notes', // 笔记本
-  'typing', // 打字练习
+  'vocab', // Vocabulary notebook
+  'notes', // Notes
+  'typing', // Typing practice
 ];
 
 interface LayoutContextType {

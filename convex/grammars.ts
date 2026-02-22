@@ -140,7 +140,7 @@ export type UnitGrammarDto = {
     mn?: string;
     audio?: string;
   }>;
-  conjugationRules: unknown[];
+  conjugationRules: Record<string, string> | Record<string, string>[] | string[] | undefined;
   createdAt: number;
   updatedAt: number;
   // Course Context
@@ -493,8 +493,28 @@ export const bulkImport = mutation({
         explanationVi: v.optional(v.string()),
         explanationMn: v.optional(v.string()),
         // Examples and rules
-        examples: v.optional(v.any()), // JSON array or string
-        conjugationRules: v.optional(v.any()),
+        examples: v.optional(
+          v.union(
+            v.string(),
+            v.array(
+              v.object({
+                kr: v.string(),
+                cn: v.string(),
+                en: v.optional(v.string()),
+                vi: v.optional(v.string()),
+                mn: v.optional(v.string()),
+                audio: v.optional(v.string()),
+              })
+            )
+          )
+        ),
+        conjugationRules: v.optional(
+          v.union(
+            v.record(v.string(), v.string()),
+            v.array(v.string()),
+            v.array(v.record(v.string(), v.string()))
+          )
+        ),
         searchPatterns: v.optional(v.union(v.string(), v.array(v.string()))),
         // Course context
         courseId: v.string(),

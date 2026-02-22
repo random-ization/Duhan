@@ -52,6 +52,7 @@
     "es-hangul": "^2.3.8",
     "framer-motion": "^12.23.26",
     "globals": "^17.0.0",
+    "html2canvas": "^1.4.1",
     "i18next": "^25.7.3",
     "i18next-http-backend": "^3.0.2",
     "kiwi-nlp": "^0.22.1",

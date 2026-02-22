@@ -50,11 +50,11 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
   const avgScore =
     totalAttempts > 0
       ? Math.round(
-          examHistory.reduce((sum, a) => {
-            const maxScore = a.maxScore || a.totalScore || 100;
-            return sum + (maxScore > 0 ? ((a.score || 0) / maxScore) * 100 : 0);
-          }, 0) / totalAttempts
-        )
+        examHistory.reduce((sum, a) => {
+          const maxScore = a.maxScore || a.totalScore || 100;
+          return sum + (maxScore > 0 ? ((a.score || 0) / maxScore) * 100 : 0);
+        }, 0) / totalAttempts
+      )
       : 0;
   const passCount = examHistory.filter(a => {
     const maxScore = a.maxScore || a.totalScore || 100;
@@ -82,7 +82,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/practice')}
             className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
@@ -107,9 +107,9 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam }) => {
           <div className="rounded bg-primary-foreground/20 px-2.5 py-1 text-sm font-extrabold text-primary-foreground">
             {upcomingExam
               ? t('dashboard.topik.mobile.roundBadge', {
-                  round: upcomingExam.round,
-                  defaultValue: 'R{{round}}',
-                })
+                round: upcomingExam.round,
+                defaultValue: 'R{{round}}',
+              })
               : t('dashboard.topik.mobile.roundBadgeFallback', { defaultValue: 'TOPIK' })}
           </div>
           <div className="text-xs">

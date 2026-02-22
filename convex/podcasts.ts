@@ -249,8 +249,8 @@ export const trackView = mutation({
     guid: v.string(),
     title: v.string(),
     audioUrl: v.string(),
-    duration: v.optional(v.any()), // number or string
-    pubDate: v.optional(v.any()), // string or number
+    duration: v.optional(v.union(v.number(), v.string())),
+    pubDate: v.optional(v.union(v.number(), v.string())),
     channel: v.object({
       itunesId: v.optional(v.string()),
       title: v.string(),

@@ -255,7 +255,11 @@ export default function PricingDetailsPage() {
       >
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <LocalizedLink to="/" className="flex items-center gap-2 group">
-            <img src="/logo.png" alt={t('common.appName')} className="w-8 h-8 rounded-lg" />
+            <img
+              src="/logo.png"
+              alt={t('common.appName')}
+              className="w-8 h-8 rounded-lg dark:brightness-0 dark:invert"
+            />
             <span className="font-heading font-bold text-xl">{t('common.appName')}</span>
           </LocalizedLink>
           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-full border border-border">

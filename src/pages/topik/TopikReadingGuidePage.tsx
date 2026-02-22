@@ -39,13 +39,13 @@ const COPY: Record<
     cta: 'Practice reading now',
   },
   zh: {
-    h1: 'TOPIK 阅读策略（按时做完，稳定提分）',
-    intro: '阅读很大程度是时间管理。关键是会跳题、会扫读结构、避免慢速完美主义。',
-    rulesTitle: '保护时间的规则',
-    rules: ['除非必要不要整段反复重读', '标记后先跳过，最后再回看', '关注信号词与题型套路'],
-    timingTitle: '实用的做题顺序',
-    timing: ['先拿简单题确保分数', '中等题设置严格时间上限', '难题放最后，必要时果断猜'],
-    cta: '立即练阅读',
+    h1: 'TOPIK \u9605\u8bfb\u7b56\u7565（\u6309\u65f6\u505a\u5b8c，\u7a33\u5b9a\u63d0\u5206）',
+    intro: '\u9605\u8bfb\u5f88\u5927\u7a0b\u5ea6\u662f\u65f6\u95f4\u7ba1\u7406。\u5173\u952e\u662f\u4f1a\u8df3\u9898、\u4f1a\u626b\u8bfb\u7ed3\u6784、\u907f\u514d\u6162\u901f\u5b8c\u7f8e\u4e3b\u4e49。',
+    rulesTitle: '\u4fdd\u62a4\u65f6\u95f4\u7684\u89c4\u5219',
+    rules: ['\u9664\u975e\u5fc5\u8981\u4e0d\u8981\u6574\u6bb5\u53cd\u590d\u91cd\u8bfb', '\u6807\u8bb0\u540e\u5148\u8df3\u8fc7，\u6700\u540e\u518d\u56de\u770b', '\u5173\u6ce8\u4fe1\u53f7\u8bcd\u4e0e\u9898\u578b\u5957\u8def'],
+    timingTitle: '\u5b9e\u7528\u7684\u505a\u9898\u987a\u5e8f',
+    timing: ['\u5148\u62ff\u7b80\u5355\u9898\u786e\u4fdd\u5206\u6570', '\u4e2d\u7b49\u9898\u8bbe\u7f6e\u4e25\u683c\u65f6\u95f4\u4e0a\u9650', '\u96be\u9898\u653e\u6700\u540e，\u5fc5\u8981\u65f6\u679c\u65ad\u731c'],
+    cta: '\u7acb\u5373\u7ec3\u9605\u8bfb',
   },
   vi: {
     h1: 'Chiến lược đọc TOPIK (làm kịp giờ, tăng điểm)',
@@ -161,7 +161,7 @@ export const TopikReadingGuidePage: React.FC = () => {
                   {currentLang === 'en'
                     ? 'Back to guide'
                     : currentLang === 'zh'
-                      ? '返回指南'
+                      ? '\u8fd4\u56de\u6307\u5357'
                       : currentLang === 'vi'
                         ? 'Quay lại hướng dẫn'
                         : 'Гарын авлага руу'}

@@ -65,10 +65,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const { disabled, children, onClick, type, ...rest } = props;
     const isDisabled = Boolean(disabled || loading);
+    const buttonType = type ?? 'button';
     const content = loading ? (
       <>
         <Loader2 className={cn('h-4 w-4 animate-spin', loadingIconClassName)} aria-hidden="true" />
-        {loadingText ?? children}
+        <span aria-live="polite">{loadingText ?? children}</span>
       </>
     ) : (
       children
@@ -116,7 +117,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         ref={ref}
         className={mergedClassName}
-        type={type}
+        type={buttonType}
         disabled={isDisabled}
         onClick={onClick}
         {...rest}

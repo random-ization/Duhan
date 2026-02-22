@@ -332,12 +332,12 @@ const AIAnalysisSection = ({
           size="auto"
           onClick={handleAIAnalysis}
           loading={aiLoading}
-          loadingText="分析中..."
+          loadingText="Analyzing..."
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <>
             <Sparkles className="w-4 h-4" />
-            <span className="font-medium">AI 老师解析</span>
+            <span className="font-medium">AI Analysis</span>
           </>
         </Button>
       )}
@@ -438,15 +438,15 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
         if (result?.success && result.data) {
           setAiAnalysis(result.data);
         } else {
-          setAiError('AI 老师正在休息，请稍后再试');
+          setAiError(labels.dashboard?.topik?.mobile?.review?.aiError || 'AI is busy right now. Please try again later.');
         }
       } catch (err) {
         console.error('[AI Analysis] Error:', err);
-        setAiError('AI 老师正在休息，请稍后再试');
+        setAiError(labels.dashboard?.topik?.mobile?.review?.aiError || 'AI is busy right now. Please try again later.');
       } finally {
         setAiLoading(false);
       }
-    }, [question, correctAnswer, aiLoading, aiAnalysis, analyzeQuestionAction]);
+    }, [question, correctAnswer, aiLoading, aiAnalysis, analyzeQuestionAction, labels.dashboard?.topik?.mobile?.review?.aiError]);
 
     // Save to Notebook handler
     const [showSaveToast, setShowSaveToast] = useState(false);
@@ -504,22 +504,24 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
         }
       } catch (err: unknown) {
         console.error('[Save to Notebook] Error:', err);
-        setSaveError((err as Error)?.message || '保存失败，请重试');
+        setSaveError(
+          (err as Error)?.message || labels.dashboard?.topik?.mobile?.review?.saveFailed || 'Failed to save. Please try again.'
+        );
         setShowSaveToast(true);
         setTimeout(() => setShowSaveToast(false), 4000);
       } finally {
         setIsSaving(false);
       }
-    }, [aiAnalysis, isSaving, isSaved, question, questionIndex, correctAnswer, saveNotebook]);
+    }, [aiAnalysis, isSaving, isSaved, question, questionIndex, correctAnswer, saveNotebook, labels.dashboard?.topik?.mobile?.review?.saveFailed]);
 
     // Helper for highlight styles
-    // 高亮默认用色块背景，有笔记的用下划线区分
+    // Default highlight uses background; highlights with notes use underline styling.
     const getHighlightClass = useCallback(
       (isActive: boolean, hasNote: boolean = false, color: string = 'yellow') => {
         const base =
           'box-decoration-clone cursor-pointer transition-all duration-200 px-0.5 rounded-sm ';
 
-        // 有笔记的标注：下划线样式 (Debug: 增强区分度 - 双下划线)
+        // Highlight with notes: underline style.
         if (hasNote && !isActive) {
           switch (color) {
             case 'green':
@@ -546,7 +548,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           }
         }
 
-        // 激活状态：深色背景
+        // Active state.
         if (isActive) {
           switch (color) {
             case 'green':
@@ -561,7 +563,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           }
         }
 
-        // 默认高亮（无笔记）：色块背景
+        // Default highlight without note.
         switch (color) {
           case 'green':
             return base + 'bg-green-300/60 hover:bg-green-400/60';
@@ -764,7 +766,11 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
             >
               {saveError ? <X className="w-5 h-5" /> : <BookmarkCheck className="w-5 h-5" />}
               <div>
-                <p className="font-medium">{saveError ? '保存失败' : '已保存到笔记本'}</p>
+                <p className="font-medium">
+                  {saveError
+                    ? labels.dashboard?.topik?.mobile?.review?.saveFailedShort || 'Save failed'
+                    : labels.dashboard?.topik?.mobile?.review?.savedToast || 'Saved to notebook'}
+                </p>
                 {saveError ? (
                   <p className="text-red-100 text-sm">{saveError}</p>
                 ) : (
@@ -772,7 +778,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
                     href="/notebook"
                     className="text-emerald-100 text-sm hover:text-white underline"
                   >
-                    查看我的笔记 →
+                    View notebook →
                   </a>
                 )}
               </div>
@@ -867,13 +873,13 @@ const SanitizedAIAnalysisDisplay = ({
       return (
         <>
           <BookmarkCheck className="w-4 h-4" />
-          已收藏
+          Saved
         </>
       );
     return (
       <>
         <Bookmark className="w-4 h-4" />
-        收藏
+        Save
       </>
     );
   };
@@ -883,7 +889,7 @@ const SanitizedAIAnalysisDisplay = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-indigo-600" />
-          <span className="font-bold text-indigo-700">AI 老师解析</span>
+          <span className="font-bold text-indigo-700">AI Analysis</span>
         </div>
 
         {/* Save to Notebook Button */}
@@ -894,7 +900,7 @@ const SanitizedAIAnalysisDisplay = ({
           onClick={onSave}
           disabled={isSaving || isSaved}
           loading={isSaving}
-          loadingText="保存中..."
+          loadingText="Saving..."
           className={getSaveBtnClass()}
         >
           {getSaveBtnContent()}
@@ -904,7 +910,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Translation */}
       {translation && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">题干翻译</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Translation</div>
           <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {translation}
           </div>
@@ -914,7 +920,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Key Point */}
       {keyPoint && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">核心考点</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Key Point</div>
           <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full text-sm font-medium">
             {keyPoint}
           </div>
@@ -924,7 +930,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Analysis */}
       {analysisText && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">正解分析</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Analysis</div>
           <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {analysisText}
           </div>
@@ -934,11 +940,11 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Wrong Options */}
       {wrongOptions.length > 0 && (
         <div>
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">干扰项排除</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Wrong Options</div>
           <div className="space-y-2">
             {wrongOptions.map(([key, value]) => (
               <div key={key} className="bg-card/60 p-3 rounded-lg">
-                <span className="font-medium text-muted-foreground">选项 {key}：</span>
+                <span className="font-medium text-muted-foreground">Option {key}:</span>
                 <span className="text-muted-foreground">{value}</span>
               </div>
             ))}

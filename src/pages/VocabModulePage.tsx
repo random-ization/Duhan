@@ -233,7 +233,7 @@ export default function VocabModulePage() {
     // Check if this is a Volume 2 course
     const isVolume2 =
       (course?.volume &&
-        (course.volume === '2' || course.volume === 'B' || course.volume === '下')) ||
+        (course.volume === '2' || course.volume === 'B' || course.volume === '\u4E0B')) ||
       (course?.id &&
         (course.id.includes('_1b') || course.id.includes('_2b') || course.id.endsWith('b'))) ||
       (course?.name && (course.name.includes('1B') || course.name.includes('2B')));

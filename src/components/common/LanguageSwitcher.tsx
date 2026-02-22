@@ -11,17 +11,19 @@ export const LanguageSwitcher = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const menuId = 'language-switcher-menu';
 
   const languages = [
     { code: 'en', label: 'English' },
-    { code: 'zh', label: '中文' },
+    { code: 'zh', label: 'Chinese' },
     { code: 'vi', label: 'Tiếng Việt' },
     { code: 'mn', label: 'Монгол' },
   ];
 
   const firstSegment = location.pathname.split('/').find(Boolean);
   const activeLang = firstSegment && isValidLanguage(firstSegment) ? firstSegment : i18n.language;
-  const currentLang = languages.find(l => l.code === activeLang) || languages[0];
+  const normalizedActiveLang = (activeLang || 'en').split('-')[0];
+  const currentLang = languages.find(l => l.code === normalizedActiveLang) || languages[0];
 
   return (
     <div className="relative">
@@ -32,6 +34,10 @@ export const LanguageSwitcher = () => {
             variant="outline"
             size="auto"
             aria-label="Language"
+            aria-haspopup="menu"
+            aria-expanded={isOpen}
+            aria-controls={menuId}
+            title={currentLang.label}
             className="inline-flex items-center justify-center w-10 h-10 bg-card border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-hover hover:-translate-y-0.5 transition-all text-foreground"
           >
             <Globe size={18} />
@@ -40,6 +46,7 @@ export const LanguageSwitcher = () => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
+          id={menuId}
           unstyled
           className="absolute right-0 top-full mt-2 w-48 bg-card border-2 border-foreground rounded-xl shadow-pop-card z-50 overflow-hidden"
         >
@@ -64,10 +71,14 @@ export const LanguageSwitcher = () => {
                 navigate(nextPath);
                 setIsOpen(false);
               }}
+              aria-pressed={normalizedActiveLang === lang.code}
+              title={lang.label}
               className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 transition-colors text-left font-bold text-sm border-b border-border last:border-0 text-foreground"
             >
               <span>{lang.label}</span>
-              {i18n.language === lang.code && <Check size={16} className="text-indigo-600" />}
+              {normalizedActiveLang === lang.code && (
+                <Check size={16} className="text-indigo-600" />
+              )}
             </Button>
           ))}
         </DropdownMenuContent>

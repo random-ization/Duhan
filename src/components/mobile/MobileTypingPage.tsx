@@ -79,7 +79,7 @@ const MobileLobby = ({
         <Button
           variant="ghost"
           size="auto"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/practice')}
           className="p-2 -ml-2 rounded-full active:bg-muted text-muted-foreground"
         >
           <ArrowLeft className="w-6 h-6" />

@@ -109,7 +109,7 @@ export const MobilePodcastDashboard: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/media')}
             className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
@@ -142,11 +142,10 @@ export const MobilePodcastDashboard: React.FC = () => {
             size="auto"
             key={opt.key}
             onClick={() => setFilter(opt.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-              filter === opt.key
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${filter === opt.key
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             {opt.label}
           </Button>
@@ -233,11 +232,10 @@ export const MobilePodcastDashboard: React.FC = () => {
               variant="ghost"
               size="auto"
               onClick={() => setTrendingTab('all')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                trendingTab === 'all'
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${trendingTab === 'all'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground'
-              }`}
+                }`}
             >
               All
             </Button>
@@ -245,11 +243,10 @@ export const MobilePodcastDashboard: React.FC = () => {
               variant="ghost"
               size="auto"
               onClick={() => setTrendingTab('picks')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                trendingTab === 'picks'
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${trendingTab === 'picks'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground'
-              }`}
+                }`}
             >
               Picks
             </Button>

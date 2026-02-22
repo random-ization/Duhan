@@ -9,7 +9,7 @@ import { Input } from '../ui';
 
 // Publisher theme configuration
 const PUBLISHER_THEMES: Record<string, { gradient: string; bgLight: string; text: string }> = {
-  延世大学: {
+  \u5ef6\u4e16\u5927\u5b66: {
     gradient: 'from-indigo-500 to-indigo-600 dark:from-indigo-400/75 dark:to-indigo-500/75',
     bgLight: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
@@ -19,7 +19,7 @@ const PUBLISHER_THEMES: Record<string, { gradient: string; bgLight: string; text
     bgLight: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
   },
-  首尔大学: {
+  \u9996\u5c14\u5927\u5b66: {
     gradient: 'from-rose-500 to-rose-600 dark:from-rose-400/75 dark:to-rose-500/75',
     bgLight: 'bg-rose-100 dark:bg-rose-400/16',
     text: 'text-rose-600 dark:text-rose-300',
@@ -29,7 +29,7 @@ const PUBLISHER_THEMES: Record<string, { gradient: string; bgLight: string; text
     bgLight: 'bg-rose-100 dark:bg-rose-400/16',
     text: 'text-rose-600 dark:text-rose-300',
   },
-  中央大学: {
+  \u4e2d\u592e\u5927\u5b66: {
     gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-400/75 dark:to-emerald-500/75',
     bgLight: 'bg-emerald-100 dark:bg-emerald-400/16',
     text: 'text-emerald-600 dark:text-emerald-300',
@@ -47,12 +47,12 @@ const PUBLISHER_THEMES: Record<string, { gradient: string; bgLight: string; text
 };
 
 const PUBLISHER_TRANSLATIONS: Record<string, { ko: string; en: string; zh: string }> = {
-  延世大学: { ko: '연세대학교', zh: '延世大学', en: 'Yonsei' },
-  연세대학교: { ko: '연세대학교', zh: '延世大学', en: 'Yonsei' },
-  首尔大学: { ko: '서울대학교', zh: '首尔大学', en: "Seoul Nat'l" },
-  서울대학교: { ko: '서울대학교', zh: '首尔大学', en: "Seoul Nat'l" },
-  中央大学: { ko: '중앙대학교', zh: '中央大学', en: 'Ewha' },
-  중앙대학교: { ko: '중앙대학교', zh: '中央大学', en: 'Ewha' },
+  \u5ef6\u4e16\u5927\u5b66: { ko: '연세대학교', zh: '\u5ef6\u4e16\u5927\u5b66', en: 'Yonsei' },
+  연세대학교: { ko: '연세대학교', zh: '\u5ef6\u4e16\u5927\u5b66', en: 'Yonsei' },
+  \u9996\u5c14\u5927\u5b66: { ko: '서울대학교', zh: '\u9996\u5c14\u5927\u5b66', en: "Seoul Nat'l" },
+  서울대학교: { ko: '서울대학교', zh: '\u9996\u5c14\u5927\u5b66', en: "Seoul Nat'l" },
+  \u4e2d\u592e\u5927\u5b66: { ko: '중앙대학교', zh: '\u4e2d\u592e\u5927\u5b66', en: 'Ewha' },
+  중앙대학교: { ko: '중앙대학교', zh: '\u4e2d\u592e\u5927\u5b66', en: 'Ewha' },
 };
 
 type Course = {

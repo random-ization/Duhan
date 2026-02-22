@@ -1,6 +1,28 @@
 import { internalMutation, internalQuery } from './_generated/server';
 import { v } from 'convex/values';
 
+const ReadingAnalysisPayloadValidator = v.object({
+  summary: v.string(),
+  vocabulary: v.array(
+    v.object({
+      term: v.string(),
+      meaning: v.string(),
+      level: v.string(),
+    })
+  ),
+  grammar: v.array(
+    v.object({
+      pattern: v.string(),
+      explanation: v.string(),
+      example: v.string(),
+    })
+  ),
+});
+
+const ReadingTranslationPayloadValidator = v.object({
+  translations: v.array(v.string()),
+});
+
 export const getByKey = internalQuery({
   args: {
     key: v.string(),
@@ -19,7 +41,7 @@ export const upsert = internalMutation({
     kind: v.string(),
     language: v.string(),
     contentHash: v.string(),
-    payload: v.any(),
+    payload: v.union(ReadingAnalysisPayloadValidator, ReadingTranslationPayloadValidator),
   },
   handler: async (ctx, args) => {
     const now = Date.now();

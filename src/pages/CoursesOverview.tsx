@@ -14,7 +14,7 @@ const PUBLISHER_THEMES: Record<
   string,
   { bg: string; text: string; accent: string; border: string; light: string }
 > = {
-  延世大学: {
+  \u5ef6\u4e16\u5927\u5b66: {
     bg: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
     accent: 'bg-indigo-500 dark:bg-indigo-400/70',
@@ -28,7 +28,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-indigo-900 dark:border-indigo-300/50',
     light: 'bg-indigo-50 dark:bg-indigo-400/10',
   },
-  首尔大学: {
+  \u9996\u5c14\u5927\u5b66: {
     bg: 'bg-rose-100 dark:bg-rose-400/16',
     text: 'text-rose-600 dark:text-rose-300',
     accent: 'bg-rose-500 dark:bg-rose-400/70',
@@ -42,7 +42,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-rose-900 dark:border-rose-300/50',
     light: 'bg-rose-50 dark:bg-rose-400/10',
   },
-  中央大学: {
+  \u4e2d\u592e\u5927\u5b66: {
     bg: 'bg-emerald-100 dark:bg-emerald-400/16',
     text: 'text-emerald-600 dark:text-emerald-300',
     accent: 'bg-emerald-500 dark:bg-emerald-400/70',
@@ -56,7 +56,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-emerald-900 dark:border-emerald-300/50',
     light: 'bg-emerald-50 dark:bg-emerald-400/10',
   },
-  默认: {
+  \u9ed8\u8ba4: {
     bg: 'bg-muted',
     text: 'text-muted-foreground',
     accent: 'bg-primary',
@@ -69,44 +69,44 @@ const PUBLISHER_TRANSLATIONS: Record<
   string,
   { ko: string; zh: string; en: string; vi: string; mn: string }
 > = {
-  延世大学: {
+  \u5ef6\u4e16\u5927\u5b66: {
     ko: '연세대학교',
-    zh: '延世大学',
+    zh: '\u5ef6\u4e16\u5927\u5b66',
     en: 'Yonsei University',
     vi: 'Đại học Yonsei',
     mn: 'Ёнсэ их сургууль',
   },
   연세대학교: {
     ko: '연세대학교',
-    zh: '延世大学',
+    zh: '\u5ef6\u4e16\u5927\u5b66',
     en: 'Yonsei University',
     vi: 'Đại học Yonsei',
     mn: 'Ёнсэ их сургууль',
   },
-  首尔大学: {
+  \u9996\u5c14\u5927\u5b66: {
     ko: '서울대학교',
-    zh: '首尔大学',
+    zh: '\u9996\u5c14\u5927\u5b66',
     en: 'Seoul National University',
     vi: 'Đại học Quốc gia Seoul',
     mn: 'Сөүлийн үндэсний их сургууль',
   },
   서울대학교: {
     ko: '서울대학교',
-    zh: '首尔大学',
+    zh: '\u9996\u5c14\u5927\u5b66',
     en: 'Seoul National University',
     vi: 'Đại học Quốc gia Seoul',
     mn: 'Сөүлийн үндэсний их сургууль',
   },
-  中央大学: {
+  \u4e2d\u592e\u5927\u5b66: {
     ko: '중앙대학교',
-    zh: '中央大学',
+    zh: '\u4e2d\u592e\u5927\u5b66',
     en: 'Chung-Ang University',
     vi: 'Đại học Chung-Ang',
     mn: 'Чүнган их сургууль',
   },
   중앙대학교: {
     ko: '중앙대학교',
-    zh: '中央大学',
+    zh: '\u4e2d\u592e\u5927\u5b66',
     en: 'Chung-Ang University',
     vi: 'Đại học Chung-Ang',
     mn: 'Чүнган их сургууль',
@@ -268,7 +268,7 @@ const CoursesOverview: React.FC = () => {
     for (const key in PUBLISHER_THEMES) {
       if (publisher.includes(key)) return PUBLISHER_THEMES[key];
     }
-    return PUBLISHER_THEMES['默认'];
+    return PUBLISHER_THEMES['\u9ed8\u8ba4'];
   };
 
   // Return mobile version on small screens (after all hooks)

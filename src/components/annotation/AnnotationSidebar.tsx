@@ -16,6 +16,7 @@ interface AnnotationSidebarProps {
     cancel: string;
     save: string;
     clickToAddNote: string;
+    noNotes?: string;
   };
   onActivate: (id: string) => void;
   onHover: (id: string | null) => void;
@@ -66,7 +67,9 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
         <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3 text-muted-foreground">
           <MessageSquare className="w-6 h-6" />
         </div>
-        <p className="text-sm font-medium text-muted-foreground mb-1">暂无笔记</p>
+        <p className="text-sm font-medium text-muted-foreground mb-1">
+          {labels.noNotes || 'No notes yet'}
+        </p>
         <p className="text-xs text-muted-foreground">{labels.clickToAddNote}</p>
       </div>
     ) : (

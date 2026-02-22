@@ -90,7 +90,7 @@ export const MobileNotebookPage: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/practice')}
             className="p-2 -ml-2"
           >
             <ArrowLeft className="w-6 h-6 text-foreground" />
@@ -123,11 +123,10 @@ export const MobileNotebookPage: React.FC = () => {
                 size="auto"
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
-                  isActive
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${isActive
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
                     : 'bg-card text-muted-foreground border-border'
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -213,7 +212,7 @@ export const MobileNotebookPage: React.FC = () => {
                 <NoteDetailModal
                   noteId={selectedNoteId}
                   onClose={() => setSelectedNoteId(null)}
-                  onDelete={() => {}} // Auto refresh
+                  onDelete={() => { }} // Auto refresh
                 />
               </div>
             )}

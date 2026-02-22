@@ -36,7 +36,7 @@ const UnitSidebar: React.FC<UnitSidebarProps> = ({ units, selectedUnit, onSelect
                         }
                     `}
         >
-          <span>🚀 全部查看</span>
+          <span>🚀 View All</span>
         </Button>
 
         {/* Unit Buttons */}

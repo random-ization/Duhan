@@ -7,46 +7,46 @@ interface UseCanvasAnnotationOptions {
   targetId: string;
   targetType: 'TEXTBOOK' | 'EXAM';
   pageIndex: number;
-  debounceMs?: number; // 防抖延迟，默认 1000ms
-  autoSave?: boolean; // 是否自动保存，默认 true
+  debounceMs?: number; // \u9632\u6296\u5ef6\u8fdf，\u9ed8\u8ba4 1000ms
+  autoSave?: boolean; // \u662f\u5426\u81ea\u52a8\u4fdd\u5b58，\u9ed8\u8ba4 true
 }
 
 interface UseCanvasAnnotationReturn {
-  // 数据
+  // \u6570\u636e
   canvasData: CanvasData | null;
   loading: boolean;
   saving: boolean;
   error: Error | null;
 
-  // 操作
+  // \u64cd\u4f5c
   handleCanvasChange: (data: CanvasData) => void;
   handleCanvasSave: (data: CanvasData) => void;
   refresh: () => Promise<void>;
 }
 
 /**
- * useCanvasAnnotation - 画板笔记 Hook
+ * useCanvasAnnotation - \u753b\u677f\u7b14\u8bb0 Hook
  *
- * 功能：
- * - 翻页时自动获取当前页的笔记数据
- * - 支持防抖保存，避免频繁请求
- * - 自动保存 / 手动保存
+ * \u529f\u80fd：
+ * - \u7ffb\u9875\u65f6\u81ea\u52a8\u83b7\u53d6\u5f53\u524d\u9875\u7684\u7b14\u8bb0\u6570\u636e
+ * - \u652f\u6301\u9632\u6296\u4fdd\u5b58，\u907f\u514d\u9891\u7e41\u8bf7\u6c42
+ * - \u81ea\u52a8\u4fdd\u5b58 / \u624b\u52a8\u4fdd\u5b58
  */
 export const useCanvasAnnotation = (
   options: UseCanvasAnnotationOptions
 ): UseCanvasAnnotationReturn => {
   const { targetId, targetType, pageIndex, debounceMs = 1000, autoSave = true } = options;
 
-  // 状态
+  // \u72b6\u6001
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // 防抖定时器
+  // \u9632\u6296\u5b9a\u65f6\u5668
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 保存待保存的数据（用于防抖）
+  // \u4fdd\u5b58\u5f85\u4fdd\u5b58\u7684\u6570\u636e（\u7528\u4e8e\u9632\u6296）
   const pendingDataRef = useRef<CanvasData | null>(null);
 
   // Convex hooks
@@ -121,7 +121,7 @@ export const useCanvasAnnotation = (
     // No-op with Convex, it's realtime.
   }, []);
 
-  // 保存笔记数据（实际执行）
+  // \u4fdd\u5b58\u7b14\u8bb0\u6570\u636e（\u5b9e\u9645\u6267\u884c）
   const doSave = useCallback(
     async (data: CanvasData) => {
       if (!targetId) return;
@@ -147,17 +147,17 @@ export const useCanvasAnnotation = (
     [targetId, targetType, pageIndex, saveMutation]
   );
 
-  // 防抖保存
+  // \u9632\u6296\u4fdd\u5b58
   const debouncedSave = useCallback(
     (data: CanvasData) => {
       pendingDataRef.current = data;
 
-      // 清除之前的定时器
+      // \u6e05\u9664\u4e4b\u524d\u7684\u5b9a\u65f6\u5668
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      // 设置新的定时器
+      // \u8bbe\u7f6e\u65b0\u7684\u5b9a\u65f6\u5668
       debounceTimerRef.current = setTimeout(() => {
         if (pendingDataRef.current) {
           doSave(pendingDataRef.current);
@@ -168,7 +168,7 @@ export const useCanvasAnnotation = (
     [doSave, debounceMs]
   );
 
-  // 处理画板变化（自动保存时使用防抖）
+  // \u5904\u7406\u753b\u677f\u53d8\u5316（\u81ea\u52a8\u4fdd\u5b58\u65f6\u4f7f\u7528\u9632\u6296）
   const handleCanvasChange = useCallback(
     (data: CanvasData) => {
       setCanvasData(data);
@@ -180,36 +180,36 @@ export const useCanvasAnnotation = (
     [autoSave, debouncedSave]
   );
 
-  // 手动保存（立即执行，不防抖）
+  // \u624b\u52a8\u4fdd\u5b58（\u7acb\u5373\u6267\u884c，\u4e0d\u9632\u6296）
   const handleCanvasSave = useCallback(
     (data: CanvasData) => {
-      // 清除待执行的防抖保存
+      // \u6e05\u9664\u5f85\u6267\u884c\u7684\u9632\u6296\u4fdd\u5b58
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
       pendingDataRef.current = null;
 
-      // 立即保存
+      // \u7acb\u5373\u4fdd\u5b58
       doSave(data);
     },
     [doSave]
   );
 
-  // 刷新数据
+  // \u5237\u65b0\u6570\u636e
   const refresh = useCallback(async () => {
     await fetchAnnotation();
   }, [fetchAnnotation]);
 
-  // 翻页时自动获取数据 - Managed by UseQuery Effect now
+  // \u7ffb\u9875\u65f6\u81ea\u52a8\u83b7\u53d6\u6570\u636e - Managed by UseQuery Effect now
 
-  // 组件卸载时清理定时器，并保存未保存的数据
+  // \u7ec4\u4ef6\u5378\u8f7d\u65f6\u6e05\u7406\u5b9a\u65f6\u5668，\u5e76\u4fdd\u5b58\u672a\u4fdd\u5b58\u7684\u6570\u636e
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      // 保存待保存的数据
+      // \u4fdd\u5b58\u5f85\u4fdd\u5b58\u7684\u6570\u636e
       if (pendingDataRef.current) {
         doSave(pendingDataRef.current);
       }

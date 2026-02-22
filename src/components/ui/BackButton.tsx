@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './button';
 
 interface BackButtonProps {
@@ -13,6 +14,7 @@ interface BackButtonProps {
  * Use on secondary pages to navigate back
  */
 const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
+  const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
 
   const handleClick = () => {
@@ -22,6 +24,7 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
       navigate(-1);
     }
   };
+  const label = t('dashboard.common.back', { defaultValue: 'Go back' });
 
   return (
     <Button
@@ -39,9 +42,10 @@ const BackButton: React.FC<BackButtonProps> = ({ className = '', onClick }) => {
         transition-all duration-150
         ${className}
       `}
-      aria-label="返回上一页"
+      aria-label={label}
+      title={label}
     >
-      <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} />
+      <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} aria-hidden="true" />
     </Button>
   );
 };

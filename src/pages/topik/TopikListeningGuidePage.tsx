@@ -39,17 +39,17 @@ const COPY: Record<
     cta: 'Practice listening now',
   },
   zh: {
-    h1: 'TOPIK 听力策略（真正提升速度与稳定性）',
-    intro: '听力不只是“听懂”。更重要的是预判、题型规律，以及在计时压力下保持稳定。',
-    stepsTitle: '简单可坚持的听力流程',
+    h1: 'TOPIK \u542c\u529b\u7b56\u7565（\u771f\u6b63\u63d0\u5347\u901f\u5ea6\u4e0e\u7a33\u5b9a\u6027）',
+    intro: '\u542c\u529b\u4e0d\u53ea\u662f“\u542c\u61c2”。\u66f4\u91cd\u8981\u7684\u662f\u9884\u5224、\u9898\u578b\u89c4\u5f8b，\u4ee5\u53ca\u5728\u8ba1\u65f6\u538b\u529b\u4e0b\u4fdd\u6301\u7a33\u5b9a。',
+    stepsTitle: '\u7b80\u5355\u53ef\u575a\u6301\u7684\u542c\u529b\u6d41\u7a0b',
     steps: [
-      '1）第一遍：不暂停，按考试节奏做',
-      '2）第二遍：回放难点，写下错因',
-      '3）修正：针对同题型重复训练直到变简单',
+      '1）\u7b2c\u4e00\u904d：\u4e0d\u6682\u505c，\u6309\u8003\u8bd5\u8282\u594f\u505a',
+      '2）\u7b2c\u4e8c\u904d：\u56de\u653e\u96be\u70b9，\u5199\u4e0b\u9519\u56e0',
+      '3）\u4fee\u6b63：\u9488\u5bf9\u540c\u9898\u578b\u91cd\u590d\u8bad\u7ec3\u76f4\u5230\u53d8\u7b80\u5355',
     ],
-    drillsTitle: '最值得做的训练',
-    drills: ['跟读（短句反复跟读）', '听写（1-2 分钟音频即可）', '核对文本：找出干扰你的关键表达'],
-    cta: '立即练听力',
+    drillsTitle: '\u6700\u503c\u5f97\u505a\u7684\u8bad\u7ec3',
+    drills: ['\u8ddf\u8bfb（\u77ed\u53e5\u53cd\u590d\u8ddf\u8bfb）', '\u542c\u5199（1-2 \u5206\u949f\u97f3\u9891\u5373\u53ef）', '\u6838\u5bf9\u6587\u672c：\u627e\u51fa\u5e72\u6270\u4f60\u7684\u5173\u952e\u8868\u8fbe'],
+    cta: '\u7acb\u5373\u7ec3\u542c\u529b',
   },
   vi: {
     h1: 'Chiến lược nghe TOPIK (tăng tốc độ thật sự)',
@@ -165,7 +165,7 @@ export const TopikListeningGuidePage: React.FC = () => {
                   {currentLang === 'en'
                     ? 'Back to guide'
                     : currentLang === 'zh'
-                      ? '返回指南'
+                      ? '\u8fd4\u56de\u6307\u5357'
                       : currentLang === 'vi'
                         ? 'Quay lại hướng dẫn'
                         : 'Гарын авлага руу'}

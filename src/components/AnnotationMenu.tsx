@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Type, ChevronDown, BookOpen, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from './ui';
@@ -49,6 +50,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
   labels,
   onSaveToVocab,
 }) => {
+  const { t } = useTranslation();
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [vocabSaving, setVocabSaving] = useState(false);
   const [vocabSaved, setVocabSaved] = useState(false);
@@ -85,13 +87,13 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
       return (
         <React.Fragment>
           <Check className="w-4 h-4" />
-          已保存
+          {labels.saved || t('saved', { defaultValue: 'Saved' })}
         </React.Fragment>
       );
     return (
       <React.Fragment>
         <BookOpen className="w-4 h-4" />
-        {labels.saveToVocab || '存入生词本'}
+        {labels.saveToVocab || t('annotationMenu.saveToVocab', { defaultValue: 'Save to Vocab' })}
       </React.Fragment>
     );
   };
@@ -119,7 +121,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
         >
           <FileText className="w-4 h-4 text-muted-foreground" />
-          {labels.addNote || '添加笔记'}
+          {labels.addNote || t('addNote', { defaultValue: 'Add note' })}
         </Button>
 
         <div className="w-px h-4 bg-muted"></div>
@@ -210,7 +212,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
               onClick={handleSaveToVocab}
               disabled={vocabSaving || vocabSaved}
               loading={vocabSaving}
-              loadingText="保存中..."
+              loadingText={labels.saving || t('annotationMenu.saving', { defaultValue: 'Saving...' })}
               className={getSaveBtnClass()}
             >
               {getSaveBtnContent()}

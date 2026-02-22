@@ -30,7 +30,19 @@ export const saveCanvas = mutation({
         targetId: v.string(),
         targetType: v.string(),
         pageIndex: v.number(),
-        data: v.any(),
+        data: v.object({
+            lines: v.array(
+                v.object({
+                    id: v.string(),
+                    tool: v.string(),
+                    points: v.array(v.number()),
+                    color: v.string(),
+                    strokeWidth: v.number(),
+                    opacity: v.number(),
+                })
+            ),
+            version: v.number(),
+        }),
     },
     handler: async (ctx, args) => {
         const userId = await getAuthUserId(ctx);

@@ -58,31 +58,31 @@ const COPY: Record<
     note: 'If you only have 30 minutes a day: do 10 min vocab, 10 min timed practice, 10 min review.',
   },
   zh: {
-    h1: 'TOPIK II 四周实用备考计划',
-    intro: '这份计划强调可坚持。时间可增可减，但结构不变：学习、计时练习、复盘。',
+    h1: 'TOPIK II \u56db\u5468\u5b9e\u7528\u5907\u8003\u8ba1\u5212',
+    intro: '\u8fd9\u4efd\u8ba1\u5212\u5f3a\u8c03\u53ef\u575a\u6301。\u65f6\u95f4\u53ef\u589e\u53ef\u51cf，\u4f46\u7ed3\u6784\u4e0d\u53d8：\u5b66\u4e60、\u8ba1\u65f6\u7ec3\u4e60、\u590d\u76d8。',
     weeks: [
       {
-        title: '第 1 周：摸底 + 建立节奏',
+        title: '\u7b2c 1 \u5468：\u6478\u5e95 + \u5efa\u7acb\u8282\u594f',
         items: [
-          '各做一次听力/阅读计时训练',
-          '建立每日词汇 + 语法学习块',
-          '记录最薄弱的 3 个题型/错误模式',
+          '\u5404\u505a\u4e00\u6b21\u542c\u529b/\u9605\u8bfb\u8ba1\u65f6\u8bad\u7ec3',
+          '\u5efa\u7acb\u6bcf\u65e5\u8bcd\u6c47 + \u8bed\u6cd5\u5b66\u4e60\u5757',
+          '\u8bb0\u5f55\u6700\u8584\u5f31\u7684 3 \u4e2a\u9898\u578b/\u9519\u8bef\u6a21\u5f0f',
         ],
       },
       {
-        title: '第 2 周：题型与规律训练',
-        items: ['针对薄弱题型集中练', '听力加入核对文本/关键词', '坚持计时，哪怕做得很难受'],
+        title: '\u7b2c 2 \u5468：\u9898\u578b\u4e0e\u89c4\u5f8b\u8bad\u7ec3',
+        items: ['\u9488\u5bf9\u8584\u5f31\u9898\u578b\u96c6\u4e2d\u7ec3', '\u542c\u529b\u52a0\u5165\u6838\u5bf9\u6587\u672c/\u5173\u952e\u8bcd', '\u575a\u6301\u8ba1\u65f6，\u54ea\u6015\u505a\u5f97\u5f88\u96be\u53d7'],
       },
       {
-        title: '第 3 周：速度与稳定性',
-        items: ['适度增加计时训练量', '阅读设置严格时间上限', '错题当天复盘'],
+        title: '\u7b2c 3 \u5468：\u901f\u5ea6\u4e0e\u7a33\u5b9a\u6027',
+        items: ['\u9002\u5ea6\u589e\u52a0\u8ba1\u65f6\u8bad\u7ec3\u91cf', '\u9605\u8bfb\u8bbe\u7f6e\u4e25\u683c\u65f6\u95f4\u4e0a\u9650', '\u9519\u9898\u5f53\u5929\u590d\u76d8'],
       },
       {
-        title: '第 4 周：模考与收尾',
-        items: ['做 1-2 次完整模考', '只修正最高收益的薄弱点', '睡眠与稳定胜过临时抱佛脚'],
+        title: '\u7b2c 4 \u5468：\u6a21\u8003\u4e0e\u6536\u5c3e',
+        items: ['\u505a 1-2 \u6b21\u5b8c\u6574\u6a21\u8003', '\u53ea\u4fee\u6b63\u6700\u9ad8\u6536\u76ca\u7684\u8584\u5f31\u70b9', '\u7761\u7720\u4e0e\u7a33\u5b9a\u80dc\u8fc7\u4e34\u65f6\u62b1\u4f5b\u811a'],
       },
     ],
-    note: '如果每天只有 30 分钟：10 分钟词汇 + 10 分钟计时练习 + 10 分钟复盘。',
+    note: '\u5982\u679c\u6bcf\u5929\u53ea\u6709 30 \u5206\u949f：10 \u5206\u949f\u8bcd\u6c47 + 10 \u5206\u949f\u8ba1\u65f6\u7ec3\u4e60 + 10 \u5206\u949f\u590d\u76d8。',
   },
   vi: {
     h1: 'Kế hoạch 4 tuần luyện TOPIK II thực tế',
@@ -219,7 +219,7 @@ export const TopikStudyPlanPage: React.FC = () => {
                 {currentLang === 'en'
                   ? 'Note'
                   : currentLang === 'zh'
-                    ? '提示'
+                    ? '\u63d0\u793a'
                     : currentLang === 'vi'
                       ? 'Ghi chú'
                       : 'Тэмдэглэл'}
@@ -238,7 +238,7 @@ export const TopikStudyPlanPage: React.FC = () => {
                   {currentLang === 'en'
                     ? 'Start practice'
                     : currentLang === 'zh'
-                      ? '开始练习'
+                      ? '\u5f00\u59cb\u7ec3\u4e60'
                       : currentLang === 'vi'
                         ? 'Bắt đầu luyện'
                         : 'Дасгал эхлэх'}
@@ -254,7 +254,7 @@ export const TopikStudyPlanPage: React.FC = () => {
                   {currentLang === 'en'
                     ? 'Back to guide'
                     : currentLang === 'zh'
-                      ? '返回指南'
+                      ? '\u8fd4\u56de\u6307\u5357'
                       : currentLang === 'vi'
                         ? 'Quay lại hướng dẫn'
                         : 'Гарын авлага руу'}

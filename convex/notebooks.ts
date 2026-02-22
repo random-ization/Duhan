@@ -2,12 +2,52 @@ import { mutation, query } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
 
+const NotebookGeneralContentValidator = v.object({
+  text: v.string(),
+  notes: v.optional(v.string()),
+  source: v.optional(v.string()),
+  articleId: v.optional(v.string()),
+  articleTitle: v.optional(v.string()),
+  articleSource: v.optional(v.string()),
+  color: v.optional(v.string()),
+  createdAt: v.optional(v.number()),
+});
+
+const NotebookMistakeContentValidator = v.object({
+  questionText: v.string(),
+  options: v.array(v.string()),
+  correctAnswer: v.number(),
+  imageUrl: v.optional(v.string()),
+  aiAnalysis: v.object({
+    translation: v.string(),
+    keyPoint: v.string(),
+    analysis: v.string(),
+    wrongOptions: v.array(v.string()),
+  }),
+});
+
+const NotebookVocabContentValidator = v.object({
+  word: v.string(),
+  pronunciation: v.optional(v.string()),
+  meaning: v.optional(v.string()),
+  context: v.optional(v.string()),
+  analysis: v.optional(v.string()),
+  examTitle: v.optional(v.string()),
+});
+
+const NotebookContentValidator = v.union(
+  v.string(),
+  NotebookGeneralContentValidator,
+  NotebookMistakeContentValidator,
+  NotebookVocabContentValidator
+);
+
 // Save notebook entry
 export const save = mutation({
   args: {
     type: v.string(),
     title: v.string(),
-    content: v.any(),
+    content: NotebookContentValidator,
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
@@ -19,7 +59,7 @@ export const save = mutation({
     let preview = '';
     if (typeof content === 'string') {
       preview = content.slice(0, 100);
-    } else if (content?.text) {
+    } else if ('text' in content && typeof content.text === 'string') {
       preview = content.text.slice(0, 100);
     }
 

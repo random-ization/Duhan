@@ -423,14 +423,18 @@ const Flashcard: React.FC<FlashcardProps> = ({
             <>
               <p className="text-3xl font-medium text-indigo-600 mb-2">{meaning}</p>
               {card.hanja && (
-                <p className="text-lg text-muted-foreground mb-4">漢字: {card.hanja}</p>
+                <p className="text-lg text-muted-foreground mb-4">
+                  {labels.hanja || 'Hanja'}: {card.hanja}
+                </p>
               )}
             </>
           ) : (
             <>
               <h3 className="text-5xl font-bold text-indigo-600 mb-2">{card.korean}</h3>
               {card.hanja && (
-                <p className="text-lg text-muted-foreground mb-2">漢字: {card.hanja}</p>
+                <p className="text-lg text-muted-foreground mb-2">
+                  {labels.hanja || 'Hanja'}: {card.hanja}
+                </p>
               )}
             </>
           )}
@@ -543,7 +547,7 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
         onClick={onToggleTrackProgress}
       >
         <span className="text-sm font-medium text-muted-foreground group-hover:text-muted-foreground transition-colors">
-          {labels.trackProgress || '跟踪进度'}
+          {labels.trackProgress || 'Track progress'}
         </span>
         <div
           className={`w-10 h-6 rounded-full transition-colors relative ${trackProgress ? 'bg-indigo-600' : 'bg-muted'}`}
@@ -563,7 +567,7 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={onUndo}
-              aria-label={labels.undo || '撤销'}
+              aria-label={labels.undo || 'Undo'}
               className={`p-2.5 rounded-lg transition-colors ${canUndo ? 'text-muted-foreground hover:bg-muted hover:text-muted-foreground' : 'text-muted-foreground cursor-not-allowed'}`}
               disabled={!canUndo}
             >
@@ -571,7 +575,7 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">{labels.undo || '撤销'}</TooltipContent>
+            <TooltipContent side="top">{labels.undo || 'Undo'}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
         <Tooltip>
@@ -580,14 +584,14 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={onToggleRandom}
-              aria-label={labels.randomMode || '随机模式'}
+              aria-label={labels.randomMode || 'Random mode'}
               className={`p-2.5 rounded-lg transition-colors ${isRandom ? 'bg-indigo-100 text-indigo-600' : 'text-muted-foreground hover:bg-muted hover:text-muted-foreground'}`}
             >
               <Shuffle className="w-5 h-5" />
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">{labels.randomMode || '随机模式'}</TooltipContent>
+            <TooltipContent side="top">{labels.randomMode || 'Random mode'}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
         <Tooltip>
@@ -596,14 +600,14 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={onShowSettings}
-              aria-label={labels.settings || '设置'}
+              aria-label={labels.settings || 'Settings'}
               className="p-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors"
             >
               <Settings className="w-5 h-5" />
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">{labels.settings || '设置'}</TooltipContent>
+            <TooltipContent side="top">{labels.settings || 'Settings'}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
         <Tooltip>
@@ -612,14 +616,14 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={onToggleFullscreen}
-              aria-label={labels.fullscreen || '全屏'}
+              aria-label={labels.fullscreen || 'Fullscreen'}
               className="p-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors"
             >
               {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">{labels.fullscreen || '全屏'}</TooltipContent>
+            <TooltipContent side="top">{labels.fullscreen || 'Fullscreen'}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
       </div>

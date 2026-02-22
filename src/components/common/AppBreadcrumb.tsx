@@ -23,10 +23,11 @@ export function AppBreadcrumb({ items, className }: AppBreadcrumbProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <Breadcrumb className={cn('text-xs', className)}>
+    <Breadcrumb className={cn('text-xs', className)} aria-label="Breadcrumb">
       <BreadcrumbList className="flex items-center gap-1.5 text-muted-foreground">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
+          const labelText = typeof item.label === 'string' ? item.label : undefined;
           return (
             <React.Fragment key={`crumb-${index}`}>
               <UiBreadcrumbItem className="min-w-0">
@@ -34,6 +35,7 @@ export function AppBreadcrumb({ items, className }: AppBreadcrumbProps) {
                   <LocalizedLink
                     to={item.to}
                     className="hover:text-foreground transition-colors whitespace-nowrap"
+                    title={labelText}
                   >
                     {item.label}
                   </LocalizedLink>
@@ -45,6 +47,7 @@ export function AppBreadcrumb({ items, className }: AppBreadcrumbProps) {
                         ? 'text-foreground font-semibold'
                         : 'whitespace-nowrap text-muted-foreground'
                     )}
+                    title={labelText}
                   >
                     {item.label}
                   </BreadcrumbPage>

@@ -116,7 +116,7 @@ export type VocabReviewDeckDto = {
 };
 
 export type DailyPhraseDto = {
-  id: Id<'words'>;
+  id: string;
   korean: string;
   romanization: string;
   translation: string;
@@ -565,22 +565,22 @@ export const getOfCourse = query({
           // Merge progress data (normalized structure for frontend)
           progress: progress
             ? {
-                id: progress._id,
-                status: progress.status,
-                interval: progress.interval,
-                streak: progress.streak,
-                nextReviewAt: progress.nextReviewAt,
-                lastReviewedAt: progress.lastReviewedAt,
-                // FSRS Fields (Optional, may be undefined for legacy data)
-                state: progress.state,
-                stability: progress.stability,
-                difficulty: progress.difficulty,
-                elapsed_days: progress.elapsed_days,
-                scheduled_days: progress.scheduled_days,
-                reps: progress.reps,
-                lapses: progress.lapses,
-                last_review: progress.last_review,
-              }
+              id: progress._id,
+              status: progress.status,
+              interval: progress.interval,
+              streak: progress.streak,
+              nextReviewAt: progress.nextReviewAt,
+              lastReviewedAt: progress.lastReviewedAt,
+              // FSRS Fields (Optional, may be undefined for legacy data)
+              state: progress.state,
+              stability: progress.stability,
+              difficulty: progress.difficulty,
+              elapsed_days: progress.elapsed_days,
+              scheduled_days: progress.scheduled_days,
+              reps: progress.reps,
+              lapses: progress.lapses,
+              last_review: progress.last_review,
+            }
             : null,
           mastered: progress?.status === 'MASTERED' || false,
         };
@@ -699,23 +699,23 @@ export const getReviewDeck = query({
           exampleMeaningMn: app.exampleMeaningMn,
           progress: progress
             ? {
-                id: progress._id,
-                status: progress.status,
-                interval: progress.interval,
-                streak: progress.streak,
-                nextReviewAt: progress.nextReviewAt,
-                lastReviewedAt: progress.lastReviewedAt,
-                state: progress.state,
-                due: progress.due,
-                stability: progress.stability,
-                difficulty: progress.difficulty,
-                elapsed_days: progress.elapsed_days,
-                scheduled_days: progress.scheduled_days,
-                learning_steps: progress.learning_steps,
-                reps: progress.reps,
-                lapses: progress.lapses,
-                last_review: progress.last_review,
-              }
+              id: progress._id,
+              status: progress.status,
+              interval: progress.interval,
+              streak: progress.streak,
+              nextReviewAt: progress.nextReviewAt,
+              lastReviewedAt: progress.lastReviewedAt,
+              state: progress.state,
+              due: progress.due,
+              stability: progress.stability,
+              difficulty: progress.difficulty,
+              elapsed_days: progress.elapsed_days,
+              scheduled_days: progress.scheduled_days,
+              learning_steps: progress.learning_steps,
+              reps: progress.reps,
+              lapses: progress.lapses,
+              last_review: progress.last_review,
+            }
             : null,
           mastered: progress?.status === 'MASTERED' || false,
         });
@@ -737,6 +737,27 @@ export const getDailyPhrase = query({
   handler: async (ctx, args): Promise<DailyPhraseDto | null> => {
     const lang = args.language || 'zh';
 
+    // 0. Try dedicated Daily Phrases table
+    // (Cast to any to avoid type errors before codegen update)
+    const phrases = await (ctx.db as any).query('daily_phrases').collect();
+    if (phrases.length > 0) {
+      const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+      const index = day % phrases.length;
+      const phrase = phrases[index];
+
+      let translation = phrase.translation; // Default to English
+      if (lang === 'zh' || !args.language) translation = phrase.translationZh || phrase.translation;
+      if (lang === 'vi' && phrase.translationVi) translation = phrase.translationVi;
+      if (lang === 'mn' && phrase.translationMn) translation = phrase.translationMn;
+
+      return {
+        id: phrase._id as string,
+        korean: phrase.korean,
+        romanization: phrase.romanization,
+        translation,
+      };
+    }
+
     // 1. Get total words to pick one deterministically by date
     const allWords = await ctx.db.query('words').take(100); // Take a subset for random selection
     if (allWords.length === 0) return null;
@@ -753,7 +774,7 @@ export const getDailyPhrase = query({
     if (lang === 'mn' && word.meaningMn) translation = word.meaningMn;
 
     return {
-      id: word._id,
+      id: word._id as string,
       korean: word.word,
       romanization: word.pronunciation || '',
       translation: translation,
@@ -1338,6 +1359,7 @@ export const getVocabBook = query({
     search: v.optional(v.string()),
     includeMastered: v.optional(v.boolean()),
     limit: v.optional(v.number()),
+    savedByUserOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<VocabBookItemDto[]> => {
     try {
@@ -1367,7 +1389,11 @@ export const getVocabBook = query({
           .order('desc')
           .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
 
-        const progressPage = page.page.filter(p => includeMastered || p.status !== 'MASTERED');
+        const progressPage = page.page.filter(
+          p =>
+            (includeMastered || p.status !== 'MASTERED') &&
+            (!args.savedByUserOnly || p.savedByUser === true)
+        );
 
         if (!searchQuery) {
           // No search: just take the first `limit` items (fast path).
@@ -1548,15 +1574,15 @@ export const addToReview = mutation({
       .unique();
 
     if (existingProgress) {
-      // Already in review list - optionally reset to LEARNING
+      // Already in review list - mark as savedByUser & optionally reset to LEARNING
+      const patch: Record<string, unknown> = { savedByUser: true };
       if (existingProgress.status === 'MASTERED') {
-        await ctx.db.patch(existingProgress._id, {
-          status: 'LEARNING',
-          interval: 1,
-          streak: 0,
-          nextReviewAt: now + 24 * 60 * 60 * 1000,
-        });
+        patch.status = 'LEARNING';
+        patch.interval = 1;
+        patch.streak = 0;
+        patch.nextReviewAt = now + 24 * 60 * 60 * 1000;
       }
+      await ctx.db.patch(existingProgress._id, patch);
       return { success: true, wordId, action: 'updated' };
     }
 
@@ -1569,6 +1595,7 @@ export const addToReview = mutation({
       streak: 0,
       lastReviewedAt: now,
       nextReviewAt: now + 12 * 60 * 60 * 1000, // 12 hours
+      savedByUser: true,
     });
 
     return { success: true, wordId, action: 'created' };

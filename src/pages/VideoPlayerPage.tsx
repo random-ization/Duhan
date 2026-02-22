@@ -123,7 +123,7 @@ const WordPopup: React.FC<WordPopupProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs hover:bg-muted shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
               <Volume2 className="w-3 h-3" />
-              {getLabel(labels, ['dashboard', 'common', 'read']) || '朗读'}
+              {getLabel(labels, ['dashboard', 'common', 'read']) || 'Read aloud'}
             </Button>
             <Button
               type="button"
@@ -133,7 +133,7 @@ const WordPopup: React.FC<WordPopupProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 dark:bg-lime-400/80 border-2 border-foreground rounded-lg font-bold text-xs hover:bg-lime-400 dark:hover:bg-lime-300 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
               <Plus className="w-3 h-3" />
-              {getLabel(labels, ['dashboard', 'common', 'favorite']) || '收藏'}
+              {getLabel(labels, ['dashboard', 'common', 'favorite']) || 'Save'}
             </Button>
           </div>
         </PopoverContent>
@@ -254,7 +254,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
       const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
       if (!clickedWord) return;
       const rect = wordEl.getBoundingClientRect();
-      const fallbackMeaning = labels.dashboard?.common?.noMeaning || '暂无释义';
+      const fallbackMeaning = labels.dashboard?.common?.noMeaning || 'No meaning available';
       const requestId = dictionaryRequestRef.current + 1;
       dictionaryRequestRef.current = requestId;
       const popoverWidth = 260;
@@ -266,7 +266,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
       );
       setSelectedWord({
         word: clickedWord,
-        meaning: labels.dashboard?.common?.loading || '查询中...',
+        meaning: labels.dashboard?.common?.loading || 'Looking up...',
         position: { x, y },
       });
       void (async () => {
@@ -539,10 +539,10 @@ const DesktopVideoPlayerPage: React.FC = () => {
           onSave={async () => {
             try {
               await saveWord(selectedWord.word, selectedWord.meaning);
-              toast.success(labels.dashboard?.common?.saved || '已保存到生词本');
+              toast.success(labels.dashboard?.common?.saved || 'Saved to vocab notebook');
             } catch (err) {
               console.error('Failed to save word:', err);
-              toast.error(labels.dashboard?.common?.saveFailed || '保存失败');
+              toast.error(labels.dashboard?.common?.saveFailed || 'Failed to save');
             }
             setSelectedWord(null);
           }}

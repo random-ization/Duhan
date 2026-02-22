@@ -2,6 +2,12 @@ import { mutation, query } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId, requireAdmin } from './utils';
 import { hasActiveSubscription } from './subscription';
+import { transcriptInputValidator } from './transcriptSchema';
+import {
+  deleteVideoTranscriptChunks,
+  loadVideoTranscript,
+  replaceVideoTranscriptChunks,
+} from './transcriptStorage';
 
 const PREMIUM_LEVELS = new Set(['ADVANCED', 'C1', 'C2', 'TOPIK5', 'TOPIK6']);
 
@@ -75,8 +81,11 @@ export const get = query({
       }
     }
 
+    const transcriptData = await loadVideoTranscript(ctx, video);
+
     return {
       ...video,
+      transcriptData,
       id: video._id,
     };
   },
@@ -90,7 +99,7 @@ export const create = mutation({
     thumbnailUrl: v.optional(v.string()),
     level: v.string(),
     duration: v.optional(v.number()),
-    transcriptData: v.optional(v.any()),
+    transcriptData: v.optional(transcriptInputValidator),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -102,10 +111,23 @@ export const create = mutation({
       thumbnailUrl: args.thumbnailUrl,
       level: args.level,
       duration: args.duration,
-      transcriptData: args.transcriptData,
+      transcriptData: [],
+      transcriptStorage: 'inline',
+      transcriptChunkCount: 0,
+      transcriptSegmentCount: 0,
       views: 0,
       createdAt: now,
     });
+
+    if (args.transcriptData !== undefined) {
+      const transcriptWrite = await replaceVideoTranscriptChunks(ctx, id, args.transcriptData ?? null);
+      await ctx.db.patch(id, {
+        transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
+        transcriptChunkCount: transcriptWrite.chunkCount,
+        transcriptSegmentCount: transcriptWrite.segmentCount,
+      });
+    }
+
     return { id };
   },
 });
@@ -119,14 +141,28 @@ export const update = mutation({
     thumbnailUrl: v.optional(v.string()),
     level: v.optional(v.string()),
     duration: v.optional(v.number()),
-    transcriptData: v.optional(v.any()),
+    transcriptData: v.optional(transcriptInputValidator),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const { id, ...rest } = args;
+    const { id, transcriptData, ...rest } = args;
     const existing = await ctx.db.get(id);
     if (!existing) throw new ConvexError({ code: 'VIDEO_NOT_FOUND' });
-    await ctx.db.patch(id, rest);
+
+    if (transcriptData === undefined) {
+      await ctx.db.patch(id, rest);
+      return { id };
+    }
+
+    const transcriptWrite = await replaceVideoTranscriptChunks(ctx, id, transcriptData ?? null);
+    await ctx.db.patch(id, {
+      ...rest,
+      transcriptData: [],
+      transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
+      transcriptChunkCount: transcriptWrite.chunkCount,
+      transcriptSegmentCount: transcriptWrite.segmentCount,
+    });
+
     return { id };
   },
 });
@@ -135,6 +171,7 @@ export const remove = mutation({
   args: { id: v.id('videos') },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    await deleteVideoTranscriptChunks(ctx, args.id);
     await ctx.db.delete(args.id);
     return { id: args.id };
   },

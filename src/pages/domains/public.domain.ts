@@ -1,0 +1,12 @@
+export { default as LandingPage } from '../Landing';
+export { default as AuthPage } from '../AuthPage';
+export { default as VerifyEmailPage } from '../VerifyEmailPage';
+export { default as ForgotPasswordPage } from '../ForgotPasswordPage';
+export { default as ResetPasswordPage } from '../ResetPasswordPage';
+export { default as LegalDocumentPage } from '../LegalDocumentPage';
+export { default as SubscriptionPage } from '../SubscriptionPage';
+export { default as PricingDetailsPage } from '../PricingDetailsPage';
+export { default as PaymentSuccessPage } from '../PaymentSuccessPage';
+export { default as MobilePreviewPage } from '../MobilePreviewPage';
+export { default as AdminLoginPage } from '../AdminLoginPage';
+export { default as NotFoundPage } from '../NotFoundPage';

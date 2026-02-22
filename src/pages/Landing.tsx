@@ -176,7 +176,7 @@ const LandingNav = ({
           <img
             src="/logo.png"
             alt={t('common.appName')}
-            className="w-10 h-10 rounded-xl shadow-lg"
+            className="w-10 h-10 rounded-xl shadow-lg dark:brightness-0 dark:invert"
           />
           <span className="font-heading font-bold text-2xl tracking-tight">
             {t('common.appName')}
@@ -289,7 +289,7 @@ const LandingHero = () => {
   const navigate = useLocalizedNavigate();
 
   return (
-    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(90deg,#f0f0f0_1px,transparent_1px)] [background-size:40px_40px]">
+    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[radial-gradient(110%_110%_at_50%_0%,#e9edff_0%,#ffffff_58%)] dark:bg-[radial-gradient(120%_120%_at_50%_0%,rgba(167,139,250,0.30)_0%,rgba(129,140,248,0.10)_38%,#020617_78%)]">
       <motion.div
         initial="hidden"
         whileInView="visible"
@@ -1510,11 +1510,11 @@ const LandingPricing = ({
                     {proPriceDisplay}
                   </span>
                   <span className="text-muted-foreground text-sm">
-                    {t('pricingDetails.period.month', '/月')}
+                    {t('pricingDetails.period.month', '/mo')}
                   </span>
                 </div>
                 <div className="text-muted-foreground font-bold text-sm mb-6">
-                  {t('pricingDetails.originalLabel', '原价')}{' '}
+                  {t('pricingDetails.originalLabel', 'Original')}{' '}
                   <span className="line-through decoration-red-500 decoration-wavy decoration-2">
                     $6.90
                   </span>
@@ -1663,7 +1663,11 @@ const LandingFooter = () => {
     <footer className="bg-card py-12 border-t border-border">
       <div className="max-w-7xl mx-auto px-6 text-center">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <img src="/logo.png" alt={t('common.appName')} className="w-9 h-9 rounded-lg" />
+          <img
+            src="/logo.png"
+            alt={t('common.appName')}
+            className="w-9 h-9 rounded-lg dark:brightness-0 dark:invert"
+          />
           <div className="font-heading font-bold text-2xl">{t('common.appName')}</div>
         </div>
         <div className="flex justify-center gap-6 text-sm text-muted-foreground font-semibold mb-8">

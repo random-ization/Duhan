@@ -255,7 +255,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   }, [timerActive, timeLeft, submitExam]);
 
   const selectExam = async (exam: TopikExam) => {
-    // 权限检查
+    // Permission check.
     if (canAccessContent && !canAccessContent(exam)) {
       onShowUpgradePrompt?.();
       return;
@@ -264,17 +264,17 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     // Hide sidebar for full page experience
     setSidebarHidden(true);
 
-    setLoading(true); // 开始加载
+    setLoading(true); // Begin loading.
     try {
       let fullQuestions: TopikQuestionDto[] = await fetchQuestions(exam.id);
 
-      // 如果还是空的，给个默认空数组防止白屏
+      // Keep an empty fallback to avoid blank screen when no questions are returned.
       if (!fullQuestions) {
         fullQuestions = [];
         logger.warn('No questions found for this exam');
       }
 
-      // 组装完整的考试对象
+      // Build full exam payload with loaded questions.
       const fullExam = {
         ...exam,
         questions: fullQuestions,
@@ -291,7 +291,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam content.');
       setSidebarHidden(false); // Restore sidebar if loading fails
     } finally {
-      setLoading(false); // 结束加载
+      setLoading(false); // End loading.
     }
   };
 
@@ -366,11 +366,11 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const pauseTimer = () => setTimerActive(false);
   const resumeTimer = () => timeLeft > 0 && setTimerActive(true);
 
-  // 3. 在 return 之前添加 Loading 界面
+  // Loading screen.
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        {/* 如果有 Loader2 图标就用这个，没有就用文字 */}
+        {/* Spinner fallback */}
         <div className="animate-spin text-indigo-600">
           <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24">
             <circle

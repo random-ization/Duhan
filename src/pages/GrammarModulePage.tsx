@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +20,7 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
+  const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const isMobile = useIsMobile();
 
@@ -131,13 +133,17 @@ const GrammarModulePage: React.FC = () => {
 
   // Generate unit list for sidebar
   const unitList = useMemo(() => {
-    return Array.from({ length: totalUnits }, (_, i) => `Unit ${i + 1}: 第${i + 1}课`);
-  }, [totalUnits]);
+    return Array.from({ length: totalUnits }, (_, i) =>
+      t('grammarModule.unitLabel', { defaultValue: 'Unit {{count}}', count: i + 1 })
+    );
+  }, [totalUnits, t]);
 
   if (instituteQuery === undefined) {
     return (
       <div className="min-h-screen bg-muted bg-[radial-gradient(#CBD5E1_1.5px,transparent_1.5px)] bg-[length:24px_24px] dark:bg-[radial-gradient(hsl(var(--border))_1.5px,transparent_1.5px)] dark:bg-[length:24px_24px] flex items-center justify-center">
-        <div className="text-xl font-bold text-muted-foreground animate-pulse">加载中...</div>
+        <div className="text-xl font-bold text-muted-foreground animate-pulse">
+          {t('loading', { defaultValue: 'Loading...' })}
+        </div>
       </div>
     );
   }
@@ -190,7 +196,7 @@ const GrammarModulePage: React.FC = () => {
               <h1 className="font-black text-xl italic tracking-tight">
                 {instituteName}
                 <span className="not-italic text-sm font-bold text-muted-foreground ml-2">
-                  语法专项训练
+                  {t('grammarModule.title', { defaultValue: 'Grammar Training' })}
                 </span>
               </h1>
             </div>
@@ -199,7 +205,9 @@ const GrammarModulePage: React.FC = () => {
           <div className="relative group w-80">
             <Input
               type="text"
-              placeholder="搜索语法点..."
+              placeholder={t('grammarModule.searchPlaceholder', {
+                defaultValue: 'Search grammar points...',
+              })}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full !h-auto !px-4 !py-2 !border-2 !border-foreground dark:!border-border !rounded-lg font-bold text-sm focus-visible:!shadow-[2px_2px_0px_0px_#0f172a] dark:focus-visible:!shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)] transition-all !bg-muted focus-visible:!bg-card !shadow-none"
@@ -215,7 +223,10 @@ const GrammarModulePage: React.FC = () => {
           {/* Left Sidebar - Unit Selector */}
           <UnitSidebar
             units={unitList}
-            selectedUnit={`Unit ${selectedUnit}: 第${selectedUnit}课`}
+            selectedUnit={t('grammarModule.unitLabel', {
+              defaultValue: 'Unit {{count}}',
+              count: selectedUnit,
+            })}
             onSelectUnit={unitStr => {
               if (!unitStr) return;
               // Parse "Unit X: ..." to get the unit number

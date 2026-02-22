@@ -262,9 +262,9 @@ export const saveExamAttempt = mutation({
     examId: v.string(), // Legacy ID or Convex ID
     score: v.number(),
     totalQuestions: v.optional(v.number()),
-    sectionScores: v.optional(v.any()), // JSON object
+    sectionScores: v.optional(v.record(v.string(), v.number())),
     duration: v.optional(v.number()),
-    answers: v.optional(v.any()), // JSON record of questionId -> optionIndex
+    answers: v.optional(v.record(v.string(), v.number())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -373,7 +373,7 @@ export const logActivity = mutation({
     activityType: v.string(), // VOCAB, READING, LISTENING, EXAM
     duration: v.optional(v.number()),
     itemsStudied: v.optional(v.number()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

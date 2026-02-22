@@ -22,10 +22,10 @@ interface ExamSessionProps {
   onExit?: () => void;
 }
 
-// PDF 仿真样式常量
+// PDF \u4eff\u771f\u6837\u5f0f\u5e38\u91cf
 const PAPER_MAX_WIDTH = 'max-w-[900px]';
 
-// TOPIK Reading 结构定义
+// TOPIK Reading \u7ed3\u6784\u5b9a\u4e49
 const TOPIK_READING_STRUCTURE: {
   range: [number, number];
   instruction: string;
@@ -214,7 +214,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
     const examContextPrefix = useMemo(() => `TOPIK-${exam.id}`, [exam.id]);
 
-    // 选择结构定义
+    // \u9009\u62e9\u7ed3\u6784\u5b9a\u4e49
     const structure =
       exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
 
@@ -251,7 +251,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
       return () => observer.disconnect();
     }, [exam.questions.length]);
 
-    // 获取当前题目所属的 section
+    // \u83b7\u53d6\u5f53\u524d\u9898\u76ee\u6240\u5c5e\u7684 section
     const getSectionForQuestion = (qIndex: number) => {
       const qNum = qIndex + 1;
       for (const section of structure) {
@@ -262,26 +262,26 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
       return null;
     };
 
-    // 获取当前题目所属的 instruction
+    // \u83b7\u53d6\u5f53\u524d\u9898\u76ee\u6240\u5c5e\u7684 instruction
     const getInstructionForQuestion = (qIndex: number) => {
       const section = getSectionForQuestion(qIndex);
       return section?.instruction || null;
     };
 
-    // 判断是否需要显示 instruction (仅在该 section 的第一道题时显示)
+    // \u5224\u65ad\u662f\u5426\u9700\u8981\u663e\u793a instruction (\u4ec5\u5728\u8be5 section \u7684\u7b2c\u4e00\u9053\u9898\u65f6\u663e\u793a)
     const shouldShowInstruction = (qIndex: number) => {
       const qNum = qIndex + 1;
       const section = getSectionForQuestion(qIndex);
       return section ? qNum === section.range[0] : false;
     };
 
-    // 判断是否是分组题
+    // \u5224\u65ad\u662f\u5426\u662f\u5206\u7ec4\u9898
     const isGroupedQuestion = (qIndex: number) => {
       const section = getSectionForQuestion(qIndex);
       return section?.grouped || false;
     };
 
-    // 判断是否是分组中的第一题（需要显示正文）
+    // \u5224\u65ad\u662f\u5426\u662f\u5206\u7ec4\u4e2d\u7684\u7b2c\u4e00\u9898（\u9700\u8981\u663e\u793a\u6b63\u6587）
     const isFirstInGroup = (qIndex: number) => {
       const qNum = qIndex + 1;
       const section = getSectionForQuestion(qIndex);
@@ -290,13 +290,13 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
 
     return (
       <div className="min-h-screen flex flex-col">
-        {/* 主内容区域 */}
+        {/* \u4e3b\u5185\u5bb9\u533a\u57df */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
-          {/* PDF 试卷纸张 */}
+          {/* PDF \u8bd5\u5377\u7eb8\u5f20 */}
           <div
             className={`bg-card w-full ${PAPER_MAX_WIDTH} shadow-2xl min-h-screen pb-16 relative border border-border`}
           >
-            {/* 试卷头部 (Header) */}
+            {/* \u8bd5\u5377\u5934\u90e8 (Header) */}
             <div className="p-8 md:p-12 pb-4 font-serif">
               {/* Title Box - Black rounded rectangle */}
               <div className="bg-primary text-primary-foreground py-6 px-8 rounded-2xl mb-16 shadow-pop">
@@ -359,7 +359,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
               </div>
             </div>
 
-            {/* 题目区域 */}
+            {/* \u9898\u76ee\u533a\u57df */}
             <div className="px-8 md:px-12 select-none">
               {exam.questions.map((question, idx) => (
                 <div
@@ -369,14 +369,14 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                     questionRefs.current[idx] = el;
                   }}
                 >
-                  {/* Instruction Bar (每个 section 的第一题显示) */}
+                  {/* Instruction Bar (\u6bcf\u4e2a section \u7684\u7b2c\u4e00\u9898\u663e\u793a) */}
                   {shouldShowInstruction(idx) && (
                     <div className="mb-4 font-bold text-lg leading-relaxed text-foreground font-['Batang','KoPubBatang','Times_New_Roman',serif]">
                       {getInstructionForQuestion(idx)}
                     </div>
                   )}
 
-                  {/* 题目 */}
+                  {/* \u9898\u76ee */}
                   <div className="mb-12">
                     <QuestionRenderer
                       question={question}
@@ -398,7 +398,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
               ))}
             </div>
 
-            {/* 试卷页脚 */}
+            {/* \u8bd5\u5377\u9875\u811a */}
             <div className="flex justify-center py-12">
               <div className="bg-muted rounded-full px-4 py-1 font-bold text-muted-foreground">
                 End of Section

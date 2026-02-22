@@ -86,6 +86,19 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitle: 'Reading',
   }),
   topik: segments => {
+    if (segments[1] === 'writing') {
+      return {
+        hasDesktopSidebar: false,
+        hasBottomNav: false,
+        hasHeader: false,
+        hasFooter: false,
+        headerType: 'detail',
+        headerAction: 'none',
+        headerTitle: 'TOPIK Writing',
+        allowHiddenChrome: true,
+      };
+    }
+
     if (segments.length <= 1 || segments[1] === 'history') {
       return {
         hasFooter: false,

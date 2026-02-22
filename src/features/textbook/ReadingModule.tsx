@@ -237,7 +237,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
           <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
           {grammarMatches && grammarMatches.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-bold text-foreground mb-1">语法</div>
+              <div className="text-xs font-bold text-foreground mb-1">Grammar</div>
               <div className="space-y-1">
                 {grammarMatches.slice(0, 5).map(g => (
                   <div key={g.id} className="text-xs text-muted-foreground">
@@ -264,7 +264,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
             >
               <Volume2 className="w-3 h-3" />
-              {labels.dashboard?.common?.read || '朗读'}
+              {labels.dashboard?.common?.read || 'Read aloud'}
             </Button>
             <Button
               variant="ghost"
@@ -273,7 +273,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
             >
               <Plus className="w-3 h-3" />
-              {labels.dashboard?.common?.addVocab || '加入生词本'}
+              {labels.dashboard?.common?.addVocab || 'Save word'}
             </Button>
           </div>
         </PopoverContent>
@@ -356,7 +356,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <Languages className="w-3 h-3" />
-        {labels.dashboard?.reading?.translate || '翻译'}
+        {labels.dashboard?.reading?.translate || 'Translate'}
       </Button>
       <Button
         variant="ghost"
@@ -365,7 +365,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <Volume2 className="w-3 h-3" />
-        {labels.dashboard?.common?.read || '朗读'}
+        {labels.dashboard?.common?.read || 'Read aloud'}
       </Button>
       <Button
         variant="ghost"
@@ -374,7 +374,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
       >
         <PenLine className="w-3 h-3" />
-        {labels.dashboard?.reading?.note || '笔记'}
+        {labels.dashboard?.reading?.note || 'Notes'}
       </Button>
       <div className="relative">
         <DropdownMenu open={showColors} onOpenChange={setShowColors}>
@@ -386,7 +386,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
               className="flex items-center gap-1 px-3 py-2 rounded hover:bg-muted text-xs font-bold transition-colors text-primary-foreground"
             >
               <Highlighter className="w-3 h-3" />
-              {labels.dashboard?.reading?.highlight || '高亮'}
+              {labels.dashboard?.reading?.highlight || 'Highlight'}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -460,12 +460,12 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
         >
           <div className="pointer-events-auto bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[8px_8px_0px_0px_#18181B] p-6 w-96">
             <h3 className="font-black text-lg mb-4">
-              {labels.dashboard?.reading?.addNote || '添加笔记'}
+              {labels.dashboard?.reading?.addNote || 'Add note'}
             </h3>
 
             <div className="bg-muted border-2 border-border rounded-lg p-3 mb-4">
               <p className="text-sm text-muted-foreground font-bold">
-                {labels.dashboard?.reading?.selectedText || '选中文本：'}
+                {labels.dashboard?.reading?.selectedText || 'Selected text:'}
               </p>
               <p className="text-foreground font-bold">{selectedText}</p>
             </div>
@@ -473,13 +473,13 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
             <Textarea
               value={comment}
               onChange={e => setComment(e.target.value)}
-              placeholder={labels.dashboard?.reading?.writeNote || '写下你的笔记...'}
+              placeholder={labels.dashboard?.reading?.writeNote || 'Write your note...'}
               className="w-full !h-24 !px-3 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none resize-none mb-4 !shadow-none"
             />
 
             <div className="flex items-center gap-4 mb-4">
               <span className="text-sm font-bold text-muted-foreground">
-                {labels.dashboard?.reading?.color || '颜色：'}
+                {labels.dashboard?.reading?.color || 'Color:'}
               </span>
               <div className="flex gap-2">
                 {(['yellow', 'green', 'pink'] as HighlightColor[]).map(c => (
@@ -504,7 +504,7 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
                 onClick={onClose}
                 className="flex-1 px-4 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-foreground hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
               >
-                {labels.dashboard?.reading?.cancel || '取消'}
+                {labels.dashboard?.reading?.cancel || 'Cancel'}
               </Button>
               <Button
                 variant="ghost"
@@ -513,7 +513,7 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
                 disabled={!comment.trim()}
                 className="flex-1 px-4 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {labels.dashboard?.reading?.save || '保存'}
+                {labels.dashboard?.reading?.save || 'Save'}
               </Button>
             </div>
           </div>
@@ -545,13 +545,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-black text-sm">{labels.dashboard?.reading?.settings || '阅读设置'}</h4>
+        <h4 className="font-black text-sm">{labels.dashboard?.reading?.settings || 'Reading Settings'}</h4>
         <Button
           variant="ghost"
           size="auto"
           onClick={onClose}
           className="w-6 h-6 rounded-full bg-card border-2 border-foreground flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 transition-all"
-          aria-label={labels.dashboard?.common?.close || '关闭'}
+          aria-label={labels.dashboard?.common?.close || 'Close'}
         >
           <X className="w-3 h-3" />
         </Button>
@@ -559,7 +559,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className="mb-4">
         <label className="text-xs font-bold text-muted-foreground mb-2 block">
-          {labels.dashboard?.reading?.fontSize || '字体大小'}
+          {labels.dashboard?.reading?.fontSize || 'Font Size'}
         </label>
         <div className="flex items-center gap-2">
           <Button
@@ -584,7 +584,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-muted-foreground">
-          {labels.dashboard?.reading?.serif || '衬线字体'}
+          {labels.dashboard?.reading?.serif || 'Serif font'}
         </span>
         <Button
           variant="ghost"
@@ -616,7 +616,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   courseId,
   unitIndex: initialUnitIndex = 1,
   unitTitle = 'Unit 1: Self-introduction',
-  language = 'zh',
+  language = 'en',
   onBack,
 }) => {
   const labels = getLabels(language);
@@ -899,7 +899,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   ]);
 
   const readerRef = useRef<HTMLDivElement>(null);
-  const error = queryError ? '加载失败，请重试' : null;
+  const error = queryError ? 'Failed to load. Please try again.' : null;
 
   // ========================================
   // Smart Word Lookup: Find base form using analysisData
@@ -1099,7 +1099,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
       const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
       const fallbackMeaning =
-        vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || '暂无释义';
+        vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || 'No meaning';
 
       const requestId = dictionaryRequestRef.current + 1;
       dictionaryRequestRef.current = requestId;
@@ -1110,7 +1110,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       setSelectedWord({
         word: clickedWord,
         lemma: tokenInfo?.base,
-        meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || '查询中...',
+        meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || 'Looking up...',
         baseForm: tokenInfo?.base,
         grammarMatches: [],
         contextTranslation,
@@ -1298,7 +1298,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         ...prev,
         {
           role: 'ai',
-          content: `关于"${aiInput}"的解释：这是一个很好的问题！在韩语中，这个语法点用于表示...（AI回复示例）`,
+          content: `About "${aiInput}": great question! In Korean, this grammar point is used to express... (AI sample response)`,
         },
       ]);
     }, 500);
@@ -1322,7 +1322,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <p className="font-bold mb-4">
-              {labels.dashboard?.common?.error || '加载失败，请重试'}
+              {labels.dashboard?.common?.error || 'Failed to load. Please try again.'}
             </p>
             <Button
               variant="ghost"
@@ -1330,7 +1330,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
               onClick={onBack}
               className="px-4 py-2 bg-primary text-white rounded-lg font-bold"
             >
-              {labels.dashboard?.common?.back || '返回'}
+              {labels.dashboard?.common?.back || 'Back'}
             </Button>
           </div>
         </div>
@@ -1367,7 +1367,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     (idx: number) => (
                       <option key={idx} value={idx}>
                         📖{' '}
-                        {(labels.dashboard?.reading?.lesson || '第 {idx} 课').replace(
+                        {(labels.dashboard?.reading?.lesson || 'Lesson {idx}').replace(
                           '{idx}',
                           idx.toString()
                         )}
@@ -1395,7 +1395,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                             : 'hover:bg-muted'
                         }`}
                       >
-                        {(labels.dashboard?.reading?.article || '文章').replace(
+                        {(labels.dashboard?.reading?.article || 'Article').replace(
                           '{index}',
                           articleIndex.toString()
                         )}{' '}
@@ -1408,7 +1408,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
               {grammarList.length > 0 && (
                 <span className="hidden md:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
-                  {(labels.dashboard?.reading?.grammarCount || '{count} 个语法点').replace(
+                  {(labels.dashboard?.reading?.grammarCount || '{count} grammar points').replace(
                     '{count}',
                     grammarList.length.toString()
                   )}
@@ -1451,17 +1451,17 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 ref={readerRef}
                 className={`bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-                aria-label={labels.dashboard?.reading?.readerLabel || '文章阅读器'}
+                aria-label={labels.dashboard?.reading?.readerLabel || 'Article reader'}
               >
                 <h2 className="text-2xl font-black mb-6 text-foreground">
-                  {unitData?.title || labels.dashboard?.reading?.noArticles || '暂无文章'}
+                  {unitData?.title || labels.dashboard?.reading?.noArticles || 'No article'}
                 </h2>
                 <div className="text-muted-foreground leading-loose">
                   {unitData?.readingText ? (
                     renderContent(unitData.readingText)
                   ) : (
                     <p className="text-muted-foreground">
-                      {labels.dashboard?.reading?.noContent || '暂无内容'}
+                      {labels.dashboard?.reading?.noContent || 'No content'}
                     </p>
                   )}
                 </div>
@@ -1472,7 +1472,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     <details className="group">
                       <summary className="cursor-pointer font-bold text-sm text-muted-foreground hover:text-muted-foreground flex items-center gap-2">
                         <Languages className="w-4 h-4" />
-                        {labels.dashboard?.reading?.showTranslation || '显示翻译'}
+                        {labels.dashboard?.reading?.showTranslation || 'Show translation'}
                         <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                       </summary>
                       <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground whitespace-pre-wrap">
@@ -1494,7 +1494,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
                         flushReadingTime(true);
                         // Show success feedback
-                        notify.success(labels.dashboard?.reading?.learned || '🎉 本课学习已完成！');
+                        notify.success(labels.dashboard?.reading?.learned || '🎉 Lesson completed!');
                       } catch (e) {
                         console.error('Failed to mark unit complete:', e);
                       } finally {
@@ -1503,11 +1503,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     }}
                     disabled={completingUnit}
                     loading={completingUnit}
-                    loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || '完成本课学习'}`}
+                    loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || 'Complete lesson'}`}
                     loadingIconClassName="w-4 h-4"
                     className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                   >
-                    ✅ {labels.dashboard?.reading?.completeLesson || '完成本课学习'}
+                    ✅ {labels.dashboard?.reading?.completeLesson || 'Complete lesson'}
                   </Button>
                 </div>
               </div>
@@ -1521,17 +1521,17 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   [
                     {
                       key: 'grammar',
-                      label: labels.dashboard?.reading?.grammar || '语法点',
+                      label: labels.dashboard?.reading?.grammar || 'Grammar points',
                       icon: Sparkles,
                     },
                     {
                       key: 'notes',
-                      label: labels.dashboard?.reading?.note || '笔记',
+                      label: labels.dashboard?.reading?.note || 'Notes',
                       icon: PenLine,
                     },
                     {
                       key: 'ai',
-                      label: labels.dashboard?.reading?.aiAssistant || 'AI助教',
+                      label: labels.dashboard?.reading?.aiAssistant || 'AI tutor',
                       icon: MessageSquare,
                     },
                   ] as const
@@ -1559,10 +1559,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       <div className="text-center text-muted-foreground py-8">
                         <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="font-bold">
-                          {labels.dashboard?.reading?.noNotes || '暂无笔记'}
+                          {labels.dashboard?.reading?.noNotes || 'No notes'}
                         </p>
                         <p className="text-xs">
-                          {labels.dashboard?.reading?.selectedText || '选中文本添加笔记'}
+                          {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
                         </p>
                       </div>
                     ) : (
@@ -1591,10 +1591,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                       <div className="text-center text-muted-foreground py-8">
                         <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="font-bold">
-                          {labels.dashboard?.reading?.noGrammar || '本课暂无语法点'}
+                          {labels.dashboard?.reading?.noGrammar || 'No grammar in this lesson'}
                         </p>
                         <p className="text-xs">
-                          {labels.dashboard?.reading?.addGrammar || '请先添加课程语法'}
+                          {labels.dashboard?.reading?.addGrammar || 'Please add grammar for this lesson first'}
                         </p>
                       </div>
                     ) : (
@@ -1605,7 +1605,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
-                              {grammar.type || '语法'}
+                              {grammar.type || 'Grammar'}
                             </span>
                             <h4 className="font-bold text-foreground">{grammar.title}</h4>
                           </div>
@@ -1613,7 +1613,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                           {grammar.explanation && (
                             <details className="mt-2">
                               <summary className="cursor-pointer text-xs text-muted-foreground hover:text-muted-foreground">
-                                {labels.dashboard?.reading?.viewExplanation || '查看详细解释'}
+                                {labels.dashboard?.reading?.viewExplanation || 'View detailed explanation'}
                               </summary>
                               <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
                                 {grammar.explanation}
@@ -1646,7 +1646,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         value={aiInput}
                         onChange={e => setAiInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && sendAiMessage()}
-                        placeholder={labels.dashboard?.reading?.placeholder || '问我语法问题...'}
+                        placeholder={labels.dashboard?.reading?.placeholder || 'Ask a grammar question...'}
                         className="flex-1 !h-auto !px-4 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none !shadow-none"
                       />
                       <Button
@@ -1685,7 +1685,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
               <SelectionToolbar
                 position={selectionToolbar.position}
                 onTranslate={() => {
-                  notify.info(`翻译：${selectionToolbar.text}`);
+                  notify.info(`Translate：${selectionToolbar.text}`);
                   setSelectionToolbar(null);
                 }}
                 onSpeak={() => {
@@ -1729,7 +1729,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           <BottomSheet
             isOpen={mobileSheetOpen}
             onClose={() => setMobileSheetOpen(false)}
-            title={labels.dashboard?.reading?.studyTool || '学习工具'}
+            title={labels.dashboard?.reading?.studyTool || 'Study tools'}
             height="half"
           >
             {/* Mobile Tabs */}
@@ -1738,10 +1738,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                 [
                   {
                     key: 'grammar',
-                    label: labels.dashboard?.reading?.grammar || '语法',
+                    label: labels.dashboard?.reading?.grammar || 'Grammar',
                     icon: Sparkles,
                   },
-                  { key: 'notes', label: labels.dashboard?.reading?.note || '笔记', icon: PenLine },
+                  { key: 'notes', label: labels.dashboard?.reading?.note || 'Notes', icon: PenLine },
                 ] as const
               ).map(tab => (
                 <Button
@@ -1777,7 +1777,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
               <div className="space-y-2">
                 {notes.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">
-                    {labels.dashboard?.reading?.selectedText || '选中文本添加笔记'}
+                    {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
                   </p>
                 ) : (
                   notes.map(note => (

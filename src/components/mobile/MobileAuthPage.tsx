@@ -89,7 +89,11 @@ export const MobileAuthPage: React.FC = () => {
           <div className="relative z-10">
             <div className="w-16 h-16 bg-card rounded-2xl mx-auto mb-4 shadow-lg flex items-center justify-center">
               {/* <span className="font-black text-2xl text-foreground">HG</span> */}
-              <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-10 h-10 object-contain dark:brightness-0 dark:invert"
+              />
             </div>
             <h1 className="text-2xl font-black text-white mb-1">{t('auth.brand')}</h1>
             <p className="text-indigo-200 font-bold text-xs tracking-wide">{t('auth.slogan')}</p>

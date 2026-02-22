@@ -436,7 +436,28 @@
     "timeLimit": "{{count}} phút",
     "noExams": "Không có đề thi khả dụng",
     "unknownExam": "Bài thi không xác định",
-    "viewAllHistory": "Xem toàn bộ lịch sử"
+    "viewAllHistory": "Xem toàn bộ lịch sử",
+    "statsTitle": "Thống kê của tôi",
+    "avgScore": "Điểm TB",
+    "passRate": "Tỷ lệ đỗ",
+    "breakdown": "Phân tích môn học",
+    "notTried": "Chưa thử",
+    "subjectAttempts_one": "{{count}} lần làm bài",
+    "subjectAttempts_other": "{{count}} lần làm bài",
+    "tryThisSection": "← Hãy thử phần này!",
+    "trendUp": "Điểm số đang cải thiện (5 lần gần nhất)",
+    "trendDown": "Điểm số giảm — hãy tập trung vào phần yếu",
+    "todayTitle": "Mẹo hôm nay",
+    "recommended": "Đề xuất",
+    "estimatedTime": "Ước tính:",
+    "minutes": "phút",
+    "allDone": "Bạn đã làm thử tất cả bài thi!",
+    "reminder": {
+      "firstTime": "Bắt đầu bài thi thử TOPIK đầu tiên của bạn!",
+      "good": "Chuỗi làm bài tốt! Hãy giữ vững phong độ.",
+      "warn": "{{count}} ngày kể từ lần luyện tập cuối — hãy giữ sự tập trung!",
+      "danger": "Đã {{count}} ngày trôi qua — kiến thức có thể bị phai mờ!"
+    }
   },
   "dashboard": {
     "banner": {
@@ -585,7 +606,9 @@
           "submitDesc": "Tất cả câu hỏi là chọn một đáp án. Sau khi nộp bạn sẽ thấy điểm và phân tích AI.",
           "listeningTip": "Phần nghe có âm thanh. Hãy bật loa hoặc dùng tai nghe.",
           "readingTip": "Bài đọc khá dài, nên làm bài trong môi trường yên tĩnh.",
-          "startExam": "Bắt đầu thi"
+          "startExam": "Bắt đầu thi",
+          "listeningTitle": "Lưu ý phần nghe",
+          "startConfirm": "Bắt đầu nghĩa là bạn đã sẵn sàng."
         },
         "session": {
           "passageFor": "Đoạn văn cho câu {{start}}-{{end}}",
@@ -629,6 +652,48 @@
           "saveFailedShort": "Lưu thất bại",
           "savedToast": "Đã lưu vào sổ tay"
         }
+      },
+      "totalAttempts": "Số lần thi",
+      "writing": "Viết",
+      "writingMockExams": "Đề thi viết mô phỏng",
+      "writingComingSoon": "Đề viết đang được chuẩn bị. Vui lòng thử lại sau.",
+      "writingCardLabel": "TOPIK II Viết",
+      "writingMockTitle": "TOPIK II Viết mô phỏng",
+      "writingMockDesc": "Câu 51-54 · AI chấm điểm",
+      "startWriting": "Bắt đầu viết",
+      "passBadge": "ĐẠT",
+      "controller": {
+        "questionOverview": "Tổng quan câu hỏi",
+        "done": "Đã làm",
+        "current": "Hiện tại",
+        "answered": "Đã trả lời",
+        "unanswered": "Chưa trả lời",
+        "overview": "Tổng quan",
+        "exit": "Thoát",
+        "close": "Đóng"
+      },
+      "result": {
+        "passTitle": "Chúc mừng! 🎉",
+        "keepTitle": "Tiếp tục luyện tập! 💪",
+        "passSubtitle": "Bạn đã đạt mức điểm đỗ.",
+        "keepSubtitle": "Bạn đang tiến gần hơn đến mục tiêu.",
+        "yourScore": "Điểm của bạn",
+        "accuracy": "Độ chính xác",
+        "correct": "Đúng",
+        "incorrect": "Sai",
+        "reviewDetails": "Xem phân tích chi tiết",
+        "tryAgain": "Làm lại",
+        "backToList": "Quay lại danh sách"
+      },
+      "review": {
+        "roundLabel": "Kỳ {{round}}",
+        "mark": "Đánh dấu",
+        "canvasLoading": "Đang tải...",
+        "canvasSaving": "Đang lưu...",
+        "canvasSynced": "Đã đồng bộ",
+        "wrongQuestions": "Câu sai ({{count}}):",
+        "allCorrect": "🎉 Đúng hết!",
+        "endOfSection": "Kết thúc phần"
       }
     },
     "readingHub": {
@@ -1503,7 +1568,165 @@
     },
     "searchPlaceholder": "Tìm kiếm ghi chú...",
     "noNotes": "Không tìm thấy ghi chú",
-    "details": "Chi tiết ghi chú"
+    "details": "Chi tiết ghi chú",
+    "emptyTitle": "Sổ tay của bạn đang trống",
+    "emptyDesc": "Trong chế độ ôn tập, hãy chọn văn bản và lưu vào sổ tay.",
+    "noMatchTitle": "Không tìm thấy ghi chú phù hợp",
+    "noMatchDesc": "Hãy thử đổi từ khóa tìm kiếm hoặc đổi danh mục",
+    "previewEmpty": "Chưa có nội dung xem trước",
+    "type": {
+      "vocab": "Từ vựng",
+      "grammar": "Ngữ pháp",
+      "mistake": "Lỗi sai",
+      "general": "Ghi chú"
+    },
+    "time": {
+      "justNow": "Vừa xong",
+      "minutesAgo": "{{count}} phút trước",
+      "hoursAgo": "{{count}} giờ trước",
+      "daysAgo": "{{count}} ngày trước"
+    },
+    "detail": {
+      "loadError": "Không thể tải chi tiết ghi chú",
+      "noContent": "Chưa có nội dung",
+      "deleteTitle": "Xóa ghi chú này?",
+      "deleteDesc": "Thao tác này không thể hoàn tác. Ghi chú sẽ bị xóa ngay lập tức.",
+      "cancelDelete": "Hủy",
+      "deleting": "Đang xóa...",
+      "confirmDelete": "Xóa",
+      "meaning": "Nghĩa",
+      "context": "Câu gốc",
+      "grammarAnalysis": "Phân tích ngữ pháp",
+      "sourcePrefix": "Nguồn",
+      "question": "Câu hỏi",
+      "questionImageAlt": "Hình câu hỏi",
+      "correctAnswer": "Đáp án đúng",
+      "aiAnalysis": "Phân tích AI",
+      "content": "Nội dung",
+      "note": "Ghi chú",
+      "aiTeacherAnalysis": "Giải thích AI",
+      "stemTranslation": "Bản dịch đề bài",
+      "keyPoint": "Trọng tâm",
+      "correctAnalysis": "Phân tích đáp án đúng",
+      "distractorAnalysis": "Phân tích đáp án nhiễu"
+    }
+  },
+  "annotationMenu": {
+    "saveToVocab": "Lưu vào sổ từ vựng",
+    "saving": "Đang lưu..."
+  },
+  "audioPlayer": {
+    "restart": "Phát lại",
+    "changeSpeed": "Đổi tốc độ",
+    "mute": "Tắt tiếng",
+    "unmute": "Bật tiếng"
+  },
+  "grammarCard": {
+    "type": {
+      "ending": "Đuôi kết thúc câu",
+      "particle": "Trợ từ",
+      "connective": "Đuôi liên kết"
+    }
+  },
+  "grammarFeed": {
+    "allPoints": "Tất cả điểm ngữ pháp",
+    "empty": "Bài này chưa có điểm ngữ pháp"
+  },
+  "grammarModule": {
+    "title": "Luyện ngữ pháp",
+    "searchPlaceholder": "Tìm điểm ngữ pháp...",
+    "unitLabel": "Bài {{count}}"
+  },
+  "analysisSheet": {
+    "title": "Phân tích câu bằng AI",
+    "loading": "AI đang phân tích câu...",
+    "empty": "Kết quả phân tích sẽ hiển thị tại đây",
+    "vocabularyTitle": "Từ vựng",
+    "grammarTitle": "Ngữ pháp",
+    "nuanceTitle": "Sắc thái",
+    "cached": "Kết quả đã lưu bộ nhớ đệm"
+  },
+  "wongojiEditor": {
+    "row": "Dòng",
+    "column": "Cột",
+    "perLine": "{{count}} ký tự mỗi dòng · Wongoji"
+  },
+  "leaderboard": {
+    "weeklyTitle": "Bảng xếp hạng tuần",
+    "empty": "Chưa có ai lên bảng. Hãy là người đầu tiên!",
+    "meTag": "(Tôi)"
+  },
+  "achievements": {
+    "aiTutorTagline": "Gia sư AI tiếng Hàn cá nhân của bạn",
+    "saveReportImage": "Lưu ảnh thành tích",
+    "galleryEmpty": "Hoàn thành luyện gõ hoặc từ vựng để mở khóa huy hiệu đầu tiên!"
+  },
+  "weeklyActivity": {
+    "minutesUnit": "p",
+    "minutesLabel": "phút",
+    "studyDuration": "Thời gian học"
+  },
+  "learnerSummary": {
+    "title": "Tổng quan học tập",
+    "streak": "Đã học liên tục {count} ngày",
+    "progress": "Tiến độ hôm nay",
+    "minutes": "phút",
+    "completed": "✨ Đã hoàn thành mục tiêu hôm nay!",
+    "todayTag": "Hôm nay",
+    "studyTooltip": "Đã học {{count}} phút",
+    "weeklyActivity": "Hoạt động trong tuần",
+    "stats": {
+      "studyToday": "Thời gian học",
+      "studyTotal": "Tổng thời gian",
+      "wordsToday": "Từ đã học",
+      "wordsTotal": "Tổng từ",
+      "grammarToday": "Ngữ pháp đã học",
+      "grammarTotal": "Tổng ngữ pháp",
+      "xpTotal": "Tổng XP"
+    }
+  },
+  "learnerDashboard": {
+    "loadError": "Không thể tải dữ liệu học tập",
+    "streakDays": "Ngày học liên tục",
+    "wordsLearned": "Từ đã học",
+    "grammarLearned": "Ngữ pháp đã học",
+    "todayMinutes": "Hôm nay (phút)",
+    "weeklyStudy": "Thời gian học trong tuần",
+    "continueLearning": "Tiếp tục học",
+    "unitProgress": "Bài {{unit}} · {{module}}",
+    "continueButton": "Tiếp tục",
+    "startFirstLesson": "Hãy bắt đầu bài học đầu tiên!",
+    "dailyGoal": "Mục tiêu hôm nay",
+    "minutesUnit": "phút",
+    "goalCompleted": "Đã hoàn thành mục tiêu hôm nay!",
+    "reviewWords": "Có {{count}} từ cần ôn tập",
+    "reviewHint": "Duy trì nhịp học để củng cố trí nhớ.",
+    "reviewNow": "Ôn tập ngay",
+    "module": {
+      "vocab": "Từ vựng",
+      "reading": "Đọc",
+      "grammar": "Ngữ pháp"
+    }
+  },
+  "grammarDetail": {
+    "checkFailed": "Kiểm tra thất bại, vui lòng thử lại.",
+    "analysisDone": "Phân tích hoàn tất",
+    "selectPrompt": "Chọn một điểm ngữ pháp để xem chi tiết",
+    "aiPractice": "Luyện với AI",
+    "practicePlaceholder": "Hãy tạo câu với {{title}}...",
+    "checking": "Đang kiểm tra...",
+    "check": "Kiểm tra",
+    "feedback": {
+      "correct": "✓ Rất tốt!",
+      "incorrect": "✗ Cần cải thiện"
+    },
+    "suggested": "Câu gợi ý:",
+    "proficiency": "Độ thành thạo",
+    "mastered": "Đã thành thạo",
+    "explanation": "Giải thích chi tiết",
+    "markMastered": "Đánh dấu đã thành thạo",
+    "rules": "Quy tắc biến đổi",
+    "examples": "Ví dụ sử dụng"
   },
   "podcast": {
     "title": "Podcast",
@@ -2033,6 +2256,129 @@
       "aiDictionaryFailed": "AI giải thích từ thất bại",
       "dictionaryLookupFailed": "Tra từ điển thất bại",
       "noteSyncFailed": "Đồng bộ ghi chú sang Notebook thất bại"
+    }
+  },
+  "reviewPage": {
+    "card": {
+      "title": "Ôn Tập Hàng Ngày",
+      "wordsDue": "{{count}} Từ Cần Ôn",
+      "description": "Củng cố trí nhớ dài hạn với phương pháp lặp lại ngắt quãng phù hợp với bạn.",
+      "estimatedTime": "Thời gian dự kiến: ~{{min}} phút",
+      "start": "Bắt Đầu Ôn"
+    },
+    "dashboard": {
+      "title": "Ôn Tập Hàng Ngày",
+      "subtitle": "Giữ vững chuỗi! Bạn có {{count}} từ cần ôn tập.",
+      "streakDays": "{{days}} Ngày"
+    },
+    "stats": {
+      "accuracy": "Độ Chính Xác",
+      "accuracy_sub": "+2% so với tuần trước",
+      "learned": "Từ Đã Học",
+      "learned_sub": "Tổng số từ đang học",
+      "due": "Cần Ôn Ngay",
+      "due_sub": "Sẵn sàng để ôn tập"
+    },
+    "modes": {
+      "title": "Chọn Chế Độ",
+      "recommended": "ĐỀ XUẤT",
+      "quick": {
+        "title": "Ôn Nhanh",
+        "desc": "10 từ ngẫu nhiên • 2 phút",
+        "btn": "Bắt Đầu Nhanh"
+      },
+      "full": {
+        "title": "Ôn Toàn Bộ",
+        "desc": "Hoàn thành tất cả {{count}} từ",
+        "btn": "Bắt Đầu Hết"
+      },
+      "weak": {
+        "title": "Từ Khó",
+        "desc": "Tập trung vào các từ khó",
+        "btn": "Cải Thiện"
+      }
+    },
+    "queue": {
+      "title": "Danh Sách Từ",
+      "due": "Cần Ôn",
+      "mastered": "Đã Thuộc",
+      "empty_due": "Không có từ nào cần ôn! Làm tốt lắm.",
+      "empty_mastered": "Danh sách các từ đã thuộc sẽ hiện ở đây."
+    }
+  },
+  "topikWriting": {
+    "title": "TOPIK II Viết",
+    "session": {
+      "fillBlank": "Điền vào chỗ trống",
+      "graphEssay": "Viết biểu đồ",
+      "opinionEssay": "Nghị luận",
+      "exampleBox": "Ví dụ / Context",
+      "questionX": "Câu {{num}}",
+      "points": "điểm",
+      "answerPlaceholder": "Nhập câu trả lời của bạn...",
+      "characterCount": "{{count}} ký tự",
+      "remainingChars": "Còn {{count}}",
+      "submitConfirmTitle": "Nộp bài?",
+      "submitConfirmDesc": "Đã trả lời {{ans}}/{{total}} câu. Không thể sửa sau khi nộp.",
+      "exitConfirmTitle": "Thoát bài thi?",
+      "exitConfirmDesc": "Câu trả lời hiện tại sẽ được lưu dưới dạng bản nháp. Bạn có thể quay lại để tiếp tục sau.",
+      "continueForm": "Tiếp tục",
+      "confirmSubmit": "Xác nhận nộp",
+      "exiting": "Đang thoát...",
+      "submitting": "Đang nộp...",
+      "saveIdle": "Tự động lưu",
+      "saving": "Đang lưu...",
+      "saved": "✓ Đã lưu",
+      "saveError": "Lỗi lưu",
+      "submitButton": "Nộp bài",
+      "wongojiAnswer": "Giấy kẻ ô Answer",
+      "answerArea": "Khu vực trả lời",
+      "maxLength": "Tối đa {{count}} ký tự",
+      "submittedTitle": "Nộp bài thành công!",
+      "submittedDesc": "Đã trả lời {{ans}}/{{total}} câu. Đang chờ AI đánh giá...",
+      "loadingExam": "Đang chuẩn bị bài thi viết...",
+      "q51Instruction": "Điền vào chỗ trống dựa vào ngữ cảnh để đoạn văn hoàn chỉnh và tự nhiên.",
+      "q52Instruction": "Điền vào chỗ trống theo yêu cầu của đề bài.",
+      "q53Instruction": "Dựa vào biểu đồ dưới đây, viết một bài văn thuyết minh (200-300 chữ).",
+      "q54Instruction": "Viết một bài văn nghị luận về chủ đề dưới đây (400-600 chữ).",
+      "fillBlankPaperTitle": "Điền chỗ trống (㉠ / ㉡)",
+      "fillBlankOneSentence": "Mỗi chỗ trống nên viết 1 câu",
+      "fillBlankHint": "Vui lòng điền cả ㉠ và ㉡ bằng câu hoàn chỉnh.",
+      "fillBlankA": "Điền ㉠ tại đây",
+      "fillBlankB": "Điền ㉡ tại đây"
+    },
+    "report": {
+      "title": "Báo cáo Đánh giá Viết",
+      "subtitle": "TOPIK II Viết · AI Đánh giá",
+      "evaluatingTitle": "AI đang chấm điểm...",
+      "evaluatingDesc": "Phân tích theo tiêu chuẩn TOPIK chính thức. Thường mất 30-60 giây.",
+      "dimTask": "Mức độ hoàn thành",
+      "dimStructure": "Cấu trúc & Phát triển",
+      "dimLanguage": "Sử dụng ngôn ngữ",
+      "dimWongoji": "Quy tắc giấy kẻ ô",
+      "maxScore": "Tối đa {{score}}",
+      "scoreLabel": "Điểm:",
+      "dimScores": "Điểm từng phần",
+      "originalText": "Bài làm của bạn",
+      "notAnswered": "(Chưa trả lời)",
+      "aiCorrected": "Bản sửa gợi ý (AI)",
+      "noCorrection": "(Không có chỉnh sửa)",
+      "feedback": "Nhận xét chung",
+      "loadingError": "Không thể tải báo cáo, vui lòng tải lại trang.",
+      "back": "Quay lại",
+      "timeElapsed": "Thời gian làm bài:",
+      "timeFormat": "{{min}}p {{sec}}s",
+      "totalScore": "Tổng điểm:",
+      "aiDone": "AI chấm xong",
+      "passExcellent": "Xuất sắc 🎉",
+      "passGood": "Đạt ✅",
+      "passNeedsWork": "Cần cố gắng 📚",
+      "overallAnalysis": "Phân tích tổng thể",
+      "questionFeedback": "Nhận xét chi tiết từng câu",
+      "loadingOriginal": "Đang tải đề thi gốc...",
+      "retrigger": "Kích hoạt chấm lại",
+      "retriggering": "Đang thử lại...",
+      "retryFailed": "Thử lại thất bại. Vui lòng thử lại sau."
     }
   }
 }

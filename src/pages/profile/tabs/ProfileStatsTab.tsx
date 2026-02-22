@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ExamAttempt } from '../../../types';
+import { AchievementGallery } from '../../../components/profile/AchievementGallery';
 
 export const ProfileStatsTab: React.FC<{
   labels: Record<string, any>;
@@ -69,11 +70,10 @@ export const ProfileStatsTab: React.FC<{
               </div>
               <div className="text-right">
                 <div
-                  className={`font-bold text-lg ${
-                    exam.score / exam.maxScore >= 0.6
-                      ? 'text-green-600 dark:text-emerald-200'
-                      : 'text-muted-foreground'
-                  }`}
+                  className={`font-bold text-lg ${exam.score / exam.maxScore >= 0.6
+                    ? 'text-green-600 dark:text-emerald-200'
+                    : 'text-muted-foreground'
+                    }`}
                 >
                   {Math.round((exam.score / exam.maxScore) * 100)}%
                 </div>
@@ -85,6 +85,12 @@ export const ProfileStatsTab: React.FC<{
           ))
         )}
       </div>
+
+      {/* ── Achievement Gallery ──────────────────────── */}
+      <h2 className="font-heading text-2xl font-bold mb-4 mt-8">
+        {labels.profile?.achievementGallery || 'Achievement Gallery'}
+      </h2>
+      <AchievementGallery />
     </div>
   );
 };

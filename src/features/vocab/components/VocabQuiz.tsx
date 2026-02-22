@@ -8,6 +8,7 @@ import { Language } from '../../../types';
 import { mRef, aRef } from '../../../utils/convexRefs';
 import { Rating } from '../../../utils/srsAlgorithm';
 import { logger } from '../../../utils/logger';
+import { notify } from '../../../utils/notify';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
 import { Button, Checkbox, Input, Radio } from '../../../components/ui';
 
@@ -681,6 +682,7 @@ const useQuizGame = ({
   playWrongSound,
   userId,
   onFsrsReview,
+  onProgressSyncError,
 }: {
   words: readonly VocabItem[];
   settings: QuizSettings;
@@ -691,6 +693,7 @@ const useQuizGame = ({
   playWrongSound: () => void;
   userId?: string;
   onFsrsReview?: (wordId: string, isCorrect: boolean) => void;
+  onProgressSyncError?: (wordId: string, isCorrect: boolean) => void;
 }) => {
   const [gameState, setGameState] = useState<GameState>('PLAYING');
   const [questions, setQuestions] = useState<readonly QuizQuestion[]>([]);
@@ -808,10 +811,12 @@ const useQuizGame = ({
         return;
       }
       if (userId) {
-        void recordProgress(wordId, isCorrect);
+        void recordProgress(wordId, isCorrect).catch(() => {
+          onProgressSyncError?.(wordId, isCorrect);
+        });
       }
     },
-    [onFsrsReview, recordProgress, userId]
+    [onFsrsReview, onProgressSyncError, recordProgress, userId]
   );
 
   const nextQuestion = useCallback(() => {
@@ -1111,10 +1116,16 @@ const useQuizProgress = () => {
     >('vocab:updateProgressV2')
   );
 
+  const updateProgressLegacy = useMutation(
+    mRef<{ wordId: string; quality: number }, { success: boolean; progress: Record<string, unknown> }>(
+      'vocab:updateProgress'
+    )
+  );
+
   const recordProgress = useCallback(
     async (wordId: string, isCorrect: boolean) => {
+      const rating = isCorrect ? Rating.Good : Rating.Again;
       try {
-        const rating = isCorrect ? Rating.Good : Rating.Again;
         const fsrsResult = await calculateNextSchedule({
           rating,
           now: Date.now(),
@@ -1135,11 +1146,22 @@ const useQuizProgress = () => {
             last_review: number | null;
           },
         });
-      } catch (error) {
-        logger.warn('[FSRS] Failed to record progress:', error);
+        return;
+      } catch (primaryError) {
+        logger.warn('[FSRS] V2 progress sync failed, fallback to legacy path:', primaryError);
+      }
+
+      try {
+        await updateProgressLegacy({
+          wordId,
+          quality: isCorrect ? 4 : 1,
+        });
+      } catch (fallbackError) {
+        logger.error('[FSRS] Both V2 and legacy progress sync failed:', fallbackError);
+        throw fallbackError;
       }
     },
-    [calculateNextSchedule, updateProgressV2]
+    [calculateNextSchedule, updateProgressLegacy, updateProgressV2]
   );
 
   return { recordProgress };
@@ -1253,23 +1275,102 @@ const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({ wordsCount, labels, var
   );
 };
 
-const useQuizKeyboard = (
-  pendingAdvance: boolean,
-  nextQuestionRef: React.RefObject<() => void>,
-  setPendingAdvanceReason: (reason: any) => void
-) => {
+const useQuizKeyboard = ({
+  pendingAdvance,
+  showSettings,
+  isLocked,
+  currentQuestion,
+  writingState,
+  nextQuestionRef,
+  setPendingAdvanceReason,
+  handleOptionClick,
+  handleWritingSubmit,
+  speakWord,
+}: {
+  pendingAdvance: boolean;
+  showSettings: boolean;
+  isLocked: boolean;
+  currentQuestion: QuizQuestion | undefined;
+  writingState: WritingState;
+  nextQuestionRef: React.RefObject<() => void>;
+  setPendingAdvanceReason: (reason: any) => void;
+  handleOptionClick: (index: number) => void;
+  handleWritingSubmit: () => void;
+  speakWord: (text: string, force?: boolean) => void;
+}) => {
   useEffect(() => {
-    if (!pendingAdvance) return;
+    const isInputTarget = (target: EventTarget | null) => {
+      const element = target as HTMLElement | null;
+      if (!element) return false;
+      const tag = element.tagName;
+      return (
+        element.isContentEditable ||
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT'
+      );
+    };
+
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
-      e.preventDefault();
-      setPendingAdvanceReason(null);
-      nextQuestionRef.current?.();
+      if (showSettings) return;
+      if (isInputTarget(e.target)) return;
+
+      if (pendingAdvance) {
+        e.preventDefault();
+        setPendingAdvanceReason(null);
+        nextQuestionRef.current?.();
+        return;
+      }
+
+      if (!currentQuestion) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        speakWord(currentQuestion.targetWord.korean, true);
+        return;
+      }
+
+      if (currentQuestion.type === 'MULTIPLE_CHOICE' && !isLocked) {
+        const keyMap: Record<string, number> = {
+          '1': 0,
+          '2': 1,
+          '3': 2,
+          '4': 3,
+          Numpad1: 0,
+          Numpad2: 1,
+          Numpad3: 2,
+          Numpad4: 3,
+        };
+        const mapped = keyMap[e.key] ?? keyMap[e.code];
+        if (mapped !== undefined) {
+          e.preventDefault();
+          handleOptionClick(mapped);
+          return;
+        }
+      }
+
+      if (currentQuestion.type === 'WRITING' && writingState === 'INPUT' && e.key === 'Enter') {
+        e.preventDefault();
+        handleWritingSubmit();
+      }
     };
+
     globalThis.addEventListener('keydown', handler);
     return () => globalThis.removeEventListener('keydown', handler);
-  }, [pendingAdvance, nextQuestionRef, setPendingAdvanceReason]);
+  }, [
+    currentQuestion,
+    handleOptionClick,
+    handleWritingSubmit,
+    isLocked,
+    nextQuestionRef,
+    pendingAdvance,
+    setPendingAdvanceReason,
+    showSettings,
+    speakWord,
+    writingState,
+  ]);
 };
 
 interface QuizContentProps {
@@ -1458,6 +1559,16 @@ function VocabQuizComponent({
   const { speak: speakTTS } = useTTS();
   const { playCorrectSound, playWrongSound } = useQuizSounds(settings.soundEffects);
   const { recordProgress } = useQuizProgress();
+  const lastProgressErrorAtRef = useRef(0);
+  const handleProgressSyncError = useCallback(() => {
+    const now = Date.now();
+    if (now - lastProgressErrorAtRef.current < 3000) return;
+    lastProgressErrorAtRef.current = now;
+    notify.error(
+      labels.vocab?.syncFailed ||
+        'Failed to sync progress. Your local answer is kept; please try again later.'
+    );
+  }, [labels.vocab?.syncFailed]);
   const {
     gameState,
     questions,
@@ -1493,10 +1604,22 @@ function VocabQuizComponent({
     playWrongSound,
     userId,
     onFsrsReview,
+    onProgressSyncError: handleProgressSyncError,
   });
 
   const { speakWord } = useQuizTTS(settings.autoTTS, speakTTS);
-  useQuizKeyboard(pendingAdvance, nextQuestionRef, setPendingAdvanceReason);
+  useQuizKeyboard({
+    pendingAdvance,
+    showSettings,
+    isLocked,
+    currentQuestion,
+    writingState,
+    nextQuestionRef,
+    setPendingAdvanceReason,
+    handleOptionClick,
+    handleWritingSubmit,
+    speakWord,
+  });
 
   useEffect(() => {
     if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {

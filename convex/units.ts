@@ -1,6 +1,12 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { toErrorMessage } from './errors';
+import { getOptionalAuthUserId, requireAdmin } from './utils';
+import { transcriptInputValidator } from './transcriptSchema';
+import {
+  loadTextbookUnitTranscript,
+  replaceTextbookUnitTranscriptChunks,
+} from './transcriptStorage';
 
 // Get unit list for course (includes all content for admin editing)
 export const getByCourse = query({
@@ -12,9 +18,9 @@ export const getByCourse = query({
       .collect();
 
     // Return all fields for admin editing, exclude archived
-    return units
-      .filter(u => u.isArchived !== true)
-      .map(u => ({
+    const visibleUnits = units.filter(u => u.isArchived !== true);
+    return Promise.all(
+      visibleUnits.map(async u => ({
         _id: u._id,
         courseId: u.courseId,
         unitIndex: u.unitIndex,
@@ -26,14 +32,13 @@ export const getByCourse = query({
         translationVi: u.translationVi,
         translationMn: u.translationMn,
         audioUrl: u.audioUrl,
-        transcriptData: u.transcriptData,
+        transcriptData: await loadTextbookUnitTranscript(ctx, u),
         analysisData: u.analysisData,
         createdAt: u.createdAt,
-      }));
+      }))
+    );
   },
 });
-
-import { getOptionalAuthUserId, requireAdmin } from './utils';
 
 export const getDetails = query({
   args: {
@@ -100,7 +105,13 @@ export const getDetails = query({
     ]);
 
     const visibleArticles = articles.filter(article => article.isArchived !== true);
-    const mainUnit = visibleArticles[0] || null;
+    const articlesWithTranscript = await Promise.all(
+      visibleArticles.map(async article => ({
+        ...article,
+        transcriptData: await loadTextbookUnitTranscript(ctx, article),
+      }))
+    );
+    const mainUnit = articlesWithTranscript[0] || null;
 
     // OPTIMIZATION: Batch fetch vocabulary words
     const wordIds = [...new Set(vocabAppearances.map(a => a.wordId))];
@@ -152,7 +163,7 @@ export const getDetails = query({
 
     return {
       unit: mainUnit,
-      articles: visibleArticles,
+      articles: articlesWithTranscript,
       vocabList: vocabList.filter(v => v !== null),
       grammarList: grammarList.filter(g => g !== null),
       annotations: annotations,
@@ -173,10 +184,31 @@ export const save = mutation({
     translationVi: v.optional(v.string()),
     translationMn: v.optional(v.string()),
     audioUrl: v.optional(v.string()),
-    analysisData: v.optional(v.any()),
-    transcriptData: v.optional(v.any()), // JSON transcript
+    analysisData: v.optional(
+      v.object({
+        vocabulary: v.array(
+          v.object({
+            word: v.string(),
+            root: v.string(),
+            meaning: v.string(),
+            type: v.string(),
+          })
+        ),
+        grammar: v.array(
+          v.object({
+            structure: v.string(),
+            explanation: v.string(),
+          })
+        ),
+        nuance: v.string(),
+        cached: v.optional(v.boolean()),
+      })
+    ),
+    transcriptData: v.optional(transcriptInputValidator),
   },
   handler: async (ctx, args) => {
+    const shouldUpdateTranscript = args.transcriptData !== undefined;
+
     const existing = await ctx.db
       .query('textbook_units')
       .withIndex('by_course_unit_article', q =>
@@ -188,7 +220,7 @@ export const save = mutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      const basePatch = {
         title: args.title,
         readingText: args.readingText,
         translation: args.translation,
@@ -197,26 +229,62 @@ export const save = mutation({
         translationMn: args.translationMn,
         audioUrl: args.audioUrl,
         analysisData: args.analysisData,
-        transcriptData: args.transcriptData,
+      };
+
+      if (!shouldUpdateTranscript) {
+        await ctx.db.patch(existing._id, basePatch);
+        return existing._id;
+      }
+
+      const transcriptWrite = await replaceTextbookUnitTranscriptChunks(
+        ctx,
+        existing._id,
+        args.transcriptData ?? null
+      );
+
+      await ctx.db.patch(existing._id, {
+        ...basePatch,
+        transcriptData: [],
+        transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
+        transcriptChunkCount: transcriptWrite.chunkCount,
+        transcriptSegmentCount: transcriptWrite.segmentCount,
       });
       return existing._id;
-    } else {
-      return await ctx.db.insert('textbook_units', {
-        courseId: args.courseId,
-        unitIndex: args.unitIndex,
-        articleIndex: args.articleIndex,
-        title: args.title,
-        readingText: args.readingText,
-        translation: args.translation,
-        translationEn: args.translationEn,
-        translationVi: args.translationVi,
-        translationMn: args.translationMn,
-        audioUrl: args.audioUrl,
-        analysisData: args.analysisData,
-        transcriptData: args.transcriptData,
-        createdAt: Date.now(),
+    }
+
+    const unitId = await ctx.db.insert('textbook_units', {
+      courseId: args.courseId,
+      unitIndex: args.unitIndex,
+      articleIndex: args.articleIndex,
+      title: args.title,
+      readingText: args.readingText,
+      translation: args.translation,
+      translationEn: args.translationEn,
+      translationVi: args.translationVi,
+      translationMn: args.translationMn,
+      audioUrl: args.audioUrl,
+      analysisData: args.analysisData,
+      transcriptData: [],
+      transcriptStorage: 'inline',
+      transcriptChunkCount: 0,
+      transcriptSegmentCount: 0,
+      createdAt: Date.now(),
+    });
+
+    if (shouldUpdateTranscript) {
+      const transcriptWrite = await replaceTextbookUnitTranscriptChunks(
+        ctx,
+        unitId,
+        args.transcriptData ?? null
+      );
+      await ctx.db.patch(unitId, {
+        transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
+        transcriptChunkCount: transcriptWrite.chunkCount,
+        transcriptSegmentCount: transcriptWrite.segmentCount,
       });
     }
+
+    return unitId;
   },
 });
 

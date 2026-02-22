@@ -139,25 +139,31 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                 <br />
                 {exam.type}
               </h1>
-              <p className="text-primary-foreground/80 font-medium">第 {exam.round} 届真题模拟</p>
+              <p className="text-primary-foreground/80 font-medium">
+                {labels.dashboard?.topik?.mobile?.cover?.roundMock?.replace('{{round}}', String(exam.round)) ||
+                  `Round ${exam.round} Past Exam`}
+              </p>
             </div>
 
             <div className="relative z-10 space-y-6">
               <div>
                 <div className="text-xs text-primary-foreground/70 uppercase tracking-widest font-bold mb-1">
-                  Total Time
+                  {labels.dashboard?.topik?.mobile?.cover?.time || 'Time'}
                 </div>
-                <div className="text-2xl font-mono">{exam.timeLimit} Min</div>
+                <div className="text-2xl font-mono">
+                  {labels.topikLobby?.timeLimit?.replace('{{count}}', String(exam.timeLimit)) ||
+                    `${exam.timeLimit} min`}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-primary-foreground/70 uppercase tracking-widest font-bold mb-1">
-                  Questions
+                  {labels.dashboard?.topik?.mobile?.cover?.items || 'Questions'}
                 </div>
                 <div className="text-2xl font-mono">{exam.questions.length}</div>
               </div>
               <div>
                 <div className="text-xs text-primary-foreground/70 uppercase tracking-widest font-bold mb-1">
-                  Full Score
+                  {labels.dashboard?.topik?.mobile?.cover?.score || 'Score'}
                 </div>
                 <div className="text-2xl font-mono">100</div>
               </div>
@@ -169,7 +175,9 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
 
           {/* Right Panel: Instructions */}
           <div className="md:w-3/5 p-10 md:p-12 flex flex-col">
-            <h2 className="text-2xl font-bold text-foreground mb-6">考前须知</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">
+              {labels.dashboard?.topik?.mobile?.cover?.noticeTitle || 'Before You Start'}
+            </h2>
 
             <div className="space-y-4 flex-1">
               <div className="flex gap-4 p-4 rounded-xl bg-muted border border-border">
@@ -177,9 +185,13 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                   1
                 </div>
                 <div>
-                  <h4 className="font-bold text-muted-foreground text-sm">全真模拟环境</h4>
+                  <h4 className="font-bold text-muted-foreground text-sm">
+                    {labels.dashboard?.topik?.mobile?.cover?.simulationTitle ||
+                      'Full simulation mode'}
+                  </h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    考试期间请勿离开页面，计时器结束后将自动提交试卷。
+                    {labels.dashboard?.topik?.mobile?.cover?.simulationDesc ||
+                      'Do not leave the page during the exam. The paper will auto-submit when time runs out.'}
                   </p>
                 </div>
               </div>
@@ -188,9 +200,12 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                   2
                 </div>
                 <div>
-                  <h4 className="font-bold text-muted-foreground text-sm">答案提交</h4>
+                  <h4 className="font-bold text-muted-foreground text-sm">
+                    {labels.dashboard?.topik?.mobile?.cover?.submitTitle || 'Answer submission'}
+                  </h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    所有选择题均为单选。提交后即可查看分数和解析。
+                    {labels.dashboard?.topik?.mobile?.cover?.submitDesc ||
+                      'All questions are single-choice. You can view your score and AI analysis after submission.'}
                   </p>
                 </div>
               </div>
@@ -200,9 +215,12 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-muted-foreground text-sm">听力注意事项</h4>
+                    <h4 className="font-bold text-muted-foreground text-sm">
+                      {labels.dashboard?.topik?.mobile?.cover?.listeningTitle || 'Listening section'}
+                    </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      音频将自动播放且无法暂停。请检查您的扬声器设备。
+                      {labels.dashboard?.topik?.mobile?.cover?.listeningTip ||
+                        'Listening section contains audio. Please turn on your sound or use headphones.'}
                     </p>
                   </div>
                 </div>
@@ -216,11 +234,14 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                 onClick={onStart}
                 className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-pop hover:-translate-y-1 flex items-center justify-center gap-2 group"
               >
-                {hasAttempted ? '重新挑战' : '开始考试'}
+                {hasAttempted
+                  ? labels.dashboard?.topik?.result?.tryAgain || 'Try Again'
+                  : labels.dashboard?.topik?.mobile?.cover?.startExam || 'Start Exam'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                点击开始即代表您已做好准备
+                {labels.dashboard?.topik?.mobile?.cover?.startConfirm ||
+                  'By starting, you confirm you are ready.'}
               </p>
             </div>
           </div>
@@ -274,10 +295,16 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
               <h1
                 className={`text-3xl font-bold mb-2 ${passed ? 'text-white' : 'text-foreground'}`}
               >
-                {passed ? 'Congratulations! 🎉' : 'Keep Practicing! 💪'}
+                {passed
+                  ? labels.dashboard?.topik?.result?.passTitle || 'Congratulations! 🎉'
+                  : labels.dashboard?.topik?.result?.keepTitle || 'Keep Practicing! 💪'}
               </h1>
               <p className={`text-sm ${passed ? 'text-white/80' : 'text-muted-foreground'}`}>
-                {passed ? '您已达到通过标准' : '距离目标还有一段距离，加油！'}
+                {passed
+                  ? labels.dashboard?.topik?.result?.passSubtitle ||
+                    'You have reached the passing standard.'
+                  : labels.dashboard?.topik?.result?.keepSubtitle ||
+                    'You are getting closer to your target.'}
               </p>
             </div>
           </div>
@@ -286,7 +313,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
           <div className="p-8 -mt-6">
             <div className="bg-card rounded-2xl shadow-lg border border-border p-6 flex flex-col items-center">
               <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-2">
-                Your Score
+                {labels.dashboard?.topik?.result?.yourScore || 'Your Score'}
               </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <span
@@ -302,14 +329,18 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
               <div className="grid grid-cols-3 gap-4 w-full">
                 <div className="bg-muted p-3 rounded-xl text-center border border-border">
                   <div className="text-2xl font-bold text-muted-foreground mb-1">{percentage}%</div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase">Accuracy</div>
+                  <div className="text-xs font-bold text-muted-foreground uppercase">
+                    {labels.dashboard?.topik?.result?.accuracy || 'Accuracy'}
+                  </div>
                 </div>
                 <div className="bg-emerald-50 p-3 rounded-xl text-center border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/30">
                   <div className="text-2xl font-bold text-emerald-600 mb-1">
                     {result.correctCount}
                   </div>
                   <div className="text-xs font-bold text-emerald-700/60 dark:text-emerald-200/80 uppercase">
-                    Correct
+                    {labels.dashboard?.topik?.result?.correct ||
+                      labels.dashboard?.topik?.mobile?.review?.correct ||
+                      'Correct'}
                   </div>
                 </div>
                 <div className="bg-red-50 p-3 rounded-xl text-center border border-red-100 dark:bg-red-500/10 dark:border-red-400/30">
@@ -317,7 +348,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
                     {result.totalQuestions - result.correctCount}
                   </div>
                   <div className="text-xs font-bold text-red-700/60 dark:text-red-200/80 uppercase">
-                    Incorrect
+                    {labels.dashboard?.topik?.result?.incorrect || 'Incorrect'}
                   </div>
                 </div>
               </div>
@@ -333,7 +364,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg transition-all shadow-pop flex items-center justify-center gap-2"
             >
               <Eye className="w-5 h-5" />
-              查看详细解析
+              {labels.dashboard?.topik?.result?.reviewDetails || 'View Detailed Analysis'}
             </Button>
 
             <div className="grid grid-cols-2 gap-3">
@@ -344,7 +375,8 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
                 onClick={onTryAgain}
                 className="py-3 bg-card border border-border text-muted-foreground hover:bg-muted rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
               >
-                <RotateCcw className="w-4 h-4" /> 再次挑战
+                <RotateCcw className="w-4 h-4" />{' '}
+                {labels.dashboard?.topik?.result?.tryAgain || 'Try Again'}
               </Button>
               <Button
                 type="button"
@@ -353,7 +385,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
                 onClick={onBackToList}
                 className="py-3 bg-card border border-border text-muted-foreground hover:bg-muted rounded-xl font-bold transition-colors"
               >
-                返回列表
+                {labels.dashboard?.topik?.result?.backToList || 'Back to List'}
               </Button>
             </div>
           </div>
@@ -402,7 +434,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       const questions = exam.questions || [];
       questions.forEach((q, idx) => {
         const userAnswer = userAnswers[idx];
-        // 只有当用户作答且答对时才算正确
+        // Count as correct only when the user answered and matched the correct answer.
         if (userAnswer !== undefined && userAnswer === q.correctAnswer) {
           correct++;
         } else {
@@ -412,7 +444,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       return { correct, wrong };
     }, [exam.questions, userAnswers]);
 
-    // 获取当前题目所属的 instruction
+    // Resolve instruction for current question index.
     const getInstructionForQuestion = (qIndex: number) => {
       const qNum = qIndex + 1;
       for (const section of structure) {
@@ -423,7 +455,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       return null;
     };
 
-    // 判断是否需要显示 instruction
+    // Show instruction only for the first question in each section.
     const shouldShowInstruction = (qIndex: number) => {
       const qNum = qIndex + 1;
       for (const section of structure) {
@@ -688,10 +720,15 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                 <h1 className="font-bold text-muted-foreground text-lg">{exam.title}</h1>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                   <span className="bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded">
-                    Review Mode
+                    {labels.dashboard?.topik?.mobile?.review?.mode || 'Review Mode'}
                   </span>
                   <span>•</span>
-                  <span>第 {exam.round} 届</span>
+                  <span>
+                    {labels.dashboard?.topik?.review?.roundLabel?.replace(
+                      '{{round}}',
+                      String(exam.round)
+                    ) || `Round ${exam.round}`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -710,7 +747,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                 }`}
               >
                 <Pencil className="w-4 h-4" />
-                标记
+                {labels.dashboard?.topik?.review?.mark || 'Mark'}
               </Button>
 
               {/* Canvas Status Indicator */}
@@ -719,19 +756,19 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                   {canvasLoading && (
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      加载中...
+                      {labels.dashboard?.topik?.review?.canvasLoading || 'Loading...'}
                     </span>
                   )}
                   {canvasSaving && (
                     <span className="flex items-center gap-1 text-amber-500">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      保存中...
+                      {labels.dashboard?.topik?.review?.canvasSaving || 'Saving...'}
                     </span>
                   )}
                   {!canvasLoading && !canvasSaving && (
                     <span className="text-emerald-500 flex items-center gap-1">
                       <Check className="w-3 h-3" />
-                      已同步
+                      {labels.dashboard?.topik?.review?.canvasSynced || 'Synced'}
                     </span>
                   )}
                 </div>
@@ -743,7 +780,10 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
           <div className="border-t border-border bg-muted/80 px-4 py-2">
             <div className="max-w-[1400px] mx-auto flex items-center gap-2 overflow-x-auto scrollbar-hide">
               <span className="text-xs font-medium text-muted-foreground shrink-0">
-                错题 ({stats.wrong}):
+                {labels.dashboard?.topik?.review?.wrongQuestions?.replace(
+                  '{{count}}',
+                  String(stats.wrong)
+                ) || `Mistakes (${stats.wrong}):`}
               </span>
               <div className="flex gap-1">
                 {exam.questions.map((q, idx) => {
@@ -765,7 +805,9 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                 })}
               </div>
               {stats.wrong === 0 && (
-                <span className="text-xs text-emerald-600 font-medium">🎉 全部正确！</span>
+                <span className="text-xs text-emerald-600 font-medium">
+                  {labels.dashboard?.topik?.review?.allCorrect || '🎉 All correct!'}
+                </span>
               )}
             </div>
           </div>
@@ -922,7 +964,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
             {/* Paper Footer */}
             <div className="flex justify-center py-12">
               <div className="bg-muted rounded-full px-4 py-1 font-bold text-muted-foreground">
-                End of Section
+                {labels.dashboard?.topik?.review?.endOfSection || 'End of Section'}
               </div>
             </div>
           </div>
@@ -933,13 +975,13 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
               <div className="p-4 border-b border-border bg-muted">
                 <h4 className="font-bold text-muted-foreground flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-indigo-500" />
-                  {labels.annotate || '笔记'}
+                  {labels.annotate || 'Notes'}
                 </h4>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {sidebarAnnotations.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm italic">
-                    {labels.noNotes || '暂无笔记'}
+                    {labels.noNotes || 'No notes yet'}
                   </div>
                 ) : (
                   sidebarAnnotations.map(ann => {
@@ -954,7 +996,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           className="bg-card p-3 rounded-lg border-2 border-indigo-500 shadow-md scroll-mt-20"
                         >
                           <div className="text-xs font-bold mb-2 text-muted-foreground">
-                            {labels.editingNote || '编辑笔记'}: &quot;{ann.text.substring(0, 15)}
+                            {labels.editingNote || 'Editing note'}: &quot;{ann.text.substring(0, 15)}
                             ...&quot;
                           </div>
                           <Textarea
@@ -978,7 +1020,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                               onClick={() => setEditingAnnotationId(null)}
                               className="px-3 py-1 text-xs text-muted-foreground hover:bg-muted rounded"
                             >
-                              {labels.cancel || '取消'}
+                              {labels.cancel || 'Cancel'}
                             </Button>
                             <Button
                               type="button"
@@ -986,7 +1028,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                               onClick={() => handleUpdateNote(ann.id)}
                               className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 flex items-center gap-1"
                             >
-                              <Check className="w-3 h-3" /> {labels.save || '保存'}
+                              <Check className="w-3 h-3" /> {labels.save || 'Save'}
                             </Button>
                           </div>
                         </div>
@@ -1031,7 +1073,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                             <p className="text-sm text-muted-foreground">{ann.note}</p>
                           ) : (
                             <p className="text-xs text-muted-foreground italic">
-                              {labels.clickToAddNote || '点击添加笔记...'}
+                              {labels.clickToAddNote || 'Click to add note...'}
                             </p>
                           )}
                         </Button>

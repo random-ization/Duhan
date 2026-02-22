@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GripVertical, FileText } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
@@ -8,13 +9,22 @@ import { useLayout } from '../contexts/LayoutContext';
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
-import { ExamAttempt } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
-import { qRef } from '../utils/convexRefs';
+import { VOCAB, qRef } from '../utils/convexRefs';
 import { MobileDashboard } from '../components/mobile/MobileDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/ui';
+import { useTTS } from '../hooks/useTTS';
+import { Skeleton } from '../components/common';
+import { ReviewWordsCard } from '../features/vocab/components/ReviewWordsCard';
+
+interface DailyPhraseData {
+  id: string;
+  korean: string;
+  romanization: string;
+  translation: string;
+}
 
 // DnD Kit
 import {
@@ -96,21 +106,43 @@ const SortableItem = ({
 };
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, language } = useAuth();
+  const { speak, isLoading: isSpeaking } = useTTS();
+  const dailyPhrase = useQuery(qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'), {
+    language: language || 'en',
+  });
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearning();
   const { isEditing, cardOrder, updateCardOrder } = useLayout();
   const { institutes } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
+  const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
+
+  // Card groups
+  const PRACTICE_CARDS = useMemo(() => new Set(['vocab', 'notes', 'typing']), []);
+  const filteredCardOrder = useMemo(
+    () =>
+      dashboardView === 'practice'
+        ? cardOrder.filter(id => PRACTICE_CARDS.has(id))
+        : cardOrder.filter(id => !PRACTICE_CARDS.has(id)),
+    [cardOrder, dashboardView, PRACTICE_CARDS]
+  );
   const vocabBookCount = useQuery(
     qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
     user ? { includeMastered: true } : 'skip'
   );
-  const examAttempts = useQuery(
-    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
-    user ? { limit: 200 } : 'skip'
-  );
+
+  const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });
+  const [now] = React.useState(() => Date.now());
+
+  const dueReviews = (vocabBook || []).filter(
+    item =>
+      item.progress.status !== 'MASTERED' &&
+      !!item.progress.nextReviewAt &&
+      item.progress.nextReviewAt <= now
+  ).length;
   const courseProgress = useQuery(
     qRef<
       { courseId: string },
@@ -145,12 +177,6 @@ export default function DashboardPage() {
   const progressPercent =
     courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
 
-  // Determine top score
-  const topScore = useMemo(() => {
-    if (!examAttempts || examAttempts.length === 0) return 0;
-    return Math.max(...examAttempts.map(e => e.score));
-  }, [examAttempts]);
-
   // Lookup institute name
   const instituteName = useMemo(() => {
     if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
@@ -172,8 +198,6 @@ export default function DashboardPage() {
   // Render Card Content based on ID
   const renderCard = (id: string) => {
     switch (id) {
-      case 'summary':
-        return <LearnerSummaryCard className="h-full" />;
       case 'tiger':
         return (
           <BentoCard
@@ -188,27 +212,43 @@ export default function DashboardPage() {
                 backgroundSize: '10px 10px',
               }}
             ></div>
-            <img
-              src={ASSETS.tiger}
-              className="w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500"
-              alt="tiger coach"
-            />
-            <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition">
-              <p className="font-bold text-foreground text-sm">
-                &quot;
-                {t('dashboard.tiger.quote', {
-                  defaultValue: "Don't give up! Just 5 more minutes!",
-                })}
-                &quot;
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="auto"
-              className="mt-4 bg-primary text-primary-foreground px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition shadow-lg border-2 border-foreground"
+            <button
+              type="button"
+              className={`w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500 cursor-pointer ${isSpeaking ? 'animate-pulse scale-110' : ''} bg-transparent border-0 p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dailyPhrase?.korean) speak(dailyPhrase.korean);
+              }}
             >
-              {t('dashboard.tiger.action', { defaultValue: 'Start Quiz' })}
-            </Button>
+              <img
+                src={ASSETS.tiger}
+                className="w-full h-full object-contain pointer-events-none"
+                alt="tiger coach"
+              />
+            </button>
+            <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition min-w-[200px]">
+              {dailyPhrase ? (
+                <div className="flex flex-col gap-1 text-center">
+                  <p className="font-bold text-foreground text-lg leading-tight">
+                    {dailyPhrase.korean}
+                  </p>
+                  {dailyPhrase.romanization && (
+                    <p className="text-[11px] text-muted-foreground/70 italic">
+                      {dailyPhrase.romanization}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                    {dailyPhrase.translation}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 py-1">
+                  <Skeleton className="h-5 w-40 mx-auto bg-muted/20" />
+                  <Skeleton className="h-3 w-32 mx-auto bg-muted/20" />
+                </div>
+              )}
+            </div>
           </BentoCard>
         );
       case 'textbook':
@@ -226,9 +266,9 @@ export default function DashboardPage() {
                   <br />
                   {selectedLevel
                     ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
-                        '{level}',
-                        String(selectedLevel)
-                      )
+                      '{level}',
+                      String(selectedLevel)
+                    )
                     : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
                 </h3>
                 <div className="bg-card dark:bg-blue-400/14 border-2 border-blue-200 dark:border-blue-300/25 text-blue-600 dark:text-blue-200 px-2 py-1 rounded-lg text-xs font-bold">
@@ -295,30 +335,6 @@ export default function DashboardPage() {
               src={ASSETS.books}
               className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
               alt="reading"
-            />
-          </BentoCard>
-        );
-      case 'topik':
-        return (
-          <BentoCard
-            onClickPath="/topik"
-            bgClass="bg-amber-50 dark:bg-amber-400/10"
-            borderClass="border-amber-200 dark:border-amber-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10">
-              <h3 className="font-black text-2xl text-foreground whitespace-pre-wrap">
-                {t('dashboard.topik.cardTitle', { defaultValue: 'TOPIK\nMock Exam' })}
-              </h3>
-              <div className="mt-2 inline-block bg-card dark:bg-amber-400/12 px-3 py-1 rounded-lg text-xs font-bold text-yellow-600 dark:text-amber-200 shadow-sm border-2 border-yellow-100 dark:border-amber-300/20">
-                {t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}:{' '}
-                <span className="text-foreground">{topScore}</span>
-              </div>
-            </div>
-            <img
-              src={ASSETS.trophy}
-              className="absolute -right-2 -bottom-2 w-28 h-28 group-hover:scale-110 group-hover:-rotate-6 transition duration-300"
-              alt="trophy"
             />
           </BentoCard>
         );
@@ -561,13 +577,23 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* 2. Sortable Grid */}
+      {/* 2. Hero Stats (learning view only) */}
+      {dashboardView !== 'practice' && <LearnerSummaryCard />}
+
+      {/* Review Card (Practice View) */}
+      {dashboardView === 'practice' && (
+        <div className="mb-6">
+          <ReviewWordsCard dueCount={dueReviews} />
+        </div>
+      )}
+
+      {/* 3. Sortable Grid */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
+        <SortableContext items={filteredCardOrder} strategy={rectSortingStrategy}>
           <div
             className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] rounded-3xl bg-muted p-4 ring-4 ring-primary/20' : ''} `}
           >
-            {cardOrder.map(id => (
+            {filteredCardOrder.map(id => (
               <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>
                 {renderCard(id)}
               </SortableItem>

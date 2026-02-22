@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, BookOpen, MessageSquare, Lightbulb } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from './ui';
 
@@ -46,9 +47,15 @@ const SectionTitle = ({
   </div>
 );
 
-const VocabularySection = ({ items }: { items: VocabularyItem[] }) => (
+const VocabularySection = ({
+  items,
+  title,
+}: {
+  items: VocabularyItem[];
+  title: string;
+}) => (
   <section>
-    <SectionTitle icon={BookOpen} title="词汇 Vocabulary" colorClass="text-amber-500" />
+    <SectionTitle icon={BookOpen} title={title} colorClass="text-amber-500" />
     <div className="grid grid-cols-2 gap-3">
       {items.map(item => (
         <div
@@ -66,9 +73,9 @@ const VocabularySection = ({ items }: { items: VocabularyItem[] }) => (
   </section>
 );
 
-const GrammarSection = ({ items }: { items: GrammarItem[] }) => (
+const GrammarSection = ({ items, title }: { items: GrammarItem[]; title: string }) => (
   <section>
-    <SectionTitle icon={MessageSquare} title="语法 Grammar" colorClass="text-emerald-500" />
+    <SectionTitle icon={MessageSquare} title={title} colorClass="text-emerald-500" />
     <div className="space-y-3">
       {items.map(item => (
         <div
@@ -83,9 +90,9 @@ const GrammarSection = ({ items }: { items: GrammarItem[] }) => (
   </section>
 );
 
-const NuanceSection = ({ nuance }: { nuance: string }) => (
+const NuanceSection = ({ nuance, title }: { nuance: string; title: string }) => (
   <section>
-    <SectionTitle icon={Lightbulb} title="语感 Nuance" colorClass="text-purple-500" />
+    <SectionTitle icon={Lightbulb} title={title} colorClass="text-purple-500" />
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4">
       <p className="text-sm text-muted-foreground leading-relaxed">{nuance}</p>
     </div>
@@ -99,12 +106,15 @@ const AnalysisSheet: React.FC<AnalysisSheetProps> = ({
   analysis,
   loading,
 }) => {
+  const { t } = useTranslation();
   const renderContent = () => {
     if (loading) {
       return (
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-muted-foreground text-sm">AI 正在分析句子...</p>
+          <p className="text-muted-foreground text-sm">
+            {t('analysisSheet.loading', { defaultValue: 'AI is analyzing this sentence...' })}
+          </p>
         </div>
       );
     }
@@ -112,19 +122,30 @@ const AnalysisSheet: React.FC<AnalysisSheetProps> = ({
     if (!analysis) {
       return (
         <div className="text-center py-12 text-muted-foreground">
-          <p>分析结果将显示在这里</p>
+          <p>{t('analysisSheet.empty', { defaultValue: 'Analysis will appear here' })}</p>
         </div>
       );
     }
 
     return (
       <>
-        <VocabularySection items={analysis.vocabulary} />
-        <GrammarSection items={analysis.grammar} />
-        <NuanceSection nuance={analysis.nuance} />
+        <VocabularySection
+          items={analysis.vocabulary}
+          title={t('analysisSheet.vocabularyTitle', { defaultValue: 'Vocabulary' })}
+        />
+        <GrammarSection
+          items={analysis.grammar}
+          title={t('analysisSheet.grammarTitle', { defaultValue: 'Grammar' })}
+        />
+        <NuanceSection
+          nuance={analysis.nuance}
+          title={t('analysisSheet.nuanceTitle', { defaultValue: 'Nuance' })}
+        />
 
         {analysis.cached && (
-          <p className="text-xs text-center text-muted-foreground">✨ 已缓存结果</p>
+          <p className="text-xs text-center text-muted-foreground">
+            ✨ {t('analysisSheet.cached', { defaultValue: 'Cached result' })}
+          </p>
         )}
       </>
     );
@@ -159,7 +180,7 @@ const AnalysisSheet: React.FC<AnalysisSheetProps> = ({
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-indigo-600 mb-1 uppercase tracking-wider flex items-center gap-1">
                     <Lightbulb className="w-3 h-3" />
-                    AI 句子分析
+                    {t('analysisSheet.title', { defaultValue: 'AI sentence analysis' })}
                   </p>
                   <p className="text-lg font-bold text-muted-foreground leading-relaxed">
                     {sentence}

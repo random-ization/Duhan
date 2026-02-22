@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
+import { VocabBookDictationSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
@@ -182,14 +183,6 @@ const VocabBookDictationPage: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="py-24 text-center text-muted-foreground font-bold">
-          {labels.common?.loading || 'Loading...'}
-        </div>
-      );
-    }
-
     if (total === 0) {
       return (
         <div className="py-24 text-center">
@@ -409,6 +402,37 @@ const VocabBookDictationPage: React.FC = () => {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">
+        <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-rose-100 dark:border-rose-300/20">
+          <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => navigate('/vocab-book')}
+              className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
+              aria-label={labels.common?.back || 'Back'}
+            >
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            </Button>
+
+            <div className="text-center">
+              <p className="text-xs font-black text-rose-500 dark:text-rose-300 tracking-wider uppercase">
+                {labels.vocab?.modeDictation || 'Dictation'}
+              </p>
+              <p className="text-sm font-black text-muted-foreground" />
+            </div>
+
+            <div className="w-12" />
+          </div>
+        </div>
+        <VocabBookDictationSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">

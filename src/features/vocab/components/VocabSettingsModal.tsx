@@ -291,7 +291,7 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                     {/* Rating Mode Selection (FSRS) */}
                     <div>
                       <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                        {labels.ratingMode || '评分模式'}
+                        {labels.ratingMode || 'Rating mode'}
                       </label>
                       <div className="flex bg-muted p-1 rounded-lg">
                         <Button
@@ -309,7 +309,7 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                               : 'text-muted-foreground hover:text-muted-foreground'
                           }`}
                         >
-                          ✓/✗ {labels.passFail || '对/错'}
+                          ✓/✗ {labels.passFail || 'Pass / Fail'}
                         </Button>
                         <Button
                           variant="ghost"
@@ -326,13 +326,13 @@ const VocabSettingsModal: React.FC<VocabSettingsModalProps> = React.memo(
                               : 'text-muted-foreground hover:text-muted-foreground'
                           }`}
                         >
-                          🎚️ {labels.fourButtons || '4级评分'}
+                          🎚️ {labels.fourButtons || '4 Buttons'}
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">
                         {localSettings.learn.ratingMode === 'PASS_FAIL'
-                          ? labels.passFailDesc || '简单模式：对或错'
-                          : labels.fourButtonsDesc || '详细模式：忘记/困难/正常/轻松'}
+                          ? labels.passFailDesc || 'Simple mode: pass or fail'
+                          : labels.fourButtonsDesc || 'Detailed mode: again / hard / good / easy'}
                       </p>
                     </div>
 

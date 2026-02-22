@@ -3,13 +3,20 @@ import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
 import { requireAdmin } from './utils';
 
+const SettingPrimitiveValidator = v.union(v.string(), v.number(), v.boolean(), v.null());
+const SettingValueValidator = v.union(
+  SettingPrimitiveValidator,
+  v.array(v.string()),
+  v.record(v.string(), SettingPrimitiveValidator)
+);
+
 /**
  * Save or update a site setting
  */
 export const saveSetting = mutation({
   args: {
     key: v.string(),
-    value: v.any(),
+    value: SettingValueValidator,
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);

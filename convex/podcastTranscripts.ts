@@ -11,7 +11,23 @@ const TranslationLanguage = v.union(
 export const upsert = internalMutation({
   args: {
     episodeId: v.string(),
-    segments: v.any(),
+    segments: v.array(
+      v.object({
+        start: v.number(),
+        end: v.number(),
+        text: v.string(),
+        translation: v.optional(v.string()),
+        words: v.optional(
+          v.array(
+            v.object({
+              word: v.string(),
+              start: v.number(),
+              end: v.number(),
+            })
+          )
+        ),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db

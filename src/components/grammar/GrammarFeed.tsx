@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { GrammarPointData } from '../../types';
 import GrammarCard from './GrammarCard';
 
@@ -33,13 +34,14 @@ const GrammarFeed: React.FC<GrammarFeedProps> = ({
   onToggleStatus,
   isLoading,
 }) => {
+  const { t } = useTranslation();
   // Calculate progress
   const masteredCount = grammarPoints.filter(p => p.status === 'MASTERED').length;
   const progressPercent =
     grammarPoints.length > 0 ? (masteredCount / grammarPoints.length) * 100 : 0;
 
   // Extract unit title for display
-  const displayTitle = selectedUnit || '全部语法点';
+  const displayTitle = selectedUnit || t('grammarFeed.allPoints', { defaultValue: 'All grammar points' });
 
   return (
     <main className="flex-1 overflow-y-auto pb-20 pr-2">
@@ -83,7 +85,9 @@ const GrammarFeed: React.FC<GrammarFeedProps> = ({
 
       {!isLoading && grammarPoints.length === 0 && (
         <div className="border-2 border-dashed border-border rounded-xl p-12 text-center bg-card">
-          <p className="text-muted-foreground font-bold text-lg">此单元暂无语法点</p>
+          <p className="text-muted-foreground font-bold text-lg">
+            {t('grammarFeed.empty', { defaultValue: 'No grammar points in this unit' })}
+          </p>
         </div>
       )}
     </main>

@@ -248,7 +248,7 @@ export default function ReadingDiscoveryPage() {
           defaultValue: 'Korean Culture Encyclopedia',
         }),
         icon: '🏛️',
-        title: '한옥 (韩屋)',
+        title: '한옥',
         excerpt:
           '한옥은 한국의 전통 건축 양식으로 지어진 집을 말한다. 자연과의 조화를 중요하게 생각하며, 온돌과 마루가 있는 것이 특징이다...',
         badge: t('readingDiscovery.fallback.wikipediaBadge', {
@@ -287,8 +287,8 @@ export default function ReadingDiscoveryPage() {
           defaultValue: 'Public Domain Classics',
         }),
         icon: '✍️',
-        title: '서시 (序诗)',
-        subtitle: '윤동주 (尹东柱)',
+        title: '서시',
+        subtitle: '윤동주',
         excerpt:
           '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다...',
         badge: t('readingDiscovery.fallback.literatureBadge', {

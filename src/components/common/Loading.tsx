@@ -16,9 +16,10 @@ export const Loading: React.FC<LoadingProps> = ({ fullScreen = false, size = 'md
   };
 
   const content = (
-    <div className="flex flex-col items-center justify-center gap-3">
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-indigo-600`} />
+    <div className="flex flex-col items-center justify-center gap-3" role="status" aria-live="polite" aria-busy="true">
+      <Loader2 className={`${sizeClasses[size]} animate-spin text-indigo-600`} aria-hidden="true" />
       {text && <p className="text-sm font-medium text-muted-foreground animate-pulse">{text}</p>}
+      <span className="sr-only">{text || 'Loading'}</span>
     </div>
   );
 

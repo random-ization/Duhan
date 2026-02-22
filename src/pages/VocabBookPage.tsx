@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   BookOpen,
@@ -13,6 +13,8 @@ import {
   PencilLine,
   SpellCheck,
   X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -42,6 +44,7 @@ const VocabBookPage: React.FC = () => {
   const [exportShuffle, setExportShuffle] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [masteryPendingId, setMasteryPendingId] = useState<string | null>(null);
+  const [optimisticMastery, setOptimisticMastery] = useState<Record<string, boolean>>({});
   // Use state for 'now' to ensure purity during render
   const [now] = useState(() => Date.now());
 
@@ -52,14 +55,38 @@ const VocabBookPage: React.FC = () => {
   const vocabBookResult = useQuery(VOCAB.getVocabBook, {
     includeMastered: true,
     search: trimmedSearch || undefined,
+    savedByUserOnly: true,
   });
   const loading = vocabBookResult === undefined;
   const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
 
+  useEffect(() => {
+    setOptimisticMastery(current => {
+      if (Object.keys(current).length === 0) return current;
+      let changed = false;
+      const next = { ...current };
+      const serverMasteryMap = new Map(
+        items.map(item => [String(item.id), item.progress.status === 'MASTERED'])
+      );
+
+      Object.entries(current).forEach(([id, value]) => {
+        const serverValue = serverMasteryMap.get(id);
+        if (serverValue === value) {
+          delete next[id];
+          changed = true;
+        }
+      });
+
+      return changed ? next : current;
+    });
+  }, [items]);
+
   const categorized = useMemo(() => {
     return items.map(item => {
       const progress = item.progress;
-      const isMastered = progress.status === 'MASTERED';
+      const optimisticValue = optimisticMastery[String(item.id)];
+      const isMastered =
+        typeof optimisticValue === 'boolean' ? optimisticValue : progress.status === 'MASTERED';
       const isUnlearned = progress.state === 0 || progress.status === 'NEW';
 
       let category: VocabBookCategory = 'DUE';
@@ -70,15 +97,15 @@ const VocabBookPage: React.FC = () => {
       }
 
       const dueNow = !!progress.nextReviewAt && progress.nextReviewAt <= now && !isMastered;
-      return { item, category, dueNow };
+      return { item, category, dueNow, isMastered };
     });
-  }, [items, now]);
+  }, [items, now, optimisticMastery]);
 
   const visibleItems = useMemo(() => {
     return categorized.filter(x => x.category === activeCategory);
   }, [categorized, activeCategory]);
 
-  // 统计
+  // Stats
   const stats = useMemo(() => {
     const dueNow = categorized.filter(x => x.category === 'DUE' && x.dueNow).length;
     const unlearned = categorized.filter(x => x.category === 'UNLEARNED').length;
@@ -215,7 +242,13 @@ const VocabBookPage: React.FC = () => {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => {
+                if (isMobile) {
+                  navigate('/practice');
+                } else {
+                  navigate('/dashboard?view=practice');
+                }
+              }}
               className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.18)]"
             >
               <ArrowLeft className="w-5 h-5 text-muted-foreground" />
@@ -312,9 +345,8 @@ const VocabBookPage: React.FC = () => {
                 >
                   {btn.label}
                   <span
-                    className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
-                      isActive ? 'bg-card/20' : 'bg-muted'
-                    }`}
+                    className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${isActive ? 'bg-card/20' : 'bg-muted'
+                      }`}
                   >
                     {btn.count}
                   </span>
@@ -329,6 +361,14 @@ const VocabBookPage: React.FC = () => {
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => (prev === id ? null : id));
+  };
+
+  const openImmersiveForWord = (wordId: string) => {
+    const params = new URLSearchParams();
+    params.set('category', activeCategory);
+    params.set('focus', wordId);
+    if (trimmedSearch) params.set('q', trimmedSearch);
+    navigate(`/vocab-book/immerse?${params.toString()}`);
   };
 
   const renderContent = () => {
@@ -381,15 +421,15 @@ const VocabBookPage: React.FC = () => {
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-        {visibleItems.map(({ item: word }) => {
+        {visibleItems.map(({ item: word, isMastered }) => {
           const id = String(word.id);
           const isExpanded = expandedId === id;
-          const isMastered = word.progress.status === 'MASTERED';
           const isMasteryPending = masteryPendingId === id;
 
           return (
-            <div
+            <motion.div
               key={id}
+              layoutId={`vocab-word-card-${id}`}
               className="bg-card rounded-2xl border-[3px] border-border shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
             >
               <div className="flex items-center justify-between gap-3 px-5 py-4">
@@ -397,10 +437,25 @@ const VocabBookPage: React.FC = () => {
                   type="button"
                   variant="ghost"
                   size="auto"
-                  onClick={() => toggleExpand(id)}
+                  onClick={() => openImmersiveForWord(id)}
                   className="flex-1 min-w-0 justify-start text-left"
                 >
                   <div className="text-xl font-black text-foreground truncate">{word.word}</div>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => toggleExpand(id)}
+                  className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                  aria-label={isExpanded ? 'Collapse meaning' : 'Expand meaning'}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  )}
                 </Button>
 
                 <Button
@@ -411,9 +466,25 @@ const VocabBookPage: React.FC = () => {
                     if (masteryPendingId !== null) return;
                     e.preventDefault();
                     e.stopPropagation();
+                    const previousOverride = optimisticMastery[id];
+                    const nextMastered = !isMastered;
                     try {
                       setMasteryPendingId(id);
-                      await setMastery({ wordId: word.id, mastered: !isMastered });
+                      setOptimisticMastery(current => ({ ...current, [id]: nextMastered }));
+                      await setMastery({ wordId: word.id, mastered: nextMastered });
+                    } catch {
+                      setOptimisticMastery(current => {
+                        const next = { ...current };
+                        if (typeof previousOverride === 'boolean') {
+                          next[id] = previousOverride;
+                        } else {
+                          delete next[id];
+                        }
+                        return next;
+                      });
+                      notify.error(
+                        labels.vocabBook?.saveFailed || 'Failed to save word status. Please retry.'
+                      );
                     } finally {
                       setMasteryPendingId(current => (current === id ? null : current));
                     }
@@ -450,7 +521,7 @@ const VocabBookPage: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </motion.div>
@@ -525,11 +596,10 @@ const VocabBookPage: React.FC = () => {
                   variant="ghost"
                   size="auto"
                   onClick={() => setExportMode('A4_DICTATION')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
-                    exportMode === 'A4_DICTATION'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                      : 'border-border bg-card hover:border-border'
-                  }`}
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'A4_DICTATION'
+                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                    : 'border-border bg-card hover:border-border'
+                    }`}
                 >
                   <p className="font-black text-foreground">
                     {labels.vocabBook?.exportModes?.a4Title || 'A4 Dictation'}
@@ -544,11 +614,10 @@ const VocabBookPage: React.FC = () => {
                   variant="ghost"
                   size="auto"
                   onClick={() => setExportMode('LANG_LIST')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
-                    exportMode === 'LANG_LIST'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                      : 'border-border bg-card hover:border-border'
-                  }`}
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'LANG_LIST'
+                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                    : 'border-border bg-card hover:border-border'
+                    }`}
                 >
                   <p className="font-black text-foreground">{langListLabel}</p>
                   <p className="text-xs font-bold text-muted-foreground mt-1">{langListDesc}</p>
@@ -559,11 +628,10 @@ const VocabBookPage: React.FC = () => {
                   variant="ghost"
                   size="auto"
                   onClick={() => setExportMode('KO_LIST')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${
-                    exportMode === 'KO_LIST'
-                      ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                      : 'border-border bg-card hover:border-border'
-                  }`}
+                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'KO_LIST'
+                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
+                    : 'border-border bg-card hover:border-border'
+                    }`}
                 >
                   <p className="font-black text-foreground">
                     {labels.vocabBook?.exportModes?.koListTitle || 'Korean List'}
@@ -583,15 +651,13 @@ const VocabBookPage: React.FC = () => {
                   variant="ghost"
                   size="auto"
                   onClick={() => setExportShuffle(v => !v)}
-                  className={`w-12 h-7 rounded-full transition-all relative ${
-                    exportShuffle ? 'bg-orange-500 dark:bg-orange-400/80' : 'bg-muted'
-                  }`}
+                  className={`w-12 h-7 rounded-full transition-all relative ${exportShuffle ? 'bg-orange-500 dark:bg-orange-400/80' : 'bg-muted'
+                    }`}
                   aria-label="shuffle"
                 >
                   <span
-                    className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${
-                      exportShuffle ? 'left-6' : 'left-1'
-                    }`}
+                    className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${exportShuffle ? 'left-6' : 'left-1'
+                      }`}
                   />
                 </Button>
               </div>
@@ -701,7 +767,7 @@ const VocabBookPage: React.FC = () => {
         language={language}
         onStartLearn={() => startLearning('immerse')}
         onStartTest={() => startLearning('dictation')}
-        onManageList={() => {}} // Placeholder or navigate to list view if exists
+        onManageList={() => { }} // Placeholder or navigate to list view if exists
       />
     );
   }

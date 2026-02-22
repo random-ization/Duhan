@@ -161,7 +161,7 @@ export const createInstitute = mutation({
     nameEn: v.optional(v.string()),
     nameVi: v.optional(v.string()),
     nameMn: v.optional(v.string()),
-    levels: v.any(), // Array of level objects
+    levels: v.array(v.union(v.number(), v.object({ level: v.number(), units: v.number() }))),
     coverUrl: v.optional(v.string()),
     themeColor: v.optional(v.string()),
     publisher: v.optional(v.string()),
@@ -257,49 +257,19 @@ export const getOverviewStats = query({
   args: {},
   handler: async ctx => {
     await requireAdmin(ctx);
-    const countByPages = async (
-      getPage: (cursor: string | null) => Promise<{
-        page: unknown[];
-        isDone: boolean;
-        continueCursor: string;
-      }>
-    ) => {
-      let total = 0;
-      let cursor: string | null = null;
-      do {
-        const batch = await getPage(cursor);
-        total += batch.page.length;
-        cursor = batch.isDone ? null : batch.continueCursor;
-      } while (cursor);
-      return total;
-    };
+    // NOTE: Convex only allows one paginated query per function.
+    // This stats query intentionally avoids paginate() and uses collect/take.
+    const users = await ctx.db.query('users').collect();
+    const userCount = users.length;
 
-    // Count users
-    const userCount = await countByPages(cursor =>
-      ctx.db.query('users').paginate({ numItems: SCAN_PAGE_SIZE, cursor })
-    );
+    // Count institutes (exclude archived)
+    const institutes = await ctx.db.query('institutes').collect();
+    const instituteCount = institutes.filter(i => i.isArchived !== true).length;
 
-    // Count institutes (not archived)
-    const instituteCount = await countByPages(cursor =>
-      ctx.db
-        .query('institutes')
-        .withIndex('by_archived', q => q.eq('isArchived', false))
-        .paginate({ numItems: SCAN_PAGE_SIZE, cursor })
-    );
-
-    // Count vocabulary words (master dictionary)
+    // Count vocabulary words (master dictionary, capped)
     const vocabLimit = 10000;
-    let vocabScanned = 0;
-    let vocabCursor: string | null = null;
-    do {
-      const batch = await ctx.db
-        .query('words')
-        .paginate({ numItems: SCAN_PAGE_SIZE, cursor: vocabCursor });
-      vocabScanned += batch.page.length;
-      if (vocabScanned > vocabLimit) break;
-      vocabCursor = batch.isDone ? null : batch.continueCursor;
-    } while (vocabCursor);
-    const vocabCount = vocabScanned > vocabLimit ? '10000+' : vocabScanned;
+    const vocabProbe = await ctx.db.query('words').take(vocabLimit + 1);
+    const vocabCount = vocabProbe.length > vocabLimit ? `${vocabLimit}+` : vocabProbe.length;
 
     // Count grammar points
     const grammarPoints = await ctx.db.query('grammar_points').take(1000);
@@ -313,9 +283,8 @@ export const getOverviewStats = query({
     const unitCount = units.length;
 
     // Count TOPIK exams
-    const examCount = await countByPages(cursor =>
-      ctx.db.query('topik_exams').paginate({ numItems: SCAN_PAGE_SIZE, cursor })
-    );
+    const exams = await ctx.db.query('topik_exams').collect();
+    const examCount = exams.length;
 
     return {
       users: userCount,

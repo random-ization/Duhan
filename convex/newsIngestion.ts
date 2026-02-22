@@ -84,6 +84,7 @@ const BLOCKED_URL_PATTERNS = [
 ];
 
 const MIN_ARTICLE_BODY_LENGTH = 220;
+const MAX_ARTICLE_BODY_LENGTH = 500;
 const MIN_ARTICLE_HANGUL_COUNT = 100;
 const MIN_ARTICLE_SENTENCE_COUNT = 3;
 const USER_FEED_NEWS_LIMIT = 24;
@@ -303,10 +304,10 @@ export const listRecent = query({
 
     const rows = effectiveDifficulty
       ? await ctx.db
-          .query('news_articles')
-          .withIndex('by_difficulty_published', q => q.eq('difficultyLevel', effectiveDifficulty))
-          .order('desc')
-          .take(limit)
+        .query('news_articles')
+        .withIndex('by_difficulty_published', q => q.eq('difficultyLevel', effectiveDifficulty))
+        .order('desc')
+        .take(limit)
       : await ctx.db.query('news_articles').withIndex('by_published').order('desc').take(limit);
 
     return rows.filter(row => row.status === 'active');
@@ -684,7 +685,9 @@ async function fetchNewsCandidates(ctx: ReadCtx, limit: number): Promise<NewsArt
     .order('desc')
     .take(Math.min(Math.max(limit, USER_FEED_NEWS_LIMIT), USER_FEED_MAX_NEWS_SCAN));
 
-  return rows.filter(row => row.sourceKey !== WIKI_SOURCE_KEY);
+  return rows.filter(
+    row => row.sourceKey !== WIKI_SOURCE_KEY && (row.bodyText?.length ?? 0) <= MAX_ARTICLE_BODY_LENGTH
+  );
 }
 
 async function fetchArticleCandidates(ctx: ReadCtx, limit: number): Promise<NewsArticleDoc[]> {
@@ -693,7 +696,9 @@ async function fetchArticleCandidates(ctx: ReadCtx, limit: number): Promise<News
     .withIndex('by_source_published', q => q.eq('sourceKey', WIKI_SOURCE_KEY))
     .order('desc')
     .take(Math.min(Math.max(limit, USER_FEED_ARTICLE_LIMIT), USER_FEED_MAX_ARTICLE_SCAN));
-  return rows.filter(row => row.status === 'active');
+  return rows.filter(
+    row => row.status === 'active' && (row.bodyText?.length ?? 0) <= MAX_ARTICLE_BODY_LENGTH
+  );
 }
 
 function pickFeedIds(
@@ -905,6 +910,10 @@ function evaluateContentPolicy(input: {
     return { allowed: false, reason: 'body_too_short' };
   }
 
+  if (isArticleTooLong(input.bodyText)) {
+    return { allowed: false, reason: 'body_too_long' };
+  }
+
   return { allowed: true };
 }
 
@@ -934,6 +943,11 @@ function isArticleTooShort(bodyText: string): boolean {
   }
 
   return false;
+}
+
+function isArticleTooLong(bodyText: string): boolean {
+  const normalized = normalizeWhitespace(bodyText);
+  return normalized.length > MAX_ARTICLE_BODY_LENGTH;
 }
 
 function hash32(value: string): string {

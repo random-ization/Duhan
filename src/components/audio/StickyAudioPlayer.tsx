@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { Slider } from '../ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
@@ -15,6 +16,7 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
   onTimeUpdate,
   initialTime = 0,
 }) => {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -168,14 +170,16 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
                 variant="ghost"
                 size="auto"
                 onClick={restart}
-                aria-label="重新播放"
+                aria-label={t('audioPlayer.restart', { defaultValue: 'Restart' })}
                 className="w-10 h-10 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"
               >
                 <RotateCcw size={18} className="text-muted-foreground" />
               </Button>
             </TooltipTrigger>
             <TooltipPortal>
-              <TooltipContent side="top">重新播放</TooltipContent>
+              <TooltipContent side="top">
+                {t('audioPlayer.restart', { defaultValue: 'Restart' })}
+              </TooltipContent>
             </TooltipPortal>
           </Tooltip>
 
@@ -214,14 +218,16 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
                 variant="ghost"
                 size="auto"
                 onClick={changePlaybackRate}
-                aria-label="切换播放速度"
+                aria-label={t('audioPlayer.changeSpeed', { defaultValue: 'Change speed' })}
                 className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted text-sm font-black text-muted-foreground transition-colors min-w-[50px]"
               >
                 {playbackRate}x
               </Button>
             </TooltipTrigger>
             <TooltipPortal>
-              <TooltipContent side="top">切换播放速度</TooltipContent>
+              <TooltipContent side="top">
+                {t('audioPlayer.changeSpeed', { defaultValue: 'Change speed' })}
+              </TooltipContent>
             </TooltipPortal>
           </Tooltip>
 
@@ -232,7 +238,11 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
                 variant="ghost"
                 size="auto"
                 onClick={toggleMute}
-                aria-label={isMuted ? '取消静音' : '静音'}
+                aria-label={
+                  isMuted
+                    ? t('audioPlayer.unmute', { defaultValue: 'Unmute' })
+                    : t('audioPlayer.mute', { defaultValue: 'Mute' })
+                }
                 className="w-10 h-10 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"
               >
                 {isMuted ? (
@@ -243,7 +253,11 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
               </Button>
             </TooltipTrigger>
             <TooltipPortal>
-              <TooltipContent side="top">{isMuted ? '取消静音' : '静音'}</TooltipContent>
+              <TooltipContent side="top">
+                {isMuted
+                  ? t('audioPlayer.unmute', { defaultValue: 'Unmute' })
+                  : t('audioPlayer.mute', { defaultValue: 'Mute' })}
+              </TooltipContent>
             </TooltipPortal>
           </Tooltip>
         </div>

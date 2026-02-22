@@ -64,7 +64,7 @@ export function getLocalizedContent(
 export function getLanguageLabel(lang: Language): string {
   switch (lang) {
     case 'zh':
-      return '中文';
+      return '\u4E2D\u6587';
     case 'en':
       return 'English';
     case 'vi':

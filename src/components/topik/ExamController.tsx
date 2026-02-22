@@ -20,6 +20,7 @@ import { TopikExam, TopikQuestion } from '../../types';
 import { Button } from '../ui';
 import { DialogPortal } from '../ui';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui';
+import { useTranslation } from 'react-i18next';
 
 interface ExamControllerProps {
   exam: TopikExam;
@@ -44,6 +45,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
   timeLeft,
   audioUrl,
 }) => {
+  const { t } = useTranslation();
   const [showOverview, setShowOverview] = useState(false);
 
   // Auto-scroll the question list to keep current question in view
@@ -207,7 +209,9 @@ export const ExamController: React.FC<ExamControllerProps> = ({
             >
               {/* Popover Header */}
               <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-muted/50">
-                <span className="text-muted-foreground font-bold text-sm">题目概览</span>
+                <span className="text-muted-foreground font-bold text-sm">
+                  {t('dashboard.topik.controller.questionOverview')}
+                </span>
 
                 <div className="text-xs font-mono text-muted-foreground">
                   <span className="text-emerald-600 font-bold">
@@ -215,7 +219,9 @@ export const ExamController: React.FC<ExamControllerProps> = ({
                   </span>
                   <span className="mx-1 text-muted-foreground">/</span>
                   <span>{questions.length}</span>
-                  <span className="ml-1 text-[10px] uppercase opacity-70">Done</span>
+                  <span className="ml-1 text-[10px] uppercase opacity-70">
+                    {t('dashboard.topik.controller.done')}
+                  </span>
                 </div>
               </div>
 
@@ -248,14 +254,16 @@ export const ExamController: React.FC<ExamControllerProps> = ({
               <div className="px-5 py-3 bg-muted border-t border-border text-[10px] text-muted-foreground flex justify-between items-center">
                 <div className="flex gap-3">
                   <span className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-indigo-600"></div>当前
+                    <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
+                    {t('dashboard.topik.controller.current')}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-100 border border-emerald-300"></div>
-                    已做
+                    {t('dashboard.topik.controller.answered')}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full border border-border bg-card"></div>未做
+                    <div className="w-2 h-2 rounded-full border border-border bg-card"></div>
+                    {t('dashboard.topik.controller.unanswered')}
                   </span>
                 </div>
 
@@ -267,7 +275,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
                   onClick={() => setShowOverview(false)}
                   className="hover:text-foreground transition-colors font-medium"
                 >
-                  Close
+                  {t('dashboard.topik.controller.close')}
                 </Button>
               </div>
             </PopoverContent>
@@ -292,7 +300,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
               `}
           >
             <Grid className="w-5 h-5" />
-            <span className="text-[9px] font-bold">概览</span>
+            <span className="text-[9px] font-bold">{t('dashboard.topik.controller.overview')}</span>
           </Button>
 
           {/* Submit Button */}
@@ -303,7 +311,9 @@ export const ExamController: React.FC<ExamControllerProps> = ({
             className="w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 border-2 border-indigo-100 dark:border-indigo-300/30 flex flex-col items-center justify-center gap-0.5 text-white shadow-pop hover:scale-105 active:scale-95 transition-all group"
           >
             <Check className="w-6 h-6 stroke-[3]" />
-            <span className="text-[9px] font-bold opacity-90 group-hover:opacity-100">交卷</span>
+            <span className="text-[9px] font-bold opacity-90 group-hover:opacity-100">
+              {t('dashboard.topik.submit')}
+            </span>
           </Button>
 
           {/* Exit Button (Optional) */}
@@ -316,7 +326,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
               className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-sm border border-border bg-card text-muted-foreground hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-red-500 dark:hover:text-red-300 hover:border-red-200 dark:hover:border-red-400/30 hover:scale-105 active:scale-95 transition-all mt-2"
             >
               <LogOut className="w-5 h-5 ml-0.5" />
-              <span className="text-[9px] font-bold">退出</span>
+              <span className="text-[9px] font-bold">{t('dashboard.topik.controller.exit')}</span>
             </Button>
           )}
         </div>

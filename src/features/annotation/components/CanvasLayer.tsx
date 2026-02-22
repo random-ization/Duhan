@@ -3,10 +3,10 @@ import { Stage, Layer, Line } from 'react-konva';
 import Konva from 'konva';
 import { Button } from '../../../components/ui';
 
-// 工具类型
+// \u5de5\u5177\u7c7b\u578b
 export type ToolType = 'pen' | 'highlighter' | 'eraser';
 
-// 单条线的数据结构
+// \u5355\u6761\u7ebf\u7684\u6570\u636e\u7ed3\u6784
 export interface LineData {
   id: string;
   tool: ToolType;
@@ -16,47 +16,47 @@ export interface LineData {
   opacity: number;
 }
 
-// 画板数据结构
+// \u753b\u677f\u6570\u636e\u7ed3\u6784
 export interface CanvasData {
   lines: LineData[];
   version: number;
 }
 
 interface CanvasLayerProps {
-  // 数据
+  // \u6570\u636e
   data?: CanvasData | null;
 
-  // 回调
+  // \u56de\u8c03
   onSave?: (data: CanvasData) => void;
   onChange?: (data: CanvasData) => void;
 
-  // 模式
+  // \u6a21\u5f0f
   readOnly?: boolean;
 
-  // 工具设置（外部控制）
+  // \u5de5\u5177\u8bbe\u7f6e（\u5916\u90e8\u63a7\u5236）
   tool?: ToolType;
   color?: string;
   strokeWidth?: number;
 
-  // 样式
+  // \u6837\u5f0f
   className?: string;
 }
 
-// 默认颜色
+// \u9ed8\u8ba4\u989c\u8272
 const DEFAULT_COLORS = {
-  pen: '#1e293b', // 深灰色
-  highlighter: '#fde047', // 黄色高亮
+  pen: '#1e293b', // \u6df1\u7070\u8272
+  highlighter: '#fde047', // \u9ec4\u8272Highlight
   eraser: '#ffffff',
 };
 
-// 默认线宽
+// \u9ed8\u8ba4\u7ebf\u5bbd
 const DEFAULT_STROKE_WIDTH = {
   pen: 2,
   highlighter: 20,
   eraser: 20,
 };
 
-// 默认透明度
+// \u9ed8\u8ba4\u900f\u660e\u5ea6
 const DEFAULT_OPACITY = {
   pen: 1,
   highlighter: 0.4,
@@ -64,17 +64,17 @@ const DEFAULT_OPACITY = {
 };
 
 /**
- * CanvasLayer - 通用画板组件 (性能优化版)
+ * CanvasLayer - \u901a\u7528\u753b\u677f\u7ec4\u4ef6 (\u6027\u80fd\u4f18\u5316\u7248)
  *
- * 使用 react-konva 实现的透明画板，支持：
- * - 普通画笔 (Pen)
- * - 高亮笔 (Highlighter, 半透明粗线)
- * - 橡皮擦 (Eraser)
+ * \u4f7f\u7528 react-konva \u5b9e\u73b0\u7684\u900f\u660e\u753b\u677f，\u652f\u6301：
+ * - \u666e\u901aPen (Pen)
+ * - Highlight\u7b14 (Highlighter, \u534a\u900f\u660e\u7c97\u7ebf)
+ * - Eraser\u64e6 (Eraser)
  *
- * 性能优化：
- * - 使用 ref 追踪绘制中的线条，避免频繁 setState
- * - 使用 requestAnimationFrame 节流渲染
- * - 直接操作 Konva 节点，绕过 React 渲染周期
+ * \u6027\u80fd\u4f18\u5316：
+ * - \u4f7f\u7528 ref \u8ffd\u8e2a\u7ed8\u5236\u4e2d\u7684\u7ebf\u6761，\u907f\u514d\u9891\u7e41 setState
+ * - \u4f7f\u7528 requestAnimationFrame \u8282\u6d41\u6e32\u67d3
+ * - \u76f4\u63a5\u64cd\u4f5c Konva \u8282\u70b9，\u7ed5\u8fc7 React \u6e32\u67d3\u5468\u671f
  */
 const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
   data,
@@ -86,11 +86,11 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
   strokeWidth,
   className = '',
 }) => {
-  // 容器尺寸
+  // \u5bb9\u5668\u5c3a\u5bf8
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // 画线状态 - 使用 ref 避免频繁渲染
+  // \u753b\u7ebf\u72b6\u6001 - \u4f7f\u7528 ref \u907f\u514d\u9891\u7e41\u6e32\u67d3
   const [lines, setLines] = useState<LineData[]>(() => data?.lines ?? []);
   const isDrawingRef = useRef(false);
   const currentLineRef = useRef<LineData | null>(null);
@@ -98,7 +98,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
 
-  // 缓存样式计算
+  // \u7f13\u5b58\u6837\u5f0f\u8ba1\u7b97
   const currentStyle = useMemo(
     () => ({
       color: color || DEFAULT_COLORS[tool],
@@ -108,7 +108,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     [tool, color, strokeWidth]
   );
 
-  // 监听容器尺寸变化
+  // \u76d1\u542c\u5bb9\u5668\u5c3a\u5bf8\u53d8\u5316
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -129,13 +129,13 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     };
   }, []);
 
-  // 生成唯一 ID
+  // \u751f\u6210\u552f\u4e00 ID
   const generateId = useCallback(
     () => `line-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     []
   );
 
-  // 通知数据变化
+  // \u901a\u77e5\u6570\u636e\u53d8\u5316
   const notifyChange = useCallback(
     (newLines: LineData[]) => {
       const newData: CanvasData = {
@@ -147,7 +147,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     [onChange]
   );
 
-  // 支持 Ctrl+S 保存
+  // \u652f\u6301 Ctrl+S Save
   useEffect(() => {
     if (readOnly || !onSave) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -165,7 +165,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     return tool === 'eraser' ? 'cell' : 'crosshair';
   }, [readOnly, tool]);
 
-  // 鼠标按下 - 开始画线
+  // \u9f20\u6807\u6309\u4e0b - \u5f00\u59cb\u753b\u7ebf
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
       if (readOnly) return;
@@ -175,7 +175,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
 
       isDrawingRef.current = true;
 
-      // 创建新线条数据（使用普通数组，后续直接 push）
+      // \u521b\u5efa\u65b0\u7ebf\u6761\u6570\u636e（\u4f7f\u7528\u666e\u901a\u6570\u7ec4，\u540e\u7eed\u76f4\u63a5 push）
       const newLine: LineData = {
         id: generateId(),
         tool,
@@ -187,7 +187,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
 
       currentLineRef.current = newLine;
 
-      // 直接创建 Konva Line 节点并添加到 layer
+      // \u76f4\u63a5\u521b\u5efa Konva Line \u8282\u70b9\u5e76\u6dfb\u52a0\u5230 layer
       if (layerRef.current) {
         const konvaLine = new Konva.Line({
           points: newLine.points,
@@ -206,7 +206,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
     [readOnly, tool, currentStyle, generateId]
   );
 
-  // 鼠标移动 - 继续画线 (直接操作 Konva 节点，绕过 React)
+  // \u9f20\u6807\u79fb\u52a8 - \u7ee7\u7eed\u753b\u7ebf (\u76f4\u63a5\u64cd\u4f5c Konva \u8282\u70b9，\u7ed5\u8fc7 React)
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
       if (!isDrawingRef.current || readOnly) return;
@@ -216,44 +216,44 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
       const pos = stage?.getPointerPosition();
       if (!pos) return;
 
-      // 直接 push 到数组，避免创建新数组
+      // \u76f4\u63a5 push \u5230\u6570\u7ec4，\u907f\u514d\u521b\u5efa\u65b0\u6570\u7ec4
       currentLineRef.current.points.push(pos.x, pos.y);
 
-      // 直接更新 Konva 节点的 points，并立即绘制
+      // \u76f4\u63a5\u66f4\u65b0 Konva \u8282\u70b9\u7684 points，\u5e76\u7acb\u5373\u7ed8\u5236
       currentKonvaLineRef.current.points(currentLineRef.current.points);
 
-      // 使用 batchDraw 进行高性能绘制
+      // \u4f7f\u7528 batchDraw \u8fdb\u884c\u9ad8\u6027\u80fd\u7ed8\u5236
       layerRef.current?.batchDraw();
     },
     [readOnly]
   );
 
-  // 鼠标抬起 - 结束画线
+  // \u9f20\u6807\u62ac\u8d77 - \u7ed3\u675f\u753b\u7ebf
   const handleMouseUp = useCallback(() => {
     if (!isDrawingRef.current) return;
 
     isDrawingRef.current = false;
 
     if (currentLineRef.current && currentKonvaLineRef.current) {
-      // 创建完成线条的副本（因为 points 数组会被继续使用）
+      // \u521b\u5efa\u5b8c\u6210\u7ebf\u6761\u7684\u526f\u672c（\u56e0\u4e3a points \u6570\u7ec4\u4f1a\u88ab\u7ee7\u7eed\u4f7f\u7528）
       const completedLine: LineData = {
         ...currentLineRef.current,
-        points: [...currentLineRef.current.points], // 创建副本
+        points: [...currentLineRef.current.points], // \u521b\u5efa\u526f\u672c
       };
 
-      // 销毁临时创建的 Konva 节点（React 会重新渲染）
+      // \u9500\u6bc1\u4e34\u65f6\u521b\u5efa\u7684 Konva \u8282\u70b9（React \u4f1a\u91cd\u65b0\u6e32\u67d3）
       currentKonvaLineRef.current.destroy();
       layerRef.current?.batchDraw();
 
-      // 更新 React state，触发重新渲染
+      // \u66f4\u65b0 React state，\u89e6\u53d1\u91cd\u65b0\u6e32\u67d3
       setLines(prev => {
         const newLines = [...prev, completedLine];
-        // 通知变化
+        // \u901a\u77e5\u53d8\u5316
         notifyChange(newLines);
         return newLines;
       });
 
-      // 清除当前绘制状态
+      // \u6e05\u9664\u5f53\u524d\u7ed8\u5236\u72b6\u6001
       currentLineRef.current = null;
       currentKonvaLineRef.current = null;
     }
@@ -265,7 +265,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
       className={`absolute inset-0 ${className}`}
       style={{
         pointerEvents: readOnly ? 'none' : 'auto',
-        touchAction: 'none', // 防止触摸滚动
+        touchAction: 'none', // \u9632\u6b62\u89e6\u6478\u6eda\u52a8
       }}
     >
       <Stage
@@ -304,7 +304,7 @@ const CanvasLayerInner: React.FC<CanvasLayerProps> = ({
   );
 };
 
-// 导出工具栏组件
+// \u5bfc\u51fa\u5de5\u5177\u680f\u7ec4\u4ef6
 export interface CanvasToolbarProps {
   tool: ToolType;
   onToolChange: (tool: ToolType) => void;
@@ -331,7 +331,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
   return (
     <div className="flex items-center gap-2 p-2 bg-card/90 backdrop-blur-sm rounded-lg shadow-lg border border-border">
-      {/* 工具切换 */}
+      {/* \u5de5\u5177\u5207\u6362 */}
       <div className="flex bg-muted rounded-lg p-0.5">
         <Button
           variant="ghost"
@@ -344,7 +344,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          ✏️ 画笔
+          ✏️ Pen
         </Button>
         <Button
           variant="ghost"
@@ -357,7 +357,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          🖍️ 高亮
+          🖍️ Highlight
         </Button>
         <Button
           variant="ghost"
@@ -370,14 +370,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          🧹 橡皮
+          🧹 Eraser
         </Button>
       </div>
 
-      {/* 分隔线 */}
+      {/* \u5206\u9694\u7ebf */}
       <div className="w-px h-6 bg-muted" />
 
-      {/* 颜色选择 */}
+      {/* \u989c\u8272\u9009\u62e9 */}
       <div className="flex gap-1">
         {(tool === 'highlighter' ? highlightColors : colors).map(c => (
           <Button
@@ -394,10 +394,10 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         ))}
       </div>
 
-      {/* 分隔线 */}
+      {/* \u5206\u9694\u7ebf */}
       <div className="w-px h-6 bg-muted" />
 
-      {/* 操作按钮 */}
+      {/* \u64cd\u4f5c\u6309\u94ae */}
       <Button
         variant="ghost"
         size="auto"
@@ -405,7 +405,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         disabled={disabled}
         className="px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-md transition-all"
       >
-        ↩️ 撤销
+        ↩️ Undo
       </Button>
       <Button
         variant="ghost"
@@ -414,7 +414,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         disabled={disabled}
         className="px-2 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-all"
       >
-        🗑️ 清空
+        🗑️ Clear
       </Button>
 
       {onSave && (
@@ -425,7 +425,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           disabled={disabled}
           className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all shadow-sm"
         >
-          💾 保存
+          💾 Save
         </Button>
       )}
     </div>

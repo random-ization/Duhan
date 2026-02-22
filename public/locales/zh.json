@@ -466,7 +466,28 @@
     "timeLimit": "{{count}} 分钟",
     "noExams": "暂无可用考试",
     "unknownExam": "未知考试",
-    "viewAllHistory": "查看全部历史"
+    "viewAllHistory": "查看全部历史",
+    "statsTitle": "学习数据",
+    "avgScore": "平均分",
+    "passRate": "通过率",
+    "breakdown": "各科表现",
+    "notTried": "未尝试",
+    "subjectAttempts_one": "{{count}} 次作答",
+    "subjectAttempts_other": "{{count}} 次作答",
+    "tryThisSection": "← 尝试此部分！",
+    "trendUp": "最近5次成绩有所提升",
+    "trendDown": "成绩下降 — 请关注薄弱环节",
+    "todayTitle": "今日提示",
+    "recommended": "推荐实战",
+    "estimatedTime": "预计用时:",
+    "minutes": "分钟",
+    "allDone": "太棒了，你已完成所有可用考试！",
+    "reminder": {
+      "firstTime": "开始你的第一次 TOPIK 模拟！",
+      "good": "保持连胜！继续保持势头。",
+      "warn": "距离上次练习已过 {{count}} 天 — 保持敏锐！",
+      "danger": "距离上次练习已过 {{count}} 天 — 记忆可能已经衰退！"
+    }
   },
   "dashboard": {
     "banner": {
@@ -610,7 +631,9 @@
           "submitDesc": "所有题目均为单选。交卷后可查看分数和 AI 解析。",
           "listeningTip": "听力部分含音频播放，请开启声音或佩戴耳机。",
           "readingTip": "阅读篇幅较长，建议在安静环境下完成。",
-          "startExam": "开始考试"
+          "startExam": "开始考试",
+          "listeningTitle": "听力注意事项",
+          "startConfirm": "点击开始即表示你已准备好。"
         },
         "session": {
           "passageFor": "第{{start}}-{{end}}题材料",
@@ -654,6 +677,48 @@
           "saveFailedShort": "保存失败",
           "savedToast": "已保存到错题本"
         }
+      },
+      "totalAttempts": "作答次数",
+      "writing": "写作",
+      "writingMockExams": "写作模拟考试",
+      "writingComingSoon": "写作试卷正在准备中，请稍后再试。",
+      "writingCardLabel": "TOPIK II 写作",
+      "writingMockTitle": "TOPIK II 写作模拟",
+      "writingMockDesc": "第 51-54 题 · AI 智能批改",
+      "startWriting": "开始写作",
+      "passBadge": "通过",
+      "controller": {
+        "questionOverview": "题目概览",
+        "done": "已做",
+        "current": "当前",
+        "answered": "已做",
+        "unanswered": "未做",
+        "overview": "概览",
+        "exit": "退出",
+        "close": "关闭"
+      },
+      "result": {
+        "passTitle": "恭喜通过！🎉",
+        "keepTitle": "继续加油！💪",
+        "passSubtitle": "你已达到通过标准。",
+        "keepSubtitle": "离目标更近了一步。",
+        "yourScore": "你的得分",
+        "accuracy": "正确率",
+        "correct": "正确",
+        "incorrect": "错误",
+        "reviewDetails": "查看详细解析",
+        "tryAgain": "再次挑战",
+        "backToList": "返回列表"
+      },
+      "review": {
+        "roundLabel": "第 {{round}} 届",
+        "mark": "标记",
+        "canvasLoading": "加载中...",
+        "canvasSaving": "保存中...",
+        "canvasSynced": "已同步",
+        "wrongQuestions": "错题 ({{count}}):",
+        "allCorrect": "🎉 全部正确！",
+        "endOfSection": "本节结束"
       }
     },
     "readingHub": {
@@ -1508,7 +1573,165 @@
     },
     "searchPlaceholder": "搜索笔记...",
     "noNotes": "暂无笔记",
-    "details": "笔记详情"
+    "details": "笔记详情",
+    "emptyTitle": "笔记本是空的",
+    "emptyDesc": "在复习模式中选中文字并存入笔记本即可保存。",
+    "noMatchTitle": "没有找到匹配的笔记",
+    "noMatchDesc": "尝试调整搜索条件或切换分类",
+    "previewEmpty": "暂无预览内容",
+    "type": {
+      "vocab": "生词",
+      "grammar": "语法",
+      "mistake": "错题",
+      "general": "笔记"
+    },
+    "time": {
+      "justNow": "刚刚",
+      "minutesAgo": "{{count}} 分钟前",
+      "hoursAgo": "{{count}} 小时前",
+      "daysAgo": "{{count}} 天前"
+    },
+    "detail": {
+      "loadError": "无法加载笔记详情",
+      "noContent": "暂无内容",
+      "deleteTitle": "确认删除这条笔记？",
+      "deleteDesc": "删除后无法恢复，相关内容会立即从你的笔记本中移除。",
+      "cancelDelete": "取消",
+      "deleting": "删除中...",
+      "confirmDelete": "确认删除",
+      "meaning": "释义",
+      "context": "原句",
+      "grammarAnalysis": "语法分析",
+      "sourcePrefix": "来源",
+      "question": "题目",
+      "questionImageAlt": "题目图片",
+      "correctAnswer": "正确答案",
+      "aiAnalysis": "AI 解析",
+      "content": "内容",
+      "note": "笔记",
+      "aiTeacherAnalysis": "AI 老师解析",
+      "stemTranslation": "题干翻译",
+      "keyPoint": "核心考点",
+      "correctAnalysis": "正解分析",
+      "distractorAnalysis": "干扰项分析"
+    }
+  },
+  "annotationMenu": {
+    "saveToVocab": "存入生词本",
+    "saving": "保存中..."
+  },
+  "audioPlayer": {
+    "restart": "重新播放",
+    "changeSpeed": "切换播放速度",
+    "mute": "静音",
+    "unmute": "取消静音"
+  },
+  "grammarCard": {
+    "type": {
+      "ending": "终结词尾",
+      "particle": "助词",
+      "connective": "连接词尾"
+    }
+  },
+  "grammarFeed": {
+    "allPoints": "全部语法点",
+    "empty": "此单元暂无语法点"
+  },
+  "grammarModule": {
+    "title": "语法专项训练",
+    "searchPlaceholder": "搜索语法点...",
+    "unitLabel": "第{{count}}课"
+  },
+  "analysisSheet": {
+    "title": "AI 句子分析",
+    "loading": "AI 正在分析句子...",
+    "empty": "分析结果将显示在这里",
+    "vocabularyTitle": "词汇",
+    "grammarTitle": "语法",
+    "nuanceTitle": "语感",
+    "cached": "已缓存结果"
+  },
+  "wongojiEditor": {
+    "row": "行",
+    "column": "列",
+    "perLine": "每行 {{count}} 字 · 原稿纸"
+  },
+  "leaderboard": {
+    "weeklyTitle": "本周排行榜",
+    "empty": "还没有人上榜，成为第一个吧！",
+    "meTag": "(我)"
+  },
+  "achievements": {
+    "aiTutorTagline": "专属韩语 AI 私教",
+    "saveReportImage": "保存战报图片",
+    "galleryEmpty": "完成一次打字或背单词，解锁你的第一枚徽章吧！"
+  },
+  "weeklyActivity": {
+    "minutesUnit": "分",
+    "minutesLabel": "分钟",
+    "studyDuration": "学习时长"
+  },
+  "learnerSummary": {
+    "title": "学习概览",
+    "streak": "已连续学习 {count} 天",
+    "progress": "今日进度",
+    "minutes": "分钟",
+    "completed": "✨ 今日目标已达成！",
+    "todayTag": "今天",
+    "studyTooltip": "学习 {{count}} 分钟",
+    "weeklyActivity": "本周活跃度",
+    "stats": {
+      "studyToday": "学习时长",
+      "studyTotal": "累计学习",
+      "wordsToday": "学习单词",
+      "wordsTotal": "累计单词",
+      "grammarToday": "学习语法",
+      "grammarTotal": "累计语法",
+      "xpTotal": "累计 XP"
+    }
+  },
+  "learnerDashboard": {
+    "loadError": "无法加载学习数据",
+    "streakDays": "连续打卡天数",
+    "wordsLearned": "已学词汇",
+    "grammarLearned": "已学语法",
+    "todayMinutes": "今日学习(分钟)",
+    "weeklyStudy": "本周学习时长",
+    "continueLearning": "继续学习",
+    "unitProgress": "第 {{unit}} 课 · {{module}}",
+    "continueButton": "继续学习",
+    "startFirstLesson": "开始你的第一节课吧！",
+    "dailyGoal": "今日目标",
+    "minutesUnit": "分钟",
+    "goalCompleted": "今日目标已完成！",
+    "reviewWords": "有 {{count}} 个单词待复习",
+    "reviewHint": "趁热打铁，巩固记忆！",
+    "reviewNow": "去复习",
+    "module": {
+      "vocab": "词汇",
+      "reading": "阅读",
+      "grammar": "语法"
+    }
+  },
+  "grammarDetail": {
+    "checkFailed": "检查失败，请稍后重试",
+    "analysisDone": "分析完成",
+    "selectPrompt": "选择一个语法点查看详情",
+    "aiPractice": "AI 陪练",
+    "practicePlaceholder": "用 {{title}} 造个句子...",
+    "checking": "检查中...",
+    "check": "检查",
+    "feedback": {
+      "correct": "✓ 太棒了!",
+      "incorrect": "✗ 需要改进"
+    },
+    "suggested": "建议写法:",
+    "proficiency": "熟练度",
+    "mastered": "已掌握",
+    "explanation": "详细解释",
+    "markMastered": "标记为已掌握",
+    "rules": "接续规则",
+    "examples": "场景例句"
   },
   "podcast": {
     "title": "播客",
@@ -2038,6 +2261,129 @@
       "aiDictionaryFailed": "AI 释义失败",
       "dictionaryLookupFailed": "词典查询失败",
       "noteSyncFailed": "笔记同步 Notebook 失败"
+    }
+  },
+  "reviewPage": {
+    "card": {
+      "title": "每日复习回顾",
+      "wordsDue": "{{count}} 个待复习",
+      "description": "通过为您量身定制的间隔重复系统，强化您的长期记忆。",
+      "estimatedTime": "预计时间: ~{{min}} 分钟",
+      "start": "开始复习"
+    },
+    "dashboard": {
+      "title": "每日复习",
+      "subtitle": "保持连胜！您有 {{count}} 个单词需要复习。",
+      "streakDays": "{{days}} 天"
+    },
+    "stats": {
+      "accuracy": "准确率",
+      "accuracy_sub": "较上周 +2%",
+      "learned": "已学单词",
+      "learned_sub": "当前活跃单词总数",
+      "due": "即刻复习",
+      "due_sub": "准备好开始复习"
+    },
+    "modes": {
+      "title": "选择模式",
+      "recommended": "推荐",
+      "quick": {
+        "title": "快速复习",
+        "desc": "10 个随机单词 • 2 分钟",
+        "btn": "快速开始"
+      },
+      "full": {
+        "title": "完整复习",
+        "desc": "清除所有 {{count}} 个待复习单词",
+        "btn": "全部开始"
+      },
+      "weak": {
+        "title": "难点攻克",
+        "desc": "专注于困难词汇",
+        "btn": "提升"
+      }
+    },
+    "queue": {
+      "title": "单词队列",
+      "due": "待复习",
+      "mastered": "已掌握",
+      "empty_due": "没有待复习的单词！做得好。",
+      "empty_mastered": "已掌握的单词列表将显示在这里。"
+    }
+  },
+  "topikWriting": {
+    "title": "TOPIK II 写作",
+    "session": {
+      "fillBlank": "补全短文",
+      "graphEssay": "图表作文",
+      "opinionEssay": "论述作文",
+      "exampleBox": "보기",
+      "questionX": "第 {{num}} 题",
+      "points": "分",
+      "answerPlaceholder": "答安을 입력하세요…",
+      "characterCount": "{{count}} 字",
+      "remainingChars": "还剩 {{count}} 字",
+      "submitConfirmTitle": "确认交卷？",
+      "submitConfirmDesc": "已完成 {{ans}}/{{total}} 题，交卷后不可修改。",
+      "exitConfirmTitle": "退出考试？",
+      "exitConfirmDesc": "当前作答会保存为草稿，你可以稍后回来继续作答。",
+      "continueForm": "继续作答",
+      "confirmSubmit": "确认交卷",
+      "exiting": "退出中…",
+      "submitting": "提交中…",
+      "saveIdle": "自动保存",
+      "saving": "保存中…",
+      "saved": "✓ 已保存",
+      "saveError": "保存失败",
+      "submitButton": "交卷",
+      "wongojiAnswer": "원고지 答案",
+      "answerArea": "答案区",
+      "maxLength": "最多 {{count}} 字",
+      "submittedTitle": "已成功提交！",
+      "submittedDesc": "共作答 {{ans}} / {{total}} 题，正在等待 AI 批改…",
+      "loadingExam": "正在准备写作考试…",
+      "q51Instruction": "请根据上下文填写空白处，使文章内容完整、自然。",
+      "q52Instruction": "请根据题目要求，补充完整空白处的内容。",
+      "q53Instruction": "请参考下图，写一篇说明文（最少 200 字，最多 300 字）。",
+      "q54Instruction": "请就下面的题目写一篇议论文（最少 400 字，最多 600 字）。",
+      "fillBlankPaperTitle": "填空作答（㉠ / ㉡）",
+      "fillBlankOneSentence": "每空建议 1 句",
+      "fillBlankHint": "请分别填写 ㉠ 和 ㉡，每空建议一句完整表达。",
+      "fillBlankA": "在此填写 ㉠",
+      "fillBlankB": "在此填写 ㉡"
+    },
+    "report": {
+      "title": "写作评估报告",
+      "subtitle": "TOPIK II 写作 · AI 智能批改",
+      "evaluatingTitle": "AI 正在批改中…",
+      "evaluatingDesc": "正在按 TOPIK 官方评分标准逐题分析，通常需要 30-60 秒",
+      "dimTask": "内容及课题完成度",
+      "dimStructure": "文章展开与结构",
+      "dimLanguage": "语言使用（词汇/语法）",
+      "dimWongoji": "原稿纸使用规范",
+      "maxScore": "满分 {{score}}",
+      "scoreLabel": "得分：",
+      "dimScores": "分项得分",
+      "originalText": "考生原文",
+      "notAnswered": "（未作答）",
+      "aiCorrected": "AI 高分润色版",
+      "noCorrection": "（无校正内容）",
+      "feedback": "综合评语",
+      "loadingError": "无法加载评估结果，请刷新页面。",
+      "back": "返回",
+      "timeElapsed": "作答用时：",
+      "timeFormat": "{{min}} 分 {{sec}} 秒",
+      "totalScore": "总分：",
+      "aiDone": "AI 批改完成",
+      "passExcellent": "优秀 🎉",
+      "passGood": "合格 ✅",
+      "passNeedsWork": "需加强 📚",
+      "overallAnalysis": "总体维度分析",
+      "questionFeedback": "逐题详细反馈",
+      "loadingOriginal": "正在加载原考试试卷...",
+      "retrigger": "重新触发批改",
+      "retriggering": "重新触发中...",
+      "retryFailed": "触发失败，请稍后重试。"
     }
   }
 }

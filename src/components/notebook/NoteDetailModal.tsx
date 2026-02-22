@@ -5,6 +5,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { mRef, qRef } from '../../utils/convexRefs';
 import { Button } from '../ui';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,12 +22,24 @@ import {
 // Type display config
 const TYPE_CONFIG: Record<
   string,
-  { icon: React.ComponentType<{ className?: string }>; label: string; color: string }
+  { icon: React.ComponentType<{ className?: string }>; labelKey: string; color: string }
 > = {
-  VOCAB: { icon: BookOpen, label: '生词', color: 'text-indigo-600 dark:text-indigo-200' },
-  GRAMMAR: { icon: GraduationCap, label: '语法', color: 'text-emerald-600 dark:text-emerald-200' },
-  MISTAKE: { icon: XCircle, label: '错题', color: 'text-red-500 dark:text-rose-200' },
-  GENERAL: { icon: FileText, label: '笔记', color: 'text-muted-foreground' },
+  VOCAB: { icon: BookOpen, labelKey: 'notes.type.vocab', color: 'text-indigo-600 dark:text-indigo-200' },
+  GRAMMAR: {
+    icon: GraduationCap,
+    labelKey: 'notes.type.grammar',
+    color: 'text-emerald-600 dark:text-emerald-200',
+  },
+  MISTAKE: { icon: XCircle, labelKey: 'notes.type.mistake', color: 'text-red-500 dark:text-rose-200' },
+  GENERAL: { icon: FileText, labelKey: 'notes.type.general', color: 'text-muted-foreground' },
+};
+
+const getDateLocale = (language: string): string => {
+  if (language.startsWith('zh')) return 'zh-CN';
+  if (language.startsWith('vi')) return 'vi-VN';
+  if (language.startsWith('mn')) return 'mn-MN';
+  if (language.startsWith('ko')) return 'ko-KR';
+  return 'en-US';
 };
 
 interface NoteDetailModalProps {
@@ -98,7 +111,13 @@ const NoteDetailHeader = ({
   </div>
 );
 
-const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number } }) => (
+const NoteDetailFooter = ({
+  note,
+  locale,
+}: {
+  note: { tags?: string[]; createdAt: number };
+  locale: string;
+}) => (
   <div className="px-5 py-3 bg-muted border-t border-border flex items-center justify-between">
     <div className="flex gap-2">
       {note.tags?.map((tag: string, idx: number) => (
@@ -111,7 +130,7 @@ const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number
       ))}
     </div>
     <span className="text-xs text-muted-foreground">
-      {new Date(note.createdAt).toLocaleDateString('zh-CN', {
+      {new Date(note.createdAt).toLocaleString(locale, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -123,6 +142,7 @@ const NoteDetailFooter = ({ note }: { note: { tags?: string[]; createdAt: number
 );
 
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDelete }) => {
+  const { t, i18n } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
@@ -138,7 +158,9 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
 
   const loading = noteDetail === undefined && !!noteId;
   const note = noteDetail?.data;
-  const error = noteDetail && !noteDetail.success ? '无法加载笔记详情' : null;
+  const error = noteDetail && !noteDetail.success
+    ? t('notes.detail.loadError', { defaultValue: 'Failed to load note details' })
+    : null;
 
   const deleteNotebook = useMutation(mRef<{ notebookId: string }, unknown>('notebooks:remove'));
 
@@ -161,6 +183,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
 
   const config = note ? TYPE_CONFIG[note.type] || TYPE_CONFIG.GENERAL : TYPE_CONFIG.GENERAL;
   const Icon = config.icon;
+  const typeLabel = t(config.labelKey, { defaultValue: 'Note' });
+  const dateLocale = getDateLocale(i18n.resolvedLanguage || i18n.language || 'en');
 
   const renderContent = () => {
     if (loading) {
@@ -184,10 +208,14 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
     }
 
     if (!note) {
-      return <p className="text-muted-foreground">暂无内容</p>;
+      return (
+        <p className="text-muted-foreground">
+          {t('notes.detail.noContent', { defaultValue: 'No content yet' })}
+        </p>
+      );
     }
 
-    return <NoteContent type={note.type} content={note.content} />;
+    return <NoteContent type={note.type} content={note.content} t={t} />;
   };
 
   return (
@@ -213,7 +241,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
               <NoteDetailHeader
                 loading={loading}
                 note={note}
-                config={config}
+                config={{ ...config, label: typeLabel }}
                 Icon={Icon}
                 deleting={deleting}
                 handleDelete={() => setConfirmDeleteOpen(true)}
@@ -222,7 +250,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
 
               <div className="flex-1 overflow-y-auto p-5">{renderContent()}</div>
 
-              {!loading && note && <NoteDetailFooter note={note} />}
+              {!loading && note && <NoteDetailFooter note={note} locale={dateLocale} />}
             </motion.div>
           </DialogContent>
         </DialogPortal>
@@ -234,23 +262,25 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
           <AlertDialogContent className="z-[61] max-w-md rounded-2xl border-2 border-border shadow-pop">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-lg font-black text-foreground">
-                确认删除这条笔记？
+                {t('notes.detail.deleteTitle', { defaultValue: 'Delete this note?' })}
               </AlertDialogTitle>
               <AlertDialogDescription className="text-sm text-muted-foreground">
-                删除后无法恢复，相关内容会立即从你的笔记本中移除。
+                {t('notes.detail.deleteDesc', {
+                  defaultValue: 'This action cannot be undone. The note will be removed immediately.',
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-4">
               <AlertDialogCancel onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>
-                取消
+                {t('notes.detail.cancelDelete', { defaultValue: 'Cancel' })}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 loading={deleting}
-                loadingText="删除中..."
+                loadingText={t('notes.detail.deleting', { defaultValue: 'Deleting...' })}
                 className="bg-destructive border-destructive text-destructive-foreground hover:bg-destructive/90 hover:border-destructive/90"
               >
-                确认删除
+                {t('notes.detail.confirmDelete', { defaultValue: 'Delete' })}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -261,7 +291,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ noteId, onClose, onDe
 };
 
 // Content renderer based on type
-const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
+const VocabContent = ({
+  record,
+  t,
+}: {
+  record: Record<string, unknown>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) => (
   <div className="space-y-5">
     {/* Word */}
     {typeof record.word === 'string' && (
@@ -279,14 +315,14 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
 
     {/* Meaning */}
     {typeof record.meaning === 'string' && record.meaning.trim() !== '' && (
-      <Section title="释义">
+      <Section title={t('notes.detail.meaning', { defaultValue: 'Meaning' })}>
         <p className="text-muted-foreground">{record.meaning}</p>
       </Section>
     )}
 
     {/* Context / Original Sentence */}
     {typeof record.context === 'string' && record.context.trim() !== '' && (
-      <Section title="原句">
+      <Section title={t('notes.detail.context', { defaultValue: 'Original sentence' })}>
         <p className="text-muted-foreground italic bg-muted p-3 rounded-lg border-l-4 border-indigo-200 dark:border-indigo-300/40">
           {record.context}
         </p>
@@ -295,7 +331,7 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
 
     {/* Analysis */}
     {typeof record.analysis === 'string' && record.analysis.trim() !== '' && (
-      <Section title="语法分析">
+      <Section title={t('notes.detail.grammarAnalysis', { defaultValue: 'Grammar analysis' })}>
         <p className="text-muted-foreground">{record.analysis}</p>
       </Section>
     )}
@@ -303,13 +339,19 @@ const VocabContent = ({ record }: { record: Record<string, unknown> }) => (
     {/* Extra info */}
     {typeof record.examTitle === 'string' && record.examTitle.trim() !== '' && (
       <div className="text-xs text-muted-foreground pt-4 border-t border-border">
-        来源：{record.examTitle}
+        {t('notes.detail.sourcePrefix', { defaultValue: 'Source' })}: {record.examTitle}
       </div>
     )}
   </div>
 );
 
-const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
+const MistakeContent = ({
+  record,
+  t,
+}: {
+  record: Record<string, unknown>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) => {
   const questionText = typeof record.questionText === 'string' ? record.questionText : undefined;
   const question = typeof record.question === 'string' ? record.question : undefined;
   const imageUrl = typeof record.imageUrl === 'string' ? record.imageUrl : undefined;
@@ -325,7 +367,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
         {(questionText || question) && (
           <div>
             <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-              题目
+              {t('notes.detail.question', { defaultValue: 'Question' })}
             </h4>
             <div className="text-lg font-medium text-muted-foreground leading-relaxed mb-4">
               {questionText || question}
@@ -338,7 +380,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
           <div className="mb-4">
             <img
               src={imageUrl}
-              alt="Question"
+              alt={t('notes.detail.questionImageAlt', { defaultValue: 'Question' })}
               className="rounded-lg border border-border shadow-sm max-h-60 object-contain"
             />
           </div>
@@ -373,7 +415,7 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
                   <span className="text-sm">{optionText}</span>
                   {isCorrect && (
                     <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-400/15 dark:text-emerald-200 px-2 py-0.5 rounded-full">
-                      正确答案
+                      {t('notes.detail.correctAnswer', { defaultValue: 'Correct answer' })}
                     </span>
                   )}
                 </div>
@@ -384,10 +426,10 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
       </div>
 
       {/* AI Analysis Section */}
-      {!!aiAnalysis && <SanitizedAIAnalysisContent analysis={aiAnalysis} />}
+      {!!aiAnalysis && <SanitizedAIAnalysisContent analysis={aiAnalysis} t={t} />}
       {!aiAnalysis && analysis && (
         /* Legacy analysis support */
-        <Section title="AI 解析">
+        <Section title={t('notes.detail.aiAnalysis', { defaultValue: 'AI analysis' })}>
           <p className="text-muted-foreground">{analysis}</p>
         </Section>
       )}
@@ -395,16 +437,26 @@ const MistakeContent = ({ record }: { record: Record<string, unknown> }) => {
   );
 };
 
-const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, content }) => {
-  if (!content) return <p className="text-muted-foreground">暂无内容</p>;
+const NoteContent: React.FC<{
+  type: string;
+  content: unknown;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}> = ({ type, content, t }) => {
+  if (!content) {
+    return (
+      <p className="text-muted-foreground">
+        {t('notes.detail.noContent', { defaultValue: 'No content yet' })}
+      </p>
+    );
+  }
   const record = content as Record<string, unknown>;
 
   if (type === 'VOCAB') {
-    return <VocabContent record={record} />;
+    return <VocabContent record={record} t={t} />;
   }
 
   if (type === 'MISTAKE') {
-    return <MistakeContent record={record} />;
+    return <MistakeContent record={record} t={t} />;
   }
 
   // Default: GENERAL or GRAMMAR
@@ -413,12 +465,12 @@ const NoteContent: React.FC<{ type: string; content: unknown }> = ({ type, conte
   return (
     <div className="space-y-5">
       {text && (
-        <Section title="内容">
+        <Section title={t('notes.detail.content', { defaultValue: 'Content' })}>
           <p className="text-muted-foreground whitespace-pre-wrap">{text}</p>
         </Section>
       )}
       {notes && (
-        <Section title="笔记">
+        <Section title={t('notes.detail.note', { defaultValue: 'Note' })}>
           <p className="text-muted-foreground whitespace-pre-wrap">{notes}</p>
         </Section>
       )}
@@ -476,7 +528,13 @@ const safeWrongOptions = (opts: unknown): [string, string][] => {
 /**
  * Robust component to display AI Analysis content safely
  */
-const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
+const SanitizedAIAnalysisContent = ({
+  analysis,
+  t,
+}: {
+  analysis: unknown;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) => {
   const record = analysis as Record<string, unknown>;
   const translation = safeString(record.translation);
   const keyPoint = safeString(record.keyPoint);
@@ -489,7 +547,9 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         <div className="p-1.5 bg-indigo-100 dark:bg-indigo-400/15 rounded text-indigo-600 dark:text-indigo-200">
           <GraduationCap className="w-5 h-5" />
         </div>
-        <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-100">AI 老师解析</h3>
+        <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
+          {t('notes.detail.aiTeacherAnalysis', { defaultValue: 'AI explanation' })}
+        </h3>
       </div>
 
       <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-400/10 dark:to-violet-400/10 rounded-xl p-5 border border-indigo-100 dark:border-indigo-300/20 space-y-5">
@@ -497,7 +557,7 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {translation && (
           <div>
             <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
-              题干翻译
+              {t('notes.detail.stemTranslation', { defaultValue: 'Question translation' })}
             </div>
             <p className="text-muted-foreground bg-card/60 p-3 rounded-lg text-sm leading-relaxed">
               {translation}
@@ -509,7 +569,7 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {keyPoint && (
           <div>
             <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
-              核心考点
+              {t('notes.detail.keyPoint', { defaultValue: 'Key point' })}
             </div>
             <div className="inline-block bg-indigo-100 text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200 px-3 py-1 rounded-full text-sm font-medium">
               {keyPoint}
@@ -521,7 +581,7 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {analysisText && (
           <div>
             <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
-              正解分析
+              {t('notes.detail.correctAnalysis', { defaultValue: 'Correct answer analysis' })}
             </div>
             <p className="text-muted-foreground bg-card/60 p-3 rounded-lg text-sm leading-relaxed">
               {analysisText}
@@ -533,7 +593,7 @@ const SanitizedAIAnalysisContent = ({ analysis }: { analysis: unknown }) => {
         {wrongOptions.length > 0 && (
           <div>
             <div className="text-xs font-bold text-indigo-700 dark:text-indigo-200 uppercase mb-1.5">
-              干扰项分析
+              {t('notes.detail.distractorAnalysis', { defaultValue: 'Distractor analysis' })}
             </div>
             <div className="space-y-2">
               {wrongOptions.map(([key, value]) => (

@@ -466,7 +466,28 @@
     "timeLimit": "{{count}} min",
     "noExams": "No exams available",
     "unknownExam": "Unknown Exam",
-    "viewAllHistory": "View Full History"
+    "viewAllHistory": "View Full History",
+    "statsTitle": "My Stats",
+    "avgScore": "Avg. Score",
+    "passRate": "Pass Rate",
+    "breakdown": "Subject Breakdown",
+    "notTried": "Not tried",
+    "subjectAttempts_one": "{{count}} attempt",
+    "subjectAttempts_other": "{{count}} attempts",
+    "tryThisSection": "← Try this section!",
+    "trendUp": "Score improving in last 5 attempts",
+    "trendDown": "Score declining — focus on weak areas",
+    "todayTitle": "Today's Tip",
+    "recommended": "Recommended",
+    "estimatedTime": "Est. time:",
+    "minutes": "min",
+    "allDone": "You've tried all available exams!",
+    "reminder": {
+      "firstTime": "Start your first TOPIK simulation!",
+      "good": "Great streak! Keep the momentum.",
+      "warn": "{{count}} days since last practice — stay sharp!",
+      "danger": "{{count}} days away — memory may have faded!"
+    }
   },
   "dashboard": {
     "banner": {
@@ -611,7 +632,9 @@
           "submitDesc": "All questions are single-choice. You can view your score and AI analysis after submission.",
           "listeningTip": "Listening section contains audio. Please turn on your sound or use headphones.",
           "readingTip": "Reading passages can be long. A quiet environment is recommended.",
-          "startExam": "Start Exam"
+          "startExam": "Start Exam",
+          "listeningTitle": "Listening Notes",
+          "startConfirm": "By starting, you confirm you are ready."
         },
         "session": {
           "passageFor": "Passage for Q{{start}}-{{end}}",
@@ -655,6 +678,48 @@
           "saveFailedShort": "Failed to Save",
           "savedToast": "Saved to Notebook"
         }
+      },
+      "totalAttempts": "Attempts",
+      "writing": "Writing",
+      "writingMockExams": "Writing Mock Exams",
+      "writingComingSoon": "Writing exams are currently being prepared. Please try again later.",
+      "writingCardLabel": "TOPIK II Writing",
+      "writingMockTitle": "TOPIK II Writing Mock",
+      "writingMockDesc": "Questions 51-54 · AI grading",
+      "startWriting": "Start Writing",
+      "passBadge": "PASS",
+      "controller": {
+        "questionOverview": "Question Overview",
+        "done": "Done",
+        "current": "Current",
+        "answered": "Answered",
+        "unanswered": "Unanswered",
+        "overview": "Overview",
+        "exit": "Exit",
+        "close": "Close"
+      },
+      "result": {
+        "passTitle": "Congratulations! 🎉",
+        "keepTitle": "Keep Practicing! 💪",
+        "passSubtitle": "You have reached the passing standard.",
+        "keepSubtitle": "You are getting closer to your target.",
+        "yourScore": "Your Score",
+        "accuracy": "Accuracy",
+        "correct": "Correct",
+        "incorrect": "Incorrect",
+        "reviewDetails": "View Detailed Analysis",
+        "tryAgain": "Try Again",
+        "backToList": "Back to List"
+      },
+      "review": {
+        "roundLabel": "Round {{round}}",
+        "mark": "Mark",
+        "canvasLoading": "Loading...",
+        "canvasSaving": "Saving...",
+        "canvasSynced": "Synced",
+        "wrongQuestions": "Mistakes ({{count}}):",
+        "allCorrect": "🎉 All correct!",
+        "endOfSection": "End of Section"
       }
     },
     "readingHub": {
@@ -1499,7 +1564,165 @@
     },
     "searchPlaceholder": "Search notes...",
     "noNotes": "No notes found",
-    "details": "Note Details"
+    "details": "Note Details",
+    "emptyTitle": "Your notebook is empty",
+    "emptyDesc": "In review mode, select text and save it to your notebook.",
+    "noMatchTitle": "No matching notes found",
+    "noMatchDesc": "Try adjusting search terms or switching category",
+    "previewEmpty": "No preview available yet",
+    "type": {
+      "vocab": "Vocab",
+      "grammar": "Grammar",
+      "mistake": "Mistake",
+      "general": "Note"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}} hr ago",
+      "daysAgo": "{{count}} days ago"
+    },
+    "detail": {
+      "loadError": "Failed to load note details",
+      "noContent": "No content yet",
+      "deleteTitle": "Delete this note?",
+      "deleteDesc": "This action cannot be undone. The note will be removed immediately.",
+      "cancelDelete": "Cancel",
+      "deleting": "Deleting...",
+      "confirmDelete": "Delete",
+      "meaning": "Meaning",
+      "context": "Original sentence",
+      "grammarAnalysis": "Grammar analysis",
+      "sourcePrefix": "Source",
+      "question": "Question",
+      "questionImageAlt": "Question image",
+      "correctAnswer": "Correct answer",
+      "aiAnalysis": "AI analysis",
+      "content": "Content",
+      "note": "Note",
+      "aiTeacherAnalysis": "AI explanation",
+      "stemTranslation": "Question translation",
+      "keyPoint": "Key point",
+      "correctAnalysis": "Correct answer analysis",
+      "distractorAnalysis": "Distractor analysis"
+    }
+  },
+  "annotationMenu": {
+    "saveToVocab": "Save to Vocab",
+    "saving": "Saving..."
+  },
+  "audioPlayer": {
+    "restart": "Restart",
+    "changeSpeed": "Change speed",
+    "mute": "Mute",
+    "unmute": "Unmute"
+  },
+  "grammarCard": {
+    "type": {
+      "ending": "Sentence ending",
+      "particle": "Particle",
+      "connective": "Connective ending"
+    }
+  },
+  "grammarFeed": {
+    "allPoints": "All grammar points",
+    "empty": "No grammar points in this unit"
+  },
+  "grammarModule": {
+    "title": "Grammar Training",
+    "searchPlaceholder": "Search grammar points...",
+    "unitLabel": "Unit {{count}}"
+  },
+  "analysisSheet": {
+    "title": "AI sentence analysis",
+    "loading": "AI is analyzing this sentence...",
+    "empty": "Analysis will appear here",
+    "vocabularyTitle": "Vocabulary",
+    "grammarTitle": "Grammar",
+    "nuanceTitle": "Nuance",
+    "cached": "Cached result"
+  },
+  "wongojiEditor": {
+    "row": "Row",
+    "column": "Column",
+    "perLine": "{{count}} chars per line · Wongoji"
+  },
+  "leaderboard": {
+    "weeklyTitle": "Weekly leaderboard",
+    "empty": "No one is ranked yet. Be the first!",
+    "meTag": "(Me)"
+  },
+  "achievements": {
+    "aiTutorTagline": "Your personal Korean AI tutor",
+    "saveReportImage": "Save report image",
+    "galleryEmpty": "Complete typing or vocab practice to unlock your first badge!"
+  },
+  "weeklyActivity": {
+    "minutesUnit": "m",
+    "minutesLabel": "minutes",
+    "studyDuration": "Study time"
+  },
+  "learnerSummary": {
+    "title": "Learning Summary",
+    "streak": "{count} day streak",
+    "progress": "Today's progress",
+    "minutes": "min",
+    "completed": "✨ Goal completed today!",
+    "todayTag": "Today",
+    "studyTooltip": "Studied {{count}} min",
+    "weeklyActivity": "Weekly Activity",
+    "stats": {
+      "studyToday": "Study",
+      "studyTotal": "Total Study",
+      "wordsToday": "Words",
+      "wordsTotal": "Total Words",
+      "grammarToday": "Grammar",
+      "grammarTotal": "Total Grammar",
+      "xpTotal": "Total XP"
+    }
+  },
+  "learnerDashboard": {
+    "loadError": "Failed to load learning data",
+    "streakDays": "Streak Days",
+    "wordsLearned": "Words Learned",
+    "grammarLearned": "Grammar Learned",
+    "todayMinutes": "Today (minutes)",
+    "weeklyStudy": "Weekly Study Time",
+    "continueLearning": "Continue Learning",
+    "unitProgress": "Unit {{unit}} · {{module}}",
+    "continueButton": "Continue",
+    "startFirstLesson": "Start your first lesson!",
+    "dailyGoal": "Daily Goal",
+    "minutesUnit": "min",
+    "goalCompleted": "Goal completed today!",
+    "reviewWords": "{{count}} words are waiting for review",
+    "reviewHint": "Keep momentum and lock in your memory.",
+    "reviewNow": "Review now",
+    "module": {
+      "vocab": "Vocabulary",
+      "reading": "Reading",
+      "grammar": "Grammar"
+    }
+  },
+  "grammarDetail": {
+    "checkFailed": "Check failed. Please try again.",
+    "analysisDone": "Analysis completed",
+    "selectPrompt": "Select a grammar point to view details",
+    "aiPractice": "AI Practice",
+    "practicePlaceholder": "Make a sentence with {{title}}...",
+    "checking": "Checking...",
+    "check": "Check",
+    "feedback": {
+      "correct": "✓ Great job!",
+      "incorrect": "✗ Needs improvement"
+    },
+    "suggested": "Suggested sentence:",
+    "proficiency": "Proficiency",
+    "mastered": "Mastered",
+    "explanation": "Detailed explanation",
+    "markMastered": "Mark as mastered",
+    "rules": "Conjugation rules",
+    "examples": "Usage examples"
   },
   "podcast": {
     "title": "Podcasts",
@@ -2029,6 +2252,129 @@
       "aiDictionaryFailed": "AI dictionary fallback failed",
       "dictionaryLookupFailed": "Dictionary lookup failed",
       "noteSyncFailed": "Failed to sync note to Notebook"
+    }
+  },
+  "reviewPage": {
+    "card": {
+      "title": "Daily Review Session",
+      "wordsDue": "{{count}} Words Due",
+      "description": "Strengthen your long-term memory with spaced repetition suited for you.",
+      "estimatedTime": "Estimated time: ~{{min}} mins",
+      "start": "Start Review"
+    },
+    "dashboard": {
+      "title": "Daily Review",
+      "subtitle": "Keep your streak alive! You have {{count}} words due.",
+      "streakDays": "{{days}} Days"
+    },
+    "stats": {
+      "accuracy": "Accuracy",
+      "accuracy_sub": "+2% from last week",
+      "learned": "Words Learned",
+      "learned_sub": "Total active words",
+      "due": "Due Now",
+      "due_sub": "Ready to review"
+    },
+    "modes": {
+      "title": "Choose a Mode",
+      "recommended": "RECOMMENDED",
+      "quick": {
+        "title": "Quick Review",
+        "desc": "10 random due words • 2 mins",
+        "btn": "Start Quick"
+      },
+      "full": {
+        "title": "Full Review",
+        "desc": "Clear all {{count}} due words",
+        "btn": "Start All"
+      },
+      "weak": {
+        "title": "Weakest Words",
+        "desc": "Focus on difficult items",
+        "btn": "Improve"
+      }
+    },
+    "queue": {
+      "title": "Word Queue",
+      "due": "Due Review",
+      "mastered": "Mastered",
+      "empty_due": "No words due for review! Good job.",
+      "empty_mastered": "List of mastered words will appear here."
+    }
+  },
+  "topikWriting": {
+    "title": "TOPIK II Writing",
+    "session": {
+      "fillBlank": "Fill in the blank",
+      "graphEssay": "Graph essay",
+      "opinionEssay": "Opinion essay",
+      "exampleBox": "Example / Context",
+      "questionX": "Question {{num}}",
+      "points": "pts",
+      "answerPlaceholder": "Type your answer here...",
+      "characterCount": "{{count}} chars",
+      "remainingChars": "{{count}} left",
+      "submitConfirmTitle": "Submit Exam?",
+      "submitConfirmDesc": "Answered {{ans}}/{{total}} questions. You cannot change your answers after submitting.",
+      "exitConfirmTitle": "Exit Exam?",
+      "exitConfirmDesc": "Your current answers will be saved as a draft. You can return later to continue this exam.",
+      "continueForm": "Continue",
+      "confirmSubmit": "Confirm Submit",
+      "exiting": "Exiting...",
+      "submitting": "Submitting...",
+      "saveIdle": "Auto-save",
+      "saving": "Saving...",
+      "saved": "✓ Saved",
+      "saveError": "Save Failed",
+      "submitButton": "Submit",
+      "wongojiAnswer": "Wongoji Answer",
+      "answerArea": "Answer Area",
+      "maxLength": "Max {{count}} chars",
+      "submittedTitle": "Successfully Submitted!",
+      "submittedDesc": "Answered {{ans}} / {{total}} questions. Waiting for AI evaluation...",
+      "loadingExam": "Preparing writing exam...",
+      "q51Instruction": "Fill in the blank based on the context to make the passage complete and natural.",
+      "q52Instruction": "Fill in the blank according to the requirements of the prompt.",
+      "q53Instruction": "Based on the graph below, write an explanatory essay (200-300 characters).",
+      "q54Instruction": "Write an argumentative essay on the topic below (400-600 characters).",
+      "fillBlankPaperTitle": "Fill in blanks (㉠ / ㉡)",
+      "fillBlankOneSentence": "One sentence per blank recommended",
+      "fillBlankHint": "Please fill both ㉠ and ㉡ with complete sentences.",
+      "fillBlankA": "Fill ㉠ here",
+      "fillBlankB": "Fill ㉡ here"
+    },
+    "report": {
+      "title": "Writing Evaluation Report",
+      "subtitle": "TOPIK II Writing · AI Evaluation",
+      "evaluatingTitle": "AI is evaluating...",
+      "evaluatingDesc": "Analyzing based on official TOPIK grading criteria. Usually takes 30-60 seconds.",
+      "dimTask": "Task Accomplishment",
+      "dimStructure": "Development & Structure",
+      "dimLanguage": "Language Use",
+      "dimWongoji": "Wongoji Formatting",
+      "maxScore": "Max {{score}}",
+      "scoreLabel": "Score:",
+      "dimScores": "Dimension Scores",
+      "originalText": "Your Original Answer",
+      "notAnswered": "(Not answered)",
+      "aiCorrected": "AI Polished Version",
+      "noCorrection": "(No correction)",
+      "feedback": "Overall Feedback",
+      "loadingError": "Failed to load evaluation, please refresh the page.",
+      "back": "Back",
+      "timeElapsed": "Time elapsed:",
+      "timeFormat": "{{min}}m {{sec}}s",
+      "totalScore": "Total Score:",
+      "aiDone": "AI Evaluation Complete",
+      "passExcellent": "Excellent 🎉",
+      "passGood": "Pass ✅",
+      "passNeedsWork": "Needs Work 📚",
+      "overallAnalysis": "Overall Dimension Analysis",
+      "questionFeedback": "Detailed Feedback by Question",
+      "loadingOriginal": "Loading original exam paper...",
+      "retrigger": "Retry Evaluation",
+      "retriggering": "Retrying...",
+      "retryFailed": "Retry failed. Please try again later."
     }
   }
 }

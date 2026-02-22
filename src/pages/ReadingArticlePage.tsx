@@ -140,12 +140,12 @@ const TERM_GLOSSARY: Record<
   { meaning: Record<'zh' | 'en' | 'vi' | 'mn', string>; level: string }
 > = {
   기준금리: {
-    meaning: { zh: '基准利率', en: 'base interest rate', vi: 'lãi suất cơ bản', mn: 'суурь хүү' },
+    meaning: { zh: '\u57fa\u51c6\u5229\u7387', en: 'base interest rate', vi: 'lãi suất cơ bản', mn: 'суурь хүү' },
     level: 'TOPIK 4',
   },
   동결: {
     meaning: {
-      zh: '冻结，维持不变',
+      zh: '\u51bb\u7ed3，\u7ef4\u6301\u4e0d\u53d8',
       en: 'freeze, keep unchanged',
       vi: 'đóng băng, giữ nguyên',
       mn: 'хэвээр барих',
@@ -154,7 +154,7 @@ const TERM_GLOSSARY: Record<
   },
   동결하다: {
     meaning: {
-      zh: '冻结，维持不变',
+      zh: '\u51bb\u7ed3，\u7ef4\u6301\u4e0d\u53d8',
       en: 'freeze, keep unchanged',
       vi: 'đóng băng, giữ nguyên',
       mn: 'хэвээр барих',
@@ -162,27 +162,27 @@ const TERM_GLOSSARY: Record<
     level: 'TOPIK 3',
   },
   가계부채: {
-    meaning: { zh: '家庭债务', en: 'household debt', vi: 'nợ hộ gia đình', mn: 'өрхийн өр' },
+    meaning: { zh: '\u5bb6\u5ead\u503a\u52a1', en: 'household debt', vi: 'nợ hộ gia đình', mn: 'өрхийн өр' },
     level: 'TOPIK 4',
   },
   물가: {
-    meaning: { zh: '物价', en: 'prices', vi: 'giá cả', mn: 'үнийн түвшин' },
+    meaning: { zh: '\u7269\u4ef7', en: 'prices', vi: 'giá cả', mn: 'үнийн түвшин' },
     level: 'TOPIK 3',
   },
   상승률: {
-    meaning: { zh: '上涨率', en: 'growth rate', vi: 'tỷ lệ tăng', mn: 'өсөлтийн хувь' },
+    meaning: { zh: '\u4e0a\u6da8\u7387', en: 'growth rate', vi: 'tỷ lệ tăng', mn: 'өсөлтийн хувь' },
     level: 'TOPIK 4',
   },
   가능성: {
-    meaning: { zh: '可能性', en: 'possibility', vi: 'khả năng', mn: 'боломж' },
+    meaning: { zh: '\u53ef\u80fd\u6027', en: 'possibility', vi: 'khả năng', mn: 'боломж' },
     level: 'TOPIK 3',
   },
   배제: {
-    meaning: { zh: '排除', en: 'exclude', vi: 'loại trừ', mn: 'үгүйсгэх' },
+    meaning: { zh: '\u6392\u9664', en: 'exclude', vi: 'loại trừ', mn: 'үгүйсгэх' },
     level: 'TOPIK 5',
   },
   충돌: {
-    meaning: { zh: '冲突', en: 'conflict', vi: 'xung đột', mn: 'мөргөлдөөн' },
+    meaning: { zh: '\u51b2\u7a81', en: 'conflict', vi: 'xung đột', mn: 'мөргөлдөөн' },
     level: 'TOPIK 4',
   },
 };
@@ -329,7 +329,7 @@ function summarizeArticle(
       return `${title}. Bài viết tập trung vào các xu hướng xã hội và kinh tế tại Hàn Quốc.`;
     if (language === 'mn')
       return `${title}. Энэхүү нийтлэл нь Солонгосын нийгэм, эдийн засгийн чиг хандлагад төвлөрнө.`;
-    return `${title}。本文聚焦韩国社会与经济动态。`;
+    return `${title}。\u672c\u6587\u805a\u7126\u97e9\u56fd\u793e\u4f1a\u4e0e\u7ecf\u6d4e\u52a8\u6001。`;
   }
   return `${title}. ${sentences.join('. ')}.`;
 }
@@ -375,7 +375,7 @@ function extractGrammar(text: string, language: 'zh' | 'en' | 'vi' | 'mn'): Gram
     items.push({
       pattern: '-은/는 데다(가)',
       explanation: explain(
-        '表示在前述基础上，又叠加了后面的情况。',
+        '\u8868\u793a\u5728\u524d\u8ff0\u57fa\u7840\u4e0a，\u53c8\u53e0\u52a0\u4e86\u540e\u9762\u7684\u60c5\u51b5。',
         'Adds another condition on top of the previous one.',
         'Diễn tả thêm một tình huống chồng lên điều đã nêu trước đó.',
         'Өмнөх нөхцөл дээр нэмэлт нөхцөл давхардаж байгааг илэрхийлнэ.'
@@ -387,7 +387,7 @@ function extractGrammar(text: string, language: 'zh' | 'en' | 'vi' | 'mn'): Gram
     items.push({
       pattern: '-(으)면서',
       explanation: explain(
-        '表示两个动作/状态同时进行。',
+        '\u8868\u793a\u4e24\u4e2a\u52a8\u4f5c/\u72b6\u6001\u540c\u65f6\u8fdb\u884c。',
         'Indicates two actions or states happening at the same time.',
         'Diễn tả hai hành động/trạng thái diễn ra đồng thời.',
         'Хоёр үйлдэл/байдал зэрэгцэн явагдаж байгааг илэрхийлнэ.'
@@ -399,7 +399,7 @@ function extractGrammar(text: string, language: 'zh' | 'en' | 'vi' | 'mn'): Gram
     items.push({
       pattern: '-(으)ㄹ 수 없다',
       explanation: explain(
-        '表示“不可能/无法”。',
+        '\u8868\u793a“\u4e0d\u53ef\u80fd/\u65e0\u6cd5”。',
         'Expresses impossibility or inability.',
         'Diễn tả sự không thể hoặc không có khả năng.',
         'Боломжгүй эсвэл чадваргүйг илэрхийлнэ.'
@@ -412,7 +412,7 @@ function extractGrammar(text: string, language: 'zh' | 'en' | 'vi' | 'mn'): Gram
     items.push({
       pattern: '-기로 하다',
       explanation: explain(
-        '表示决定做某事。',
+        '\u8868\u793a\u51b3\u5b9a\u505a\u67d0\u4e8b。',
         'Indicates a decision to do something.',
         'Diễn tả quyết định làm việc gì đó.',
         'Ямар нэг зүйл хийхээр шийдсэнийг илэрхийлнэ.'
@@ -477,7 +477,7 @@ function translationLanguageLabel(language?: string) {
   if (language === 'en') return 'English';
   if (language === 'vi') return 'Tiếng Việt';
   if (language === 'mn') return 'Монгол';
-  return '中文';
+  return '\u4e2d\u6587';
 }
 
 function normalizePartOfSpeech(pos?: string) {
@@ -501,7 +501,7 @@ function toTranslationErrorMessage(error: unknown, language: 'zh' | 'en' | 'vi' 
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.includes('AI_RATE_LIMIT_EXCEEDED')) {
     return text(
-      '翻译请求过于频繁，请稍后重试',
+      '\u7ffb\u8bd1\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41，\u8bf7\u7a0d\u540e\u91cd\u8bd5',
       'Too many translation requests. Please try again later.',
       'Yêu cầu dịch quá nhiều. Vui lòng thử lại sau.',
       'Орчуулгын хүсэлт хэт олон байна. Дараа дахин оролдоно уу.'
@@ -509,7 +509,7 @@ function toTranslationErrorMessage(error: unknown, language: 'zh' | 'en' | 'vi' 
   }
   if (raw.includes('UNAUTHORIZED')) {
     return text(
-      '请先登录后再使用翻译',
+      '\u8bf7\u5148\u767b\u5f55\u540e\u518d\u4f7f\u7528\u7ffb\u8bd1',
       'Please sign in to use translation.',
       'Vui lòng đăng nhập để dùng tính năng dịch.',
       'Орчуулга ашиглахын тулд нэвтэрнэ үү.'
@@ -517,14 +517,14 @@ function toTranslationErrorMessage(error: unknown, language: 'zh' | 'en' | 'vi' 
   }
   if (raw.includes("Could not find public function for 'ai:translateReadingParagraphs'")) {
     return text(
-      '翻译服务尚未更新，请稍后刷新',
+      '\u7ffb\u8bd1\u670d\u52a1\u5c1a\u672a\u66f4\u65b0，\u8bf7\u7a0d\u540e\u5237\u65b0',
       'Translation service is not updated yet. Please refresh later.',
       'Dịch vụ dịch chưa được cập nhật. Vui lòng tải lại sau.',
       'Орчуулгын үйлчилгээ шинэчлэгдээгүй байна. Дараа дахин шинэчилнэ үү.'
     );
   }
   return text(
-    '当前翻译服务不可用',
+    '\u5f53\u524d\u7ffb\u8bd1\u670d\u52a1\u4e0d\u53ef\u7528',
     'Translation service is currently unavailable.',
     'Dịch vụ dịch hiện không khả dụng.',
     'Орчуулгын үйлчилгээ одоогоор ашиглах боломжгүй байна.'

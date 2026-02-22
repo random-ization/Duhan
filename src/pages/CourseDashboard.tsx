@@ -286,7 +286,7 @@ export default function CourseDashboard() {
               {lastUnitIndex ? (
                 <p className="text-xs text-muted-foreground font-semibold mt-1">
                   {t('courseDashboard.recentUnit', {
-                    defaultValue: '最近学习：第 {unit} 课',
+                    defaultValue: 'Recently studied: Unit {unit}',
                     unit: lastUnitIndex,
                   })}
                 </p>

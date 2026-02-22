@@ -1,6 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronLeft, ChevronRight, Check, X, Keyboard } from 'lucide-react';
+import {
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
+  GraduationCap,
+  Dumbbell,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useTranslation } from 'react-i18next';
@@ -13,15 +24,6 @@ import { isValidLanguage } from '../LanguageRouter';
 import { Button } from '../ui';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
-
-// Helper for 3D Icons
-const EmojiIcon = ({ src, grayscale = false }: { src: string; grayscale?: boolean }) => (
-  <img
-    src={src}
-    alt="icon"
-    className={`w-6 h-6 transition shrink-0 ${grayscale ? 'grayscale group-hover:grayscale-0' : ''}`}
-  />
-);
 
 const HoverTooltip = ({
   label,
@@ -66,17 +68,28 @@ const UserProfileHeader = ({
       className={`p-6 flex items-center cursor-pointer hover:bg-muted rounded-t-[2.3rem] transition text-left w-full ${collapsed ? 'justify-center' : 'gap-4'}`}
       onClick={() => navigate('/profile')}
       aria-label={t('sidebar.profile')}
+      title={t('sidebar.profile')}
     >
       <div className="w-12 h-12 bg-card rounded-2xl flex items-center justify-center border-2 border-foreground shadow-pop-sm hover:scale-110 transition shrink-0 overflow-hidden">
         {user?.avatar ? (
-          <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+          <img
+            src={user.avatar}
+            alt={`${user?.name || 'User'} avatar`}
+            className="w-full h-full object-cover"
+          />
         ) : (
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="w-full h-full object-contain p-1 dark:brightness-0 dark:invert"
+          />
         )}
       </div>
       {!collapsed && (
         <div className="overflow-hidden">
-          <p className="font-black text-foreground truncate">{user?.name || t('guest')}</p>
+          <p className="font-black text-foreground truncate" title={user?.name || t('guest')}>
+            {user?.name || t('guest')}
+          </p>
           <p className="text-xs text-muted-foreground truncate">
             {user?.email || t('sidebar.viewProfile')}
           </p>
@@ -89,33 +102,50 @@ const UserProfileHeader = ({
 const SidebarNav = ({
   items,
   pathWithoutLang,
+  searchString,
   collapsed,
 }: {
   items: Array<{
     path: string;
     to: string;
     label: string;
-    icon: React.ReactNode;
+    icon: LucideIcon;
     activeClass: string;
+    activePrefixes: string[];
   }>;
   pathWithoutLang: string;
+  searchString: string;
   collapsed: boolean;
 }) => (
-  <nav className="flex-1 px-3 space-y-2 py-2 overflow-y-auto scrollbar-hide">
+  <nav className="flex-1 px-3 space-y-2 py-2 overflow-y-auto scrollbar-hide" aria-label="Sidebar navigation">
     {items.map(item => {
-      const isActive = pathWithoutLang.startsWith(item.path);
+      const fullPath = pathWithoutLang + searchString;
+      const isActive = item.activePrefixes.some(prefix => {
+        if (prefix.includes('?')) return fullPath.startsWith(prefix);
+        // Plain prefix: match only if the URL doesn't have a ?view= on the same base path
+        if (pathWithoutLang.startsWith(prefix) && fullPath.includes('?view=')) return false;
+        return pathWithoutLang.startsWith(prefix);
+      });
       return (
         <HoverTooltip key={item.path} label={item.label} enabled={collapsed} side="right">
           <NavLink
             to={item.to}
             aria-label={item.label}
-            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-4 px-5'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${
-              isActive
-                ? `${item.activeClass}`
-                : 'border-transparent text-muted-foreground hover:bg-muted hover:border-border'
-            }`}
+            aria-current={isActive ? 'page' : undefined}
+            title={collapsed ? item.label : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${isActive
+              ? `${item.activeClass}`
+              : 'border-transparent text-muted-foreground hover:bg-muted hover:border-border'
+              }`}
           >
-            {item.icon}
+            <span
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition ${isActive
+                ? 'border-current/20 bg-card/70'
+                : 'border-border/70 bg-muted/60 group-hover:border-border group-hover:bg-card'
+                }`}
+            >
+              <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
+            </span>
             {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
           </NavLink>
         </HoverTooltip>
@@ -160,16 +190,16 @@ const SidebarFooter = ({
         aria-label={
           pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
         }
-        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${
-          pathWithoutLang === '/dashboard' && isEditing
-            ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
-            : 'text-muted-foreground hover:bg-muted border-transparent hover:border-border'
-        } transition border-2`}
+        title={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
+        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${pathWithoutLang === '/dashboard' && isEditing
+          ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+          : 'text-muted-foreground hover:bg-muted border-transparent hover:border-border'
+          } transition border-2`}
       >
         {pathWithoutLang === '/dashboard' && isEditing ? (
-          <Check size={20} />
+          <Check size={20} aria-hidden="true" />
         ) : (
-          <Settings size={20} />
+          <Settings size={20} aria-hidden="true" />
         )}
       </Button>
     </HoverTooltip>
@@ -180,9 +210,10 @@ const SidebarFooter = ({
         size="auto"
         onClick={logout}
         aria-label={t('sidebar.logout')}
+        title={t('sidebar.logout')}
         className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-50 transition border-2 border-transparent hover:border-red-100`}
       >
-        <LogOut size={20} />
+        <LogOut size={20} aria-hidden="true" />
       </Button>
     </HoverTooltip>
   </div>
@@ -205,6 +236,10 @@ export default function Sidebar() {
       : location.pathname;
 
   const navItems = useSidebarNavItems(t, currentLanguage);
+  const closeMenuLabel = t('common.close', { defaultValue: 'Close menu' });
+  const collapseToggleLabel = collapsed
+    ? t('sidebar.expand', { defaultValue: 'Expand sidebar' })
+    : t('sidebar.collapse', { defaultValue: 'Collapse sidebar' });
 
   if (sidebarHidden) {
     return null;
@@ -218,9 +253,11 @@ export default function Sidebar() {
           variant="ghost"
           size="auto"
           onClick={toggleMobileMenu}
+          aria-label={closeMenuLabel}
+          title={closeMenuLabel}
           className="md:hidden absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground"
         >
-          <X size={20} />
+          <X size={20} aria-hidden="true" />
         </Button>
       )}
 
@@ -232,12 +269,18 @@ export default function Sidebar() {
         variant="outline"
         size="auto"
         onClick={() => setCollapsed(!collapsed)}
+        aria-label={collapseToggleLabel}
+        title={collapseToggleLabel}
         className="absolute -right-3 top-20 w-6 h-6 bg-card border-2 border-foreground rounded-full flex items-center justify-center text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 transition shadow-sm z-30"
       >
-        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        {collapsed ? (
+          <ChevronRight size={14} aria-hidden="true" />
+        ) : (
+          <ChevronLeft size={14} aria-hidden="true" />
+        )}
       </Button>
 
-      <SidebarNav items={navItems} pathWithoutLang={pathWithoutLang} collapsed={collapsed} />
+      <SidebarNav items={navItems} pathWithoutLang={pathWithoutLang} searchString={location.search} collapsed={collapsed} />
 
       <SidebarFooter
         collapsed={collapsed}
@@ -298,41 +341,24 @@ function useSidebarNavItems(
     const items = [
       {
         path: '/dashboard',
-        label: t('sidebar.dashboard'),
-        icon: <EmojiIcon src="/emojis/Spiral_Calendar.webp" />,
-        activeClass: 'bg-indigo-100 text-indigo-700 border-indigo-100',
+        label: t('sidebar.learn', { defaultValue: 'Learn' }),
+        icon: GraduationCap,
+        activeClass: 'bg-accent text-foreground border-border',
+        activePrefixes: ['/dashboard', '/courses', '/course/', '/reading', '/videos', '/video/', '/podcasts'],
       },
       {
-        path: '/courses',
-        label: t('sidebar.textbooks'),
-        icon: <EmojiIcon src="/emojis/Books.png" grayscale />,
-        activeClass: 'bg-blue-100 text-blue-700 border-blue-100',
+        path: '/dashboard?view=practice',
+        label: t('sidebar.practice', { defaultValue: 'Practice' }),
+        icon: Dumbbell,
+        activeClass: 'bg-accent text-foreground border-border',
+        activePrefixes: ['/dashboard?view=practice', '/vocab-book', '/notebook', '/typing'],
       },
       {
         path: '/topik',
-        label: t('sidebar.topik'),
-        icon: <EmojiIcon src="/emojis/Trophy.png" grayscale />,
-        activeClass: 'bg-yellow-100 text-yellow-700 border-yellow-100',
-      },
-      {
-        path: '/videos',
-        label: t('sidebar.videos'),
-        icon: <EmojiIcon src="/emojis/Clapper_Board.png" grayscale />,
-        activeClass: 'bg-red-100 text-red-700 border-red-100',
-      },
-      {
-        path: '/podcasts',
-        label: t('sidebar.podcasts'),
-        icon: <EmojiIcon src="/emojis/Headphone.png" grayscale />,
-        activeClass: 'bg-purple-100 text-purple-700 border-purple-100',
-      },
-      {
-        path: '/typing',
-        label: t('sidebar.typing', { defaultValue: 'Typing' }),
-        icon: (
-          <Keyboard className="w-6 h-6 shrink-0 transition text-muted-foreground group-hover:text-muted-foreground" />
-        ),
-        activeClass: 'bg-indigo-100 text-indigo-700 border-indigo-100',
+        label: t('nav.topik', { defaultValue: 'TOPIK' }),
+        icon: Trophy,
+        activeClass: 'bg-accent text-foreground border-border',
+        activePrefixes: ['/topik'],
       },
     ];
 

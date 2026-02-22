@@ -5,7 +5,7 @@ import { toErrorMessage } from './errors';
 
 type WebhookResult = { success: boolean; error?: string };
 type WebhookArgs = { body: string; signature: string };
-type DeepgramWebhookArgs = { episodeId: string; language?: string; payload: unknown };
+type DeepgramWebhookArgs = { episodeId: string; language?: string; payloadJson: string };
 
 const creemWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
   'payments:handleWebhook'
@@ -136,7 +136,7 @@ http.route({
       const result = await ctx.runAction(deepgramWebhookAction, {
         episodeId,
         language,
-        payload,
+        payloadJson: JSON.stringify(payload),
       });
 
       if (result.success) {

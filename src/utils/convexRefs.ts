@@ -187,7 +187,7 @@ export const VOCAB = {
   >('vocab:getReviewDeck'),
   getDailyPhrase: qRef<{ language?: string }, DailyPhraseDto | null>('vocab:getDailyPhrase'),
   getVocabBook: qRef<
-    { search?: string; includeMastered?: boolean; limit?: number },
+    { search?: string; includeMastered?: boolean; limit?: number; savedByUserOnly?: boolean },
     VocabBookItemDto[]
   >('vocab:getVocabBook'),
   // Mutations

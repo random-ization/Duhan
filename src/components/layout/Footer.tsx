@@ -1,18 +1,32 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className="mt-auto py-8 text-center text-muted-foreground">
       <div className="flex justify-center gap-6 text-xs font-bold uppercase tracking-wider mb-2 items-center">
-        <Link to="/privacy" className="hover:text-indigo-600 transition">
-          隐私协议
+        <Link
+          to="/privacy"
+          title={t('privacyPolicy', { defaultValue: 'Privacy Policy' })}
+          className="hover:text-indigo-600 transition"
+        >
+          {t('privacyPolicy', { defaultValue: 'Privacy Policy' })}
         </Link>
-        <Link to="/terms" className="hover:text-indigo-600 transition">
-          服务条款
+        <Link
+          to="/terms"
+          title={t('termsOfService', { defaultValue: 'Terms of Service' })}
+          className="hover:text-indigo-600 transition"
+        >
+          {t('termsOfService', { defaultValue: 'Terms of Service' })}
         </Link>
-        <Link to="/refund" className="hover:text-indigo-600 transition">
-          退款政策
+        <Link
+          to="/refund"
+          title={t('refundPolicy', { defaultValue: 'Refund Policy' })}
+          className="hover:text-indigo-600 transition"
+        >
+          {t('refundPolicy', { defaultValue: 'Refund Policy' })}
         </Link>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -21,6 +35,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Join our Discord"
+              title="Join our Discord"
               className="hover:text-indigo-500 transition"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

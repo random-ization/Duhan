@@ -160,7 +160,7 @@ const FlashcardSettingsModal: React.FC<FlashcardSettingsModalProps> = ({
               onClick={onClose}
               className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-muted"
             >
-              {labels.done || '完成'}
+              {labels.done || 'Done'}
             </Button>
           </div>
         </DialogContent>

@@ -33,7 +33,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
   } | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const checkAction = useAction(
     aRef<
@@ -81,7 +81,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       console.error('Grammar check failed:', error);
       setAiFeedback({
         isCorrect: false,
-        feedback: '检查失败，请稍后重试',
+        feedback: t('grammarDetail.checkFailed', { defaultValue: 'Check failed. Please try again.' }),
       });
     } finally {
       setIsChecking(false);
@@ -92,10 +92,13 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _isCorrect = true;
 
-    let feedback = typeof data.nuance === 'string' ? data.nuance : '分析完成';
+    let feedback =
+      typeof data.nuance === 'string'
+        ? data.nuance
+        : t('grammarDetail.analysisDone', { defaultValue: 'Analysis completed' });
     const isFeedbackNegative =
       feedback.toLowerCase().startsWith('incorrect') ||
-      feedback.includes('错误') ||
+      feedback.includes('\u9519\u8BEF') ||
       feedback.includes('Incorrect');
 
     // Override isCorrect based on feedback content if strict check found errors
@@ -158,7 +161,11 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
         <div className="flex-1 flex items-center justify-center text-muted-foreground font-bold p-6">
           <div className="text-center">
             <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>选择一个语法点查看详情</p>
+            <p>
+              {t('grammarDetail.selectPrompt', {
+                defaultValue: 'Select a grammar point to view details',
+              })}
+            </p>
           </div>
         </div>
       </aside>
@@ -202,7 +209,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
       <div className="p-4 border-b-2 border-foreground bg-muted shrink-0">
         <label className="flex items-center gap-2 text-[10px] font-black text-foreground mb-2">
           <Sparkles className="w-3 h-3" />
-          AI 陪练
+          {t('grammarDetail.aiPractice', { defaultValue: 'AI Practice' })}
         </label>
         <div className="flex gap-2">
           <Input
@@ -210,7 +217,10 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
             value={practiceSentence}
             onChange={e => setPracticeSentence(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`用 ${grammar.title} 造个句子...`}
+            placeholder={t('grammarDetail.practicePlaceholder', {
+              defaultValue: 'Make a sentence with {{title}}...',
+              title: grammar.title,
+            })}
             className="flex-1 px-3 py-2 border-2 border-foreground rounded-lg text-sm font-bold bg-card focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
@@ -219,11 +229,11 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
             onClick={handleCheck}
             disabled={isChecking || !practiceSentence.trim()}
             loading={isChecking}
-            loadingText="检查中..."
+            loadingText={t('grammarDetail.checking', { defaultValue: 'Checking...' })}
             loadingIconClassName="w-3 h-3"
             className="px-4 py-2 bg-primary text-white font-bold rounded-lg border-2 border-foreground text-sm hover:bg-card hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            检查
+            {t('grammarDetail.check', { defaultValue: 'Check' })}
           </Button>
         </div>
 
@@ -244,13 +254,15 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
                 <p
                   className={`text-sm font-bold ${aiFeedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}
                 >
-                  {aiFeedback.isCorrect ? '✓ 太棒了!' : '✗ 需要改进'}
+                  {aiFeedback.isCorrect
+                    ? t('grammarDetail.feedback.correct', { defaultValue: '✓ Great job!' })
+                    : t('grammarDetail.feedback.incorrect', { defaultValue: '✗ Needs improvement' })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{aiFeedback.feedback}</p>
                 {!aiFeedback.isCorrect && aiFeedback.correctedSentence && (
                   <div className="mt-2 p-2 bg-card rounded border border-border">
                     <span className="text-[10px] font-bold text-muted-foreground block mb-1">
-                      建议写法:
+                      {t('grammarDetail.suggested', { defaultValue: 'Suggested sentence:' })}
                     </span>
                     <span className="text-sm font-bold text-muted-foreground">
                       {aiFeedback.correctedSentence}
@@ -259,12 +271,14 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
                 )}
                 {aiFeedback.progress && (
                   <div className="mt-2 text-[10px] text-muted-foreground">
-                    熟练度:{' '}
+                    {t('grammarDetail.proficiency', { defaultValue: 'Proficiency' })}:{' '}
                     <span className="font-bold text-muted-foreground">
                       {aiFeedback.progress.proficiency}%
                     </span>
                     {aiFeedback.progress.status === 'MASTERED' && (
-                      <span className="ml-2 text-green-600 font-bold">🎉 已掌握!</span>
+                      <span className="ml-2 text-green-600 font-bold">
+                        🎉 {t('grammarDetail.mastered', { defaultValue: 'Mastered!' })}
+                      </span>
                     )}
                   </div>
                 )}
@@ -285,7 +299,7 @@ const GrammarDetailSheet: React.FC<GrammarDetailSheetProps> = ({
 
         <div>
           <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
-            📖 详细解释
+            📖 {t('grammarDetail.explanation', { defaultValue: 'Detailed explanation' })}
           </h4>
           <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
             {grammar.explanation}
@@ -360,6 +374,7 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
   onStatusToggle,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const getTypeStyles = () => {
     switch (grammar?.type) {
       case 'ENDING':
@@ -418,7 +433,11 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
               variant="ghost"
               size="auto"
               onClick={onStatusToggle}
-              aria-label={status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
+              aria-label={
+                status === 'MASTERED'
+                  ? t('grammarDetail.mastered', { defaultValue: 'Mastered' })
+                  : t('grammarDetail.markMastered', { defaultValue: 'Mark as mastered' })
+              }
               className={`p-1.5 rounded-lg border-2 ${
                 status === 'MASTERED'
                   ? 'bg-green-100 border-green-500 text-green-700'
@@ -430,7 +449,9 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
           </TooltipTrigger>
           <TooltipPortal>
             <TooltipContent side="top">
-              {status === 'MASTERED' ? '已掌握' : '标记为已掌握'}
+              {status === 'MASTERED'
+                ? t('grammarDetail.mastered', { defaultValue: 'Mastered' })
+                : t('grammarDetail.markMastered', { defaultValue: 'Mark as mastered' })}
             </TooltipContent>
           </TooltipPortal>
         </Tooltip>
@@ -448,34 +469,38 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({
   );
 };
 
-const RulesSection: React.FC<{ rules: Record<string, unknown> }> = ({ rules }) => (
-  <div>
-    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
-      🧩 接续规则
-    </h4>
-    <div className="flex items-center gap-1 flex-wrap">
-      {Object.entries(rules).map(([key, value], i) => (
-        <React.Fragment key={key}>
-          {i > 0 && <span className="font-black text-lg mx-1 text-muted-foreground">/</span>}
-          <div className="px-3 py-1.5 bg-card border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
-            {key}
-          </div>
-          <span className="font-black text-lg text-muted-foreground">→</span>
-          <div className="px-3 py-1.5 bg-blue-100 text-blue-700 border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
-            {String(value)}
-          </div>
-        </React.Fragment>
-      ))}
+const RulesSection: React.FC<{ rules: Record<string, unknown> }> = ({ rules }) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
+        🧩 {t('grammarDetail.rules', { defaultValue: 'Conjugation rules' })}
+      </h4>
+      <div className="flex items-center gap-1 flex-wrap">
+        {Object.entries(rules).map(([key, value], i) => (
+          <React.Fragment key={key}>
+            {i > 0 && <span className="font-black text-lg mx-1 text-muted-foreground">/</span>}
+            <div className="px-3 py-1.5 bg-card border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
+              {key}
+            </div>
+            <span className="font-black text-lg text-muted-foreground">→</span>
+            <div className="px-3 py-1.5 bg-blue-100 text-blue-700 border-2 border-foreground rounded font-bold shadow-[2px_2px_0_0_#000] text-sm">
+              {String(value)}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ExamplesSection: React.FC<{ examples?: unknown[] }> = ({ examples }) => {
+  const { t } = useTranslation();
   const list = Array.isArray(examples) ? examples : [];
   return (
     <div>
       <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-2">
-        💬 场景例句
+        💬 {t('grammarDetail.examples', { defaultValue: 'Usage examples' })}
       </h4>
       <div className="space-y-2">
         {list.map((ex, i) => {

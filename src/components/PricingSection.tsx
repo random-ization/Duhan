@@ -69,6 +69,8 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
   const getOriginalPrice = (lang: string) => {
     if (lang === 'zh') return '¥228';
     if (lang === 'en') return '$69.99';
+    if (lang === 'vi') return '₫699.000';
+    if (lang === 'mn') return '₮99,000';
     return undefined;
   };
 

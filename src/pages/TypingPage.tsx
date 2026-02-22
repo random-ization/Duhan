@@ -497,7 +497,9 @@ const DesktopTypingPage: React.FC = () => {
     if (/[a-zA-Z]{2,}/.test(userInput)) {
       if (!hasWarnedRef.current) {
         toast.error(
-          '检测到英文输入 (English Detected)\n请切换到韩语输入法 (Please switch to Korean IME)',
+          t('typingGame.switchImeWarning', {
+            defaultValue: 'English input detected. Please switch to Korean IME.',
+          }),
           {
             duration: 4000,
             position: 'top-center',
@@ -514,7 +516,7 @@ const DesktopTypingPage: React.FC = () => {
       // Reset warning if input is cleared or proper Korean is typed
       hasWarnedRef.current = false;
     }
-  }, [userInput]);
+  }, [userInput, t]);
 
   // Helper: Get active keys for keyboard highlights
   const getCurrentTypingPosition = () => {
@@ -561,7 +563,7 @@ const DesktopTypingPage: React.FC = () => {
   if (gameState === 'lobby') {
     return (
       <TypingLobby
-        onBack={() => navigate('/dashboard')}
+        onBack={() => navigate('/dashboard?view=practice')}
         onStartWord={() => {
           setPracticeMode('word');
           setGameState('playing');
@@ -1162,8 +1164,8 @@ transition-all duration-150 inline-block
                             style={
                               isCurrent
                                 ? {
-                                    textShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                  }
+                                  textShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                }
                                 : undefined
                             }
                           >
