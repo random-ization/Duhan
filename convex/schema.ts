@@ -2,6 +2,11 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
 import { transcriptArrayValidator } from './transcriptSchema';
+import {
+  WRITING_ANSWER_MAP_VALIDATOR,
+  WRITING_GRADING_CRITERIA_VALIDATOR,
+  WRITING_QUESTION_TYPE_VALIDATOR,
+} from './topikWritingValidators';
 
 const ReadingAnalysisPayloadValidator = v.object({
   summary: v.string(),
@@ -487,7 +492,19 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index('by_channel', ['channelId'])
+    .index('by_channel_guid', ['channelId', 'guid'])
+    .index('by_audioUrl', ['audioUrl'])
     .index('by_pubDate', ['pubDate']),
+
+  podcast_channel_stats: defineTable({
+    channelId: v.id('podcast_channels'),
+    views: v.number(),
+    latestAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_channel', ['channelId'])
+    .index('by_views_latest', ['views', 'latestAt']),
 
   // Podcast Transcripts (server-stored fallback)
   podcast_transcripts: defineTable({
@@ -547,6 +564,7 @@ export default defineSchema({
     playedAt: v.number(),
   })
     .index('by_user', ['userId'])
+    .index('by_user_playedAt', ['userId', 'playedAt'])
     .index('by_user_episode', ['userId', 'episodeGuid']),
 
   // User Course Progress (Completed Units)
@@ -984,13 +1002,13 @@ export default defineSchema({
   topik_writing_questions: defineTable({
     examId: v.id('topik_exams'),
     number: v.number(),
-    questionType: v.string(), // "FILL_BLANK" | "GRAPH_ESSAY" | "OPINION_ESSAY"
+    questionType: WRITING_QUESTION_TYPE_VALIDATOR,
     instruction: v.optional(v.string()),
     contextBox: v.optional(v.string()),
     image: v.optional(v.string()),
     score: v.number(),
     modelAnswer: v.optional(v.string()),
-    gradingCriteria: v.optional(v.any()),
+    gradingCriteria: v.optional(WRITING_GRADING_CRITERIA_VALIDATOR),
   })
     .index('by_exam', ['examId'])
     .index('by_exam_number', ['examId', 'number']),
@@ -1000,7 +1018,7 @@ export default defineSchema({
     userId: v.id('users'),
     examId: v.id('topik_exams'),
     status: v.string(), // "IN_PROGRESS" | "COMPLETED" | "EVALUATING" | "EVALUATED"
-    answers: v.optional(v.any()),
+    answers: v.optional(WRITING_ANSWER_MAP_VALIDATOR),
     startTime: v.number(),
     endTime: v.number(),
     completedAt: v.optional(v.number()),
@@ -1029,4 +1047,3 @@ export default defineSchema({
     .index('by_session', ['sessionId'])
     .index('by_user', ['userId']),
 });
-

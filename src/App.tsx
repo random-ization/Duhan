@@ -1,19 +1,19 @@
-import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 
 import UpgradePrompt from './components/UpgradePrompt';
 import { PhoneVerifyModal } from './components/PhoneVerifyModal';
-import { AppRoutes } from './routes';
 import { useAuth } from './contexts/AuthContext';
-import { useLearning } from './contexts/LearningContext';
+import { useLearningSelection } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
 import { PhoneVerifyModalProvider } from './contexts/PhoneVerifyModalContext';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
+
+const AppRoutes = lazy(() => import('./routes').then(m => ({ default: m.AppRoutes })));
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -29,9 +29,9 @@ const queryClient = new QueryClient({
 
 function App() {
   const { t } = useTranslation();
-  const { user, loading, language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
+  const { user, language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
   const { updateLearningProgress } = useUserActions();
-  const { selectedInstitute, selectedLevel } = useLearning();
+  const { selectedInstitute, selectedLevel } = useLearningSelection();
 
   // Track learning progress when user changes institute/level
   useEffect(() => {
@@ -44,16 +44,14 @@ function App() {
     }
   }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
 
-  if (loading) return <Loading fullScreen size="lg" text={t('loading')} />;
-
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
         <PhoneVerifyModalProvider>
           <GlobalModalProvider>
-            <Routes>
-              <Route path="/*" element={<AppRoutes />} />
-            </Routes>
+            <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
+              <AppRoutes />
+            </Suspense>
 
             <UpgradePrompt
               isOpen={showUpgradePrompt}

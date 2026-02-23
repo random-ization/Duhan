@@ -11,8 +11,8 @@ i18n
     backend: {
       loadPath:
         globalThis.window === undefined
-          ? `${import.meta.env.BASE_URL}locales/{{lng}}.json`
-          : `${globalThis.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}.json`,
+          ? `${import.meta.env.BASE_URL}locales/{{lng}}/public.json`
+          : `${globalThis.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}/public.json`,
       queryStringParams: {
         v: import.meta.env.VITE_I18N_VERSION,
       },

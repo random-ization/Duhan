@@ -4,8 +4,8 @@ import { GripVertical, FileText } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { useAuth } from '../contexts/AuthContext';
-import { useLearning } from '../contexts/LearningContext';
-import { useLayout } from '../contexts/LayoutContext';
+import { useLearningSelection } from '../contexts/LearningContext';
+import { useLayoutActions, useLayoutDashboardState } from '../contexts/LayoutContext';
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
 import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDropdown';
@@ -108,14 +108,18 @@ const SortableItem = ({
 export default function DashboardPage() {
   const { user, language } = useAuth();
   const { speak, isLoading: isSpeaking } = useTTS();
-  const dailyPhrase = useQuery(qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'), {
-    language: language || 'en',
-  });
+  const dailyPhrase = useQuery(
+    qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'),
+    {
+      language: language || 'en',
+    }
+  );
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const { selectedInstitute, selectedLevel } = useLearning();
-  const { isEditing, cardOrder, updateCardOrder } = useLayout();
-  const { institutes } = useData(); // Get institutes data
+  const { selectedInstitute, selectedLevel } = useLearningSelection();
+  const { isEditing, cardOrder } = useLayoutDashboardState();
+  const { updateCardOrder } = useLayoutActions();
+  const { institutes, isLoading: institutesLoading } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
@@ -180,9 +184,11 @@ export default function DashboardPage() {
   // Lookup institute name
   const instituteName = useMemo(() => {
     if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
-    const inst = institutes.find(i => i.id === selectedInstitute);
+    if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
+    const inst = institutes?.find(i => i.id === selectedInstitute);
     return inst ? inst.name : selectedInstitute;
-  }, [selectedInstitute, institutes, t]);
+  }, [selectedInstitute, institutes, institutesLoading, t]);
+  const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
 
   if (isMobile) {
     return <MobileDashboard />;
@@ -215,7 +221,7 @@ export default function DashboardPage() {
             <button
               type="button"
               className={`w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500 cursor-pointer ${isSpeaking ? 'animate-pulse scale-110' : ''} bg-transparent border-0 p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full`}
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (dailyPhrase?.korean) speak(dailyPhrase.korean);
@@ -262,14 +268,23 @@ export default function DashboardPage() {
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <h3 className="font-black text-2xl text-foreground leading-tight">
-                  {instituteName}
-                  <br />
-                  {selectedLevel
-                    ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
-                      '{level}',
-                      String(selectedLevel)
-                    )
-                    : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
+                  {isInstituteNameLoading ? (
+                    <span className="inline-flex flex-col gap-2">
+                      <Skeleton className="h-7 w-44 bg-blue-200/60 dark:bg-blue-300/20" />
+                      <Skeleton className="h-5 w-24 bg-blue-200/45 dark:bg-blue-300/15" />
+                    </span>
+                  ) : (
+                    <>
+                      {instituteName}
+                      <br />
+                      {selectedLevel
+                        ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
+                            '{level}',
+                            String(selectedLevel)
+                          )
+                        : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
+                    </>
+                  )}
                 </h3>
                 <div className="bg-card dark:bg-blue-400/14 border-2 border-blue-200 dark:border-blue-300/25 text-blue-600 dark:text-blue-200 px-2 py-1 rounded-lg text-xs font-bold">
                   {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}

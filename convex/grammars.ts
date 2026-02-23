@@ -13,6 +13,25 @@ interface GrammarExample {
   audio?: string;
 }
 
+type GrammarConjugationRules = UnitGrammarDto['conjugationRules'];
+type ParsedConjugationRules = Exclude<GrammarConjugationRules, undefined>;
+
+type GrammarRecord = {
+  _id: Id<'grammar_points'>;
+  title: string;
+  summary: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
+  explanation: string;
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
+  examples: GrammarExample[];
+  conjugationRules?: GrammarConjugationRules;
+  searchPatterns?: string[];
+};
+
 export type GrammarStatsDto = {
   total: number;
   mastered: number;
@@ -593,7 +612,7 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
 
     // 2. Find all grammars with similar titles (base title without #N suffix)
     const baseTitle = item.title.replace(/ #\d+$/, '').trim();
-    const allGrammars = await ctx.db.query('grammar_points').collect();
+    const allGrammars = (await ctx.db.query('grammar_points').collect()) as GrammarRecord[];
 
     // Filter grammars that match the base title
     const matchingGrammars = allGrammars.filter(g => {
@@ -602,11 +621,15 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
     });
 
     let grammarId: Id<'grammar_points'> | null = null;
-    const { reuseGrammar, shouldCreateNew } = await determineGrammarAction(
+    const { reuseGrammar, shouldCreateNew } = (await determineGrammarAction(
       ctx,
       matchingGrammars,
       currentPublisher
-    );
+    )) as {
+      reuseGrammar: GrammarRecord | null;
+      shouldCreateNew: boolean;
+    };
+    const resolvedReuseGrammar: GrammarRecord | null = reuseGrammar;
 
     // Parse examples if it's a string
     const examples = parseExamples(item.examples);
@@ -645,30 +668,28 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
         explanationVi: item.explanationVi,
         explanationMn: item.explanationMn,
         examples: examples || [],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        conjugationRules: (conjugationRules as any) || [],
+        conjugationRules: conjugationRules ?? [],
         searchPatterns,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
       isNew = true;
-    } else if (reuseGrammar) {
+    } else if (resolvedReuseGrammar) {
       // Reuse existing grammar from different publisher
-      grammarId = reuseGrammar._id;
+      grammarId = resolvedReuseGrammar._id;
       // Optionally update with new content if provided
-      await ctx.db.patch(reuseGrammar._id, {
-        summary: item.summary || reuseGrammar.summary,
-        summaryEn: item.summaryEn ?? reuseGrammar.summaryEn,
-        summaryVi: item.summaryVi ?? reuseGrammar.summaryVi,
-        summaryMn: item.summaryMn ?? reuseGrammar.summaryMn,
-        explanation: item.explanation || reuseGrammar.explanation,
-        explanationEn: item.explanationEn ?? reuseGrammar.explanationEn,
-        explanationVi: item.explanationVi ?? reuseGrammar.explanationVi,
-        explanationMn: item.explanationMn ?? reuseGrammar.explanationMn,
-        examples: examples || reuseGrammar.examples,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        conjugationRules: (conjugationRules as any) || reuseGrammar.conjugationRules,
-        searchPatterns: searchPatterns ?? reuseGrammar.searchPatterns,
+      await ctx.db.patch(resolvedReuseGrammar._id, {
+        summary: item.summary || resolvedReuseGrammar.summary,
+        summaryEn: item.summaryEn ?? resolvedReuseGrammar.summaryEn,
+        summaryVi: item.summaryVi ?? resolvedReuseGrammar.summaryVi,
+        summaryMn: item.summaryMn ?? resolvedReuseGrammar.summaryMn,
+        explanation: item.explanation || resolvedReuseGrammar.explanation,
+        explanationEn: item.explanationEn ?? resolvedReuseGrammar.explanationEn,
+        explanationVi: item.explanationVi ?? resolvedReuseGrammar.explanationVi,
+        explanationMn: item.explanationMn ?? resolvedReuseGrammar.explanationMn,
+        examples: examples || resolvedReuseGrammar.examples,
+        conjugationRules: conjugationRules ?? resolvedReuseGrammar.conjugationRules,
+        searchPatterns: searchPatterns ?? resolvedReuseGrammar.searchPatterns,
         updatedAt: Date.now(),
       });
     }
@@ -708,11 +729,10 @@ async function processImportItem(ctx: MutationCtx, item: ImportGrammarItem): Pro
 
 async function determineGrammarAction(
   ctx: MutationCtx,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  matchingGrammars: any[],
+  matchingGrammars: GrammarRecord[],
   currentPublisher: string
 ) {
-  let reuseGrammar = null;
+  let reuseGrammar: GrammarRecord | null = null;
   let shouldCreateNew = false;
 
   if (matchingGrammars.length === 0) {
@@ -786,17 +806,18 @@ function parseExamples(examples: unknown): GrammarExample[] {
   return (examples as GrammarExample[]) || [];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseConjugationRules(rules: unknown): any[] {
+function parseConjugationRules(rules: unknown): ParsedConjugationRules {
   if (typeof rules === 'string') {
     try {
-      return JSON.parse(rules);
+      const parsed = JSON.parse(rules) as unknown;
+      if (Array.isArray(parsed)) return parsed as ParsedConjugationRules;
+      return [];
     } catch {
       return [];
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (rules as any[]) || [];
+  if (Array.isArray(rules)) return rules as ParsedConjugationRules;
+  return [];
 }
 
 function parseSearchPatterns(patterns: string | string[] | undefined): string[] | undefined {

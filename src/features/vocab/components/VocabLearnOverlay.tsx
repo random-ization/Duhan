@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { useLayout } from '../../../contexts/LayoutContext';
+import { useLayoutActions, useLayoutChromeState } from '../../../contexts/LayoutContext';
 import { getLabels } from '../../../utils/i18n';
 import type { Language } from '../../../types';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
@@ -26,7 +26,8 @@ export default function VocabLearnOverlay({
   children,
 }: Props) {
   const labels = getLabels(language);
-  const { sidebarHidden, setSidebarHidden } = useLayout();
+  const { sidebarHidden } = useLayoutChromeState();
+  const { setSidebarHidden } = useLayoutActions();
   const latestSidebarHiddenRef = useRef(sidebarHidden);
   const previousSidebarHiddenRef = useRef<boolean | null>(null);
 

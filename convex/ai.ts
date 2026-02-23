@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use node';
 import { action, type ActionCtx } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
@@ -7,7 +6,7 @@ import OpenAI from 'openai';
 import { createClient } from '@deepgram/sdk';
 import { createHash } from 'node:crypto';
 import { getAuthUserId } from '@convex-dev/auth/server';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
 import { hasActiveSubscription } from './subscription';
 import { FREE_DAILY_AI_CALL_LIMIT, SUBSCRIBER_DAILY_AI_CALL_LIMIT } from './queryLimits';
@@ -25,6 +24,7 @@ const AI_CACHE_VERSION = 'v1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const AI_DAILY_LIMIT_TIMEZONE = process.env.AI_DAILY_LIMIT_TIMEZONE === 'UTC' ? 'UTC' : 'KST';
+type SupportedTranslationLanguage = 'zh' | 'en' | 'vi' | 'mn';
 
 // Minimal error formatter
 function toErrorMessage(error: unknown): string {
@@ -77,15 +77,15 @@ async function guardAiAction(ctx: ActionCtx, feature: string): Promise<Id<'users
   return userId;
 }
 
-const SUPPORTED_TRANSLATION_LANGS = new Set(['zh', 'en', 'vi', 'mn']);
-const TARGET_LANGUAGE_LABELS: Record<string, string> = {
+const SUPPORTED_TRANSLATION_LANGS = new Set<SupportedTranslationLanguage>(['zh', 'en', 'vi', 'mn']);
+const TARGET_LANGUAGE_LABELS: Record<SupportedTranslationLanguage, string> = {
   zh: 'Simplified Chinese',
   en: 'English',
   vi: 'Vietnamese',
   mn: 'Mongolian',
 };
 
-const READING_RESPONSE_LANGUAGE_LABELS: Record<string, string> = {
+const READING_RESPONSE_LANGUAGE_LABELS: Record<SupportedTranslationLanguage, string> = {
   zh: '简体中文',
   en: 'English',
   vi: 'Tiếng Việt',
@@ -100,7 +100,7 @@ function resolveReadingResponseLanguage(lang?: string) {
   };
 }
 
-function normalizeTargetLanguage(lang?: string): string {
+function normalizeTargetLanguage(lang?: string): SupportedTranslationLanguage | '' {
   if (!lang) return '';
   const normalized = lang.trim().toLowerCase();
 
@@ -122,7 +122,9 @@ function normalizeTargetLanguage(lang?: string): string {
     return 'mn';
   }
 
-  return SUPPORTED_TRANSLATION_LANGS.has(normalized) ? normalized : '';
+  return SUPPORTED_TRANSLATION_LANGS.has(normalized as SupportedTranslationLanguage)
+    ? (normalized as SupportedTranslationLanguage)
+    : '';
 }
 
 type ReadingVocabularyItem = {
@@ -235,14 +237,51 @@ type WhisperSegment = {
   text?: string;
 };
 
+type TranscriptRecord = Doc<'podcast_transcripts'>;
+type TranscriptSegment = TranscriptRecord['segments'][number];
+type SegmentInput = {
+  start?: number;
+  end?: number;
+  text?: string;
+  translation?: string;
+  words?: TranscriptSegment['words'];
+};
+
+type DeepgramUtterance = {
+  start?: number;
+  end?: number;
+  transcript?: string;
+};
+
+type DeepgramParagraphSentence = {
+  start?: number;
+  end?: number;
+  text?: string;
+};
+
+type DeepgramParagraph = {
+  sentences?: DeepgramParagraphSentence[];
+};
+
+type DeepgramAlternative = {
+  words?: DeepgramWord[];
+  transcript?: string;
+  paragraphs?: {
+    paragraphs?: DeepgramParagraph[];
+  };
+};
+
+type DeepgramResponse = {
+  results?: {
+    channels?: Array<{
+      alternatives?: DeepgramAlternative[];
+    }>;
+    utterances?: DeepgramUtterance[];
+  };
+};
+
 function buildSegmentsFromWords(words: DeepgramWord[]) {
-  const segments: Array<{
-    start: number;
-    end: number;
-    text: string;
-    translation: string;
-    words: { word: string; start: number; end: number }[];
-  }> = [];
+  const segments: TranscriptSegment[] = [];
 
   let currentWords: { word: string; start: number; end: number }[] = [];
   let currentText: string[] = [];
@@ -297,37 +336,43 @@ function buildSegmentsFromWords(words: DeepgramWord[]) {
   return segments;
 }
 
-function extractSegmentsFromDeepgramResult(result: any) {
-  if (!result?.results?.channels?.[0]?.alternatives?.[0]) {
+function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[] {
+  const parsed = result as DeepgramResponse;
+  const alt = parsed.results?.channels?.[0]?.alternatives?.[0];
+
+  if (!alt) {
     throw new Error('Deepgram returned no results');
   }
 
-  const alt = result.results.channels[0].alternatives[0];
-  const utterances = (result.results as any).utterances;
+  const utterances = parsed.results?.utterances;
   const paragraphs = alt.paragraphs;
 
   if (Array.isArray(utterances) && utterances.length > 0) {
     const segments = utterances
-      .map((u: any) => ({
-        start: u.start,
-        end: u.end,
-        text: typeof u.transcript === 'string' ? u.transcript.trim() : '',
-        translation: '',
-      }))
-      .filter((s: any) => s.text.length > 0);
+      .map(
+        (u): SegmentInput => ({
+          start: typeof u.start === 'number' ? u.start : undefined,
+          end: typeof u.end === 'number' ? u.end : undefined,
+          text: typeof u.transcript === 'string' ? u.transcript.trim() : '',
+          translation: '',
+        })
+      )
+      .filter(segment => Boolean(segment.text));
     return mergeShortSegments(segments);
   }
 
-  if (paragraphs && paragraphs.paragraphs) {
-    const allSentences = paragraphs.paragraphs.flatMap((p: any) => p.sentences || []);
+  if (Array.isArray(paragraphs?.paragraphs)) {
+    const allSentences = paragraphs.paragraphs.flatMap(p => p.sentences || []);
     const segments = allSentences
-      .map((s: any) => ({
-        start: s.start,
-        end: s.end,
-        text: typeof s.text === 'string' ? s.text.trim() : '',
-        translation: '',
-      }))
-      .filter((s: any) => s.text.length > 0);
+      .map(
+        (s): SegmentInput => ({
+          start: typeof s.start === 'number' ? s.start : undefined,
+          end: typeof s.end === 'number' ? s.end : undefined,
+          text: typeof s.text === 'string' ? s.text.trim() : '',
+          translation: '',
+        })
+      )
+      .filter(segment => Boolean(segment.text));
     return mergeShortSegments(segments);
   }
 
@@ -351,7 +396,7 @@ function extractSegmentsFromDeepgramResult(result: any) {
   throw new Error('Deepgram returned no usable segments');
 }
 
-function mergeShortSegments(segments: any[]) {
+function mergeShortSegments(segments: SegmentInput[]): TranscriptSegment[] {
   if (!Array.isArray(segments) || segments.length === 0) return [];
 
   const MIN_CHARS = 24;
@@ -360,8 +405,8 @@ function mergeShortSegments(segments: any[]) {
   const MAX_DURATION = 14;
   const MAX_GAP_SECONDS = 1.5;
 
-  const merged: any[] = [];
-  let current: any | null = null;
+  const merged: TranscriptSegment[] = [];
+  let current: TranscriptSegment | null = null;
 
   const flush = () => {
     if (current) {
@@ -376,13 +421,16 @@ function mergeShortSegments(segments: any[]) {
 
     const segStart = typeof seg.start === 'number' ? seg.start : null;
     const segEnd = typeof seg.end === 'number' ? seg.end : null;
+    const segWords = Array.isArray(seg.words) ? [...seg.words] : undefined;
+    const segTranslation = typeof seg.translation === 'string' ? seg.translation : '';
 
     if (!current) {
       current = {
-        ...seg,
+        start: segStart ?? 0,
+        end: segEnd ?? segStart ?? 0,
         text,
-        translation: '',
-        words: Array.isArray(seg.words) ? [...seg.words] : seg.words,
+        translation: segTranslation,
+        words: segWords,
       };
       continue;
     }
@@ -392,10 +440,11 @@ function mergeShortSegments(segments: any[]) {
     if (gap > MAX_GAP_SECONDS) {
       flush();
       current = {
-        ...seg,
+        start: segStart ?? 0,
+        end: segEnd ?? segStart ?? 0,
         text,
-        translation: '',
-        words: Array.isArray(seg.words) ? [...seg.words] : seg.words,
+        translation: segTranslation,
+        words: segWords,
       };
       continue;
     }
@@ -405,10 +454,10 @@ function mergeShortSegments(segments: any[]) {
     if (segEnd !== null) {
       current.end = segEnd;
     }
-    if (Array.isArray(seg.words)) {
+    if (Array.isArray(segWords)) {
       current.words = Array.isArray(current.words)
-        ? [...current.words, ...seg.words]
-        : [...seg.words];
+        ? [...current.words, ...segWords]
+        : [...segWords];
     }
 
     const duration =
@@ -431,10 +480,10 @@ function mergeShortSegments(segments: any[]) {
 }
 
 function applyTranslationsToSegments(
-  baseSegments: any[],
+  baseSegments: TranscriptSegment[],
   translations: string[],
   fallbackToSegmentTranslation: boolean
-) {
+): TranscriptSegment[] {
   return baseSegments.map((seg, index) => ({
     ...seg,
     translation:
@@ -443,7 +492,10 @@ function applyTranslationsToSegments(
   }));
 }
 
-async function translateSegmentTexts(baseSegments: any[], normalizedTargetLang: string) {
+async function translateSegmentTexts(
+  baseSegments: Array<{ text: string }>,
+  normalizedTargetLang: SupportedTranslationLanguage | ''
+): Promise<string[]> {
   if (baseSegments.length === 0) return [];
   if (!normalizedTargetLang) return [];
 
@@ -462,20 +514,19 @@ async function translateSegmentTexts(baseSegments: any[], normalizedTargetLang: 
     }
 
     const BATCH_SIZE = 40;
-    const chunks: { index: number; segments: any[] }[] = [];
+    const chunks: { index: number; segments: Array<{ text: string }> }[] = [];
 
     for (let i = 0; i < baseSegments.length; i += BATCH_SIZE) {
       chunks.push({ index: i, segments: baseSegments.slice(i, i + BATCH_SIZE) });
     }
 
-    const targetLanguageLabel =
-      TARGET_LANGUAGE_LABELS[normalizedTargetLang] || normalizedTargetLang;
+    const targetLanguageLabel = TARGET_LANGUAGE_LABELS[normalizedTargetLang];
 
     console.log(
       `[AI] Translating ${baseSegments.length} segments to ${targetLanguageLabel} in ${chunks.length} batches (Parallel)...`
     );
 
-    const processBatch = async (chunk: { index: number; segments: any[] }) => {
+    const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
       try {
         const completion = await client.chat.completions.create({
           model: 'gpt-4o-mini',
@@ -530,7 +581,7 @@ async function translateSegmentTexts(baseSegments: any[], normalizedTargetLang: 
   }
 }
 
-async function cacheTranscriptToSpaces(episodeId: string, segments: any[]) {
+async function cacheTranscriptToSpaces(episodeId: string, segments: TranscriptSegment[]) {
   try {
     const payload = JSON.stringify({ segments });
     const presigned = createPresignedUploadUrl({
@@ -552,7 +603,7 @@ async function cacheTranscriptToSpaces(episodeId: string, segments: any[]) {
   }
 }
 
-async function upsertTranscript(ctx: any, episodeId: string, segments: any[]) {
+async function upsertTranscript(ctx: ActionCtx, episodeId: string, segments: TranscriptSegment[]) {
   await ctx.runMutation(internal.podcastTranscripts.upsert, {
     episodeId,
     segments,
@@ -589,7 +640,7 @@ export const generateTranscript = action({
       return { success: false, error: 'DEEPGRAM_API_KEY not set' };
     }
 
-    let baseSegments: any[] = [];
+    let baseSegments: TranscriptSegment[] = [];
     const targetLang = args.language || ''; // translation target (optional)
     const sourceLang = 'ko'; // podcasts are Korean by default
 
@@ -643,7 +694,7 @@ export const generateTranscript = action({
     if (translations.length > 0 && normalizedTargetLang) {
       await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
         episodeId: args.episodeId,
-        language: normalizedTargetLang as 'zh' | 'en' | 'vi' | 'mn',
+        language: normalizedTargetLang,
         translations,
       });
     }
@@ -754,11 +805,11 @@ export const handleDeepgramCallback = action({
 
 export const getTranscript = action({
   args: { episodeId: v.string(), language: v.optional(v.string()) },
-  handler: async (ctx, args): Promise<{ segments: any[] | null }> => {
+  handler: async (ctx, args): Promise<{ segments: TranscriptSegment[] | null }> => {
     await guardAiAction(ctx, 'get_transcript');
     const record = (await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
       episodeId: args.episodeId,
-    })) as { segments?: any[]; translations?: Record<string, string[]> } | null;
+    })) as TranscriptRecord | null;
 
     if (!record?.segments || record.segments.length === 0) {
       return { segments: null };
@@ -783,7 +834,7 @@ export const getTranscript = action({
     if (translations.length > 0) {
       await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
         episodeId: args.episodeId,
-        language: normalizedTargetLang as 'zh' | 'en' | 'vi' | 'mn',
+        language: normalizedTargetLang,
         translations,
       });
     }

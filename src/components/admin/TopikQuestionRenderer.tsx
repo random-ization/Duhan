@@ -1,10 +1,6 @@
 import React from 'react';
 import { Trash2, Loader2, ImageIcon } from 'lucide-react';
-import {
-  TopikQuestion,
-  ExamSectionStructure,
-  getQuestionConfig,
-} from './TopikConstants';
+import { TopikQuestion, ExamSectionStructure, getQuestionConfig } from './TopikConstants';
 
 interface QuestionRendererProps {
   q: TopikQuestion;
@@ -13,10 +9,18 @@ interface QuestionRendererProps {
   isGroupStart: boolean;
   isGrouped: boolean;
   uploadingItems: Set<string>;
-  updateQuestion: (id: number, field: keyof TopikQuestion, value: any) => void;
+  updateQuestion: <K extends keyof TopikQuestion>(
+    id: number,
+    field: K,
+    value: TopikQuestion[K]
+  ) => void;
   updateOption: (id: number, idx: number, value: string) => void;
   updateOptionImage: (id: number, idx: number, url: string) => void;
-  handleFileUpload: (file: File, onSuccess: (url: string) => void, uploadKey: string) => Promise<void>;
+  handleFileUpload: (
+    file: File,
+    onSuccess: (url: string) => void,
+    uploadKey: string
+  ) => Promise<void>;
 }
 
 export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
@@ -57,7 +61,11 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <div className="mb-2">
               {q.image ? (
                 <div className="relative inline-block group/img">
-                  <img src={q.image} className="max-h-48 border-2 border-zinc-200 rounded-lg" alt="Q" />
+                  <img
+                    src={q.image}
+                    className="max-h-48 border-2 border-zinc-200 rounded-lg"
+                    alt="Q"
+                  />
                   <button
                     onClick={() => updateQuestion(q.id, 'image', '')}
                     className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover/img:opacity-100"
@@ -87,7 +95,11 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     onChange={e => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      handleFileUpload(file, url => updateQuestion(q.id, 'image', url), `img-${q.id}`);
+                      handleFileUpload(
+                        file,
+                        url => updateQuestion(q.id, 'image', url),
+                        `img-${q.id}`
+                      );
                     }}
                   />
                 </button>
@@ -101,7 +113,11 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               <div className="flex gap-3">
                 {q.image ? (
                   <div className="relative inline-block group/img">
-                    <img src={q.image} className="max-h-40 border-2 border-zinc-200 rounded-lg" alt="Q" />
+                    <img
+                      src={q.image}
+                      className="max-h-40 border-2 border-zinc-200 rounded-lg"
+                      alt="Q"
+                    />
                     <button
                       onClick={() => updateQuestion(q.id, 'image', '')}
                       className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover/img:opacity-100"
@@ -131,7 +147,11 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        handleFileUpload(file, url => updateQuestion(q.id, 'image', url), `img-${q.id}`);
+                        handleFileUpload(
+                          file,
+                          url => updateQuestion(q.id, 'image', url),
+                          `img-${q.id}`
+                        );
                       }}
                     />
                   </button>
@@ -321,7 +341,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               {[0, 1, 2, 3].map(optIdx => {
                 const img = q.optionImages?.[optIdx];
                 return (
-                  <div key={`img-opt-${q.id}-${optIdx}`} className="flex flex-col items-center gap-2">
+                  <div
+                    key={`img-opt-${q.id}-${optIdx}`}
+                    className="flex flex-col items-center gap-2"
+                  >
                     <div className="relative w-full aspect-[4/3] group/optImg">
                       {/* Image Area / Upload Area */}
                       <div
@@ -341,7 +364,9 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                           <button
                             type="button"
                             className="flex flex-col items-center text-zinc-400 cursor-pointer w-full h-full justify-center hover:bg-zinc-50 transition-colors border-none bg-transparent"
-                            onClick={() => document.getElementById(`file-input-opt-${q.id}-${optIdx}`)?.click()}
+                            onClick={() =>
+                              document.getElementById(`file-input-opt-${q.id}-${optIdx}`)?.click()
+                            }
                           >
                             {uploadingItems.has(`opt-${q.id}-${optIdx}`) ? (
                               <Loader2 className="w-6 h-6 animate-spin" />

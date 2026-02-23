@@ -3,7 +3,7 @@ import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator, makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 import { getAuthUserId, requireAdmin } from './utils';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
 import { normalizeAnswerMap } from './validation';
 import { hasActiveSubscription } from './subscription';
 
@@ -55,23 +55,71 @@ export type TopikQuestionDto = {
   explanation?: string;
   score: number;
   instruction?: string;
-  layout?: string;
+  layout?: TopikQuestionLayout;
   groupCount?: number;
 };
+
+export type TopikQuestionLayout = 'DEFAULT' | 'IMAGE' | 'NEWS_HEADLINE' | 'INSERT_BOX';
+export type TopikExamType = 'READING' | 'LISTENING' | 'WRITING';
+export type TopikPaperType = 'A' | 'B';
 
 export type TopikExamDto = {
   id: string; // Legacy ID
   _id: string;
   title: string;
   round: number;
-  type: string;
-  paperType?: string;
+  type: TopikExamType;
+  paperType?: TopikPaperType;
   timeLimit: number;
   audioUrl?: string;
   description?: string;
   isPaid?: boolean;
   createdAt: number;
+  questions: TopikQuestionDto[];
 };
+
+type TopikExamDoc = Doc<'topik_exams'>;
+
+const normalizeTopikExamType = (type: string): TopikExamType => {
+  if (type === 'READING' || type === 'LISTENING' || type === 'WRITING') return type;
+  return 'READING';
+};
+
+const normalizeTopikPaperType = (paperType?: string): TopikPaperType | undefined => {
+  if (paperType === 'A' || paperType === 'B') return paperType;
+  return undefined;
+};
+
+const normalizeTopikQuestionLayout = (layout?: string): TopikQuestionLayout | undefined => {
+  if (
+    layout === 'DEFAULT' ||
+    layout === 'IMAGE' ||
+    layout === 'NEWS_HEADLINE' ||
+    layout === 'INSERT_BOX'
+  ) {
+    return layout;
+  }
+  return undefined;
+};
+
+const toTopikExamDto = async (
+  ctx: StorageResolverContext,
+  exam: TopikExamDoc
+): Promise<TopikExamDto> => ({
+  id: exam.legacyId?.trim() || String(exam._id),
+  _id: String(exam._id),
+  title: exam.title,
+  round: exam.round,
+  type: normalizeTopikExamType(exam.type),
+  paperType: normalizeTopikPaperType(exam.paperType),
+  timeLimit: exam.timeLimit,
+  audioUrl: await resolveUrl(ctx, exam.audioUrl),
+  description: exam.description,
+  isPaid: exam.isPaid,
+  createdAt: exam.createdAt ?? exam._creationTime,
+  // Metadata query keeps payload small while satisfying frontend TopikExam shape.
+  questions: [],
+});
 
 // ============================================
 // TOPIK Exam CRUD Functions
@@ -87,25 +135,7 @@ export const getExams = query({
 
     if (args.paginationOpts) {
       const results = await query.paginate(args.paginationOpts);
-
-      const pageWithUrls = await Promise.all(
-        results.page.map(
-          async exam =>
-            ({
-              id: exam.legacyId,
-              _id: exam._id,
-              title: exam.title,
-              round: exam.round,
-              type: exam.type,
-              paperType: exam.paperType,
-              timeLimit: exam.timeLimit,
-              audioUrl: await resolveUrl(ctx, exam.audioUrl),
-              description: exam.description,
-              isPaid: exam.isPaid,
-              createdAt: exam.createdAt,
-            }) as TopikExamDto
-        )
-      );
+      const pageWithUrls = await Promise.all(results.page.map(exam => toTopikExamDto(ctx, exam)));
 
       return {
         ...results,
@@ -121,25 +151,7 @@ export const getExams = query({
       cursor = batch.isDone ? null : batch.continueCursor;
     } while (cursor);
 
-    return Promise.all(
-      exams.map(
-        async exam =>
-          ({
-            id: exam.legacyId,
-            _id: exam._id,
-            title: exam.title,
-            round: exam.round,
-            type: exam.type,
-            paperType: exam.paperType,
-            timeLimit: exam.timeLimit,
-            audioUrl: await resolveUrl(ctx, exam.audioUrl),
-            description: exam.description,
-            isPaid: exam.isPaid,
-            createdAt: exam.createdAt,
-            // No questions array - loaded separately
-          }) as TopikExamDto
-      )
-    );
+    return Promise.all(exams.map(exam => toTopikExamDto(ctx, exam)));
   },
 });
 
@@ -155,20 +167,7 @@ export const getExamById = query({
       .first();
 
     if (!exam) return null;
-
-    return {
-      id: exam.legacyId,
-      _id: exam._id,
-      title: exam.title,
-      round: exam.round,
-      type: exam.type,
-      paperType: exam.paperType,
-      timeLimit: exam.timeLimit,
-      audioUrl: await resolveUrl(ctx, exam.audioUrl),
-      description: exam.description,
-      isPaid: exam.isPaid,
-      createdAt: exam.createdAt,
-    };
+    return toTopikExamDto(ctx, exam);
   },
 });
 
@@ -219,7 +218,7 @@ export const getExamQuestions = query({
         explanation: q.explanation,
         score: q.score,
         instruction: q.instruction,
-        layout: q.layout,
+        layout: normalizeTopikQuestionLayout(q.layout),
         groupCount: q.groupCount,
       }))
     );
@@ -554,6 +553,12 @@ export const saveExam = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const { id, questions, ...examData } = args;
+    const normalizedExamData = {
+      ...examData,
+      type: normalizeTopikExamType(examData.type),
+      paperType: normalizeTopikPaperType(examData.paperType),
+      isPaid: examData.isPaid ?? false,
+    };
 
     // Check if exam exists
     const exam = await ctx.db
@@ -566,8 +571,7 @@ export const saveExam = mutation({
     if (exam) {
       // Update existing exam
       await ctx.db.patch(exam._id, {
-        ...examData,
-        isPaid: examData.isPaid ?? false,
+        ...normalizedExamData,
       });
       examConvexId = exam._id;
 
@@ -582,8 +586,7 @@ export const saveExam = mutation({
       // Create new exam
       examConvexId = await ctx.db.insert('topik_exams', {
         legacyId: id,
-        ...examData,
-        isPaid: examData.isPaid ?? false,
+        ...normalizedExamData,
         createdAt: Date.now(),
       });
     }
@@ -604,7 +607,7 @@ export const saveExam = mutation({
           explanation: q.explanation,
           score: q.score,
           instruction: q.instruction,
-          layout: q.layout,
+          layout: normalizeTopikQuestionLayout(q.layout),
           groupCount: q.groupCount,
         })
       )

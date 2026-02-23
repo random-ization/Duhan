@@ -14,7 +14,7 @@ import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import { useTTS } from '../../../hooks/useTTS';
-import { useLayout } from '../../../contexts/LayoutContext';
+import { useLayoutActions, useLayoutChromeState } from '../../../contexts/LayoutContext';
 import { useFlashcardKeyboard } from '../hooks/useFlashcardKeyboard';
 import FlashcardSettingsModal from './FlashcardSettingsModal';
 import FlashcardFullscreenOverlay from './FlashcardFullscreenOverlay';
@@ -284,6 +284,7 @@ interface FlashcardProps {
   isDragging: boolean;
   dragOffset: { x: number; y: number };
   language: Language;
+  labels: ReturnType<typeof getLabels>;
   cardFront: 'KOREAN' | 'NATIVE';
   onFlip: () => void;
   onSpeak: (text: string) => void;
@@ -315,6 +316,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
   isDragging,
   dragOffset,
   language,
+  labels,
   cardFront,
   onFlip,
   onSpeak,
@@ -646,7 +648,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
-    const { sidebarHidden, setSidebarHidden } = useLayout();
+    const { sidebarHidden } = useLayoutChromeState();
+    const { setSidebarHidden } = useLayoutActions();
 
     const { localSettings, setLocalSettings, showSettings, setShowSettings } =
       useFlashcardSettings(settings);
@@ -753,6 +756,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
         isDragging={isDragging}
         dragOffset={dragOffset}
         language={language}
+        labels={labels}
         cardFront={localSettings.cardFront}
         onFlip={() => !isDragging && setIsFlipped(!isFlipped)}
         onSpeak={speakKorean}

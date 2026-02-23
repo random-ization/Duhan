@@ -6,7 +6,7 @@ import Footer from './Footer';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
 import { MobilePwaInstallPrompt } from '../mobile/MobilePwaInstallPrompt';
-import { useLayout } from '../../contexts/LayoutContext';
+import { useLayoutActions, useLayoutChromeState } from '../../contexts/LayoutContext';
 import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { GlobalModalContainer } from '../modals/GlobalModalContainer';
@@ -16,7 +16,8 @@ import { ContentSkeleton } from '../common';
 
 export default function AppLayout() {
   const location = useLocation();
-  const { sidebarHidden, setSidebarHidden, footerHidden } = useLayout();
+  const { sidebarHidden, footerHidden } = useLayoutChromeState();
+  const { setSidebarHidden } = useLayoutActions();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const routeUiConfig = getRouteUiConfig(pathWithoutLang);
 

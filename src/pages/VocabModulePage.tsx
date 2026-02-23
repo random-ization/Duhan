@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLearning } from '../contexts/LearningContext';
+import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
 import EmptyState from '../components/common/EmptyState';
@@ -60,8 +60,9 @@ export default function VocabModulePage() {
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user, language } = useAuth();
-  const { setSelectedInstitute, selectedLevel, setSelectedLevel } = useLearning();
-  const { institutes } = useData();
+  const { selectedLevel } = useLearningSelection();
+  const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
+  const { institutes, isLoading: institutesLoading } = useData();
   const { speak: speakTTS } = useTTS();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
@@ -78,7 +79,7 @@ export default function VocabModulePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instituteId]); // Only depend on instituteId to prevent loops
 
-  const course = institutes.find(i => i.id === instituteId);
+  const course = institutes?.find(i => i.id === instituteId);
 
   // State - Merged related states for better performance
   const [selectedUnitId, setSelectedUnitId] = useState<number | 'ALL'>('ALL');
@@ -112,7 +113,7 @@ export default function VocabModulePage() {
   });
 
   // Derive loading state and allWords directly from query - no extra state needed
-  const isLoading = convexWordsQuery === undefined;
+  const isLoading = convexWordsQuery === undefined || institutesLoading;
   const allWords = useMemo<ExtendedVocabItem[]>(() => {
     if (!convexWordsQuery) return [];
     return convexWordsQuery.map(w => {
@@ -638,6 +639,7 @@ export default function VocabModulePage() {
             <VocabQuiz
               key={`learn-${selectedUnitId}-${gameWords.length}`}
               words={gameWords}
+              courseId={instituteId}
               onComplete={stats => {
                 console.log('Learn completed:', stats);
                 void flushQueue();

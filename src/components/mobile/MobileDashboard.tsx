@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { Flame, Search, Target, ArrowRight, Headphones, Tv, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLearning } from '../../contexts/LearningContext';
+import { useLearningSelection } from '../../contexts/LearningContext';
 import { useData } from '../../contexts/DataContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { qRef, NoArgs } from '../../utils/convexRefs';
@@ -29,8 +29,8 @@ export const MobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const { selectedInstitute, selectedLevel } = useLearning();
-  const { institutes } = useData();
+  const { selectedInstitute, selectedLevel } = useLearningSelection();
+  const { institutes, isLoading: institutesLoading } = useData();
 
   // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
 
@@ -85,9 +85,11 @@ export const MobileDashboard: React.FC = () => {
 
   const instituteName = useMemo(() => {
     if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
-    const inst = institutes.find(i => i.id === selectedInstitute);
+    if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
+    const inst = institutes?.find(i => i.id === selectedInstitute);
     return inst ? inst.name : selectedInstitute;
-  }, [selectedInstitute, institutes, t]);
+  }, [selectedInstitute, institutes, institutesLoading, t]);
+  const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
 
   // -- Search Logic --
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,7 +248,11 @@ export const MobileDashboard: React.FC = () => {
               </span>
             </div>
             <h3 className="text-2xl font-black text-foreground leading-tight mb-1 pr-12">
-              {instituteName}
+              {isInstituteNameLoading ? (
+                <span className="inline-block h-8 w-44 animate-pulse rounded-lg bg-sky-200/65 dark:bg-sky-300/20" />
+              ) : (
+                instituteName
+              )}
             </h3>
             <div className="mt-4 bg-card/60 dark:bg-sky-400/10 backdrop-blur-sm p-3 rounded-xl border border-white/50 dark:border-sky-300/20">
               <div className="flex justify-between text-xs font-bold text-sky-700 dark:text-sky-200 mb-1.5">

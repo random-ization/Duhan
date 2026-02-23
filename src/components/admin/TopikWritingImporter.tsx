@@ -4,6 +4,7 @@ import { CheckCircle2, ClipboardPaste, ImageIcon, Loader2, PenLine, Upload } fro
 import { mRef, TOPIK } from '../../utils/convexRefs';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { api } from '../../../convex/_generated/api';
+import type { WritingGradingCriteria } from '../../../convex/topikWritingValidators';
 
 type WritingQuestionType = 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY';
 
@@ -15,7 +16,7 @@ type WritingQuestionInput = {
   image?: string;
   score: number;
   modelAnswer?: string;
-  gradingCriteria?: Record<string, unknown>;
+  gradingCriteria?: WritingGradingCriteria;
 };
 
 type SaveWritingExamArgs = {
@@ -50,7 +51,14 @@ const REQUIRED_IMAGE_QUESTIONS = [51, 53] as const;
 const INITIAL_QUESTIONS: WritingQuestionInput[] = [
   { number: 51, questionType: 'FILL_BLANK', score: 10, instruction: '', contextBox: '', image: '' },
   { number: 52, questionType: 'FILL_BLANK', score: 10, instruction: '', contextBox: '', image: '' },
-  { number: 53, questionType: 'GRAPH_ESSAY', score: 30, instruction: '', contextBox: '', image: '' },
+  {
+    number: 53,
+    questionType: 'GRAPH_ESSAY',
+    score: 30,
+    instruction: '',
+    contextBox: '',
+    image: '',
+  },
   {
     number: 54,
     questionType: 'OPINION_ESSAY',
@@ -117,11 +125,9 @@ function isLikelyImageUrl(url: string): boolean {
 
 function toUploadReadyImageFile(questionNumber: number, sourceFile: File, sourceTag: string): File {
   const extension = sourceFile.type.split('/')[1] || 'png';
-  return new File(
-    [sourceFile],
-    `q${questionNumber}-${sourceTag}-${Date.now()}.${extension}`,
-    { type: sourceFile.type || 'image/png' }
-  );
+  return new File([sourceFile], `q${questionNumber}-${sourceTag}-${Date.now()}.${extension}`, {
+    type: sourceFile.type || 'image/png',
+  });
 }
 
 function dataUrlToFile(dataUrl: string, filename: string): File | null {
@@ -260,18 +266,14 @@ export const TopikWritingImporter: React.FC = () => {
             questionNumber,
             `Q${questionNumber} 外链上传失败，已自动转为内嵌图片保存`
           );
-          setStatus(
-            `Q${questionNumber} 外链上传失败（${message}），已自动转为内嵌图片保存`
-          );
+          setStatus(`Q${questionNumber} 外链上传失败（${message}），已自动转为内嵌图片保存`);
         } catch (fallbackError) {
           const fallbackMessage = getErrorMessage(fallbackError);
           setQuestionMessage(
             questionNumber,
             `Q${questionNumber} 图片上传失败：${message}；兜底失败：${fallbackMessage}`
           );
-          setStatus(
-            `Q${questionNumber} 图片上传失败：${message}；兜底失败：${fallbackMessage}`
-          );
+          setStatus(`Q${questionNumber} 图片上传失败：${message}；兜底失败：${fallbackMessage}`);
         }
       } else {
         setQuestionMessage(questionNumber, `Q${questionNumber} 图片上传失败：${message}`);
@@ -307,10 +309,7 @@ export const TopikWritingImporter: React.FC = () => {
 
     const plainText = clipboardData.getData('text/plain').trim();
     if (plainText.startsWith('data:image/')) {
-      const dataUrlFile = dataUrlToFile(
-        plainText,
-        `q${questionNumber}-dataurl-${Date.now()}.png`
-      );
+      const dataUrlFile = dataUrlToFile(plainText, `q${questionNumber}-dataurl-${Date.now()}.png`);
       if (dataUrlFile) {
         await handleQuestionImageUpload(questionNumber, dataUrlFile);
         return true;
@@ -518,7 +517,9 @@ export const TopikWritingImporter: React.FC = () => {
           <PenLine className="w-6 h-6" />
           TOPIK 写作题目上传
         </h2>
-        <p className="text-sm text-zinc-500">写作试卷专用编辑器（51~54），不再复用阅读/听力编辑器</p>
+        <p className="text-sm text-zinc-500">
+          写作试卷专用编辑器（51~54），不再复用阅读/听力编辑器
+        </p>
       </div>
 
       <div className="bg-white border-2 border-zinc-900 rounded-2xl shadow-[6px_6px_0px_0px_#18181B] p-5 space-y-3">
@@ -661,7 +662,9 @@ export const TopikWritingImporter: React.FC = () => {
                     题目要求
                     <textarea
                       value={question.instruction || ''}
-                      onChange={e => updateQuestion(question.number, { instruction: e.target.value })}
+                      onChange={e =>
+                        updateQuestion(question.number, { instruction: e.target.value })
+                      }
                       rows={2}
                       className="mt-1 w-full rounded-lg border-2 border-zinc-300 px-3 py-2 text-sm bg-white focus:border-zinc-900 outline-none"
                       placeholder="请输入题目要求文本"
@@ -672,7 +675,9 @@ export const TopikWritingImporter: React.FC = () => {
                     材料 / 正文
                     <textarea
                       value={question.contextBox || ''}
-                      onChange={e => updateQuestion(question.number, { contextBox: e.target.value })}
+                      onChange={e =>
+                        updateQuestion(question.number, { contextBox: e.target.value })
+                      }
                       rows={5}
                       className="mt-1 w-full rounded-lg border-2 border-zinc-300 px-3 py-2 text-sm bg-white focus:border-zinc-900 outline-none"
                       placeholder="请输入题目材料内容"
@@ -683,7 +688,9 @@ export const TopikWritingImporter: React.FC = () => {
                     参考答案（可选）
                     <textarea
                       value={question.modelAnswer || ''}
-                      onChange={e => updateQuestion(question.number, { modelAnswer: e.target.value })}
+                      onChange={e =>
+                        updateQuestion(question.number, { modelAnswer: e.target.value })
+                      }
                       rows={4}
                       className="mt-1 w-full rounded-lg border-2 border-zinc-300 px-3 py-2 text-sm bg-white focus:border-zinc-900 outline-none"
                       placeholder="可填写参考答案"
@@ -750,7 +757,9 @@ export const TopikWritingImporter: React.FC = () => {
                       先复制截图，然后点击“读取剪贴板图片”，或在上方输入框按 Ctrl/Cmd+V。
                     </p>
                     {questionStatus[question.number] ? (
-                      <p className="text-xs font-bold text-zinc-700">{questionStatus[question.number]}</p>
+                      <p className="text-xs font-bold text-zinc-700">
+                        {questionStatus[question.number]}
+                      </p>
                     ) : null}
 
                     {question.image ? (

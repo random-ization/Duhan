@@ -11,7 +11,7 @@ import {
   PracticeParagraph,
 } from '../features/typing/data/practiceTexts';
 import { ArrowLeft, Ghost } from 'lucide-react';
-import { useLayout } from '../contexts/LayoutContext';
+import { useLayoutActions } from '../contexts/LayoutContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useMutation, useQuery } from 'convex/react';
 import { WordPractice } from '../features/typing/components/WordPractice';
@@ -197,7 +197,7 @@ type GameState = 'lobby' | 'playing' | 'finished'; // Added GameState type
 
 const DesktopTypingPage: React.FC = () => {
   // -- LAYOUT CONTROL --
-  const { setSidebarHidden, setFooterHidden } = useLayout();
+  const { setSidebarHidden, setFooterHidden } = useLayoutActions();
 
   // -- USER --
   const { user } = useAuth();
@@ -1164,8 +1164,8 @@ transition-all duration-150 inline-block
                             style={
                               isCurrent
                                 ? {
-                                  textShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                }
+                                    textShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                  }
                                 : undefined
                             }
                           >

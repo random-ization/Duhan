@@ -5,6 +5,7 @@ import { convexAuth, getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { compareSync, hashSync } from 'bcryptjs';
+import type { Id } from './_generated/dataModel';
 
 // Custom bcrypt crypto for Password provider (to match legacy password hashes)
 const bcryptCrypto = {
@@ -115,8 +116,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     },
   },
 });
-
-
 
 export const updateProfile = mutation({
   args: {
@@ -253,13 +252,33 @@ export const changePassword = mutation({
 
 // --- Helper Functions ---
 
+type AuthUserDoc = {
+  emailVerificationTime?: number;
+};
+
+type AuthCallbackContext = {
+  db: {
+    get: (id: Id<'users'>) => Promise<AuthUserDoc | null>;
+    patch: (id: Id<'users'>, value: Record<string, unknown>) => Promise<void>;
+    insert: (table: 'users', value: Record<string, unknown>) => Promise<Id<'users'>>;
+  };
+};
+
+type AuthCreateOrUpdateArgs = {
+  provider?: {
+    id?: string;
+  };
+  profile: Record<string, unknown> & {
+    name?: unknown;
+  };
+};
+
 // Refactored to reduce complexity
 async function updateExistingUser(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any, // Using any for ctx here as inferred types from convexAuth callbacks are complex to import manually
-  userId: string,
+  ctx: AuthCallbackContext,
+  userId: Id<'users'>,
   emailVerified: boolean
-) {
+): Promise<Id<'users'>> {
   const user = await ctx.db.get(userId);
   if (!user) {
     throw new Error('USER_NOT_FOUND');
@@ -277,14 +296,12 @@ async function updateExistingUser(
 }
 
 async function createNewUser(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
+  ctx: AuthCallbackContext,
   email: string,
   emailVerified: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: any
-) {
-  const providerId = (args.provider as { id?: string } | undefined)?.id;
+  args: AuthCreateOrUpdateArgs
+): Promise<Id<'users'>> {
+  const providerId = args.provider?.id;
   const isPasswordProvider = providerId === 'password';
 
   const insertData: Record<string, unknown> = {

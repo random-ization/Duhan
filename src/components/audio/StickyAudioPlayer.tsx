@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
@@ -24,6 +24,18 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const teardownAudio = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.removeAttribute('src');
+    try {
+      audio.load();
+    } catch {
+      // Ignore unload errors on some browsers.
+    }
+  }, []);
 
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -60,16 +72,25 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
     };
   }, [onTimeUpdate, initialTime, isDragging]);
 
-  const togglePlay = () => {
+  useEffect(() => {
+    return () => teardownAudio();
+  }, [teardownAudio]);
+
+  const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (isPlaying) {
       audio.pause();
+      setIsPlaying(false);
     } else {
-      audio.play();
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch {
+        setIsPlaying(false);
+      }
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {

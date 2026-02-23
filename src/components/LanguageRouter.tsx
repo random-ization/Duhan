@@ -18,51 +18,61 @@ const getBrowserPreferredLanguage = (): Language | null => {
   if (typeof navigator === 'undefined') return null;
 
   const rawLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
-
-  const normalizedList = new Set(
-    rawLanguages
-      .map(raw => raw.split(/[-_]/)[0])
-      .filter((value): value is Language => isValidLanguage(value))
-  );
-
-  for (const preferred of ['zh', 'vi', 'mn', 'en'] as const) {
-    if (normalizedList.has(preferred)) {
-      return preferred;
+  for (const raw of rawLanguages) {
+    const normalized = raw.split(/[-_]/)[0];
+    if (isValidLanguage(normalized)) {
+      return normalized;
     }
   }
 
   return null;
 };
 
-// Get language from URL or detect from browser
-export const detectLanguage = async (): Promise<Language> => {
+const getStoredUserLanguage = (): Language | null => {
   const stored = localStorage.getItem('preferredLanguage');
   const storedSource = localStorage.getItem('preferredLanguageSource');
-
-  // 1. If user explicitly chose a language, prioritize it above all else
   if (storedSource === 'user' && stored && isValidLanguage(stored)) {
     return stored;
   }
+  return null;
+};
 
-  // 2. Geo-location detection (force language for specific countries if no user override)
+const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', hash = '') => {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] && isValidLanguage(segments[0])) {
+    segments[0] = nextLang;
+  } else {
+    segments.unshift(nextLang);
+  }
+  return `/${segments.join('/')}${search}${hash}`;
+};
+
+// Get language from URL or detect from browser
+export const detectLanguage = async (): Promise<Language> => {
+  const stored = localStorage.getItem('preferredLanguage');
+  const userLanguage = getStoredUserLanguage();
+
+  // 1. If user explicitly chose a language, prioritize it above all else
+  if (userLanguage) {
+    return userLanguage;
+  }
+
+  // 2. Browser language detection
+  const browserLang = getBrowserPreferredLanguage();
+  if (browserLang) {
+    return browserLang;
+  }
+
+  // 3. Geo-location detection (fallback only when browser language is unavailable)
   const country = await fetchUserCountry();
   if (country === 'CN') return 'zh';
   if (country === 'VN') return 'vi';
   if (country === 'MN') return 'mn';
 
-  // 3. Browser language detection
-  const browserLang = getBrowserPreferredLanguage();
-  if (browserLang && (browserLang === 'zh' || browserLang === 'vi' || browserLang === 'mn')) {
-    return browserLang;
-  }
-
   // 4. Fallback to stored preference (legacy logic or auto-saved)
   if (stored && isValidLanguage(stored)) {
     return stored;
   }
-
-  // 5. Fallback to browser lang if valid supported lang
-  if (browserLang) return browserLang;
 
   return DEFAULT_LANGUAGE;
 };
@@ -104,28 +114,16 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
       };
     }
 
-    let cancelled = false;
-    const syncBrowserLanguage = async () => {
-      const browserLang = getBrowserPreferredLanguage();
-      if (!browserLang || (browserLang !== 'zh' && browserLang !== 'vi' && browserLang !== 'mn')) {
-        return;
-      }
-      const country = await fetchUserCountry();
-      if (cancelled) return;
-      if (country === 'CN' || country === 'VN' || country === 'MN') return;
-      const storedSource = localStorage.getItem('preferredLanguageSource');
-      if (storedSource === 'user') return;
-      if (browserLang === lang) return;
-      const segments = location.pathname.split('/').filter(Boolean);
-      if (segments[0] && isValidLanguage(segments[0])) {
-        segments[0] = browserLang;
-      } else {
-        segments.unshift(browserLang);
-      }
-      const newPath = `/${segments.join('/')}${location.search}${location.hash}`;
-      navigate(newPath, { replace: true });
-    };
-    syncBrowserLanguage();
+    const userLanguage = getStoredUserLanguage();
+    if (userLanguage && userLanguage !== lang) {
+      navigate(
+        buildLocalizedPath(location.pathname, userLanguage, location.search, location.hash),
+        {
+          replace: true,
+        }
+      );
+      return;
+    }
 
     // Sync i18n with URL language
     if (i18n.language !== lang) {
@@ -135,15 +133,11 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
     // Update HTML lang attribute
     document.documentElement.lang = lang;
 
-    // Store preference
-    localStorage.setItem('preferredLanguage', lang);
     const storedSource = localStorage.getItem('preferredLanguageSource');
     if (storedSource !== 'user') {
+      localStorage.setItem('preferredLanguage', lang);
       localStorage.setItem('preferredLanguageSource', 'auto');
     }
-    return () => {
-      cancelled = true;
-    };
   }, [lang, i18n, navigate, location]);
 
   // Don't render children until we have a valid language

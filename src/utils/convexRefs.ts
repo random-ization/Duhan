@@ -1,9 +1,10 @@
 import { makeFunctionReference } from 'convex/server';
 import type { DefaultFunctionArgs, PaginationOptions, PaginationResult } from 'convex/server';
-import type { Doc, Id } from '../../convex/_generated/dataModel';
+import type { Id } from '../../convex/_generated/dataModel';
 
 // Import types only to avoid runtime cycles
 import type { GrammarStatsDto, GrammarItemDto, UnitGrammarDto } from '../../convex/grammars';
+import type { InstituteClientDto } from '../../convex/institutes';
 import type { SearchResult } from '../../convex/dictionary';
 
 export type NoArgs = Record<string, never>;
@@ -21,8 +22,8 @@ export const aRef = <Args extends DefaultFunctionArgs, Ret>(name: string) =>
  * COMMON REFS
  */
 export const INSTITUTES = {
-  getAll: qRef<NoArgs, Doc<'institutes'>[]>('institutes:getAll'),
-  get: qRef<{ id: string }, Doc<'institutes'> | null>('institutes:get'),
+  getAll: qRef<NoArgs, InstituteClientDto[]>('institutes:getAll'),
+  get: qRef<{ id: string }, InstituteClientDto | null>('institutes:get'),
 };
 
 export const STORAGE = {
@@ -191,9 +192,10 @@ export const VOCAB = {
     VocabBookItemDto[]
   >('vocab:getVocabBook'),
   // Mutations
-  updateProgress: mRef<{ wordId: string; quality: number }, { success: boolean; progress: any }>(
-    'vocab:updateProgress'
-  ),
+  updateProgress: mRef<
+    { wordId: string; quality: number },
+    { success: boolean; progress: LegacySrsProgressDto }
+  >('vocab:updateProgress'),
   updateProgressV2: mRef<
     {
       wordId: Id<'words'>;
@@ -338,6 +340,15 @@ export type FSRSProgressDto = FSRSCardState & {
   lastReviewedAt: number;
 };
 
+export type LegacySrsProgressDto = {
+  id: Id<'user_vocab_progress'>;
+  status: string;
+  interval: number;
+  streak: number;
+  lastReviewedAt: number;
+  nextReviewAt: number;
+};
+
 export const FSRS = {
   calculateNextSchedule: aRef<
     {
@@ -354,30 +365,52 @@ export const FSRS = {
  */
 import { TopikQuestionDto, TopikExamDto } from '../../convex/topik';
 
+export type TopikSaveQuestionInput = {
+  id: number;
+  number?: number;
+  passage?: string;
+  question: string;
+  contextBox?: string;
+  options: string[];
+  correctAnswer: number;
+  image?: string;
+  optionImages?: string[];
+  explanation?: string;
+  score: number;
+  instruction?: string;
+  layout?: string;
+  groupCount?: number;
+};
+
+export type TopikSaveExamArgs = {
+  id: string;
+  title: string;
+  round: number;
+  type: string;
+  paperType?: string;
+  timeLimit: number;
+  audioUrl?: string;
+  description?: string;
+  isPaid?: boolean;
+  questions: TopikSaveQuestionInput[];
+};
+
 export const TOPIK = {
   getExams: qRef<
     { paginationOpts?: PaginationOptions },
     PaginationResult<TopikExamDto> | TopikExamDto[]
   >('topik:getExams'),
+  getExamsPaginated: qRef<{ paginationOpts: PaginationOptions }, PaginationResult<TopikExamDto>>(
+    'topik:getExams'
+  ),
   getExamById: qRef<{ examId: string }, TopikExamDto | null>('topik:getExamById'),
   getExamQuestions: qRef<{ examId: string }, TopikQuestionDto[]>('topik:getExamQuestions'),
   // Mutations
-  saveExam: mRef<
-    {
-      id: string;
-      title: string;
-      round: number;
-      type: string;
-      timeLimit: number;
-      questions: any[];
-      isPaid?: boolean;
-      // Add other fields as needed or use partial
-    } & Record<string, any>,
-    { success: boolean; examId: string }
-  >('topik:saveExam'),
-  submitExam: mRef<{ sessionId: string; answers: any }, { success: boolean; score: number }>(
-    'topik:submitExam'
-  ),
+  saveExam: mRef<TopikSaveExamArgs, { success: boolean; examId: string }>('topik:saveExam'),
+  submitExam: mRef<
+    { sessionId: string; answers: Record<number, number> },
+    { success: boolean; score: number }
+  >('topik:submitExam'),
   deleteExam: mRef<{ examId: string }, unknown>('topik:deleteExam'),
 };
 

@@ -1,9 +1,26 @@
-import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { v } from 'convex/values';
 
 type AchievementCategory = 'TYPING' | 'VOCAB' | 'STREAK';
 type AchievementTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND';
+type AchievementInputData = {
+  wpm?: number;
+  accuracy?: number;
+  vocabCount?: number;
+};
+
+const ACHIEVEMENT_INPUT_DATA_VALIDATOR = v.object({
+  wpm: v.optional(v.number()),
+  accuracy: v.optional(v.number()),
+  vocabCount: v.optional(v.number()),
+});
 
 type MatchedRule = {
   category: AchievementCategory;
@@ -24,7 +41,7 @@ function readNumericMetric(data: unknown, key: string): number | null {
   return typeof value === 'number' ? value : null;
 }
 
-function matchRule(category: AchievementCategory, data: unknown): MatchedRule | null {
+function matchRule(category: AchievementCategory, data: AchievementInputData): MatchedRule | null {
   if (category === 'TYPING') {
     const wpm = readNumericMetric(data, 'wpm');
     const accuracy = readNumericMetric(data, 'accuracy');
@@ -68,9 +85,9 @@ async function findCurrentUserId(ctx: QueryCtx | MutationCtx): Promise<Id<'users
       .first()) ||
     (identity.email
       ? await ctx.db
-        .query('users')
-        .filter(q => q.eq(q.field('email'), identity.email))
-        .first()
+          .query('users')
+          .filter(q => q.eq(q.field('email'), identity.email))
+          .first()
       : null);
 
   return userRecord?._id ?? null;
@@ -88,7 +105,7 @@ export const evaluate = internalMutation({
   args: {
     userId: v.id('users'),
     category: v.union(v.literal('TYPING'), v.literal('VOCAB'), v.literal('STREAK')),
-    data: v.any(),
+    data: ACHIEVEMENT_INPUT_DATA_VALIDATOR,
   },
   handler: async (ctx, args) => {
     const matched = matchRule(args.category, args.data);

@@ -140,8 +140,10 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                 {exam.type}
               </h1>
               <p className="text-primary-foreground/80 font-medium">
-                {labels.dashboard?.topik?.mobile?.cover?.roundMock?.replace('{{round}}', String(exam.round)) ||
-                  `Round ${exam.round} Past Exam`}
+                {labels.dashboard?.topik?.mobile?.cover?.roundMock?.replace(
+                  '{{round}}',
+                  String(exam.round)
+                ) || `Round ${exam.round} Past Exam`}
               </p>
             </div>
 
@@ -216,7 +218,8 @@ export const ExamCoverView: React.FC<ExamCoverViewProps> = React.memo(
                   </div>
                   <div>
                     <h4 className="font-bold text-muted-foreground text-sm">
-                      {labels.dashboard?.topik?.mobile?.cover?.listeningTitle || 'Listening section'}
+                      {labels.dashboard?.topik?.mobile?.cover?.listeningTitle ||
+                        'Listening section'}
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       {labels.dashboard?.topik?.mobile?.cover?.listeningTip ||
@@ -268,7 +271,8 @@ interface ExamResultViewProps {
 }
 
 export const ExamResultView: React.FC<ExamResultViewProps> = React.memo(
-  ({ exam, result, language: _language, onReview, onTryAgain, onBackToList }) => {
+  ({ exam, result, language, onReview, onTryAgain, onBackToList }) => {
+    const labels = useMemo(() => getLabels(language), [language]);
     const percentage = Math.round((result.score / result.totalScore) * 100);
     const passed = percentage >= 60;
 
@@ -996,7 +1000,8 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
                           className="bg-card p-3 rounded-lg border-2 border-indigo-500 shadow-md scroll-mt-20"
                         >
                           <div className="text-xs font-bold mb-2 text-muted-foreground">
-                            {labels.editingNote || 'Editing note'}: &quot;{ann.text.substring(0, 15)}
+                            {labels.editingNote || 'Editing note'}: &quot;
+                            {ann.text.substring(0, 15)}
                             ...&quot;
                           </div>
                           <Textarea

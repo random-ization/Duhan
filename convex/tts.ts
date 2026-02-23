@@ -38,8 +38,13 @@ const upsertCacheMutation = makeFunctionReference<
 /**
  * Generate a hash key for caching based on text and voice
  */
-function generateCacheKey(text: string, voice: string): string {
-  const input = `${text}|${voice}`;
+function generateCacheKey(
+  text: string,
+  voice: string,
+  rate: string = '0%',
+  pitch: string = '0%'
+): string {
+  const input = `${text}|${voice}|${rate}|${pitch}`;
   const hash = crypto.createHash('md5').update(input).digest('hex');
   return `tts/${hash}.mp3`;
 }
@@ -248,7 +253,7 @@ export const speak = action({
       const rate = args.rate || '0%';
       const pitch = args.pitch || '0%';
 
-      const cacheKey = generateCacheKey(args.text, voice);
+      const cacheKey = generateCacheKey(args.text, voice, rate, pitch);
 
       // Check S3 cache first (unless skipCache is true)
       if (!args.skipCache) {

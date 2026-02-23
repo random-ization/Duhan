@@ -138,6 +138,14 @@ export default defineConfig(({ command }) => ({
             return 'vendor-react';
           }
 
+          // Convex client/auth SDK
+          if (
+            normalized.includes('/node_modules/convex/') ||
+            normalized.includes('/node_modules/@convex-dev/auth/')
+          ) {
+            return 'vendor-convex';
+          }
+
           // Canvas 画板功能
           if (normalized.includes('/node_modules/konva/')) return 'vendor-konva';
           if (normalized.includes('/node_modules/react-konva/')) return 'vendor-react-konva';
@@ -160,6 +168,10 @@ export default defineConfig(({ command }) => ({
 
           // PDF export
           if (normalized.includes('/node_modules/@react-pdf/')) return 'vendor-pdf';
+
+          // Rich text/content processing
+          if (normalized.includes('/node_modules/dompurify/')) return 'vendor-editor';
+          if (normalized.includes('/node_modules/html2canvas/')) return 'vendor-editor';
 
           // Animation
           if (normalized.includes('/node_modules/framer-motion/')) return 'vendor-motion';
@@ -198,12 +210,11 @@ export default defineConfig(({ command }) => ({
   },
   // Optimize dependencies
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
+    include: ['react', 'react-dom', 'react-router-dom', 'lucide-react', 'convex/react'],
   },
 }));
 
 // Config touched to trigger VITE_I18N_VERSION cache bust
-
 
 // bump 1771603658
 

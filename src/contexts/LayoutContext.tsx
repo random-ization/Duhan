@@ -12,21 +12,31 @@ export const DEFAULT_CARD_ORDER = [
   'typing', // Typing practice
 ];
 
-interface LayoutContextType {
+interface LayoutDashboardState {
   isEditing: boolean;
-  toggleEditMode: () => void;
   cardOrder: string[];
+}
+
+interface LayoutChromeState {
+  isMobileMenuOpen: boolean;
+  sidebarHidden: boolean;
+  footerHidden: boolean;
+}
+
+interface LayoutActions {
+  toggleEditMode: () => void;
   updateCardOrder: (newOrder: string[]) => void;
   resetLayout: () => void;
-  isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
-  sidebarHidden: boolean;
   setSidebarHidden: (hidden: boolean) => void;
-  footerHidden: boolean;
   setFooterHidden: (hidden: boolean) => void;
 }
 
-const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
+export interface LayoutContextType extends LayoutDashboardState, LayoutChromeState, LayoutActions {}
+
+const LayoutDashboardStateContext = createContext<LayoutDashboardState | undefined>(undefined);
+const LayoutChromeStateContext = createContext<LayoutChromeState | undefined>(undefined);
+const LayoutActionsContext = createContext<LayoutActions | undefined>(undefined);
 
 export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -68,40 +78,76 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [footerHidden, setFooterHidden] = useState(false);
 
-  const value = useMemo(
+  const dashboardState = useMemo<LayoutDashboardState>(
     () => ({
       isEditing,
-      toggleEditMode,
       cardOrder,
-      updateCardOrder,
-      resetLayout,
-      isMobileMenuOpen,
-      toggleMobileMenu,
-      sidebarHidden,
-      setSidebarHidden,
-      footerHidden,
-      setFooterHidden,
     }),
-    [
-      isEditing,
-      toggleEditMode,
-      cardOrder,
-      updateCardOrder,
-      resetLayout,
-      isMobileMenuOpen,
-      toggleMobileMenu,
-      sidebarHidden,
-      footerHidden,
-    ]
+    [isEditing, cardOrder]
   );
 
-  return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
+  const chromeState = useMemo<LayoutChromeState>(
+    () => ({
+      isMobileMenuOpen,
+      sidebarHidden,
+      footerHidden,
+    }),
+    [isMobileMenuOpen, sidebarHidden, footerHidden]
+  );
+
+  const actions = useMemo<LayoutActions>(
+    () => ({
+      toggleEditMode,
+      updateCardOrder,
+      resetLayout,
+      toggleMobileMenu,
+      setSidebarHidden,
+      setFooterHidden,
+    }),
+    [toggleEditMode, updateCardOrder, resetLayout, toggleMobileMenu]
+  );
+
+  return (
+    <LayoutActionsContext.Provider value={actions}>
+      <LayoutDashboardStateContext.Provider value={dashboardState}>
+        <LayoutChromeStateContext.Provider value={chromeState}>
+          {children}
+        </LayoutChromeStateContext.Provider>
+      </LayoutDashboardStateContext.Provider>
+    </LayoutActionsContext.Provider>
+  );
+};
+
+export const useLayoutDashboardState = () => {
+  const context = useContext(LayoutDashboardStateContext);
+  if (!context) {
+    throw new Error('useLayoutDashboardState must be used within a LayoutProvider');
+  }
+  return context;
+};
+
+export const useLayoutChromeState = () => {
+  const context = useContext(LayoutChromeStateContext);
+  if (!context) {
+    throw new Error('useLayoutChromeState must be used within a LayoutProvider');
+  }
+  return context;
+};
+
+export const useLayoutActions = () => {
+  const context = useContext(LayoutActionsContext);
+  if (!context) {
+    throw new Error('useLayoutActions must be used within a LayoutProvider');
+  }
+  return context;
 };
 
 export const useLayout = () => {
-  const context = useContext(LayoutContext);
-  if (!context) {
-    throw new Error('useLayout must be used within a LayoutProvider');
-  }
-  return context;
+  const dashboard = useLayoutDashboardState();
+  const chrome = useLayoutChromeState();
+  const actions = useLayoutActions();
+  return useMemo<LayoutContextType>(
+    () => ({ ...dashboard, ...chrome, ...actions }),
+    [dashboard, chrome, actions]
+  );
 };

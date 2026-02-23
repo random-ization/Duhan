@@ -7,7 +7,7 @@ import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
 import { useConvex } from 'convex/react';
 import { TOPIK } from '../../utils/convexRefs';
 import { TopikQuestionDto } from '../../../convex/topik';
-import { useLayout } from '../../contexts/LayoutContext';
+import { useLayoutActions } from '../../contexts/LayoutContext';
 import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
@@ -57,7 +57,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const { examId, view: urlView } = useParams<{ examId?: string; view?: string }>();
   const navigate = useLocalizedNavigate();
   const convex = useConvex();
-  const { setSidebarHidden } = useLayout();
+  const { setSidebarHidden } = useLayoutActions();
   const { logActivity } = useActivityLogger();
   const isMobile = useIsMobile();
   const labels = getLabels(language);

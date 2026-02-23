@@ -5,30 +5,64 @@ import { useAuth } from './AuthContext';
 type CustomList = VocabularyItem[] | Mistake[];
 type ListType = 'SAVED' | 'MISTAKES';
 
-interface LearningContextType {
-  // Learning Position
+interface LearningSelectionState {
   selectedInstitute: string;
-  setSelectedInstitute: (id: string) => void;
   selectedLevel: number;
-  setSelectedLevel: (level: number) => void;
-  activeModule: LearningModuleType | null;
-  setActiveModule: (module: LearningModuleType | null) => void;
+}
 
-  // Custom List State (for saved words / mistakes review)
+interface LearningSessionState {
+  activeModule: LearningModuleType | null;
   activeCustomList: CustomList | null;
-  setActiveCustomList: (list: CustomList | null) => void;
   activeListType: ListType | null;
+}
+
+interface LearningActions {
+  setSelectedInstitute: (id: string) => void;
+  setSelectedLevel: (level: number) => void;
+  setActiveModule: (module: LearningModuleType | null) => void;
+  setActiveCustomList: (list: CustomList | null) => void;
   setActiveListType: (type: ListType | null) => void;
 }
 
-const LearningContext = createContext<LearningContextType | undefined>(undefined);
+export interface LearningContextType
+  extends LearningSelectionState, LearningSessionState, LearningActions {}
 
-export const useLearning = () => {
-  const context = useContext(LearningContext);
+const LearningSelectionStateContext = createContext<LearningSelectionState | undefined>(undefined);
+const LearningSessionStateContext = createContext<LearningSessionState | undefined>(undefined);
+const LearningActionsContext = createContext<LearningActions | undefined>(undefined);
+
+export const useLearningSelection = () => {
+  const context = useContext(LearningSelectionStateContext);
   if (!context) {
-    throw new Error('useLearning must be used within LearningProvider');
+    throw new Error('useLearningSelection must be used within LearningProvider');
   }
   return context;
+};
+
+export const useLearningSession = () => {
+  const context = useContext(LearningSessionStateContext);
+  if (!context) {
+    throw new Error('useLearningSession must be used within LearningProvider');
+  }
+  return context;
+};
+
+export const useLearningActions = () => {
+  const context = useContext(LearningActionsContext);
+  if (!context) {
+    throw new Error('useLearningActions must be used within LearningProvider');
+  }
+  return context;
+};
+
+export const useLearning = () => {
+  const selection = useLearningSelection();
+  const session = useLearningSession();
+  const actions = useLearningActions();
+  return useMemo<LearningContextType>(
+    () => ({ ...selection, ...session, ...actions }),
+    [selection, session, actions]
+  );
 };
 
 interface LearningProviderProps {
@@ -48,31 +82,41 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
 
   const setSelectedInstitute = useCallback((id: string) => setSelectedInstituteOverride(id), []);
   const setSelectedLevel = useCallback((level: number) => setSelectedLevelOverride(level), []);
-
-  // OPTIMIZATION: Use useMemo to stabilize context value and prevent unnecessary re-renders
-  const value = useMemo<LearningContextType>(
+  const actions = useMemo<LearningActions>(
     () => ({
-      selectedInstitute,
       setSelectedInstitute,
-      selectedLevel,
       setSelectedLevel,
-      activeModule,
       setActiveModule,
-      activeCustomList,
       setActiveCustomList,
-      activeListType,
       setActiveListType,
     }),
-    [
+    [setSelectedInstitute, setSelectedLevel]
+  );
+
+  const selectionState = useMemo<LearningSelectionState>(
+    () => ({
       selectedInstitute,
-      setSelectedInstitute,
       selectedLevel,
-      setSelectedLevel,
+    }),
+    [selectedInstitute, selectedLevel]
+  );
+
+  const sessionState = useMemo<LearningSessionState>(
+    () => ({
       activeModule,
       activeCustomList,
       activeListType,
-    ]
+    }),
+    [activeModule, activeCustomList, activeListType]
   );
 
-  return <LearningContext.Provider value={value}>{children}</LearningContext.Provider>;
+  return (
+    <LearningActionsContext.Provider value={actions}>
+      <LearningSelectionStateContext.Provider value={selectionState}>
+        <LearningSessionStateContext.Provider value={sessionState}>
+          {children}
+        </LearningSessionStateContext.Provider>
+      </LearningSelectionStateContext.Provider>
+    </LearningActionsContext.Provider>
+  );
 };

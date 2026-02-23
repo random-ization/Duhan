@@ -266,6 +266,7 @@ export default function MobileVocabView({
         <div className="h-full overflow-auto p-4">
           <VocabQuiz
             words={gameWords}
+            courseId={instituteId}
             onComplete={() => {}}
             onNextUnit={() => {}}
             hasNextUnit={false}

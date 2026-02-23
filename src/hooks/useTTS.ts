@@ -1,6 +1,46 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
+
+type SpeakActionArgs = {
+  text: string;
+  voice?: string;
+  rate?: string;
+  pitch?: string;
+  skipCache?: boolean;
+};
+
+type SpeakActionResult = {
+  success: boolean;
+  url?: string;
+  audio?: string;
+  format?: string;
+  error?: string;
+};
+
+type SpeakActionFn = (args: SpeakActionArgs) => Promise<SpeakActionResult>;
+
+const SPEAK_DEBOUNCE_MS = 120;
+const inFlightSpeakRequests = new Map<string, Promise<SpeakActionResult>>();
+
+function buildSpeakRequestDedupeKey(args: SpeakActionArgs): string {
+  return `${args.voice || ''}|${args.rate || ''}|${args.pitch || ''}|${args.skipCache ? '1' : '0'}|${args.text}`;
+}
+
+function runSpeakActionWithDedupe(
+  speakAction: SpeakActionFn,
+  args: SpeakActionArgs
+): Promise<SpeakActionResult> {
+  const dedupeKey = buildSpeakRequestDedupeKey(args);
+  const inFlight = inFlightSpeakRequests.get(dedupeKey);
+  if (inFlight) return inFlight;
+
+  const request = speakAction(args).finally(() => {
+    inFlightSpeakRequests.delete(dedupeKey);
+  });
+  inFlightSpeakRequests.set(dedupeKey, request);
+  return request;
+}
 
 /**
  * Hook for Text-to-Speech using Convex Azure TTS
@@ -14,37 +54,72 @@ import { aRef } from '../utils/convexRefs';
  * await speak("안녕하세요");
  */
 export const useTTS = () => {
-  const speakAction = useAction(
-    aRef<
-      { text: string; voice?: string; rate?: string; pitch?: string; skipCache?: boolean },
-      { success: boolean; url?: string; audio?: string; format?: string; error?: string }
-    >('tts:speak')
-  );
+  const speakAction = useAction(aRef<SpeakActionArgs, SpeakActionResult>('tts:speak'));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const requestIdRef = useRef(0);
   const cacheRef = useRef<Map<string, string> | null>(null);
   const cacheReadyRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDebounceResolveRef = useRef<((ok: boolean) => void) | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const createdUrlsRef = useRef<string[]>([]);
+  const createdUrlsRef = useRef<Set<string>>(new Set());
+
+  const revokeObjectUrl = useCallback((url: string) => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn('Failed to revoke audio URL:', e);
+    } finally {
+      createdUrlsRef.current.delete(url);
+    }
+  }, []);
 
   const stopCurrentAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = '';
+    const audio = audioRef.current;
+    if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.onabort = null;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.removeAttribute('src');
+      try {
+        audio.load();
+      } catch {
+        // Ignore browser-specific unload errors.
+      }
       audioRef.current = null;
     }
+
     // Also stop browser TTS as fallback
     if ('speechSynthesis' in globalThis) {
       globalThis.speechSynthesis.cancel();
     }
   }, []);
 
+  const cancelPendingDebouncedSpeak = useCallback((resolveValue: boolean) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    if (pendingDebounceResolveRef.current) {
+      pendingDebounceResolveRef.current(resolveValue);
+      pendingDebounceResolveRef.current = null;
+    }
+  }, []);
+
+  const cleanupCreatedObjectUrls = useCallback(() => {
+    for (const url of createdUrlsRef.current) {
+      revokeObjectUrl(url);
+    }
+    createdUrlsRef.current.clear();
+  }, [revokeObjectUrl]);
+
   const handleAudioPlayback = useCallback(
     async (audioUrl: string, shouldRevoke: boolean, myRequestId: number): Promise<boolean> => {
       if (myRequestId !== requestIdRef.current) {
-        if (shouldRevoke) URL.revokeObjectURL(audioUrl);
+        if (shouldRevoke) revokeObjectUrl(audioUrl);
         return false;
       }
 
@@ -54,11 +129,11 @@ export const useTTS = () => {
 
       return new Promise<boolean>(resolve => {
         const onPlaybackComplete = (ok: boolean) => {
-          try {
-            if (shouldRevoke) URL.revokeObjectURL(audioUrl);
-          } catch (e) {
-            console.warn('Failed to revoke audio URL:', e);
-          }
+          if (shouldRevoke) revokeObjectUrl(audioUrl);
+          audio.onended = null;
+          audio.onerror = null;
+          audio.onabort = null;
+
           if (myRequestId === requestIdRef.current) {
             if (audioRef.current === audio) {
               audioRef.current = null;
@@ -74,24 +149,26 @@ export const useTTS = () => {
         audio.play().catch(() => onPlaybackComplete(false));
       });
     },
-    []
+    [revokeObjectUrl]
   );
 
   const stop = useCallback(() => {
     requestIdRef.current += 1;
+    cancelPendingDebouncedSpeak(false);
     stopCurrentAudio();
-    // Clean up any created URLs
-    createdUrlsRef.current.forEach(url => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (e) {
-        console.warn('Failed to revoke URL during stop:', e);
-      }
-    });
-    createdUrlsRef.current = [];
+    cleanupCreatedObjectUrls();
     setIsLoading(false);
     setError(null);
-  }, [stopCurrentAudio]);
+  }, [cancelPendingDebouncedSpeak, cleanupCreatedObjectUrls, stopCurrentAudio]);
+
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+      cancelPendingDebouncedSpeak(false);
+      stopCurrentAudio();
+      cleanupCreatedObjectUrls();
+    };
+  }, [cancelPendingDebouncedSpeak, cleanupCreatedObjectUrls, stopCurrentAudio]);
 
   const getCache = useCallback(() => {
     if (!cacheReadyRef.current) {
@@ -102,18 +179,15 @@ export const useTTS = () => {
     return cacheRef.current;
   }, []);
 
-  const speak = useCallback(
+  const executeSpeak = useCallback(
     async (
-      text: string,
+      normalizedText: string,
       options?: {
         voice?: string;
         rate?: string;
         pitch?: string;
       }
     ) => {
-      const normalizedText = text?.trim();
-      if (!normalizedText) return false;
-
       const myRequestId = (requestIdRef.current += 1);
       stopCurrentAudio();
       setIsLoading(true);
@@ -121,7 +195,7 @@ export const useTTS = () => {
 
       try {
         const voice = options?.voice || 'ko-KR-SunHiNeural';
-        const cacheKey = buildCacheKey(normalizedText, voice);
+        const cacheKey = buildCacheKey(normalizedText, voice, options?.rate, options?.pitch);
         const cache = getCache();
         const cachedUrl = touchCache(cache, cacheKey);
 
@@ -137,26 +211,15 @@ export const useTTS = () => {
         }
 
         const runSpeakAction = async (skipCache: boolean) =>
-          (await speakAction({
+          await runSpeakActionWithDedupe(speakAction, {
             text: normalizedText,
             voice,
             rate: options?.rate,
             pitch: options?.pitch,
             skipCache,
-          })) as {
-            success: boolean;
-            url?: string;
-            audio?: string;
-            format?: string;
-            error?: string;
-          };
+          });
 
-        const playFromResult = async (result: {
-          success: boolean;
-          url?: string;
-          audio?: string;
-          format?: string;
-        }) => {
+        const playFromResult = async (result: SpeakActionResult) => {
           if (result.url) {
             writeCache(cache, cacheKey, result.url);
             persistCache(cache);
@@ -165,7 +228,7 @@ export const useTTS = () => {
           if (result.audio) {
             const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
             const audioUrl = URL.createObjectURL(audioBlob);
-            createdUrlsRef.current.push(audioUrl);
+            createdUrlsRef.current.add(audioUrl);
             return await handleAudioPlayback(audioUrl, true, myRequestId);
           }
           return false;
@@ -214,14 +277,41 @@ export const useTTS = () => {
     [getCache, handleAudioPlayback, speakAction, stopCurrentAudio]
   );
 
+  const speak = useCallback(
+    (
+      text: string,
+      options?: {
+        voice?: string;
+        rate?: string;
+        pitch?: string;
+      }
+    ) => {
+      const normalizedText = text?.trim();
+      if (!normalizedText) return Promise.resolve(false);
+
+      cancelPendingDebouncedSpeak(false);
+
+      return new Promise<boolean>(resolve => {
+        pendingDebounceResolveRef.current = resolve;
+        debounceTimerRef.current = setTimeout(async () => {
+          debounceTimerRef.current = null;
+          pendingDebounceResolveRef.current = null;
+          const played = await executeSpeak(normalizedText, options);
+          resolve(played);
+        }, SPEAK_DEBOUNCE_MS);
+      });
+    },
+    [cancelPendingDebouncedSpeak, executeSpeak]
+  );
+
   return { speak, stop, isLoading, error };
 };
 
 const CACHE_KEY = 'ttsCacheV1';
 const MAX_CACHE_SIZE = 200;
 
-function buildCacheKey(text: string, voice: string): string {
-  return `${voice}|${text}`;
+function buildCacheKey(text: string, voice: string, rate?: string, pitch?: string): string {
+  return `${voice}|${rate || '0%'}|${pitch || '0%'}|${text}`;
 }
 
 function loadPersistedCache(): Map<string, string> {

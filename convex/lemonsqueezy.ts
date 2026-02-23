@@ -1,5 +1,5 @@
 'use node';
-import { action } from './_generated/server';
+import { action, type ActionCtx } from './_generated/server';
 import { v } from 'convex/values';
 import crypto from 'node:crypto';
 import { makeFunctionReference } from 'convex/server';
@@ -27,6 +27,21 @@ type GrantAccessArgs = {
 type RevokeAccessArgs = {
   customerEmail: string;
   userId?: string;
+};
+
+type WebhookEventData = {
+  userEmail: string | undefined;
+  userId: string | undefined;
+  planFromCustom: string | undefined;
+  customerId: string | undefined;
+  subscriptionOrOrderId: string | undefined;
+  attributes: unknown;
+};
+
+type VariantPrice = {
+  id: string;
+  priceCents: number;
+  formatted: string;
 };
 
 const grantAccessMutation = makeFunctionReference<
@@ -76,6 +91,24 @@ const VARIANT_MAP: Record<string, Record<string, string>> = {
 };
 
 const LEMONSQUEEZY_API_URL = 'https://api.lemonsqueezy.com/v1';
+
+const parseVariantPrices = (value: unknown): VariantPrice[] => {
+  const data = getPath(value, ['data']);
+  if (!Array.isArray(data)) return [];
+
+  return data.flatMap(entry => {
+    if (!isRecord(entry)) return [];
+    const id = readStringish(entry, ['id']);
+    const price = getPath(entry, ['attributes', 'price']);
+    const formatted = readString(entry, ['attributes', 'price_formatted']);
+
+    if (!id || typeof price !== 'number' || !Number.isFinite(price) || !formatted) {
+      return [];
+    }
+
+    return [{ id, priceCents: price, formatted }];
+  });
+};
 
 /**
  * Create a Lemon Squeezy checkout session
@@ -202,9 +235,8 @@ export const getVariantPrices = action({
       throw new Error(`Lemon Squeezy API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const variants = data.data as any[];
+    const data: unknown = await response.json();
+    const variants = parseVariantPrices(data);
 
     // Build pricing map
     const prices = {
@@ -223,8 +255,8 @@ export const getVariantPrices = action({
       for (const [plan, id] of Object.entries(plans)) {
         const variant = findVariant(id);
         if (variant) {
-          const price = variant.attributes.price; // integer (cents)
-          const formatted = variant.attributes.price_formatted; // e.g. "$9.99"
+          const price = variant.priceCents; // integer (cents)
+          const formatted = variant.formatted; // e.g. "$9.99"
           // We assume USD mostly, but LS handles currency symbol in formatted string
           // We can also just return the formatted string directly
           // Or format it manually if needed. formatted string is best for display.
@@ -322,18 +354,9 @@ export const handleWebhook = action({
 // Helper for Lemon Squeezy webhook processing
 
 async function processWebhookEvent(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
+  ctx: ActionCtx,
   eventName: string | undefined,
-  data: {
-    userEmail: string | undefined;
-    userId: string | undefined;
-    planFromCustom: string | undefined;
-    customerId: string | undefined;
-    subscriptionOrOrderId: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attributes: any;
-  }
+  data: WebhookEventData
 ) {
   const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
 
@@ -364,20 +387,7 @@ async function processWebhookEvent(
   }
 }
 
-async function handleSubscriptionEvent(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  eventName: string,
-  data: {
-    userEmail: string | undefined;
-    userId: string | undefined;
-    planFromCustom: string | undefined;
-    customerId: string | undefined;
-    subscriptionOrOrderId: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attributes: any;
-  }
-) {
+async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: WebhookEventData) {
   const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
 
   switch (eventName) {
@@ -426,19 +436,7 @@ async function handleSubscriptionEvent(
   }
 }
 
-async function handleSubscriptionUpdated(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  data: {
-    userEmail: string | undefined;
-    userId: string | undefined;
-    planFromCustom: string | undefined;
-    customerId: string | undefined;
-    subscriptionOrOrderId: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attributes: any;
-  }
-) {
+async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData) {
   const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
   const status = readString(attributes, ['status']);
 

@@ -1,0 +1,656 @@
+{
+  "home": "Trang chủ",
+  "textbookLearning": "Học Giáo Trình",
+  "topik": "Luyện thi TOPIK",
+  "admin": "Quản trị",
+  "signOut": "Đăng xuất",
+  "guest": "Khách",
+  "login": "Đăng nhập",
+  "register": "Đăng ký",
+  "displayName": "Tên hiển thị",
+  "email": "Email",
+  "password": "Mật khẩu",
+  "selectPlan": "Chọn gói",
+  "free": "Miễn phí",
+  "premium": "Cao cấp",
+  "loginAsAdmin": "Đăng nhập Quản trị viên",
+  "currentPassword": "Mật khẩu hiện tại",
+  "newPassword": "Mật khẩu mới",
+  "confirmPassword": "Xác nhận mật khẩu",
+  "changePassword": "Đổi mật khẩu",
+  "passwordMismatch": "Mật khẩu không khớp",
+  "weakPassword": "Mật khẩu phải có ít nhất 6 ký tự",
+  "wrongPassword": "Mật khẩu hiện tại không đúng",
+  "forgotPassword": "Quên mật khẩu?",
+  "resetPasswordViaEmail": "Đặt lại mật khẩu qua email",
+  "upgradeToPremium": "Nâng cấp lên Premium",
+  "premiumTextbookAccess": "Bài học này yêu cầu gói Premium",
+  "premiumExamAccess": "Bài thi TOPIK này yêu cầu gói Premium",
+  "premiumFeatures": "Tính năng Premium",
+  "unlimitedAccess": "Truy cập không giới hạn tất cả nội dung",
+  "allTextbooks": "Truy cập tất cả bài học",
+  "allExams": "Truy cập tất cả bài thi TOPIK",
+  "prioritySupport": "Hỗ trợ ưu tiên",
+  "offlineMode": "Chế độ học ngoại tuyến",
+  "perMonth": "mỗi tháng",
+  "upgradeNow": "Nâng cấp ngay",
+  "upgradeComingSoon": "Tính năng thanh toán sắp ra mắt! Vui lòng liên hệ hỗ trợ.",
+  "continueFromLast": "Tiếp tục từ lần cuối",
+  "resumeLearning": "Tiếp tục học",
+  "startNew": "Bắt đầu mới",
+  "freeContent": "Miễn phí",
+  "paidContent": "Trả phí",
+  "contentLocked": "Nội dung cao cấp",
+  "upgradeToAccess": "Nâng cấp để truy cập nội dung này",
+  "upgradeTitle": "Nâng cấp lên Premium",
+  "upgradeDescription": "Mở khóa tất cả nội dung giáo trình và bài thi TOPIK",
+  "upgradeFeaturesList": {
+    "allTextbooksUnits": "Tất cả bài học giáo trình",
+    "allExamsAccess": "Tất cả bài thi thực hành TOPIK",
+    "unlimitedLearning": "Học không giới hạn"
+  },
+  "maybeLater": "Để sau",
+  "subscriptionType": "Loại đăng ký",
+  "annualMember": "Thành viên hàng năm",
+  "lifetimeMember": "Thành viên trọn đời",
+  "freeMember": "Thành viên miễn phí",
+  "daysRemaining": "Số ngày còn lại",
+  "expiresOn": "Hết hạn vào",
+  "membershipStatus": "Trạng thái thành viên",
+  "termsOfService": "Điều khoản dịch vụ",
+  "privacyPolicy": "Chính sách bảo mật",
+  "refundPolicy": "Chính sách hoàn tiền",
+  "legal": "Pháp lý",
+  "legalDocuments": "Trình chỉnh sửa tài liệu pháp lý",
+  "legalDocumentsDesc": "Chỉnh sửa điều khoản dịch vụ, chính sách bảo mật và chính sách hoàn tiền",
+  "documentNotFound": "Không tìm thấy tài liệu",
+  "documentNotFoundDesc": "Không thể tìm thấy tài liệu được yêu cầu.",
+  "lastUpdated": "Cập nhật lần cuối",
+  "appName": "DuHan",
+  "plan": {
+    "monthly": "Gói Tháng",
+    "annual": "Gói Năm",
+    "lifetime": "Trọn Đời"
+  },
+  "period": {
+    "per_month": "/ tháng",
+    "per_year": "/ năm",
+    "once": "một lần"
+  },
+  "button": {
+    "upgrade": "Nâng cấp ngay"
+  },
+  "landing": {
+    "seo": {
+      "title": "DuHan - Học tiếng Hàn trực tuyến | Nền tảng học tương tác",
+      "description": "Học tiếng Hàn hiệu quả với DuHan. Luyện từ vựng, ngữ pháp, luyện thi TOPIK, podcast và video trong một nền tảng học tập tương tác.",
+      "keywords": "học tiếng Hàn, học tiếng Hàn online, TOPIK, từ vựng tiếng Hàn, ngữ pháp tiếng Hàn, khóa học tiếng Hàn"
+    },
+    "nav": {
+      "topik": "TOPIK",
+      "fsrs": "Thuật toán ghi nhớ",
+      "ai": "Gia sư AI",
+      "pricing": "Giá",
+      "cta": "Bắt đầu miễn phí",
+      "openMenu": "Mở menu",
+      "closeMenu": "Đóng menu"
+    },
+    "hero": {
+      "badge": "Hơn 2.000 người học đang ôn TOPIK",
+      "titleLine1": "Làm chủ tiếng Hàn,",
+      "titleGradient": "không có đường tắt.",
+      "desc": "Nhưng với phương pháp khoa học, bạn sẽ học tiếng Hàn nhanh hơn. DuHan kết hợp đề TOPIK, luyện từ vựng và AI để tạo hệ thống tăng điểm hiệu quả.",
+      "ctaPrimary": "Dùng thử miễn phí",
+      "ctaSecondary": "Xem cách hoạt động"
+    },
+    "stats": {
+      "topikCoverageValue": "100%",
+      "topikCoverageLabel": "Đề TOPIK",
+      "aiValue": "GPT-4",
+      "aiLabel": "Máy phân tích ngữ pháp",
+      "fsrsValue": "FSRS",
+      "fsrsLabel": "Lặp lại tối ưu",
+      "levelRange": "TOPIK1-6",
+      "levelSupportLabel": "Hỗ trợ toàn cấp"
+    },
+    "topik": {
+      "badge": "Ưu tiên thi",
+      "titleLine1": "Mô phỏng thi thật,",
+      "titleHighlight": "luyện như ngày thi.",
+      "desc": "Không chỉ tải PDF. Chúng tôi tái tạo trải nghiệm TOPIK trên máy: nghe tự phát, đọc giới hạn thời gian, và phân tích sau bài thi.",
+      "point1Title": "Kho đề (TOPIK I & II)",
+      "point1Desc": "Không cần tìm tài liệu rải rác nữa—tất cả ở đây.",
+      "point2Title": "Biểu đồ năng lực",
+      "point2Desc": "Nhìn nhanh điểm yếu nghe hay đọc của bạn.",
+      "mockDomain": "secure.topik-exam.com",
+      "mockTitle": "제 64회 한국어능력시험",
+      "mockSubtitle": "TOPIK II - 읽기 (Reading)",
+      "mockQuestion": "1. 다음 ( )에 알맞은 것을 고르십시오.",
+      "mockStem": "비가 오면 우산을 ( ).",
+      "mockChoice1": "쓰다",
+      "mockChoice2": "씁니다",
+      "mockChoice3": "쓰고",
+      "mockChoice4": "썼다"
+    },
+    "fsrs": {
+      "badge": "Công nghệ cốt lõi",
+      "titleLine1": "Hiểu bạn hơn Anki,",
+      "titleHighlight": "lập lịch FSRS",
+      "desc": "Học vẹt rất kém hiệu quả. DuHan dùng FSRS để dự đoán khi bạn sắp quên và nhắc đúng thời điểm cần ôn.",
+      "stat1Value": "-40%",
+      "stat1Label": "Giảm thời gian ôn",
+      "stat2Value": "95%",
+      "stat2Label": "Ghi nhớ dài hạn",
+      "cardBadge": "Từ mới",
+      "word": "개발자",
+      "wordMeaning": "Lập trình viên",
+      "rateAgain": "Lại",
+      "rateAgainHint": "1m",
+      "rateHard": "Khó",
+      "rateHardHint": "6m",
+      "rateGood": "Tốt",
+      "rateGoodHint": "10m",
+      "rateEasy": "Dễ",
+      "rateEasyHint": "4d"
+    },
+    "ai": {
+      "badge": "Trí tuệ DuHan",
+      "titleLine1": "Luôn sẵn sàng 24/7,",
+      "titleHighlight": "gia sư ngữ pháp AI",
+      "desc": "Gặp câu dài khó hiểu hay phân vân sắc thái? Chạm vào câu bất kỳ, AI sẽ phân tích ngữ pháp, ngữ cảnh và đưa ví dụ bằng ngôn ngữ của bạn.",
+      "supportTitle": "Hỗ trợ",
+      "feature1": "Phân tích ngữ pháp",
+      "feature2": "So sánh từ đồng nghĩa",
+      "feature3": "Chỉnh sửa bài viết",
+      "feature4": "Sửa phát âm/nói",
+      "chatTitle": "Phân tích ngữ pháp",
+      "chatSubtitle": "Được hỗ trợ bởi GPT-4o",
+      "userAlt": "Người dùng",
+      "userQuestion": "-다가 trong câu này nghĩa là gì?",
+      "userExample": "\"학교에 가다가 친구를 만났어요.\"",
+      "botAnswer": "Ở đây, -다가 diễn tả sự chuyển hành động giữa chừng: trong lúc đang đi đến trường, hành động thứ hai (gặp bạn) xảy ra trước khi tới nơi."
+    },
+    "toolbox": {
+      "badge": "Demo tương tác",
+      "title": "Chưa dừng ở đó.",
+      "subtitle": "Nhấp vào thẻ bên dưới để khám phá bộ công cụ học tập mạnh mẽ của DuHan.",
+      "card1Title": "Xuất PDF & Chép chính tả",
+      "card1Desc": "Chuyển sổ từ vựng thành giấy chép chính tả A4. Nhiều bố cục phù hợp luyện viết.",
+      "card1Cta": "Tải PDF này",
+      "card2Title": "Podcast & Transcript thông minh",
+      "card2Desc": "Không chỉ nghe—mỗi tập có transcript theo thời gian do AI tạo.",
+      "card2Point1Title": "Đồng bộ tô sáng",
+      "card2Point1Desc": "Chữ chạy theo âm thanh",
+      "card2Point2Title": "Nhấp để tra từ",
+      "card2Point2Desc": "Tra cứu từ điển tích hợp",
+      "card2Cta": "Nghe thử tập này",
+      "card3Title": "Video & AI phân tích sâu",
+      "card3Desc": "Học như lướt TikTok. Không hiểu ngữ pháp? AI phân tích tức thì.",
+      "card3Tip": "Thử rê chuột lên từ màu tím",
+      "card3Cta": "Xem video demo AI",
+      "demo": {
+        "pdf": {
+          "block1Title": "Chế độ",
+          "block1Value": "Danh sách từ / Chép chính tả / Chính tả",
+          "block2Title": "Khổ giấy",
+          "block2Value": "A4 / B5 / Tablet",
+          "sheetTitle": "Bảng từ vựng",
+          "badge1": "Mới",
+          "badge2": "Chép A4",
+          "siteTagline": "10 phút mỗi ngày, học tiếng Hàn dễ dàng",
+          "tableWord": "Tiếng Hàn (Word)",
+          "tableMeaning": "Nghĩa (Meaning)",
+          "tableQuiz": "Viết",
+          "meaning1": "Nước nóng",
+          "meaning2": "Ăn",
+          "meaning3": "Học",
+          "footerLeft": "DuHan - nền tảng học tiếng Hàn",
+          "footerRight": "Trang 1 / 5"
+        },
+        "podcast": {
+          "nowPlaying": "Đang phát",
+          "episodeTitle": "Talk To Me In Korean Ep.14",
+          "tooltip": "Tốt (Good)",
+          "translation": "Hôm nay thời tiết thật sự rất đẹp.",
+          "liveTranscript": "Phụ đề trực tiếp",
+          "transcriptFragment": "Hôm nay thời tiết thật sự rất đẹp."
+        },
+        "video": {
+          "aiTitle": "Phân tích ngữ pháp AI",
+          "baseForm": "Nguyên thể",
+          "baseFormValue": "먹다 (ăn)",
+          "grammar": "Ngữ pháp",
+          "grammarValue": "-아/어서 (lý do)",
+          "gloss": "\"Vì đã ăn kimchi...\"",
+          "translation": "Cay vì tôi đã ăn kimchi.",
+          "subtitle": "Phụ đề"
+        }
+      }
+    },
+    "pricing": {
+      "title": "Giá đơn giản, giá trị lớn",
+      "subtitle": "Rẻ hơn một ly cà phê—đáng để đỗ TOPIK.",
+      "free": {
+        "title": "Miễn phí",
+        "price": "$0",
+        "feature1": "15 từ / ngày",
+        "feature2": "Tài liệu đọc cơ bản",
+        "feature3": "Hỗ trợ cộng đồng",
+        "cta": "Tạo tài khoản"
+      },
+      "pro": {
+        "badge": "Phổ biến nhất",
+        "title": "Pro",
+        "price": "$6.9",
+        "period": "/ tháng (giảm khi trả năm)",
+        "feature1": "Ôn từ vựng không giới hạn",
+        "feature2": "Thi thử TOPIK đầy đủ",
+        "feature3": "Gia sư ngữ pháp AI (không giới hạn)",
+        "feature4": "Xuất PDF",
+        "cta": "Dùng thử miễn phí 7 ngày"
+      },
+      "lifetime": {
+        "title": "Trọn đời",
+        "price": "$99",
+        "feature1": "Thanh toán một lần",
+        "feature2": "Bao gồm mọi cập nhật tương lai",
+        "cta": "Mua trọn đời"
+      }
+    },
+    "faq": {
+      "title": "Câu hỏi thường gặp",
+      "q1": "Phù hợp cho người mới bắt đầu?",
+      "a1": "Có. Bắt đầu từ Hangul và có bài đọc phân cấp theo TOPIK1.",
+      "q2": "Đề TOPIK có cập nhật không?",
+      "a2": "Có. Chúng tôi thu thập đề công khai và cập nhật khi có đợt mới.",
+      "q3": "Có hoàn tiền không?",
+      "a3": "Có bảo đảm hoàn tiền trong 30 ngày. Email hỗ trợ để được hoàn tiền."
+    },
+    "footer": {
+      "about": "Giới thiệu",
+      "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
+    },
+    "typing": {
+      "badge": "TÍNH NĂNG MỚI",
+      "titleLine1": "Gõ tiếng Hàn trôi chảy",
+      "titleHighlight": "Như chơi piano",
+      "desc": "Tạm biệt kiểu gõ mò từng phím. Luyện thành phản xạ cơ từ chữ cái cơ bản đến bài viết hoàn chỉnh với hệ thống luyện gõ thông minh tích hợp sẵn. Trải nghiệm nhịp điệu gõ tiếng Hàn ngay trong trình duyệt mà không cần cài thêm phần mềm.",
+      "feature1Title": "Phản hồi thời gian thực",
+      "feature1Desc": "Sửa lỗi theo từng ký tự giúp bạn chỉnh nhanh trí nhớ vị trí phím.",
+      "feature2Title": "Gợi ý phím động",
+      "feature2Desc": "Dự đoán thông minh sẽ làm nổi bật phím tiếp theo để phản hồi trực quan ngay lập tức. Tạo phản xạ cơ một cách tự nhiên qua luyện tập mượt mà, không cần học vẹt.",
+      "cta": "Bắt đầu luyện gõ",
+      "preview": {
+        "label": "XEM TRƯỚC GÕ PHÍM",
+        "text1": "한",
+        "text2": "국",
+        "text3": "어",
+        "text4": "를 배워요",
+        "wpmLabel": "WPM",
+        "accLabel": "Độ chính xác",
+        "nextKeyLabel": "PHÍM TIẾP THEO",
+        "layoutLabel": "BÀN PHÍM HÀN 2-BEOL"
+      }
+    },
+    "typingGame": {
+      "title": "Luyen go phim",
+      "nextSentence": "Cau tiep theo",
+      "focusInput": "Tap trung nhap",
+      "wpm": "WPM",
+      "acc": "Do chinh xac"
+    }
+  },
+  "pricing": {
+    "limitedOffer": "Ưu đãi có hạn",
+    "paymentMethods": "Chúng tôi chấp nhận WeChat Pay và Alipay",
+    "notSure": "Không chắc chắn gói nào phù hợp với bạn?",
+    "trial": "Bắt đầu dùng thử miễn phí 7 ngày",
+    "discount": "GIẢM 70%",
+    "title": "Đầu tư cho sự trôi chảy tiếng Hàn của bạn",
+    "subtitle": "Chọn gói phù hợp với tốc độ của bạn.",
+    "paymentUpgrading": "Hệ thống thanh toán đang được nâng cấp...",
+    "recommended": "Đề xuất",
+    "currentPlan": "Gói hiện tại",
+    "features": {
+      "monthly": {
+        "cloudSync": "Đồng bộ ghi chú đám mây"
+      },
+      "annual": {
+        "allMonthly": "Tất cả tính năng hàng tháng",
+        "bestValue": "Giá trị tốt nhất cho người học nghiêm túc",
+        "prioritySupport": "Hỗ trợ ưu tiên"
+      },
+      "lifetime": {
+        "oneTime": "Thanh toán một lần",
+        "foreverAccess": "Truy cập vĩnh viễn mọi thứ",
+        "futureUpdates": "Bao gồm các bản cập nhật trong tương lai"
+      }
+    }
+  },
+  "pricingDetails": {
+    "refundBadge": "Hoàn tiền trong 30 ngày",
+    "errors": {
+      "checkoutFailed": "Không thể bắt đầu thanh toán. Vui lòng thử lại."
+    },
+    "hero": {
+      "titlePrefix": "Đầu tư cho ",
+      "titleHighlight": "tương lai tiếng Hàn",
+      "subtitleLine1": "Giá một ly cà phê để đạt TOPIK và nói trôi chảy.",
+      "subtitleLine2": "Không phí ẩn. Hủy bất cứ lúc nào."
+    },
+    "billing": {
+      "monthly": "Tháng",
+      "quarterly": "Quý",
+      "semiannual": "Quý",
+      "annual": "Năm",
+      "semiannualBadge": "Giá khu vực",
+      "annualBadge": "Giá khu vực"
+    },
+    "period": {
+      "month": "/tháng",
+      "quarterly": "/quý",
+      "semiannual": "/quý",
+      "annual": "/năm"
+    },
+    "saving": {
+      "semiannual": "",
+      "annual": ""
+    },
+    "plans": {
+      "free": {
+        "title": "Miễn phí",
+        "subtitle": "Dành cho học nhẹ nhàng",
+        "cta": "Gói hiện tại",
+        "features": {
+          "f1": "Tối đa 20 từ mới/ngày",
+          "f2": "Flashcard / Chính tả / Trắc nghiệm",
+          "f3": "Test Mode: 1 lần/ngày",
+          "f4": "Video/Podcast: 2 mục/ngày",
+          "f5": "Chỉ một phần đề TOPIK chọn lọc"
+        }
+      },
+      "pro": {
+        "badge": "Phổ biến nhất",
+        "title": "Pro",
+        "subtitle": "Dành cho người ôn thi nghiêm túc",
+        "cta": "Nâng cấp Pro",
+        "unlockTitle": "Mở khóa tất cả",
+        "features": {
+          "f1": "Test Mode không giới hạn",
+          "f2": "FSRS không giới hạn",
+          "f3": "Kho đề TOPIK đầy đủ",
+          "f4": "Truy cập media đầy đủ",
+          "f5": "Gia sư ngữ pháp AI (không giới hạn)"
+        }
+      },
+      "lifetime": {
+        "title": "Trọn đời",
+        "subtitle": "Trả một lần, dùng mãi",
+        "cta": "Nhận quyền truy cập trọn đời",
+        "features": {
+          "f1": "Bao gồm mọi tính năng Pro",
+          "f2": "Cập nhật tương lai miễn phí",
+          "f3": "Hỗ trợ ưu tiên"
+        }
+      }
+    },
+    "table": {
+      "title": "So sánh quyền lợi",
+      "subtitle": "Vì sao nên chọn Pro—nhìn là hiểu.",
+      "th1": "Quyền lợi",
+      "th2": "Miễn phí",
+      "th3": "Pro / Trọn đời",
+      "section": {
+        "fsrs": "Từ vựng (FSRS)",
+        "topik": "TOPIK",
+        "tools": "Nội dung & công cụ"
+      },
+      "unlimited": "Không giới hạn",
+      "supported": "Hỗ trợ",
+      "freeOpen": "Có",
+      "fullAccess": "Đầy đủ",
+      "fsrs": {
+        "dailyLimit": "Từ mới/ngày",
+        "dailyLimitFree": "20/ngày",
+        "modes": "Chế độ học",
+        "testMode": "Chế độ kiểm tra",
+        "testModeFree": "1/ngày",
+        "testModePro": "Không giới hạn & phân tích"
+      },
+      "topik": {
+        "scope": "Phạm vi đề",
+        "scopeFree": "Một phần chọn lọc",
+        "scopePro": "Đầy đủ",
+        "exam": "Thi thử (giờ/điểm)",
+        "examFree": "Một phần",
+        "examPro": "Tất cả",
+        "speed": "Tốc độ nghe"
+      },
+      "tools": {
+        "media": "Thư viện video/podcast",
+        "mediaFree": "2 mục/ngày",
+        "mediaPro": "Đầy đủ",
+        "ai": "AI ngữ pháp",
+        "aiFree": "3 lần/ngày",
+        "pdf": "Xuất PDF",
+        "pdfPro": "Mọi định dạng"
+      }
+    },
+    "faq": {
+      "title": "Câu hỏi thường gặp",
+      "q1": {
+        "q": "Không hài lòng có hoàn tiền không?",
+        "a": "Có. Chúng tôi có bảo đảm hoàn tiền 30 ngày. Hãy email hỗ trợ để được hoàn tiền."
+      },
+      "q2": {
+        "q": "Tôi có thể hủy bất cứ lúc nào không?",
+        "a": "Có. Bạn có thể hủy trong cài đặt tài khoản. Quyền lợi còn đến hết kỳ thanh toán."
+      },
+      "q3": {
+        "q": "Gói trọn đời có bao gồm tính năng tương lai không?",
+        "a": "Có. Gói trọn đời bao gồm mọi cập nhật Pro trong tương lai, kể cả khóa học và nâng cấp AI."
+      }
+    },
+    "footer": {
+      "poweredBy": "Thanh toán an toàn bởi",
+      "stripe": "Stripe",
+      "paypal": "PayPal",
+      "copyright": "© 2026 DuHan Inc. All rights reserved."
+    },
+    "originalLabel": "Giá gốc",
+    "promo": {
+      "activated": "Ưu đãi khu vực đã kích hoạt",
+      "verifyNow": "Xác minh ngay",
+      "subscribe": "Đăng ký giá ưu đãi",
+      "kycReserved": "Đã giữ chỗ nút xác minh, sẽ tích hợp KYC sau.",
+      "banner": {
+        "prefix": "Xác minh số điện thoại để mở giá ưu đãi: ",
+        "highlight": "$1.9",
+        "suffix": "/tháng từ",
+        "cta": "Xác minh ngay →"
+      },
+      "card": {
+        "title": "Ưu đãi đặc biệt cho Việt Nam",
+        "badge": "Từ $1.9",
+        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Hoàn tất xác minh số điện thoại để mở khóa mức giá ưu đãi.",
+        "cta": "Xác minh ngay"
+      }
+    }
+  },
+  "phoneVerifyModal": {
+    "title": "Kiểm tra số điện thoại",
+    "subtitle": "Chỉ dùng để xác nhận bạn có đủ điều kiện ưu đãi theo khu vực.",
+    "disclaimer": "Chúng tôi không lưu số điện thoại của bạn. Sau khi gửi, chúng tôi chỉ ghi lại tình trạng đủ điều kiện và khu vực để áp dụng ưu đãi.",
+    "close": "Đóng",
+    "tabs": {
+      "cn": "Trung Quốc",
+      "vn": "Việt Nam",
+      "mn": "Mông Cổ"
+    },
+    "placeholder": "Nhập số điện thoại",
+    "hint": "Vui lòng nhập số hợp lệ cho khu vực đã chọn.",
+    "formattedLabel": "Xác minh thành công",
+    "cta": {
+      "verify": "Xác minh và nhận ưu đãi",
+      "login": "Đăng nhập để xác minh và nhận ưu đãi"
+    },
+    "errors": {
+      "invalid": "Số điện thoại không hợp lệ hoặc không thuộc khu vực đã chọn.",
+      "failed": "Xác minh thất bại. Vui lòng thử lại."
+    },
+    "toasts": {
+      "eligible": "Xác minh thành công. Ưu đãi khu vực đã được bật.",
+      "notEligible": "Đã xác minh nhưng không đủ điều kiện ưu đãi khu vực."
+    }
+  },
+  "generalSettings": "Cài đặt chung",
+  "language": "Ngôn ngữ hiển thị",
+  "languageDescription": "Chọn ngôn ngữ cho giao diện và tài liệu học tập.",
+  "nav": {
+    "dashboard": "Trang chủ",
+    "courses": "Khóa học",
+    "practice": "Luyện tập",
+    "media": "Nội dung",
+    "videos": "Video",
+    "podcasts": "Podcast",
+    "topik": "TOPIK",
+    "profile": "Hồ sơ",
+    "typing": "Gõ phím"
+  },
+  "auth": {
+    "loginFailed": "Đăng nhập thất bại",
+    "signupFailed": "Đăng ký thất bại",
+    "invalidCredentials": "Email hoặc mật khẩu không đúng",
+    "emailExists": "Email đã được đăng ký",
+    "emailNotVerified": "Vui lòng xác minh email trước khi đăng nhập",
+    "userNotFound": "Người dùng không tồn tại",
+    "googleLoginFailed": "Đăng nhập Google thất bại",
+    "googleConfigMissing": "Chưa cấu hình đăng nhập Google",
+    "registerSuccess": "Đăng ký thành công! Vui lòng kiểm tra email.",
+    "slogan": "Nâng cấp tiếng Hàn của bạn",
+    "welcomeBack": "Chào mừng trở lại!",
+    "createCharacter": "Tạo nhân vật mới",
+    "placeholderName": "Tên nhân vật",
+    "placeholderEmail": "Địa chỉ Email",
+    "placeholderPassword": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginButton": "Bắt đầu (ĐĂNG NHẬP)",
+    "signupButton": "Đăng ký",
+    "orContinue": "Hoặc tiếp tục với",
+    "noAccount": "Chưa có tài khoản?",
+    "hasAccount": "Đã có tài khoản?",
+    "registerAction": "Tạo ngay",
+    "loginAction": "Đăng nhập ngay",
+    "resendSuccess": "Liên kết đặt lại đã được gửi! Vui lòng kiểm tra hộp thư của bạn.",
+    "resendError": "Không thể đặt lại mật khẩu, vui lòng kiểm tra xem địa chỉ email có chính xác không.",
+    "backToLogin": "Quay lại đăng nhập",
+    "recoverPassword": "Khôi phục mật khẩu",
+    "recoveryDesc": "Nhập email đã đăng ký, chúng tôi sẽ gửi tín hiệu khôi phục.",
+    "verifyingEmail": "Đang xác minh email...",
+    "waitPlease": "Vui lòng đợi",
+    "verifySuccess": "Xác minh email thành công!",
+    "verifyFailed": "Xác minh thất bại",
+    "brand": "DuHan.",
+    "recoveryTitle": "Khôi phục tài khoản",
+    "recoverySlogan": "Đừng lo lắng.",
+    "sending": "Đang gửi...",
+    "sendResetLink": "Gửi liên kết khôi phục",
+    "setNewPassword": "Thiết lập mật khẩu mới",
+    "enterNewPassword": "Nhập mật khẩu mới của bạn bên dưới",
+    "confirmPasswordLabel": "Xác nhận mật khẩu",
+    "passwordsNotMatch": "Mật khẩu không khớp",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
+    "resetSuccess": "Đặt lại mật khẩu thành công!",
+    "resetSuccessDesc": "Bạn đã được đăng xuất. Vui lòng đăng nhập lại bằng mật khẩu mới.",
+    "invalidLink": "Liên kết không hợp lệ",
+    "invalidLinkDesc": "Mã xác nhận thiếu hoặc đã hết hạn. Vui lòng yêu cầu lại.",
+    "requestAgain": "Yêu cầu lại",
+    "alt": {
+      "rocket": "Tên lửa"
+    },
+    "social": {
+      "google": "Google",
+      "kakao": "Kakao"
+    },
+    "newPasswordLabel": "Mật khẩu mới",
+    "resetFailed": "Đặt lại mật khẩu thất bại. Vui lòng thử lại.",
+    "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối và thử lại."
+  },
+  "common": {
+    "appName": "Duhan",
+    "alt": {
+      "logo": "Logo Duhan"
+    },
+    "contact": "Liên hệ hỗ trợ",
+    "getStarted": "Bắt đầu ngay",
+    "login": "Đăng nhập",
+    "privacy": "Chính sách bảo mật",
+    "terms": "Điều khoản dịch vụ",
+    "close": "Đóng",
+    "menu": "Trình đơn",
+    "prev": "Trước",
+    "next": "Tiếp",
+    "back": "Quay lại",
+    "backHome": "Về trang chủ",
+    "continue": "Tiếp tục",
+    "viewAll": "Xem tất cả",
+    "exams": "Đề thi",
+    "currentFocus": "Trọng tâm hiện tại",
+    "more": "Thêm thao tác",
+    "favorite": "Yêu thích",
+    "unfavorite": "Bỏ yêu thích",
+    "share": "Chia sẻ",
+    "fontSize": "Cỡ chữ",
+    "gotIt": "OK",
+    "noMatches": "Không có kết quả phù hợp",
+    "notFound": "Không tìm thấy trang",
+    "notFoundHint": "Trang bạn tìm không tồn tại.",
+    "off": "Tắt",
+    "on": "Bật",
+    "page": "Trang",
+    "search": "Tìm kiếm"
+  },
+  "errors": {
+    "CHANNEL_CREATION_FAILED": "Lỗi tạo kênh podcast.",
+    "EMAIL_ALREADY_EXISTS": "Tài khoản với email này đã tồn tại.",
+    "EXAM_NOT_FOUND": "Không tìm thấy bài thi.",
+    "INCORRECT_PASSWORD": "Mật khẩu hiện tại không hợp lệ.",
+    "INSTITUTE_NOT_FOUND": "Không tìm thấy giáo trình.",
+    "INVALID_CREDENTIALS": "Email hoặc mật khẩu không hợp lệ.",
+    "KAKAO_EMAIL_REQUIRED": "Vui lòng cho phép chia sẻ email khi đăng nhập Kakao.",
+    "EMAIL_REQUIRED": "Thiếu email. Vui lòng thử lại.",
+    "ACCOUNT_EXISTS_LINK_REQUIRED": "Email này đã có tài khoản. Hãy đăng nhập trước, sau đó liên kết Google/Kakao trong hồ sơ cá nhân.",
+    "RSS_PARSE_FAILED": "Lỗi phân tích nguồn cấp podcast.",
+    "SESSION_ALREADY_COMPLETED": "Bài thi này đã được nộp.",
+    "SESSION_EXPIRED": "Thời gian làm bài thi của bạn đã hết.",
+    "SESSION_NOT_FOUND": "Không tìm thấy phiên thi.",
+    "STORAGE_CONFIG_MISSING": "Thiếu cấu hình lưu trữ.",
+    "UNAUTHORIZED": "Bạn phải đăng nhập để thực hiện hành động này.",
+    "USER_CREATION_FAILED": "Lỗi tạo tài khoản người dùng.",
+    "USER_NOT_FOUND": "Không tìm thấy người dùng.",
+    "oops": "Rất tiếc, đã có lỗi xảy ra!",
+    "loadError": "{{module}} gặp lỗi khi tải. Đừng lo, điều này không ảnh hưởng đến các chức năng khác.",
+    "retry": "Thử lại",
+    "backToHome": "Trở về trang chủ",
+    "reloadPrompt": "Nếu lỗi vẫn còn, vui lòng thử",
+    "refreshPage": "tải lại trang"
+  },
+  "seo": {
+    "notFound": {
+      "title": "Không tìm thấy trang",
+      "description": "Trang bạn đang tìm không tồn tại."
+    }
+  },
+  "notebook": "Sổ tay của tôi",
+  "loading": "Đang tải...",
+  "search": "Tìm kiếm",
+  "error": "Lỗi",
+  "pwa": {
+    "install": {
+      "title": "Cài đặt ứng dụng DuHan",
+      "androidHint": "Cài đặt để mở nhanh hơn và dùng trải nghiệm toàn màn hình trên di động.",
+      "iosHint": "Trong Safari, nhấn Chia sẻ và chọn Thêm vào Màn hình chính.",
+      "action": "Cài đặt ngay"
+    }
+  }
+}

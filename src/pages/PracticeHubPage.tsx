@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import { VOCAB, qRef } from '../utils/convexRefs';
-import { useData } from '../contexts/DataContext';
+import { useTopikExams } from '../hooks/useTopikExams';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/ui';
 
@@ -23,7 +23,7 @@ export default function PracticeHubPage() {
   const isMobile = useIsMobile();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
-  const { topikExams } = useData();
+  const topikExams = useTopikExams();
   const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });
   const typingStats = useQuery(
     qRef<Record<string, never>, { highestWpm: number } | null>('typing:getUserStats'),

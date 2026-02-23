@@ -19,7 +19,11 @@ import {
   useLocalizedNavigate,
 } from '../../hooks/useLocalizedNavigate';
 import { Button } from '../ui';
-import { useLayout } from '../../contexts/LayoutContext';
+import {
+  useLayoutActions,
+  useLayoutChromeState,
+  useLayoutDashboardState,
+} from '../../contexts/LayoutContext';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
@@ -113,7 +117,10 @@ const SidebarNav = ({
   searchString: string;
   collapsed: boolean;
 }) => (
-  <nav className="flex-1 px-3 space-y-2 py-2 overflow-y-auto scrollbar-hide" aria-label="Sidebar navigation">
+  <nav
+    className="flex-1 px-3 space-y-2 py-2 overflow-y-auto scrollbar-hide"
+    aria-label="Sidebar navigation"
+  >
     {items.map(item => {
       const fullPath = pathWithoutLang + searchString;
       const isActive = item.activePrefixes.some(prefix => {
@@ -128,16 +135,18 @@ const SidebarNav = ({
             aria-label={item.label}
             aria-current={isActive ? 'page' : undefined}
             title={collapsed ? item.label : undefined}
-            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${isActive
-              ? `${item.activeClass}`
-              : 'border-transparent text-muted-foreground hover:bg-accent hover:border-border'
-              }`}
+            className={`flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-4 rounded-[1.5rem] font-bold transition-all border-2 group ${
+              isActive
+                ? `${item.activeClass}`
+                : 'border-transparent text-muted-foreground hover:bg-accent hover:border-border'
+            }`}
           >
             <span
-              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition ${isActive
-                ? 'border-current/20 bg-card/70'
-                : 'border-border/70 bg-muted/60 group-hover:border-border group-hover:bg-card'
-                }`}
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition ${
+                isActive
+                  ? 'border-current/20 bg-card/70'
+                  : 'border-border/70 bg-muted/60 group-hover:border-border group-hover:bg-card'
+              }`}
             >
               <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
             </span>
@@ -186,10 +195,11 @@ const SidebarFooter = ({
           pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
         }
         title={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
-        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${pathWithoutLang === '/dashboard' && isEditing
-          ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
-          : 'text-muted-foreground hover:bg-accent border-transparent hover:border-border'
-          } transition border-2`}
+        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center justify-center gap-2 py-3 rounded-2xl font-bold ${
+          pathWithoutLang === '/dashboard' && isEditing
+            ? 'bg-green-100 text-green-600 border-green-200 hover:bg-green-200'
+            : 'text-muted-foreground hover:bg-accent border-transparent hover:border-border'
+        } transition border-2`}
       >
         {pathWithoutLang === '/dashboard' && isEditing ? (
           <Check size={20} aria-hidden="true" />
@@ -217,7 +227,9 @@ const SidebarFooter = ({
 export default function DesktopSidebar() {
   const { logout, user } = useAuth();
   const { t } = useTranslation();
-  const { isEditing, toggleEditMode, sidebarHidden } = useLayout();
+  const { isEditing } = useLayoutDashboardState();
+  const { sidebarHidden } = useLayoutChromeState();
+  const { toggleEditMode } = useLayoutActions();
   const location = useLocation();
   const navigate = useLocalizedNavigate();
   const currentLanguage = useCurrentLanguage();
@@ -255,7 +267,12 @@ export default function DesktopSidebar() {
         )}
       </Button>
 
-      <SidebarNav items={navItems} pathWithoutLang={pathWithoutLang} searchString={location.search} collapsed={collapsed} />
+      <SidebarNav
+        items={navItems}
+        pathWithoutLang={pathWithoutLang}
+        searchString={location.search}
+        collapsed={collapsed}
+      />
 
       <SidebarFooter
         collapsed={collapsed}
@@ -281,7 +298,15 @@ function useSidebarNavItems(
         label: t('sidebar.learn', { defaultValue: 'Learn' }),
         icon: GraduationCap,
         activeClass: 'bg-accent text-foreground border-border',
-        activePrefixes: ['/dashboard', '/courses', '/course/', '/reading', '/videos', '/video/', '/podcasts'],
+        activePrefixes: [
+          '/dashboard',
+          '/courses',
+          '/course/',
+          '/reading',
+          '/videos',
+          '/video/',
+          '/podcasts',
+        ],
       },
       {
         path: '/dashboard?view=practice',

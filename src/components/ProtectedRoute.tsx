@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useConvexAuth } from 'convex/react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Loading } from './common/Loading';
-
+import { ensureLocaleNamespaces } from '../utils/i18nNamespaceLoader';
 
 interface ProtectedRouteProps {
   requireAdmin?: boolean;
@@ -12,10 +13,17 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
-  redirectTo
+  redirectTo,
 }) => {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const { user, loading: userDataLoading } = useAuth();
+  const { user, loading: userDataLoading, language } = useAuth();
+  const { isPending: appLocaleLoading } = useQuery({
+    queryKey: ['i18n', 'namespace', 'app', language],
+    queryFn: () => ensureLocaleNamespaces(language, ['app']),
+    enabled: isAuthenticated,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
   // Monitor session expiration - removed modal logic
   // useEffect(() => {
   //   if (sessionExpired && !isLoading && !userDataLoading) {
@@ -25,7 +33,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Step 1: ANY loading state = show loading, DO NOT redirect
   // This is CRITICAL to avoid the race condition
-  if (isLoading || userDataLoading) {
+  if (isLoading || userDataLoading || appLocaleLoading) {
     return <Loading fullScreen size="lg" text="Loading..." />;
   }
 

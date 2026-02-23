@@ -1,127 +1,67 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { ContentSkeleton } from './components/common';
-import { LanguageRouter, DEFAULT_LANGUAGE, isValidLanguage } from './components/LanguageRouter';
+import {
+  LanguageRouter,
+  DEFAULT_LANGUAGE,
+  detectLanguage,
+  isValidLanguage,
+} from './components/LanguageRouter';
 
 // Lazy load pages for code splitting
-import AppLayout from './components/layout/AppLayout';
-const loadPublicDomain = () => import('./pages/domains/public.domain');
-const loadCoreAppDomain = () => import('./pages/domains/core-app.domain');
-const loadCourseFlowDomain = () => import('./pages/domains/course-flow.domain');
-const loadMediaDomain = () => import('./pages/domains/media.domain');
-const loadVocabBookDomain = () => import('./pages/domains/vocab-book.domain');
-const loadTopikDomain = () => import('./pages/domains/topik.domain');
-const loadAdminDomain = () => import('./pages/domains/admin.domain');
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const Landing = lazy(() => import('./pages/Landing'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const PricingDetailsPage = lazy(() => import('./pages/PricingDetailsPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
+const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
+const ModulePage = lazy(() => import('./pages/ModulePage'));
+const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
+const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
+const ReviewDashboardPage = lazy(() => import('./pages/ReviewDashboardPage'));
+const ReviewQuizPage = lazy(() => import('./pages/ReviewQuizPage'));
+const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
+const ReadingDiscoveryPage = lazy(() => import('./pages/ReadingDiscoveryPage'));
+const ReadingArticlePage = lazy(() => import('./pages/ReadingArticlePage'));
+const VocabModulePage = lazy(() => import('./pages/VocabModulePage'));
+const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
+const NotebookPage = lazy(() => import('./pages/NotebookPage'));
+const TypingPage = lazy(() => import('./pages/TypingPage'));
+const DictionarySearchPage = lazy(() => import('./pages/DictionarySearchPage'));
+
+const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
+const VocabBookImmersivePage = lazy(() => import('./pages/VocabBookImmersivePage'));
+const VocabBookListenPage = lazy(() => import('./pages/VocabBookListenPage'));
+const VocabBookDictationPage = lazy(() => import('./pages/VocabBookDictationPage'));
+const VocabBookSpellingPage = lazy(() => import('./pages/VocabBookSpellingPage'));
+const VocabBookExportPdfPage = lazy(() => import('./pages/VocabBookExportPdfPage'));
+
+const TopikPage = lazy(() => import('./pages/TopikPage'));
 const TopikWritingPage = lazy(() => import('./pages/TopikWritingPage'));
+const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
+const PodcastSearchPage = lazy(() => import('./pages/PodcastSearchPage'));
+const PodcastChannelPage = lazy(() => import('./pages/PodcastChannelPage'));
+const PodcastPlayerPage = lazy(() => import('./pages/PodcastPlayerPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const VideoLibraryPage = lazy(() => import('./pages/VideoLibraryPage'));
+const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
 
-const Landing = lazy(() => loadPublicDomain().then(m => ({ default: m.LandingPage })));
-const AuthPage = lazy(() => loadPublicDomain().then(m => ({ default: m.AuthPage })));
-const VerifyEmailPage = lazy(() => loadPublicDomain().then(m => ({ default: m.VerifyEmailPage })));
-const ForgotPasswordPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.ForgotPasswordPage }))
-);
-const ResetPasswordPage = lazy(() => loadPublicDomain().then(m => ({ default: m.ResetPasswordPage })));
-const LegalDocumentPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.LegalDocumentPage }))
-);
-const SubscriptionPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.SubscriptionPage }))
-);
-const PricingDetailsPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.PricingDetailsPage }))
-);
-const PaymentSuccessPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.PaymentSuccessPage }))
-);
-const MobilePreviewPage = lazy(() =>
-  loadPublicDomain().then(m => ({ default: m.MobilePreviewPage }))
-);
-const AdminLoginPage = lazy(() => loadPublicDomain().then(m => ({ default: m.AdminLoginPage })));
-const NotFoundPage = lazy(() => loadPublicDomain().then(m => ({ default: m.NotFoundPage })));
-
-const ProfilePage = lazy(() => loadCoreAppDomain().then(m => ({ default: m.ProfilePage })));
-const DashboardPage = lazy(() => loadCoreAppDomain().then(m => ({ default: m.DashboardPage })));
-const CourseDashboard = lazy(() =>
-  loadCourseFlowDomain().then(m => ({ default: m.CourseDashboardPage }))
-);
-const ModulePage = lazy(() => loadCourseFlowDomain().then(m => ({ default: m.ModulePage })));
-const CoursesOverview = lazy(() =>
-  loadCourseFlowDomain().then(m => ({ default: m.CoursesOverviewPage }))
-);
-const PracticeHubPage = lazy(() =>
-  loadCoreAppDomain().then(m => ({ default: m.PracticeHubPage }))
-);
-const ReviewDashboardPage = lazy(() =>
-  import('./pages/ReviewDashboardPage').then(m => ({ default: m.default }))
-);
-const ReviewQuizPage = lazy(() =>
-  import('./pages/ReviewQuizPage').then(m => ({ default: m.default }))
-);
-const MediaHubPage = lazy(() => loadCoreAppDomain().then(m => ({ default: m.MediaHubPage })));
-const ReadingDiscoveryPage = lazy(() =>
-  loadCoreAppDomain().then(m => ({ default: m.ReadingDiscoveryPage }))
-);
-const ReadingArticlePage = lazy(() =>
-  loadCoreAppDomain().then(m => ({ default: m.ReadingArticlePage }))
-);
-const VocabModulePage = lazy(() =>
-  loadCourseFlowDomain().then(m => ({ default: m.VocabModulePage }))
-);
-const GrammarModulePage = lazy(() =>
-  loadCourseFlowDomain().then(m => ({ default: m.GrammarModulePage }))
-);
-const NotebookPage = lazy(() => loadCoreAppDomain().then(m => ({ default: m.NotebookPage })));
-const TypingPage = lazy(() => loadCoreAppDomain().then(m => ({ default: m.TypingPage })));
-const DictionarySearchPage = lazy(() =>
-  loadCoreAppDomain().then(m => ({ default: m.DictionarySearchPage }))
-);
-
-const VocabBookPage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookPage }))
-);
-const VocabBookImmersivePage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookImmersivePage }))
-);
-const VocabBookListenPage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookListenPage }))
-);
-const VocabBookDictationPage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookDictationPage }))
-);
-const VocabBookSpellingPage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookSpellingPage }))
-);
-const VocabBookExportPdfPage = lazy(() =>
-  loadVocabBookDomain().then(m => ({ default: m.VocabBookExportPdfPage }))
-);
-
-const TopikPage = lazy(() => loadTopikDomain().then(m => ({ default: m.TopikPage })));
-
-const PodcastDashboard = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.PodcastDashboardPage }))
-);
-const PodcastSearchPage = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.PodcastSearchPage }))
-);
-const PodcastChannelPage = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.PodcastChannelPage }))
-);
-const PodcastPlayerPage = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.PodcastPlayerPage }))
-);
-const HistoryPage = lazy(() => loadMediaDomain().then(m => ({ default: m.HistoryPage })));
-const VideoLibraryPage = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.VideoLibraryPage }))
-);
-const VideoPlayerPage = lazy(() =>
-  loadMediaDomain().then(m => ({ default: m.VideoPlayerPage }))
-);
-
-const AdminPage = lazy(() => loadAdminDomain().then(m => ({ default: m.AdminPage })));
+const AdminPage = lazy(() => import('./features/admin/AdminPage'));
 
 // Loading fallback component with skeleton screen
 const PageLoader = () => <ContentSkeleton />;
@@ -129,18 +69,30 @@ const withPageLoader = (element: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{element}</Suspense>
 );
 
-const RedirectToDefaultLanguage: React.FC = () => {
+const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
+  keepPathname = true,
+}) => {
   const location = useLocation();
-  return (
-    <Navigate
-      to={{
-        pathname: `/${DEFAULT_LANGUAGE}${location.pathname}`,
-        search: location.search,
-        hash: location.hash,
-      }}
-      replace
-    />
-  );
+  const [target, setTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    detectLanguage().then(detectedLang => {
+      if (cancelled) return;
+      const nextPathname = keepPathname ? location.pathname : '/';
+      const normalizedPath = nextPathname === '/' ? '' : nextPathname;
+      setTarget(`/${detectedLang}${normalizedPath}${location.search}${location.hash}`);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [keepPathname, location.pathname, location.search, location.hash]);
+
+  if (!target) {
+    return <ContentSkeleton />;
+  }
+
+  return <Navigate to={target} replace />;
 };
 
 // Inner routes component that uses language from URL params
@@ -182,7 +134,7 @@ const LanguageAwareRoutes: React.FC = () => {
         {/* === Admin login page (public) === */}
         <Route path="admin/login" element={withPageLoader(<AdminLoginPage />)} />
         <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
+          <Route element={withPageLoader(<AppLayout />)}>
             <Route path="profile" element={<ProfilePage language={language} />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="dashboard/course" element={<CourseDashboard />} />
@@ -248,19 +200,10 @@ const LanguageAwareRoutes: React.FC = () => {
 };
 
 export const AppRoutes: React.FC = () => {
-  const location = useLocation();
   return (
     <Routes>
-      {/* Redirect root to default language */}
-      <Route
-        path="/"
-        element={
-          <Navigate
-            to={{ pathname: `/${DEFAULT_LANGUAGE}`, search: location.search, hash: location.hash }}
-            replace
-          />
-        }
-      />
+      {/* Redirect root to detected language */}
+      <Route path="/" element={<RedirectToDetectedLanguage keepPathname={false} />} />
 
       {/* Language-prefixed routes */}
       <Route
@@ -272,7 +215,7 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      <Route path="*" element={<RedirectToDefaultLanguage />} />
+      <Route path="*" element={<RedirectToDetectedLanguage />} />
     </Routes>
   );
 };

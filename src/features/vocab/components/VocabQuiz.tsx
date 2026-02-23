@@ -1,16 +1,14 @@
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
-import { useMutation, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useTTS } from '../../../hooks/useTTS';
 import { getLabels, Labels } from '../../../utils/i18n';
 import { Language } from '../../../types';
-import { mRef, aRef } from '../../../utils/convexRefs';
-import { Rating } from '../../../utils/srsAlgorithm';
 import { logger } from '../../../utils/logger';
 import { notify } from '../../../utils/notify';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
 import { Button, Checkbox, Input, Radio } from '../../../components/ui';
+import { useFSRSProgress } from '../hooks/useVocabProgress';
 
 interface VocabItem {
   readonly id: string;
@@ -30,6 +28,7 @@ interface QuizSettings {
 
 interface VocabQuizProps {
   readonly words: readonly VocabItem[];
+  readonly courseId?: string;
   readonly onComplete?: (stats: { readonly correct: number; readonly total: number }) => void;
   readonly hasNextUnit?: boolean;
   readonly onNextUnit?: () => void;
@@ -1086,82 +1085,18 @@ const useQuizGame = ({
   };
 };
 
-const useQuizProgress = () => {
-  const calculateNextSchedule = useAction(
-    aRef<
-      { currentCard?: Record<string, unknown>; rating: number; now?: number },
-      Record<string, unknown>
-    >('fsrs:calculateNextSchedule')
-  );
-
-  const updateProgressV2 = useMutation(
-    mRef<
-      {
-        wordId: Id<'words'>;
-        rating: number;
-        fsrsState: {
-          state: number;
-          due: number;
-          stability: number;
-          difficulty: number;
-          elapsed_days: number;
-          scheduled_days: number;
-          learning_steps: number;
-          reps: number;
-          lapses: number;
-          last_review: number | null;
-        };
-      },
-      { success: boolean; progress: Record<string, unknown> }
-    >('vocab:updateProgressV2')
-  );
-
-  const updateProgressLegacy = useMutation(
-    mRef<{ wordId: string; quality: number }, { success: boolean; progress: Record<string, unknown> }>(
-      'vocab:updateProgress'
-    )
-  );
+const useQuizProgress = (courseId?: string) => {
+  const { updateProgressFSRS } = useFSRSProgress(courseId);
 
   const recordProgress = useCallback(
     async (wordId: string, isCorrect: boolean) => {
-      const rating = isCorrect ? Rating.Good : Rating.Again;
-      try {
-        const fsrsResult = await calculateNextSchedule({
-          rating,
-          now: Date.now(),
-        });
-        await updateProgressV2({
-          wordId: wordId as Id<'words'>,
-          rating,
-          fsrsState: fsrsResult as {
-            state: number;
-            due: number;
-            stability: number;
-            difficulty: number;
-            elapsed_days: number;
-            scheduled_days: number;
-            learning_steps: number;
-            reps: number;
-            lapses: number;
-            last_review: number | null;
-          },
-        });
-        return;
-      } catch (primaryError) {
-        logger.warn('[FSRS] V2 progress sync failed, fallback to legacy path:', primaryError);
-      }
-
-      try {
-        await updateProgressLegacy({
-          wordId,
-          quality: isCorrect ? 4 : 1,
-        });
-      } catch (fallbackError) {
-        logger.error('[FSRS] Both V2 and legacy progress sync failed:', fallbackError);
-        throw fallbackError;
-      }
+      const result = await updateProgressFSRS({
+        wordId: wordId as Id<'words'>,
+        isCorrect,
+      });
+      await result.syncPromise;
     },
-    [calculateNextSchedule, updateProgressLegacy, updateProgressV2]
+    [updateProgressFSRS]
   );
 
   return { recordProgress };
@@ -1303,12 +1238,7 @@ const useQuizKeyboard = ({
       const element = target as HTMLElement | null;
       if (!element) return false;
       const tag = element.tagName;
-      return (
-        element.isContentEditable ||
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      );
+      return element.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
     };
 
     const handler = (e: KeyboardEvent) => {
@@ -1528,6 +1458,7 @@ const QuizContent: React.FC<QuizContentProps> = ({
 
 function VocabQuizComponent({
   words,
+  courseId,
   onComplete,
   hasNextUnit,
   onNextUnit,
@@ -1558,7 +1489,7 @@ function VocabQuizComponent({
   const [showSettings, setShowSettings] = useState(false);
   const { speak: speakTTS } = useTTS();
   const { playCorrectSound, playWrongSound } = useQuizSounds(settings.soundEffects);
-  const { recordProgress } = useQuizProgress();
+  const { recordProgress } = useQuizProgress(courseId);
   const lastProgressErrorAtRef = useRef(0);
   const handleProgressSyncError = useCallback(() => {
     const now = Date.now();

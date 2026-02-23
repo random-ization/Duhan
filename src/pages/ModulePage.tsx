@@ -6,7 +6,7 @@ import { VocabModule } from '../features/vocab';
 import ReadingModule from '../features/textbook/ReadingModule';
 import ListeningModule from '../features/textbook/ListeningModule';
 import { useAuth } from '../contexts/AuthContext';
-import { useLearning } from '../contexts/LearningContext';
+import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
 import { LearningModuleType } from '../types';
 import { useUserActions } from '../hooks/useUserActions';
@@ -128,16 +128,15 @@ const ModulePage: React.FC = () => {
   const { t } = useTranslation();
   const { user, language } = useAuth();
   const { saveWord, recordMistake } = useUserActions();
+  const { selectedInstitute, selectedLevel } = useLearningSelection();
   const {
     setActiveModule,
     setActiveCustomList,
     setActiveListType,
-    selectedInstitute,
-    selectedLevel,
     setSelectedInstitute,
     setSelectedLevel,
-  } = useLearning();
-  const { institutes } = useData();
+  } = useLearningActions();
+  const { institutes, isLoading: institutesLoading } = useData();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const { moduleParam, instituteId } = useParams<{ moduleParam: string; instituteId?: string }>();
@@ -182,10 +181,12 @@ const ModulePage: React.FC = () => {
     [effectiveInstitute, effectiveLevel]
   );
 
-  const institute = institutes.find(i => i.id === effectiveInstitute);
+  const institute = institutes?.find(i => i.id === effectiveInstitute);
   const instituteName =
-    (institute ? getLocalizedContent(institute, 'name', language) || institute.name : null) ||
-    'Korean';
+    institutesLoading && effectiveInstitute
+      ? t('common.loading', { defaultValue: 'Loading...' })
+      : (institute ? getLocalizedContent(institute, 'name', language) || institute.name : null) ||
+        'Korean';
   const moduleLabel = useMemo(() => {
     if (currentModule === LearningModuleType.READING) {
       return t('courseDashboard.modules.reading', { defaultValue: 'Reading' });

@@ -55,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const setLanguage = useCallback((lang: Language) => {
     localStorage.setItem('preferredLanguage', lang);
+    localStorage.setItem('preferredLanguageSource', 'user');
     document.documentElement.lang = lang;
     i18n.changeLanguage(lang);
   }, []);
@@ -70,7 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Session Check (Load User) using Convex Auth
   const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
-  const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'));
+  const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'), isAuthenticated ? {} : 'skip');
   const loading = !ready || authLoading || (isAuthenticated && viewer === undefined);
 
   const user = useMemo<User | null>(() => {

@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { Mail, Lock, User, ArrowRight, HelpCircle, Sparkles, AlertCircle } from 'lucide-react';
 import { LocalizedLink } from '../../components/LocalizedLink';
-import { getLocalizedPath, useCurrentLanguage } from '../../hooks/useLocalizedNavigate';
+import {
+  getLocalizedPath,
+  useCurrentLanguage,
+  useLocalizedNavigate,
+} from '../../hooks/useLocalizedNavigate';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
 import { Input } from '../ui';
+
+const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
 export const MobileAuthPage: React.FC = () => {
   const { t } = useTranslation();
   const { signIn } = useAuthActions();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
   const currentLanguage = useCurrentLanguage();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -21,27 +32,80 @@ export const MobileAuthPage: React.FC = () => {
     password: '',
   });
 
-  const postAuthRedirectPath = getLocalizedPath('/dashboard', currentLanguage);
+  const safeRedirectPath = (() => {
+    const raw = searchParams.get('redirect');
+    if (!raw) return null;
+    if (!raw.startsWith('/')) return null;
+    if (raw.startsWith('//')) return null;
+    if (raw.includes('://')) return null;
+    return raw;
+  })();
+
+  const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
-  const handleGoogleLogin = async () => {
+  useEffect(() => {
+    if (!authLoading && user) {
+      setLoading(false);
+      navigate(safeRedirectPath || '/dashboard', { replace: true });
+    }
+  }, [authLoading, user, navigate, safeRedirectPath]);
+
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number) => {
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
     try {
-      setLoading(true);
-      await signIn('google', { redirectTo: postAuthRedirectUrl });
-    } catch {
-      setError(t('auth.googleLoginFailed'));
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timeoutId = globalThis.setTimeout(() => {
+            reject(new Error('AUTH_REQUEST_TIMEOUT'));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'AUTH_REQUEST_TIMEOUT') {
+      return t('auth.loginFailed');
+    }
+    const translated = t(`errors.${message}`, { defaultValue: '' });
+    if (translated) return translated;
+    if (message && !message.startsWith('errors.')) return message;
+    return t(fallbackKey);
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'kakao', fallbackKey: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await withTimeout(
+        signIn(provider, { redirectTo: postAuthRedirectUrl }),
+        AUTH_REQUEST_TIMEOUT_MS
+      );
+
+      if (result.redirect) {
+        globalThis.location.assign(result.redirect.toString());
+        return;
+      }
+    } catch (err: unknown) {
+      setError(toAuthErrorMessage(err, fallbackKey));
+    } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = async () => {
+    await handleSocialLogin('google', 'auth.googleLoginFailed');
+  };
+
   const handleKakaoLogin = async () => {
-    try {
-      setLoading(true);
-      await signIn('kakao', { redirectTo: postAuthRedirectUrl });
-    } catch {
-      setError(t('auth.loginFailed'));
-      setLoading(false);
-    }
+    await handleSocialLogin('kakao', 'auth.loginFailed');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,24 +115,31 @@ export const MobileAuthPage: React.FC = () => {
 
     try {
       if (isLogin) {
-        await signIn('password', {
-          email: formData.email,
-          password: formData.password,
-          flow: 'signIn',
-          redirectTo: postAuthRedirectUrl,
-        });
+        await withTimeout(
+          signIn('password', {
+            email: formData.email,
+            password: formData.password,
+            flow: 'signIn',
+            redirectTo: postAuthRedirectUrl,
+          }),
+          AUTH_REQUEST_TIMEOUT_MS
+        );
       } else {
-        await signIn('password', {
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-          flow: 'signUp',
-          redirectTo: postAuthRedirectUrl,
-        });
+        await withTimeout(
+          signIn('password', {
+            email: formData.email,
+            password: formData.password,
+            name: formData.name,
+            flow: 'signUp',
+            redirectTo: postAuthRedirectUrl,
+          }),
+          AUTH_REQUEST_TIMEOUT_MS
+        );
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(isLogin ? t('auth.loginFailed') : t('auth.signupFailed'));
+    } catch (err: unknown) {
+      console.error('Auth error:', err);
+      setError(toAuthErrorMessage(err, isLogin ? 'auth.loginFailed' : 'auth.signupFailed'));
+    } finally {
       setLoading(false);
     }
   };

@@ -1,13 +1,96 @@
-import { query } from './_generated/server';
+import { query, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
+import type { Doc } from './_generated/dataModel';
 
 const isVisibleInstitute = (institute: { isArchived?: boolean }) => institute.isArchived !== true;
+type InstituteDoc = Doc<'institutes'>;
+type LevelConfig = { level: number; units: number };
+
+export type InstituteClientDto = {
+  _id: string;
+  _creationTime: number;
+  id: string;
+  name: string;
+  nameZh?: string;
+  nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
+  levels: Array<number | LevelConfig>;
+  coverUrl?: string;
+  themeColor?: string;
+  publisher?: string;
+  displayLevel?: string;
+  totalUnits?: number;
+  volume?: string;
+};
+
+type IntegrityIssue = {
+  courseName: string;
+  courseId: string;
+  volume?: string;
+  missingUnits: number[];
+};
+
+const isLevelConfig = (value: unknown): value is LevelConfig => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { level?: unknown; units?: unknown };
+  return (
+    typeof candidate.level === 'number' &&
+    Number.isFinite(candidate.level) &&
+    typeof candidate.units === 'number' &&
+    Number.isFinite(candidate.units)
+  );
+};
+
+const normalizeInstituteLevels = (levelsRaw: unknown): Array<number | LevelConfig> => {
+  if (typeof levelsRaw === 'string') {
+    try {
+      return normalizeInstituteLevels(JSON.parse(levelsRaw));
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(levelsRaw)) return [];
+
+  const normalized: Array<number | LevelConfig> = [];
+  for (const level of levelsRaw) {
+    if (typeof level === 'number' && Number.isFinite(level)) {
+      normalized.push(level);
+      continue;
+    }
+    if (isLevelConfig(level)) {
+      normalized.push({
+        level: level.level,
+        units: level.units,
+      });
+    }
+  }
+  return normalized;
+};
+
+const normalizeInstitute = (institute: InstituteDoc): InstituteClientDto => ({
+  _id: String(institute._id),
+  _creationTime: institute._creationTime,
+  id: institute.id?.trim() || String(institute._id),
+  name: institute.name,
+  nameZh: institute.nameZh,
+  nameEn: institute.nameEn,
+  nameVi: institute.nameVi,
+  nameMn: institute.nameMn,
+  levels: normalizeInstituteLevels(institute.levels),
+  coverUrl: institute.coverUrl,
+  themeColor: institute.themeColor,
+  publisher: institute.publisher,
+  displayLevel: institute.displayLevel,
+  totalUnits: institute.totalUnits,
+  volume: institute.volume,
+});
 
 export const getAll = query({
   args: {},
   handler: async ctx => {
     const institutes = await ctx.db.query('institutes').collect();
-    return institutes.filter(isVisibleInstitute);
+    return institutes.filter(isVisibleInstitute).map(normalizeInstitute);
   },
 });
 
@@ -18,7 +101,7 @@ export const get = query({
       .query('institutes')
       .withIndex('by_legacy_id', q => q.eq('id', args.id))
       .unique();
-    return institute && isVisibleInstitute(institute) ? institute : null;
+    return institute && isVisibleInstitute(institute) ? normalizeInstitute(institute) : null;
   },
 });
 
@@ -26,8 +109,7 @@ export const checkIntegrity = query({
   args: {},
   handler: async ctx => {
     const courses = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const report: any[] = [];
+    const report: IntegrityIssue[] = [];
 
     for (const course of courses) {
       const reportItem = await processCourseIntegrity(ctx, course);
@@ -41,8 +123,7 @@ export const checkIntegrity = query({
 
 // Helper functions for institutes.ts complexity reduction
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function calculateExpectedUnits(course: any): number[] {
+function calculateExpectedUnits(course: InstituteDoc): number[] {
   let expectedUnits: number[] = [];
   if (course.levels && course.levels.length > 0) {
     const firstLevel = course.levels[0];
@@ -57,8 +138,10 @@ function calculateExpectedUnits(course: any): number[] {
   return expectedUnits;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function processCourseIntegrity(ctx: any, course: any) {
+async function processCourseIntegrity(
+  ctx: QueryCtx,
+  course: InstituteDoc
+): Promise<IntegrityIssue | null> {
   const expectedUnits = calculateExpectedUnits(course);
   const missingUnits: number[] = [];
 
@@ -72,27 +155,19 @@ async function processCourseIntegrity(ctx: any, course: any) {
 
     const count = await ctx.db
       .query('course_grammars')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex('by_course_unit', (q: any) =>
-        q.eq('courseId', course.id).eq('unitId', storageUnitId)
-      )
-      .collect()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((res: any[]) => res.length);
+      .withIndex('by_course_unit', q => q.eq('courseId', course.id).eq('unitId', storageUnitId))
+      .collect();
 
-    if (count === 0) {
+    if (count.length === 0) {
       // Check offset 10 just in case
       const offsetCount = await ctx.db
         .query('course_grammars')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .withIndex('by_course_unit', (q: any) =>
+        .withIndex('by_course_unit', q =>
           q.eq('courseId', course.id).eq('unitId', storageUnitId + 10)
         )
-        .collect()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .then((res: any[]) => res.length);
+        .collect();
 
-      if (offsetCount > 0) {
+      if (offsetCount.length > 0) {
         // It exists but at offset
         missingUnits.push(-unitId); // Mark as negative to indicate "Found at +10"
       } else {

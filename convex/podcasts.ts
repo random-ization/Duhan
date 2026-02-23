@@ -1,6 +1,82 @@
-import { query, mutation } from './_generated/server';
+import { query, mutation, type MutationCtx } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
+import type { Doc, Id } from './_generated/dataModel';
+
+type PodcastChannelInfo = {
+  itunesId?: string;
+  title: string;
+  author?: string;
+  feedUrl?: string;
+  artworkUrl?: string;
+};
+
+type ChannelRankingEntry = {
+  channelId: Id<'podcast_channels'>;
+  views: number;
+  latestAt: number;
+};
+
+const toValidTimestamp = (value: number | string | undefined, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = new Date(value).getTime();
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const rankChannelsFromEpisodes = (episodes: Doc<'podcast_episodes'>[]): ChannelRankingEntry[] => {
+  const channelStats = new Map<string, ChannelRankingEntry>();
+  for (const episode of episodes) {
+    const key = episode.channelId.toString();
+    const entry = channelStats.get(key) ?? {
+      channelId: episode.channelId,
+      views: 0,
+      latestAt: 0,
+    };
+    entry.views += episode.views || 0;
+    const episodeLatestAt = episode.pubDate || episode.createdAt || 0;
+    if (episodeLatestAt > entry.latestAt) entry.latestAt = episodeLatestAt;
+    channelStats.set(key, entry);
+  }
+
+  return Array.from(channelStats.values()).sort((a, b) => {
+    const viewsDiff = b.views - a.views;
+    if (viewsDiff !== 0) return viewsDiff;
+    return b.latestAt - a.latestAt;
+  });
+};
+
+async function incrementPodcastChannelStats(
+  ctx: MutationCtx,
+  channelId: Id<'podcast_channels'>,
+  latestAtCandidate: number
+) {
+  const now = Date.now();
+  const latestAt = Number.isFinite(latestAtCandidate) ? latestAtCandidate : now;
+
+  const existing = await ctx.db
+    .query('podcast_channel_stats')
+    .withIndex('by_channel', q => q.eq('channelId', channelId))
+    .first();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      views: existing.views + 1,
+      latestAt: Math.max(existing.latestAt, latestAt),
+      updatedAt: now,
+    });
+    return;
+  }
+
+  await ctx.db.insert('podcast_channel_stats', {
+    channelId,
+    views: 1,
+    latestAt,
+    createdAt: now,
+  });
+}
 
 // ============================================
 // Queries
@@ -10,33 +86,34 @@ import { getAuthUserId, getOptionalAuthUserId } from './utils';
 export const getTrending = query({
   args: {},
   handler: async ctx => {
-    // 1. Internal: Rank channels by total episode views
-    const allEpisodes = await ctx.db.query('podcast_episodes').collect();
-    const channelStats = new Map<
-      string,
-      { channelId: (typeof allEpisodes)[number]['channelId']; views: number; latestAt: number }
-    >();
+    // 1) Internal: read pre-aggregated ranking first.
+    const rankedFromStats = await ctx.db
+      .query('podcast_channel_stats')
+      .withIndex('by_views_latest')
+      .order('desc')
+      .take(24);
 
-    for (const ep of allEpisodes) {
-      const key = ep.channelId.toString();
-      const entry = channelStats.get(key) ?? {
-        channelId: ep.channelId,
-        views: 0,
-        latestAt: 0,
-      };
-      entry.views += ep.views || 0;
-      const latestAt = ep.pubDate || ep.createdAt || 0;
-      if (latestAt > entry.latestAt) entry.latestAt = latestAt;
-      channelStats.set(key, entry);
-    }
-
-    const rankedChannels = Array.from(channelStats.values())
-      .sort((a, b) => {
-        const viewsDiff = b.views - a.views;
-        if (viewsDiff !== 0) return viewsDiff;
-        return b.latestAt - a.latestAt;
-      })
+    const rankedChannels: ChannelRankingEntry[] = rankedFromStats
+      .map(stat => ({
+        channelId: stat.channelId,
+        views: stat.views,
+        latestAt: stat.latestAt,
+      }))
       .slice(0, 12);
+
+    // 2) Projection warm-up fallback: bounded scan of recent episodes only.
+    if (rankedChannels.length < 12) {
+      const recentEpisodes = await ctx.db
+        .query('podcast_episodes')
+        .withIndex('by_pubDate')
+        .order('desc')
+        .take(2000);
+      const seen = new Set(rankedChannels.map(entry => entry.channelId.toString()));
+      const fallbackRanked = rankChannelsFromEpisodes(recentEpisodes).filter(
+        entry => !seen.has(entry.channelId.toString())
+      );
+      rankedChannels.push(...fallbackRanked.slice(0, 12 - rankedChannels.length));
+    }
 
     const channelDocs = await Promise.all(rankedChannels.map(stat => ctx.db.get(stat.channelId)));
     const internal = rankedChannels
@@ -108,20 +185,14 @@ export const getHistory = query({
 
     const history = await ctx.db
       .query('listening_history')
-      .withIndex('by_user', q => q.eq('userId', userId))
-      .order('desc') // Most recent first (if index creation supports it, otherwise manual sort)
+      .withIndex('by_user_playedAt', q => q.eq('userId', userId))
+      .order('desc')
       .take(20);
 
-    // Note: index "by_user" allows simple filtering. Ordering by time requires specific index logic
-    // or doing memory sort if result set is small.
-    // Let's manually sort for safety if index isn't composed with time.
-    return history
-      .slice()
-      .sort((a, b) => b.playedAt - a.playedAt)
-      .map(h => ({
-        ...h,
-        id: h._id,
-      }));
+    return history.map(h => ({
+      ...h,
+      id: h._id,
+    }));
   },
 });
 
@@ -261,6 +332,8 @@ export const trackView = mutation({
   },
   handler: async (ctx, args) => {
     const { guid, title, audioUrl, duration, pubDate, channel: channelInfo } = args;
+    const now = Date.now();
+    const normalizedPubDate = toValidTimestamp(pubDate, now);
 
     // 1. Find or Create Channel
     const channelId = await resolvePodcastChannel(ctx, channelInfo);
@@ -270,19 +343,20 @@ export const trackView = mutation({
     // 2. Find or Create Episode
     let episode = await ctx.db
       .query('podcast_episodes')
-      .withIndex('by_channel', q => q.eq('channelId', channelId))
-      .filter(q => q.eq(q.field('guid'), guid))
+      .withIndex('by_channel_guid', q => q.eq('channelId', channelId).eq('guid', guid))
       .first();
 
     episode ??= await ctx.db
       .query('podcast_episodes')
-      .filter(q => q.eq(q.field('audioUrl'), audioUrl))
+      .withIndex('by_audioUrl', q => q.eq('audioUrl', audioUrl))
       .first();
 
     if (episode) {
+      const latestAt = episode.pubDate || episode.createdAt || normalizedPubDate;
       await ctx.db.patch(episode._id, {
         views: (episode.views || 0) + 1,
       });
+      await incrementPodcastChannelStats(ctx, channelId, latestAt);
       return { success: true, views: episode.views + 1 };
     } else {
       // Create new episode
@@ -292,11 +366,12 @@ export const trackView = mutation({
         title,
         audioUrl,
         duration: typeof duration === 'number' ? duration : 0,
-        pubDate: pubDate ? new Date(pubDate).getTime() : Date.now(),
+        pubDate: normalizedPubDate,
         views: 1,
         likes: 0,
-        createdAt: Date.now(),
+        createdAt: now,
       });
+      await incrementPodcastChannelStats(ctx, channelId, normalizedPubDate);
       return { success: true, views: 1 };
     }
   },
@@ -327,25 +402,14 @@ export const saveProgress = mutation({
 });
 
 // Helper for resolving podcast channels in podcasts.ts
-async function resolvePodcastChannel(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  channelInfo: {
-    itunesId?: string;
-    title: string;
-    author?: string;
-    feedUrl?: string;
-    artworkUrl?: string;
-  }
-) {
+async function resolvePodcastChannel(ctx: MutationCtx, channelInfo: PodcastChannelInfo) {
   const normalizedFeedUrl = channelInfo.feedUrl?.trim() || undefined;
   const normalizedItunesId = channelInfo.itunesId?.trim() || undefined;
 
   if (normalizedFeedUrl) {
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', normalizedFeedUrl))
+      .withIndex('by_feedUrl', q => q.eq('feedUrl', normalizedFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -365,8 +429,7 @@ async function resolvePodcastChannel(
     const pseudoFeedUrl = `itunes:${normalizedItunesId}`;
     const existingChannel = await ctx.db
       .query('podcast_channels')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex('by_feedUrl', (q: any) => q.eq('feedUrl', pseudoFeedUrl))
+      .withIndex('by_feedUrl', q => q.eq('feedUrl', pseudoFeedUrl))
       .first();
 
     if (existingChannel) {
@@ -386,9 +449,7 @@ async function resolvePodcastChannel(
     // Fallback: Try to find by title if no feedUrl
     const existingChannel = await ctx.db
       .query('podcast_channels')
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((q: any) => q.eq(q.field('title'), channelInfo.title))
+      .filter(q => q.eq(q.field('title'), channelInfo.title))
       .first();
     if (existingChannel) return existingChannel._id;
   }

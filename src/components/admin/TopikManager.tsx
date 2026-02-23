@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { TOPIK } from '../../utils/convexRefs';
+import { api } from '../../../convex/_generated/api';
 import {
   TopikQuestion,
   TopikExam,
@@ -34,7 +35,7 @@ export const TopikManager: React.FC = () => {
   // Convex Queries (Reactive)
   // ========================================
   const { results, status, loadMore } = usePaginatedQuery(
-    TOPIK.getExams as any,
+    TOPIK.getExamsPaginated,
     {},
     { initialNumItems: 20 }
   );
@@ -43,6 +44,7 @@ export const TopikManager: React.FC = () => {
     .filter(e => e.type === 'READING' || e.type === 'LISTENING')
     .map(e => ({
       ...e,
+      isPaid: e.isPaid,
       questions: [], // Questions loaded separately
       type: e.type as 'READING' | 'LISTENING',
     }));
@@ -52,8 +54,8 @@ export const TopikManager: React.FC = () => {
   // ========================================
   // Convex Mutations
   // ========================================
-  const saveExamMutation = useMutation(TOPIK.saveExam);
-  const deleteExamMutation = useMutation(TOPIK.deleteExam);
+  const saveExamMutation = useMutation(api.topik.saveExam);
+  const deleteExamMutation = useMutation(api.topik.deleteExam);
 
   // ========================================
   // Local UI State
@@ -75,7 +77,7 @@ export const TopikManager: React.FC = () => {
 
   // Query for questions when exam is selected
   const convexQuestions = useQuery(
-    TOPIK.getExamQuestions,
+    api.topik.getExamQuestions,
     selectedExamId ? { examId: selectedExamId } : 'skip'
   );
 
@@ -126,8 +128,8 @@ export const TopikManager: React.FC = () => {
         image: '',
         score: config?.score || 2,
         instruction: config?.instruction || '',
-        // Initialize optional fields to match strict DTO if necessary, or let them be undefined
-        layout: config?.uiType as any, // Cast uiType to layout if compatible, or map it. TopikQuestionDto layout is string.
+        // Let server normalize canonical layout values when persisting.
+        layout: undefined,
       });
     }
     return questions;
@@ -179,7 +181,11 @@ export const TopikManager: React.FC = () => {
     setActiveQuestionId(1);
   };
 
-  const updateQuestionState = (questionId: number, field: keyof TopikQuestion, value: any) => {
+  const updateQuestionState = <K extends keyof TopikQuestion>(
+    questionId: number,
+    field: K,
+    value: TopikQuestion[K]
+  ) => {
     setSelectedExam(prev => {
       if (!prev || !prev.questions) return prev;
       return {
@@ -653,7 +659,7 @@ export const TopikManager: React.FC = () => {
                 </h1>
                 <select
                   value={currentExam.paperType || 'B'}
-                  onChange={e => updateExamField('paperType', e.target.value)}
+                  onChange={e => updateExamField('paperType', e.target.value === 'A' ? 'A' : 'B')}
                   className="appearance-none bg-black text-white text-2xl font-serif font-bold rounded-full w-10 h-10 text-center cursor-pointer"
                   style={{ textAlignLast: 'center' }}
                   aria-label="Paper type"

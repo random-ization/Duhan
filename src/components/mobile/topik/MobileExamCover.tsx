@@ -1,7 +1,7 @@
 import React from 'react';
 import { TopikExam, Language } from '../../../types';
 import { clsx } from 'clsx';
-import { useLayout } from '../../../contexts/LayoutContext';
+import { useLayoutActions } from '../../../contexts/LayoutContext';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Info, AlertCircle, Headphones, BookOpen } from 'lucide-react';
 import { Button } from '../../ui';
@@ -21,7 +21,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 }) => {
   const { t } = useTranslation();
   // Hide sidebar (and mobile nav) on mount, just to be safe
-  const { setSidebarHidden } = useLayout();
+  const { setSidebarHidden } = useLayoutActions();
   React.useEffect(() => {
     setSidebarHidden(true);
     // Also cleanup? No, if we navigate back, the listener in AppLayout or the back button logic should handle it.

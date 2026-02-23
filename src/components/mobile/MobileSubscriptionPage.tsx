@@ -275,11 +275,7 @@ export const MobileSubscriptionPage: React.FC = () => {
                 <tr key={i}>
                   <td className="py-3 px-4 text-muted-foreground">{row.l}</td>
                   <td className="py-3 px-2 text-center text-muted-foreground">{row.f}</td>
-                  <td
-                    className={`py-3 px-2 text-center ${row.isCheck ? 'text-green-600' : 'text-indigo-700'} bg-indigo-50/30`}
-                  >
-                    {row.isCheck ? <Check className="w-4 h-4 mx-auto" /> : row.p}
-                  </td>
+                  <td className="py-3 px-2 text-center text-indigo-700 bg-indigo-50/30">{row.p}</td>
                 </tr>
               ))}
             </tbody>
@@ -322,7 +318,9 @@ export const MobileSubscriptionPage: React.FC = () => {
           {t('pricingDetails.plans.pro.cta', { defaultValue: 'Upgrade to Pro' })}
         </Button>
         <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
-          {t('pricingDetails.hero.subtitleLine2', { defaultValue: 'No hidden fees. Cancel anytime.' })}
+          {t('pricingDetails.hero.subtitleLine2', {
+            defaultValue: 'No hidden fees. Cancel anytime.',
+          })}
         </p>
       </div>
     </div>

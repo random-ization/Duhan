@@ -1,11 +1,12 @@
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { Institute, TopikExam } from '../types';
+import { Institute } from '../types';
 import { useQuery } from 'convex/react';
-import { INSTITUTES, TOPIK } from '../utils/convexRefs';
+import { INSTITUTES } from '../utils/convexRefs';
 
 interface DataContextType {
-  institutes: Institute[];
-  topikExams: TopikExam[];
+  institutes: Institute[] | undefined;
+  isLoading: boolean;
+  institutesLoading: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -24,55 +25,17 @@ interface DataProviderProps {
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const institutesData = useQuery(INSTITUTES.getAll, {});
-  const topikExamsData = useQuery(TOPIK.getExams, {});
 
-  // Maps Convex data to legacy state shape
-  const institutes = useMemo(() => {
-    if (!institutesData) return [];
-    return institutesData.map(inst => {
-      const levelsRaw = inst.levels;
-      const levels =
-        typeof levelsRaw === 'string'
-          ? (() => {
-            try {
-              return JSON.parse(levelsRaw);
-            } catch {
-              return [];
-            }
-          })()
-          : levelsRaw;
-
-      return {
-        ...(inst as unknown as Institute),
-        levels: (levels as Institute['levels']) ?? [],
-        id: (inst as { id?: string }).id || String(inst._id),
-      };
-    });
-  }, [institutesData]);
-
-  const topikExams = useMemo(() => {
-    if (!topikExamsData) return [];
-
-    const examsList = Array.isArray(topikExamsData)
-      ? topikExamsData
-      : (topikExamsData as { page?: unknown[] }).page || [];
-
-    return examsList.map(e => {
-      const item = e as TopikExam;
-      return {
-        ...item,
-        id: item.id || String((e as { _id: unknown })._id),
-        questions: [],
-      };
-    });
-  }, [topikExamsData]);
+  const institutes = useMemo<Institute[] | undefined>(() => institutesData, [institutesData]);
+  const institutesLoading = institutesData === undefined;
 
   const value = useMemo(
     () => ({
       institutes,
-      topikExams,
+      isLoading: institutesLoading,
+      institutesLoading,
     }),
-    [institutes, topikExams]
+    [institutes, institutesLoading]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

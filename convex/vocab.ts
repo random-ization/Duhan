@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { DEFAULT_VOCAB_LIMIT } from './queryLimits';
@@ -21,6 +21,30 @@ export type VocabStatsDto = {
 const isVisibleInstitute = <T extends { isArchived?: boolean }>(
   institute: T | null | undefined
 ): institute is T => !!institute && institute.isArchived !== true;
+
+const resolveCourseNameMap = async (ctx: QueryCtx, courseIds: Iterable<string>) => {
+  const uniqueCourseIds = [...new Set(Array.from(courseIds).filter(courseId => courseId.trim()))];
+  const entries = await Promise.all(
+    uniqueCourseIds.map(async courseId => {
+      const normalizedInstituteId = ctx.db.normalizeId('institutes', courseId);
+      let institute: Doc<'institutes'> | null = null;
+
+      if (normalizedInstituteId) {
+        institute = await ctx.db.get(normalizedInstituteId);
+      }
+      if (!institute) {
+        institute = await ctx.db
+          .query('institutes')
+          .withIndex('by_legacy_id', q => q.eq('id', courseId))
+          .unique();
+      }
+
+      return [courseId, isVisibleInstitute(institute) ? institute.name : courseId] as const;
+    })
+  );
+
+  return new Map<string, string>(entries);
+};
 
 // ... DTOs ...
 export type VocabTips = {
@@ -247,12 +271,6 @@ export const getAllPaginated = query({
     courseId: v.optional(v.string()), // Optional filter by course
   },
   handler: async (ctx, args) => {
-    // 1. Get all institutes for course name lookup (small collection, cacheable)
-    const institutes = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
-    const courseNameMap = new Map(institutes.map(i => [i.id, i.name]));
-    // Note: courseNameMap uses _id as key.
-    // In existing getAll, it used i.id ?? i._id. Let's assume _id for join consistency.
-
     let result;
     if (args.courseId) {
       result = await ctx.db
@@ -266,12 +284,17 @@ export const getAllPaginated = query({
         .paginate(args.paginationOpts);
     }
 
-    // 3. Batch fetch words for the page
+    const courseNameMap = await resolveCourseNameMap(
+      ctx,
+      args.courseId ? [args.courseId] : result.page.map(app => app.courseId)
+    );
+
+    // Batch fetch words for the page
     const wordIds = [...new Set(result.page.map(a => a.wordId))];
     const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
     const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
-    // 4. Map results
+    // Map results
     const page = result.page
       .map(app => {
         const word = wordsMap.get(app.wordId.toString());
@@ -326,12 +349,9 @@ export const getAll = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 1000;
 
-    // 1. Get all institutes for course name lookup
-    const institutes = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
-    const courseNameMap = new Map(institutes.map(i => [i.id, i.name]));
-
-    // 2. If courseId is provided, filter via appearances FIRST (before limit)
+    // If courseId is provided, filter via appearances FIRST (before limit)
     if (args.courseId) {
+      const courseNameMap = await resolveCourseNameMap(ctx, [args.courseId]);
       const appearances = await ctx.db
         .query('vocabulary_appearances')
         .withIndex('by_course_unit', q => q.eq('courseId', args.courseId!))
@@ -374,9 +394,12 @@ export const getAll = query({
         .filter(Boolean);
     }
 
-    // 3. No courseId filter: get all words with course associations
+    // No courseId filter: get all words with course associations
     const words = await ctx.db.query('words').take(limit);
     const appearances = await ctx.db.query('vocabulary_appearances').collect();
+    const courseNameMap = await resolveCourseNameMap(ctx, [
+      ...new Set(appearances.map(app => app.courseId)),
+    ]);
 
     // Build word -> appearance data map (use first appearance for display)
     const wordAppMap = new Map<string, (typeof appearances)[0]>();
@@ -442,14 +465,13 @@ export const getOfCourse = query({
     try {
       const userId = await getOptionalAuthUserId(ctx);
       let effectiveCourseId = args.courseId;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let institute: any = null;
+      let institute: Doc<'institutes'> | null = null;
       const instituteId = ctx.db.normalizeId('institutes', args.courseId);
 
       if (instituteId) {
         institute = await ctx.db.get(instituteId);
         if (institute) {
-          effectiveCourseId = institute.id || institute._id;
+          effectiveCourseId = institute.id;
         }
       } else {
         // Try lookup by legacy ID if instituteId was null (fallback)
@@ -565,22 +587,22 @@ export const getOfCourse = query({
           // Merge progress data (normalized structure for frontend)
           progress: progress
             ? {
-              id: progress._id,
-              status: progress.status,
-              interval: progress.interval,
-              streak: progress.streak,
-              nextReviewAt: progress.nextReviewAt,
-              lastReviewedAt: progress.lastReviewedAt,
-              // FSRS Fields (Optional, may be undefined for legacy data)
-              state: progress.state,
-              stability: progress.stability,
-              difficulty: progress.difficulty,
-              elapsed_days: progress.elapsed_days,
-              scheduled_days: progress.scheduled_days,
-              reps: progress.reps,
-              lapses: progress.lapses,
-              last_review: progress.last_review,
-            }
+                id: progress._id,
+                status: progress.status,
+                interval: progress.interval,
+                streak: progress.streak,
+                nextReviewAt: progress.nextReviewAt,
+                lastReviewedAt: progress.lastReviewedAt,
+                // FSRS Fields (Optional, may be undefined for legacy data)
+                state: progress.state,
+                stability: progress.stability,
+                difficulty: progress.difficulty,
+                elapsed_days: progress.elapsed_days,
+                scheduled_days: progress.scheduled_days,
+                reps: progress.reps,
+                lapses: progress.lapses,
+                last_review: progress.last_review,
+              }
             : null,
           mastered: progress?.status === 'MASTERED' || false,
         };
@@ -606,14 +628,13 @@ export const getReviewDeck = query({
     try {
       const userId = await getOptionalAuthUserId(ctx);
       let effectiveCourseId = args.courseId;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let institute: any = null;
+      let institute: Doc<'institutes'> | null = null;
       const instituteId = ctx.db.normalizeId('institutes', args.courseId);
 
       if (instituteId) {
         institute = await ctx.db.get(instituteId);
         if (institute) {
-          effectiveCourseId = institute.id || institute._id;
+          effectiveCourseId = institute.id;
         }
       } else {
         institute = await ctx.db
@@ -699,23 +720,23 @@ export const getReviewDeck = query({
           exampleMeaningMn: app.exampleMeaningMn,
           progress: progress
             ? {
-              id: progress._id,
-              status: progress.status,
-              interval: progress.interval,
-              streak: progress.streak,
-              nextReviewAt: progress.nextReviewAt,
-              lastReviewedAt: progress.lastReviewedAt,
-              state: progress.state,
-              due: progress.due,
-              stability: progress.stability,
-              difficulty: progress.difficulty,
-              elapsed_days: progress.elapsed_days,
-              scheduled_days: progress.scheduled_days,
-              learning_steps: progress.learning_steps,
-              reps: progress.reps,
-              lapses: progress.lapses,
-              last_review: progress.last_review,
-            }
+                id: progress._id,
+                status: progress.status,
+                interval: progress.interval,
+                streak: progress.streak,
+                nextReviewAt: progress.nextReviewAt,
+                lastReviewedAt: progress.lastReviewedAt,
+                state: progress.state,
+                due: progress.due,
+                stability: progress.stability,
+                difficulty: progress.difficulty,
+                elapsed_days: progress.elapsed_days,
+                scheduled_days: progress.scheduled_days,
+                learning_steps: progress.learning_steps,
+                reps: progress.reps,
+                lapses: progress.lapses,
+                last_review: progress.last_review,
+              }
             : null,
           mastered: progress?.status === 'MASTERED' || false,
         });
@@ -738,8 +759,7 @@ export const getDailyPhrase = query({
     const lang = args.language || 'zh';
 
     // 0. Try dedicated Daily Phrases table
-    // (Cast to any to avoid type errors before codegen update)
-    const phrases = await (ctx.db as any).query('daily_phrases').collect();
+    const phrases = await ctx.db.query('daily_phrases').collect();
     if (phrases.length > 0) {
       const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
       const index = day % phrases.length;

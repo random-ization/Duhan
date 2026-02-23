@@ -139,7 +139,7 @@ export function useVocabProgress(courseId: string) {
  * updateProgressFSRS({ wordId: word._id, rating: Rating.Good });
  * ```
  */
-export function useFSRSProgress(courseId: string) {
+export function useFSRSProgress(courseId?: string) {
   type VocabProgress = {
     id: string;
     status: string;
@@ -162,16 +162,6 @@ export function useFSRSProgress(courseId: string) {
     'vocab:getOfCourse'
   );
 
-  // Action ref for FSRS calculation
-  const calculateNextScheduleRef = aRef<
-    {
-      currentCard?: FSRSCardState;
-      rating: number;
-      now?: number;
-    },
-    FSRSCardState & { review_log: Record<string, unknown> }
-  >('fsrs:calculateNextSchedule');
-
   // Mutation ref for saving progress
   const updateProgressV2Ref = mRef<
     {
@@ -183,13 +173,47 @@ export function useFSRSProgress(courseId: string) {
   >('vocab:updateProgressV2');
 
   // Query vocab data
-  const vocabData = useQuery(getOfCourseRef, { courseId });
+  const vocabData = useQuery(getOfCourseRef, courseId ? { courseId } : 'skip');
 
-  // FSRS action
-  const calculateNextSchedule = useAction(calculateNextScheduleRef);
+  const updateProgressV2 = useMutation(updateProgressV2Ref).withOptimisticUpdate(
+    (localStore, args) => {
+      if (!courseId) return;
+      const currentVocab = localStore.getQuery(getOfCourseRef, { courseId });
+      if (!Array.isArray(currentVocab)) return;
 
-  // Mutation
-  const updateProgressV2 = useMutation(updateProgressV2Ref);
+      const reviewedAt = args.fsrsState.last_review ?? args.fsrsState.due;
+      const status = stateToStatus(args.fsrsState.state as never, args.fsrsState.stability);
+
+      const updated = currentVocab.map(word => {
+        if (word._id !== args.wordId) return word;
+
+        return {
+          ...word,
+          progress: {
+            id: word.progress?.id || `optimistic-${String(args.wordId)}`,
+            status,
+            interval: args.fsrsState.scheduled_days,
+            streak: args.fsrsState.reps,
+            nextReviewAt: args.fsrsState.due,
+            lastReviewedAt: reviewedAt,
+            state: args.fsrsState.state,
+            due: args.fsrsState.due,
+            stability: args.fsrsState.stability,
+            difficulty: args.fsrsState.difficulty,
+            elapsed_days: args.fsrsState.elapsed_days,
+            scheduled_days: args.fsrsState.scheduled_days,
+            learning_steps: args.fsrsState.learning_steps,
+            reps: args.fsrsState.reps,
+            lapses: args.fsrsState.lapses,
+            last_review: reviewedAt,
+          },
+          mastered: status === 'MASTERED',
+        };
+      });
+
+      localStore.setQuery(getOfCourseRef, { courseId }, updated);
+    }
+  );
 
   /**
    * Update progress using FSRS algorithm
@@ -230,46 +254,52 @@ export function useFSRSProgress(courseId: string) {
         }
       }
 
-      try {
-        // 1. Call FSRS action to calculate next schedule
-        const fsrsResult = await calculateNextSchedule({
-          currentCard: cardState,
-          rating: finalRating,
-          now: Date.now(),
-        });
+      const reviewedAt = Date.now();
+      const next = calculateFSRSReview(
+        finalRating as Grade,
+        cardState ? deserializeCard(cardState) : createEmptyCard(new Date(reviewedAt)),
+        new Date(reviewedAt)
+      );
+      const serialized = serializeCard(next.card);
+      const normalizedFsrsState: FSRSCardState = {
+        state: serialized.state,
+        due: serialized.due,
+        stability: serialized.stability,
+        difficulty: serialized.difficulty,
+        elapsed_days: serialized.elapsed_days,
+        scheduled_days: serialized.scheduled_days,
+        learning_steps: serialized.learning_steps,
+        reps: serialized.reps,
+        lapses: serialized.lapses,
+        last_review: serialized.last_review ?? reviewedAt,
+      };
 
-        logger.info('[FSRS] Calculated next schedule:', {
-          wordId,
-          rating: finalRating,
-          newState: fsrsResult.state,
-          scheduledDays: fsrsResult.scheduled_days,
-        });
+      logger.info('[FSRS] Local optimistic schedule computed:', {
+        wordId,
+        rating: finalRating,
+        newState: normalizedFsrsState.state,
+        scheduledDays: normalizedFsrsState.scheduled_days,
+      });
 
-        // 2. Save to database using V2 mutation
-        const result = await updateProgressV2({
-          wordId,
-          rating: finalRating,
-          fsrsState: {
-            state: fsrsResult.state,
-            due: fsrsResult.due,
-            stability: fsrsResult.stability,
-            difficulty: fsrsResult.difficulty,
-            elapsed_days: fsrsResult.elapsed_days,
-            scheduled_days: fsrsResult.scheduled_days,
-            learning_steps: fsrsResult.learning_steps,
-            reps: fsrsResult.reps,
-            lapses: fsrsResult.lapses,
-            last_review: fsrsResult.last_review,
-          },
-        });
-
-        return result;
-      } catch (error) {
+      // Persist in background; optimistic cache updates immediately and
+      // Convex will rollback automatically if this mutation fails.
+      const syncPromise = updateProgressV2({
+        wordId,
+        rating: finalRating,
+        fsrsState: normalizedFsrsState,
+      }).catch(error => {
         logger.error('[FSRS] Error updating progress:', error);
         throw error;
-      }
+      });
+
+      return {
+        success: true,
+        optimistic: true as const,
+        fsrsState: normalizedFsrsState,
+        syncPromise,
+      };
     },
-    [vocabData, calculateNextSchedule, updateProgressV2]
+    [vocabData, updateProgressV2]
   );
 
   /**
