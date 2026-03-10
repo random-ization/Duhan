@@ -1639,8 +1639,50 @@
   },
   "grammarModule": {
     "title": "语法专项训练",
+    "directoryTitle": "语法专项教材",
     "searchPlaceholder": "搜索语法点...",
-    "unitLabel": "第{{count}}课"
+    "selectGrammarHint": "请选择一个语法点开始学习",
+    "proficiency": "学习进度",
+    "status": "掌握程度",
+    "markMastery": "标记已学",
+    "unmarkMastery": "已掌握",
+    "aiPlaceholder": "在这里输入你的造句，让 AI 检查准确性...",
+    "checkNow": "立即检查",
+    "unitLabel": "第{{count}}课",
+    "units": {
+      "unit1": "猜测与推断",
+      "unit2": "对照与转折",
+      "unit3": "原因与理由",
+      "unit4": "目的与意图",
+      "unit5": "进行与完成",
+      "unit6": "状态与持续",
+      "unit7": "程度与限定",
+      "unit8": "假设与假定",
+      "unit9": "让步与包含",
+      "unit10": "机会与改变",
+      "unit11": "传闻与引用",
+      "unit12": "必然与经历",
+      "unit13": "罗列与顺序",
+      "unit14": "基准与范围",
+      "unit15": "助词与添意"
+    },
+    "unitsShort": {
+      "unit1": "猜测",
+      "unit2": "对照",
+      "unit3": "原因",
+      "unit4": "目的",
+      "unit5": "进行",
+      "unit6": "状态",
+      "unit7": "程度",
+      "unit8": "假设",
+      "unit9": "让步",
+      "unit10": "机会",
+      "unit11": "传闻",
+      "unit12": "必然",
+      "unit13": "罗列",
+      "unit14": "基准",
+      "unit15": "助词"
+    }
   },
   "analysisSheet": {
     "title": "AI 句子分析",
@@ -1731,7 +1773,13 @@
     "explanation": "详细解释",
     "markMastered": "标记为已掌握",
     "rules": "接续规则",
-    "examples": "场景例句"
+    "examples": "场景例句",
+    "comparative": "易混淆语法比较",
+    "commonMistakes": "常见使用误区",
+    "condition": "词性 / 结构",
+    "rule": "规则变化",
+    "quizzes": "实战演练",
+    "customNote": "教研组小贴士"
   },
   "podcast": {
     "title": "播客",

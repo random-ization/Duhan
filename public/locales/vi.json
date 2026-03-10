@@ -1634,8 +1634,50 @@
   },
   "grammarModule": {
     "title": "Luyện ngữ pháp",
+    "directoryTitle": "Sổ tay ngữ pháp",
     "searchPlaceholder": "Tìm điểm ngữ pháp...",
-    "unitLabel": "Bài {{count}}"
+    "selectGrammarHint": "Chọn một điểm ngữ pháp để bắt đầu học",
+    "proficiency": "Tiến độ học",
+    "status": "Độ thành thạo",
+    "markMastery": "Đánh dấu đã học",
+    "unmarkMastery": "Đã thành thạo",
+    "aiPlaceholder": "Nhập câu của bạn ở đây để AI kiểm tra...",
+    "checkNow": "Kiểm tra ngay",
+    "unitLabel": "Bài {{count}}",
+    "units": {
+      "unit1": "Suy đoán và suy luận",
+      "unit2": "Đối chiếu và chuyển ý",
+      "unit3": "Nguyên nhân và lý do",
+      "unit4": "Mục đích và ý định",
+      "unit5": "Tiến trình và hoàn tất",
+      "unit6": "Trạng thái và duy trì",
+      "unit7": "Mức độ và giới hạn",
+      "unit8": "Giả định và giả thuyết",
+      "unit9": "Nhượng bộ và bao hàm",
+      "unit10": "Cơ hội và thay đổi",
+      "unit11": "Tường thuật và trích dẫn",
+      "unit12": "Tất yếu và trải nghiệm",
+      "unit13": "Liệt kê và trình tự",
+      "unit14": "Tiêu chuẩn và phạm vi",
+      "unit15": "Trợ từ và sắc thái"
+    },
+    "unitsShort": {
+      "unit1": "Suy đoán",
+      "unit2": "Đối chiếu",
+      "unit3": "Lý do",
+      "unit4": "Mục đích",
+      "unit5": "Tiến trình",
+      "unit6": "Trạng thái",
+      "unit7": "Mức độ",
+      "unit8": "Giả thuyết",
+      "unit9": "Nhượng bộ",
+      "unit10": "Cơ hội",
+      "unit11": "Tường thuật",
+      "unit12": "Tất yếu",
+      "unit13": "Liệt kê",
+      "unit14": "Tiêu chuẩn",
+      "unit15": "Trợ từ"
+    }
   },
   "analysisSheet": {
     "title": "Phân tích câu bằng AI",
@@ -1726,7 +1768,13 @@
     "explanation": "Giải thích chi tiết",
     "markMastered": "Đánh dấu đã thành thạo",
     "rules": "Quy tắc biến đổi",
-    "examples": "Ví dụ sử dụng"
+    "examples": "Ví dụ sử dụng",
+    "comparative": "So sánh ngữ pháp dễ nhầm",
+    "commonMistakes": "Lỗi dùng thường gặp",
+    "condition": "Điều kiện / cấu trúc",
+    "rule": "Quy tắc",
+    "quizzes": "Bài luyện tập",
+    "customNote": "Ghi chú từ giảng viên"
   },
   "podcast": {
     "title": "Podcast",

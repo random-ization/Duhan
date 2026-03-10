@@ -1630,8 +1630,50 @@
   },
   "grammarModule": {
     "title": "Grammar Training",
+    "directoryTitle": "Grammar Workbook",
     "searchPlaceholder": "Search grammar points...",
-    "unitLabel": "Unit {{count}}"
+    "selectGrammarHint": "Select a grammar point to begin studying",
+    "proficiency": "Study Progress",
+    "status": "Proficiency",
+    "markMastery": "Mark learned",
+    "unmarkMastery": "Mastered",
+    "aiPlaceholder": "Type your sentence here and let AI check it...",
+    "checkNow": "Check now",
+    "unitLabel": "Unit {{count}}",
+    "units": {
+      "unit1": "Speculation & inference",
+      "unit2": "Contrast & shifts",
+      "unit3": "Cause & reason",
+      "unit4": "Purpose & intent",
+      "unit5": "Progress & completion",
+      "unit6": "State & continuity",
+      "unit7": "Degree & limits",
+      "unit8": "Hypothesis & assumption",
+      "unit9": "Concession & inclusion",
+      "unit10": "Chance & change",
+      "unit11": "Reported speech",
+      "unit12": "Necessity & experience",
+      "unit13": "Listing & sequence",
+      "unit14": "Standards & range",
+      "unit15": "Particles & nuance"
+    },
+    "unitsShort": {
+      "unit1": "Speculation",
+      "unit2": "Contrast",
+      "unit3": "Reason",
+      "unit4": "Purpose",
+      "unit5": "Aspect",
+      "unit6": "State",
+      "unit7": "Degree",
+      "unit8": "Hypothesis",
+      "unit9": "Concession",
+      "unit10": "Opportunity",
+      "unit11": "Indirect",
+      "unit12": "Necessity",
+      "unit13": "Listing",
+      "unit14": "Standard",
+      "unit15": "Particles"
+    }
   },
   "analysisSheet": {
     "title": "AI sentence analysis",
@@ -1722,7 +1764,13 @@
     "explanation": "Detailed explanation",
     "markMastered": "Mark as mastered",
     "rules": "Conjugation rules",
-    "examples": "Usage examples"
+    "examples": "Usage examples",
+    "comparative": "Similar grammar comparison",
+    "commonMistakes": "Common mistakes",
+    "condition": "Condition",
+    "rule": "Rule",
+    "quizzes": "Practice quizzes",
+    "customNote": "Instructor note"
   },
   "podcast": {
     "title": "Podcasts",
