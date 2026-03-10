@@ -35,6 +35,11 @@ type XpStats = { currentWeekXp: number; totalXp: number } | null;
 
 /* ────────────── sub-components ────────────── */
 
+const formatMetricValue = (value: number | string): string => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return String(value ?? 0);
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(2).replace(/\.?0+$/, '');
+};
 
 const StatPairBox = ({
   icon,
@@ -237,7 +242,8 @@ export const LearnerSummaryCard: React.FC = () => {
             <div className="flex justify-between text-sm mb-1.5 opacity-80 font-semibold">
               <span>{l?.progress || t('learnerSummary.progress', { defaultValue: "Today's progress" })}</span>
               <span>
-                {todayMinutes} / {dailyGoal} {l?.minutes || t('learnerSummary.minutes', { defaultValue: 'min' })}
+                {formatMetricValue(todayMinutes)} / {formatMetricValue(dailyGoal)}{' '}
+                {l?.minutes || t('learnerSummary.minutes', { defaultValue: 'min' })}
               </span>
             </div>
             <div className="h-3 bg-white/15 rounded-full overflow-hidden">
@@ -261,8 +267,8 @@ export const LearnerSummaryCard: React.FC = () => {
             <div className="bg-white/8 rounded-xl">
               <StatPairBox
                 icon={<Clock className="w-3.5 h-3.5 opacity-70" />}
-                todayValue={todayMinutes}
-                totalValue={totalMinutes}
+                todayValue={formatMetricValue(todayMinutes)}
+                totalValue={formatMetricValue(totalMinutes)}
                 todayLabel={t('learnerSummary.stats.studyToday', { defaultValue: 'Study' })}
                 totalLabel={t('learnerSummary.stats.studyTotal', { defaultValue: 'Total Study' })}
                 todaySubLabel={t('learnerSummary.todayTag', { defaultValue: 'Today' })}

@@ -11,7 +11,15 @@ export const transcriptSegmentValidator = v.object({
   end: v.number(),
   text: v.string(),
   translation: v.optional(v.string()),
+  translationEn: v.optional(v.string()),
+  translationVi: v.optional(v.string()),
+  translationMn: v.optional(v.string()),
   words: v.optional(v.array(transcriptWordValidator)),
+  tokens: v.optional(v.array(v.object({
+    surface: v.string(),
+    base: v.string(),
+    pos: v.string(),
+  }))),
 });
 
 export const transcriptArrayValidator = v.array(transcriptSegmentValidator);
@@ -28,5 +36,9 @@ export type TranscriptSegment = {
   end: number;
   text: string;
   translation?: string;
+  translationEn?: string;
+  translationVi?: string;
+  translationMn?: string;
   words?: TranscriptWord[];
+  tokens?: { surface: string; base: string; pos: string }[];
 };

@@ -75,7 +75,7 @@ const MobileLobby = ({
   return (
     <div className="flex flex-col h-full bg-muted">
       {/* Header */}
-      <div className="px-6 pt-8 pb-4 bg-card/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50 flex items-center justify-between">
+      <div className="px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 bg-card/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50 flex items-center justify-between gap-2">
         <Button
           variant="ghost"
           size="auto"
@@ -84,12 +84,14 @@ const MobileLobby = ({
         >
           <ArrowLeft className="w-6 h-6" />
         </Button>
-        <h1 className="text-xl font-black text-muted-foreground tracking-tight">Hangyeol Typing</h1>
+        <h1 className="text-base sm:text-xl font-black text-muted-foreground tracking-tight truncate">
+          Hangyeol Typing
+        </h1>
         <div className="w-8"></div>
       </div>
 
       {/* Tabs */}
-      <div className="px-6 mt-6 mb-2 sticky top-[72px] z-10 bg-muted pb-2">
+      <div className="px-4 sm:px-6 mt-4 mb-2 sticky top-[calc(env(safe-area-inset-top)+72px)] z-10 bg-muted pb-2">
         <div className="flex p-1 bg-muted/60 rounded-2xl relative">
           {/* Animated Background Indicator */}
           <div
@@ -143,7 +145,7 @@ const MobileLobby = ({
       </div>
 
       {/* List Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 pb-24 no-scrollbar">
         {/* 1. Sentence Mode */}
         {activeTab === 'sentence' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

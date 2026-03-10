@@ -1,17 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
-import UnitSidebar from '../components/grammar/UnitSidebar';
-import GrammarFeed from '../components/grammar/GrammarFeed';
-import GrammarDetailSheet from '../components/grammar/GrammarDetailSheet';
+import GrammarDirectorySidebar from '../components/grammar/GrammarDirectorySidebar';
+import GrammarDetailPane from '../components/grammar/GrammarDetailPane';
+import GrammarAuxiliaryPane from '../components/grammar/GrammarAuxiliaryPane';
 import { GrammarPointData } from '../types';
 import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
-import { GRAMMARS, INSTITUTES } from '../utils/convexRefs';
+import { GRAMMARS, INSTITUTES, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import MobileGrammarView from '../components/mobile/MobileGrammarView';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -27,13 +27,30 @@ const GrammarModulePage: React.FC = () => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
+  const [pendingGrammarId, setPendingGrammarId] = useState<string | null>(null);
 
   const { user } = useAuth();
 
   const instituteQuery = useQuery(INSTITUTES.get, instituteId ? { id: instituteId } : 'skip');
+  const allCourseGrammar = useQuery(
+    GRAMMARS.getByCourse,
+    instituteId ? { courseId: instituteId } : 'skip'
+  );
   const instituteName = instituteQuery?.name || instituteId || '';
 
-  const totalUnits = instituteQuery?.totalUnits || 30;
+  const totalUnits = useMemo(() => {
+    if (Array.isArray(allCourseGrammar) && allCourseGrammar.length > 0) {
+      return Math.max(1, ...allCourseGrammar.map(item => item.unitId));
+    }
+    return 10;
+  }, [allCourseGrammar]);
+
+  useEffect(() => {
+    if (selectedUnit > totalUnits) {
+      setSelectedUnit(totalUnits);
+      setSelectedGrammar(null);
+    }
+  }, [selectedUnit, totalUnits]);
 
   const normalizeStatus = (value: unknown): GrammarPointData['status'] => {
     if (value === 'NEW' || value === 'LEARNING' || value === 'MASTERED') return value;
@@ -46,6 +63,21 @@ const GrammarModulePage: React.FC = () => {
     instituteId ? { courseId: instituteId, unitId: selectedUnit } : 'skip'
   );
   const updateStatusMutation = useMutation(GRAMMARS.updateStatus);
+  const updateLearningProgressMutation = useMutation(
+    mRef<
+      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      unknown
+    >('user:updateLearningProgress')
+  );
+
+  useEffect(() => {
+    if (!instituteId) return;
+    void updateLearningProgressMutation({
+      lastInstitute: instituteId,
+      lastUnit: selectedUnit,
+      lastModule: 'GRAMMAR',
+    });
+  }, [updateLearningProgressMutation, instituteId, selectedUnit]);
 
   // Derive loading state and grammarList directly from query
   const isGrammarLoading = grammarListQuery === undefined;
@@ -69,6 +101,17 @@ const GrammarModulePage: React.FC = () => {
       return g;
     });
   }, [grammarList, localUpdates]);
+
+  // Handle pending grammar fetches across units
+  useEffect(() => {
+    if (pendingGrammarId && grammarListWithUpdates.length > 0) {
+      const found = grammarListWithUpdates.find(g => g.id === pendingGrammarId);
+      if (found) {
+        setSelectedGrammar(found);
+        setPendingGrammarId(null);
+      }
+    }
+  }, [grammarListWithUpdates, pendingGrammarId]);
 
   // Handle proficiency update (Optimistic UI)
   const handleProficiencyUpdate = (
@@ -131,6 +174,23 @@ const GrammarModulePage: React.FC = () => {
     );
   }, [grammarListWithUpdates, searchQuery]);
 
+  const currentIndex = useMemo(() => {
+    if (!selectedGrammar || !grammarListWithUpdates) return -1;
+    return grammarListWithUpdates.findIndex(g => g.id === selectedGrammar.id);
+  }, [selectedGrammar, grammarListWithUpdates]);
+
+  const handleNext = () => {
+    if (currentIndex >= 0 && currentIndex < grammarListWithUpdates.length - 1) {
+      setSelectedGrammar(grammarListWithUpdates[currentIndex + 1]);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setSelectedGrammar(grammarListWithUpdates[currentIndex - 1]);
+    }
+  };
+
   // Generate unit list for sidebar
   const unitList = useMemo(() => {
     return Array.from({ length: totalUnits }, (_, i) =>
@@ -171,90 +231,62 @@ const GrammarModulePage: React.FC = () => {
   }
 
   return (
-    <div className="text-foreground h-full flex overflow-hidden">
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-6 gap-6">
-        {/* Header */}
-        <header className="flex justify-between items-center bg-card border-2 border-foreground dark:border-border rounded-xl px-6 py-3 shadow-[4px_4px_0px_0px_#0f172a] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)] shrink-0 z-20">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => navigate(-1)}
-              variant="ghost"
-              size="auto"
-              className="w-8 h-8 rounded-lg border-2 border-foreground dark:border-border hover:bg-muted flex items-center justify-center transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <AppBreadcrumb
-                className="mb-1"
-                items={[
-                  { label: 'Courses', to: '/courses' },
-                  { label: instituteName || 'Course', to: `/course/${instituteId}` },
-                  { label: 'Grammar' },
-                ]}
-              />
-              <h1 className="font-black text-xl italic tracking-tight">
-                {instituteName}
-                <span className="not-italic text-sm font-bold text-muted-foreground ml-2">
-                  {t('grammarModule.title', { defaultValue: 'Grammar Training' })}
-                </span>
-              </h1>
-            </div>
-          </div>
-
-          <div className="relative group w-80">
-            <Input
-              type="text"
-              placeholder={t('grammarModule.searchPlaceholder', {
-                defaultValue: 'Search grammar points...',
-              })}
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full !h-auto !px-4 !py-2 !border-2 !border-foreground dark:!border-border !rounded-lg font-bold text-sm focus-visible:!shadow-[2px_2px_0px_0px_#0f172a] dark:focus-visible:!shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)] transition-all !bg-muted focus-visible:!bg-card !shadow-none"
+    <div className="text-foreground h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950 dotted-bg font-sans">
+      <header className="shrink-0 p-4 border-b-2 border-slate-900 dark:border-border bg-white dark:bg-card flex justify-between items-center z-20 relative shadow-[0px_4px_0px_0px_rgba(15,23,42,0.05)]">
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            size="auto"
+            className="w-8 h-8 rounded-lg border-2 border-slate-900 dark:border-border shadow-[2px_2px_0px_0px_#0f172a] dark:shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none bg-white dark:bg-card text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <AppBreadcrumb
+              className="mb-0"
+              items={[
+                { label: 'Courses', to: '/courses' },
+                { label: instituteName || 'Course', to: `/course/${instituteId}` },
+                { label: 'Grammar' },
+              ]}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              🔍
-            </span>
           </div>
-        </header>
-
-        {/* Main Content */}
-        <div className="flex-1 flex gap-6 overflow-hidden">
-          {/* Left Sidebar - Unit Selector */}
-          <UnitSidebar
-            units={unitList}
-            selectedUnit={t('grammarModule.unitLabel', {
-              defaultValue: 'Unit {{count}}',
-              count: selectedUnit,
-            })}
-            onSelectUnit={unitStr => {
-              if (!unitStr) return;
-              // Parse "Unit X: ..." to get the unit number
-              const unitRegex = /Unit (\d+)/;
-              const match = unitRegex.exec(unitStr);
-              if (match) {
-                setSelectedUnit(Number.parseInt(match[1], 10));
-                setSelectedGrammar(null); // Clear selection when changing units
-              }
-            }}
-          />
-
-          {/* Center Feed */}
-          <GrammarFeed
-            grammarPoints={isGrammarLoading ? [] : displayedPoints}
-            isLoading={isGrammarLoading}
-            selectedUnit={`Unit ${selectedUnit}`}
-            onSelect={setSelectedGrammar}
-            onToggleStatus={handleToggleStatus}
-          />
-
-          {/* Right Detail Panel */}
-          <GrammarDetailSheet
-            grammar={selectedGrammar}
-            onClose={() => setSelectedGrammar(null)}
-            onProficiencyUpdate={handleProficiencyUpdate}
-          />
         </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden relative z-10 w-full max-w-[1600px] mx-auto">
+        <GrammarDirectorySidebar
+          courseGrammars={allCourseGrammar || []}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedGrammarId={selectedGrammar?.id}
+          onSelectGrammar={(id, unitId) => {
+            if (unitId !== selectedUnit) {
+              setSelectedUnit(unitId);
+            }
+            const grammar = grammarListWithUpdates.find(g => g.id === id);
+            if (grammar) {
+              setSelectedGrammar(grammar);
+            } else {
+              setSelectedGrammar(null); // Show loading skeleton or empty state while unit loads
+              setPendingGrammarId(id);
+            }
+          }}
+        />
+
+        <GrammarDetailPane
+          grammar={selectedGrammar}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          hasNext={currentIndex >= 0 && currentIndex < grammarListWithUpdates.length - 1}
+          hasPrev={currentIndex > 0}
+        />
+
+        <GrammarAuxiliaryPane
+          grammar={selectedGrammar}
+          onToggleStatus={handleToggleStatus}
+        />
       </div>
     </div>
   );

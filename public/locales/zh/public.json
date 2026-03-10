@@ -170,7 +170,7 @@
     "stats": {
       "topikCoverageValue": "100%",
       "topikCoverageLabel": "TOPIK 真题覆盖",
-      "aiValue": "GPT-4",
+      "aiValue": "GPT-5 nano",
       "aiLabel": "语法解析内核",
       "fsrsValue": "FSRS",
       "fsrsLabel": "自适应记忆算法",
@@ -228,7 +228,7 @@
       "feature3": "作文润色",
       "feature4": "口语纠错",
       "chatTitle": "Grammar Analysis",
-      "chatSubtitle": "Powered by GPT-4o",
+      "chatSubtitle": "Powered by GPT-5 nano",
       "userAlt": "用户",
       "userQuestion": "这句话里的 -다가 是什么意思？",
       "userExample": "\"학교에 가다가 친구를 만났어요.\"",

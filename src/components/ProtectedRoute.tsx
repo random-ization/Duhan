@@ -43,9 +43,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo || '/'} replace />;
   }
 
-  // Step 3: Authenticated but waiting for user data (edge case)
+  // Step 3: Authenticated but no user record available (stale/broken session edge case)
+  // AuthContext attempts repair by signing out; redirect as final fallback.
   if (!user) {
-    return <Loading fullScreen size="lg" text="Loading user..." />;
+    return <Navigate to={redirectTo || '/'} replace />;
   }
 
   // Step 4: Admin role check

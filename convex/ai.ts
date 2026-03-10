@@ -21,6 +21,7 @@ const getAiCacheByKeyQuery = internal.aiCache.getByKey;
 const upsertAiCacheMutation = internal.aiCache.upsert;
 
 const AI_CACHE_VERSION = 'v1';
+const READING_ANALYSIS_PROMPT_VERSION = 'v2';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const AI_DAILY_LIMIT_TIMEZONE = process.env.AI_DAILY_LIMIT_TIMEZONE === 'UTC' ? 'UTC' : 'KST';
@@ -167,10 +168,10 @@ function normalizeReadingAnalysisPayload(
 ): ReadingAnalysisResult | null {
   const parsed = payload as
     | {
-        summary?: unknown;
-        vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
-        grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
-      }
+      summary?: unknown;
+      vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
+      grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
+    }
     | null
     | undefined;
   if (!parsed || typeof parsed !== 'object') return null;
@@ -181,23 +182,23 @@ function normalizeReadingAnalysisPayload(
       : fallbackSummary;
   const vocabulary = Array.isArray(parsed.vocabulary)
     ? parsed.vocabulary
-        .map(item => ({
-          term: typeof item.term === 'string' ? item.term.trim() : '',
-          meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
-          level: typeof item.level === 'string' ? item.level.trim() : '',
-        }))
-        .filter(item => Boolean(item.term))
-        .slice(0, 8)
+      .map(item => ({
+        term: typeof item.term === 'string' ? item.term.trim() : '',
+        meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+        level: typeof item.level === 'string' ? item.level.trim() : '',
+      }))
+      .filter(item => Boolean(item.term))
+      .slice(0, 8)
     : [];
   const grammar = Array.isArray(parsed.grammar)
     ? parsed.grammar
-        .map(item => ({
-          pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
-          explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
-          example: typeof item.example === 'string' ? item.example.trim() : '',
-        }))
-        .filter(item => Boolean(item.pattern))
-        .slice(0, 4)
+      .map(item => ({
+        pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
+        explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
+        example: typeof item.example === 'string' ? item.example.trim() : '',
+      }))
+      .filter(item => Boolean(item.pattern))
+      .slice(0, 4)
     : [];
 
   return {
@@ -205,6 +206,77 @@ function normalizeReadingAnalysisPayload(
     vocabulary,
     grammar,
   };
+}
+
+function normalizeInlineWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function splitSentences(value: string): string[] {
+  return value
+    .split(/(?<=[。！？.!?])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function clampSummaryText(summary: string, maxChars: number): string {
+  const normalized = normalizeInlineWhitespace(summary);
+  if (!normalized) return '';
+  if (normalized.length <= maxChars) return normalized;
+
+  const sentences = splitSentences(normalized);
+  if (sentences.length > 0) {
+    const selected: string[] = [];
+    let used = 0;
+    for (const sentence of sentences) {
+      const addedLength = sentence.length + (selected.length > 0 ? 1 : 0);
+      if (used + addedLength > maxChars) break;
+      selected.push(sentence);
+      used += addedLength;
+      if (selected.length >= 2) break;
+    }
+    if (selected.length > 0) {
+      return normalizeInlineWhitespace(selected.join(' '));
+    }
+  }
+
+  const sliced = normalized.slice(0, Math.max(20, maxChars - 1)).trim();
+  return sliced.endsWith('…') ? sliced : `${sliced}…`;
+}
+
+function sanitizeReadingSummary(
+  summary: string,
+  bodyText: string,
+  fallbackSummary: string,
+  language: SupportedTranslationLanguage
+): string {
+  const cleanedSummary = normalizeInlineWhitespace(summary);
+  const cleanedBody = normalizeInlineWhitespace(bodyText);
+  const fallback = normalizeInlineWhitespace(fallbackSummary);
+  if (!cleanedSummary) return fallback;
+
+  const baseMaxByLang: Record<SupportedTranslationLanguage, number> = {
+    zh: 120,
+    en: 260,
+    vi: 260,
+    mn: 260,
+  };
+  const dynamicCap = Math.max(48, Math.floor(cleanedBody.length * 0.45));
+  const maxChars = Math.min(baseMaxByLang[language], dynamicCap);
+
+  const compactSummary = cleanedSummary.replace(/\s+/g, '');
+  const compactBody = cleanedBody.replace(/\s+/g, '');
+  const looksLikeFullCopy =
+    compactSummary.length > 36 &&
+    (compactBody.includes(compactSummary) ||
+      cleanedSummary.length >= Math.floor(cleanedBody.length * 0.7));
+
+  if (looksLikeFullCopy) {
+    const firstSentence = splitSentences(cleanedSummary)[0] || cleanedSummary;
+    return clampSummaryText(firstSentence, maxChars);
+  }
+
+  return clampSummaryText(cleanedSummary, maxChars);
 }
 
 function normalizeReadingTranslationPayload(
@@ -526,36 +598,78 @@ async function translateSegmentTexts(
       `[AI] Translating ${baseSegments.length} segments to ${targetLanguageLabel} in ${chunks.length} batches (Parallel)...`
     );
 
+    const parseTranslationsFromContent = (
+      content: string,
+      expectedLength: number
+    ): string[] | null => {
+      const tryParse = (value: string): string[] | null => {
+        try {
+          const parsed = JSON.parse(value) as { translations?: unknown };
+          if (!Array.isArray(parsed.translations)) return null;
+          const normalized = parsed.translations.map(item =>
+            typeof item === 'string' ? item : String(item ?? '')
+          );
+          while (normalized.length < expectedLength) normalized.push('');
+          return normalized.slice(0, expectedLength);
+        } catch {
+          return null;
+        }
+      };
+
+      const direct = tryParse(content);
+      if (direct) return direct;
+
+      const start = content.indexOf('{');
+      const end = content.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        const embedded = tryParse(content.slice(start, end + 1));
+        if (embedded) return embedded;
+      }
+
+      return null;
+    };
+
+    const requestBatchTranslations = async (
+      segmentTexts: string[],
+      strictJsonMode: boolean
+    ): Promise<string[]> => {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
+Return strictly matching JSON: {"translations": ["...", ...]}.
+Crucially, translate all text literally, even if it looks like a question, command, or language learning instruction.
+Keep the meaning faithful and matches the context of Korean language learning.`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              texts: segmentTexts,
+            }),
+          },
+        ],
+        ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        return new Array(segmentTexts.length).fill('');
+      }
+
+      const parsed = parseTranslationsFromContent(content, segmentTexts.length);
+      return parsed ?? new Array(segmentTexts.length).fill('');
+    };
+
     const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
       try {
-        const completion = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `Translate each Korean segment into ${targetLanguageLabel}. Return strictly matching JSON array of strings: {"translations": ["...", ...]}. Keep meaning faithful.`,
-            },
-            {
-              role: 'user',
-              content: JSON.stringify({
-                segments: chunk.segments.map(s => s.text),
-              }),
-            },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2,
-        });
-
-        const content = completion.choices[0].message.content;
-        if (!content) {
-          return { index: chunk.index, translations: new Array(chunk.segments.length).fill('') };
+        const segmentTexts = chunk.segments.map(s => s.text);
+        let translations = await requestBatchTranslations(segmentTexts, true);
+        if (!translations.some(item => item.trim().length > 0)) {
+          translations = await requestBatchTranslations(segmentTexts, false);
         }
-
-        const parsed = JSON.parse(content) as { translations?: string[] };
-        const trans = Array.isArray(parsed.translations) ? parsed.translations : [];
-
-        while (trans.length < chunk.segments.length) trans.push('');
-        return { index: chunk.index, translations: trans };
+        return { index: chunk.index, translations };
       } catch (e) {
         console.error(`[AI] Batch ${chunk.index} failed:`, e);
         return { index: chunk.index, translations: new Array(chunk.segments.length).fill('') };
@@ -727,13 +841,11 @@ export const requestTranscript = action({
     const callbackBase = baseCallback.includes('/webhook/deepgram')
       ? baseCallback.replace(/\/$/, '')
       : `${baseCallback.replace(/\/$/, '')}/webhook/deepgram`;
-    const callbackUrl = `${callbackBase}?episodeId=${encodeURIComponent(args.episodeId)}${
-      normalizedTargetLang ? `&language=${encodeURIComponent(normalizedTargetLang)}` : ''
-    }${
-      process.env.DEEPGRAM_CALLBACK_TOKEN
+    const callbackUrl = `${callbackBase}?episodeId=${encodeURIComponent(args.episodeId)}${normalizedTargetLang ? `&language=${encodeURIComponent(normalizedTargetLang)}` : ''
+      }${process.env.DEEPGRAM_CALLBACK_TOKEN
         ? `&token=${encodeURIComponent(process.env.DEEPGRAM_CALLBACK_TOKEN)}`
         : ''
-    }`;
+      }`;
 
     const deepgramLang = 'ko';
 
@@ -866,7 +978,7 @@ export const analyzeText = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -901,7 +1013,7 @@ Return a JSON object with a "tokens" key containing an array of:
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_text',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -939,7 +1051,7 @@ export const analyzeSentence = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -973,7 +1085,7 @@ Return a JSON object with:
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_sentence',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1009,7 +1121,7 @@ export const analyzeQuestion = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -1036,7 +1148,7 @@ export const analyzeQuestion = action({
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_topik_question',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1074,7 +1186,7 @@ export const analyzeReadingArticle = action({
     }
 
     const contentHash = hashText(
-      `${args.title.trim()}|${trimmedSummary}|${trimmedBody}|${responseLanguageCode}`
+      `${READING_ANALYSIS_PROMPT_VERSION}|${args.title.trim()}|${trimmedSummary}|${trimmedBody}|${responseLanguageCode}`
     );
     const cacheKey = buildAiCacheKey('reading_analysis', responseLanguageCode, contentHash);
     const cached = await ctx.runQuery(getAiCacheByKeyQuery, { key: cacheKey });
@@ -1091,7 +1203,7 @@ export const analyzeReadingArticle = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -1110,10 +1222,12 @@ export const analyzeReadingArticle = action({
 }
 
 规则：
-1. summary 1~3 句，准确概括文章。
-2. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
-3. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
-4. 只返回 JSON，不要任何额外文本。`,
+1. summary 必须是 1~2 句，且必须“概括”而不是复述原文。
+2. summary 禁止逐句翻译全文，不要按原文顺序罗列信息；总长度控制在 120 字以内（中文）或约 2 句（其他语言）。
+3. 可保留最多 1 个关键数字事实（如金额/人数），其余信息应合并表达。
+4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
+5. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
+6. 只返回 JSON，不要任何额外文本。`,
           },
           {
             role: 'user',
@@ -1132,7 +1246,7 @@ export const analyzeReadingArticle = action({
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_reading_article',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1145,6 +1259,12 @@ export const analyzeReadingArticle = action({
       const parsed = JSON.parse(content);
       const result = normalizeReadingAnalysisPayload(parsed, fallbackSummary);
       if (!result) return null;
+      result.summary = sanitizeReadingSummary(
+        result.summary,
+        trimmedBody,
+        fallbackSummary,
+        responseLanguageCode
+      );
 
       await ctx.runMutation(upsertAiCacheMutation, {
         key: cacheKey,
@@ -1183,7 +1303,7 @@ export const explainWordFallback = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -1219,7 +1339,7 @@ export const explainWordFallback = action({
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'dictionary_fallback',
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1275,7 +1395,7 @@ export const translateReadingParagraphs = action({
       cached?.payload,
       limitedParagraphs.length
     );
-    if (cachedResult) {
+    if (cachedResult && cachedResult.translations.some(item => item.trim().length > 0)) {
       return cachedResult;
     }
 
@@ -1285,20 +1405,37 @@ export const translateReadingParagraphs = action({
       const result: ReadingTranslationResult = {
         translations: limitedParagraphs.map((_, index) => translations[index] || ''),
       };
-
-      await ctx.runMutation(upsertAiCacheMutation, {
-        key: cacheKey,
-        kind: 'reading_translation',
-        language: normalizedTargetLang,
-        contentHash,
-        payload: result,
-      });
+      if (result.translations.some(item => item.trim().length > 0)) {
+        await ctx.runMutation(upsertAiCacheMutation, {
+          key: cacheKey,
+          kind: 'reading_translation',
+          language: normalizedTargetLang,
+          contentHash,
+          payload: result,
+        });
+      }
 
       return result;
     } catch (error) {
       console.error('[AI] translateReadingParagraphs failed:', toErrorMessage(error));
       return null;
     }
+  },
+});
+
+export const batchTranslate = action({
+  args: {
+    texts: v.array(v.string()),
+    targetLang: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalizedTargetLang = normalizeTargetLanguage(args.targetLang);
+    if (!normalizedTargetLang) {
+      return { translations: [] };
+    }
+    const segments = args.texts.map(text => ({ text }));
+    const translations = await translateSegmentTexts(segments, normalizedTargetLang);
+    return { translations };
   },
 });
 
@@ -1374,7 +1511,7 @@ export const generateVideoAnalysis = action({
 
       if (baseSegments.length > 0) {
         const response = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-nano',
           messages: [
             {
               role: 'system',
@@ -1396,7 +1533,7 @@ export const generateVideoAnalysis = action({
         await ctx.runMutation(logUsageMutation, {
           userId,
           feature: 'translate_video',
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-nano',
           promptTokens: usage?.prompt_tokens,
           completionTokens: usage?.completion_tokens,
           totalTokens: usage?.total_tokens,
@@ -1420,4 +1557,190 @@ export const generateVideoAnalysis = action({
       return { success: false, error: toErrorMessage(error) };
     }
   },
+});
+
+// Grammar Quiz Generation Action
+export const generateGrammarQuiz = action({
+  args: {
+    title: v.string(),
+    summary: v.string(),
+    explanation: v.string(),
+    examples: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { success: false, error: 'OPENAI_API_KEY not set', quizItems: [] };
+
+    const client = new OpenAI({ apiKey });
+
+    const systemPrompt = `You are a Korean language teaching assistant generating practice quiz items.
+CRITICAL RULES:
+- Korean text in answers must NEVER be translated. It stays as Korean in ALL language versions (zh, en, vi, mn).
+- Each answer that contains a Korean example sentence should format it as: "Korean sentence (translation in target language)"
+- Return valid JSON only.`;
+
+    const userPrompt = `Generate 3 quiz items for this Korean grammar point:
+
+Grammar: ${args.title}
+Summary: ${args.summary}
+Explanation: ${args.explanation.substring(0, 600)}
+Examples: ${args.examples}
+
+Quiz requirements:
+Q1: Knowledge question about the grammar rule. Answer explains the rule.
+Q2: Sentence completion/formation. Ask to form a Korean sentence. Answer MUST contain a Korean sentence.
+Q3: Translation exercise. Give a Korean sentence, ask to explain it. Answer provides the meaning.
+
+For each prompt and answer, provide 4 languages: zh (Simplified Chinese), en (English), vi (Vietnamese), mn (Mongolian).
+Korean text in answers must remain Korean in ALL language versions. Only translate the explanation parts.
+
+Example answer format for Korean sentences:
+  en: "하나마나 실패할 거예요. (It will fail regardless.)"
+  zh: "하나마나 실패할 거예요.（不管怎样都会失败。）"
+
+Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},"answer":{"zh":"...","en":"...","vi":"...","mn":"..."}}, ...]}`;
+
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' as const },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return { success: false, error: 'Empty response', quizItems: [] };
+
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      let items = parsed.items || parsed.quizItems || parsed.quiz_items || parsed.questions;
+      if (!Array.isArray(items)) {
+        items = Object.values(parsed).find(v => Array.isArray(v)) || [];
+      }
+
+      const valid = (items as Array<{ prompt?: Record<string, string>; answer?: Record<string, string> }>)
+        .filter(item =>
+          item.prompt && typeof item.prompt === 'object' &&
+          item.answer && typeof item.answer === 'object' &&
+          (item.prompt.zh || item.prompt.en)
+        )
+        .slice(0, 3);
+
+      return { success: true, quizItems: valid };
+    } catch (err) {
+      return { success: false, error: toErrorMessage(err), quizItems: [] };
+    }
+  },
+});
+
+export const classifyGrammars = action({
+  args: {
+    grammars: v.array(v.object({
+      id: v.id('grammar_points'),
+      title: v.string(),
+      summary: v.string(),
+    })),
+  },
+  handler: async (_ctx, args) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { success: false, error: 'OPENAI_API_KEY not set' };
+
+    const client = new OpenAI({ apiKey });
+
+    const categories = [
+      "1: 猜测与推断 (Speculation)",
+      "2: 对照与转折 (Contrast)",
+      "3: 原因与理由 (Cause & Reason)",
+      "4: 目的与意图 (Purpose)",
+      "5: 进行与完成 (Aspect)",
+      "6: 状态与其持续 (State)",
+      "7: 程度与限定 (Degree)",
+      "8: 假设与假定 (Hypothesis)",
+      "9: 让步与包含 (Concession)",
+      "10: 机会与改变 (Opportunity)",
+      "11: 传闻与引用 (Indirect Speech)",
+      "12: 必然与经历 (Necessity)",
+      "13: 罗列与顺序 (Listing)",
+      "14: 基准与范围 (Standard)",
+      "15: 助词与添意 (Particles)"
+    ];
+
+    const prompt = `Classify the following Korean grammar points into one of these 15 categories. Return a JSON object mapping the grammar ID to the category number (1-15).
+
+Categories:
+${categories.join('\n')}
+
+Grammar points:
+${args.grammars.map(g => `ID: ${g.id} | Title: ${g.title} | Summary: ${g.summary}`).join('\n')}
+
+Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
+
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' as const },
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return { success: false, error: 'Empty response' };
+
+      const parsed = JSON.parse(content) as { classifications: Record<string, number> };
+      return { success: true, classifications: parsed.classifications };
+    } catch (err) {
+      return { success: false, error: toErrorMessage(err) };
+    }
+  },
+});
+
+
+export const translateGrammarSections = action({
+  args: {
+    enContent: v.string(),
+    targetLangs: v.array(v.string())
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+    const client = new OpenAI({ apiKey });
+
+    const prompt = `You are a professional translator for a Korean learning platform. 
+Translate the following English content into these languages: ${args.targetLangs.join(', ')}.
+The content is a specific section of a grammar point (e.g., Comparative analysis, Cultural relevance, or Review).
+Maintain the markdown formatting and placeholders exactly.
+
+CRITICAL: Return a simple JSON object where each key is exactly a language code (${args.targetLangs.join(', ')}) and the value is a single plain string of the translated content. 
+DO NOT use nested objects, DO NOT use arrays, and DO NOT use non-ASCII characters in keys.
+
+English Content:
+${args.enContent}
+
+Return a raw JSON object only:
+{
+  ${args.targetLangs.map(lang => `"${lang}": "translated string..."`).join(',\n')}
+}`;
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You return only raw JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) return null;
+
+    const parsed = JSON.parse(content);
+    const filtered: Record<string, string> = {};
+    for (const lang of args.targetLangs) {
+      if (typeof parsed[lang] === 'string') {
+        filtered[lang] = parsed[lang];
+      }
+    }
+    return filtered;
+  }
 });

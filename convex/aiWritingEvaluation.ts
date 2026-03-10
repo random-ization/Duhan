@@ -366,7 +366,7 @@ async function callOpenAI(
             Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-5-nano',
             temperature: 0.3,
             response_format: { type: 'json_object' },
             messages: [

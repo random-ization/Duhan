@@ -117,7 +117,7 @@ export const MobileDashboard: React.FC = () => {
   const goalPercent = Math.min(100, (stats.dailyMinutes / (stats.dailyGoal || 1)) * 100);
 
   return (
-    <div className="bg-muted min-h-screen pb-24">
+    <div className="relative min-h-screen pb-24 bg-transparent overflow-hidden">
       {/* 1. Header */}
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="flex justify-between items-center gap-3 mb-3">
@@ -172,7 +172,7 @@ export const MobileDashboard: React.FC = () => {
         </form>
       </header>
 
-      <main className="px-4 space-y-5 pt-5 animate-in fade-in duration-500">
+      <main className="relative z-10 px-4 space-y-5 pt-5 animate-in fade-in duration-500">
         {/* 2. Learner Stats Card */}
         <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200/60 dark:shadow-slate-950/30 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -236,9 +236,9 @@ export const MobileDashboard: React.FC = () => {
           variant="ghost"
           size="auto"
           onClick={() => navigate('/courses')}
-          className="w-full text-left bg-sky-50 dark:bg-sky-400/10 rounded-3xl p-5 border border-sky-100 dark:border-sky-300/20 relative overflow-hidden group active:scale-[0.98] transition-all duration-200"
+          className="w-full text-left justify-start items-start bg-sky-50 dark:bg-sky-400/10 rounded-3xl p-5 border border-sky-100 dark:border-sky-300/20 relative overflow-hidden group active:scale-[0.98] transition-all duration-200"
         >
-          <div className="relative z-10">
+          <div className="relative z-10 w-full">
             <div className="flex justify-between items-start mb-2">
               <span className="bg-sky-500 dark:bg-sky-400/30 text-white dark:text-sky-100 text-[10px] font-black px-2 py-0.5 rounded uppercase">
                 {t('dashboard.textbook.label', { defaultValue: 'Current Course' })}
@@ -290,9 +290,9 @@ export const MobileDashboard: React.FC = () => {
             variant="ghost"
             size="auto"
             onClick={() => navigate('/vocab-book')}
-            className="bg-indigo-50 dark:bg-indigo-400/10 p-4 rounded-3xl border border-indigo-100 dark:border-indigo-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="w-full justify-start items-start bg-indigo-50 dark:bg-indigo-400/10 p-4 rounded-3xl border border-indigo-100 dark:border-indigo-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <span className="bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.review')}
               </span>
@@ -315,9 +315,9 @@ export const MobileDashboard: React.FC = () => {
             variant="ghost"
             size="auto"
             onClick={() => navigate('/notebook')}
-            className="bg-orange-50 dark:bg-orange-400/10 p-4 rounded-3xl border border-orange-100 dark:border-orange-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="w-full justify-start items-start bg-orange-50 dark:bg-orange-400/10 p-4 rounded-3xl border border-orange-100 dark:border-orange-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <span className="bg-orange-500 dark:bg-orange-400/30 text-white dark:text-orange-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.notes')}
               </span>
@@ -342,9 +342,9 @@ export const MobileDashboard: React.FC = () => {
             variant="ghost"
             size="auto"
             onClick={() => navigate('/typing')}
-            className="bg-emerald-50 dark:bg-emerald-400/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="w-full justify-start items-start bg-emerald-50 dark:bg-emerald-400/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <span className="bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.typing')}
               </span>
@@ -367,9 +367,9 @@ export const MobileDashboard: React.FC = () => {
             variant="ghost"
             size="auto"
             onClick={() => navigate('/topik')}
-            className="bg-amber-50 dark:bg-amber-400/10 p-4 rounded-3xl border border-amber-100 dark:border-amber-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="w-full justify-start items-start bg-amber-50 dark:bg-amber-400/10 p-4 rounded-3xl border border-amber-100 dark:border-amber-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
           >
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <span className="bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
                 {t('dashboard.mobile.exam')}
               </span>

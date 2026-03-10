@@ -146,6 +146,15 @@
       1px 1px 3px hsl(var(--border) / 0.45),
       0 10px 20px -5px hsl(var(--border) / 0.3);
   }
+
+  /* Neobrutalism Dotted Background */
+  .dotted-bg {
+    background-image: radial-gradient(#CBD5E1 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+  }
+  .dark .dotted-bg {
+    background-image: radial-gradient(#334155 1.5px, transparent 1.5px);
+  }
 }
 
 @media (max-width: 767px) {

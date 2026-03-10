@@ -363,7 +363,7 @@
     "defaultDisplayLevel": "Book 1",
     "backToShelf": "Back to Library",
     "courseMeta": "{{level}} · Lesson 1-{{totalUnits}}",
-    "recentUnit": "Recently studied: Unit {unit}",
+    "recentUnit": "Recently studied: Unit {{unit}}",
     "overallProgress": "Overall Progress",
     "trainingModules": "Training Modules",
     "modules": {
@@ -1721,6 +1721,14 @@
       "retrigger": "Retry Evaluation",
       "retriggering": "Retrying...",
       "retryFailed": "Retry failed. Please try again later."
+    }
+  },
+  "pwa": {
+    "install": {
+      "title": "Install DuHan App",
+      "androidHint": "Install for faster launch and a full-screen mobile experience.",
+      "iosHint": "In Safari, tap Share and choose Add to Home Screen.",
+      "action": "Install now"
     }
   }
 }

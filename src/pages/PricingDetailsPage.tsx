@@ -10,7 +10,6 @@ import { aRef } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
-import { usePhoneVerifyModal } from '../contexts/PhoneVerifyModalContext';
 import { SubscriptionType } from '../types';
 import {
   Check,
@@ -46,7 +45,6 @@ export default function PricingDetailsPage() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const { open } = usePhoneVerifyModal();
   const location = useLocation();
   const meta = getRouteMeta(location.pathname);
 
@@ -179,10 +177,6 @@ export default function PricingDetailsPage() {
       redirectTo(`/pricing/details?plan=${plan}`);
       return;
     }
-    if (showLocalizedPromo && !isPromoVerified) {
-      handleKyc();
-      return;
-    }
 
     try {
       setCheckoutPendingPlan(plan);
@@ -203,17 +197,10 @@ export default function PricingDetailsPage() {
 
   const isCurrentPlan = (type: SubscriptionType) =>
     (user?.subscriptionType || SubscriptionType.FREE) === type;
-  const isPromoVerified = !!user?.isRegionalPromoEligible && user?.kycStatus === 'VERIFIED';
-  const handleKyc = () => {
-    open();
-  };
 
-  let buttonLabel = t('pricingDetails.plans.pro.cta');
-  if (showLocalizedPromo) {
-    buttonLabel = isPromoVerified
-      ? t('pricingDetails.promo.subscribe')
-      : t('pricingDetails.promo.verifyNow');
-  }
+  const buttonLabel = showLocalizedPromo
+    ? t('pricingDetails.promo.subscribe')
+    : t('pricingDetails.plans.pro.cta');
 
   return (
     <div className="min-h-screen bg-muted text-foreground font-landing antialiased selection:bg-[#FFDE59] selection:text-foreground">
@@ -241,7 +228,7 @@ export default function PricingDetailsPage() {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={handleKyc}
+              onClick={() => startCheckout(proPlanId)}
               className="bg-[#FFDE59] text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.banner.cta')}
@@ -295,7 +282,7 @@ export default function PricingDetailsPage() {
                 type="button"
                 variant="ghost"
                 size="auto"
-                onClick={handleKyc}
+                onClick={() => startCheckout(proPlanId)}
                 className="bg-card text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
               >
                 {t('pricingDetails.promo.card.cta')}
@@ -467,13 +454,7 @@ export default function PricingDetailsPage() {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => {
-                if (showLocalizedPromo && !isPromoVerified) {
-                  handleKyc();
-                  return;
-                }
-                startCheckout(proPlanId);
-              }}
+              onClick={() => startCheckout(proPlanId)}
               disabled={checkoutPendingPlan !== null}
               loading={checkoutPendingPlan === proPlanId}
               loadingText={buttonLabel}
@@ -485,11 +466,7 @@ export default function PricingDetailsPage() {
               }`}
             >
               {buttonLabel}
-              {showLocalizedPromo && isPromoVerified ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                <Zap className="w-5 h-5" />
-              )}
+              <Zap className="w-5 h-5" />
             </Button>
 
             <div className="text-xs font-bold text-muted-foreground mb-4 uppercase tracking-widest border-b border-border pb-2">

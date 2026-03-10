@@ -106,7 +106,7 @@
     "stats": {
       "topikCoverageValue": "100%",
       "topikCoverageLabel": "TOPIK бодит материал",
-      "aiValue": "GPT-4",
+      "aiValue": "GPT-5 nano",
       "aiLabel": "Дүрмийн хөдөлгүүр",
       "fsrsValue": "FSRS",
       "fsrsLabel": "Дасан зохицох давталт",
@@ -164,7 +164,7 @@
       "feature3": "Эссэ сайжруулалт",
       "feature4": "Ярианы засвар",
       "chatTitle": "Дүрмийн шинжилгээ",
-      "chatSubtitle": "GPT-4o дэмжлэгтэй",
+      "chatSubtitle": "GPT-5 nano дэмжлэгтэй",
       "userAlt": "Хэрэглэгч",
       "userQuestion": "Энэ өгүүлбэрт -다가 ямар утгатай вэ?",
       "userExample": "\"학교에 가다가 친구를 만났어요.\"",

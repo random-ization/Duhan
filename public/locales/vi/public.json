@@ -106,7 +106,7 @@
     "stats": {
       "topikCoverageValue": "100%",
       "topikCoverageLabel": "Đề TOPIK",
-      "aiValue": "GPT-4",
+      "aiValue": "GPT-5 nano",
       "aiLabel": "Máy phân tích ngữ pháp",
       "fsrsValue": "FSRS",
       "fsrsLabel": "Lặp lại tối ưu",
@@ -164,7 +164,7 @@
       "feature3": "Chỉnh sửa bài viết",
       "feature4": "Sửa phát âm/nói",
       "chatTitle": "Phân tích ngữ pháp",
-      "chatSubtitle": "Được hỗ trợ bởi GPT-4o",
+      "chatSubtitle": "Được hỗ trợ bởi GPT-5 nano",
       "userAlt": "Người dùng",
       "userQuestion": "-다가 trong câu này nghĩa là gì?",
       "userExample": "\"학교에 가다가 친구를 만났어요.\"",

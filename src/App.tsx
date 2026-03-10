@@ -4,13 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 
 import UpgradePrompt from './components/UpgradePrompt';
-import { PhoneVerifyModal } from './components/PhoneVerifyModal';
 import { useAuth } from './contexts/AuthContext';
 import { useLearningSelection } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
-import { PhoneVerifyModalProvider } from './contexts/PhoneVerifyModalContext';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 
 const AppRoutes = lazy(() => import('./routes').then(m => ({ default: m.AppRoutes })));
@@ -44,31 +42,75 @@ function App() {
     }
   }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
 
+  // Warm critical route chunks on idle to reduce first navigation latency on mobile/PWA.
+  useEffect(() => {
+    if (typeof globalThis.window === 'undefined') return;
+
+    const navWithConnection = globalThis.navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    };
+    const connection = navWithConnection.connection;
+    if (connection?.saveData) return;
+    if (connection?.effectiveType?.includes('2g')) return;
+
+    const prefetchRoutes = () => {
+      void import('./pages/CoursesOverview');
+      void import('./pages/CourseDashboard');
+      void import('./pages/ModulePage');
+      void import('./pages/VocabModulePage');
+      void import('./pages/TopikPage');
+      void import('./pages/NotebookPage');
+      void import('./pages/PracticeHubPage');
+      void import('./pages/MediaHubPage');
+    };
+
+    type IdleWindow = Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleWindow = globalThis.window as IdleWindow;
+
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetchRoutes, { timeout: 2000 });
+    } else {
+      timeoutId = globalThis.window.setTimeout(prefetchRoutes, 1200);
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
-        <PhoneVerifyModalProvider>
-          <GlobalModalProvider>
-            <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
-              <AppRoutes />
-            </Suspense>
+        <GlobalModalProvider>
+          <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
+            <AppRoutes />
+          </Suspense>
 
-            <UpgradePrompt
-              isOpen={showUpgradePrompt}
-              onClose={() => setShowUpgradePrompt(false)}
-              language={language}
-            />
-            <PhoneVerifyModal />
-            <Toaster
-              position="top-center"
-              toastOptions={{
-                duration: 2800,
-                className:
-                  'rounded-xl border border-border bg-card text-foreground font-bold shadow-pop-sm',
-              }}
-            />
-          </GlobalModalProvider>
-        </PhoneVerifyModalProvider>
+          <UpgradePrompt
+            isOpen={showUpgradePrompt}
+            onClose={() => setShowUpgradePrompt(false)}
+            language={language}
+          />
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 2800,
+              className:
+                'rounded-xl border border-border bg-card text-foreground font-bold shadow-pop-sm',
+            }}
+          />
+        </GlobalModalProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   );

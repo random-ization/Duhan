@@ -90,14 +90,18 @@ export default function CourseDashboard() {
 
   // Find current course by ID
   const course = institutes?.find(i => i.id === instituteId);
+  const isYskCourse = instituteId === 'ysk-1';
+  const coursePublisher =
+    course?.publisher || (isYskCourse ? 'OER' : t('courseDashboard.defaultPublisher'));
   const courseName =
     (course && getLocalizedContent(course, 'name', language)) ||
     course?.name ||
-    t('courseDashboard.defaultCourseName');
-  const displayLevel = course?.displayLevel || t('courseDashboard.defaultDisplayLevel');
+    (isYskCourse ? 'You Speak Korean! 1' : t('courseDashboard.defaultCourseName'));
+  const displayLevel =
+    course?.displayLevel || (isYskCourse ? '1' : t('courseDashboard.defaultDisplayLevel'));
   const coverUrl = course?.coverUrl;
   const coverTransitionName = getCourseCoverTransitionName(instituteId);
-  const totalUnits = course?.totalUnits || 10;
+  const totalUnits = course?.totalUnits || (isYskCourse ? 12 : 10);
   const completedUnits = courseProgress?.completedUnits ?? [];
   const completedCount = courseProgress?.completedCount ?? completedUnits.length;
   const unitTotal = courseProgress?.totalUnits || totalUnits;
@@ -124,6 +128,9 @@ export default function CourseDashboard() {
         overallProgress={overallProgress}
         currentUnit={lastUnitIndex || 1}
         totalUnits={unitTotal}
+        publisher={coursePublisher}
+        displayLevel={displayLevel}
+        coverUrl={coverUrl}
       />
     );
   }
@@ -264,6 +271,10 @@ export default function CourseDashboard() {
                   alt={courseName}
                   className="w-full h-full object-cover rounded-xl"
                 />
+              ) : isYskCourse ? (
+                <div className="w-full h-full flex items-center justify-center bg-amber-50 dark:bg-amber-500/15">
+                  <span className="text-xl font-black text-amber-700 dark:text-amber-200">YSK</span>
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-indigo-50 dark:bg-indigo-500/15">
                   <BookMarked className="w-12 h-12 text-indigo-300 dark:text-indigo-200/70" />
@@ -280,7 +291,7 @@ export default function CourseDashboard() {
                 </span>
               </h1>
               <p className="text-muted-foreground font-medium flex items-center gap-2">
-                <span>{course?.publisher}</span>
+                <span>{coursePublisher}</span>
                 {t('courseDashboard.courseMeta', { level: displayLevel, totalUnits })}
               </p>
               {lastUnitIndex ? (

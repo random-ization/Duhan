@@ -13,6 +13,36 @@ interface GrammarExample {
   audio?: string;
 }
 
+interface GrammarLocalizedText {
+  zh?: string;
+  en?: string;
+  vi?: string;
+  mn?: string;
+}
+
+interface GrammarSections {
+  introduction?: GrammarLocalizedText;
+  core?: GrammarLocalizedText;
+  comparative?: GrammarLocalizedText;
+  cultural?: GrammarLocalizedText;
+  commonMistakes?: GrammarLocalizedText;
+  review?: GrammarLocalizedText;
+}
+
+interface GrammarQuizItem {
+  prompt: GrammarLocalizedText;
+  answer?: GrammarLocalizedText;
+}
+
+interface GrammarSourceMeta {
+  sourceType: string;
+  sourcePath?: string;
+  sourceUrl?: string;
+  checksum?: string;
+  parserVersion?: string;
+  importedAt: number;
+}
+
 type GrammarConjugationRules = UnitGrammarDto['conjugationRules'];
 type ParsedConjugationRules = Exclude<GrammarConjugationRules, undefined>;
 
@@ -27,6 +57,9 @@ type GrammarRecord = {
   explanationEn?: string;
   explanationVi?: string;
   explanationMn?: string;
+  sections?: GrammarSections;
+  quizItems?: GrammarQuizItem[];
+  sourceMeta?: GrammarSourceMeta;
   examples: GrammarExample[];
   conjugationRules?: GrammarConjugationRules;
   searchPatterns?: string[];
@@ -48,13 +81,31 @@ export const getStats = query({
   },
   handler: async (ctx, args): Promise<GrammarStatsDto> => {
     const userId = await getOptionalAuthUserId(ctx);
+    let effectiveCourseId = args.courseId;
+
+    const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+    let institute = null;
+    if (instituteId) {
+      institute = await ctx.db.get(instituteId);
+    } else {
+      institute = await ctx.db
+        .query('institutes')
+        .withIndex('by_legacy_id', q => q.eq('id', args.courseId))
+        .unique();
+    }
+    if (institute) {
+      effectiveCourseId = institute.id || institute._id;
+    }
+    if (!isVisibleInstitute(institute)) {
+      return { total: 0, mastered: 0 };
+    }
 
     // 1. Get all CourseGrammar links for this course
     // OPTIMIZATION: Limit to prevent excessive queries
-    const MAX_GRAMMAR_POINTS = 500;
+    const MAX_GRAMMAR_POINTS = 5000;
     const courseGrammars = await ctx.db
       .query('course_grammars')
-      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId))
+      .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
       .take(MAX_GRAMMAR_POINTS);
 
     if (!userId) return { total: courseGrammars.length, mastered: 0 };
@@ -62,7 +113,7 @@ export const getStats = query({
 
     // 2. Fetch progress
     // OPTIMIZATION: Limit to prevent excessive queries
-    const MAX_PROGRESS_ITEMS = 500;
+    const MAX_PROGRESS_ITEMS = 5000;
     const progress = await ctx.db
       .query('user_grammar_progress')
       .filter(q => q.eq(q.field('userId'), userId))
@@ -81,6 +132,10 @@ export const getStats = query({
 export type GrammarItemDto = {
   id: Id<'grammar_points'>;
   title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
   summary: string;
   unitId: number;
   status: string;
@@ -94,10 +149,28 @@ export const getByCourse = query({
   },
   handler: async (ctx, args): Promise<GrammarItemDto[]> => {
     const userId = await getOptionalAuthUserId(ctx);
+    let effectiveCourseId = args.courseId;
+
+    const instituteId = ctx.db.normalizeId('institutes', args.courseId);
+    let institute = null;
+    if (instituteId) {
+      institute = await ctx.db.get(instituteId);
+    } else {
+      institute = await ctx.db
+        .query('institutes')
+        .withIndex('by_legacy_id', q => q.eq('id', args.courseId))
+        .unique();
+    }
+    if (institute) {
+      effectiveCourseId = institute.id || institute._id;
+    }
+    if (!isVisibleInstitute(institute)) {
+      return [];
+    }
 
     const links = await ctx.db
       .query('course_grammars')
-      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId))
+      .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
       .collect();
 
     // OPTIMIZATION: Batch fetch all grammars and progress
@@ -126,21 +199,29 @@ export const getByCourse = query({
       return {
         id: grammar._id,
         title: grammar.title,
+        titleEn: grammar.titleEn,
+        titleZh: grammar.titleZh,
+        titleVi: grammar.titleVi,
+        titleMn: grammar.titleMn,
         summary: grammar.summary,
         unitId: link.unitId,
         status: userStatus,
       };
     });
 
-    return results
-      .filter((g): g is GrammarItemDto => g !== null)
-      .sort((a, b) => a.unitId - b.unitId);
+    return (results.filter(g => g !== null) as GrammarItemDto[]).sort(
+      (a, b) => a.unitId - b.unitId
+    );
   },
 });
 
 export type UnitGrammarDto = {
   id: Id<'grammar_points'>;
   title: string;
+  titleEn: string | undefined;
+  titleZh: string | undefined;
+  titleVi: string | undefined;
+  titleMn: string | undefined;
   level: string;
   type: string;
   summary: string;
@@ -151,6 +232,9 @@ export type UnitGrammarDto = {
   explanationEn: string | undefined;
   explanationVi: string | undefined;
   explanationMn: string | undefined;
+  sections: GrammarSections | undefined;
+  quizItems: GrammarQuizItem[] | undefined;
+  sourceMeta: GrammarSourceMeta | undefined;
   examples: Array<{
     kr: string;
     cn: string;
@@ -218,7 +302,7 @@ export const getUnitGrammar = query({
 
       // 1. Get links
       // OPTIMIZATION: Limit to prevent excessive queries
-      const MAX_UNIT_GRAMMAR = 100;
+      const MAX_UNIT_GRAMMAR = 300;
       const courseGrammars = await ctx.db
         .query('course_grammars')
         .withIndex('by_course_unit', q =>
@@ -256,6 +340,10 @@ export const getUnitGrammar = query({
         return {
           id: grammar._id,
           title: grammar.title,
+          titleEn: grammar.titleEn,
+          titleZh: grammar.titleZh,
+          titleVi: grammar.titleVi,
+          titleMn: grammar.titleMn,
           level: grammar.level,
           type: grammar.type,
           summary: grammar.summary,
@@ -266,6 +354,9 @@ export const getUnitGrammar = query({
           explanationEn: grammar.explanationEn,
           explanationVi: grammar.explanationVi,
           explanationMn: grammar.explanationMn,
+          sections: grammar.sections,
+          quizItems: grammar.quizItems,
+          sourceMeta: grammar.sourceMeta,
           examples: grammar.examples,
           conjugationRules: grammar.conjugationRules,
           createdAt: grammar.createdAt,
@@ -389,6 +480,15 @@ export const create = mutation({
   },
 });
 
+export const getByIdInternal = query({
+  args: {
+    grammarId: v.id('grammar_points'),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.grammarId);
+  },
+});
+
 export const getAdminById = query({
   args: {
     grammarId: v.id('grammar_points'),
@@ -419,34 +519,30 @@ export const updateSearchPatterns = mutation({
   },
 });
 
-export const assignToUnit = mutation({
+export const updateUnitId = mutation({
   args: {
     courseId: v.string(),
-    unitId: v.number(),
     grammarId: v.id('grammar_points'),
+    unitId: v.number(),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('course_grammars')
-      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId).eq('unitId', args.unitId))
-      .filter(q => q.eq(q.field('grammarId'), args.grammarId))
+      .withIndex('by_course_unit') // We can also use a filter if we dont have by_course_grammar
+      .filter(q => q.eq(q.field('courseId'), args.courseId) && q.eq(q.field('grammarId'), args.grammarId))
       .unique();
 
-    if (existing) return existing._id;
+    if (existing) {
+      await ctx.db.patch(existing._id, { unitId: args.unitId });
+      return existing._id;
+    }
 
-    // Get max display order
-    const currentParams = await ctx.db
-      .query('course_grammars')
-      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId).eq('unitId', args.unitId))
-      .collect();
-
-    const maxOrder = currentParams.reduce((max, p) => Math.max(max, p.displayOrder || 0), 0);
-
+    // If doesn't exist, create it
     return await ctx.db.insert('course_grammars', {
       courseId: args.courseId,
       unitId: args.unitId,
       grammarId: args.grammarId,
-      displayOrder: maxOrder + 1,
+      displayOrder: 0,
     });
   },
 });
@@ -832,3 +928,14 @@ function parseSearchPatterns(patterns: string | string[] | undefined): string[] 
   }
   return undefined;
 }
+
+export const updateSections = mutation({
+  args: {
+    id: v.id('grammar_points'),
+    sections: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Force bypass validation by patching directly
+    await ctx.db.patch(args.id, { sections: args.sections });
+  },
+});

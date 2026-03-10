@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
 import { ExamList } from './ExamList';
@@ -78,6 +78,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const questionCacheRef = useRef<Map<string, TopikQuestionDto[]>>(new Map());
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const pathWithoutLang =
     pathSegments[0] && ['en', 'zh', 'vi', 'mn'].includes(pathSegments[0])
@@ -110,11 +111,52 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const fetchQuestions = useCallback(
     async (examId: string): Promise<TopikQuestionDto[]> => {
+      const cached = questionCacheRef.current.get(examId);
+      if (cached) return cached;
       const questions = await convex.query(TOPIK.getExamQuestions, { examId });
-      return questions || [];
+      const resolved = questions || [];
+      questionCacheRef.current.set(examId, resolved);
+      return resolved;
     },
     [convex]
   );
+
+  useEffect(() => {
+    if (exams.length === 0) return;
+    if (typeof globalThis.window === 'undefined') return;
+
+    const firstExamId = exams[0]?.id;
+    if (!firstExamId || questionCacheRef.current.has(firstExamId)) return;
+
+    const prefetch = () => {
+      void fetchQuestions(firstExamId).catch(() => {
+        // Silent prefetch failure; on-demand load still works.
+      });
+    };
+
+    type IdleWindow = Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleWindow = globalThis.window as IdleWindow;
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetch, { timeout: 1500 });
+    } else {
+      timeoutId = globalThis.window.setTimeout(prefetch, 800);
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.window.clearTimeout(timeoutId);
+      }
+    };
+  }, [exams, fetchQuestions]);
 
   const selectExamFromUrl = useCallback(
     async (exam: TopikExam, viewParam?: string) => {

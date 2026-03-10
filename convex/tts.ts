@@ -217,15 +217,6 @@ function normalizePublicAudioUrl(inputUrl: string): string {
   }
 }
 
-async function isPublicUrlAccessible(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
 export const speak = action({
   args: {
     text: v.string(),
@@ -260,25 +251,27 @@ export const speak = action({
         const cacheEntry = await ctx.runQuery(getCacheQuery, { key: cacheKey });
         if (cacheEntry?.url) {
           const normalizedUrl = normalizePublicAudioUrl(cacheEntry.url);
-          const accessible = await isPublicUrlAccessible(normalizedUrl);
-          if (accessible) {
-            if (normalizedUrl !== cacheEntry.url) {
-              await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: normalizedUrl });
-            }
-            return {
-              success: true,
-              audio: null,
-              url: normalizedUrl,
-              format: 'audio/mp3',
-              cached: true,
-            };
+          if (normalizedUrl !== cacheEntry.url) {
+            void ctx
+              .runMutation(upsertCacheMutation, { key: cacheKey, url: normalizedUrl })
+              .catch(error => {
+                console.warn('Failed to normalize cached TTS URL:', error);
+              });
           }
-          console.warn('TTS cache URL inaccessible, regenerating:', normalizedUrl);
+          return {
+            success: true,
+            audio: null,
+            url: normalizedUrl,
+            format: 'audio/mp3',
+            cached: true,
+          };
         }
 
         const cachedUrl = await checkS3Cache(cacheKey);
         if (cachedUrl) {
-          await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl });
+          void ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl }).catch(error => {
+            console.warn('Failed to upsert TTS cache after S3 hit:', error);
+          });
           console.log('TTS cache hit:', args.text.substring(0, 20));
           return {
             success: true,
@@ -330,21 +323,16 @@ export const speak = action({
 
       // Return URL if available, otherwise base64
       if (cdnUrl) {
-        const publicAccessible = await isPublicUrlAccessible(cdnUrl);
-        if (publicAccessible) {
-          await ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cdnUrl });
-          return {
-            success: true,
-            audio: null,
-            url: cdnUrl,
-            format: 'audio/mp3',
-            cached: false,
-          };
-        }
-        console.warn(
-          'Generated TTS URL is not publicly accessible, returning inline audio:',
-          cdnUrl
-        );
+        void ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cdnUrl }).catch(error => {
+          console.warn('Failed to upsert generated TTS cache URL:', error);
+        });
+        return {
+          success: true,
+          audio: null,
+          url: cdnUrl,
+          format: 'audio/mp3',
+          cached: false,
+        };
       } else {
         console.warn('TTS upload unavailable, returning inline audio');
       }

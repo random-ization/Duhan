@@ -334,7 +334,7 @@
     "defaultDisplayLevel": "Quyển 1",
     "backToShelf": "Quay lại thư viện",
     "courseMeta": "{{level}} · Bài 1-{{totalUnits}}",
-    "recentUnit": "Học gần đây: Bài {unit}",
+    "recentUnit": "Học gần đây: Bài {{unit}}",
     "overallProgress": "Tiến độ tổng",
     "trainingModules": "Chuyên đề luyện tập",
     "modules": {
@@ -1725,6 +1725,14 @@
       "retrigger": "Kích hoạt chấm lại",
       "retriggering": "Đang thử lại...",
       "retryFailed": "Thử lại thất bại. Vui lòng thử lại sau."
+    }
+  },
+  "pwa": {
+    "install": {
+      "title": "Cài đặt ứng dụng DuHan",
+      "androidHint": "Cài đặt để mở nhanh hơn và dùng trải nghiệm toàn màn hình trên di động.",
+      "iosHint": "Trong Safari, nhấn Chia sẻ và chọn Thêm vào Màn hình chính.",
+      "action": "Cài đặt ngay"
     }
   }
 }

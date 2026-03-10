@@ -332,12 +332,13 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           <DialogOverlay
             unstyled
             forceMount
+            onClick={() => setGridOpen(false)}
             className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-[1px] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
           />
           <DialogContent
             unstyled
             forceMount
-            closeOnEscape={false}
+            closeOnEscape={true}
             lockBodyScroll={false}
             className="fixed inset-0 z-[71] p-4 flex items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
           >

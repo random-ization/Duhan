@@ -15,7 +15,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { useQuery, useMutation, useAction } from 'convex/react';
-import { aRef, mRef, qRef } from '../../utils/convexRefs';
+import { aRef, INSTITUTES, mRef, qRef } from '../../utils/convexRefs';
 import BottomSheet from '../../components/common/BottomSheet';
 import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
@@ -218,7 +218,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
         <PopoverContent
           unstyled
           data-popover
-          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-[#FDFBF7] p-4 shadow-[4px_4px_0px_0px_#18181B]"
+          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-card dark:bg-slate-900 p-4 shadow-[4px_4px_0px_0px_#18181B] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.22)]"
           style={{ left: position.x, top: position.y }}
         >
           <Button
@@ -458,7 +458,7 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
           lockBodyScroll={false}
           className="fixed inset-0 z-[51] flex items-center justify-center pointer-events-none"
         >
-          <div className="pointer-events-auto bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[8px_8px_0px_0px_#18181B] p-6 w-96">
+          <div className="pointer-events-auto bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[8px_8px_0px_0px_#18181B] dark:shadow-[8px_8px_0px_0px_rgba(148,163,184,0.22)] p-6 w-96">
             <h3 className="font-black text-lg mb-4">
               {labels.dashboard?.reading?.addNote || 'Add note'}
             </h3>
@@ -543,7 +543,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const labels = getLabels(language);
   return (
-    <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
+    <div className="bg-card dark:bg-slate-900 border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.22)] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-black text-sm">{labels.dashboard?.reading?.settings || 'Reading Settings'}</h4>
         <Button
@@ -627,6 +627,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   useEffect(() => stopTTS, [stopTTS]);
   // State for selected unit (allows changing within the component)
   const [selectedUnitIndexOverride, setSelectedUnitIndexOverride] = useState(initialUnitIndex);
+  useEffect(() => {
+    setSelectedUnitIndexOverride(initialUnitIndex);
+  }, [initialUnitIndex]);
+  const instituteMeta = useQuery(INSTITUTES.get, courseId ? { id: courseId } : 'skip');
 
   // Fetch available units for course (for unit selector)
   const availableUnits = useQuery(
@@ -638,15 +642,23 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     const indices = [...new Set(availableUnits.map((u: { unitIndex: number }) => u.unitIndex))];
     return indices.sort((a, b) => a - b);
   }, [availableUnits]);
+  const fallbackUnitCount = useMemo(() => {
+    if (typeof instituteMeta?.totalUnits === 'number' && instituteMeta.totalUnits > 0) {
+      return instituteMeta.totalUnits;
+    }
+    return Math.max(initialUnitIndex, 10);
+  }, [instituteMeta?.totalUnits, initialUnitIndex]);
+  const selectableUnitIndices = useMemo(() => {
+    if (uniqueUnitIndices.length > 0) return uniqueUnitIndices;
+    return Array.from({ length: fallbackUnitCount }, (_, index) => index + 1);
+  }, [uniqueUnitIndices, fallbackUnitCount]);
 
   const selectedUnitIndex = useMemo(() => {
-    if (uniqueUnitIndices.length === 0) return selectedUnitIndexOverride;
-    return uniqueUnitIndices.includes(selectedUnitIndexOverride)
+    if (selectableUnitIndices.length === 0) return selectedUnitIndexOverride;
+    return selectableUnitIndices.includes(selectedUnitIndexOverride)
       ? selectedUnitIndexOverride
-      : uniqueUnitIndices[0];
-  }, [uniqueUnitIndices, selectedUnitIndexOverride]);
-
-  const setSelectedUnitIndex = (next: number) => setSelectedUnitIndexOverride(next);
+      : selectableUnitIndices[0];
+  }, [selectableUnitIndices, selectedUnitIndexOverride]);
   // ========================================
   // Convex Query: Fetch unit data
   // ========================================
@@ -686,6 +698,12 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const touchCourseMutation = useMutation(
     mRef<{ courseId: string; unitIndex?: number }, unknown>('progress:touchCourse')
   );
+  const updateLearningProgressMutation = useMutation(
+    mRef<
+      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      unknown
+    >('user:updateLearningProgress')
+  );
 
   // Use loading state instead of early return to avoid hooks order issues
   const isLoading = unitDetails === undefined;
@@ -708,6 +726,10 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     return available.includes(activeArticleIndexOverride) ? activeArticleIndexOverride : first;
   }, [articles, activeArticleIndexOverride]);
 
+  const setSelectedUnitIndex = (next: number) => {
+    setSelectedUnitIndexOverride(next);
+    setActiveArticleIndexOverride(1);
+  };
   const setActiveArticleIndex = (next: number) => setActiveArticleIndexOverride(next);
 
   const readingAccumulatedRef = useRef(0);
@@ -787,6 +809,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   useEffect(() => {
     void touchCourseMutation({ courseId, unitIndex: selectedUnitIndex });
   }, [touchCourseMutation, courseId, selectedUnitIndex]);
+
+  useEffect(() => {
+    void updateLearningProgressMutation({
+      lastInstitute: courseId,
+      lastUnit: selectedUnitIndex,
+      lastModule: 'READING',
+    });
+  }, [updateLearningProgressMutation, courseId, selectedUnitIndex]);
 
   // Select the active article - ensure we always have a valid selection
   const unitData = useMemo(() => {
@@ -890,6 +920,19 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   // Mobile bottom sheet state
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [aiInput, setAiInput] = useState('');
+  const formatLessonLabel = useCallback(
+    (idx: number) => {
+      const template = labels.dashboard?.reading?.lesson;
+      if (template && template.includes('{idx}')) {
+        return template.replace('{idx}', idx.toString());
+      }
+      if (template && template.trim().length > 0) {
+        return `${template} ${idx}`;
+      }
+      return `Lesson ${idx}`;
+    },
+    [labels.dashboard?.reading?.lesson]
+  );
   // Initial AI message - Role is assistant per typical patterns, though codebase used ai
   const [aiMessages, setAiMessages] = useState<{ role: string; content: string }[]>(() => [
     {
@@ -1306,14 +1349,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   };
 
   return (
-    <div
-      className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col"
-      style={{
-        backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundColor: '#f4f4f5',
-      }}
-    >
+    <div className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col overflow-x-hidden bg-zinc-100 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-slate-950 dark:bg-[radial-gradient(rgba(148,163,184,0.20)_1px,transparent_1px)] dark:bg-[length:20px_20px]">
       {/* Loading State */}
       {isLoading && <ListeningModuleSkeleton />}
 
@@ -1340,123 +1376,119 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       {!isLoading && !error && (
         <>
           {/* Header */}
-          <header className="bg-[#FDFBF7] border-b-2 border-foreground px-6 py-3 flex items-center justify-between shrink-0">
-            {/* Left: Back + Title */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={onBack}
-                className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="font-black text-lg">{unitData?.title || unitTitle}</h1>
-            </div>
-
-            {/* Center: Unit Info Badge + Article Selector */}
-            <div className="flex gap-2 items-center">
-              {/* Unit Selector - Green styled dropdown with arrow */}
-              <div className="relative">
-                <Select
-                  value={selectedUnitIndex}
-                  onChange={e => setSelectedUnitIndex(Number(e.target.value))}
-                  className="!h-auto !px-4 !py-2 !pr-8 !bg-lime-300 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
+          <header className="bg-card dark:bg-slate-900 border-b-2 border-foreground px-3 sm:px-6 py-3 shrink-0">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              {/* Left: Back + Title */}
+              <div className="flex items-center gap-3 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={onBack}
+                  className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
                 >
-                  {(uniqueUnitIndices.length > 0 ? uniqueUnitIndices : [selectedUnitIndex]).map(
-                    (idx: number) => (
-                      <option key={idx} value={idx}>
-                        📖{' '}
-                        {(labels.dashboard?.reading?.lesson || 'Lesson {idx}').replace(
-                          '{idx}',
-                          idx.toString()
-                        )}
-                      </option>
-                    )
-                  )}
-                </Select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h1 className="font-black text-base sm:text-lg truncate">
+                  {unitData?.title || unitTitle}
+                </h1>
               </div>
 
-              {/* Article Selector */}
-              {articles.length > 1 && (
-                <div className="flex bg-card border-2 border-foreground rounded-lg overflow-hidden">
-                  {articles.map(article => {
-                    const articleIndex = article.articleIndex ?? 1;
-                    return (
-                      <Button
-                        variant="ghost"
-                        size="auto"
-                        key={articleIndex}
-                        onClick={() => setActiveArticleIndex(articleIndex)}
-                        className={`px-3 py-2 font-bold text-xs text-foreground transition-colors border-r-2 border-foreground last:border-r-0 ${
-                          activeArticleIndex === article.articleIndex
-                            ? 'bg-primary text-white'
-                            : 'hover:bg-muted'
-                        }`}
-                      >
-                        {(labels.dashboard?.reading?.article || 'Article').replace(
-                          '{index}',
-                          articleIndex.toString()
-                        )}{' '}
-                        {articleIndex}
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {grammarList.length > 0 && (
-                <span className="hidden md:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
-                  {(labels.dashboard?.reading?.grammarCount || '{count} grammar points').replace(
-                    '{count}',
-                    grammarList.length.toString()
-                  )}
-                </span>
-              )}
-            </div>
-
-            {/* Right: Settings */}
-            <div className="relative">
-              <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+              {/* Middle: Unit + Article controls */}
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="relative w-full sm:w-auto">
+                  <Select
+                    value={selectedUnitIndex}
+                    onChange={e => setSelectedUnitIndex(Number(e.target.value))}
+                    className="!h-auto w-full sm:w-auto !px-4 !py-2 !pr-8 !bg-lime-300 dark:!bg-slate-700 dark:hover:!bg-slate-600 dark:!text-slate-100 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
                   >
-                    <Settings className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
-                  <SettingsPanel
-                    fontSize={fontSize}
-                    isSerif={isSerif}
-                    onFontSizeChange={setFontSize}
-                    onSerifToggle={() => setIsSerif(!isSerif)}
-                    onClose={() => setShowSettings(false)}
-                    language={language}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {selectableUnitIndices.map((idx: number) => (
+                      <option key={idx} value={idx}>
+                        📖 {formatLessonLabel(idx)}
+                      </option>
+                    ))}
+                  </Select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                </div>
+
+                {articles.length > 1 && (
+                  <div className="flex flex-wrap bg-card border-2 border-foreground rounded-lg overflow-hidden">
+                    {articles.map(article => {
+                      const articleIndex = article.articleIndex ?? 1;
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="auto"
+                          key={articleIndex}
+                          onClick={() => setActiveArticleIndex(articleIndex)}
+                          className={`px-3 py-2 font-bold text-xs text-foreground transition-colors border-r-2 border-foreground last:border-r-0 ${
+                            activeArticleIndex === article.articleIndex
+                              ? 'bg-primary text-white'
+                              : 'hover:bg-muted'
+                          }`}
+                        >
+                          {(labels.dashboard?.reading?.article || 'Article').replace(
+                            '{index}',
+                            articleIndex.toString()
+                          )}{' '}
+                          {articleIndex}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {grammarList.length > 0 && (
+                  <span className="hidden sm:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
+                    {(labels.dashboard?.reading?.grammarCount || '{count} grammar points').replace(
+                      '{count}',
+                      grammarList.length.toString()
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* Right: Settings */}
+              <div className="self-end md:self-auto relative">
+                <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="auto"
+                      type="button"
+                      className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
+                    <SettingsPanel
+                      fontSize={fontSize}
+                      isSerif={isSerif}
+                      onFontSizeChange={setFontSize}
+                      onSerifToggle={() => setIsSerif(!isSerif)}
+                      onClose={() => setShowSettings(false)}
+                      language={language}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </header>
 
           {/* Main Content: Split Screen */}
           <div className="flex-1 flex overflow-hidden">
             {/* Left: Reader Panel (65% desktop, full width mobile) */}
-            <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-4 md:p-8">
+            <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-3 sm:p-4 md:p-8">
               <div
                 ref={readerRef}
-                className={`bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
+                className={`bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] dark:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.22)] p-4 sm:p-6 md:p-8 max-w-full sm:max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
                 style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
                 aria-label={labels.dashboard?.reading?.readerLabel || 'Article reader'}
               >
                 <h2 className="text-2xl font-black mb-6 text-foreground">
                   {unitData?.title || labels.dashboard?.reading?.noArticles || 'No article'}
                 </h2>
-                <div className="text-muted-foreground leading-loose">
+                <div className="text-muted-foreground leading-loose break-words">
                   {unitData?.readingText ? (
                     renderContent(unitData.readingText)
                   ) : (
@@ -1514,7 +1546,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
             </div>
 
             {/* Right: Study Hub (35% - hidden on mobile) */}
-            <div className="hidden md:flex w-[35%] bg-[#FDFBF7] flex-col overflow-hidden">
+            <div className="hidden md:flex w-[35%] bg-card dark:bg-slate-900 flex-col overflow-hidden">
               {/* Tabs */}
               <div className="flex border-b-2 border-foreground shrink-0">
                 {(
@@ -1542,7 +1574,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-foreground border-r-2 border-foreground last:border-r-0 transition-colors ${
-                      activeTab === tab.key ? 'bg-lime-300' : 'bg-card hover:bg-muted'
+                      activeTab === tab.key
+                        ? 'bg-lime-300 dark:bg-slate-700 dark:text-slate-100'
+                        : 'bg-card hover:bg-muted'
                     }`}
                   >
                     <tab.icon className="w-4 h-4" />
@@ -1633,7 +1667,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                         <div
                           key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
                           className={`p-3 rounded-lg border-2 border-foreground ${
-                            msg.role === 'user' ? 'bg-lime-100 ml-8' : 'bg-card mr-8'
+                            msg.role === 'user'
+                              ? 'bg-lime-100 dark:bg-lime-900/30 ml-8'
+                              : 'bg-card dark:bg-slate-800 mr-8'
                           }`}
                         >
                           <p className="text-sm">{msg.content}</p>
@@ -1783,7 +1819,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
                   notes.map(note => (
                     <div
                       key={note.id}
-                      className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400"
+                      className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400"
                     >
                       <div className="font-bold text-sm">{note.text}</div>
                       <div className="text-xs text-muted-foreground">{note.comment}</div>

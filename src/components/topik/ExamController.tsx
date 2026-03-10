@@ -14,6 +14,7 @@ import {
   Check, // Submit icon
   FastForward,
   Rewind,
+  X,
   LogOut, // Exit icon
 } from 'lucide-react';
 import { TopikExam, TopikQuestion } from '../../types';
@@ -212,16 +213,27 @@ export const ExamController: React.FC<ExamControllerProps> = ({
                 <span className="text-muted-foreground font-bold text-sm">
                   {t('dashboard.topik.controller.questionOverview')}
                 </span>
-
-                <div className="text-xs font-mono text-muted-foreground">
-                  <span className="text-emerald-600 font-bold">
-                    {Object.keys(userAnswers).length}
-                  </span>
-                  <span className="mx-1 text-muted-foreground">/</span>
-                  <span>{questions.length}</span>
-                  <span className="ml-1 text-[10px] uppercase opacity-70">
-                    {t('dashboard.topik.controller.done')}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <div className="text-xs font-mono text-muted-foreground">
+                    <span className="text-emerald-600 font-bold">
+                      {Object.keys(userAnswers).length}
+                    </span>
+                    <span className="mx-1 text-muted-foreground">/</span>
+                    <span>{questions.length}</span>
+                    <span className="ml-1 text-[10px] uppercase opacity-70">
+                      {t('dashboard.topik.controller.done')}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => setShowOverview(false)}
+                    className="w-7 h-7 rounded-md bg-card border border-border text-muted-foreground hover:text-foreground"
+                    aria-label={t('dashboard.topik.controller.close')}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
 
@@ -238,6 +250,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
                       size="auto"
                       onClick={() => {
                         onQuestionSelect(idx);
+                        setShowOverview(false);
                       }}
                       className={`
                           aspect-square rounded-lg flex items-center justify-center font-bold text-xs transition-all border

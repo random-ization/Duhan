@@ -7,6 +7,12 @@ import { getAuthUserId } from "./utils";
 export const getStats = query({
     args: {},
     handler: async (ctx) => {
+        const roundMetric = (value: number, decimals = 2): number => {
+            if (!Number.isFinite(value)) return 0;
+            const factor = 10 ** decimals;
+            return Math.round(value * factor) / factor;
+        };
+
         const userId = await getAuthUserId(ctx).catch(() => null);
         if (!userId) {
             // Return empty stats if not logged in
@@ -105,8 +111,10 @@ export const getStats = query({
         // Calculate Study Time
         // Daily Minutes
         const todayLogs = recentLogs.filter(log => log.createdAt >= startOfDay);
-        const todayMinutes = todayLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
-        const totalMinutes = allLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+        const todayMinutesRaw = todayLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+        const totalMinutesRaw = allLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+        const todayMinutes = roundMetric(todayMinutesRaw);
+        const totalMinutes = roundMetric(totalMinutesRaw);
         const dailyProgress = Math.min(Math.round((todayMinutes / 30) * 100), 100); // 30 min goal
 
         // Today's vocab/grammar study counts
@@ -145,7 +153,7 @@ export const getStats = query({
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const weeklyActivity = weeklyMinutesArr.map((mins, i) => ({
             day: days[i],
-            minutes: mins
+            minutes: roundMetric(mins)
         }));
 
         // OPTIMIZATION: Batch fetch course details

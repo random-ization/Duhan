@@ -22,20 +22,16 @@ export function getLocalizedContent(
   // If field has dots, we might want a get implementation, but for now let's assume direct access
   // or standard suffix logic.
 
+  const langStr = (language as string).toLowerCase();
   let suffix = '';
-  switch (language) {
-    case 'en':
-      suffix = 'En';
-      break;
-    case 'vi':
-      suffix = 'Vi';
-      break;
-    case 'mn':
-      suffix = 'Mn';
-      break;
-    case 'zh':
-      suffix = 'Zh';
-      break; // Default field usually
+  if (langStr === 'en') {
+    suffix = 'En';
+  } else if (langStr === 'vi') {
+    suffix = 'Vi';
+  } else if (langStr === 'mn') {
+    suffix = 'Mn';
+  } else if (langStr.startsWith('zh') || langStr === 'cn') {
+    suffix = 'Zh';
   }
 
   // Try specific language field

@@ -363,7 +363,7 @@
     "defaultDisplayLevel": "第一册",
     "backToShelf": "返回书架",
     "courseMeta": "{{level}} · 第 1-{{totalUnits}} 课",
-    "recentUnit": "最近学习：第 {unit} 单元",
+    "recentUnit": "最近学习：第 {{unit}} 单元",
     "overallProgress": "总进度",
     "trainingModules": "专项训练",
     "modules": {
@@ -1730,6 +1730,14 @@
       "retrigger": "重新触发批改",
       "retriggering": "重新触发中...",
       "retryFailed": "触发失败，请稍后重试。"
+    }
+  },
+  "pwa": {
+    "install": {
+      "title": "安装 DuHan 应用",
+      "androidHint": "安装后启动更快，并获得沉浸式全屏体验。",
+      "iosHint": "在 Safari 中点击“分享”，然后选择“添加到主屏幕”。",
+      "action": "立即安装"
     }
   }
 }

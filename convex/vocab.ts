@@ -1520,6 +1520,7 @@ export const getVocabBook = query({
 export const getVocabBookCount = query({
   args: {
     includeMastered: v.optional(v.boolean()),
+    savedByUserOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     try {
@@ -1541,6 +1542,7 @@ export const getVocabBookCount = query({
           .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
         scanned += page.page.length;
         for (const p of page.page) {
+          if (args.savedByUserOnly && p.savedByUser !== true) continue;
           if (includeMastered || p.status !== 'MASTERED') count++;
         }
         cursor = page.isDone || scanned >= MAX_PROGRESS_DOCS ? null : page.continueCursor;
@@ -1686,6 +1688,235 @@ export const setMastery = mutation({
     });
 
     return { success: true, action: 'updated' as const };
+  },
+});
+
+const stripMeaningHtml = (value: string) =>
+  value
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const splitMeaningCandidates = (value: string): string[] => {
+  const cleaned = stripMeaningHtml(value);
+  if (!cleaned) return [];
+
+  const primaryParts = cleaned
+    .split(/\s\/\s|\s\|\s|；|;|\n|／|·/g)
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  if (primaryParts.length > 1) return primaryParts;
+  return [cleaned];
+};
+
+const isGenericMeaning = (value: string): boolean => {
+  const text = value.trim().toLowerCase();
+  return (
+    /^(yes|no|okay|ok)$/i.test(text) ||
+    /^to be$/.test(text) ||
+    /^to not be$/.test(text) ||
+    /^there is$/.test(text) ||
+    /^there are$/.test(text) ||
+    /^and$/.test(text) ||
+    /^or$/.test(text) ||
+    /^who$/.test(text) ||
+    /^what$/.test(text) ||
+    /^when$/.test(text)
+  );
+};
+
+const looksLikeGrammarGloss = (value: string): boolean => {
+  const text = value.toLowerCase();
+  return (
+    /particle|connector|subject|topic|sentence/.test(text) ||
+    /\bto be\b|\bto not be\b|\bthere is\b|\bthere are\b|\blet's\b|how\/what about/.test(text) ||
+    /together with|subject particle|topic particle/.test(text)
+  );
+};
+
+const compactForMatch = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+    .trim();
+
+const isEnglishGlossCandidate = (value: string): boolean => {
+  const hasLatin = /[A-Za-z]/.test(value);
+  if (!hasLatin) return false;
+
+  const hasHangul = /[\u3131-\u318e\uac00-\ud7a3]/i.test(value);
+  const hasLowercaseLatin = /[a-z]/.test(value);
+
+  if (hasHangul && !hasLowercaseLatin) {
+    // Cases like "SNS 아이디" are not reliable English meanings.
+    return false;
+  }
+
+  return true;
+};
+
+const normalizeMeaningValue = (raw: string, word?: string): string | null => {
+  const candidates = splitMeaningCandidates(raw);
+  if (candidates.length === 0) return null;
+
+  const normalizedCandidates = candidates
+    .map(candidate =>
+      candidate
+        .replace(/^[-–•·\s]+/, '')
+        .replace(/[-–•·\s]+$/, '')
+        .trim()
+    )
+    .filter(candidate => candidate.length > 0);
+  if (normalizedCandidates.length === 0) return null;
+
+  const englishCandidates = normalizedCandidates.filter(isEnglishGlossCandidate);
+  const first = normalizedCandidates[0];
+  const firstHasLatin = isEnglishGlossCandidate(first);
+
+  if (firstHasLatin && !isGenericMeaning(first) && !looksLikeGrammarGloss(first)) {
+    return first;
+  }
+
+  const fallbackEnglish =
+    englishCandidates.find(
+      candidate =>
+        !isGenericMeaning(candidate) &&
+        !looksLikeGrammarGloss(candidate) &&
+        candidate.split(/\s+/).length >= 2
+    ) ||
+    englishCandidates.find(candidate => !isGenericMeaning(candidate) && !looksLikeGrammarGloss(candidate)) ||
+    englishCandidates.find(candidate => !isGenericMeaning(candidate)) ||
+    englishCandidates[0];
+
+  if (fallbackEnglish) {
+    return fallbackEnglish;
+  }
+
+  if (word) {
+    const compactWord = compactForMatch(word);
+    if (compactWord.length > 0) {
+      const matchedCandidate = normalizedCandidates.find(candidate => {
+        const compactCandidate = compactForMatch(candidate);
+        return (
+          compactCandidate.length > 0 &&
+          (compactCandidate.includes(compactWord) || compactWord.includes(compactCandidate))
+        );
+      });
+      if (matchedCandidate) {
+        return matchedCandidate;
+      }
+    }
+  }
+
+  if (normalizedCandidates.length > 1 && normalizedCandidates.every(candidate => !isEnglishGlossCandidate(candidate))) {
+    // Multiple non-English candidates are usually extraction artifacts; skip these ambiguous rows.
+    return null;
+  }
+
+  return first;
+};
+
+export const sanitizeCourseMeanings = mutation({
+  args: {
+    courseId: v.string(),
+    dryRun: v.optional(v.boolean()),
+    clearOtherLocales: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const dryRun = args.dryRun ?? false;
+    const clearOtherLocales = args.clearOtherLocales ?? true;
+
+    const appearances = await ctx.db
+      .query('vocabulary_appearances')
+      .withIndex('by_course_unit', q => q.eq('courseId', args.courseId))
+      .collect();
+
+    const wordIds = [...new Set(appearances.map(item => item.wordId))];
+    const words = await Promise.all(wordIds.map(id => ctx.db.get(id)));
+    const wordMap = new Map(words.filter(Boolean).map(word => [word!._id.toString(), word!]));
+
+    let updated = 0;
+    let unchanged = 0;
+    let skipped = 0;
+    const samples: Array<{
+      word: string;
+      before: string;
+      after: string;
+      appearanceId: Id<'vocabulary_appearances'>;
+    }> = [];
+
+    for (const appearance of appearances) {
+      const wordDoc = wordMap.get(appearance.wordId.toString());
+      const wordText = wordDoc?.word ?? '';
+
+      const sourceMeaning =
+        appearance.meaningEn?.trim() ||
+        appearance.meaning?.trim() ||
+        wordDoc?.meaningEn?.trim() ||
+        wordDoc?.meaning?.trim() ||
+        '';
+
+      if (!sourceMeaning) {
+        skipped += 1;
+        continue;
+      }
+
+      const normalized = normalizeMeaningValue(sourceMeaning, wordText);
+      if (!normalized) {
+        skipped += 1;
+        continue;
+      }
+
+      const existingMeaning = appearance.meaning?.trim() || '';
+      const existingMeaningEn = appearance.meaningEn?.trim() || '';
+      const existingMeaningVi = appearance.meaningVi?.trim() || '';
+      const existingMeaningMn = appearance.meaningMn?.trim() || '';
+
+      const needsUpdate =
+        existingMeaning !== normalized ||
+        existingMeaningEn !== normalized ||
+        (clearOtherLocales && (existingMeaningVi.length > 0 || existingMeaningMn.length > 0));
+
+      if (!needsUpdate) {
+        unchanged += 1;
+        continue;
+      }
+
+      updated += 1;
+      if (samples.length < 30) {
+        samples.push({
+          word: wordText,
+          before: sourceMeaning,
+          after: normalized,
+          appearanceId: appearance._id,
+        });
+      }
+
+      if (!dryRun) {
+        await ctx.db.patch(appearance._id, {
+          meaning: normalized,
+          meaningEn: normalized,
+          meaningVi: clearOtherLocales ? '' : appearance.meaningVi,
+          meaningMn: clearOtherLocales ? '' : appearance.meaningMn,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      dryRun,
+      courseId: args.courseId,
+      processed: appearances.length,
+      updated,
+      unchanged,
+      skipped,
+      samples,
+    };
   },
 });
 

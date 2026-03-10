@@ -11,7 +11,7 @@ import { useTTS } from '../hooks/useTTS';
 import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
-import { VOCAB } from '../utils/convexRefs';
+import { VOCAB, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import type { Id } from '../../convex/_generated/dataModel';
 import VocabProgressSections from '../features/vocab/components/VocabProgressSections';
@@ -106,6 +106,12 @@ export default function VocabModulePage() {
     instituteId ? { courseId: instituteId } : 'skip'
   );
   const addToReviewMutation = useMutation(VOCAB.addToReview);
+  const updateLearningProgressMutation = useMutation(
+    mRef<
+      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      unknown
+    >('user:updateLearningProgress')
+  );
   const { enqueueReview, flushQueue, optimisticProgressMap } = useFSRSBatchProgress({
     maxBatchSize: 10,
     flushDebounceMs: 4000,
@@ -219,6 +225,21 @@ export default function VocabModulePage() {
     if (selectedUnitId === 'ALL') return allWords;
     return allWords.filter(w => w.unit === selectedUnitId);
   }, [allWords, selectedUnitId]);
+
+  const progressUnit = useMemo(() => {
+    if (typeof selectedUnitId === 'number') return selectedUnitId;
+    const firstValid = allWords.find(w => Number.isFinite(w.unit) && w.unit > 0)?.unit;
+    return firstValid || 1;
+  }, [selectedUnitId, allWords]);
+
+  useEffect(() => {
+    if (!instituteId) return;
+    void updateLearningProgressMutation({
+      lastInstitute: instituteId,
+      lastUnit: progressUnit,
+      lastModule: 'VOCAB',
+    });
+  }, [updateLearningProgressMutation, instituteId, progressUnit]);
 
   useEffect(() => {
     setViewState(prev => ({ ...prev, cardIndex: 0, isFlipped: false, flashcardComplete: false }));

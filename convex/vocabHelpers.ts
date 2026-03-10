@@ -97,7 +97,10 @@ export type ImportItem = {
 // Helper to determine if we should look for Unit +10 (Volume 2 logic)
 // Returns the adjusted unit ID to query
 export function resolveTargetUnitId(
-  institute: { volume?: string; id?: string; name?: string } | null | undefined,
+  institute:
+    | { volume?: string; id?: string; name?: string; publisher?: string }
+    | null
+    | undefined,
   targetUnitId: number | undefined
 ): number | undefined {
   if (targetUnitId === undefined) return undefined;
@@ -106,16 +109,19 @@ export function resolveTargetUnitId(
   if (targetUnitId > 10) return targetUnitId;
   if (!institute) return targetUnitId;
 
-  const isVolume2 =
-    (institute.volume &&
-      (institute.volume === '2' || institute.volume === 'B' || institute.volume === '下')) ||
+  const isYonseiCourse =
     (institute.id &&
-      (institute.id.includes('_1b') ||
-        institute.id.includes('_2b') ||
-        institute.id.endsWith('b'))) ||
-    (institute.name && (institute.name.includes('1B') || institute.name.includes('2B')));
+      (institute.id.includes('yonsei') || institute.id === 'course_yonsei_1b_appendix')) ||
+    (institute.name && /연세|yonsei/i.test(institute.name)) ||
+    (institute.publisher && /연세|yonsei|延世/i.test(institute.publisher));
 
-  if (isVolume2) {
+  const isLegacyYonseiVolume2Id =
+    !!institute.id &&
+    (institute.id.includes('_1b') || institute.id.includes('_2b') || institute.id.endsWith('b'));
+
+  const isVolume2 = institute.volume && (institute.volume === '2' || institute.volume === 'B');
+
+  if (isYonseiCourse && (isLegacyYonseiVolume2Id || isVolume2)) {
     return targetUnitId + 10;
   }
 

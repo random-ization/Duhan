@@ -10,9 +10,11 @@ import './index.css';
 import { ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import { getConvexUrl } from './utils/convexConfig';
+import { registerServiceWorker } from './pwa/registerServiceWorker';
 
 const convexUrl = getConvexUrl();
 const convex = new ConvexReactClient(convexUrl);
+registerServiceWorker();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

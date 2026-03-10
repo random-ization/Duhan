@@ -453,6 +453,10 @@ export interface SentenceAnalysis {
 export interface GrammarPointData {
   id: string;
   title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
   slug?: string;
   level?: string; // "TOPIK 1", "TOPIK 2"
 
@@ -471,6 +475,26 @@ export interface GrammarPointData {
   explanationEn?: string;
   explanationVi?: string;
   explanationMn?: string;
+  sections?: {
+    introduction?: { zh?: string; en?: string; vi?: string; mn?: string };
+    core?: { zh?: string; en?: string; vi?: string; mn?: string };
+    comparative?: { zh?: string; en?: string; vi?: string; mn?: string };
+    cultural?: { zh?: string; en?: string; vi?: string; mn?: string };
+    commonMistakes?: { zh?: string; en?: string; vi?: string; mn?: string };
+    review?: { zh?: string; en?: string; vi?: string; mn?: string };
+  };
+  quizItems?: Array<{
+    prompt: { zh?: string; en?: string; vi?: string; mn?: string };
+    answer?: { zh?: string; en?: string; vi?: string; mn?: string };
+  }>;
+  sourceMeta?: {
+    sourceType: string;
+    sourcePath?: string;
+    sourceUrl?: string;
+    checksum?: string;
+    parserVersion?: string;
+    importedAt: number;
+  };
 
   construction?: Record<string, string>; // Legacy field
   conjugationRules?: unknown; // New: flexible rules object

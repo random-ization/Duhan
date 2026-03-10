@@ -76,7 +76,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   return (
     <div className="min-h-screen bg-muted pb-20">
       {/* Header */}
-      <header className="bg-card px-5 pt-5 pb-4 border-b border-border sticky top-0 z-20">
+      <header className="bg-card px-4 sm:px-5 pt-[calc(env(safe-area-inset-top)+12px)] pb-4 border-b border-border sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-3">
           <Button
             variant="ghost"
@@ -126,13 +126,13 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
       </header>
 
       {/* Filter Tabs */}
-      <div className="px-5 py-3 flex gap-2 bg-card border-b border-border sticky top-[89px] z-10">
+      <div className="px-4 sm:px-5 py-3 flex gap-2 bg-card border-b border-border overflow-x-auto no-scrollbar">
         <Button
           variant="ghost"
           size="auto"
           onClick={() => setFilterType('ALL')}
           className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+            'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0',
             filterType === 'ALL'
               ? 'bg-primary text-primary-foreground'
               : 'bg-muted text-muted-foreground'
@@ -145,7 +145,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
           size="auto"
           onClick={() => setFilterType('READING')}
           className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors',
+            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
             filterType === 'READING'
               ? 'bg-blue-600 text-white dark:bg-blue-400/30 dark:text-blue-100'
               : 'bg-muted text-muted-foreground'
@@ -158,7 +158,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
           size="auto"
           onClick={() => setFilterType('LISTENING')}
           className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors',
+            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
             filterType === 'LISTENING'
               ? 'bg-violet-600 text-white dark:bg-violet-400/30 dark:text-violet-100'
               : 'bg-muted text-muted-foreground'
@@ -169,23 +169,23 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
       </div>
 
       {/* Stats Row */}
-      <div className="px-5 py-3 flex gap-2">
-        <div className="flex-1 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-xs text-muted-foreground font-medium">
+      <div className="px-4 sm:px-5 py-3 grid grid-cols-3 gap-2">
+        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
+          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
             {t('dashboard.topik.avgScore')}
           </div>
           <div className="text-lg font-extrabold text-foreground">{avgScore}</div>
         </div>
-        <div className="flex-1 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-xs text-muted-foreground font-medium">
+        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
+          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
             {t('dashboard.topik.passRate')}
           </div>
           <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-300">
             {passRate}%
           </div>
         </div>
-        <div className="flex-1 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-xs text-muted-foreground font-medium">
+        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
+          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
             {t('dashboard.topik.total')}
           </div>
           <div className="text-lg font-extrabold text-foreground">{filteredExams.length}</div>
@@ -193,7 +193,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
       </div>
 
       {/* Exam List (Compact Rows) */}
-      <div className="px-5 space-y-2 pb-4">
+      <div className="px-4 sm:px-5 space-y-2 pb-4">
         <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
           {t('dashboard.topik.availableExams')}
         </div>
@@ -232,7 +232,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-foreground text-sm truncate">{exam.title}</h3>
+                  <h3 className="font-bold text-foreground text-sm line-clamp-2">{exam.title}</h3>
                   <span
                     className={clsx(
                       'text-[9px] font-bold px-1 py-0.5 rounded',
@@ -246,7 +246,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
                       : t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })}
                   </span>
                 </div>
-                <div className="text-[10px] text-muted-foreground font-medium mt-0.5 flex items-center gap-2">
+                <div className="text-[10px] text-muted-foreground font-medium mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="flex items-center gap-0.5">
                     <Clock className="w-3 h-3" />
                     {t('dashboard.topik.mobile.minuteShort', {

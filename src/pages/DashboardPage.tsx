@@ -134,8 +134,10 @@ export default function DashboardPage() {
     [cardOrder, dashboardView, PRACTICE_CARDS]
   );
   const vocabBookCount = useQuery(
-    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
-    user ? { includeMastered: true } : 'skip'
+    qRef<{ includeMastered?: boolean; savedByUserOnly?: boolean }, { count: number }>(
+      'vocab:getVocabBookCount'
+    ),
+    user ? { includeMastered: true, savedByUserOnly: true } : 'skip'
   );
 
   const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });

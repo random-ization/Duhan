@@ -14,6 +14,13 @@ const PUBLISHER_THEMES: Record<
   string,
   { bg: string; text: string; accent: string; border: string; light: string }
 > = {
+  OER: {
+    bg: 'bg-amber-100 dark:bg-amber-400/16',
+    text: 'text-amber-700 dark:text-amber-200',
+    accent: 'bg-amber-500 dark:bg-amber-400/70',
+    border: 'border-amber-900 dark:border-amber-300/50',
+    light: 'bg-amber-50 dark:bg-amber-400/10',
+  },
   \u5ef6\u4e16\u5927\u5b66: {
     bg: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
@@ -69,6 +76,13 @@ const PUBLISHER_TRANSLATIONS: Record<
   string,
   { ko: string; zh: string; en: string; vi: string; mn: string }
 > = {
+  OER: {
+    ko: '오픈 교재',
+    zh: '开放教育资源',
+    en: 'Open Educational Resources',
+    vi: 'Tài nguyên giáo dục mở',
+    mn: 'Нээлттэй боловсролын эх сурвалж',
+  },
   \u5ef6\u4e16\u5927\u5b66: {
     ko: '연세대학교',
     zh: '\u5ef6\u4e16\u5927\u5b66',
@@ -271,6 +285,19 @@ const CoursesOverview: React.FC = () => {
     return PUBLISHER_THEMES['\u9ed8\u8ba4'];
   };
 
+  const getCourseUiMeta = useCallback((course: Course) => {
+    if (course.id === 'ysk-1') {
+      return {
+        displayLevel: course.displayLevel || '1',
+        totalUnits: course.totalUnits || 12,
+      };
+    }
+    return {
+      displayLevel: course.displayLevel,
+      totalUnits: course.totalUnits,
+    };
+  }, []);
+
   // Return mobile version on small screens (after all hooks)
   if (isMobile) {
     return <MobileCoursesOverview />;
@@ -429,79 +456,92 @@ const CoursesOverview: React.FC = () => {
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
                       {groupCourses.map(course => (
-                        <Button
-                          key={course._id || course.id}
-                          onClick={() => navigate(`/course/${course.id}`)}
-                          variant="ghost"
-                          size="auto"
-                          className="flex w-full bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all overflow-hidden group/card min-h-[104px] text-left !justify-start !items-stretch !whitespace-normal"
-                        >
-                          {/* Left: Level Strip */}
-                          <div
-                            className={`w-16 ${theme.accent} border-r-2 border-foreground flex flex-col items-center justify-center relative overflow-hidden px-1 self-stretch`}
-                          >
-                            {/* Diagonal stripes pattern overlay */}
-                            <div
-                              className="absolute inset-0 opacity-10"
-                              style={{
-                                backgroundImage:
-                                  'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)',
-                                backgroundSize: '4px 4px',
-                              }}
-                            ></div>
-
-                            <span className="text-base font-black text-primary-foreground leading-none relative z-10 whitespace-nowrap">
-                              {course.displayLevel
-                                ? t('coursesLibrary.levelTag', { level: course.displayLevel })
-                                : '?'}
-                            </span>
-                          </div>
-
-                          {/* Center: Content */}
-                          <div className="flex-1 px-4 py-3 flex flex-col justify-center min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-black text-lg text-foreground leading-snug group-hover/card:text-primary transition-colors line-clamp-2 break-words">
-                                {course.name}
-                              </h3>
-                              {course.volume && (
-                                <span className="shrink-0 text-[10px] font-black bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border uppercase">
-                                  VOL.{course.volume}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1">
-                              <div className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                                <Layers size={14} />
-                                {t('coursesLibrary.unitsCount', { count: course.totalUnits || 10 })}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right: Shared Cover + Arrow */}
-                          <div className="w-[76px] border-l-2 border-dashed border-border flex flex-col items-center justify-center gap-2 bg-muted group-hover/card:bg-accent transition-colors self-stretch p-2">
-                            <div
-                              className="w-10 h-14 rounded-lg border border-border bg-card overflow-hidden shadow-sm"
-                              style={
-                                {
-                                  viewTransitionName: getCourseCoverTransitionName(course.id),
-                                } as React.CSSProperties
-                              }
+                        (() => {
+                          const uiMeta = getCourseUiMeta(course);
+                          return (
+                            <Button
+                              key={course._id || course.id}
+                              onClick={() => navigate(`/course/${course.id}`)}
+                              variant="ghost"
+                              size="auto"
+                              className="flex w-full bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all overflow-hidden group/card min-h-[104px] text-left !justify-start !items-stretch !whitespace-normal"
                             >
-                              {course.coverUrl ? (
-                                <img
-                                  src={course.coverUrl}
-                                  alt={course.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full grid place-items-center bg-indigo-50 dark:bg-indigo-400/12">
-                                  <BookMarked className="w-4 h-4 text-indigo-300 dark:text-indigo-200/75" />
+                              {/* Left: Level Strip */}
+                              <div
+                                className={`w-16 ${theme.accent} border-r-2 border-foreground flex flex-col items-center justify-center relative overflow-hidden px-1 self-stretch`}
+                              >
+                                {/* Diagonal stripes pattern overlay */}
+                                <div
+                                  className="absolute inset-0 opacity-10"
+                                  style={{
+                                    backgroundImage:
+                                      'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)',
+                                    backgroundSize: '4px 4px',
+                                  }}
+                                ></div>
+
+                                <span className="text-base font-black text-primary-foreground leading-none relative z-10 whitespace-nowrap">
+                                  {uiMeta.displayLevel
+                                    ? t('coursesLibrary.levelTag', { level: uiMeta.displayLevel })
+                                    : '?'}
+                                </span>
+                              </div>
+
+                              {/* Center: Content */}
+                              <div className="flex-1 px-4 py-3 flex flex-col justify-center min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-black text-lg text-foreground leading-snug group-hover/card:text-primary transition-colors line-clamp-2 break-words">
+                                    {course.name}
+                                  </h3>
+                                  {course.volume && (
+                                    <span className="shrink-0 text-[10px] font-black bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border uppercase">
+                                      VOL.{course.volume}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover/card:text-foreground transition-colors" />
-                          </div>
-                        </Button>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <div className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                                    <Layers size={14} />
+                                    {t('coursesLibrary.unitsCount', {
+                                      count: uiMeta.totalUnits || 10,
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right: Shared Cover + Arrow */}
+                              <div className="w-[76px] border-l-2 border-dashed border-border flex flex-col items-center justify-center gap-2 bg-muted group-hover/card:bg-accent transition-colors self-stretch p-2">
+                                <div
+                                  className="w-10 h-14 rounded-lg border border-border bg-card overflow-hidden shadow-sm"
+                                  style={
+                                    {
+                                      viewTransitionName: getCourseCoverTransitionName(course.id),
+                                    } as React.CSSProperties
+                                  }
+                                >
+                                  {course.coverUrl ? (
+                                    <img
+                                      src={course.coverUrl}
+                                      alt={course.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : course.id === 'ysk-1' ? (
+                                    <div className="w-full h-full grid place-items-center bg-amber-50 dark:bg-amber-400/12">
+                                      <span className="text-[9px] font-black text-amber-600 dark:text-amber-200">
+                                        YSK
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full grid place-items-center bg-indigo-50 dark:bg-indigo-400/12">
+                                      <BookMarked className="w-4 h-4 text-indigo-300 dark:text-indigo-200/75" />
+                                    </div>
+                                  )}
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover/card:text-foreground transition-colors" />
+                              </div>
+                            </Button>
+                          );
+                        })()
                       ))}
                     </div>
                   </div>

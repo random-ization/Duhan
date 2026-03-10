@@ -14,6 +14,21 @@ import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
 
+const shouldAnimateRoutes = () => {
+  if (typeof globalThis.window === 'undefined') return true;
+  const displayModeStandalone = globalThis.window.matchMedia('(display-mode: standalone)').matches;
+  const nav = globalThis.navigator as Navigator & { standalone?: boolean };
+  const isStandalone = displayModeStandalone || nav.standalone === true;
+  const prefersReducedMotion = globalThis.window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+  const mobileLikeViewport =
+    globalThis.window.matchMedia('(pointer: coarse)').matches ||
+    globalThis.window.matchMedia('(max-width: 1023px)').matches;
+
+  return !isStandalone && !prefersReducedMotion && !mobileLikeViewport;
+};
+
 export default function AppLayout() {
   const location = useLocation();
   const { sidebarHidden, footerHidden } = useLayoutChromeState();
@@ -34,6 +49,7 @@ export default function AppLayout() {
   const shouldShowMobileHeader = !sidebarHidden && routeUiConfig.hasHeader;
   const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;
   const shouldShowFooter = !footerHidden && routeUiConfig.hasFooter;
+  const allowRouteMotion = shouldAnimateRoutes();
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
@@ -55,22 +71,33 @@ export default function AppLayout() {
         <div
           className={`min-h-full flex flex-col ${routeUiConfig.hasDesktopSidebar ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
-          <LayoutGroup id="app-route-layout">
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.div
-                key={location.pathname}
-                className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.16, ease: 'easeOut' }}
-              >
-                <Suspense fallback={<ContentSkeleton />}>
-                  <Outlet />
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
-          </LayoutGroup>
+          {allowRouteMotion ? (
+            <LayoutGroup id="app-route-layout">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={location.pathname}
+                  className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  <Suspense fallback={<ContentSkeleton />}>
+                    <Outlet />
+                  </Suspense>
+                </motion.div>
+              </AnimatePresence>
+            </LayoutGroup>
+          ) : (
+            <div
+              key={location.pathname}
+              className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+            >
+              <Suspense fallback={<ContentSkeleton />}>
+                <Outlet />
+              </Suspense>
+            </div>
+          )}
           {shouldShowFooter && <Footer />}
         </div>
         {shouldShowMobileNav && (

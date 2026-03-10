@@ -8,7 +8,6 @@ import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
-import { usePhoneVerifyModal } from '../contexts/PhoneVerifyModalContext';
 import {
   ArrowRight,
   PlayCircle,
@@ -1345,13 +1344,10 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
 const LandingPricing = ({
   showLocalizedPromo,
   navigate,
-  open,
   prices,
 }: {
   showLocalizedPromo: boolean;
   navigate: (path: string) => void;
-  open: () => void;
-
   prices: any;
 }) => {
   const { t } = useTranslation();
@@ -1435,9 +1431,7 @@ const LandingPricing = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => {
-                open();
-              }}
+              onClick={() => navigate('/pricing/details?plan=ANNUAL&source=landing')}
               className="bg-card text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.card.cta')}
@@ -1551,17 +1545,11 @@ const LandingPricing = ({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (showLocalizedPromo) {
-                  open();
-                  return;
-                }
-                navigate('/pricing/details?plan=ANNUAL&source=landing');
-              }}
+              onClick={() => navigate('/pricing/details?plan=ANNUAL&source=landing')}
               className="w-full py-4 bg-[#FFDE59] dark:bg-amber-300 text-foreground rounded-xl font-bold shadow-lg hover:bg-yellow-300 dark:hover:bg-amber-200 transition-colors"
             >
               {showLocalizedPromo
-                ? t('pricingDetails.promo.verifyNow')
+                ? t('pricingDetails.promo.subscribe')
                 : t('landing.pricing.pro.cta')}
             </motion.button>
           </motion.div>
@@ -1697,7 +1685,6 @@ const DEMO_ASSETS = {
 export default function Landing() {
   const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const { open } = usePhoneVerifyModal();
   const location = useLocation();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1765,7 +1752,6 @@ export default function Landing() {
         <LandingPricing
           showLocalizedPromo={showLocalizedPromo}
           navigate={navigate}
-          open={open}
           prices={prices}
         />
         <div className="w-full h-px bg-muted" />

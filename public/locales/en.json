@@ -1058,7 +1058,7 @@
     "stats": {
       "topikCoverageValue": "100%",
       "topikCoverageLabel": "TOPIK Past Papers",
-      "aiValue": "GPT-4",
+      "aiValue": "GPT-5 nano",
       "aiLabel": "Grammar Engine",
       "fsrsValue": "FSRS",
       "fsrsLabel": "Adaptive Scheduler",
@@ -1116,7 +1116,7 @@
       "feature3": "Writing polish",
       "feature4": "Speaking corrections",
       "chatTitle": "Grammar Analysis",
-      "chatSubtitle": "Powered by GPT-4o",
+      "chatSubtitle": "Powered by GPT-5 nano",
       "userAlt": "User",
       "userQuestion": "What does -다가 mean in this sentence?",
       "userExample": "\"학교에 가다가 친구를 만났어요.\"",

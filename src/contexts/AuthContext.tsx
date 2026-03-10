@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  ReactNode,
+  useEffect,
+  useRef,
+} from 'react';
 import { useQuery, useConvexAuth, useMutation } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useTranslation } from 'react-i18next';
 import { User, Language, TextbookContent, TopikExam } from '../types';
 import { NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
@@ -44,8 +52,6 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const { ready } = useTranslation();
-
   // Mutations - token argument no longer needed for backend that uses getAuthUserId
 
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -61,18 +67,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const language: Language =
-    i18n.language === 'zh' ||
-    i18n.language === 'en' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn'
-      ? i18n.language
-      : 'en';
+    i18n.language.startsWith('zh') || i18n.language === 'cn'
+      ? 'zh'
+      : i18n.language === 'vi'
+        ? 'vi'
+        : i18n.language === 'mn'
+          ? 'mn'
+          : 'en';
 
   // Session Check (Load User) using Convex Auth
   const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'), isAuthenticated ? {} : 'skip');
-  const loading = !ready || authLoading || (isAuthenticated && viewer === undefined);
+  const attemptedSessionRepairRef = useRef(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      attemptedSessionRepairRef.current = false;
+      return;
+    }
+
+    // Session exists but viewer doc is missing; repair once by signing out stale session.
+    if (viewer === null && !attemptedSessionRepairRef.current) {
+      attemptedSessionRepairRef.current = true;
+      void signOut()
+        .catch(error => {
+          logger.warn('Session repair signOut failed', error);
+        });
+    }
+  }, [authLoading, isAuthenticated, viewer, signOut]);
+
+  const loading = authLoading || (isAuthenticated && viewer === undefined);
 
   const user = useMemo<User | null>(() => {
     if (!isAuthenticated) return null;

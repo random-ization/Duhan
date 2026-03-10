@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Settings, Volume2, Plus, Languages, Headphones, X } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, Plus, Languages, Headphones, X, ChevronDown } from 'lucide-react';
 import { useQuery, useAction, useMutation } from 'convex/react';
-import { aRef, qRef, mRef } from '../../utils/convexRefs';
+import { aRef, INSTITUTES, qRef, mRef } from '../../utils/convexRefs';
 import { StickyAudioPlayer } from '../../components/audio/StickyAudioPlayer';
 import { Language } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
@@ -14,7 +14,7 @@ import { useActivityLogger } from '../../hooks/useActivityLogger';
 import { notify } from '../../utils/notify';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
-import { Button } from '../../components/ui';
+import { Button, Select } from '../../components/ui';
 
 // =========================================
 // Types
@@ -140,7 +140,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
         <PopoverContent
           unstyled
           data-popover
-          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-[#FDFBF7] p-4 shadow-[4px_4px_0px_0px_#18181B]"
+          className="fixed z-50 min-w-[200px] rounded-lg border-2 border-foreground bg-card dark:bg-slate-900 p-4 shadow-[4px_4px_0px_0px_#18181B] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.22)]"
           style={{ left: position.x, top: position.y }}
         >
           <Button
@@ -192,7 +192,7 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               variant="ghost"
               size="auto"
               onClick={onSave}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 dark:bg-slate-700 dark:text-slate-100 border-2 border-foreground rounded-lg font-bold text-xs text-foreground hover:bg-lime-400 dark:hover:bg-slate-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[2px_2px_0px_0px_#18181B] transition-all"
             >
               <Plus className="w-3 h-3" />
               {labels.dashboard?.common?.addVocab || 'Save Word'}
@@ -223,7 +223,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const labels = getLabels(language);
   return (
-    <div className="bg-[#FDFBF7] border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] p-4 w-56">
+    <div className="bg-card dark:bg-slate-900 border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.22)] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-black text-sm">
           {labels.dashboard?.listening?.settings || 'Listening Settings'}
@@ -272,7 +272,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           variant="ghost"
           size="auto"
           onClick={onKaraokeModeToggle}
-          className={`w-12 h-6 rounded-full border-2 border-foreground relative transition-colors ${isKaraokeMode ? 'bg-lime-300' : 'bg-muted'}`}
+          className={`w-12 h-6 rounded-full border-2 border-foreground relative transition-colors ${
+            isKaraokeMode ? 'bg-lime-300 dark:bg-slate-700' : 'bg-muted'
+          }`}
         >
           <div
             className={`absolute top-0.5 w-4 h-4 bg-card rounded-full border border-foreground transition-all ${isKaraokeMode ? 'left-6' : 'left-0.5'}`}
@@ -320,7 +322,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onClick(e)}
       className={`w-full p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left !block !whitespace-normal ${
         isActive
-          ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02]'
+          ? 'bg-lime-100 border-lime-400 shadow-[4px_4px_0px_0px_#84cc16] scale-[1.02] dark:bg-slate-800 dark:border-emerald-700 dark:shadow-[3px_3px_0px_0px_rgba(16,185,129,0.35)]'
           : 'bg-card border-border hover:border-border'
       }`}
     >
@@ -330,7 +332,9 @@ const SegmentView: React.FC<SegmentViewProps> = ({
       </div>
 
       {/* Korean text with word click */}
-      <div className={`font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+      <div
+        className={`font-medium break-words ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
+      >
         {segment.text.split(/\s+/).map((word, wordIndex) => {
           const normalizedWord = normalizeLookupWord(word);
           if (!normalizedWord) {
@@ -355,7 +359,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 
       {/* Translation */}
       {(showTranslation || isActive) && localizedTranslation && (
-        <div className="mt-2 text-sm text-muted-foreground">{localizedTranslation}</div>
+        <div className="mt-2 text-sm text-muted-foreground break-words">{localizedTranslation}</div>
       )}
     </Button>
   );
@@ -383,7 +387,7 @@ const WordView: React.FC<WordViewProps> = ({
       data-base={baseForm}
       data-seg-index={segmentIndex}
       className={`cursor-pointer rounded px-0.5 transition-colors ${
-        isActive ? 'hover:bg-lime-200' : 'hover:bg-yellow-100'
+        isActive ? 'hover:bg-lime-200 dark:hover:bg-slate-700' : 'hover:bg-yellow-100'
       }`}
     >
       {word}{' '}
@@ -443,6 +447,12 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const touchCourseMutation = useMutation(
     mRef<{ courseId: string; unitIndex?: number }, unknown>('progress:touchCourse')
   );
+  const updateLearningProgressMutation = useMutation(
+    mRef<
+      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      unknown
+    >('user:updateLearningProgress')
+  );
   const dictionaryRequestRef = useRef(0);
   const translationLang = useMemo(() => {
     if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
@@ -454,6 +464,36 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const normalizeLookupWordCb = useCallback((value: string) => normalizeLookupWord(value), []);
 
   useEffect(() => stopTTS, [stopTTS]);
+  const [selectedUnitIndexOverride, setSelectedUnitIndexOverride] = useState(unitIndex);
+  useEffect(() => {
+    setSelectedUnitIndexOverride(unitIndex);
+  }, [unitIndex]);
+  const instituteMeta = useQuery(INSTITUTES.get, courseId ? { id: courseId } : 'skip');
+  const availableUnits = useQuery(
+    qRef<{ courseId: string }, { unitIndex: number }[]>('units:getByCourse'),
+    { courseId }
+  );
+  const uniqueUnitIndices = useMemo(() => {
+    if (!availableUnits) return [];
+    const indices = [...new Set(availableUnits.map(item => item.unitIndex))];
+    return indices.sort((a, b) => a - b);
+  }, [availableUnits]);
+  const fallbackUnitCount = useMemo(() => {
+    if (typeof instituteMeta?.totalUnits === 'number' && instituteMeta.totalUnits > 0) {
+      return instituteMeta.totalUnits;
+    }
+    return Math.max(unitIndex, 10);
+  }, [instituteMeta?.totalUnits, unitIndex]);
+  const selectableUnitIndices = useMemo(() => {
+    if (uniqueUnitIndices.length > 0) return uniqueUnitIndices;
+    return Array.from({ length: fallbackUnitCount }, (_, index) => index + 1);
+  }, [uniqueUnitIndices, fallbackUnitCount]);
+  const selectedUnitIndex = useMemo(() => {
+    if (selectableUnitIndices.length === 0) return selectedUnitIndexOverride;
+    return selectableUnitIndices.includes(selectedUnitIndexOverride)
+      ? selectedUnitIndexOverride
+      : selectableUnitIndices[0];
+  }, [selectableUnitIndices, selectedUnitIndexOverride]);
 
   // UI State
   const [fontSize, setFontSize] = useState(20);
@@ -466,7 +506,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const listeningAccumulatedRef = useRef(0);
   const lastAudioTimeRef = useRef<number | null>(null);
-  const activityContextRef = useRef({ courseId, unitIndex });
+  const activityContextRef = useRef({ courseId, unitIndex: selectedUnitIndex });
 
   // Word popup state
   const [selectedWord, setSelectedWord] = useState<{
@@ -502,16 +542,24 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
   useEffect(() => {
     flushListeningTime(true);
-    activityContextRef.current = { courseId, unitIndex };
+    activityContextRef.current = { courseId, unitIndex: selectedUnitIndex };
     listeningAccumulatedRef.current = 0;
     lastAudioTimeRef.current = null;
-  }, [courseId, unitIndex, flushListeningTime]);
+  }, [courseId, selectedUnitIndex, flushListeningTime]);
 
   useEffect(() => () => flushListeningTime(true), [flushListeningTime]);
 
   useEffect(() => {
-    void touchCourseMutation({ courseId, unitIndex });
-  }, [touchCourseMutation, courseId, unitIndex]);
+    void touchCourseMutation({ courseId, unitIndex: selectedUnitIndex });
+  }, [touchCourseMutation, courseId, selectedUnitIndex]);
+
+  useEffect(() => {
+    void updateLearningProgressMutation({
+      lastInstitute: courseId,
+      lastUnit: selectedUnitIndex,
+      lastModule: 'LISTENING',
+    });
+  }, [updateLearningProgressMutation, courseId, selectedUnitIndex]);
 
   // ========================================
   // Data Fetching - Use dedicated listening API
@@ -526,7 +574,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
         vocabList?: VocabItem[];
       } | null
     >('units:getDetails'),
-    { courseId, unitIndex }
+    { courseId, unitIndex: selectedUnitIndex }
   );
 
   const loading = unitDetails === undefined;
@@ -652,6 +700,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     // This will trigger the audio to seek to this time
     setCurrentTime(segment.start);
   };
+
+  const handleToggleTranslation = useCallback(() => {
+    setShowTranslation(prev => !prev);
+  }, []);
 
   const getPopoverPosition = (rect: DOMRect, popoverWidth: number, popoverHeight: number) => {
     const x = Math.min(
@@ -802,14 +854,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   };
 
   return (
-    <div
-      className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col pb-20"
-      style={{
-        backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundColor: '#f4f4f5',
-      }}
-    >
+    <div className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col pb-20 overflow-x-hidden bg-zinc-100 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-slate-950 dark:bg-[radial-gradient(rgba(148,163,184,0.20)_1px,transparent_1px)] dark:bg-[length:20px_20px]">
       {/* Loading State */}
       {loading && <ListeningModuleSkeleton />}
 
@@ -817,74 +862,88 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       {!loading && (
         <>
           {/* Header */}
-          <header className="bg-[#FDFBF7] border-b-2 border-foreground px-6 py-3 flex items-center justify-between shrink-0">
-            {/* Left: Back + Title */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={onBack}
-                className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="font-black text-lg flex items-center gap-2">
-                <Headphones className="w-5 h-5 text-lime-600" />
-                {unitData?.title || unitTitle}
-              </h1>
-            </div>
+          <header className="bg-card dark:bg-slate-900 border-b-2 border-foreground px-3 sm:px-6 py-3 shrink-0">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              {/* Left: Back + Title */}
+              <div className="flex items-center gap-3 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={onBack}
+                  className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h1 className="font-black text-base sm:text-lg flex items-center gap-2 truncate">
+                  <Headphones className="w-5 h-5 text-lime-600 shrink-0" />
+                  <span className="truncate">{unitData?.title || unitTitle}</span>
+                </h1>
+              </div>
 
-            {/* Center: Unit Info Badge */}
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-card border-2 border-foreground rounded-lg font-bold text-xs shadow-[2px_2px_0px_0px_#18181B]">
-                {(labels.dashboard?.listening?.title || 'Unit {index} · Listening').replace(
-                  '{index}',
-                  String(unitIndex)
-                )}
-              </span>
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={() => setShowTranslation(!showTranslation)}
-                className={`px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors ${
-                  showTranslation ? 'bg-blue-100' : 'bg-card'
-                }`}
-              >
-                <Languages className="w-4 h-4 inline mr-1" />
-                {labels.dashboard?.listening?.translate || 'Translation'}
-              </Button>
-            </div>
-
-            {/* Right: Settings */}
-            <div className="relative">
-              <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+              {/* Middle: Unit controls */}
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="relative w-full sm:w-auto">
+                  <Select
+                    value={selectedUnitIndex}
+                    onChange={e => setSelectedUnitIndexOverride(Number(e.target.value))}
+                    className="!h-auto w-full sm:w-auto !px-4 !py-2 !pr-8 !bg-lime-300 dark:!bg-slate-700 dark:hover:!bg-slate-600 dark:!text-slate-100 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
                   >
-                    <Settings className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
-                  <SettingsPanel
-                    fontSize={fontSize}
-                    isKaraokeMode={isKaraokeMode}
-                    onFontSizeChange={setFontSize}
-                    onKaraokeModeToggle={() => setIsKaraokeMode(!isKaraokeMode)}
-                    onClose={() => setShowSettings(false)}
-                    language={language}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {selectableUnitIndices.map(idx => (
+                      <option key={idx} value={idx}>
+                        🎧{' '}
+                        {(labels.dashboard?.listening?.title || 'Unit {index} · Listening').replace(
+                          '{index}',
+                          String(idx)
+                        )}
+                      </option>
+                    ))}
+                  </Select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={handleToggleTranslation}
+                  className={`px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors ${
+                    showTranslation ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-card'
+                  }`}
+                >
+                  <Languages className="w-4 h-4 inline mr-1" />
+                  {labels.dashboard?.listening?.translate || 'Translation'}
+                </Button>
+              </div>
+
+              {/* Right: Settings */}
+              <div className="self-end md:self-auto relative">
+                <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="auto"
+                      type="button"
+                      className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
+                    <SettingsPanel
+                      fontSize={fontSize}
+                      isKaraokeMode={isKaraokeMode}
+                      onFontSizeChange={setFontSize}
+                      onKaraokeModeToggle={() => setIsKaraokeMode(!isKaraokeMode)}
+                      onClose={() => setShowSettings(false)}
+                      language={language}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </header>
 
           {/* Main Content: Full Width Transcript Panel */}
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="bg-[#FDFBF7] border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] p-8 max-w-3xl mx-auto">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8">
+            <div className="bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] dark:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.22)] p-4 sm:p-6 md:p-8 max-w-full sm:max-w-3xl mx-auto">
               <h2 className="text-2xl font-black mb-6 text-foreground flex items-center gap-2">
                 <Headphones className="w-6 h-6 text-lime-600" />
                 {labels.dashboard?.listening?.transcript || 'Transcript'}
@@ -892,11 +951,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
               {/* Karaoke hint */}
               {unitData?.transcriptData && unitData.transcriptData.length > 0 && (
-                <div className="mb-6 p-3 bg-lime-50 border border-lime-200 rounded-lg text-sm text-lime-700">
+                <div className="mb-6 p-3 bg-lime-50 dark:bg-slate-800 border border-lime-200 dark:border-emerald-800 rounded-lg text-sm text-lime-700 dark:text-emerald-200">
                   {labels.dashboard?.listening?.hint || '💡 Tap any sentence to seek playback'}
                 </div>
               )}
-
               {renderTranscript()}
 
               <div className="mt-8 pt-6 border-t-2 border-border flex justify-center">
@@ -907,7 +965,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                     if (completingUnit) return;
                     try {
                       setCompletingUnit(true);
-                      await completeUnitMutation({ courseId, unitIndex });
+                      await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
                       flushListeningTime(true);
                       notify.success(labels.dashboard?.reading?.learned || '🎉 Lesson completed!');
                     } catch (e) {
@@ -921,7 +979,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                   loading={completingUnit}
                   loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || 'Complete lesson'}`}
                   loadingIconClassName="w-4 h-4"
-                  className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm text-foreground hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                  className="px-8 py-3 bg-lime-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100 border-2 border-foreground rounded-xl font-bold text-sm text-foreground hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
                 >
                   ✅ {labels.dashboard?.reading?.completeLesson || 'Complete lesson'}
                 </Button>

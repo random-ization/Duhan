@@ -83,6 +83,37 @@ const GrammarConjugationRulesValidator = v.union(
   v.array(v.record(v.string(), v.string()))
 );
 
+const GrammarLocalizedTextValidator = v.object({
+  zh: v.optional(v.string()),
+  en: v.optional(v.string()),
+  vi: v.optional(v.string()),
+  mn: v.optional(v.string()),
+});
+
+const GrammarSectionsValidator = v.object({
+  introduction: v.optional(GrammarLocalizedTextValidator),
+  intro: v.optional(GrammarLocalizedTextValidator),
+  core: v.optional(GrammarLocalizedTextValidator),
+  comparative: v.optional(GrammarLocalizedTextValidator),
+  cultural: v.optional(GrammarLocalizedTextValidator),
+  commonMistakes: v.optional(GrammarLocalizedTextValidator),
+  review: v.optional(GrammarLocalizedTextValidator),
+});
+
+const GrammarQuizItemValidator = v.object({
+  prompt: GrammarLocalizedTextValidator,
+  answer: v.optional(GrammarLocalizedTextValidator),
+});
+
+const GrammarSourceMetaValidator = v.object({
+  sourceType: v.string(),
+  sourcePath: v.optional(v.string()),
+  sourceUrl: v.optional(v.string()),
+  checksum: v.optional(v.string()),
+  parserVersion: v.optional(v.string()),
+  importedAt: v.number(),
+});
+
 export default defineSchema({
   ...authTables,
   // Users (Mirrors User model)
@@ -333,6 +364,10 @@ export default defineSchema({
   // Grammar Points (Master Library)
   grammar_points: defineTable({
     title: v.string(),
+    titleEn: v.optional(v.string()),
+    titleZh: v.optional(v.string()),
+    titleVi: v.optional(v.string()),
+    titleMn: v.optional(v.string()),
     slug: v.optional(v.string()),
     searchKey: v.optional(v.string()),
     searchPatterns: v.optional(v.array(v.string())),
@@ -353,6 +388,11 @@ export default defineSchema({
     explanationEn: v.optional(v.string()),
     explanationVi: v.optional(v.string()),
     explanationMn: v.optional(v.string()),
+
+    // Structured sections with multi-language variants
+    sections: v.optional(v.any()), // Temporarily flexible for AI remediation
+    quizItems: v.optional(v.array(GrammarQuizItemValidator)),
+    sourceMeta: v.optional(GrammarSourceMetaValidator),
 
     conjugationRules: v.optional(GrammarConjugationRulesValidator),
     // Examples format: [{ kr: string, cn: string, en?: string, vi?: string, mn?: string }]
@@ -1046,4 +1086,18 @@ export default defineSchema({
   })
     .index('by_session', ['sessionId'])
     .index('by_user', ['userId']),
+
+  // Korean Items (Polyglot feature)
+  koreanItems: defineTable({
+    korean: v.string(),
+    romanization: v.optional(v.string()),
+    translations: v.optional(v.object({
+      zh: v.optional(v.string()),
+      en: v.optional(v.string()),
+      mn: v.optional(v.string()),
+      vi: v.optional(v.string()),
+    })),
+    category: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+  }),
 });

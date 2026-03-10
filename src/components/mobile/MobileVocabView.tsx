@@ -128,7 +128,7 @@ export default function MobileVocabView({
   const closeFocusOverlay = () => {
     setModeMenuOpen(false);
     setShowFlashcardSettings(false);
-    setFocusOpen(false);
+    navigate(`/course/${instituteId}`);
   };
 
   const handleNextCard = () => {

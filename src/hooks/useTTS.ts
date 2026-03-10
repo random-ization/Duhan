@@ -20,7 +20,9 @@ type SpeakActionResult = {
 
 type SpeakActionFn = (args: SpeakActionArgs) => Promise<SpeakActionResult>;
 
-const SPEAK_DEBOUNCE_MS = 120;
+// Keep a tiny debounce to coalesce rapid duplicate triggers without adding
+// noticeable click-to-sound latency.
+const SPEAK_DEBOUNCE_MS = 40;
 const inFlightSpeakRequests = new Map<string, Promise<SpeakActionResult>>();
 
 function buildSpeakRequestDedupeKey(args: SpeakActionArgs): string {
