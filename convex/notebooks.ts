@@ -98,18 +98,21 @@ export const list = query({
 
     const { type } = args;
 
-    let notebooks = await ctx.db
-      .query('notebooks')
-      .filter(q => q.eq(q.field('userId'), userId))
-      .collect();
+    const notebooks = type
+      ? await ctx.db
+          .query('notebooks')
+          .withIndex('by_user_type', q => q.eq('userId', userId).eq('type', type))
+          .collect()
+      : await ctx.db
+          .query('notebooks')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
 
-    if (type) {
-      notebooks = notebooks.filter(n => n.type === type);
-    }
+    const sortedNotebooks = notebooks.slice().sort((a, b) => b.createdAt - a.createdAt);
 
     return {
       success: true,
-      data: notebooks.map(n => ({
+      data: sortedNotebooks.map(n => ({
         id: n._id,
         type: n.type,
         title: n.title,

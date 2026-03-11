@@ -6,6 +6,26 @@ import { GrammarPointData } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string;
+
+const TYPE_STYLE_MAP: Record<string, { bg: string; text: string; border: string }> = {
+  ENDING: {
+    bg: 'bg-blue-50 dark:bg-blue-950',
+    text: 'text-blue-600 dark:text-blue-400',
+    border: 'border-blue-200 dark:border-blue-800',
+  },
+  PARTICLE: {
+    bg: 'bg-purple-50 dark:bg-purple-950',
+    text: 'text-purple-600 dark:text-purple-400',
+    border: 'border-purple-200 dark:border-purple-800',
+  },
+  CONNECTIVE: {
+    bg: 'bg-amber-50 dark:bg-amber-950',
+    text: 'text-amber-600 dark:text-amber-400',
+    border: 'border-amber-200 dark:border-amber-800',
+  },
+};
+
 interface GrammarDetailPaneProps {
   grammar: GrammarPointData | null;
   onNext?: () => void;
@@ -70,6 +90,297 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
+type LocalizedSection = { zh?: string; en?: string; vi?: string; mn?: string };
+
+function getLocalizedSectionText(section?: string | LocalizedSection | null): string {
+  if (!section) return '';
+  if (typeof section === 'string') return section;
+  return section.zh || section.en || section.vi || section.mn || '';
+}
+
+function getTypeStyles(type: string): { bg: string; text: string; border: string } {
+  return (
+    TYPE_STYLE_MAP[type] || {
+      bg: 'bg-muted',
+      text: 'text-muted-foreground',
+      border: 'border-border',
+    }
+  );
+}
+
+function getLocalizedTitle(grammar: GrammarPointData, language: string): string {
+  if (language === 'zh') return grammar.titleZh || grammar.title;
+  if (language === 'vi') return grammar.titleVi || grammar.title;
+  if (language === 'mn') return grammar.titleMn || grammar.title;
+  return grammar.titleEn || grammar.title;
+}
+
+const EmptyGrammarState: React.FC<{ t: TranslateFn }> = ({ t }) => (
+  <main className="flex-1 flex flex-col h-full overflow-y-auto relative p-6">
+    <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-slate-900 dark:border-border shadow-[8px_8px_0px_0px_#0f172a] dark:shadow-[8px_8px_0px_0px_rgba(148,163,184,0.26)] p-10 mt-2 mb-10 flex flex-col items-center justify-center min-h-[50vh] opacity-50">
+      <Sparkles className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
+      <h2 className="text-xl font-bold text-muted-foreground">
+        {t('grammarModule.selectPrompt', 'Select a grammar point to view details')}
+      </h2>
+    </div>
+  </main>
+);
+
+const GrammarHeader: React.FC<{
+  grammar: GrammarPointData;
+  language: string;
+  typeStyles: { bg: string; text: string; border: string };
+}> = ({ grammar, language, typeStyles }) => (
+  <header className="border-b-2 border-slate-200 dark:border-slate-800 pb-6 mb-8">
+    <div className="flex items-center gap-2 mb-3">
+      <span
+        className={`text-xs font-black px-2 py-1 border-2 rounded uppercase ${typeStyles.bg} ${typeStyles.text} ${typeStyles.border}`}
+      >
+        {grammar.type}
+      </span>
+      {grammar.level && (
+        <span className="text-xs font-bold text-muted-foreground px-2 py-1 bg-muted rounded border border-border">
+          {grammar.level}
+        </span>
+      )}
+    </div>
+    <h1 className="text-4xl font-black text-foreground mb-4">
+      {getLocalizedTitle(grammar, language)}
+    </h1>
+    <p className="text-lg text-muted-foreground font-medium bg-yellow-100/50 dark:bg-yellow-900/20 inline-block px-2 py-1 rounded">
+      {grammar.summary}
+    </p>
+  </header>
+);
+
+const GrammarExtendedSections: React.FC<{
+  sections: GrammarPointData['sections'];
+  t: TranslateFn;
+}> = ({ sections, t }) => {
+  if (!sections || typeof sections !== 'object') return null;
+
+  return (
+    <>
+      {sections.introduction ? (
+        <MarkdownRenderer content={getLocalizedSectionText(sections.introduction)} />
+      ) : null}
+      {sections.core ? (
+        <div className="mt-8 border-t-2 border-dashed border-slate-200 dark:border-slate-800 pt-6">
+          <MarkdownRenderer content={getLocalizedSectionText(sections.core)} />
+        </div>
+      ) : null}
+      {sections.comparative ? (
+        <div className="mt-6 p-5 bg-orange-50 dark:bg-orange-950/20 border-2 border-orange-200 dark:border-orange-800 rounded-lg shadow-sm">
+          <h4 className="font-black text-orange-800 dark:text-orange-400 mb-2">
+            💡 {t('grammarDetail.comparative', 'Similar grammar comparison')}
+          </h4>
+          <MarkdownRenderer content={getLocalizedSectionText(sections.comparative)} />
+        </div>
+      ) : null}
+      {sections.commonMistakes ? (
+        <div className="mt-6 p-5 bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 rounded-lg shadow-sm">
+          <h4 className="font-black text-red-800 dark:text-red-400 mb-2">
+            ⚠️ {t('grammarDetail.commonMistakes', 'Common mistakes')}
+          </h4>
+          <MarkdownRenderer content={getLocalizedSectionText(sections.commonMistakes)} />
+        </div>
+      ) : null}
+    </>
+  );
+};
+
+const GrammarRulesSection: React.FC<{
+  rulesObject: Record<string, unknown>;
+  t: TranslateFn;
+}> = ({ rulesObject, t }) => {
+  if (Object.keys(rulesObject).length === 0) return null;
+
+  return (
+    <>
+      <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
+        <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
+          2
+        </span>
+        {t('grammarDetail.rules', 'Conjugation rules')}
+      </h3>
+      <div className="overflow-x-auto mb-10">
+        <table className="w-full text-left border-collapse border-2 border-slate-900 dark:border-border">
+          <thead>
+            <tr className="bg-slate-100 dark:bg-slate-800/50">
+              <th className="p-3 border-2 border-slate-900 dark:border-border font-black text-foreground">
+                {t('grammarDetail.condition', 'Condition')}
+              </th>
+              <th className="p-3 border-2 border-slate-900 dark:border-border font-black text-foreground">
+                {t('grammarDetail.rule', 'Rule')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(rulesObject).map(([key, value]) => (
+              <tr key={key}>
+                <td className="p-3 border-2 border-slate-900 dark:border-border font-bold text-foreground">
+                  {key}
+                </td>
+                <td className="p-3 border-2 border-slate-900 dark:border-border text-blue-600 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-900/10">
+                  {String(value)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+};
+
+const GrammarExamplesSection: React.FC<{
+  examples: GrammarPointData['examples'];
+  t: TranslateFn;
+}> = ({ examples, t }) => {
+  if (!Array.isArray(examples) || examples.length === 0) return null;
+
+  return (
+    <>
+      <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
+        <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
+          3
+        </span>
+        {t('grammarDetail.examples', 'Usage examples')}
+      </h3>
+      <div className="space-y-4 mt-4 mb-4">
+        {examples.map((ex, index) => {
+          if (!ex) return null;
+          const kr = typeof ex.kr === 'string' ? ex.kr : '';
+          const cn = typeof ex.cn === 'string' ? ex.cn : '';
+          if (!kr && !cn) return null;
+
+          return (
+            <div
+              key={index}
+              className="p-5 bg-slate-50 dark:bg-slate-800/50 border-l-8 border-slate-900 dark:border-slate-100 rounded-r-lg shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_rgba(148,163,184,0.26)] transition-transform hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#0f172a] dark:hover:shadow-[4px_4px_0_0_rgba(148,163,184,0.26)]"
+            >
+              <div className="font-bold text-lg text-foreground mb-1 leading-snug">
+                {kr.split(/(?=\d+\.)/).map((line, idx) => (
+                  <div key={`kr-${index}-${idx}`}>{line.trim()}</div>
+                ))}
+              </div>
+              <div className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                {cn.split(/(?=\d+\.)/).map((line, idx) => (
+                  <div key={`cn-${index}-${idx}`}>{line.trim()}</div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+const GrammarQuizSection: React.FC<{
+  quizItems: GrammarPointData['quizItems'];
+  t: TranslateFn;
+}> = ({ quizItems, t }) => {
+  if (!quizItems || quizItems.length === 0) return null;
+
+  return (
+    <>
+      <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
+        <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
+          4
+        </span>
+        {t('grammarDetail.quizzes', 'Practice quizzes')}
+      </h3>
+      <div className="space-y-6 mt-4 mb-4">
+        {quizItems.map((quiz, index) => {
+          const prompt = getLocalizedSectionText(quiz.prompt);
+          const answer = getLocalizedSectionText(quiz.answer);
+          if (!prompt) return null;
+
+          return (
+            <div
+              key={index}
+              className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl shadow-[4px_4px_0_0_rgba(79,70,229,0.2)]"
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <span className="font-black text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900 px-2.5 py-1 rounded border-2 border-indigo-700 dark:border-indigo-400 text-sm">
+                  Q{index + 1}
+                </span>
+                <div className="flex-1 text-foreground font-bold mt-1">
+                  <MarkdownRenderer content={prompt} />
+                </div>
+              </div>
+
+              {answer ? (
+                <div className="flex items-start gap-3 pl-2 border-l-4 border-emerald-400 dark:border-emerald-600 ml-4 pt-2">
+                  <span className="font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded text-xs select-none">
+                    Ans.
+                  </span>
+                  <div className="flex-1 text-emerald-800 dark:text-emerald-300 font-medium text-sm">
+                    <MarkdownRenderer content={answer} />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+const GrammarCustomNote: React.FC<{ customNote?: string; t: TranslateFn }> = ({
+  customNote,
+  t,
+}) => {
+  if (!customNote) return null;
+  return (
+    <div className="mt-12 p-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-900 dark:border-slate-500 rounded-xl shadow-[4px_4px_0_0_#0f172a] dark:shadow-[4px_4px_0_0_#64748b]">
+      <h4 className="font-black text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+        <span>📝</span> {t('grammarDetail.customNote', 'Instructor note')}
+      </h4>
+      <div className="text-slate-700 dark:text-slate-300">
+        <MarkdownRenderer content={customNote} />
+      </div>
+    </div>
+  );
+};
+
+function getNavigationButtonClass(enabled: boolean, variant: 'prev' | 'next'): string {
+  if (!enabled) {
+    return 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed dark:bg-slate-900/50 dark:text-slate-700 dark:border-slate-800';
+  }
+  if (variant === 'next') {
+    return 'bg-slate-900 text-white border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)]';
+  }
+  return 'bg-white text-slate-900 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none dark:bg-slate-900 dark:text-slate-100 dark:border-border dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)]';
+}
+
+const GrammarNavigation: React.FC<{
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  t: TranslateFn;
+}> = ({ onPrev, onNext, hasPrev, hasNext, t }) => (
+  <div className="mt-12 pt-8 border-t-2 border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+    <button
+      onClick={onPrev}
+      disabled={!hasPrev}
+      className={`flex-1 px-6 py-4 rounded-xl font-black text-sm transition-all border-2 flex items-center justify-center gap-2 ${getNavigationButtonClass(Boolean(hasPrev), 'prev')}`}
+    >
+      ← {t('common.prev', 'Previous')}
+    </button>
+    <button
+      onClick={onNext}
+      disabled={!hasNext}
+      className={`flex-1 px-6 py-4 rounded-xl font-black text-sm transition-all border-2 flex items-center justify-center gap-2 ${getNavigationButtonClass(Boolean(hasNext), 'next')}`}
+    >
+      {t('common.next', 'Next')} →
+    </button>
+  </div>
+);
+
 const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
   grammar,
   onNext,
@@ -79,93 +390,19 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  if (!grammar) {
-    return (
-      <main className="flex-1 flex flex-col h-full overflow-y-auto relative p-6">
-        <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-slate-900 dark:border-border shadow-[8px_8px_0px_0px_#0f172a] dark:shadow-[8px_8px_0px_0px_rgba(148,163,184,0.26)] p-10 mt-2 mb-10 flex flex-col items-center justify-center min-h-[50vh] opacity-50">
-          <Sparkles className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
-          <h2 className="text-xl font-bold text-muted-foreground">
-            {t('grammarModule.selectPrompt', 'Select a grammar point to view details')}
-          </h2>
-        </div>
-      </main>
-    );
-  }
+  if (!grammar) return <EmptyGrammarState t={t as TranslateFn} />;
 
-  const getTypeStyles = () => {
-    switch (grammar.type) {
-      case 'ENDING':
-        return {
-          bg: 'bg-blue-50 dark:bg-blue-950',
-          text: 'text-blue-600 dark:text-blue-400',
-          border: 'border-blue-200 dark:border-blue-800',
-        };
-      case 'PARTICLE':
-        return {
-          bg: 'bg-purple-50 dark:bg-purple-950',
-          text: 'text-purple-600 dark:text-purple-400',
-          border: 'border-purple-200 dark:border-purple-800',
-        };
-      case 'CONNECTIVE':
-        return {
-          bg: 'bg-amber-50 dark:bg-amber-950',
-          text: 'text-amber-600 dark:text-amber-400',
-          border: 'border-amber-200 dark:border-amber-800',
-        };
-      default:
-        return { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' };
-    }
-  };
-
-  const typeStyles = getTypeStyles();
-  const rulesObject = (grammar.conjugationRules || grammar?.construction || {}) as Record<
+  const typeStyles = getTypeStyles(grammar.type);
+  const rulesObject = (grammar.conjugationRules || grammar.construction || {}) as Record<
     string,
     unknown
   >;
-  const hasRules = Object.keys(rulesObject).length > 0;
-  const listExamples = Array.isArray(grammar.examples) ? grammar.examples : [];
-
-  // Helper to extract localized text from the complex sections object
-  const getLocalizedSectionText = (section: any): string => {
-    if (!section) return '';
-    // Just fallback to string directly if it's already a string, or attempt to grab the currently active language (default to zh/en for now based on context)
-    // Since user context implies Chinese/English TOPIK learning, we prioritize 'zh' or fallback to 'en'.
-    if (typeof section === 'string') return section;
-    return section.zh || section.en || section.vi || section.mn || '';
-  };
 
   return (
     <main className="flex-1 flex flex-col h-full overflow-y-auto scrollbar-hide relative p-6">
       <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-slate-900 dark:border-border shadow-[8px_8px_0px_0px_#0f172a] dark:shadow-[8px_8px_0px_0px_rgba(148,163,184,0.26)] p-10 mt-2 mb-10">
-        {/* Header */}
-        <header className="border-b-2 border-slate-200 dark:border-slate-800 pb-6 mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className={`text-xs font-black px-2 py-1 border-2 rounded uppercase ${typeStyles.bg} ${typeStyles.text} ${typeStyles.border}`}
-            >
-              {grammar.type}
-            </span>
-            {grammar.level && (
-              <span className="text-xs font-bold text-muted-foreground px-2 py-1 bg-muted rounded border border-border">
-                {grammar.level}
-              </span>
-            )}
-          </div>
-          <h1 className="text-4xl font-black text-foreground mb-4">
-            {i18n.language === 'zh'
-              ? grammar.titleZh || grammar.title
-              : i18n.language === 'vi'
-                ? grammar.titleVi || grammar.title
-                : i18n.language === 'mn'
-                  ? grammar.titleMn || grammar.title
-                  : grammar.titleEn || grammar.title}
-          </h1>
-          <p className="text-lg text-muted-foreground font-medium bg-yellow-100/50 dark:bg-yellow-900/20 inline-block px-2 py-1 rounded">
-            {grammar.summary}
-          </p>
-        </header>
+        <GrammarHeader grammar={grammar} language={i18n.language} typeStyles={typeStyles} />
 
-        {/* Article Body */}
         <article className="prose prose-slate dark:prose-invert max-w-none">
           <h3 className="text-lg font-black text-foreground mt-8 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
             <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
@@ -176,207 +413,22 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
 
           <div className="mb-10 text-base">
             <MarkdownRenderer content={grammar.explanation} />
-
-            {/* Extended Sections (e.g. core, introduction) which were missing previously */}
-            {grammar.sections && typeof grammar.sections === 'object' && (
-              <>
-                {'introduction' in grammar.sections && grammar.sections.introduction && (
-                  <MarkdownRenderer
-                    content={getLocalizedSectionText(grammar.sections.introduction)}
-                  />
-                )}
-                {'core' in grammar.sections && grammar.sections.core && (
-                  <div className="mt-8 border-t-2 border-dashed border-slate-200 dark:border-slate-800 pt-6">
-                    <MarkdownRenderer content={getLocalizedSectionText(grammar.sections.core)} />
-                  </div>
-                )}
-                {'comparative' in grammar.sections && grammar.sections.comparative && (
-                  <div className="mt-6 p-5 bg-orange-50 dark:bg-orange-950/20 border-2 border-orange-200 dark:border-orange-800 rounded-lg shadow-sm">
-                    <h4 className="font-black text-orange-800 dark:text-orange-400 mb-2">
-                      💡 {t('grammarDetail.comparative', 'Similar grammar comparison')}
-                    </h4>
-                    <MarkdownRenderer
-                      content={getLocalizedSectionText(grammar.sections.comparative)}
-                    />
-                  </div>
-                )}
-                {'commonMistakes' in grammar.sections && grammar.sections.commonMistakes && (
-                  <div className="mt-6 p-5 bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 rounded-lg shadow-sm">
-                    <h4 className="font-black text-red-800 dark:text-red-400 mb-2">
-                      ⚠️ {t('grammarDetail.commonMistakes', 'Common mistakes')}
-                    </h4>
-                    <MarkdownRenderer
-                      content={getLocalizedSectionText(grammar.sections.commonMistakes)}
-                    />
-                  </div>
-                )}
-              </>
-            )}
+            <GrammarExtendedSections sections={grammar.sections} t={t as TranslateFn} />
           </div>
 
-          {hasRules && (
-            <>
-              <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
-                <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
-                  2
-                </span>
-                {t('grammarDetail.rules', 'Conjugation rules')}
-              </h3>
-              <div className="overflow-x-auto mb-10">
-                <table className="w-full text-left border-collapse border-2 border-slate-900 dark:border-border">
-                  <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-800/50">
-                      <th className="p-3 border-2 border-slate-900 dark:border-border font-black text-foreground">
-                        {t('grammarDetail.condition', 'Condition')}
-                      </th>
-                      <th className="p-3 border-2 border-slate-900 dark:border-border font-black text-foreground">
-                        {t('grammarDetail.rule', 'Rule')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(rulesObject).map(([key, value]) => (
-                      <tr key={key}>
-                        <td className="p-3 border-2 border-slate-900 dark:border-border font-bold text-foreground">
-                          {key}
-                        </td>
-                        <td className="p-3 border-2 border-slate-900 dark:border-border text-blue-600 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-900/10">
-                          {String(value)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {listExamples.length > 0 && (
-            <>
-              <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
-                <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
-                  3
-                </span>
-                {t('grammarDetail.examples', 'Usage examples')}
-              </h3>
-              <div className="space-y-4 mt-4 mb-4">
-                {listExamples.map((ex, i) => {
-                  if (!ex || typeof ex !== 'object') return null;
-                  const r = ex as Record<string, unknown>;
-                  const kr = typeof r.kr === 'string' ? r.kr : '';
-                  const cn = typeof r.cn === 'string' ? r.cn : '';
-                  if (!kr && !cn) return null;
-
-                  return (
-                    <div
-                      key={i}
-                      className="p-5 bg-slate-50 dark:bg-slate-800/50 border-l-8 border-slate-900 dark:border-slate-100 rounded-r-lg shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_rgba(148,163,184,0.26)] transition-transform hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#0f172a] dark:hover:shadow-[4px_4px_0_0_rgba(148,163,184,0.26)]"
-                    >
-                      <div className="font-bold text-lg text-foreground mb-1 leading-snug">
-                        {kr.split(/(?=\d+\.)/).map((line, idx) => (
-                          <div key={`kr-${i}-${idx}`}>{line.trim()}</div>
-                        ))}
-                      </div>
-                      <div className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                        {cn.split(/(?=\d+\.)/).map((line, idx) => (
-                          <div key={`cn-${i}-${idx}`}>{line.trim()}</div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {grammar.quizItems && grammar.quizItems.length > 0 && (
-            <>
-              <h3 className="text-lg font-black text-foreground mt-12 mb-4 flex items-center gap-2 border-b-2 border-slate-900 dark:border-border pb-2 w-fit">
-                <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 w-6 h-6 inline-flex items-center justify-center rounded-full text-sm">
-                  4
-                </span>
-                {t('grammarDetail.quizzes', 'Practice quizzes')}
-              </h3>
-              <div className="space-y-6 mt-4 mb-4">
-                {grammar.quizItems.map((quiz, idx) => {
-                  const prompt = getLocalizedSectionText(quiz.prompt);
-                  const answer = getLocalizedSectionText(quiz.answer);
-                  if (!prompt) return null;
-
-                  return (
-                    <div
-                      key={idx}
-                      className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl shadow-[4px_4px_0_0_rgba(79,70,229,0.2)]"
-                    >
-                      <div className="flex items-start gap-3 mb-4">
-                        <span className="font-black text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900 px-2.5 py-1 rounded border-2 border-indigo-700 dark:border-indigo-400 text-sm">
-                          Q{idx + 1}
-                        </span>
-                        <div className="flex-1 text-foreground font-bold mt-1">
-                          <MarkdownRenderer content={prompt} />
-                        </div>
-                      </div>
-
-                      {answer && (
-                        <div className="flex items-start gap-3 pl-2 border-l-4 border-emerald-400 dark:border-emerald-600 ml-4 pt-2">
-                          <span className="font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded text-xs select-none">
-                            Ans.
-                          </span>
-                          <div className="flex-1 text-emerald-800 dark:text-emerald-300 font-medium text-sm">
-                            <MarkdownRenderer content={answer} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {grammar.customNote && (
-            <div className="mt-12 p-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-900 dark:border-slate-500 rounded-xl shadow-[4px_4px_0_0_#0f172a] dark:shadow-[4px_4px_0_0_#64748b]">
-              <h4 className="font-black text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
-                <span>📝</span> {t('grammarDetail.customNote', 'Instructor note')}
-              </h4>
-              <div className="text-slate-700 dark:text-slate-300">
-                <MarkdownRenderer content={grammar.customNote} />
-              </div>
-            </div>
-          )}
+          <GrammarRulesSection rulesObject={rulesObject} t={t as TranslateFn} />
+          <GrammarExamplesSection examples={grammar.examples} t={t as TranslateFn} />
+          <GrammarQuizSection quizItems={grammar.quizItems} t={t as TranslateFn} />
+          <GrammarCustomNote customNote={grammar.customNote} t={t as TranslateFn} />
         </article>
 
-        {/* Navigation Buttons */}
-        <div className="mt-12 pt-8 border-t-2 border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
-          <button
-            onClick={onPrev}
-            disabled={!hasPrev}
-            className={`
-                            flex-1 px-6 py-4 rounded-xl font-black text-sm transition-all border-2 flex items-center justify-center gap-2
-                            ${
-                              hasPrev
-                                ? 'bg-white text-slate-900 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none dark:bg-slate-900 dark:text-slate-100 dark:border-border dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)]'
-                                : 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed dark:bg-slate-900/50 dark:text-slate-700 dark:border-slate-800'
-                            }
-                        `}
-          >
-            ← {t('common.prev', 'Previous')}
-          </button>
-          <button
-            onClick={onNext}
-            disabled={!hasNext}
-            className={`
-                            flex-1 px-6 py-4 rounded-xl font-black text-sm transition-all border-2 flex items-center justify-center gap-2
-                            ${
-                              hasNext
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)]'
-                                : 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed dark:bg-slate-900/50 dark:text-slate-700 dark:border-slate-800'
-                            }
-                        `}
-          >
-            {t('common.next', 'Next')} →
-          </button>
-        </div>
+        <GrammarNavigation
+          onPrev={onPrev}
+          onNext={onNext}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          t={t as TranslateFn}
+        />
       </div>
     </main>
   );

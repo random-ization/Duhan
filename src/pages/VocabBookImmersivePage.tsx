@@ -5,13 +5,14 @@ import { ArrowLeft, Eye, EyeOff, ChevronLeft, ChevronRight, Volume2 } from 'luci
 import { motion, type PanInfo } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
-import { getLabels } from '../utils/i18n';
+import { getLabels, type Labels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
 import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { VocabBookImmersiveSkeleton } from '../components/common';
 import { Button } from '../components/ui';
+import type { VocabBookItemDto } from '../../convex/vocab';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED' | 'ALL';
 type ImmersiveMode = 'BROWSE' | 'RECALL';
@@ -19,7 +20,7 @@ const SWIPE_DISTANCE_THRESHOLD = 80;
 const SWIPE_VELOCITY_THRESHOLD = 700;
 
 interface WordCardProps {
-  current: any;
+  current: VocabBookItemDto;
   mode: ImmersiveMode;
   revealed: boolean;
   onReveal: () => void;
@@ -31,8 +32,114 @@ interface WordCardProps {
   layoutId?: string;
   isMastered: boolean;
   masteryPending: boolean;
-  labels: any;
+  labels: Labels;
 }
+
+const resolveExampleMeaning = (current: VocabBookItemDto) =>
+  current.exampleMeaning ||
+  current.exampleMeaningEn ||
+  current.exampleMeaningVi ||
+  current.exampleMeaningMn;
+
+const WordCardBrowseContent = ({
+  current,
+  labels,
+}: {
+  current: VocabBookItemDto;
+  labels: Labels;
+}) => {
+  const exampleMeaning = resolveExampleMeaning(current);
+  return (
+    <div className="mt-6 space-y-4">
+      <p className="text-muted-foreground text-lg font-bold">{current.meaning}</p>
+      {current.exampleSentence && (
+        <div className="rounded-2xl bg-muted border-2 border-border p-4">
+          <p className="font-bold text-muted-foreground">{current.exampleSentence}</p>
+          {exampleMeaning && (
+            <p className="mt-2 text-muted-foreground font-medium">{exampleMeaning}</p>
+          )}
+        </div>
+      )}
+      {!current.exampleSentence && (
+        <p className="font-bold text-muted-foreground">{labels.vocab?.noExample || 'No example'}</p>
+      )}
+    </div>
+  );
+};
+
+const WordCardRecallContent = ({
+  current,
+  revealed,
+  onReveal,
+  onFlipBack,
+  labels,
+}: {
+  current: VocabBookItemDto;
+  revealed: boolean;
+  onReveal: () => void;
+  onFlipBack: () => void;
+  labels: Labels;
+}) => {
+  const exampleMeaning = resolveExampleMeaning(current);
+  return (
+    <div className="mt-6 [perspective:1400px]">
+      <motion.div
+        initial={false}
+        animate={{ rotateY: revealed ? 180 : 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24, mass: 0.9 }}
+        style={{ transformStyle: 'preserve-3d' }}
+        className="relative min-h-[230px]"
+      >
+        <div
+          style={{ backfaceVisibility: 'hidden' }}
+          className="absolute inset-0 rounded-2xl bg-muted border-2 border-border p-5 flex flex-col"
+        >
+          <div className="flex-1">
+            {current.exampleSentence ? (
+              <p className="font-bold text-muted-foreground">{current.exampleSentence}</p>
+            ) : (
+              <p className="font-bold text-muted-foreground">
+                {labels.vocab?.noExample || 'No example'}
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onReveal}
+            className="mt-4 w-full py-4 rounded-2xl bg-card border-2 border-border hover:border-indigo-200 dark:hover:border-indigo-300/25"
+          >
+            <p className="text-muted-foreground font-black text-base">
+              {labels.vocab?.tapToReveal || 'Tap to reveal answer'}
+            </p>
+          </Button>
+        </div>
+
+        <div
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          className="absolute inset-0 rounded-2xl bg-muted border-2 border-border p-5 flex flex-col"
+        >
+          <div className="flex-1">
+            <p className="text-muted-foreground text-lg font-black">{current.meaning}</p>
+            {exampleMeaning && (
+              <p className="mt-2 text-muted-foreground font-medium">{exampleMeaning}</p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onFlipBack}
+            className="mt-4 w-full py-3 rounded-2xl bg-card border-2 border-border hover:border-indigo-200 dark:hover:border-indigo-300/25 text-sm font-black text-muted-foreground"
+          >
+            {labels.vocab?.showPromptAgain || 'Back to prompt'}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 const WordCard: React.FC<WordCardProps> = ({
   current,
@@ -60,25 +167,18 @@ const WordCard: React.FC<WordCardProps> = ({
     }
   };
 
-  const exampleMeaning =
-    current.exampleMeaning ||
-    current.exampleMeaningEn ||
-    current.exampleMeaningVi ||
-    current.exampleMeaningMn;
-
-  const renderBrowseContent = (
-    <div className="mt-6 space-y-4">
-      <p className="text-muted-foreground text-lg font-bold">{current.meaning}</p>
-      {current.exampleSentence && (
-        <div className="rounded-2xl bg-muted border-2 border-border p-4">
-          <p className="font-bold text-muted-foreground">{current.exampleSentence}</p>
-          {exampleMeaning && (
-            <p className="mt-2 text-muted-foreground font-medium">{exampleMeaning}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  const bodyContent =
+    mode === 'BROWSE' ? (
+      <WordCardBrowseContent current={current} labels={labels} />
+    ) : (
+      <WordCardRecallContent
+        current={current}
+        revealed={revealed}
+        onReveal={onReveal}
+        onFlipBack={onFlipBack}
+        labels={labels}
+      />
+    );
 
   return (
     <motion.div
@@ -124,69 +224,7 @@ const WordCard: React.FC<WordCardProps> = ({
           </Button>
         </div>
 
-        {mode === 'BROWSE' ? (
-          renderBrowseContent
-        ) : (
-          <div className="mt-6 [perspective:1400px]">
-            <motion.div
-              initial={false}
-              animate={{ rotateY: revealed ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 24, mass: 0.9 }}
-              style={{ transformStyle: 'preserve-3d' }}
-              className="relative min-h-[230px]"
-            >
-              <div
-                style={{ backfaceVisibility: 'hidden' }}
-                className="absolute inset-0 rounded-2xl bg-muted border-2 border-border p-5 flex flex-col"
-              >
-                <div className="flex-1">
-                  {current.exampleSentence ? (
-                    <p className="font-bold text-muted-foreground">{current.exampleSentence}</p>
-                  ) : (
-                    <p className="font-bold text-muted-foreground">
-                      {labels.vocab?.noExample || 'No example'}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={onReveal}
-                  className="mt-4 w-full py-4 rounded-2xl bg-card border-2 border-border hover:border-indigo-200 dark:hover:border-indigo-300/25"
-                >
-                  <p className="text-muted-foreground font-black text-base">
-                    {labels.vocab?.tapToReveal || 'Tap to reveal answer'}
-                  </p>
-                </Button>
-              </div>
-
-              <div
-                style={{
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                }}
-                className="absolute inset-0 rounded-2xl bg-muted border-2 border-border p-5 flex flex-col"
-              >
-                <div className="flex-1">
-                  <p className="text-muted-foreground text-lg font-black">{current.meaning}</p>
-                  {exampleMeaning && (
-                    <p className="mt-2 text-muted-foreground font-medium">{exampleMeaning}</p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={onFlipBack}
-                  className="mt-4 w-full py-3 rounded-2xl bg-card border-2 border-border hover:border-indigo-200 dark:hover:border-indigo-300/25 text-sm font-black text-muted-foreground"
-                >
-                  {labels.vocab?.showPromptAgain || 'Back to prompt'}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {bodyContent}
 
         {enableSwipe && (
           <div className="mt-4 flex items-center justify-between text-[11px] font-black tracking-wide text-muted-foreground/80">
@@ -206,7 +244,7 @@ interface NavigationControlsProps {
   onSpeak: () => void;
   onMaster: () => void;
   masteryPending: boolean;
-  labels: any;
+  labels: Labels;
 }
 
 const NavigationControls: React.FC<NavigationControlsProps> = ({
@@ -265,6 +303,129 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
   </div>
 );
 
+const normalizeCategory = (rawCategory: string): VocabBookCategory => {
+  if (
+    rawCategory === 'UNLEARNED' ||
+    rawCategory === 'MASTERED' ||
+    rawCategory === 'DUE' ||
+    rawCategory === 'ALL'
+  ) {
+    return rawCategory as VocabBookCategory;
+  }
+  return 'DUE';
+};
+
+const ImmersiveContent = ({
+  loading,
+  total,
+  labels,
+  current,
+  mode,
+  revealed,
+  setRevealed,
+  speakCurrent,
+  next,
+  currentLayoutId,
+  currentMastered,
+  masteryPending,
+  prev,
+  markCurrentMastered,
+  category,
+  setMode,
+  enableSwipe,
+}: {
+  loading: boolean;
+  total: number;
+  labels: Labels;
+  current?: VocabBookItemDto;
+  mode: ImmersiveMode;
+  revealed: boolean;
+  setRevealed: React.Dispatch<React.SetStateAction<boolean>>;
+  speakCurrent: () => Promise<void>;
+  next: () => void;
+  currentLayoutId?: string;
+  currentMastered: boolean;
+  masteryPending: boolean;
+  prev: () => void;
+  markCurrentMastered: () => Promise<void>;
+  category: VocabBookCategory;
+  setMode: React.Dispatch<React.SetStateAction<ImmersiveMode>>;
+  enableSwipe: boolean;
+}) => {
+  if (loading) return <VocabBookImmersiveSkeleton />;
+
+  if (total === 0) {
+    return (
+      <div className="py-24 text-center">
+        <p className="text-xl font-black text-muted-foreground">
+          {labels.dashboard?.vocab?.noDueNow || 'No words due'}
+        </p>
+        <p className="text-muted-foreground font-medium mt-2">
+          {labels.vocab?.tryAnotherFilter || 'Try another filter or search'}
+        </p>
+      </div>
+    );
+  }
+
+  if (!current) return null;
+
+  return (
+    <div className="space-y-5">
+      <WordCard
+        current={current}
+        mode={mode}
+        revealed={revealed}
+        onReveal={() => setRevealed(true)}
+        onFlipBack={() => setRevealed(false)}
+        onSpeak={() => {
+          void speakCurrent();
+        }}
+        onSwipeSkip={next}
+        onSwipeMaster={() => {
+          void markCurrentMastered();
+        }}
+        enableSwipe={enableSwipe}
+        layoutId={currentLayoutId}
+        isMastered={currentMastered}
+        masteryPending={masteryPending}
+        labels={labels}
+      />
+
+      <NavigationControls
+        onPrev={prev}
+        onNext={next}
+        onSpeak={() => {
+          void speakCurrent();
+        }}
+        onMaster={() => {
+          void markCurrentMastered();
+        }}
+        masteryPending={masteryPending}
+        labels={labels}
+      />
+
+      <div className="flex items-center justify-between text-muted-foreground text-xs font-bold">
+        <span>
+          {labels.vocab?.currentFilter || 'Filter'}: {category}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => {
+            setMode('RECALL');
+            setRevealed(false);
+          }}
+          className="inline-flex items-center gap-2 hover:text-muted-foreground"
+        >
+          <Volume2 className="w-4 h-4" />
+          {labels.vocab?.practiceRecall || 'Recall practice'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const VocabBookImmersivePage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -280,20 +441,14 @@ const VocabBookImmersivePage: React.FC = () => {
   const focusId = params.get('focus');
   const q = params.get('q')?.trim();
 
-  const category: VocabBookCategory =
-    categoryParam === 'UNLEARNED' ||
-    categoryParam === 'MASTERED' ||
-    categoryParam === 'DUE' ||
-    categoryParam === 'ALL'
-      ? (categoryParam as VocabBookCategory)
-      : 'DUE';
+  const category = normalizeCategory(categoryParam);
 
   const vocabBookResult = useQuery(VOCAB.getVocabBook, {
     includeMastered: true,
     search: q || undefined,
   });
   const loading = vocabBookResult === undefined;
-  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
+  const items = useMemo<VocabBookItemDto[]>(() => vocabBookResult ?? [], [vocabBookResult]);
   const [optimisticMastery, setOptimisticMastery] = useState<Record<string, boolean>>({});
   const [masteryPending, setMasteryPending] = useState(false);
 
@@ -319,7 +474,7 @@ const VocabBookImmersivePage: React.FC = () => {
   }, [items]);
 
   const isWordMastered = useCallback(
-    (word: any) => {
+    (word: VocabBookItemDto) => {
       const optimisticValue = optimisticMastery[String(word.id)];
       return typeof optimisticValue === 'boolean'
         ? optimisticValue
@@ -416,7 +571,15 @@ const VocabBookImmersivePage: React.FC = () => {
     } finally {
       setMasteryPending(false);
     }
-  }, [current, masteryPending, isWordMastered, next, optimisticMastery, setMastery, labels.vocabBook?.saveFailed]);
+  }, [
+    current,
+    masteryPending,
+    isWordMastered,
+    next,
+    optimisticMastery,
+    setMastery,
+    labels.vocabBook?.saveFailed,
+  ]);
 
   const speakCurrent = useCallback(async () => {
     if (!current) return;
@@ -433,12 +596,7 @@ const VocabBookImmersivePage: React.FC = () => {
       const element = target as HTMLElement | null;
       if (!element) return false;
       const tag = element.tagName;
-      return (
-        element.isContentEditable ||
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      );
+      return element.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
     };
 
     const handler = (event: KeyboardEvent) => {
@@ -472,77 +630,6 @@ const VocabBookImmersivePage: React.FC = () => {
     globalThis.addEventListener('keydown', handler);
     return () => globalThis.removeEventListener('keydown', handler);
   }, [current, loading, mode, next, prev, speakCurrent]);
-
-  const renderContent = () => {
-    if (loading) {
-      return <VocabBookImmersiveSkeleton />;
-    }
-
-    if (total === 0) {
-      return (
-        <div className="py-24 text-center">
-          <p className="text-xl font-black text-muted-foreground">
-            {labels.dashboard?.vocab?.noDueNow || 'No words due'}
-          </p>
-          <p className="text-muted-foreground font-medium mt-2">
-            {labels.vocab?.tryAnotherFilter || 'Try another filter or search'}
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-5">
-        <WordCard
-          current={current}
-          mode={mode}
-          revealed={revealed}
-          onReveal={() => setRevealed(true)}
-          onFlipBack={() => setRevealed(false)}
-          onSpeak={speakCurrent}
-          onSwipeSkip={next}
-          onSwipeMaster={() => {
-            void markCurrentMastered();
-          }}
-          enableSwipe={isMobile}
-          layoutId={currentLayoutId}
-          isMastered={currentMastered}
-          masteryPending={masteryPending}
-          labels={labels}
-        />
-
-        <NavigationControls
-          onPrev={prev}
-          onNext={next}
-          onSpeak={speakCurrent}
-          onMaster={() => {
-            void markCurrentMastered();
-          }}
-          masteryPending={masteryPending}
-          labels={labels}
-        />
-
-        <div className="flex items-center justify-between text-muted-foreground text-xs font-bold">
-          <span>
-            {labels.vocab?.currentFilter || 'Filter'}: {category}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => {
-              setMode('RECALL');
-              setRevealed(false);
-            }}
-            className="inline-flex items-center gap-2 hover:text-muted-foreground"
-          >
-            <Volume2 className="w-4 h-4" />
-            {labels.vocab?.practiceRecall || 'Recall practice'}
-          </Button>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-indigo-400/8 dark:via-background dark:to-indigo-300/8 text-foreground">
@@ -596,9 +683,46 @@ const VocabBookImmersivePage: React.FC = () => {
       </div>
 
       {loading ? (
-        renderContent()
+        <ImmersiveContent
+          loading={loading}
+          total={total}
+          labels={labels}
+          mode={mode}
+          revealed={revealed}
+          setRevealed={setRevealed}
+          speakCurrent={speakCurrent}
+          next={next}
+          currentLayoutId={currentLayoutId}
+          currentMastered={currentMastered}
+          masteryPending={masteryPending}
+          prev={prev}
+          markCurrentMastered={markCurrentMastered}
+          category={category}
+          setMode={setMode}
+          enableSwipe={isMobile}
+        />
       ) : (
-        <div className="max-w-3xl mx-auto px-4 py-10">{renderContent()}</div>
+        <div className="max-w-3xl mx-auto px-4 py-10">
+          <ImmersiveContent
+            loading={loading}
+            total={total}
+            labels={labels}
+            current={current}
+            mode={mode}
+            revealed={revealed}
+            setRevealed={setRevealed}
+            speakCurrent={speakCurrent}
+            next={next}
+            currentLayoutId={currentLayoutId}
+            currentMastered={currentMastered}
+            masteryPending={masteryPending}
+            prev={prev}
+            markCurrentMastered={markCurrentMastered}
+            category={category}
+            setMode={setMode}
+            enableSwipe={isMobile}
+          />
+        </div>
       )}
     </div>
   );

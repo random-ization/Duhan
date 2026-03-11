@@ -26,6 +26,13 @@ import {
 import { Button } from '../components/ui';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'annual';
+type PlanKey = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+type PriceEntry = { amount: string; currency: string; formatted: string };
+type VariantPrices = {
+  GLOBAL: Record<string, PriceEntry>;
+  REGIONAL: Record<string, PriceEntry>;
+};
+type ProPrice = { amount: string; period: string; saving: string };
 
 function parseSelectedPlanFromSearch(search: string): {
   cycle?: BillingCycle;
@@ -72,12 +79,14 @@ export default function PricingDetailsPage() {
     >('lemonsqueezy:createCheckout')
   );
 
-  const [prices, setPrices] = useState<any>(null);
+  const [prices, setPrices] = useState<VariantPrices | null>(null);
   const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<
     'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME' | null
   >(null);
 
-  const getPrices = useAction(aRef('lemonsqueezy:getVariantPrices'));
+  const getPrices = useAction(
+    aRef<Record<string, never>, VariantPrices>('lemonsqueezy:getVariantPrices')
+  );
 
   useEffect(() => {
     getPrices({})
@@ -93,7 +102,7 @@ export default function PricingDetailsPage() {
     return 'ANNUAL' as const;
   }, [billingCycle]);
 
-  const proPrice = useMemo(() => {
+  const proPrice = useMemo<ProPrice>(() => {
     const periodMap = {
       monthly: t('pricingDetails.period.month', '/month'),
       quarterly: t('pricingDetails.period.quarterly', '/quarter'),
@@ -108,13 +117,13 @@ export default function PricingDetailsPage() {
     };
 
     if (prices) {
-      const regionKey = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
-      const planKeyMap: Record<string, string> = {
+      const regionKey: keyof VariantPrices = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
+      const planKeyMap: Record<BillingCycle, PlanKey> = {
         monthly: 'MONTHLY',
         quarterly: 'QUARTERLY',
         annual: 'ANNUAL',
       };
-      const planKey = planKeyMap[billingCycle] || 'ANNUAL';
+      const planKey = planKeyMap[billingCycle];
 
       const priceData = prices[regionKey]?.[planKey];
       if (priceData) {
@@ -149,12 +158,12 @@ export default function PricingDetailsPage() {
 
     // If we have dynamic global prices, use those as anchors
     if (prices?.GLOBAL) {
-      const planKeyMap: Record<string, string> = {
+      const planKeyMap: Record<BillingCycle, PlanKey> = {
         monthly: 'MONTHLY',
         quarterly: 'QUARTERLY',
         annual: 'ANNUAL',
       };
-      const planKey = planKeyMap[billingCycle] || 'ANNUAL';
+      const planKey = planKeyMap[billingCycle];
 
       if (prices.GLOBAL[planKey]) {
         amount = prices.GLOBAL[planKey].amount;

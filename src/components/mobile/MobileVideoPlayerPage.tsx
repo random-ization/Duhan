@@ -5,7 +5,7 @@ import { ArrowLeft, Video, Loader2, Eye, Languages } from 'lucide-react';
 import { useQuery, useAction } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
-import type { MediaPlayerInstance } from '@vidstack/react';
+import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
 import { aRef, qRef } from '../../utils/convexRefs';
 // Use existing MobileDictionarySheet
 import { MobileDictionarySheet } from './MobileDictionarySheet';
@@ -141,10 +141,8 @@ export const MobileVideoPlayerPage: React.FC = () => {
   }, [activeSegmentIndex]);
 
   // Handlers
-  const handleTimeUpdate = (detail: any) => {
-    if (detail?.currentTime !== undefined) {
-      setCurrentTime(detail.currentTime);
-    }
+  const handleTimeUpdate = (detail: MediaTimeUpdateEventDetail) => {
+    setCurrentTime(detail.currentTime);
   };
 
   const seekTo = (time: number) => {
@@ -154,7 +152,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
     }
   };
 
-  const handleWordClick = (e: React.MouseEvent, word: string) => {
+  const handleWordClick = (e: React.MouseEvent | React.KeyboardEvent, word: string) => {
     e.stopPropagation();
     const clickedWord = normalizeLookupWord(word);
     if (!clickedWord) return;
@@ -300,7 +298,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
                         onClick={e => handleWordClick(e, part)}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === ' ') {
-                            handleWordClick(e as any, part);
+                            handleWordClick(e, part);
                           }
                         }}
                       >

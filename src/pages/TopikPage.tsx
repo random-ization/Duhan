@@ -26,6 +26,53 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
 
+const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
+type ReminderLevel = 'none' | 'good' | 'warn' | 'danger';
+
+const stripLocalePrefix = (pathname: string): string => {
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const hasLocalePrefix = pathSegments[0] && LOCALE_PREFIXES.includes(pathSegments[0]);
+  return hasLocalePrefix ? `/${pathSegments.slice(1).join('/')}` : pathname;
+};
+
+const getTopHistoryScore = (examHistory: ExamAttempt[]): number => {
+  if (examHistory.length === 0) return 0;
+  return Math.max(...examHistory.map(e => e.score || 0));
+};
+
+const getReminderLevel = (daysSince: number): ReminderLevel => {
+  if (daysSince < 0) return 'none';
+  if (daysSince <= 2) return 'good';
+  if (daysSince <= 6) return 'warn';
+  return 'danger';
+};
+
+const getReminderMessage = (
+  daysSince: number,
+  t: ReturnType<typeof useTranslation>['t']
+): string => {
+  if (daysSince < 0) {
+    return t('topikLobby.reminder.firstTime', {
+      defaultValue: 'Start your first TOPIK simulation!',
+    });
+  }
+  if (daysSince <= 2) {
+    return t('topikLobby.reminder.good', {
+      defaultValue: 'Great streak! Keep the momentum.',
+    });
+  }
+  if (daysSince <= 6) {
+    return t('topikLobby.reminder.warn', {
+      count: daysSince,
+      defaultValue: `${daysSince} days since last practice — stay sharp!`,
+    });
+  }
+  return t('topikLobby.reminder.danger', {
+    count: daysSince,
+    defaultValue: `${daysSince} days away — memory may have faded!`,
+  });
+};
+
 const TopikPage: React.FC = () => {
   const { user, language, canAccessContent, setShowUpgradePrompt } = useAuth();
   const { saveExamAttempt, saveAnnotation, deleteExamAttempt } = useUserActions();
@@ -47,11 +94,7 @@ const TopikPage: React.FC = () => {
     return [...(examAttempts ?? []), ...(writingSessions ?? [])] as ExamAttempt[];
   }, [examAttempts, writingSessions]);
   const { examId } = useParams();
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const pathWithoutLang =
-    pathSegments[0] && ['en', 'zh', 'vi', 'mn'].includes(pathSegments[0])
-      ? `/${pathSegments.slice(1).join('/')}`
-      : location.pathname;
+  const pathWithoutLang = stripLocalePrefix(location.pathname);
   const isHistoryRoute = pathWithoutLang === '/topik/history';
   const topikAnnotations = useQuery(
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
@@ -60,7 +103,7 @@ const TopikPage: React.FC = () => {
   const onShowUpgradePrompt = useCallback(() => setShowUpgradePrompt(true), [setShowUpgradePrompt]);
 
   // Compute top score from exam history
-  const topScore = examHistory.length > 0 ? Math.max(...examHistory.map(e => e.score || 0)) : 0;
+  const topScore = getTopHistoryScore(examHistory);
   const totalAttempts = examHistory.length;
 
   // Filter exams based on type
@@ -180,8 +223,7 @@ const TopikPage: React.FC = () => {
           const recommended = topikExams.find(e => !attemptedIds.has(e.id));
 
           // Reminder urgency
-          const reminderLevel =
-            daysSince < 0 ? 'none' : daysSince <= 2 ? 'good' : daysSince <= 6 ? 'warn' : 'danger';
+          const reminderLevel = getReminderLevel(daysSince);
           const reminderColors = {
             none: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-400/20 text-blue-700 dark:text-blue-300',
             good: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-400/20 text-emerald-700 dark:text-emerald-300',
@@ -190,24 +232,7 @@ const TopikPage: React.FC = () => {
               'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-400/20 text-rose-700 dark:text-rose-300',
           }[reminderLevel];
           const reminderIcon = { none: '✨', good: '🟢', warn: '🟡', danger: '🔴' }[reminderLevel];
-          const reminderMsg =
-            daysSince < 0
-              ? t('topikLobby.reminder.firstTime', {
-                  defaultValue: 'Start your first TOPIK simulation!',
-                })
-              : daysSince <= 2
-                ? t('topikLobby.reminder.good', {
-                    defaultValue: 'Great streak! Keep the momentum.',
-                  })
-                : daysSince <= 6
-                  ? t('topikLobby.reminder.warn', {
-                      count: daysSince,
-                      defaultValue: `${daysSince} days since last practice — stay sharp!`,
-                    })
-                  : t('topikLobby.reminder.danger', {
-                      count: daysSince,
-                      defaultValue: `${daysSince} days away — memory may have faded!`,
-                    });
+          const reminderMsg = getReminderMessage(daysSince, t);
 
           return (
             <div className="rounded-2xl border-2 border-border bg-card shadow-sm overflow-hidden">

@@ -83,6 +83,103 @@ const deriveGroupKey = (w: VocabProgressWord): GroupKey => {
   return getGroupFromStatus(progress.status);
 };
 
+type LabelsShape = ReturnType<typeof getLabels>;
+
+const RedEyeToggleButton: React.FC<{
+  labels: LabelsShape;
+  redEyeEnabled: boolean;
+  onToggle: () => void;
+}> = ({ labels, redEyeEnabled, onToggle }) => (
+  <Button
+    variant="ghost"
+    size="auto"
+    type="button"
+    onClick={onToggle}
+    className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
+      redEyeEnabled
+        ? 'bg-red-50 border-red-400 text-red-600'
+        : 'bg-card border-border text-muted-foreground hover:border-border'
+    }`}
+  >
+    {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    {labels.vocab?.redSheet || 'Red Eye'}
+  </Button>
+);
+
+const RedEyePickerDialog: React.FC<{
+  showPicker: boolean;
+  labels: LabelsShape;
+  redEyeEnabled: boolean;
+  onClose: () => void;
+  onSetEnabled: (enabled: boolean) => void;
+}> = ({ showPicker, labels, redEyeEnabled, onClose, onSetEnabled }) => (
+  <Dialog open={showPicker} onOpenChange={open => !open && onClose()}>
+    <DialogPortal>
+      <DialogContent
+        unstyled
+        closeOnEscape={false}
+        lockBodyScroll={false}
+        className="fixed inset-0 z-[80] pointer-events-none data-[state=closed]:pointer-events-none"
+      >
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-6 w-[min(520px,calc(100vw-2rem))]">
+          <div className="pointer-events-auto bg-card rounded-2xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="font-black text-foreground">
+                {labels.vocab?.redSheet || 'Red Eye'}
+              </div>
+              <Button
+                variant="ghost"
+                size="auto"
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-xl bg-muted hover:bg-muted flex items-center justify-center"
+                aria-label={labels.common?.close || 'Close'}
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </div>
+
+            <div className="p-3 space-y-2">
+              <Button
+                variant="ghost"
+                size="auto"
+                type="button"
+                onClick={() => onSetEnabled(true)}
+                className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                  redEyeEnabled
+                    ? 'bg-red-50 border-red-400 text-red-700'
+                    : 'bg-card border-border text-muted-foreground hover:border-border'
+                }`}
+              >
+                <span>{labels.vocabProgress?.redEyeEnable || 'Enable'}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {labels.vocabProgress?.redEyeEnableDesc || 'Blur meanings'}
+                </span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="auto"
+                type="button"
+                onClick={() => onSetEnabled(false)}
+                className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
+                  redEyeEnabled
+                    ? 'bg-card border-border text-muted-foreground hover:border-border'
+                    : 'bg-green-50 border-green-400 text-green-700'
+                }`}
+              >
+                <span>{labels.vocabProgress?.redEyeDisable || 'Disable'}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {labels.vocabProgress?.redEyeDisableDesc || 'Show meanings'}
+                </span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </DialogPortal>
+  </Dialog>
+);
+
 export default function VocabProgressSections({
   words,
   language,
@@ -260,20 +357,11 @@ export default function VocabProgressSections({
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          onClick={() => onRedEyeEnabledChange(!redEyeEnabled)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 font-bold text-sm transition-all ${
-            redEyeEnabled
-              ? 'bg-red-50 border-red-400 text-red-600'
-              : 'bg-card border-border text-muted-foreground hover:border-border'
-          }`}
-        >
-          {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {labels.vocab?.redSheet || 'Red Eye'}
-        </Button>
+        <RedEyeToggleButton
+          labels={labels}
+          redEyeEnabled={redEyeEnabled}
+          onToggle={() => onRedEyeEnabledChange(!redEyeEnabled)}
+        />
       </div>
 
       <div className="space-y-8">
@@ -301,77 +389,16 @@ export default function VocabProgressSections({
         })}
       </div>
 
-      <Dialog open={showPicker} onOpenChange={open => !open && setShowPicker(false)}>
-        <DialogPortal>
-          <DialogContent
-            unstyled
-            closeOnEscape={false}
-            lockBodyScroll={false}
-            className="fixed inset-0 z-[80] pointer-events-none data-[state=closed]:pointer-events-none"
-          >
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-6 w-[min(520px,calc(100vw-2rem))]">
-              <div className="pointer-events-auto bg-card rounded-2xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <div className="font-black text-foreground">
-                    {labels.vocab?.redSheet || 'Red Eye'}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    onClick={() => setShowPicker(false)}
-                    className="w-9 h-9 rounded-xl bg-muted hover:bg-muted flex items-center justify-center"
-                    aria-label={labels.common?.close || 'Close'}
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                </div>
-
-                <div className="p-3 space-y-2">
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    onClick={() => {
-                      onRedEyeEnabledChange(true);
-                      setShowPicker(false);
-                    }}
-                    className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                      redEyeEnabled
-                        ? 'bg-red-50 border-red-400 text-red-700'
-                        : 'bg-card border-border text-muted-foreground hover:border-border'
-                    }`}
-                  >
-                    <span>{labels.vocabProgress?.redEyeEnable || 'Enable'}</span>
-                    <span className="text-xs font-bold text-muted-foreground">
-                      {labels.vocabProgress?.redEyeEnableDesc || 'Blur meanings'}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    onClick={() => {
-                      onRedEyeEnabledChange(false);
-                      setShowPicker(false);
-                    }}
-                    className={`w-full px-4 py-3 rounded-xl border-2 font-black text-left flex items-center justify-between ${
-                      redEyeEnabled
-                        ? 'bg-card border-border text-muted-foreground hover:border-border'
-                        : 'bg-green-50 border-green-400 text-green-700'
-                    }`}
-                  >
-                    <span>{labels.vocabProgress?.redEyeDisable || 'Disable'}</span>
-                    <span className="text-xs font-bold text-muted-foreground">
-                      {labels.vocabProgress?.redEyeDisableDesc || 'Show meanings'}
-                    </span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
+      <RedEyePickerDialog
+        showPicker={showPicker}
+        labels={labels}
+        redEyeEnabled={redEyeEnabled}
+        onClose={() => setShowPicker(false)}
+        onSetEnabled={enabled => {
+          onRedEyeEnabledChange(enabled);
+          setShowPicker(false);
+        }}
+      />
     </div>
   );
 }

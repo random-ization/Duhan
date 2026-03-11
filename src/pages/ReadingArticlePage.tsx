@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../compo
 import { Button } from '../components/ui';
 import { Textarea } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { cleanArticleBodyText } from '../../constants/news-cleanup';
 
 type NewsArticle = {
   _id: string;
@@ -140,7 +141,12 @@ const TERM_GLOSSARY: Record<
   { meaning: Record<'zh' | 'en' | 'vi' | 'mn', string>; level: string }
 > = {
   기준금리: {
-    meaning: { zh: '\u57fa\u51c6\u5229\u7387', en: 'base interest rate', vi: 'lãi suất cơ bản', mn: 'суурь хүү' },
+    meaning: {
+      zh: '\u57fa\u51c6\u5229\u7387',
+      en: 'base interest rate',
+      vi: 'lãi suất cơ bản',
+      mn: 'суурь хүү',
+    },
     level: 'TOPIK 4',
   },
   동결: {
@@ -162,7 +168,12 @@ const TERM_GLOSSARY: Record<
     level: 'TOPIK 3',
   },
   가계부채: {
-    meaning: { zh: '\u5bb6\u5ead\u503a\u52a1', en: 'household debt', vi: 'nợ hộ gia đình', mn: 'өрхийн өр' },
+    meaning: {
+      zh: '\u5bb6\u5ead\u503a\u52a1',
+      en: 'household debt',
+      vi: 'nợ hộ gia đình',
+      mn: 'өрхийн өр',
+    },
     level: 'TOPIK 4',
   },
   물가: {
@@ -216,79 +227,6 @@ function difficultyClass(level: 'L1' | 'L2' | 'L3') {
   if (level === 'L2')
     return 'border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300';
   return 'border-indigo-100 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300';
-}
-
-const BODY_NOISE_TOKENS = [
-  'addeventlistener(',
-  'tlistener(',
-  'oncontentready',
-  'contentaudio.load',
-  "soundobj.attr('data-on'",
-  'audioplayer.pause',
-  'location.href',
-  'membership/login',
-  'onclick=',
-  'function(',
-  'var ',
-  'const ',
-  '=>',
-];
-
-const BODY_TRAILING_MARKERS = [
-  '트렌드뉴스 많이 본 댓글 순',
-  '많이 본 뉴스',
-  '많이 본 기사',
-  '무단 전재',
-  '재배포 금지',
-];
-
-function isNoiseChunk(chunk: string) {
-  const lower = chunk.toLowerCase();
-  const hasNoiseToken = BODY_NOISE_TOKENS.some(token => lower.includes(token));
-  if (hasNoiseToken) return true;
-
-  const hangulCount = (chunk.match(/[가-힣]/g) || []).length;
-  const latinCount = (chunk.match(/[A-Za-z]/g) || []).length;
-  const symbolCount = (chunk.match(/[{};=_<>]/g) || []).length;
-
-  if (/https?:\/\/\S+/i.test(chunk) && hangulCount < 12) return true;
-  if (symbolCount >= 4 && hangulCount < 20) return true;
-  if (latinCount > hangulCount * 2 && hangulCount < 10) return true;
-
-  return false;
-}
-
-function cleanArticleBodyText(rawText: string) {
-  const plain = rawText
-    .replace(/\r\n/g, '\n')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!plain) return rawText.trim();
-
-  const chunks = plain
-    .split(/(?<=[.!?。！？])\s+|\n+/)
-    .map(chunk => chunk.trim())
-    .filter(Boolean);
-  const filteredChunks = chunks.filter(chunk => !isNoiseChunk(chunk));
-
-  let cleaned = filteredChunks.join(' ').trim();
-  if (!cleaned) cleaned = plain;
-
-  for (const marker of BODY_TRAILING_MARKERS) {
-    const markerIndex = cleaned.indexOf(marker);
-    if (markerIndex > 0) {
-      cleaned = cleaned.slice(0, markerIndex).trim();
-      break;
-    }
-  }
-
-  const firstHangulIndex = cleaned.search(/[가-힣]/);
-  if (firstHangulIndex > 40) {
-    cleaned = cleaned.slice(firstHangulIndex).trim();
-  }
-
-  return cleaned || rawText.trim();
 }
 
 function toParagraphs(text: string) {
@@ -535,6 +473,1228 @@ function createNoteId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function renderParagraphTextSegment(args: {
+  text: string;
+  paragraphIndex: number;
+  segmentIndex: number;
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+  forceUnderlineColor?: NoteColor;
+  targetNoteId?: string;
+}) {
+  const {
+    text,
+    paragraphIndex,
+    segmentIndex,
+    getNoteVisualState,
+    focusNote,
+    setHoveredNoteId,
+    forceUnderlineColor,
+    targetNoteId,
+  } = args;
+  if (!text) return null;
+  if (!forceUnderlineColor) {
+    return <React.Fragment key={`t-${paragraphIndex}-${segmentIndex}`}>{text}</React.Fragment>;
+  }
+
+  const resolvedNoteId = targetNoteId || 'draft';
+  const noteState = getNoteVisualState(resolvedNoteId);
+  return (
+    <span
+      data-note-id={resolvedNoteId}
+      onClick={() => focusNote(resolvedNoteId)}
+      onMouseEnter={() => setHoveredNoteId(resolvedNoteId)}
+      onMouseLeave={() => setHoveredNoteId(prev => (prev === resolvedNoteId ? null : prev))}
+      className={`${noteUnderlineClass(forceUnderlineColor, noteState)} cursor-pointer rounded-[2px]`}
+      key={`u-${paragraphIndex}-${segmentIndex}`}
+    >
+      {text}
+    </span>
+  );
+}
+
+function renderParagraphWithNotes(args: {
+  paragraph: string;
+  paragraphIndex: number;
+  draftNote: DraftNote | null;
+  notes: ReaderNote[];
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const {
+    paragraph,
+    paragraphIndex,
+    draftNote,
+    notes,
+    getNoteVisualState,
+    focusNote,
+    setHoveredNoteId,
+  } = args;
+  const plainParagraph = normalizeInlineWhitespace(paragraph);
+  const noteRefs: ReaderNote[] = [
+    ...(draftNote
+      ? [
+          {
+            id: 'draft',
+            quote: draftNote.quote,
+            comment: draftNote.comment,
+            color: draftNote.color,
+            createdAt: Date.now(),
+            anchor: draftNote.anchor,
+          },
+        ]
+      : []),
+    ...notes,
+  ];
+
+  const sortedRanges = noteRefs
+    .filter(note => note.anchor.paragraphIndex === paragraphIndex)
+    .map(note => {
+      const directValid =
+        note.anchor.start >= 0 &&
+        note.anchor.end > note.anchor.start &&
+        note.anchor.end <= plainParagraph.length;
+
+      if (directValid) {
+        return {
+          noteId: note.id,
+          color: note.color,
+          start: note.anchor.start,
+          end: note.anchor.end,
+        };
+      }
+
+      const fallbackQuote = normalizeInlineWhitespace(note.quote);
+      const fallbackStart = plainParagraph.indexOf(fallbackQuote);
+      if (fallbackStart < 0) return null;
+      return {
+        noteId: note.id,
+        color: note.color,
+        start: fallbackStart,
+        end: fallbackStart + fallbackQuote.length,
+      };
+    })
+    .filter((item): item is { noteId: string; color: NoteColor; start: number; end: number } =>
+      Boolean(item)
+    )
+    .sort((a, b) => (a.start === b.start ? b.end - a.end : a.start - b.start));
+
+  if (sortedRanges.length === 0) {
+    return (
+      <p
+        data-paragraph-index={paragraphIndex}
+        key={`${paragraphIndex}-${plainParagraph.slice(0, 18)}`}
+      >
+        {renderParagraphTextSegment({
+          text: plainParagraph,
+          paragraphIndex,
+          segmentIndex: 0,
+          getNoteVisualState,
+          focusNote,
+          setHoveredNoteId,
+        })}
+      </p>
+    );
+  }
+
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let segmentIndex = 0;
+  for (const range of sortedRanges) {
+    if (range.start < lastIndex) {
+      continue;
+    }
+    if (range.start > lastIndex) {
+      const before = plainParagraph.slice(lastIndex, range.start);
+      nodes.push(
+        renderParagraphTextSegment({
+          text: before,
+          paragraphIndex,
+          segmentIndex,
+          getNoteVisualState,
+          focusNote,
+          setHoveredNoteId,
+        })
+      );
+      segmentIndex += 1;
+    }
+    const highlighted = plainParagraph.slice(range.start, range.end);
+    nodes.push(
+      renderParagraphTextSegment({
+        text: highlighted,
+        paragraphIndex,
+        segmentIndex,
+        getNoteVisualState,
+        focusNote,
+        setHoveredNoteId,
+        forceUnderlineColor: range.color,
+        targetNoteId: range.noteId,
+      })
+    );
+    segmentIndex += 1;
+    lastIndex = range.end;
+  }
+  if (lastIndex < plainParagraph.length) {
+    const tail = plainParagraph.slice(lastIndex);
+    nodes.push(
+      renderParagraphTextSegment({
+        text: tail,
+        paragraphIndex,
+        segmentIndex,
+        getNoteVisualState,
+        focusNote,
+        setHoveredNoteId,
+      })
+    );
+  }
+
+  return (
+    <p
+      data-paragraph-index={paragraphIndex}
+      key={`${paragraphIndex}-${plainParagraph.slice(0, 18)}`}
+    >
+      {nodes}
+    </p>
+  );
+}
+
+const ReadingArticleAiTab: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  aiAnalysisLoading: boolean;
+  aiAnalysisError: string | null;
+  summary: string;
+  vocabulary: VocabularyItem[];
+  onWordClick: (word: string) => void;
+  onSaveVocabularyItem: (item: VocabularyItem) => Promise<void>;
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+  grammar: GrammarItem[];
+}> = ({
+  t,
+  aiAnalysisLoading,
+  aiAnalysisError,
+  summary,
+  vocabulary,
+  onWordClick,
+  onSaveVocabularyItem,
+  savingWordKey,
+  savedWords,
+  grammar,
+}) => (
+  <>
+    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
+        <span>💡</span> {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
+      </h3>
+      {aiAnalysisLoading && (
+        <p className="mb-2 text-xs font-semibold text-primary">
+          {t('readingArticle.ai.loading', { defaultValue: 'Generating AI analysis...' })}
+        </p>
+      )}
+      {aiAnalysisError && (
+        <p className="mb-2 text-xs font-semibold text-amber-600 dark:text-amber-300">
+          {t('readingArticle.ai.fallbackNotice', {
+            defaultValue: 'AI unavailable, local fallback is used.',
+          })}
+        </p>
+      )}
+      <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
+    </section>
+    <section>
+      <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
+        🔑 {t('readingArticle.ai.coreVocab', { defaultValue: 'Core Vocabulary' })}
+      </h3>
+      <div className="space-y-2">
+        {vocabulary.slice(0, 8).map(item => (
+          <div
+            key={item.term}
+            className="group flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/50"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => onWordClick(item.term)}
+              className="!block flex-1 text-left"
+            >
+              <div className="font-bold text-muted-foreground">{item.term}</div>
+              <div className="text-xs text-muted-foreground">{item.meaning}</div>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => {
+                void onSaveVocabularyItem(item);
+              }}
+              loading={savingWordKey === item.term.toLowerCase()}
+              loadingText={
+                savedWords[item.term.toLowerCase()]
+                  ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                  : t('readingArticle.vocab.save', { defaultValue: 'Add' })
+              }
+              loadingIconClassName="w-3 h-3"
+              className={`ml-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+                savedWords[item.term.toLowerCase()]
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'bg-muted text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {savedWords[item.term.toLowerCase()] ? <Check size={12} /> : <Star size={12} />}
+              {savedWords[item.term.toLowerCase()]
+                ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </section>
+    <section>
+      <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
+        📖 {t('readingArticle.ai.grammarTitle', { defaultValue: 'Grammar Points' })}
+      </h3>
+      <div className="space-y-3">
+        {grammar.map(item => (
+          <article
+            key={item.pattern}
+            className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/35"
+          >
+            <div className="mb-1 font-bold text-blue-800 dark:text-blue-300">{item.pattern}</div>
+            <div className="mb-2 text-sm text-blue-700 dark:text-blue-300/90">
+              {item.explanation}
+            </div>
+            <div className="rounded border border-blue-50 bg-card p-2 text-xs text-muted-foreground dark:border-blue-900/70 dark:bg-background/50">
+              {item.example}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  </>
+);
+
+const ReadingDictionaryStatus: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  dictionaryLoading: boolean;
+  dictionaryError: string | null;
+  dictionaryFallbackLoading: boolean;
+  dictionaryFallbackError: string | null;
+  hasFallback: boolean;
+}> = ({
+  t,
+  dictionaryLoading,
+  dictionaryError,
+  dictionaryFallbackLoading,
+  dictionaryFallbackError,
+  hasFallback,
+}) => (
+  <>
+    {dictionaryLoading ? (
+      <p className="text-sm text-muted-foreground">
+        {t('readingArticle.dictionary.loading', { defaultValue: 'Looking up dictionary...' })}
+      </p>
+    ) : null}
+    {!dictionaryLoading && dictionaryError ? (
+      <p className="text-sm text-amber-600 dark:text-amber-300">
+        {t('readingArticle.dictionary.serviceError', {
+          defaultValue: 'Dictionary unavailable, switched to AI fallback.',
+        })}
+      </p>
+    ) : null}
+    {dictionaryFallbackLoading ? (
+      <p className="text-sm text-muted-foreground">
+        {t('readingArticle.dictionary.aiLoading', {
+          defaultValue: 'AI is generating explanation...',
+        })}
+      </p>
+    ) : null}
+    {!dictionaryFallbackLoading && dictionaryFallbackError && !hasFallback ? (
+      <p className="text-sm text-rose-600 dark:text-rose-300">{dictionaryFallbackError}</p>
+    ) : null}
+  </>
+);
+
+const ReadingDictionaryEntries: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  entries: DictionaryEntry[];
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+  onSaveDictionaryEntry: (entry: DictionaryEntry) => Promise<void>;
+}> = ({ t, entries, savingWordKey, savedWords, onSaveDictionaryEntry }) => {
+  if (entries.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      {entries.slice(0, 3).map(entry => {
+        const saveKey = normalizeInlineWhitespace(entry.word).toLowerCase();
+        return (
+          <article key={entry.targetCode} className="rounded-lg border border-border bg-muted p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-foreground">{entry.word}</span>
+                <span className="text-xs text-muted-foreground">
+                  {[entry.pos, entry.pronunciation].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={() => {
+                  void onSaveDictionaryEntry(entry);
+                }}
+                loading={savingWordKey === saveKey}
+                loadingText={
+                  savedWords[saveKey]
+                    ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                    : t('readingArticle.vocab.save', { defaultValue: 'Add' })
+                }
+                loadingIconClassName="w-3 h-3"
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+                  savedWords[saveKey]
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    : 'bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {savedWords[saveKey] ? <Check size={12} /> : <Star size={12} />}
+                {savedWords[saveKey]
+                  ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+                  : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+              </Button>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {getDictionaryMeaning(entry) ||
+                t('readingArticle.dictionary.noMeaning', { defaultValue: 'No meaning available.' })}
+            </p>
+          </article>
+        );
+      })}
+    </div>
+  );
+};
+
+const ReadingDictionaryFallbackCard: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  fallback: DictionaryFallbackResult | null;
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+  onSaveDictionaryFallback: () => Promise<void>;
+}> = ({ t, fallback, savingWordKey, savedWords, onSaveDictionaryFallback }) => {
+  if (!fallback) return null;
+  const fallbackKey = normalizeInlineWhitespace(fallback.word).toLowerCase();
+  return (
+    <article className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/35">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-foreground">{fallback.word}</span>
+          <span className="text-xs text-muted-foreground">
+            {fallback.pos ||
+              t('readingArticle.dictionary.unknownPos', {
+                defaultValue: 'Part of speech pending',
+              })}
+          </span>
+          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+            AI
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => {
+            void onSaveDictionaryFallback();
+          }}
+          loading={savingWordKey === fallbackKey}
+          loadingText={
+            savedWords[fallbackKey]
+              ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+              : t('readingArticle.vocab.save', { defaultValue: 'Add' })
+          }
+          loadingIconClassName="w-3 h-3"
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+            savedWords[fallbackKey]
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+              : 'bg-card text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          {savedWords[fallbackKey] ? <Check size={12} /> : <Star size={12} />}
+          {savedWords[fallbackKey]
+            ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
+            : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+        </Button>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {fallback.meaning ||
+          t('readingArticle.dictionary.noMeaning', { defaultValue: 'No meaning available.' })}
+      </p>
+      {fallback.example ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t('readingArticle.dictionary.example', { defaultValue: 'Example' })}:{fallback.example}
+        </p>
+      ) : null}
+      {fallback.note ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t('readingArticle.dictionary.note', { defaultValue: 'Tip' })}:{fallback.note}
+        </p>
+      ) : null}
+    </article>
+  );
+};
+
+const ReadingDictionarySection: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  activeWord: string;
+  dictionaryQuery: string;
+  dictionaryLoading: boolean;
+  dictionaryError: string | null;
+  dictionaryFallbackLoading: boolean;
+  dictionaryFallbackError: string | null;
+  dictionaryFallback: DictionaryFallbackResult | null;
+  dictionaryEntries: DictionaryEntry[];
+  onSaveDictionaryEntry: (entry: DictionaryEntry) => Promise<void>;
+  onSaveDictionaryFallback: () => Promise<void>;
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+}> = ({
+  t,
+  activeWord,
+  dictionaryQuery,
+  dictionaryLoading,
+  dictionaryError,
+  dictionaryFallbackLoading,
+  dictionaryFallbackError,
+  dictionaryFallback,
+  dictionaryEntries,
+  onSaveDictionaryEntry,
+  onSaveDictionaryFallback,
+  savingWordKey,
+  savedWords,
+}) => {
+  return (
+    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
+        <Languages size={16} />{' '}
+        {t('readingArticle.dictionary.title', { defaultValue: 'Dictionary' })}
+      </h3>
+      {!activeWord ? (
+        <p className="text-sm text-muted-foreground">
+          {t('readingArticle.dictionary.emptySelection', { defaultValue: 'No selected word yet.' })}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-muted-foreground">
+            {t('readingArticle.dictionary.queryWord', { defaultValue: 'Query' })}:{' '}
+            {dictionaryQuery || activeWord}
+          </div>
+          <ReadingDictionaryStatus
+            t={t}
+            dictionaryLoading={dictionaryLoading}
+            dictionaryError={dictionaryError}
+            dictionaryFallbackLoading={dictionaryFallbackLoading}
+            dictionaryFallbackError={dictionaryFallbackError}
+            hasFallback={!!dictionaryFallback}
+          />
+          {!dictionaryLoading ? (
+            <ReadingDictionaryEntries
+              t={t}
+              entries={dictionaryEntries}
+              savingWordKey={savingWordKey}
+              savedWords={savedWords}
+              onSaveDictionaryEntry={onSaveDictionaryEntry}
+            />
+          ) : null}
+          {!dictionaryLoading && dictionaryEntries.length === 0 && !dictionaryFallbackLoading ? (
+            <ReadingDictionaryFallbackCard
+              t={t}
+              fallback={dictionaryFallback}
+              savingWordKey={savingWordKey}
+              savedWords={savedWords}
+              onSaveDictionaryFallback={onSaveDictionaryFallback}
+            />
+          ) : null}
+          {!dictionaryLoading &&
+          dictionaryEntries.length === 0 &&
+          !dictionaryFallbackLoading &&
+          !dictionaryFallback &&
+          !dictionaryFallbackError ? (
+            <p className="text-sm text-muted-foreground">
+              {t('readingArticle.dictionary.noResult', {
+                defaultValue: 'No available definition found.',
+              })}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const ReadingNotesSection: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  noteSyncError: string | null;
+  draftNote: DraftNote | null;
+  onDraftCommentChange: (value: string) => void;
+  onDiscardDraftNote: () => void;
+  onSaveDraftNote: () => Promise<void>;
+  notes: ReaderNote[];
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+}> = ({
+  t,
+  noteSyncError,
+  draftNote,
+  onDraftCommentChange,
+  onDiscardDraftNote,
+  onSaveDraftNote,
+  notes,
+  focusNote,
+  setHoveredNoteId,
+  getNoteVisualState,
+}) => (
+  <section>
+    <h3 className="mb-3 text-sm font-bold text-muted-foreground">
+      📝 {t('readingArticle.notes.title', { defaultValue: 'Notes' })}
+    </h3>
+    {noteSyncError && (
+      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-300">
+        {t('readingArticle.notes.syncError', {
+          defaultValue: 'Saved locally, but failed to sync to Notebook',
+        })}
+        ：{noteSyncError}
+      </div>
+    )}
+    {draftNote && (
+      <article className="mb-3 rounded-xl border border-sky-200 bg-card p-4 shadow-sm dark:border-sky-900">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-bold text-sky-600 dark:text-sky-300">
+            {t('readingArticle.notes.newQuote', { defaultValue: 'New Quote Note' })}
+          </span>
+          <span className={`h-3 w-3 rounded-full ${noteColorDotClass(draftNote.color)}`} />
+        </div>
+        <blockquote
+          className={`rounded bg-muted p-3 text-sm text-muted-foreground ${noteUnderlineClass(draftNote.color, getNoteVisualState('draft'))}`}
+        >
+          “{draftNote.quote}”
+        </blockquote>
+        <Textarea
+          value={draftNote.comment}
+          onChange={e => onDraftCommentChange(e.target.value)}
+          placeholder={t('readingArticle.notes.placeholder', {
+            defaultValue: 'Write your understanding, questions, or translation...',
+          })}
+          className="mt-3 h-24 w-full resize-none rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-none"
+        />
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onDiscardDraftNote}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground hover:bg-muted"
+          >
+            {t('readingArticle.notes.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={() => {
+              void onSaveDraftNote();
+            }}
+            className="rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90"
+          >
+            {t('readingArticle.notes.save', { defaultValue: 'Save Note' })}
+          </Button>
+        </div>
+      </article>
+    )}
+    <div className="space-y-2">
+      {notes.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card p-4 text-xs text-muted-foreground">
+          {t('readingArticle.notes.empty', {
+            defaultValue: 'No notes yet. Select text and tap Note to create an underlined quote.',
+          })}
+        </div>
+      ) : (
+        notes.map(note => (
+          <Button
+            key={note.id}
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={() => focusNote(note.id)}
+            onMouseEnter={() => setHoveredNoteId(note.id)}
+            onMouseLeave={() => setHoveredNoteId(prev => (prev === note.id ? null : prev))}
+            className={`!block w-full rounded-lg border bg-card px-3 py-3 text-left text-sm text-muted-foreground shadow-sm transition ${
+              getNoteVisualState(note.id) === 'hovered'
+                ? 'border-yellow-400 shadow-yellow-200 dark:border-yellow-500/70 dark:shadow-yellow-950/40'
+                : getNoteVisualState(note.id) === 'selected'
+                  ? 'border-yellow-300 shadow-yellow-100 dark:border-yellow-500/55 dark:shadow-yellow-950/30'
+                  : 'border-border hover:border-border'
+            }`}
+          >
+            <p
+              className={`font-semibold ${noteUnderlineClass(note.color, getNoteVisualState(note.id))}`}
+            >
+              “{note.quote}”
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+              {note.comment ||
+                t('readingArticle.notes.noComment', { defaultValue: '(No comment)' })}
+            </p>
+          </Button>
+        ))
+      )}
+    </div>
+  </section>
+);
+
+const ReadingArticleNotesTab: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  activeWord: string;
+  dictionaryQuery: string;
+  dictionaryLoading: boolean;
+  dictionaryError: string | null;
+  dictionaryFallbackLoading: boolean;
+  dictionaryFallbackError: string | null;
+  dictionaryFallback: DictionaryFallbackResult | null;
+  dictionaryEntries: DictionaryEntry[];
+  onSaveDictionaryEntry: (entry: DictionaryEntry) => Promise<void>;
+  onSaveDictionaryFallback: () => Promise<void>;
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+  noteSyncError: string | null;
+  draftNote: DraftNote | null;
+  onDraftCommentChange: (value: string) => void;
+  onDiscardDraftNote: () => void;
+  onSaveDraftNote: () => Promise<void>;
+  notes: ReaderNote[];
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+}> = ({
+  t,
+  activeWord,
+  dictionaryQuery,
+  dictionaryLoading,
+  dictionaryError,
+  dictionaryFallbackLoading,
+  dictionaryFallbackError,
+  dictionaryFallback,
+  dictionaryEntries,
+  onSaveDictionaryEntry,
+  onSaveDictionaryFallback,
+  savingWordKey,
+  savedWords,
+  noteSyncError,
+  draftNote,
+  onDraftCommentChange,
+  onDiscardDraftNote,
+  onSaveDraftNote,
+  notes,
+  focusNote,
+  setHoveredNoteId,
+  getNoteVisualState,
+}) => (
+  <>
+    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
+        <BookOpen size={16} />{' '}
+        {t('readingArticle.dictionary.currentSelection', { defaultValue: 'Current Selection' })}
+      </h3>
+      <p className="text-sm text-muted-foreground">
+        {activeWord ||
+          t('readingArticle.dictionary.selectionHint', {
+            defaultValue: 'Tap highlighted words or select text to add notes.',
+          })}
+      </p>
+    </section>
+    <ReadingDictionarySection
+      t={t}
+      activeWord={activeWord}
+      dictionaryQuery={dictionaryQuery}
+      dictionaryLoading={dictionaryLoading}
+      dictionaryError={dictionaryError}
+      dictionaryFallbackLoading={dictionaryFallbackLoading}
+      dictionaryFallbackError={dictionaryFallbackError}
+      dictionaryFallback={dictionaryFallback}
+      dictionaryEntries={dictionaryEntries}
+      onSaveDictionaryEntry={onSaveDictionaryEntry}
+      onSaveDictionaryFallback={onSaveDictionaryFallback}
+      savingWordKey={savingWordKey}
+      savedWords={savedWords}
+    />
+    <ReadingNotesSection
+      t={t}
+      noteSyncError={noteSyncError}
+      draftNote={draftNote}
+      onDraftCommentChange={onDraftCommentChange}
+      onDiscardDraftNote={onDiscardDraftNote}
+      onSaveDraftNote={onSaveDraftNote}
+      notes={notes}
+      focusNote={focusNote}
+      setHoveredNoteId={setHoveredNoteId}
+      getNoteVisualState={getNoteVisualState}
+    />
+  </>
+);
+const ReadingArticleSidebar: React.FC<{
+  panelTab: PanelTab;
+  setPanelTab: React.Dispatch<React.SetStateAction<PanelTab>>;
+  t: ReturnType<typeof useTranslation>['t'];
+  aiAnalysisLoading: boolean;
+  aiAnalysisError: string | null;
+  summary: string;
+  vocabulary: VocabularyItem[];
+  onWordClick: (word: string) => void;
+  onSaveVocabularyItem: (item: VocabularyItem) => Promise<void>;
+  savingWordKey: string | null;
+  savedWords: Record<string, boolean>;
+  grammar: GrammarItem[];
+  activeWord: string;
+  dictionaryQuery: string;
+  dictionaryLoading: boolean;
+  dictionaryError: string | null;
+  dictionaryFallbackLoading: boolean;
+  dictionaryFallbackError: string | null;
+  dictionaryFallback: DictionaryFallbackResult | null;
+  dictionaryEntries: DictionaryEntry[];
+  onSaveDictionaryEntry: (entry: DictionaryEntry) => Promise<void>;
+  onSaveDictionaryFallback: () => Promise<void>;
+  noteSyncError: string | null;
+  draftNote: DraftNote | null;
+  onDraftCommentChange: (value: string) => void;
+  onDiscardDraftNote: () => void;
+  onSaveDraftNote: () => Promise<void>;
+  notes: ReaderNote[];
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+}> = ({
+  panelTab,
+  setPanelTab,
+  t,
+  aiAnalysisLoading,
+  aiAnalysisError,
+  summary,
+  vocabulary,
+  onWordClick,
+  onSaveVocabularyItem,
+  savingWordKey,
+  savedWords,
+  grammar,
+  activeWord,
+  dictionaryQuery,
+  dictionaryLoading,
+  dictionaryError,
+  dictionaryFallbackLoading,
+  dictionaryFallbackError,
+  dictionaryFallback,
+  dictionaryEntries,
+  onSaveDictionaryEntry,
+  onSaveDictionaryFallback,
+  noteSyncError,
+  draftNote,
+  onDraftCommentChange,
+  onDiscardDraftNote,
+  onSaveDraftNote,
+  notes,
+  focusNote,
+  setHoveredNoteId,
+  getNoteVisualState,
+}) => (
+  <aside className="flex min-h-[82vh] flex-col border-t border-border bg-muted md:border-t-0">
+    <div className="flex border-b border-border bg-card">
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setPanelTab('ai')}
+        className={`flex-1 py-4 text-sm font-bold ${
+          panelTab === 'ai'
+            ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
+            : 'text-muted-foreground hover:text-muted-foreground'
+        }`}
+      >
+        ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setPanelTab('notes')}
+        className={`flex-1 py-4 text-sm font-bold ${
+          panelTab === 'notes'
+            ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
+            : 'text-muted-foreground hover:text-muted-foreground'
+        }`}
+      >
+        📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
+      </Button>
+    </div>
+
+    <div className="flex-1 space-y-6 overflow-y-auto p-5">
+      {panelTab === 'ai' ? (
+        <ReadingArticleAiTab
+          t={t}
+          aiAnalysisLoading={aiAnalysisLoading}
+          aiAnalysisError={aiAnalysisError}
+          summary={summary}
+          vocabulary={vocabulary}
+          onWordClick={onWordClick}
+          onSaveVocabularyItem={onSaveVocabularyItem}
+          savingWordKey={savingWordKey}
+          savedWords={savedWords}
+          grammar={grammar}
+        />
+      ) : (
+        <ReadingArticleNotesTab
+          t={t}
+          activeWord={activeWord}
+          dictionaryQuery={dictionaryQuery}
+          dictionaryLoading={dictionaryLoading}
+          dictionaryError={dictionaryError}
+          dictionaryFallbackLoading={dictionaryFallbackLoading}
+          dictionaryFallbackError={dictionaryFallbackError}
+          dictionaryFallback={dictionaryFallback}
+          dictionaryEntries={dictionaryEntries}
+          onSaveDictionaryEntry={onSaveDictionaryEntry}
+          onSaveDictionaryFallback={onSaveDictionaryFallback}
+          savingWordKey={savingWordKey}
+          savedWords={savedWords}
+          noteSyncError={noteSyncError}
+          draftNote={draftNote}
+          onDraftCommentChange={onDraftCommentChange}
+          onDiscardDraftNote={onDiscardDraftNote}
+          onSaveDraftNote={onSaveDraftNote}
+          notes={notes}
+          focusNote={focusNote}
+          setHoveredNoteId={setHoveredNoteId}
+          getNoteVisualState={getNoteVisualState}
+        />
+      )}
+    </div>
+  </aside>
+);
+
+const ReadingTranslationToggleButton: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  translationError: string | null;
+  translationLoading: boolean;
+  translationEnabled: boolean;
+  onToggleTranslation: () => void;
+}> = ({ t, translationError, translationLoading, translationEnabled, onToggleTranslation }) => {
+  const buttonNode = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={onToggleTranslation}
+      loading={translationLoading}
+      loadingText={
+        <>
+          {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
+          <span className="text-xs font-bold">
+            {translationEnabled
+              ? t('readingArticle.translation.on', { defaultValue: 'On' })
+              : t('readingArticle.translation.off', { defaultValue: 'Off' })}
+          </span>
+        </>
+      }
+      loadingIconClassName="h-[15px] w-[15px]"
+      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold ${
+        translationEnabled
+          ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground'
+          : 'text-muted-foreground hover:bg-muted'
+      }`}
+      aria-label={t('readingArticle.translation.toggleAria', {
+        defaultValue: 'Toggle translation',
+      })}
+    >
+      <Languages size={15} />
+      {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
+      <span className="text-xs font-bold">
+        {translationEnabled
+          ? t('readingArticle.translation.on', { defaultValue: 'On' })
+          : t('readingArticle.translation.off', { defaultValue: 'Off' })}
+      </span>
+    </Button>
+  );
+
+  if (!translationError) return buttonNode;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{buttonNode}</TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent side="top">{translationError}</TooltipContent>
+      </TooltipPortal>
+    </Tooltip>
+  );
+};
+
+const ReadingParagraphBlocks: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  paragraphs: string[];
+  translations: string[];
+  translationEnabled: boolean;
+  translationLoading: boolean;
+  translationError: string | null;
+  draftNote: DraftNote | null;
+  notes: ReaderNote[];
+  getNoteVisualState: (noteId: string) => NoteVisualState;
+  focusNote: (noteId: string) => void;
+  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
+}> = ({
+  t,
+  paragraphs,
+  translations,
+  translationEnabled,
+  translationLoading,
+  translationError,
+  draftNote,
+  notes,
+  getNoteVisualState,
+  focusNote,
+  setHoveredNoteId,
+}) => (
+  <div className="space-y-7 text-muted-foreground">
+    {paragraphs.map((paragraph, paragraphIndex) => {
+      const translated = translations[paragraphIndex] || '';
+      return (
+        <div key={`${paragraphIndex}-${paragraph.slice(0, 18)}`}>
+          {renderParagraphWithNotes({
+            paragraph,
+            paragraphIndex,
+            draftNote,
+            notes,
+            getNoteVisualState,
+            focusNote,
+            setHoveredNoteId,
+          })}
+          {translationEnabled &&
+            (translated ? (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {translated}
+              </p>
+            ) : paragraphIndex === 0 && translationLoading ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t('readingArticle.translation.preparing', {
+                  defaultValue: 'Preparing translation...',
+                })}
+              </p>
+            ) : paragraphIndex === 0 && translationError ? (
+              <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">{translationError}</p>
+            ) : null)}
+        </div>
+      );
+    })}
+  </div>
+);
+
+const ReadingSelectionToolbar: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  selectionToolbar: SelectionToolbarState;
+  noteColor: NoteColor;
+  setNoteColor: React.Dispatch<React.SetStateAction<NoteColor>>;
+  onLookupSelection: () => void;
+  startNoteFromSelection: () => void;
+}> = ({
+  t,
+  selectionToolbar,
+  noteColor,
+  setNoteColor,
+  onLookupSelection,
+  startNoteFromSelection,
+}) => {
+  if (!selectionToolbar.visible) return null;
+
+  return (
+    <div
+      data-reading-selection-toolbar
+      className="fixed z-50 flex -translate-x-1/2 items-center rounded-lg border border-border bg-card/95 p-1 text-foreground shadow-pop backdrop-blur"
+      style={{ left: selectionToolbar.x, top: selectionToolbar.y }}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={onLookupSelection}
+        className="rounded px-3 py-1.5 text-sm hover:bg-muted"
+      >
+        🔍 {t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' })}
+      </Button>
+      <div className="mx-1 h-4 w-px bg-muted" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setNoteColor('yellow')}
+        className="rounded p-1.5 hover:bg-muted"
+      >
+        <span
+          className={`block h-4 w-4 rounded-full bg-yellow-300 dark:bg-yellow-400/85 ${noteColor === 'yellow' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
+        />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setNoteColor('green')}
+        className="rounded p-1.5 hover:bg-muted"
+      >
+        <span
+          className={`block h-4 w-4 rounded-full bg-green-300 dark:bg-green-400/85 ${noteColor === 'green' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
+        />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setNoteColor('pink')}
+        className="rounded p-1.5 hover:bg-muted"
+      >
+        <span
+          className={`block h-4 w-4 rounded-full bg-pink-300 dark:bg-pink-400/85 ${noteColor === 'pink' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
+        />
+      </Button>
+      <div className="mx-1 h-4 w-px bg-muted" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={startNoteFromSelection}
+        className={`rounded px-3 py-1.5 text-sm hover:bg-muted ${
+          selectionToolbar.anchor ? '' : 'cursor-not-allowed opacity-50'
+        }`}
+        disabled={!selectionToolbar.anchor}
+      >
+        📝 {t('readingArticle.toolbar.note', { defaultValue: 'Note' })}
+      </Button>
+    </div>
+  );
+};
+
+function renderReadingArticleState(args: {
+  articleId: string;
+  article: NewsArticle | null | undefined;
+  t: ReturnType<typeof useTranslation>['t'];
+  navigate: (path: string) => void;
+}) {
+  const { articleId, article, t, navigate } = args;
+  if (!articleId) {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-10 text-center text-sm font-semibold text-muted-foreground">
+        {t('readingArticle.errors.missingArticleId', { defaultValue: 'Missing article ID' })}
+      </div>
+    );
+  }
+  if (article === undefined) {
+    return (
+      <div className="grid gap-4 md:grid-cols-[minmax(0,_1fr)_360px]">
+        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
+        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
+      </div>
+    );
+  }
+  if (article === null) {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-10 text-center">
+        <p className="text-base font-bold text-muted-foreground">
+          {t('readingArticle.errors.articleUnavailable', {
+            defaultValue: 'This article does not exist or is not available.',
+          })}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => navigate('/reading')}
+          className="mt-4 rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-muted"
+        >
+          {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
+        </Button>
+      </div>
+    );
+  }
+  return null;
+}
+
+async function handleReadingToggleSpeak(args: {
+  article: NewsArticle | null | undefined;
+  speaking: boolean;
+  speakingLoading: boolean;
+  stop: () => void;
+  setSpeaking: React.Dispatch<React.SetStateAction<boolean>>;
+  cleanedBodyText: string;
+  speak: (text: string, options?: { voice?: string; rate?: string }) => Promise<boolean | void>;
+}) {
+  const { article, speaking, speakingLoading, stop, setSpeaking, cleanedBodyText, speak } = args;
+  if (!article) return;
+  if (speaking || speakingLoading) {
+    stop();
+    setSpeaking(false);
+    return;
+  }
+  const text = cleanedBodyText || article.bodyText;
+  if (!text.trim()) return;
+  setSpeaking(true);
+  try {
+    await speak(text, {
+      voice: 'ko-KR-SunHiNeural',
+      rate: '-5.00%',
+    });
+  } finally {
+    setSpeaking(false);
+  }
+}
+
+function resolveReadingNoteVisualState(
+  noteId: string,
+  hoveredNoteId: string | null,
+  selectedNoteId: string | null
+): NoteVisualState {
+  if (hoveredNoteId === noteId) return 'hovered';
+  if (selectedNoteId === noteId) return 'selected';
+  return 'default';
+}
+
+function discardDraftNoteSelection(
+  setSelectedNoteId: React.Dispatch<React.SetStateAction<string | null>>,
+  setDraftNote: React.Dispatch<React.SetStateAction<DraftNote | null>>
+) {
+  setSelectedNoteId(previous => (previous === 'draft' ? null : previous));
+  setDraftNote(null);
+}
+
+type ReadingUiLanguage = 'zh' | 'en' | 'vi' | 'mn';
+
+function resolveReadingUiLanguage(language: string | null | undefined): ReadingUiLanguage {
+  if (language === 'zh' || language === 'en' || language === 'vi' || language === 'mn') {
+    return language;
+  }
+  return 'en';
+}
+
+function resolveReadingTranslationLanguage(
+  language: string | null | undefined
+): ReadingUiLanguage | undefined {
+  if (language === 'zh' || language === 'en' || language === 'vi' || language === 'mn') {
+    return language;
+  }
+  return undefined;
+}
+
+function getReadingArticleQueryArg(articleId: string) {
+  return articleId ? { articleId } : 'skip';
+}
+
+function getNextReadingFontSize(current: number) {
+  return current >= 22 ? 16 : current + 2;
+}
+
 const SELECTION_TOOLBAR_DISMISS_SELECTORS = ['[data-reading-selection-toolbar]'] as const;
 
 export default function ReadingArticlePage() {
@@ -542,10 +1702,7 @@ export default function ReadingArticlePage() {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { language } = useAuth();
-  const uiLanguage: 'zh' | 'en' | 'vi' | 'mn' =
-    language === 'zh' || language === 'en' || language === 'vi' || language === 'mn'
-      ? language
-      : 'en';
+  const uiLanguage = resolveReadingUiLanguage(language);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>('ai');
   const [fontSize, setFontSize] = useState(18);
@@ -602,12 +1759,7 @@ export default function ReadingArticlePage() {
   );
   const { speak, stop, isLoading: speakingLoading, error: ttsError } = useTTS();
 
-  const translationLang = useMemo(() => {
-    if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
-      return language;
-    }
-    return undefined;
-  }, [language]);
+  const translationLang = useMemo(() => resolveReadingTranslationLanguage(language), [language]);
   const translationLabel = useMemo(
     () => translationLanguageLabel(translationLang),
     [translationLang]
@@ -619,7 +1771,7 @@ export default function ReadingArticlePage() {
     return 'en-US';
   }, [uiLanguage]);
 
-  const article = useQuery(NEWS.getById, articleId ? { articleId } : 'skip') as
+  const article = useQuery(NEWS.getById, getReadingArticleQueryArg(articleId)) as
     | NewsArticle
     | null
     | undefined;
@@ -882,25 +2034,16 @@ export default function ReadingArticlePage() {
     ignoreSelectors: SELECTION_TOOLBAR_DISMISS_SELECTORS,
   });
 
-  const toggleSpeak = async () => {
-    if (!article) return;
-    if (speaking || speakingLoading) {
-      stop();
-      setSpeaking(false);
-      return;
-    }
-    const text = cleanedBodyText || article.bodyText;
-    if (!text.trim()) return;
-    setSpeaking(true);
-    try {
-      await speak(text, {
-        voice: 'ko-KR-SunHiNeural',
-        rate: '-5.00%',
-      });
-    } finally {
-      setSpeaking(false);
-    }
-  };
+  const toggleSpeak = () =>
+    handleReadingToggleSpeak({
+      article,
+      speaking,
+      speakingLoading,
+      stop,
+      setSpeaking,
+      cleanedBodyText,
+      speak,
+    });
 
   const onWordClick = (word: string) => {
     setActiveWord(word);
@@ -1127,16 +2270,14 @@ export default function ReadingArticlePage() {
   };
 
   const onDiscardDraftNote = () => {
-    if (selectedNoteId === 'draft') {
-      setSelectedNoteId(null);
-    }
-    setDraftNote(null);
+    discardDraftNoteSelection(setSelectedNoteId, setDraftNote);
   };
 
-  const getNoteVisualState = (noteId: string): NoteVisualState => {
-    if (hoveredNoteId === noteId) return 'hovered';
-    if (selectedNoteId === noteId) return 'selected';
-    return 'default';
+  const getNoteVisualState = (noteId: string): NoteVisualState =>
+    resolveReadingNoteVisualState(noteId, hoveredNoteId, selectedNoteId);
+
+  const increaseFontSize = () => {
+    setFontSize(previous => getNextReadingFontSize(previous));
   };
 
   const focusNote = (noteId: string) => {
@@ -1150,168 +2291,17 @@ export default function ReadingArticlePage() {
     });
   };
 
-  if (!articleId) {
-    return (
-      <div className="rounded-3xl border border-border bg-card p-10 text-center text-sm font-semibold text-muted-foreground">
-        {t('readingArticle.errors.missingArticleId', { defaultValue: 'Missing article ID' })}
-      </div>
-    );
-  }
-
-  if (article === undefined) {
-    return (
-      <div className="grid gap-4 md:grid-cols-[minmax(0,_1fr)_360px]">
-        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
-      </div>
-    );
-  }
-
-  if (article === null) {
-    return (
-      <div className="rounded-3xl border border-border bg-card p-10 text-center">
-        <p className="text-base font-bold text-muted-foreground">
-          {t('readingArticle.errors.articleUnavailable', {
-            defaultValue: 'This article does not exist or is not available.',
-          })}
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={() => navigate('/reading')}
-          className="mt-4 rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-muted"
-        >
-          {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
-        </Button>
-      </div>
-    );
-  }
+  const stateView = renderReadingArticleState({
+    articleId,
+    article,
+    t,
+    navigate,
+  });
+  if (stateView) return stateView;
+  const resolvedArticle = article as NewsArticle;
 
   const wordCount = Math.max(1, Math.round(cleanedBodyText.length / 2));
   const dictionaryEntries = dictionaryResult?.entries ?? [];
-
-  const renderTextWithVocab = (
-    text: string,
-    paragraphIndex: number,
-    segmentIndex: number,
-    forceUnderlineColor?: NoteColor,
-    targetNoteId?: string
-  ) => {
-    if (!text) return null;
-    if (forceUnderlineColor) {
-      const resolvedNoteId = targetNoteId || 'draft';
-      const noteState = getNoteVisualState(resolvedNoteId);
-      return (
-        <span
-          data-note-id={resolvedNoteId}
-          onClick={() => focusNote(resolvedNoteId)}
-          onMouseEnter={() => setHoveredNoteId(resolvedNoteId)}
-          onMouseLeave={() => setHoveredNoteId(prev => (prev === resolvedNoteId ? null : prev))}
-          className={`${noteUnderlineClass(forceUnderlineColor, noteState)} cursor-pointer rounded-[2px]`}
-          key={`u-${paragraphIndex}-${segmentIndex}`}
-        >
-          {text}
-        </span>
-      );
-    }
-    return <React.Fragment key={`t-${paragraphIndex}-${segmentIndex}`}>{text}</React.Fragment>;
-  };
-
-  const renderParagraph = (paragraph: string, paragraphIndex: number) => {
-    const plainParagraph = normalizeInlineWhitespace(paragraph);
-    const noteRefs: ReaderNote[] = [
-      ...(draftNote
-        ? [
-            {
-              id: 'draft',
-              quote: draftNote.quote,
-              comment: draftNote.comment,
-              color: draftNote.color,
-              createdAt: Date.now(),
-              anchor: draftNote.anchor,
-            },
-          ]
-        : []),
-      ...notes,
-    ];
-
-    const sortedRanges = noteRefs
-      .filter(note => note.anchor.paragraphIndex === paragraphIndex)
-      .map(note => {
-        const directValid =
-          note.anchor.start >= 0 &&
-          note.anchor.end > note.anchor.start &&
-          note.anchor.end <= plainParagraph.length;
-
-        if (directValid) {
-          return {
-            noteId: note.id,
-            color: note.color,
-            start: note.anchor.start,
-            end: note.anchor.end,
-          };
-        }
-
-        const fallbackQuote = normalizeInlineWhitespace(note.quote);
-        const fallbackStart = plainParagraph.indexOf(fallbackQuote);
-        if (fallbackStart < 0) return null;
-        return {
-          noteId: note.id,
-          color: note.color,
-          start: fallbackStart,
-          end: fallbackStart + fallbackQuote.length,
-        };
-      })
-      .filter((item): item is { noteId: string; color: NoteColor; start: number; end: number } =>
-        Boolean(item)
-      )
-      .sort((a, b) => (a.start === b.start ? b.end - a.end : a.start - b.start));
-
-    if (sortedRanges.length === 0) {
-      return (
-        <p
-          data-paragraph-index={paragraphIndex}
-          key={`${paragraphIndex}-${plainParagraph.slice(0, 18)}`}
-        >
-          {renderTextWithVocab(plainParagraph, paragraphIndex, 0)}
-        </p>
-      );
-    }
-
-    const nodes: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let segmentIndex = 0;
-    for (const range of sortedRanges) {
-      if (range.start < lastIndex) {
-        continue;
-      }
-      if (range.start > lastIndex) {
-        const before = plainParagraph.slice(lastIndex, range.start);
-        nodes.push(renderTextWithVocab(before, paragraphIndex, segmentIndex));
-        segmentIndex += 1;
-      }
-      const highlighted = plainParagraph.slice(range.start, range.end);
-      nodes.push(
-        renderTextWithVocab(highlighted, paragraphIndex, segmentIndex, range.color, range.noteId)
-      );
-      segmentIndex += 1;
-      lastIndex = range.end;
-    }
-    if (lastIndex < plainParagraph.length) {
-      const tail = plainParagraph.slice(lastIndex);
-      nodes.push(renderTextWithVocab(tail, paragraphIndex, segmentIndex));
-    }
-
-    return (
-      <p
-        data-paragraph-index={paragraphIndex}
-        key={`${paragraphIndex}-${plainParagraph.slice(0, 18)}`}
-      >
-        {nodes}
-      </p>
-    );
-  };
 
   return (
     <div className="relative grid min-h-[82vh] gap-0 overflow-hidden rounded-3xl border border-border bg-muted md:grid-cols-[minmax(0,_1fr)_380px]">
@@ -1326,7 +2316,7 @@ export default function ReadingArticlePage() {
                   label: t('readingArticle.backToDiscovery', { defaultValue: 'Reading' }),
                   to: '/reading',
                 },
-                { label: article.title },
+                { label: resolvedArticle.title },
               ]}
             />
             <Button
@@ -1340,9 +2330,10 @@ export default function ReadingArticlePage() {
               {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
             </Button>
             <span
-              className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${difficultyClass(article.difficultyLevel)}`}
+              className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${difficultyClass(resolvedArticle.difficultyLevel)}`}
             >
-              {difficultyLabel(article.difficultyLevel, t)} ({sourceLabel(article.sourceKey)})
+              {difficultyLabel(resolvedArticle.difficultyLevel, t)} (
+              {sourceLabel(resolvedArticle.sourceKey)})
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1350,7 +2341,7 @@ export default function ReadingArticlePage() {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => setFontSize(prev => (prev >= 22 ? 16 : prev + 2))}
+              onClick={increaseFontSize}
               className="rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               Aa
@@ -1369,95 +2360,24 @@ export default function ReadingArticlePage() {
                 ? t('readingArticle.tts.stop', { defaultValue: 'Stop' })
                 : t('readingArticle.tts.play', { defaultValue: 'Read aloud' })}
             </Button>
-            {translationError ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={onToggleTranslation}
-                    loading={translationLoading}
-                    loadingText={
-                      <>
-                        {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
-                        <span className="text-xs font-bold">
-                          {translationEnabled
-                            ? t('readingArticle.translation.on', { defaultValue: 'On' })
-                            : t('readingArticle.translation.off', { defaultValue: 'Off' })}
-                        </span>
-                      </>
-                    }
-                    loadingIconClassName="h-[15px] w-[15px]"
-                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold ${
-                      translationEnabled
-                        ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted'
-                    }`}
-                    aria-label={t('readingArticle.translation.toggleAria', {
-                      defaultValue: 'Toggle translation',
-                    })}
-                  >
-                    <Languages size={15} />
-                    {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
-                    <span className="text-xs font-bold">
-                      {translationEnabled
-                        ? t('readingArticle.translation.on', { defaultValue: 'On' })
-                        : t('readingArticle.translation.off', { defaultValue: 'Off' })}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent side="top">{translationError}</TooltipContent>
-                </TooltipPortal>
-              </Tooltip>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={onToggleTranslation}
-                loading={translationLoading}
-                loadingText={
-                  <>
-                    {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
-                    <span className="text-xs font-bold">
-                      {translationEnabled
-                        ? t('readingArticle.translation.on', { defaultValue: 'On' })
-                        : t('readingArticle.translation.off', { defaultValue: 'Off' })}
-                    </span>
-                  </>
-                }
-                loadingIconClassName="h-[15px] w-[15px]"
-                className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold ${
-                  translationEnabled
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
-                }`}
-                aria-label={t('readingArticle.translation.toggleAria', {
-                  defaultValue: 'Toggle translation',
-                })}
-              >
-                <Languages size={15} />
-                {t('readingArticle.translation.label', { defaultValue: 'Translation' })}
-                <span className="text-xs font-bold">
-                  {translationEnabled
-                    ? t('readingArticle.translation.on', { defaultValue: 'On' })
-                    : t('readingArticle.translation.off', { defaultValue: 'Off' })}
-                </span>
-              </Button>
-            )}
+            <ReadingTranslationToggleButton
+              t={t}
+              translationError={translationError}
+              translationLoading={translationLoading}
+              translationEnabled={translationEnabled}
+              onToggleTranslation={onToggleTranslation}
+            />
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12" ref={contentRef}>
           <div className="mx-auto w-full max-w-2xl">
             <h1 className="mb-6 text-3xl font-black leading-tight text-foreground">
-              {article.title}
+              {resolvedArticle.title}
             </h1>
             <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
-              <span>{new Date(article.publishedAt).toLocaleDateString(dateLocale)}</span>
-              <span>{sourceLabel(article.sourceKey)}</span>
+              <span>{new Date(resolvedArticle.publishedAt).toLocaleDateString(dateLocale)}</span>
+              <span>{sourceLabel(resolvedArticle.sourceKey)}</span>
               <span>
                 {t('readingArticle.meta.words', {
                   defaultValue: '{{count}} chars',
@@ -1483,558 +2403,67 @@ export default function ReadingArticlePage() {
               </div>
             )}
 
-            <div className="space-y-7 text-muted-foreground" style={{ lineHeight: 2.2, fontSize }}>
-              {paragraphs.map((paragraph, paragraphIndex) => {
-                const translated = translations[paragraphIndex] || '';
-                return (
-                  <div key={`${paragraphIndex}-${paragraph.slice(0, 18)}`}>
-                    {renderParagraph(paragraph, paragraphIndex)}
-                    {translationEnabled &&
-                      (translated ? (
-                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                          {translated}
-                        </p>
-                      ) : paragraphIndex === 0 && translationLoading ? (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {t('readingArticle.translation.preparing', {
-                            defaultValue: 'Preparing translation...',
-                          })}
-                        </p>
-                      ) : paragraphIndex === 0 && translationError ? (
-                        <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">
-                          {translationError}
-                        </p>
-                      ) : null)}
-                  </div>
-                );
-              })}
+            <div style={{ lineHeight: 2.2, fontSize }}>
+              <ReadingParagraphBlocks
+                t={t}
+                paragraphs={paragraphs}
+                translations={translations}
+                translationEnabled={translationEnabled}
+                translationLoading={translationLoading}
+                translationError={translationError}
+                draftNote={draftNote}
+                notes={notes}
+                getNoteVisualState={getNoteVisualState}
+                focusNote={focusNote}
+                setHoveredNoteId={setHoveredNoteId}
+              />
             </div>
           </div>
         </div>
 
-        {selectionToolbar.visible && (
-          <div
-            data-reading-selection-toolbar
-            className="fixed z-50 flex -translate-x-1/2 items-center rounded-lg border border-border bg-card/95 p-1 text-foreground shadow-pop backdrop-blur"
-            style={{ left: selectionToolbar.x, top: selectionToolbar.y }}
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={onLookupSelection}
-              className="rounded px-3 py-1.5 text-sm hover:bg-muted"
-            >
-              🔍 {t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' })}
-            </Button>
-            <div className="mx-1 h-4 w-px bg-muted" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setNoteColor('yellow')}
-              className="rounded p-1.5 hover:bg-muted"
-            >
-              <span
-                className={`block h-4 w-4 rounded-full bg-yellow-300 dark:bg-yellow-400/85 ${noteColor === 'yellow' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-              />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setNoteColor('green')}
-              className="rounded p-1.5 hover:bg-muted"
-            >
-              <span
-                className={`block h-4 w-4 rounded-full bg-green-300 dark:bg-green-400/85 ${noteColor === 'green' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-              />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setNoteColor('pink')}
-              className="rounded p-1.5 hover:bg-muted"
-            >
-              <span
-                className={`block h-4 w-4 rounded-full bg-pink-300 dark:bg-pink-400/85 ${noteColor === 'pink' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-              />
-            </Button>
-            <div className="mx-1 h-4 w-px bg-muted" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={startNoteFromSelection}
-              className={`rounded px-3 py-1.5 text-sm hover:bg-muted ${
-                selectionToolbar.anchor ? '' : 'cursor-not-allowed opacity-50'
-              }`}
-              disabled={!selectionToolbar.anchor}
-            >
-              📝 {t('readingArticle.toolbar.note', { defaultValue: 'Note' })}
-            </Button>
-          </div>
-        )}
+        <ReadingSelectionToolbar
+          t={t}
+          selectionToolbar={selectionToolbar}
+          noteColor={noteColor}
+          setNoteColor={setNoteColor}
+          onLookupSelection={onLookupSelection}
+          startNoteFromSelection={startNoteFromSelection}
+        />
       </main>
 
-      <aside className="flex min-h-[82vh] flex-col border-t border-border bg-muted md:border-t-0">
-        <div className="flex border-b border-border bg-card">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setPanelTab('ai')}
-            className={`flex-1 py-4 text-sm font-bold ${
-              panelTab === 'ai'
-                ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
-                : 'text-muted-foreground hover:text-muted-foreground'
-            }`}
-          >
-            ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setPanelTab('notes')}
-            className={`flex-1 py-4 text-sm font-bold ${
-              panelTab === 'notes'
-                ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
-                : 'text-muted-foreground hover:text-muted-foreground'
-            }`}
-          >
-            📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
-          </Button>
-        </div>
-
-        <div className="flex-1 space-y-6 overflow-y-auto p-5">
-          {panelTab === 'ai' ? (
-            <>
-              <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
-                  <span>💡</span>{' '}
-                  {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
-                </h3>
-                {aiAnalysisLoading && (
-                  <p className="mb-2 text-xs font-semibold text-primary">
-                    {t('readingArticle.ai.loading', { defaultValue: 'Generating AI analysis...' })}
-                  </p>
-                )}
-                {aiAnalysisError && (
-                  <p className="mb-2 text-xs font-semibold text-amber-600 dark:text-amber-300">
-                    {t('readingArticle.ai.fallbackNotice', {
-                      defaultValue: 'AI unavailable, local fallback is used.',
-                    })}
-                  </p>
-                )}
-                <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
-              </section>
-
-              <section>
-                <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
-                  🔑 {t('readingArticle.ai.coreVocab', { defaultValue: 'Core Vocabulary' })}
-                </h3>
-                <div className="space-y-2">
-                  {vocabulary.slice(0, 8).map(item => (
-                    <div
-                      key={item.term}
-                      className="group flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/50"
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() => onWordClick(item.term)}
-                        className="!block flex-1 text-left"
-                      >
-                        <div className="font-bold text-muted-foreground">{item.term}</div>
-                        <div className="text-xs text-muted-foreground">{item.meaning}</div>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() => {
-                          void onSaveVocabularyItem(item);
-                        }}
-                        loading={savingWordKey === item.term.toLowerCase()}
-                        loadingText={
-                          savedWords[item.term.toLowerCase()]
-                            ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                            : t('readingArticle.vocab.save', { defaultValue: 'Add' })
-                        }
-                        loadingIconClassName="w-3 h-3"
-                        className={`ml-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
-                          savedWords[item.term.toLowerCase()]
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                            : 'bg-muted text-muted-foreground hover:bg-muted'
-                        }`}
-                      >
-                        {savedWords[item.term.toLowerCase()] ? (
-                          <Check size={12} />
-                        ) : (
-                          <Star size={12} />
-                        )}
-                        {savedWords[item.term.toLowerCase()]
-                          ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                          : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
-                  📖 {t('readingArticle.ai.grammarTitle', { defaultValue: 'Grammar Points' })}
-                </h3>
-                <div className="space-y-3">
-                  {grammar.map(item => (
-                    <article
-                      key={item.pattern}
-                      className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/35"
-                    >
-                      <div className="mb-1 font-bold text-blue-800 dark:text-blue-300">
-                        {item.pattern}
-                      </div>
-                      <div className="mb-2 text-sm text-blue-700 dark:text-blue-300/90">
-                        {item.explanation}
-                      </div>
-                      <div className="rounded border border-blue-50 bg-card p-2 text-xs text-muted-foreground dark:border-blue-900/70 dark:bg-background/50">
-                        {item.example}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </>
-          ) : (
-            <>
-              <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
-                  <BookOpen size={16} />{' '}
-                  {t('readingArticle.dictionary.currentSelection', {
-                    defaultValue: 'Current Selection',
-                  })}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {activeWord ||
-                    t('readingArticle.dictionary.selectionHint', {
-                      defaultValue: 'Tap highlighted words or select text to add notes.',
-                    })}
-                </p>
-              </section>
-
-              <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
-                  <Languages size={16} />{' '}
-                  {t('readingArticle.dictionary.title', { defaultValue: 'Dictionary' })}
-                </h3>
-                {!activeWord && (
-                  <p className="text-sm text-muted-foreground">
-                    {t('readingArticle.dictionary.emptySelection', {
-                      defaultValue: 'No selected word yet.',
-                    })}
-                  </p>
-                )}
-
-                {activeWord && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-semibold text-muted-foreground">
-                      {t('readingArticle.dictionary.queryWord', { defaultValue: 'Query' })}:{' '}
-                      {dictionaryQuery || activeWord}
-                    </div>
-
-                    {dictionaryLoading && (
-                      <p className="text-sm text-muted-foreground">
-                        {t('readingArticle.dictionary.loading', {
-                          defaultValue: 'Looking up dictionary...',
-                        })}
-                      </p>
-                    )}
-
-                    {!dictionaryLoading && dictionaryError && (
-                      <p className="text-sm text-amber-600 dark:text-amber-300">
-                        {t('readingArticle.dictionary.serviceError', {
-                          defaultValue: 'Dictionary unavailable, switched to AI fallback.',
-                        })}
-                      </p>
-                    )}
-
-                    {dictionaryFallbackLoading && (
-                      <p className="text-sm text-muted-foreground">
-                        {t('readingArticle.dictionary.aiLoading', {
-                          defaultValue: 'AI is generating explanation...',
-                        })}
-                      </p>
-                    )}
-
-                    {!dictionaryFallbackLoading &&
-                      dictionaryFallbackError &&
-                      !dictionaryFallback && (
-                        <p className="text-sm text-rose-600 dark:text-rose-300">
-                          {dictionaryFallbackError}
-                        </p>
-                      )}
-
-                    {!dictionaryLoading && dictionaryEntries.length > 0 && (
-                      <div className="space-y-2">
-                        {dictionaryEntries.slice(0, 3).map(entry => {
-                          const saveKey = normalizeInlineWhitespace(entry.word).toLowerCase();
-                          return (
-                            <article
-                              key={entry.targetCode}
-                              className="rounded-lg border border-border bg-muted p-3"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-foreground">{entry.word}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {[entry.pos, entry.pronunciation].filter(Boolean).join(' · ')}
-                                  </span>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="auto"
-                                  onClick={() => {
-                                    void onSaveDictionaryEntry(entry);
-                                  }}
-                                  loading={savingWordKey === saveKey}
-                                  loadingText={
-                                    savedWords[saveKey]
-                                      ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                                      : t('readingArticle.vocab.save', { defaultValue: 'Add' })
-                                  }
-                                  loadingIconClassName="w-3 h-3"
-                                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
-                                    savedWords[saveKey]
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                      : 'bg-card text-muted-foreground hover:bg-muted'
-                                  }`}
-                                >
-                                  {savedWords[saveKey] ? <Check size={12} /> : <Star size={12} />}
-                                  {savedWords[saveKey]
-                                    ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                                    : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
-                                </Button>
-                              </div>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {getDictionaryMeaning(entry) ||
-                                  t('readingArticle.dictionary.noMeaning', {
-                                    defaultValue: 'No meaning available.',
-                                  })}
-                              </p>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {!dictionaryLoading &&
-                      dictionaryEntries.length === 0 &&
-                      !dictionaryFallbackLoading &&
-                      dictionaryFallback && (
-                        <article className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/35">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-foreground">
-                                {dictionaryFallback.word}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {dictionaryFallback.pos ||
-                                  t('readingArticle.dictionary.unknownPos', {
-                                    defaultValue: 'Part of speech pending',
-                                  })}
-                              </span>
-                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
-                                AI
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="auto"
-                              onClick={() => {
-                                void onSaveDictionaryFallback();
-                              }}
-                              loading={
-                                savingWordKey ===
-                                normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
-                              }
-                              loadingText={
-                                savedWords[
-                                  normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
-                                ]
-                                  ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                                  : t('readingArticle.vocab.save', { defaultValue: 'Add' })
-                              }
-                              loadingIconClassName="w-3 h-3"
-                              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
-                                savedWords[
-                                  normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
-                                ]
-                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                  : 'bg-card text-muted-foreground hover:bg-muted'
-                              }`}
-                            >
-                              {savedWords[
-                                normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
-                              ] ? (
-                                <Check size={12} />
-                              ) : (
-                                <Star size={12} />
-                              )}
-                              {savedWords[
-                                normalizeInlineWhitespace(dictionaryFallback.word).toLowerCase()
-                              ]
-                                ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                                : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
-                            </Button>
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {dictionaryFallback.meaning ||
-                              t('readingArticle.dictionary.noMeaning', {
-                                defaultValue: 'No meaning available.',
-                              })}
-                          </p>
-                          {dictionaryFallback.example && (
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              {t('readingArticle.dictionary.example', { defaultValue: 'Example' })}:
-                              {dictionaryFallback.example}
-                            </p>
-                          )}
-                          {dictionaryFallback.note && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {t('readingArticle.dictionary.note', { defaultValue: 'Tip' })}:
-                              {dictionaryFallback.note}
-                            </p>
-                          )}
-                        </article>
-                      )}
-
-                    {!dictionaryLoading &&
-                      dictionaryEntries.length === 0 &&
-                      !dictionaryFallbackLoading &&
-                      !dictionaryFallback &&
-                      !dictionaryFallbackError && (
-                        <p className="text-sm text-muted-foreground">
-                          {t('readingArticle.dictionary.noResult', {
-                            defaultValue: 'No available definition found.',
-                          })}
-                        </p>
-                      )}
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <h3 className="mb-3 text-sm font-bold text-muted-foreground">
-                  📝 {t('readingArticle.notes.title', { defaultValue: 'Notes' })}
-                </h3>
-                {noteSyncError && (
-                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-300">
-                    {t('readingArticle.notes.syncError', {
-                      defaultValue: 'Saved locally, but failed to sync to Notebook',
-                    })}
-                    ：{noteSyncError}
-                  </div>
-                )}
-                {draftNote && (
-                  <article className="mb-3 rounded-xl border border-sky-200 bg-card p-4 shadow-sm dark:border-sky-900">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-sky-600 dark:text-sky-300">
-                        {t('readingArticle.notes.newQuote', { defaultValue: 'New Quote Note' })}
-                      </span>
-                      <span
-                        className={`h-3 w-3 rounded-full ${noteColorDotClass(draftNote.color)}`}
-                      />
-                    </div>
-                    <blockquote
-                      className={`rounded bg-muted p-3 text-sm text-muted-foreground ${noteUnderlineClass(draftNote.color, getNoteVisualState('draft'))}`}
-                    >
-                      “{draftNote.quote}”
-                    </blockquote>
-                    <Textarea
-                      value={draftNote.comment}
-                      onChange={e => onDraftCommentChange(e.target.value)}
-                      placeholder={t('readingArticle.notes.placeholder', {
-                        defaultValue: 'Write your understanding, questions, or translation...',
-                      })}
-                      className="mt-3 h-24 w-full resize-none rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-none"
-                    />
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={onDiscardDraftNote}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground hover:bg-muted"
-                      >
-                        {t('readingArticle.notes.cancel', { defaultValue: 'Cancel' })}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={onSaveDraftNote}
-                        className="rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90"
-                      >
-                        {t('readingArticle.notes.save', { defaultValue: 'Save Note' })}
-                      </Button>
-                    </div>
-                  </article>
-                )}
-                <div className="space-y-2">
-                  {notes.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border bg-card p-4 text-xs text-muted-foreground">
-                      {t('readingArticle.notes.empty', {
-                        defaultValue:
-                          'No notes yet. Select text and tap Note to create an underlined quote.',
-                      })}
-                    </div>
-                  ) : (
-                    notes.map(note => (
-                      <Button
-                        key={note.id}
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() => focusNote(note.id)}
-                        onMouseEnter={() => setHoveredNoteId(note.id)}
-                        onMouseLeave={() =>
-                          setHoveredNoteId(prev => (prev === note.id ? null : prev))
-                        }
-                        className={`!block w-full rounded-lg border bg-card px-3 py-3 text-left text-sm text-muted-foreground shadow-sm transition ${
-                          getNoteVisualState(note.id) === 'hovered'
-                            ? 'border-yellow-400 shadow-yellow-200 dark:border-yellow-500/70 dark:shadow-yellow-950/40'
-                            : getNoteVisualState(note.id) === 'selected'
-                              ? 'border-yellow-300 shadow-yellow-100 dark:border-yellow-500/55 dark:shadow-yellow-950/30'
-                              : 'border-border hover:border-border'
-                        }`}
-                      >
-                        <p
-                          className={`font-semibold ${noteUnderlineClass(
-                            note.color,
-                            getNoteVisualState(note.id)
-                          )}`}
-                        >
-                          “{note.quote}”
-                        </p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                          {note.comment ||
-                            t('readingArticle.notes.noComment', { defaultValue: '(No comment)' })}
-                        </p>
-                      </Button>
-                    ))
-                  )}
-                </div>
-              </section>
-            </>
-          )}
-        </div>
-      </aside>
+      <ReadingArticleSidebar
+        panelTab={panelTab}
+        setPanelTab={setPanelTab}
+        t={t}
+        aiAnalysisLoading={aiAnalysisLoading}
+        aiAnalysisError={aiAnalysisError}
+        summary={summary}
+        vocabulary={vocabulary}
+        onWordClick={onWordClick}
+        onSaveVocabularyItem={onSaveVocabularyItem}
+        savingWordKey={savingWordKey}
+        savedWords={savedWords}
+        grammar={grammar}
+        activeWord={activeWord}
+        dictionaryQuery={dictionaryQuery}
+        dictionaryLoading={dictionaryLoading}
+        dictionaryError={dictionaryError}
+        dictionaryFallbackLoading={dictionaryFallbackLoading}
+        dictionaryFallbackError={dictionaryFallbackError}
+        dictionaryFallback={dictionaryFallback}
+        dictionaryEntries={dictionaryEntries}
+        onSaveDictionaryEntry={onSaveDictionaryEntry}
+        onSaveDictionaryFallback={onSaveDictionaryFallback}
+        noteSyncError={noteSyncError}
+        draftNote={draftNote}
+        onDraftCommentChange={onDraftCommentChange}
+        onDiscardDraftNote={onDiscardDraftNote}
+        onSaveDraftNote={onSaveDraftNote}
+        notes={notes}
+        focusNote={focusNote}
+        setHoveredNoteId={setHoveredNoteId}
+        getNoteVisualState={getNoteVisualState}
+      />
     </div>
   );
 }

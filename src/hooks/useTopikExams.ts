@@ -4,7 +4,7 @@ import { TOPIK } from '../utils/convexRefs';
 import type { TopikExam } from '../types';
 
 export const useTopikExams = (): TopikExam[] => {
-  const topikExamsData = useQuery(TOPIK.getExams, {});
+  const topikExamsData = useQuery(TOPIK.getExams, { limit: 200 });
 
   return useMemo(() => {
     if (!topikExamsData) return [];

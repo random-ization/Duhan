@@ -20,9 +20,18 @@ export function useAudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+
+  const revokeCurrentAudioUrl = useCallback(() => {
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
+      revokeCurrentAudioUrl();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -37,6 +46,8 @@ export function useAudioRecorder() {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
+        revokeCurrentAudioUrl();
+        audioUrlRef.current = url;
         setState(prev => ({ ...prev, isRecording: false, audioBlob: blob, audioUrl: url }));
 
         // Stop all tracks
@@ -63,7 +74,7 @@ export function useAudioRecorder() {
         error: 'Could not access microphone. Please check permissions.',
       }));
     }
-  }, []);
+  }, [revokeCurrentAudioUrl]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -76,9 +87,7 @@ export function useAudioRecorder() {
   }, []);
 
   const resetRecording = useCallback(() => {
-    if (state.audioUrl) {
-      URL.revokeObjectURL(state.audioUrl);
-    }
+    revokeCurrentAudioUrl();
     setState({
       isRecording: false,
       recordingTime: 0,
@@ -86,14 +95,14 @@ export function useAudioRecorder() {
       audioUrl: null,
       error: null,
     });
-  }, [state.audioUrl]);
+  }, [revokeCurrentAudioUrl]);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) globalThis.clearInterval(timerRef.current);
-      if (state.audioUrl) URL.revokeObjectURL(state.audioUrl);
+      revokeCurrentAudioUrl();
     };
-  }, [state.audioUrl]);
+  }, [revokeCurrentAudioUrl]);
 
   return {
     ...state,

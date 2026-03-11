@@ -86,10 +86,31 @@ const normalizeInstitute = (institute: InstituteDoc): InstituteClientDto => ({
   volume: institute.volume,
 });
 
+const sortInstitutesByCreationTime = (institutes: InstituteDoc[]) =>
+  institutes.slice().sort((a, b) => a._creationTime - b._creationTime);
+
+const getVisibleInstitutes = async (ctx: QueryCtx): Promise<InstituteDoc[]> => {
+  const visibleFalse = await ctx.db
+    .query('institutes')
+    .withIndex('by_archived', q => q.eq('isArchived', false))
+    .collect();
+  const visibleUndefined = await ctx.db
+    .query('institutes')
+    .withIndex('by_archived', q => q.eq('isArchived', undefined))
+    .collect();
+
+  const deduped = new Map<string, InstituteDoc>();
+  for (const institute of [...visibleFalse, ...visibleUndefined]) {
+    deduped.set(institute._id.toString(), institute);
+  }
+
+  return sortInstitutesByCreationTime([...deduped.values()]);
+};
+
 export const getAll = query({
   args: {},
   handler: async ctx => {
-    const institutes = await ctx.db.query('institutes').collect();
+    const institutes = await getVisibleInstitutes(ctx);
     return institutes.filter(isVisibleInstitute).map(normalizeInstitute);
   },
 });
@@ -108,7 +129,7 @@ export const get = query({
 export const checkIntegrity = query({
   args: {},
   handler: async ctx => {
-    const courses = (await ctx.db.query('institutes').collect()).filter(isVisibleInstitute);
+    const courses = (await getVisibleInstitutes(ctx)).filter(isVisibleInstitute);
     const report: IntegrityIssue[] = [];
 
     for (const course of courses) {

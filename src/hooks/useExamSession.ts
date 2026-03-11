@@ -51,11 +51,13 @@ export function useExamSession(examId: string) {
   // Debounce timer for saving answers
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef<Record<number, number> | null>(null);
+  const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
 
-  // Reset timer during render if needed (avoid useEffect state update)
-  if ((!session?.endTime || session.status !== 'IN_PROGRESS') && timeLeft !== null) {
-    setTimeLeft(null);
-  }
+  syncTimeLeftFromSession({
+    session,
+    timeLeft,
+    setTimeLeft,
+  });
 
   // Calculate time left from server endTime
   useEffect(() => {
@@ -78,17 +80,12 @@ export function useExamSession(examId: string) {
     return () => clearInterval(interval);
   }, [session?.endTime, session?.status]);
 
-  // Sync answers from server when session loads; avoid re-sync if unchanged
-  // Track synced session to avoid useEffect state updates
-  const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
-
-  // Sync answers on session load (render-time update pattern)
-  if (session?.sessionId && session.sessionId !== syncedSessionId) {
-    setSyncedSessionId(session.sessionId);
-    if (session.answers) {
-      setLocalAnswers(session.answers);
-    }
-  }
+  syncLocalAnswersFromSession({
+    session,
+    syncedSessionId,
+    setSyncedSessionId,
+    setLocalAnswers,
+  });
 
   // Start exam
   const startExam = useCallback(async () => {
@@ -200,3 +197,40 @@ export function useExamSession(examId: string) {
     isCompleted: session?.status === 'COMPLETED' || session?.status === 'AUTO_SUBMITTED',
   };
 }
+
+type SessionShape = {
+  sessionId?: string;
+  status?: 'IN_PROGRESS' | 'COMPLETED' | 'AUTO_SUBMITTED' | 'NONE';
+  endTime?: number;
+  answers?: Record<number, number>;
+};
+
+const syncTimeLeftFromSession = ({
+  session,
+  timeLeft,
+  setTimeLeft,
+}: {
+  session?: SessionShape | null;
+  timeLeft: number | null;
+  setTimeLeft: (value: number | null) => void;
+}) => {
+  const shouldResetTimeLeft =
+    (!session?.endTime || session.status !== 'IN_PROGRESS') && timeLeft !== null;
+  if (shouldResetTimeLeft) setTimeLeft(null);
+};
+
+const syncLocalAnswersFromSession = ({
+  session,
+  syncedSessionId,
+  setSyncedSessionId,
+  setLocalAnswers,
+}: {
+  session?: SessionShape | null;
+  syncedSessionId: string | null;
+  setSyncedSessionId: (value: string | null) => void;
+  setLocalAnswers: (answers: Record<number, number>) => void;
+}) => {
+  if (!session?.sessionId || session.sessionId === syncedSessionId) return;
+  setSyncedSessionId(session.sessionId);
+  if (session.answers) setLocalAnswers(session.answers);
+};

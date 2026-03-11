@@ -1,5 +1,6 @@
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { internalMutation, internalQuery } from './_generated/server';
+import type { Doc } from './_generated/dataModel';
 
 export const getUserByEmail = internalQuery({
   args: { email: v.string() },
@@ -110,5 +111,64 @@ export const markUserEmailVerified = internalMutation({
       emailVerificationTime: args.now,
       isVerified: true,
     });
+  },
+});
+
+function assertActiveToken(
+  token: Doc<'auth_email_tokens'> | null
+): asserts token is Doc<'auth_email_tokens'> {
+  if (!token || token.usedAt || token.expiresAt <= Date.now()) {
+    throw new ConvexError('INVALID_OR_EXPIRED_TOKEN');
+  }
+}
+
+export const consumePasswordResetToken = internalMutation({
+  args: {
+    tokenHash: v.string(),
+    newSecret: v.string(),
+    now: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const token = await ctx.db
+      .query('auth_email_tokens')
+      .withIndex('by_kind_tokenHash', q =>
+        q.eq('kind', 'password_reset').eq('tokenHash', args.tokenHash)
+      )
+      .first();
+    assertActiveToken(token);
+
+    const passwordAccount = await ctx.db
+      .query('authAccounts')
+      .withIndex('userIdAndProvider', q => q.eq('userId', token.userId).eq('provider', 'password'))
+      .first();
+
+    if (!passwordAccount) {
+      throw new ConvexError('PASSWORD_AUTH_NOT_ENABLED');
+    }
+
+    await ctx.db.patch(passwordAccount._id, { secret: args.newSecret });
+    await ctx.db.patch(token._id, { usedAt: args.now });
+  },
+});
+
+export const consumeEmailVerifyToken = internalMutation({
+  args: {
+    tokenHash: v.string(),
+    now: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const token = await ctx.db
+      .query('auth_email_tokens')
+      .withIndex('by_kind_tokenHash', q =>
+        q.eq('kind', 'email_verify').eq('tokenHash', args.tokenHash)
+      )
+      .first();
+    assertActiveToken(token);
+
+    await ctx.db.patch(token.userId, {
+      emailVerificationTime: args.now,
+      isVerified: true,
+    });
+    await ctx.db.patch(token._id, { usedAt: args.now });
   },
 });

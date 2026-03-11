@@ -30,10 +30,15 @@ type CreateTokenArgs = {
   expiresAt: number;
   createdAt: number;
 };
-type FindTokenArgs = { kind: TokenKind; tokenHash: string };
-type MarkTokenUsedArgs = { tokenId: Id<'auth_email_tokens'>; usedAt: number };
-type UpdateSecretArgs = { accountId: Id<'authAccounts'>; secret: string };
-type MarkVerifiedArgs = { userId: Id<'users'>; now: number };
+type ConsumePasswordResetArgs = {
+  tokenHash: string;
+  newSecret: string;
+  now: number;
+};
+type ConsumeEmailVerifyArgs = {
+  tokenHash: string;
+  now: number;
+};
 
 const getUserByEmailRef = makeFunctionReference<
   'query',
@@ -120,44 +125,20 @@ const createTokenRef = makeFunctionReference<
   { tokenId: Id<'auth_email_tokens'> }
 >;
 
-const findTokenByHashRef = makeFunctionReference<
-  'query',
-  FindTokenArgs,
-  {
-    _id: Id<'auth_email_tokens'>;
-    kind: TokenKind;
-    userId: Id<'users'>;
-    email: string;
-    expiresAt: number;
-    usedAt?: number;
-    createdAt: number;
-  } | null
->('accountRecoveryInternal:findTokenByHash') as unknown as FunctionReference<
-  'query',
+const consumePasswordResetTokenRef = makeFunctionReference<
+  'mutation',
+  ConsumePasswordResetArgs,
+  void
+>('accountRecoveryInternal:consumePasswordResetToken') as unknown as FunctionReference<
+  'mutation',
   'internal',
-  FindTokenArgs,
-  {
-    _id: Id<'auth_email_tokens'>;
-    kind: TokenKind;
-    userId: Id<'users'>;
-    email: string;
-    expiresAt: number;
-    usedAt?: number;
-    createdAt: number;
-  } | null
+  ConsumePasswordResetArgs,
+  void
 >;
 
-const markTokenUsedRef = makeFunctionReference<'mutation', MarkTokenUsedArgs, void>(
-  'accountRecoveryInternal:markTokenUsed'
-) as unknown as FunctionReference<'mutation', 'internal', MarkTokenUsedArgs, void>;
-
-const updatePasswordSecretRef = makeFunctionReference<'mutation', UpdateSecretArgs, void>(
-  'accountRecoveryInternal:updatePasswordSecret'
-) as unknown as FunctionReference<'mutation', 'internal', UpdateSecretArgs, void>;
-
-const markUserEmailVerifiedRef = makeFunctionReference<'mutation', MarkVerifiedArgs, void>(
-  'accountRecoveryInternal:markUserEmailVerified'
-) as unknown as FunctionReference<'mutation', 'internal', MarkVerifiedArgs, void>;
+const consumeEmailVerifyTokenRef = makeFunctionReference<'mutation', ConsumeEmailVerifyArgs, void>(
+  'accountRecoveryInternal:consumeEmailVerifyToken'
+) as unknown as FunctionReference<'mutation', 'internal', ConsumeEmailVerifyArgs, void>;
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -206,9 +187,7 @@ async function sendRecoveryEmail(args: {
   const from = process.env.RESEND_FROM_EMAIL?.trim() || process.env.EMAIL_FROM?.trim();
 
   if (!apiKey || !from) {
-    console.warn(
-      `[accountRecovery] Email provider not configured. To=${args.to}, Link=${args.actionUrl}`
-    );
+    console.warn(`[accountRecovery] Email provider not configured. To=${args.to}`);
     return;
   }
 
@@ -250,17 +229,6 @@ async function createOneTimeToken(
   });
 
   return rawToken;
-}
-
-function assertValidTokenRecord(
-  tokenRecord: {
-    expiresAt: number;
-    usedAt?: number;
-  } | null
-): asserts tokenRecord is { expiresAt: number; usedAt?: number } {
-  if (!tokenRecord || tokenRecord.usedAt || tokenRecord.expiresAt <= Date.now()) {
-    throw new ConvexError('INVALID_OR_EXPIRED_TOKEN');
-  }
 }
 
 export const requestPasswordReset = action({
@@ -334,27 +302,10 @@ export const confirmPasswordReset = action({
       throw new ConvexError('WEAK_PASSWORD');
     }
 
-    const tokenRecord = await ctx.runQuery(findTokenByHashRef, {
-      kind: 'password_reset',
+    await ctx.runMutation(consumePasswordResetTokenRef, {
       tokenHash: hashToken(token),
-    });
-    assertValidTokenRecord(tokenRecord);
-
-    const passwordAccount = await ctx.runQuery(getPasswordAccountRef, {
-      userId: tokenRecord.userId,
-    });
-    if (!passwordAccount) {
-      throw new ConvexError('PASSWORD_AUTH_NOT_ENABLED');
-    }
-
-    await ctx.runMutation(updatePasswordSecretRef, {
-      accountId: passwordAccount._id,
-      secret: hashSync(args.newPassword, 10),
-    });
-
-    await ctx.runMutation(markTokenUsedRef, {
-      tokenId: tokenRecord._id,
-      usedAt: Date.now(),
+      newSecret: hashSync(args.newPassword, 10),
+      now: Date.now(),
     });
 
     return { success: true };
@@ -422,19 +373,9 @@ export const confirmEmailVerification = action({
       throw new ConvexError('INVALID_OR_EXPIRED_TOKEN');
     }
 
-    const tokenRecord = await ctx.runQuery(findTokenByHashRef, {
-      kind: 'email_verify',
+    await ctx.runMutation(consumeEmailVerifyTokenRef, {
       tokenHash: hashToken(token),
-    });
-    assertValidTokenRecord(tokenRecord);
-
-    await ctx.runMutation(markUserEmailVerifiedRef, {
-      userId: tokenRecord.userId,
       now: Date.now(),
-    });
-    await ctx.runMutation(markTokenUsedRef, {
-      tokenId: tokenRecord._id,
-      usedAt: Date.now(),
     });
 
     return { success: true };

@@ -41,6 +41,269 @@ interface TopikModuleProps {
   initialView?: 'LIST' | 'HISTORY_LIST';
 }
 
+type TopikView = 'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW';
+
+const getPathWithoutLanguage = (pathname: string): string => {
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const first = pathSegments[0];
+  if (first && ['en', 'zh', 'vi', 'mn'].includes(first)) {
+    return `/${pathSegments.slice(1).join('/')}`;
+  }
+  return pathname;
+};
+
+const routeForView = (view: TopikView, examId?: string): string | null => {
+  if (view === 'LIST') return '/topik';
+  if (view === 'HISTORY_LIST') return '/topik/history';
+  if (!examId) return null;
+  if (view === 'COVER') return `/topik/${examId}`;
+  if (view === 'EXAM') return `/topik/${examId}/exam`;
+  if (view === 'RESULT') return `/topik/${examId}/result`;
+  if (view === 'REVIEW') return `/topik/${examId}/review`;
+  return null;
+};
+
+const ExitExamConfirmDialog = ({
+  open,
+  onOpenChange,
+  onConfirm,
+  labels,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  labels: ReturnType<typeof getLabels>;
+}) => (
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+      <AlertDialogHeader>
+        <AlertDialogTitle className="font-black text-foreground">
+          {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
+        </AlertDialogTitle>
+        <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+          {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter className="flex-row justify-end gap-2">
+        <AlertDialogCancel onClick={() => onOpenChange(false)}>
+          {labels.common?.cancel || 'Cancel'}
+        </AlertDialogCancel>
+        <AlertDialogAction onClick={onConfirm}>
+          {labels.common?.confirm || 'Confirm'}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+);
+
+const TopikViewRenderer = ({
+  view,
+  isMobile,
+  currentExam,
+  examResult,
+  exams,
+  history,
+  language,
+  userAnswers,
+  timeLeft,
+  timerActive,
+  annotations,
+  showExitConfirm,
+  onSetShowExitConfirm,
+  onSelectExam,
+  onToggleHistory,
+  onReviewAttempt,
+  canAccessContent,
+  onDeleteHistory,
+  onStartExam,
+  onResetExam,
+  onAnswerChange,
+  onSubmitExam,
+  onRequestExitExam,
+  onConfirmExitExam,
+  onSaveAnnotation,
+  onDeleteAnnotation,
+  onPauseTimer,
+  onResumeTimer,
+  onReviewResult,
+  onTryAgain,
+  labels,
+}: {
+  view: TopikView;
+  isMobile: boolean;
+  currentExam: TopikExam | null;
+  examResult: {
+    score: number;
+    totalScore: number;
+    correctCount: number;
+    totalQuestions: number;
+  } | null;
+  exams: TopikExam[];
+  history: ExamAttempt[];
+  language: Language;
+  userAnswers: Record<number, number>;
+  timeLeft: number;
+  timerActive: boolean;
+  annotations: Annotation[];
+  showExitConfirm: boolean;
+  onSetShowExitConfirm: (open: boolean) => void;
+  onSelectExam: (exam: TopikExam) => void;
+  onToggleHistory: () => void;
+  onReviewAttempt: (attempt?: ExamAttempt) => void;
+  canAccessContent?: (content: any) => boolean;
+  onDeleteHistory?: (id: string) => void;
+  onStartExam: () => void;
+  onResetExam: () => void;
+  onAnswerChange: (questionIndex: number, optionIndex: number) => void;
+  onSubmitExam: () => void;
+  onRequestExitExam: () => void;
+  onConfirmExitExam: () => void;
+  onSaveAnnotation: (annotation: Annotation) => void;
+  onDeleteAnnotation: (annotationId: string) => void;
+  onPauseTimer: () => void;
+  onResumeTimer: () => void;
+  onReviewResult: () => void;
+  onTryAgain: () => void;
+  labels: ReturnType<typeof getLabels>;
+}) => {
+  if (view === 'LIST') {
+    return (
+      <ExamList
+        exams={exams}
+        history={history}
+        language={language}
+        onSelectExam={onSelectExam}
+        onViewHistory={onToggleHistory}
+        onReviewAttempt={onReviewAttempt}
+        canAccessContent={canAccessContent}
+        onDeleteAttempt={onDeleteHistory}
+      />
+    );
+  }
+
+  if (view === 'HISTORY_LIST') {
+    return (
+      <ExamList
+        exams={exams}
+        history={history}
+        language={language}
+        onSelectExam={onSelectExam}
+        onViewHistory={onToggleHistory}
+        onReviewAttempt={onReviewAttempt}
+        showHistoryView={true}
+        onBack={onToggleHistory}
+        canAccessContent={canAccessContent}
+        onDeleteAttempt={onDeleteHistory}
+      />
+    );
+  }
+
+  if (!currentExam) return null;
+
+  if (view === 'COVER') {
+    if (isMobile) {
+      return (
+        <MobileExamCover
+          exam={currentExam}
+          language={language}
+          onStart={onStartExam}
+          onBack={onResetExam}
+        />
+      );
+    }
+    return (
+      <ExamCoverView
+        exam={currentExam}
+        language={language}
+        onStart={onStartExam}
+        onBack={onResetExam}
+        hasAttempted={history.some(h => h.examId === currentExam.id)}
+      />
+    );
+  }
+
+  if (view === 'EXAM') {
+    return (
+      <>
+        {isMobile ? (
+          <MobileExamSession
+            exam={currentExam}
+            language={language}
+            userAnswers={userAnswers}
+            timeLeft={timeLeft}
+            timerActive={timerActive}
+            onAnswerChange={onAnswerChange}
+            onSubmit={onSubmitExam}
+            onExit={onRequestExitExam}
+          />
+        ) : (
+          <ExamSession
+            exam={currentExam}
+            language={language}
+            userAnswers={userAnswers}
+            timeLeft={timeLeft}
+            timerActive={timerActive}
+            annotations={annotations}
+            onAnswerChange={onAnswerChange}
+            onSubmit={onSubmitExam}
+            onExit={onRequestExitExam}
+            onSaveAnnotation={onSaveAnnotation}
+            onDeleteAnnotation={onDeleteAnnotation}
+            onPauseTimer={onPauseTimer}
+            onResumeTimer={onResumeTimer}
+          />
+        )}
+        <ExitExamConfirmDialog
+          open={showExitConfirm}
+          onOpenChange={onSetShowExitConfirm}
+          onConfirm={onConfirmExitExam}
+          labels={labels}
+        />
+      </>
+    );
+  }
+
+  if (view === 'RESULT' && examResult) {
+    return (
+      <ExamResultView
+        exam={currentExam}
+        result={examResult}
+        language={language}
+        onReview={onReviewResult}
+        onTryAgain={onTryAgain}
+        onBackToList={onResetExam}
+      />
+    );
+  }
+
+  if (view === 'REVIEW') {
+    if (isMobile) {
+      return (
+        <MobileExamReview
+          exam={currentExam}
+          userAnswers={userAnswers}
+          language={language}
+          onBack={onResetExam}
+          onReset={onTryAgain}
+        />
+      );
+    }
+    return (
+      <ExamReviewView
+        exam={currentExam}
+        userAnswers={userAnswers}
+        language={language}
+        annotations={annotations}
+        onSaveAnnotation={onSaveAnnotation}
+        onDeleteAnnotation={onDeleteAnnotation}
+        onBack={onResetExam}
+      />
+    );
+  }
+
+  return null;
+};
+
 export const TopikModule: React.FC<TopikModuleProps> = ({
   exams,
   language,
@@ -62,9 +325,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const isMobile = useIsMobile();
   const labels = getLabels(language);
 
-  const [view, setView] = useState<
-    'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW'
-  >(initialView);
+  const [view, setView] = useState<TopikView>(initialView);
   const [currentExam, setCurrentExam] = useState<TopikExam | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -79,32 +340,15 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const [loading, setLoading] = useState(false);
   const questionCacheRef = useRef<Map<string, TopikQuestionDto[]>>(new Map());
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const pathWithoutLang =
-    pathSegments[0] && ['en', 'zh', 'vi', 'mn'].includes(pathSegments[0])
-      ? `/${pathSegments.slice(1).join('/')}`
-      : location.pathname;
+  const pathWithoutLang = getPathWithoutLanguage(location.pathname);
   const isHistoryPath = pathWithoutLang === '/topik/history';
 
   // Custom handleSetView that also updates URL
   const handleSetView = useCallback(
     (newView: typeof view) => {
       setView(newView);
-
-      // Update URL based on view
-      if (newView === 'LIST') {
-        navigate('/topik');
-      } else if (newView === 'HISTORY_LIST') {
-        navigate('/topik/history');
-      } else if (currentExam && newView === 'COVER') {
-        navigate(`/topik/${currentExam.id}`);
-      } else if (currentExam && newView === 'EXAM') {
-        navigate(`/topik/${currentExam.id}/exam`);
-      } else if (currentExam && newView === 'RESULT') {
-        navigate(`/topik/${currentExam.id}/result`);
-      } else if (currentExam && newView === 'REVIEW') {
-        navigate(`/topik/${currentExam.id}/review`);
-      }
+      const route = routeForView(newView, currentExam?.id);
+      if (route) navigate(route);
     },
     [navigate, currentExam]
   );
@@ -343,32 +587,35 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     handleSetView('EXAM');
   };
 
-  const reviewExam = async (attempt?: ExamAttempt) => {
-    if (attempt) {
-      const exam = exams.find(e => e.id === attempt.examId);
-      if (exam) {
-        setLoading(true);
-        try {
-          // Load full questions from API
-          let fullQuestions: TopikQuestionDto[] = await fetchQuestions(exam.id);
-          if (!fullQuestions) fullQuestions = [];
+  const reviewExam = useCallback(
+    async (attempt?: ExamAttempt) => {
+      if (attempt) {
+        const exam = exams.find(e => e.id === attempt.examId);
+        if (exam) {
+          setLoading(true);
+          try {
+            // Load full questions from API
+            let fullQuestions: TopikQuestionDto[] = await fetchQuestions(exam.id);
+            if (!fullQuestions) fullQuestions = [];
 
-          const fullExam = { ...exam, questions: fullQuestions };
-          setCurrentExam(fullExam as TopikExam);
-          setUserAnswers(attempt.userAnswers);
-          setView('REVIEW');
-          navigate(`/topik/${exam.id}/review`);
-        } catch (error) {
-          logger.error('Failed to load exam for review:', error);
-          notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
-        } finally {
-          setLoading(false);
+            const fullExam = { ...exam, questions: fullQuestions };
+            setCurrentExam(fullExam as TopikExam);
+            setUserAnswers(attempt.userAnswers);
+            setView('REVIEW');
+            navigate(`/topik/${exam.id}/review`);
+          } catch (error) {
+            logger.error('Failed to load exam for review:', error);
+            notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
+          } finally {
+            setLoading(false);
+          }
+          return;
         }
-        return;
       }
-    }
-    setView('REVIEW');
-  };
+      setView('REVIEW');
+    },
+    [exams, fetchQuestions, labels.dashboard?.topik?.examLoadError, navigate]
+  );
 
   const resetExam = () => {
     setSidebarHidden(false); // Restore sidebar
@@ -407,6 +654,19 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const pauseTimer = () => setTimerActive(false);
   const resumeTimer = () => timeLeft > 0 && setTimerActive(true);
+  const handleToggleHistory = useCallback(() => {
+    handleSetView(view === 'HISTORY_LIST' ? 'LIST' : 'HISTORY_LIST');
+  }, [handleSetView, view]);
+  const handleTryAgain = useCallback(() => {
+    if (!currentExam) return;
+    setUserAnswers({});
+    setTimeLeft(currentExam.timeLimit * 60);
+    setExamResult(null);
+    handleSetView('COVER');
+  }, [currentExam, handleSetView]);
+  const handleReviewResult = useCallback(() => {
+    void reviewExam();
+  }, [reviewExam]);
 
   // Loading screen.
   if (loading) {
@@ -437,189 +697,41 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     );
   }
 
-  if (view === 'LIST') {
-    return (
-      <ExamList
-        exams={exams}
-        history={history}
-        language={language}
-        onSelectExam={selectExam}
-        onViewHistory={() => handleSetView('HISTORY_LIST')}
-        onReviewAttempt={reviewExam}
-        canAccessContent={canAccessContent}
-        onDeleteAttempt={onDeleteHistory}
-      />
-    );
-  }
-
-  if (view === 'HISTORY_LIST') {
-    return (
-      <ExamList
-        exams={exams}
-        history={history}
-        language={language}
-        onSelectExam={selectExam}
-        onViewHistory={() => handleSetView('LIST')}
-        onReviewAttempt={reviewExam}
-        showHistoryView={true}
-        onBack={() => handleSetView('LIST')}
-        canAccessContent={canAccessContent}
-        onDeleteAttempt={onDeleteHistory}
-      />
-    );
-  }
-
-  if (view === 'COVER' && currentExam) {
-    if (isMobile) {
-      return (
-        <MobileExamCover
-          exam={currentExam}
-          language={language}
-          onStart={startExam}
-          onBack={resetExam}
-        />
-      );
-    }
-    return (
-      <ExamCoverView
-        exam={currentExam}
-        language={language}
-        onStart={startExam}
-        onBack={resetExam}
-        hasAttempted={history.some(h => h.examId === currentExam.id)}
-      />
-    );
-  }
-
-  if (view === 'EXAM' && currentExam) {
-    if (isMobile) {
-      return (
-        <>
-          <MobileExamSession
-            exam={currentExam}
-            language={language}
-            userAnswers={userAnswers}
-            timeLeft={timeLeft}
-            timerActive={timerActive}
-            onAnswerChange={handleAnswerChange}
-            onSubmit={submitExam}
-            onExit={handleRequestExitExam}
-          />
-          <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-            <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-black text-foreground">
-                  {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
-                  {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-row justify-end gap-2">
-                <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>
-                  {labels.common?.cancel || 'Cancel'}
-                </AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmExitExam}>
-                  {labels.common?.confirm || 'Confirm'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
-      );
-    }
-
-    return (
-      <>
-        <ExamSession
-          exam={currentExam}
-          language={language}
-          userAnswers={userAnswers}
-          timeLeft={timeLeft}
-          timerActive={timerActive}
-          annotations={annotations}
-          onAnswerChange={handleAnswerChange}
-          onSubmit={submitExam}
-          onExit={handleRequestExitExam}
-          onSaveAnnotation={handleSaveAnnotation}
-          onDeleteAnnotation={handleDeleteAnnotation}
-          onPauseTimer={pauseTimer}
-          onResumeTimer={resumeTimer}
-        />
-        <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-          <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-black text-foreground">
-                {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
-                {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row justify-end gap-2">
-              <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>
-                {labels.common?.cancel || 'Cancel'}
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmExitExam}>
-                {labels.common?.confirm || 'Confirm'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </>
-    );
-  }
-
-  if (view === 'RESULT' && currentExam && examResult) {
-    return (
-      <ExamResultView
-        exam={currentExam}
-        result={examResult}
-        language={language}
-        onReview={() => reviewExam()}
-        onTryAgain={() => {
-          setUserAnswers({});
-          setTimeLeft(currentExam.timeLimit * 60);
-          setExamResult(null);
-          handleSetView('COVER');
-        }}
-        onBackToList={resetExam}
-      />
-    );
-  }
-
-  if (view === 'REVIEW' && currentExam) {
-    if (isMobile) {
-      return (
-        <MobileExamReview
-          exam={currentExam}
-          userAnswers={userAnswers}
-          language={language}
-          onBack={resetExam}
-          onReset={() => {
-            // Logic to try again (reset attempt)
-            setUserAnswers({});
-            setTimeLeft(currentExam.timeLimit * 60);
-            setExamResult(null);
-            handleSetView('COVER');
-          }}
-        />
-      );
-    }
-    return (
-      <ExamReviewView
-        exam={currentExam}
-        userAnswers={userAnswers}
-        language={language}
-        annotations={annotations}
-        onSaveAnnotation={handleSaveAnnotation}
-        onDeleteAnnotation={handleDeleteAnnotation}
-        onBack={resetExam}
-      />
-    );
-  }
-
-  return null;
+  return (
+    <TopikViewRenderer
+      view={view}
+      isMobile={isMobile}
+      currentExam={currentExam}
+      examResult={examResult}
+      exams={exams}
+      history={history}
+      language={language}
+      userAnswers={userAnswers}
+      timeLeft={timeLeft}
+      timerActive={timerActive}
+      annotations={annotations}
+      showExitConfirm={showExitConfirm}
+      onSetShowExitConfirm={setShowExitConfirm}
+      onSelectExam={selectExam}
+      onToggleHistory={handleToggleHistory}
+      onReviewAttempt={reviewExam}
+      canAccessContent={canAccessContent}
+      onDeleteHistory={onDeleteHistory}
+      onStartExam={startExam}
+      onResetExam={resetExam}
+      onAnswerChange={handleAnswerChange}
+      onSubmitExam={submitExam}
+      onRequestExitExam={handleRequestExitExam}
+      onConfirmExitExam={handleConfirmExitExam}
+      onSaveAnnotation={handleSaveAnnotation}
+      onDeleteAnnotation={handleDeleteAnnotation}
+      onPauseTimer={pauseTimer}
+      onResumeTimer={resumeTimer}
+      onReviewResult={handleReviewResult}
+      onTryAgain={handleTryAgain}
+      labels={labels}
+    />
+  );
 };
 
 export default TopikModule;

@@ -27,6 +27,76 @@ import { QuestionRenderer } from './TopikQuestionRenderer';
 
 const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
 
+type ExcelImportRow = {
+  id?: string;
+  ID?: string;
+  Id?: string;
+  number?: string;
+  Number?: string;
+  题号?: string;
+  [key: string]: unknown;
+};
+
+const getExcelRowQuestionId = (row: ExcelImportRow): number | null => {
+  const rawId = row.id ?? row.ID ?? row.Id ?? row.number ?? row.Number ?? row['题号'];
+  if (!rawId) return null;
+  const parsed = Number.parseInt(String(rawId), 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const applyTextUpdates = (updated: TopikQuestion, row: ExcelImportRow): boolean => {
+  let changed = false;
+  const updateIfPresent = (
+    field: 'question' | 'passage' | 'instruction' | 'contextBox' | 'explanation',
+    value: unknown
+  ) => {
+    if (value === undefined) return;
+    updated[field] = String(value);
+    changed = true;
+  };
+
+  updateIfPresent('question', row.question ?? row['问题']);
+  updateIfPresent('passage', row.passage ?? row['文章']);
+  updateIfPresent('instruction', row.instruction ?? row['指令']);
+  updateIfPresent('contextBox', row.contextBox ?? row['보기']);
+  updateIfPresent('explanation', row.explanation ?? row['解释'] ?? row['解析']);
+
+  return changed;
+};
+
+const applyOptionUpdates = (updated: TopikQuestion, row: ExcelImportRow): boolean => {
+  const opts = [
+    row.option1 ?? row['选项1'],
+    row.option2 ?? row['选项2'],
+    row.option3 ?? row['选项3'],
+    row.option4 ?? row['选项4'],
+  ];
+  if (!opts.some(o => o !== undefined)) return false;
+
+  const newOpts = [...updated.options];
+  opts.forEach((option, index) => {
+    if (option !== undefined) newOpts[index] = String(option);
+  });
+  updated.options = newOpts;
+  return true;
+};
+
+const applyAnswerUpdate = (updated: TopikQuestion, row: ExcelImportRow): boolean => {
+  const answer = row.correctAnswer ?? row['答案'];
+  if (answer === undefined) return false;
+  const parsed = Number.parseInt(String(answer), 10);
+  if (Number.isNaN(parsed)) return false;
+  updated.correctAnswer = parsed - 1;
+  return true;
+};
+
+const applyScoreUpdate = (updated: TopikQuestion, row: ExcelImportRow): boolean => {
+  const score = row.score ?? row['分数'];
+  if (score === undefined) return false;
+  updated.score = Number.parseInt(String(score));
+  return true;
+};
+
 export const TopikManager: React.FC = () => {
   // ========================================
   // Convex Queries (Reactive)
@@ -470,80 +540,24 @@ export const TopikManager: React.FC = () => {
       const existingQuestions = [...(selectedExam.questions || [])];
       let updatedCount = 0;
 
-      // Define loose type for Excel/JSON optimization
-      type ExcelRow = {
-        id?: string;
-        ID?: string;
-        Id?: string;
-        number?: string;
-        Number?: string;
-        题号?: string;
-        [key: string]: unknown;
-      };
-
-      const excelData = jsonData as ExcelRow[];
+      const excelData = jsonData as ExcelImportRow[];
 
       console.log('Excel Import: Processing', excelData.length, 'rows');
 
-      const processExcelRow = (row: ExcelRow) => {
-        const qId = row.id || row.ID || row.Id || row.number || row.Number || row['题号'];
-        if (!qId) return null;
-
-        const idNum = Number.parseInt(String(qId));
+      const processExcelRow = (row: ExcelImportRow) => {
+        const idNum = getExcelRowQuestionId(row);
+        if (idNum === null) return null;
         const existingIdx = existingQuestions.findIndex(q => q.id === idNum);
 
         if (existingIdx < 0) return null;
 
-        const existing = existingQuestions[existingIdx];
-        const updated = { ...existing };
-        let changed = false;
-
-        const updateIfPresent = (
-          field: 'question' | 'passage' | 'instruction' | 'contextBox' | 'explanation',
-          value: unknown
-        ) => {
-          if (value !== undefined) {
-            updated[field] = String(value);
-            changed = true;
-          }
-        };
-
-        updateIfPresent('question', row.question ?? row['问题']);
-        updateIfPresent('passage', row.passage ?? row['文章']);
-        updateIfPresent('instruction', row.instruction ?? row['指令']);
-        updateIfPresent('contextBox', row.contextBox ?? row['보기']);
-        updateIfPresent('explanation', row.explanation ?? row['解释'] ?? row['解析']);
-
-        const opts = [
-          row.option1 ?? row['选项1'],
-          row.option2 ?? row['选项2'],
-          row.option3 ?? row['选项3'],
-          row.option4 ?? row['选项4'],
-        ];
-
-        if (opts.some(o => o !== undefined)) {
-          const newOpts = [...updated.options];
-          opts.forEach((o, i) => {
-            if (o !== undefined) newOpts[i] = String(o);
-          });
-          updated.options = newOpts;
-          changed = true;
-        }
-
-        const ans = row.correctAnswer ?? row['答案'];
-        if (ans !== undefined) {
-          const ca = Number.parseInt(String(ans));
-          if (!Number.isNaN(ca)) {
-            updated.correctAnswer = ca - 1;
-            changed = true;
-          }
-        }
-
-        const score = row.score ?? row['分数'];
-        if (score !== undefined) {
-          updated.score = Number.parseInt(String(score));
-          changed = true;
-        }
+        const updated = { ...existingQuestions[existingIdx] };
+        const changed = [
+          applyTextUpdates(updated, row),
+          applyOptionUpdates(updated, row),
+          applyAnswerUpdate(updated, row),
+          applyScoreUpdate(updated, row),
+        ].some(Boolean);
 
         return changed ? { idx: existingIdx, updated } : null;
       };

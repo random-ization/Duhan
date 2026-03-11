@@ -12,6 +12,7 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import { qRef } from '../../utils/convexRefs';
 import NoteDetailModal from '../notebook/NoteDetailModal';
+import type { NotebookListItem, NotebookListResult } from '../notebook/types';
 import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetPortal } from '../ui';
 import { Button } from '../ui';
@@ -53,15 +54,14 @@ export const MobileNotebookPage: React.FC = () => {
 
   // Data Fetching
   const type = activeTab === 'ALL' ? undefined : activeTab;
-  const notebooksResult = useQuery(
-    qRef<{ type?: string }, { success: boolean; data?: any[] }>('notebooks:list'),
-    { type }
-  );
+  const notebooksResult = useQuery(qRef<{ type?: string }, NotebookListResult>('notebooks:list'), {
+    type,
+  });
 
   const loading = notebooksResult === undefined;
   const notes: Note[] = useMemo(() => {
     if (!notebooksResult?.data) return [];
-    return notebooksResult.data.map((n: any) => ({
+    return notebooksResult.data.map((n: NotebookListItem) => ({
       id: String(n.id),
       type: n.type,
       title: n.title,
@@ -123,10 +123,11 @@ export const MobileNotebookPage: React.FC = () => {
                 size="auto"
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${isActive
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+                  isActive
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
                     : 'bg-card text-muted-foreground border-border'
-                  }`}
+                }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -212,7 +213,7 @@ export const MobileNotebookPage: React.FC = () => {
                 <NoteDetailModal
                   noteId={selectedNoteId}
                   onClose={() => setSelectedNoteId(null)}
-                  onDelete={() => { }} // Auto refresh
+                  onDelete={() => {}} // Auto refresh
                 />
               </div>
             )}

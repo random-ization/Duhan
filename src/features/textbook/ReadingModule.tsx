@@ -64,6 +64,29 @@ interface Highlight {
   endOffset: number;
 }
 
+interface SelectedWordState {
+  word: string;
+  lemma?: string;
+  meaning: string;
+  baseForm?: string;
+  contextTranslation?: string;
+  grammarMatches?: GrammarMatch[];
+  position: { x: number; y: number };
+  isFromVocabList: boolean;
+}
+
+interface SelectionToolbarState {
+  text: string;
+  position: { x: number; y: number };
+  range: Range;
+}
+
+interface NoteModalState {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+}
+
 // API Response Types
 interface TextToken {
   surface: string; // Conjugated form (e.g., "갔습니다")
@@ -162,6 +185,102 @@ const POPOVER_DISMISS_SELECTORS = ['[data-popover]', '[data-word]'] as const;
 // =========================================
 // Constants & Utils
 // =========================================
+type ReadingTranslationLanguage = 'en' | 'zh' | 'vi' | 'mn';
+
+type UnitArticle = {
+  _id?: string;
+  articleIndex?: number;
+  title?: string;
+  readingText?: string;
+  translation?: string;
+  translationEn?: string;
+  translationVi?: string;
+  translationMn?: string;
+  analysisData?: TextToken[];
+  audioUrl?: string;
+  transcriptData?: unknown;
+};
+
+function resolveReadingTranslationLanguage(
+  language: Language
+): ReadingTranslationLanguage | undefined {
+  if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
+    return language;
+  }
+  return undefined;
+}
+
+function resolveUniqueUnitIndices(availableUnits: { unitIndex: number }[] | undefined): number[] {
+  if (!availableUnits) return [];
+  const indices = [...new Set(availableUnits.map((unit: { unitIndex: number }) => unit.unitIndex))];
+  return indices.sort((a, b) => a - b);
+}
+
+function resolveFallbackUnitCount(
+  totalUnits: number | undefined,
+  initialUnitIndex: number
+): number {
+  if (typeof totalUnits === 'number' && totalUnits > 0) {
+    return totalUnits;
+  }
+  return Math.max(initialUnitIndex, 10);
+}
+
+function resolveSelectableUnitIndices(
+  uniqueUnitIndices: number[],
+  fallbackUnitCount: number
+): number[] {
+  if (uniqueUnitIndices.length > 0) return uniqueUnitIndices;
+  return Array.from({ length: fallbackUnitCount }, (_, index) => index + 1);
+}
+
+function resolveSelectedUnitIndex(
+  selectableUnitIndices: number[],
+  selectedUnitIndexOverride: number
+): number {
+  if (selectableUnitIndices.length === 0) return selectedUnitIndexOverride;
+  return selectableUnitIndices.includes(selectedUnitIndexOverride)
+    ? selectedUnitIndexOverride
+    : selectableUnitIndices[0];
+}
+
+function resolveArticles(
+  unitArticles: UnitArticle[] | undefined,
+  unit: UnitArticle | undefined
+): UnitArticle[] {
+  if (Array.isArray(unitArticles) && unitArticles.length > 0) return unitArticles;
+  if (unit) return [{ ...unit, articleIndex: 1 }];
+  return [];
+}
+
+function resolveActiveArticleIndex(
+  articles: UnitArticle[],
+  activeArticleIndexOverride: number
+): number {
+  if (articles.length === 0) return activeArticleIndexOverride;
+  const available = articles.map(article => article.articleIndex || 1);
+  const first = available[0] || 1;
+  return available.includes(activeArticleIndexOverride) ? activeArticleIndexOverride : first;
+}
+
+function fallbackText(value: string | undefined | null, fallback: string): string {
+  if (value) return value;
+  return fallback;
+}
+
+function resolveInstituteQueryArg(courseId: string) {
+  return courseId ? { id: courseId } : 'skip';
+}
+
+function resolveReadingModuleText(labels: ReturnType<typeof getLabels>) {
+  return {
+    noMeaning: fallbackText(labels.dashboard?.common?.noMeaning, 'No meaning'),
+    loading: fallbackText(labels.dashboard?.common?.loading, 'Looking up...'),
+    aiGreeting: fallbackText(labels.dashboard?.reading?.aiGreeting, 'Hi! I am your AI assistant.'),
+    lessonLearned: fallbackText(labels.dashboard?.reading?.learned, '🎉 Lesson completed!'),
+  };
+}
+
 const HIGHLIGHT_COLORS: Record<HighlightColor, string> = {
   yellow: '#FEF08A',
   green: '#BBF7D0',
@@ -545,7 +664,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <div className="bg-card dark:bg-slate-900 border-2 border-foreground rounded-lg shadow-[4px_4px_0px_0px_#18181B] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.22)] p-4 w-56">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-black text-sm">{labels.dashboard?.reading?.settings || 'Reading Settings'}</h4>
+        <h4 className="font-black text-sm">
+          {labels.dashboard?.reading?.settings || 'Reading Settings'}
+        </h4>
         <Button
           variant="ghost"
           size="auto"
@@ -601,6 +722,796 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   );
 };
 
+type ReadingLabels = ReturnType<typeof getLabels>;
+type ReadingModuleTab = 'notes' | 'grammar' | 'ai';
+
+interface ReadingErrorStateProps {
+  labels: ReadingLabels;
+  onBack?: () => void;
+}
+
+const ReadingErrorState: React.FC<ReadingErrorStateProps> = ({ labels, onBack }) => (
+  <div className="flex-1 flex items-center justify-center">
+    <div className="text-center text-muted-foreground">
+      <p className="font-bold mb-4">
+        {labels.dashboard?.common?.error || 'Failed to load. Please try again.'}
+      </p>
+      <Button
+        variant="ghost"
+        size="auto"
+        onClick={onBack}
+        className="px-4 py-2 bg-primary text-white rounded-lg font-bold"
+      >
+        {labels.dashboard?.common?.back || 'Back'}
+      </Button>
+    </div>
+  </div>
+);
+
+interface ReadingModuleHeaderProps {
+  labels: ReadingLabels;
+  onBack?: () => void;
+  unitTitle: string;
+  unitData: UnitArticle | null;
+  selectedUnitIndex: number;
+  selectableUnitIndices: number[];
+  formatLessonLabel: (idx: number) => string;
+  setSelectedUnitIndex: (next: number) => void;
+  articles: UnitArticle[];
+  activeArticleIndex: number;
+  setActiveArticleIndex: (next: number) => void;
+  grammarCount: number;
+  showSettings: boolean;
+  setShowSettings: React.Dispatch<React.SetStateAction<boolean>>;
+  fontSize: number;
+  isSerif: boolean;
+  setFontSize: React.Dispatch<React.SetStateAction<number>>;
+  setIsSerif: React.Dispatch<React.SetStateAction<boolean>>;
+  language: Language;
+}
+
+const ReadingModuleHeader: React.FC<ReadingModuleHeaderProps> = ({
+  labels,
+  onBack,
+  unitTitle,
+  unitData,
+  selectedUnitIndex,
+  selectableUnitIndices,
+  formatLessonLabel,
+  setSelectedUnitIndex,
+  articles,
+  activeArticleIndex,
+  setActiveArticleIndex,
+  grammarCount,
+  showSettings,
+  setShowSettings,
+  fontSize,
+  isSerif,
+  setFontSize,
+  setIsSerif,
+  language,
+}) => (
+  <header className="bg-card dark:bg-slate-900 border-b-2 border-foreground px-3 sm:px-6 py-3 shrink-0">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-3 min-w-0">
+        <Button
+          variant="ghost"
+          size="auto"
+          onClick={onBack}
+          className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <h1 className="font-black text-base sm:text-lg truncate">{unitData?.title || unitTitle}</h1>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="relative w-full sm:w-auto">
+          <Select
+            value={selectedUnitIndex}
+            onChange={e => setSelectedUnitIndex(Number(e.target.value))}
+            className="!h-auto w-full sm:w-auto !px-4 !py-2 !pr-8 !bg-lime-300 dark:!bg-slate-700 dark:hover:!bg-slate-600 dark:!text-slate-100 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
+          >
+            {selectableUnitIndices.map((idx: number) => (
+              <option key={idx} value={idx}>
+                📖 {formatLessonLabel(idx)}
+              </option>
+            ))}
+          </Select>
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+        </div>
+
+        {articles.length > 1 && (
+          <div className="flex flex-wrap bg-card border-2 border-foreground rounded-lg overflow-hidden">
+            {articles.map(article => {
+              const articleIndex = article.articleIndex ?? 1;
+              return (
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  key={articleIndex}
+                  onClick={() => setActiveArticleIndex(articleIndex)}
+                  className={`px-3 py-2 font-bold text-xs text-foreground transition-colors border-r-2 border-foreground last:border-r-0 ${
+                    activeArticleIndex === articleIndex ? 'bg-primary text-white' : 'hover:bg-muted'
+                  }`}
+                >
+                  {(labels.dashboard?.reading?.article || 'Article').replace(
+                    '{index}',
+                    articleIndex.toString()
+                  )}{' '}
+                  {articleIndex}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+
+        {grammarCount > 0 && (
+          <span className="hidden sm:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
+            {(labels.dashboard?.reading?.grammarCount || '{count} grammar points').replace(
+              '{count}',
+              grammarCount.toString()
+            )}
+          </span>
+        )}
+      </div>
+
+      <div className="self-end md:self-auto relative">
+        <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
+            <SettingsPanel
+              fontSize={fontSize}
+              isSerif={isSerif}
+              onFontSizeChange={setFontSize}
+              onSerifToggle={() => setIsSerif(prev => !prev)}
+              onClose={() => setShowSettings(false)}
+              language={language}
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  </header>
+);
+
+interface ReadingReaderPanelProps {
+  labels: ReadingLabels;
+  readerRef: React.RefObject<HTMLDivElement | null>;
+  isSerif: boolean;
+  fontSize: number;
+  unitData: UnitArticle | null;
+  renderContent: (content: string) => React.ReactNode;
+  language: Language;
+  completingUnit: boolean;
+  onCompleteUnit: () => void;
+}
+
+const ReadingReaderPanel: React.FC<ReadingReaderPanelProps> = ({
+  labels,
+  readerRef,
+  isSerif,
+  fontSize,
+  unitData,
+  renderContent,
+  language,
+  completingUnit,
+  onCompleteUnit,
+}) => {
+  const readerLabel = fallbackText(labels.dashboard?.reading?.readerLabel, 'Article reader');
+  const emptyArticleLabel = fallbackText(labels.dashboard?.reading?.noArticles, 'No article');
+  const readerTitle = fallbackText(unitData?.title, emptyArticleLabel);
+  const noContentLabel = fallbackText(labels.dashboard?.reading?.noContent, 'No content');
+  const showTranslationLabel = fallbackText(
+    labels.dashboard?.reading?.showTranslation,
+    'Show translation'
+  );
+  const completeLessonLabel = fallbackText(
+    labels.dashboard?.reading?.completeLesson,
+    'Complete lesson'
+  );
+
+  return (
+    <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-3 sm:p-4 md:p-8">
+      <div
+        ref={readerRef}
+        className={`bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] dark:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.22)] p-4 sm:p-6 md:p-8 max-w-full sm:max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
+        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+        aria-label={readerLabel}
+      >
+        <h2 className="text-2xl font-black mb-6 text-foreground">{readerTitle}</h2>
+        <div className="text-muted-foreground leading-loose break-words">
+          {unitData?.readingText ? (
+            renderContent(unitData.readingText)
+          ) : (
+            <p className="text-muted-foreground">{noContentLabel}</p>
+          )}
+        </div>
+
+        {unitData?.translation && (
+          <div className="mt-8 pt-6 border-t-2 border-border">
+            <details className="group">
+              <summary className="cursor-pointer font-bold text-sm text-muted-foreground hover:text-muted-foreground flex items-center gap-2">
+                <Languages className="w-4 h-4" />
+                {showTranslationLabel}
+                <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground whitespace-pre-wrap">
+                {getLocalizedContent(unitData, 'translation', language)}
+              </div>
+            </details>
+          </div>
+        )}
+
+        <div className="mt-8 pt-6 border-t-2 border-border flex justify-center">
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={onCompleteUnit}
+            disabled={completingUnit}
+            loading={completingUnit}
+            loadingText={`✅ ${completeLessonLabel}`}
+            loadingIconClassName="w-4 h-4"
+            className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+          >
+            ✅ {completeLessonLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface DesktopNotesTabProps {
+  notes: Note[];
+  labels: ReadingLabels;
+}
+
+const DesktopNotesTab: React.FC<DesktopNotesTabProps> = ({ notes, labels }) => (
+  <div className="space-y-3">
+    {notes.length === 0 ? (
+      <div className="text-center text-muted-foreground py-8">
+        <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p className="font-bold">{labels.dashboard?.reading?.noNotes || 'No notes'}</p>
+        <p className="text-xs">
+          {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
+        </p>
+      </div>
+    ) : (
+      notes.map(note => (
+        <div
+          key={note.id}
+          className="bg-card border-2 border-foreground rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
+          style={{ borderLeftColor: HIGHLIGHT_COLORS[note.color], borderLeftWidth: 4 }}
+        >
+          <p className="font-bold text-sm text-foreground mb-1 underline decoration-wavy decoration-amber-500">
+            {note.text}
+          </p>
+          <p className="text-xs text-muted-foreground">{note.comment}</p>
+        </div>
+      ))
+    )}
+  </div>
+);
+
+interface DesktopGrammarTabProps {
+  grammarList: GrammarItem[];
+  labels: ReadingLabels;
+}
+
+const DesktopGrammarTab: React.FC<DesktopGrammarTabProps> = ({ grammarList, labels }) => (
+  <div className="space-y-3">
+    {grammarList.length === 0 ? (
+      <div className="text-center text-muted-foreground py-8">
+        <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p className="font-bold">
+          {labels.dashboard?.reading?.noGrammar || 'No grammar in this lesson'}
+        </p>
+        <p className="text-xs">
+          {labels.dashboard?.reading?.addGrammar || 'Please add grammar for this lesson first'}
+        </p>
+      </div>
+    ) : (
+      grammarList.map(grammar => (
+        <div
+          key={grammar.id}
+          className="bg-card border-2 border-foreground rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
+              {grammar.type || 'Grammar'}
+            </span>
+            <h4 className="font-bold text-foreground">{grammar.title}</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">{grammar.summary}</p>
+          {grammar.explanation && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-muted-foreground">
+                {labels.dashboard?.reading?.viewExplanation || 'View detailed explanation'}
+              </summary>
+              <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
+                {grammar.explanation}
+              </p>
+            </details>
+          )}
+        </div>
+      ))
+    )}
+  </div>
+);
+
+interface DesktopAiTabProps {
+  aiMessages: { role: string; content: string }[];
+  aiInput: string;
+  setAiInput: React.Dispatch<React.SetStateAction<string>>;
+  sendAiMessage: () => void;
+  labels: ReadingLabels;
+}
+
+const DesktopAiTab: React.FC<DesktopAiTabProps> = ({
+  aiMessages,
+  aiInput,
+  setAiInput,
+  sendAiMessage,
+  labels,
+}) => (
+  <div className="flex flex-col h-full">
+    <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
+      {aiMessages.map(msg => (
+        <div
+          key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
+          className={`p-3 rounded-lg border-2 border-foreground ${
+            msg.role === 'user'
+              ? 'bg-lime-100 dark:bg-lime-900/30 ml-8'
+              : 'bg-card dark:bg-slate-800 mr-8'
+          }`}
+        >
+          <p className="text-sm">{msg.content}</p>
+        </div>
+      ))}
+    </div>
+    <div className="flex gap-2 shrink-0">
+      <Input
+        type="text"
+        value={aiInput}
+        onChange={e => setAiInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && sendAiMessage()}
+        placeholder={labels.dashboard?.reading?.placeholder || 'Ask a grammar question...'}
+        className="flex-1 !h-auto !px-4 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none !shadow-none"
+      />
+      <Button
+        variant="ghost"
+        size="auto"
+        onClick={sendAiMessage}
+        className="px-4 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
+      >
+        <Send className="w-4 h-4" />
+      </Button>
+    </div>
+  </div>
+);
+
+interface ReadingDesktopStudyHubProps {
+  labels: ReadingLabels;
+  activeTab: ReadingModuleTab;
+  setActiveTab: React.Dispatch<React.SetStateAction<ReadingModuleTab>>;
+  notes: Note[];
+  grammarList: GrammarItem[];
+  aiMessages: { role: string; content: string }[];
+  aiInput: string;
+  setAiInput: React.Dispatch<React.SetStateAction<string>>;
+  sendAiMessage: () => void;
+}
+
+const ReadingDesktopStudyHub: React.FC<ReadingDesktopStudyHubProps> = ({
+  labels,
+  activeTab,
+  setActiveTab,
+  notes,
+  grammarList,
+  aiMessages,
+  aiInput,
+  setAiInput,
+  sendAiMessage,
+}) => (
+  <div className="hidden md:flex w-[35%] bg-card dark:bg-slate-900 flex-col overflow-hidden">
+    <div className="flex border-b-2 border-foreground shrink-0">
+      {(
+        [
+          {
+            key: 'grammar',
+            label: labels.dashboard?.reading?.grammar || 'Grammar points',
+            icon: Sparkles,
+          },
+          { key: 'notes', label: labels.dashboard?.reading?.note || 'Notes', icon: PenLine },
+          {
+            key: 'ai',
+            label: labels.dashboard?.reading?.aiAssistant || 'AI tutor',
+            icon: MessageSquare,
+          },
+        ] as const
+      ).map(tab => (
+        <Button
+          variant="ghost"
+          size="auto"
+          key={tab.key}
+          onClick={() => setActiveTab(tab.key)}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-foreground border-r-2 border-foreground last:border-r-0 transition-colors ${
+            activeTab === tab.key
+              ? 'bg-lime-300 dark:bg-slate-700 dark:text-slate-100'
+              : 'bg-card hover:bg-muted'
+          }`}
+        >
+          <tab.icon className="w-4 h-4" />
+          {tab.label}
+        </Button>
+      ))}
+    </div>
+
+    <div className="flex-1 overflow-y-auto p-4">
+      {activeTab === 'notes' && <DesktopNotesTab notes={notes} labels={labels} />}
+      {activeTab === 'grammar' && <DesktopGrammarTab grammarList={grammarList} labels={labels} />}
+      {activeTab === 'ai' && (
+        <DesktopAiTab
+          aiMessages={aiMessages}
+          aiInput={aiInput}
+          setAiInput={setAiInput}
+          sendAiMessage={sendAiMessage}
+          labels={labels}
+        />
+      )}
+    </div>
+  </div>
+);
+
+interface ReadingPopoversProps {
+  selectedWord: SelectedWordState | null;
+  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
+  saveWordToVocab: (word: string, meaning: string) => void;
+  speak: (text: string) => void;
+  selectionToolbar: SelectionToolbarState | null;
+  setSelectionToolbar: React.Dispatch<React.SetStateAction<SelectionToolbarState | null>>;
+  setNoteModal: React.Dispatch<React.SetStateAction<NoteModalState | null>>;
+  addHighlight: (color: HighlightColor) => void;
+  noteModal: NoteModalState | null;
+  saveNote: (comment: string, color: HighlightColor) => void;
+  language: Language;
+}
+
+const ReadingPopovers: React.FC<ReadingPopoversProps> = ({
+  selectedWord,
+  setSelectedWord,
+  saveWordToVocab,
+  speak,
+  selectionToolbar,
+  setSelectionToolbar,
+  setNoteModal,
+  addHighlight,
+  noteModal,
+  saveNote,
+  language,
+}) => (
+  <>
+    {selectedWord && (
+      <FlashcardPopover
+        word={selectedWord.word}
+        lemma={selectedWord.lemma}
+        meaning={selectedWord.meaning}
+        contextTranslation={selectedWord.contextTranslation}
+        grammarMatches={selectedWord.grammarMatches}
+        position={selectedWord.position}
+        onClose={() => setSelectedWord(null)}
+        onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
+        onSpeak={() => speak(selectedWord.word)}
+        language={language}
+      />
+    )}
+
+    {selectionToolbar && (
+      <div data-popover>
+        <SelectionToolbar
+          position={selectionToolbar.position}
+          onTranslate={() => {
+            notify.info(`Translate：${selectionToolbar.text}`);
+            setSelectionToolbar(null);
+          }}
+          onSpeak={() => {
+            speak(selectionToolbar.text);
+            setSelectionToolbar(null);
+          }}
+          onNote={() => {
+            setNoteModal({
+              text: selectionToolbar.text,
+              startOffset: 0,
+              endOffset: 0,
+            });
+            setSelectionToolbar(null);
+          }}
+          onHighlight={addHighlight}
+          language={language}
+        />
+      </div>
+    )}
+
+    {noteModal && (
+      <NoteInputModal
+        selectedText={noteModal.text}
+        onSave={saveNote}
+        onClose={() => setNoteModal(null)}
+        language={language}
+      />
+    )}
+  </>
+);
+
+interface ReadingMobileStudyHubProps {
+  labels: ReadingLabels;
+  activeTab: ReadingModuleTab;
+  setActiveTab: React.Dispatch<React.SetStateAction<ReadingModuleTab>>;
+  mobileSheetOpen: boolean;
+  setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  grammarList: GrammarItem[];
+  notes: Note[];
+}
+
+const ReadingMobileStudyHub: React.FC<ReadingMobileStudyHubProps> = ({
+  labels,
+  activeTab,
+  setActiveTab,
+  mobileSheetOpen,
+  setMobileSheetOpen,
+  grammarList,
+  notes,
+}) => (
+  <>
+    <Button
+      variant="ghost"
+      size="auto"
+      onClick={() => setMobileSheetOpen(true)}
+      className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-lime-400 border-2 border-foreground rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+    >
+      <Menu className="w-6 h-6 text-foreground" />
+    </Button>
+
+    <BottomSheet
+      isOpen={mobileSheetOpen}
+      onClose={() => setMobileSheetOpen(false)}
+      title={labels.dashboard?.reading?.studyTool || 'Study tools'}
+      height="half"
+    >
+      <div className="flex border-b border-border mb-4 -mx-5 px-5">
+        {(
+          [
+            {
+              key: 'grammar',
+              label: labels.dashboard?.reading?.grammar || 'Grammar',
+              icon: Sparkles,
+            },
+            { key: 'notes', label: labels.dashboard?.reading?.note || 'Notes', icon: PenLine },
+          ] as const
+        ).map(tab => (
+          <Button
+            variant="ghost"
+            size="auto"
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${
+              activeTab === tab.key
+                ? 'border-lime-500 text-lime-600'
+                : 'border-transparent text-muted-foreground'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </Button>
+        ))}
+      </div>
+
+      {activeTab === 'grammar' && (
+        <div className="space-y-2">
+          {grammarList.slice(0, 5).map(grammar => (
+            <div key={grammar.id} className="p-3 bg-muted rounded-lg">
+              <div className="font-bold text-foreground">{grammar.title}</div>
+              <div className="text-sm text-muted-foreground">{grammar.explanation}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {activeTab === 'notes' && (
+        <div className="space-y-2">
+          {notes.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
+            </p>
+          ) : (
+            notes.map(note => (
+              <div
+                key={note.id}
+                className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400"
+              >
+                <div className="font-bold text-sm">{note.text}</div>
+                <div className="text-xs text-muted-foreground">{note.comment}</div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </BottomSheet>
+  </>
+);
+
+interface ReadingLoadedContentProps {
+  labels: ReadingLabels;
+  onBack?: () => void;
+  unitTitle: string;
+  unitData: UnitArticle | null;
+  selectedUnitIndex: number;
+  selectableUnitIndices: number[];
+  formatLessonLabel: (idx: number) => string;
+  setSelectedUnitIndex: (next: number) => void;
+  articles: UnitArticle[];
+  activeArticleIndex: number;
+  setActiveArticleIndex: (next: number) => void;
+  grammarList: GrammarItem[];
+  showSettings: boolean;
+  setShowSettings: React.Dispatch<React.SetStateAction<boolean>>;
+  fontSize: number;
+  setFontSize: React.Dispatch<React.SetStateAction<number>>;
+  isSerif: boolean;
+  setIsSerif: React.Dispatch<React.SetStateAction<boolean>>;
+  readerRef: React.RefObject<HTMLDivElement | null>;
+  renderContent: (content: string) => React.ReactNode;
+  language: Language;
+  completingUnit: boolean;
+  onCompleteUnit: () => void;
+  activeTab: ReadingModuleTab;
+  setActiveTab: React.Dispatch<React.SetStateAction<ReadingModuleTab>>;
+  notes: Note[];
+  aiMessages: { role: string; content: string }[];
+  aiInput: string;
+  setAiInput: React.Dispatch<React.SetStateAction<string>>;
+  sendAiMessage: () => void;
+  selectedWord: SelectedWordState | null;
+  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
+  saveWordToVocab: (word: string, meaning: string) => void;
+  speak: (text: string) => void;
+  selectionToolbar: SelectionToolbarState | null;
+  setSelectionToolbar: React.Dispatch<React.SetStateAction<SelectionToolbarState | null>>;
+  setNoteModal: React.Dispatch<React.SetStateAction<NoteModalState | null>>;
+  addHighlight: (color: HighlightColor) => void;
+  noteModal: NoteModalState | null;
+  saveNote: (comment: string, color: HighlightColor) => void;
+  mobileSheetOpen: boolean;
+  setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
+  labels,
+  onBack,
+  unitTitle,
+  unitData,
+  selectedUnitIndex,
+  selectableUnitIndices,
+  formatLessonLabel,
+  setSelectedUnitIndex,
+  articles,
+  activeArticleIndex,
+  setActiveArticleIndex,
+  grammarList,
+  showSettings,
+  setShowSettings,
+  fontSize,
+  setFontSize,
+  isSerif,
+  setIsSerif,
+  readerRef,
+  renderContent,
+  language,
+  completingUnit,
+  onCompleteUnit,
+  activeTab,
+  setActiveTab,
+  notes,
+  aiMessages,
+  aiInput,
+  setAiInput,
+  sendAiMessage,
+  selectedWord,
+  setSelectedWord,
+  saveWordToVocab,
+  speak,
+  selectionToolbar,
+  setSelectionToolbar,
+  setNoteModal,
+  addHighlight,
+  noteModal,
+  saveNote,
+  mobileSheetOpen,
+  setMobileSheetOpen,
+}) => (
+  <>
+    <ReadingModuleHeader
+      labels={labels}
+      onBack={onBack}
+      unitTitle={unitTitle}
+      unitData={unitData}
+      selectedUnitIndex={selectedUnitIndex}
+      selectableUnitIndices={selectableUnitIndices}
+      formatLessonLabel={formatLessonLabel}
+      setSelectedUnitIndex={setSelectedUnitIndex}
+      articles={articles}
+      activeArticleIndex={activeArticleIndex}
+      setActiveArticleIndex={setActiveArticleIndex}
+      grammarCount={grammarList.length}
+      showSettings={showSettings}
+      setShowSettings={setShowSettings}
+      fontSize={fontSize}
+      isSerif={isSerif}
+      setFontSize={setFontSize}
+      setIsSerif={setIsSerif}
+      language={language}
+    />
+
+    <div className="flex-1 flex overflow-hidden">
+      <ReadingReaderPanel
+        labels={labels}
+        readerRef={readerRef}
+        isSerif={isSerif}
+        fontSize={fontSize}
+        unitData={unitData}
+        renderContent={renderContent}
+        language={language}
+        completingUnit={completingUnit}
+        onCompleteUnit={onCompleteUnit}
+      />
+      <ReadingDesktopStudyHub
+        labels={labels}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        notes={notes}
+        grammarList={grammarList}
+        aiMessages={aiMessages}
+        aiInput={aiInput}
+        setAiInput={setAiInput}
+        sendAiMessage={sendAiMessage}
+      />
+    </div>
+
+    <ReadingPopovers
+      selectedWord={selectedWord}
+      setSelectedWord={setSelectedWord}
+      saveWordToVocab={saveWordToVocab}
+      speak={speak}
+      selectionToolbar={selectionToolbar}
+      setSelectionToolbar={setSelectionToolbar}
+      setNoteModal={setNoteModal}
+      addHighlight={addHighlight}
+      noteModal={noteModal}
+      saveNote={saveNote}
+      language={language}
+    />
+
+    <ReadingMobileStudyHub
+      labels={labels}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      mobileSheetOpen={mobileSheetOpen}
+      setMobileSheetOpen={setMobileSheetOpen}
+      grammarList={grammarList}
+      notes={notes}
+    />
+  </>
+);
+
 // =========================================
 // Main Component
 // =========================================
@@ -620,6 +1531,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   onBack,
 }) => {
   const labels = getLabels(language);
+  const moduleText = useMemo(() => resolveReadingModuleText(labels), [labels]);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const { saveWord } = useUserActions();
   const { logActivity } = useActivityLogger();
@@ -630,53 +1542,35 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   useEffect(() => {
     setSelectedUnitIndexOverride(initialUnitIndex);
   }, [initialUnitIndex]);
-  const instituteMeta = useQuery(INSTITUTES.get, courseId ? { id: courseId } : 'skip');
+  const instituteMeta = useQuery(INSTITUTES.get, resolveInstituteQueryArg(courseId));
 
   // Fetch available units for course (for unit selector)
   const availableUnits = useQuery(
     qRef<{ courseId: string }, { unitIndex: number }[]>('units:getByCourse'),
     { courseId }
   );
-  const uniqueUnitIndices = useMemo(() => {
-    if (!availableUnits) return [];
-    const indices = [...new Set(availableUnits.map((u: { unitIndex: number }) => u.unitIndex))];
-    return indices.sort((a, b) => a - b);
-  }, [availableUnits]);
-  const fallbackUnitCount = useMemo(() => {
-    if (typeof instituteMeta?.totalUnits === 'number' && instituteMeta.totalUnits > 0) {
-      return instituteMeta.totalUnits;
-    }
-    return Math.max(initialUnitIndex, 10);
-  }, [instituteMeta?.totalUnits, initialUnitIndex]);
-  const selectableUnitIndices = useMemo(() => {
-    if (uniqueUnitIndices.length > 0) return uniqueUnitIndices;
-    return Array.from({ length: fallbackUnitCount }, (_, index) => index + 1);
-  }, [uniqueUnitIndices, fallbackUnitCount]);
+  const uniqueUnitIndices = useMemo(
+    () => resolveUniqueUnitIndices(availableUnits),
+    [availableUnits]
+  );
+  const fallbackUnitCount = useMemo(
+    () => resolveFallbackUnitCount(instituteMeta?.totalUnits, initialUnitIndex),
+    [instituteMeta?.totalUnits, initialUnitIndex]
+  );
+  const selectableUnitIndices = useMemo(
+    () => resolveSelectableUnitIndices(uniqueUnitIndices, fallbackUnitCount),
+    [uniqueUnitIndices, fallbackUnitCount]
+  );
 
-  const selectedUnitIndex = useMemo(() => {
-    if (selectableUnitIndices.length === 0) return selectedUnitIndexOverride;
-    return selectableUnitIndices.includes(selectedUnitIndexOverride)
-      ? selectedUnitIndexOverride
-      : selectableUnitIndices[0];
-  }, [selectableUnitIndices, selectedUnitIndexOverride]);
+  const selectedUnitIndex = useMemo(
+    () => resolveSelectedUnitIndex(selectableUnitIndices, selectedUnitIndexOverride),
+    [selectableUnitIndices, selectedUnitIndexOverride]
+  );
   // ========================================
   // Convex Query: Fetch unit data
   // ========================================
   // Convex Query: Fetch unit data
   // =====================================
-  type UnitArticle = {
-    _id?: string;
-    articleIndex?: number;
-    title?: string;
-    readingText?: string;
-    translation?: string;
-    translationEn?: string;
-    translationVi?: string;
-    translationMn?: string;
-    analysisData?: TextToken[];
-    audioUrl?: string;
-    transcriptData?: unknown;
-  };
   const unitDetails = useQuery(
     qRef<
       { courseId: string; unitIndex: number },
@@ -708,23 +1602,17 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   // Use loading state instead of early return to avoid hooks order issues
   const isLoading = unitDetails === undefined;
 
-  const queryError = null; // Convex throws/nulls usually, simplest check is undefined
+  const error: string | null = null;
 
   // Extract data from query
   const unit = unitDetails?.unit;
   const unitArticles = unitDetails?.articles;
-  const articles = useMemo(() => {
-    if (Array.isArray(unitArticles) && unitArticles.length > 0) return unitArticles;
-    if (unit) return [{ ...unit, articleIndex: 1 }];
-    return [];
-  }, [unitArticles, unit]);
+  const articles = useMemo(() => resolveArticles(unitArticles, unit), [unitArticles, unit]);
   const [activeArticleIndexOverride, setActiveArticleIndexOverride] = useState(1);
-  const activeArticleIndex = useMemo(() => {
-    if (articles.length === 0) return activeArticleIndexOverride;
-    const available = articles.map(a => a.articleIndex || 1);
-    const first = available[0] || 1;
-    return available.includes(activeArticleIndexOverride) ? activeArticleIndexOverride : first;
-  }, [articles, activeArticleIndexOverride]);
+  const activeArticleIndex = useMemo(
+    () => resolveActiveArticleIndex(articles, activeArticleIndexOverride),
+    [articles, activeArticleIndexOverride]
+  );
 
   const setSelectedUnitIndex = (next: number) => {
     setSelectedUnitIndexOverride(next);
@@ -885,37 +1773,15 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     >('dictionary:lookupWithMorphology')
   );
   const dictionaryRequestRef = useRef(0);
-  const translationLang = useMemo(() => {
-    if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
-      return language;
-    }
-    return undefined;
-  }, [language]);
+  const translationLang = useMemo(() => resolveReadingTranslationLanguage(language), [language]);
 
   // Selection & Popover state
-  const [selectedWord, setSelectedWord] = useState<{
-    word: string;
-    lemma?: string;
-    meaning: string;
-    baseForm?: string;
-    contextTranslation?: string;
-    grammarMatches?: GrammarMatch[];
-    position: { x: number; y: number };
-    isFromVocabList: boolean;
-  } | null>(null);
-  const [selectionToolbar, setSelectionToolbar] = useState<{
-    text: string;
-    position: { x: number; y: number };
-    range: Range;
-  } | null>(null);
-  const [noteModal, setNoteModal] = useState<{
-    text: string;
-    startOffset: number;
-    endOffset: number;
-  } | null>(null);
+  const [selectedWord, setSelectedWord] = useState<SelectedWordState | null>(null);
+  const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
+  const [noteModal, setNoteModal] = useState<NoteModalState | null>(null);
 
   // Right panel tab
-  const [activeTab, setActiveTab] = useState<'notes' | 'grammar' | 'ai'>('grammar');
+  const [activeTab, setActiveTab] = useState<ReadingModuleTab>('grammar');
 
   // Mobile bottom sheet state
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -937,12 +1803,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const [aiMessages, setAiMessages] = useState<{ role: string; content: string }[]>(() => [
     {
       role: 'assistant',
-      content: labels.dashboard?.reading?.aiGreeting || 'Hi! I am your AI assistant.',
+      content: moduleText.aiGreeting,
     },
   ]);
 
   const readerRef = useRef<HTMLDivElement>(null);
-  const error = queryError ? 'Failed to load. Please try again.' : null;
 
   // ========================================
   // Smart Word Lookup: Find base form using analysisData
@@ -1118,6 +1983,32 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     [lookupWithMorphology, translationLang, unitData, normalizeLookupWordCb]
   );
 
+  const parseDatasetIndex = useCallback(
+    (value: string | undefined): number | undefined =>
+      value ? Number.parseInt(value, 10) : undefined,
+    []
+  );
+
+  const getSentenceTranslation = useCallback(
+    (sentences: string[], sentenceIndex: number | undefined): string | undefined => {
+      if (sentenceIndex === undefined) return undefined;
+      return sentences[sentenceIndex];
+    },
+    []
+  );
+
+  const resolveLookupFallbackMeaning = useCallback(
+    (meaning: string | undefined, defaultMeaning: string | undefined): string =>
+      meaning ?? defaultMeaning ?? 'No meaning',
+    []
+  );
+
+  const resolveLookupLoadingMeaning = useCallback(
+    (meaning: string | undefined, loadingMeaning: string | undefined): string =>
+      meaning ?? loadingMeaning ?? 'Looking up...',
+    []
+  );
+
   // ========================================
   // Handle word click - Smart lookup logic
   // ========================================
@@ -1130,19 +2021,19 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       const clickedWord = normalizeLookupWordCb(wordEl.dataset.word ?? '');
       if (!clickedWord) return;
 
-      const charIndexStr = wordEl.dataset.offset;
-      const charIndex = charIndexStr ? Number.parseInt(charIndexStr, 10) : undefined;
-      const sentenceIndexStr = wordEl.dataset.sentenceIndex;
-      const sentenceIndex = sentenceIndexStr ? Number.parseInt(sentenceIndexStr, 10) : undefined;
-      const contextTranslation =
-        sentenceIndex === undefined ? undefined : translationSentences[sentenceIndex];
+      const charIndex = parseDatasetIndex(wordEl.dataset.offset);
+      const sentenceIndex = parseDatasetIndex(wordEl.dataset.sentenceIndex);
+      const contextTranslation = getSentenceTranslation(translationSentences, sentenceIndex);
 
       const tokenInfo = findBaseForm(clickedWord, charIndex);
-      const query = tokenInfo?.base || clickedWord;
+      const baseForm = tokenInfo?.base;
+      const query = baseForm ?? clickedWord;
 
-      const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
-      const fallbackMeaning =
-        vocabMatch?.meaning || labels.dashboard?.common?.noMeaning || 'No meaning';
+      const vocabMatch = lookupInVocabList(query) ?? lookupInVocabList(clickedWord);
+      const fallbackMeaning = resolveLookupFallbackMeaning(
+        vocabMatch?.meaning,
+        moduleText.noMeaning
+      );
 
       const requestId = dictionaryRequestRef.current + 1;
       dictionaryRequestRef.current = requestId;
@@ -1152,9 +2043,9 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
 
       setSelectedWord({
         word: clickedWord,
-        lemma: tokenInfo?.base,
-        meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || 'Looking up...',
-        baseForm: tokenInfo?.base,
+        lemma: baseForm,
+        meaning: resolveLookupLoadingMeaning(vocabMatch?.meaning, moduleText.loading),
+        baseForm,
         grammarMatches: [],
         contextTranslation,
         position,
@@ -1166,11 +2057,15 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     },
     [
       findBaseForm,
-      labels.dashboard?.common?.loading,
-      labels.dashboard?.common?.noMeaning,
       lookupInVocabList,
+      moduleText.loading,
+      moduleText.noMeaning,
       normalizeLookupWordCb,
+      parseDatasetIndex,
+      getSentenceTranslation,
       translationSentences,
+      resolveLookupFallbackMeaning,
+      resolveLookupLoadingMeaning,
       performDictionaryLookup,
     ]
   );
@@ -1348,488 +2243,78 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     setAiInput('');
   };
 
+  const handleCompleteUnit = useCallback(async () => {
+    if (completingUnit) return;
+    try {
+      setCompletingUnit(true);
+      await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
+      flushReadingTime(true);
+      notify.success(moduleText.lessonLearned);
+    } catch (error) {
+      console.error('Failed to mark unit complete:', error);
+    } finally {
+      setCompletingUnit(false);
+    }
+  }, [
+    completingUnit,
+    completeUnitMutation,
+    courseId,
+    selectedUnitIndex,
+    flushReadingTime,
+    moduleText.lessonLearned,
+  ]);
+
   return (
     <div className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col overflow-x-hidden bg-zinc-100 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-slate-950 dark:bg-[radial-gradient(rgba(148,163,184,0.20)_1px,transparent_1px)] dark:bg-[length:20px_20px]">
-      {/* Loading State */}
       {isLoading && <ListeningModuleSkeleton />}
-
-      {/* Error State */}
-      {error && !isLoading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <p className="font-bold mb-4">
-              {labels.dashboard?.common?.error || 'Failed to load. Please try again.'}
-            </p>
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={onBack}
-              className="px-4 py-2 bg-primary text-white rounded-lg font-bold"
-            >
-              {labels.dashboard?.common?.back || 'Back'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content - only show when loaded */}
+      {error && !isLoading && <ReadingErrorState labels={labels} onBack={onBack} />}
       {!isLoading && !error && (
-        <>
-          {/* Header */}
-          <header className="bg-card dark:bg-slate-900 border-b-2 border-foreground px-3 sm:px-6 py-3 shrink-0">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              {/* Left: Back + Title */}
-              <div className="flex items-center gap-3 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  onClick={onBack}
-                  className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <h1 className="font-black text-base sm:text-lg truncate">
-                  {unitData?.title || unitTitle}
-                </h1>
-              </div>
-
-              {/* Middle: Unit + Article controls */}
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <div className="relative w-full sm:w-auto">
-                  <Select
-                    value={selectedUnitIndex}
-                    onChange={e => setSelectedUnitIndex(Number(e.target.value))}
-                    className="!h-auto w-full sm:w-auto !px-4 !py-2 !pr-8 !bg-lime-300 dark:!bg-slate-700 dark:hover:!bg-slate-600 dark:!text-slate-100 !border-2 !border-foreground !rounded-lg font-bold text-sm cursor-pointer hover:!bg-lime-400 transition-colors appearance-none !shadow-none"
-                  >
-                    {selectableUnitIndices.map((idx: number) => (
-                      <option key={idx} value={idx}>
-                        📖 {formatLessonLabel(idx)}
-                      </option>
-                    ))}
-                  </Select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
-                </div>
-
-                {articles.length > 1 && (
-                  <div className="flex flex-wrap bg-card border-2 border-foreground rounded-lg overflow-hidden">
-                    {articles.map(article => {
-                      const articleIndex = article.articleIndex ?? 1;
-                      return (
-                        <Button
-                          variant="ghost"
-                          size="auto"
-                          key={articleIndex}
-                          onClick={() => setActiveArticleIndex(articleIndex)}
-                          className={`px-3 py-2 font-bold text-xs text-foreground transition-colors border-r-2 border-foreground last:border-r-0 ${
-                            activeArticleIndex === article.articleIndex
-                              ? 'bg-primary text-white'
-                              : 'hover:bg-muted'
-                          }`}
-                        >
-                          {(labels.dashboard?.reading?.article || 'Article').replace(
-                            '{index}',
-                            articleIndex.toString()
-                          )}{' '}
-                          {articleIndex}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {grammarList.length > 0 && (
-                  <span className="hidden sm:inline-block px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs">
-                    {(labels.dashboard?.reading?.grammarCount || '{count} grammar points').replace(
-                      '{count}',
-                      grammarList.length.toString()
-                    )}
-                  </span>
-                )}
-              </div>
-
-              {/* Right: Settings */}
-              <div className="self-end md:self-auto relative">
-                <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="auto"
-                      type="button"
-                      className="w-10 h-10 bg-card border-2 border-foreground rounded-lg flex items-center justify-center hover:bg-muted active:translate-x-0.5 active:translate-y-0.5 shadow-[3px_3px_0px_0px_#18181B] active:shadow-none transition-all"
-                    >
-                      <Settings className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent unstyled className="absolute right-0 top-full mt-2 z-50">
-                    <SettingsPanel
-                      fontSize={fontSize}
-                      isSerif={isSerif}
-                      onFontSizeChange={setFontSize}
-                      onSerifToggle={() => setIsSerif(!isSerif)}
-                      onClose={() => setShowSettings(false)}
-                      language={language}
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </header>
-
-          {/* Main Content: Split Screen */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Left: Reader Panel (65% desktop, full width mobile) */}
-            <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-3 sm:p-4 md:p-8">
-              <div
-                ref={readerRef}
-                className={`bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] dark:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.22)] p-4 sm:p-6 md:p-8 max-w-full sm:max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
-                style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
-                aria-label={labels.dashboard?.reading?.readerLabel || 'Article reader'}
-              >
-                <h2 className="text-2xl font-black mb-6 text-foreground">
-                  {unitData?.title || labels.dashboard?.reading?.noArticles || 'No article'}
-                </h2>
-                <div className="text-muted-foreground leading-loose break-words">
-                  {unitData?.readingText ? (
-                    renderContent(unitData.readingText)
-                  ) : (
-                    <p className="text-muted-foreground">
-                      {labels.dashboard?.reading?.noContent || 'No content'}
-                    </p>
-                  )}
-                </div>
-
-                {/* Translation Toggle */}
-                {unitData?.translation && (
-                  <div className="mt-8 pt-6 border-t-2 border-border">
-                    <details className="group">
-                      <summary className="cursor-pointer font-bold text-sm text-muted-foreground hover:text-muted-foreground flex items-center gap-2">
-                        <Languages className="w-4 h-4" />
-                        {labels.dashboard?.reading?.showTranslation || 'Show translation'}
-                        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                      </summary>
-                      <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground whitespace-pre-wrap">
-                        {getLocalizedContent(unitData, 'translation', language)}
-                      </div>
-                    </details>
-                  </div>
-                )}
-
-                {/* Complete Unit Button */}
-                <div className="mt-8 pt-6 border-t-2 border-border flex justify-center">
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    onClick={async () => {
-                      if (completingUnit) return;
-                      try {
-                        setCompletingUnit(true);
-                        await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
-                        flushReadingTime(true);
-                        // Show success feedback
-                        notify.success(labels.dashboard?.reading?.learned || '🎉 Lesson completed!');
-                      } catch (e) {
-                        console.error('Failed to mark unit complete:', e);
-                      } finally {
-                        setCompletingUnit(false);
-                      }
-                    }}
-                    disabled={completingUnit}
-                    loading={completingUnit}
-                    loadingText={`✅ ${labels.dashboard?.reading?.completeLesson || 'Complete lesson'}`}
-                    loadingIconClassName="w-4 h-4"
-                    className="px-8 py-3 bg-lime-300 border-2 border-foreground rounded-xl font-bold text-sm hover:bg-lime-400 shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
-                  >
-                    ✅ {labels.dashboard?.reading?.completeLesson || 'Complete lesson'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Study Hub (35% - hidden on mobile) */}
-            <div className="hidden md:flex w-[35%] bg-card dark:bg-slate-900 flex-col overflow-hidden">
-              {/* Tabs */}
-              <div className="flex border-b-2 border-foreground shrink-0">
-                {(
-                  [
-                    {
-                      key: 'grammar',
-                      label: labels.dashboard?.reading?.grammar || 'Grammar points',
-                      icon: Sparkles,
-                    },
-                    {
-                      key: 'notes',
-                      label: labels.dashboard?.reading?.note || 'Notes',
-                      icon: PenLine,
-                    },
-                    {
-                      key: 'ai',
-                      label: labels.dashboard?.reading?.aiAssistant || 'AI tutor',
-                      icon: MessageSquare,
-                    },
-                  ] as const
-                ).map(tab => (
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 font-bold text-sm text-foreground border-r-2 border-foreground last:border-r-0 transition-colors ${
-                      activeTab === tab.key
-                        ? 'bg-lime-300 dark:bg-slate-700 dark:text-slate-100'
-                        : 'bg-card hover:bg-muted'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {activeTab === 'notes' && (
-                  <div className="space-y-3">
-                    {notes.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">
-                        <PenLine className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="font-bold">
-                          {labels.dashboard?.reading?.noNotes || 'No notes'}
-                        </p>
-                        <p className="text-xs">
-                          {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
-                        </p>
-                      </div>
-                    ) : (
-                      notes.map(note => (
-                        <div
-                          key={note.id}
-                          className="bg-card border-2 border-foreground rounded-lg p-3 cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_#18181B] transition-all"
-                          style={{
-                            borderLeftColor: HIGHLIGHT_COLORS[note.color],
-                            borderLeftWidth: 4,
-                          }}
-                        >
-                          <p className="font-bold text-sm text-foreground mb-1 underline decoration-wavy decoration-amber-500">
-                            {note.text}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{note.comment}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'grammar' && (
-                  <div className="space-y-3">
-                    {grammarList.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">
-                        <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="font-bold">
-                          {labels.dashboard?.reading?.noGrammar || 'No grammar in this lesson'}
-                        </p>
-                        <p className="text-xs">
-                          {labels.dashboard?.reading?.addGrammar || 'Please add grammar for this lesson first'}
-                        </p>
-                      </div>
-                    ) : (
-                      grammarList.map((grammar: GrammarItem) => (
-                        <div
-                          key={grammar.id}
-                          className="bg-card border-2 border-foreground rounded-lg p-4 shadow-[2px_2px_0px_0px_#18181B]"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
-                              {grammar.type || 'Grammar'}
-                            </span>
-                            <h4 className="font-bold text-foreground">{grammar.title}</h4>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{grammar.summary}</p>
-                          {grammar.explanation && (
-                            <details className="mt-2">
-                              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-muted-foreground">
-                                {labels.dashboard?.reading?.viewExplanation || 'View detailed explanation'}
-                              </summary>
-                              <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
-                                {grammar.explanation}
-                              </p>
-                            </details>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'ai' && (
-                  <div className="flex flex-col h-full">
-                    <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
-                      {aiMessages.map(msg => (
-                        <div
-                          key={`ai-msg-${msg.role}-${msg.content.slice(0, 20)}`}
-                          className={`p-3 rounded-lg border-2 border-foreground ${
-                            msg.role === 'user'
-                              ? 'bg-lime-100 dark:bg-lime-900/30 ml-8'
-                              : 'bg-card dark:bg-slate-800 mr-8'
-                          }`}
-                        >
-                          <p className="text-sm">{msg.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      <Input
-                        type="text"
-                        value={aiInput}
-                        onChange={e => setAiInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && sendAiMessage()}
-                        placeholder={labels.dashboard?.reading?.placeholder || 'Ask a grammar question...'}
-                        className="flex-1 !h-auto !px-4 !py-2 !border-2 !border-foreground !rounded-lg font-bold text-sm focus-visible:shadow-[2px_2px_0px_0px_#18181B] outline-none !shadow-none"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="auto"
-                        onClick={sendAiMessage}
-                        className="px-4 py-2 bg-lime-300 border-2 border-foreground rounded-lg font-bold hover:bg-lime-400 active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none transition-all"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Popovers */}
-          {selectedWord && (
-            <FlashcardPopover
-              word={selectedWord.word}
-              lemma={selectedWord.lemma}
-              meaning={selectedWord.meaning}
-              contextTranslation={selectedWord.contextTranslation}
-              grammarMatches={selectedWord.grammarMatches}
-              position={selectedWord.position}
-              onClose={() => setSelectedWord(null)}
-              onSave={() => saveWordToVocab(selectedWord.word, selectedWord.meaning)}
-              onSpeak={() => speak(selectedWord.word)}
-              language={language}
-            />
-          )}
-
-          {selectionToolbar && (
-            <div data-popover>
-              <SelectionToolbar
-                position={selectionToolbar.position}
-                onTranslate={() => {
-                  notify.info(`Translate：${selectionToolbar.text}`);
-                  setSelectionToolbar(null);
-                }}
-                onSpeak={() => {
-                  speak(selectionToolbar.text);
-                  setSelectionToolbar(null);
-                }}
-                onNote={() => {
-                  setNoteModal({
-                    text: selectionToolbar.text,
-                    startOffset: 0,
-                    endOffset: 0,
-                  });
-                  setSelectionToolbar(null);
-                }}
-                onHighlight={addHighlight}
-                language={language}
-              />
-            </div>
-          )}
-
-          {noteModal && (
-            <NoteInputModal
-              selectedText={noteModal.text}
-              onSave={saveNote}
-              onClose={() => setNoteModal(null)}
-              language={language}
-            />
-          )}
-
-          {/* Mobile: Floating Action Button for Study Hub */}
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setMobileSheetOpen(true)}
-            className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-lime-400 border-2 border-foreground rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_#18181B] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
-          >
-            <Menu className="w-6 h-6 text-foreground" />
-          </Button>
-
-          {/* Mobile: Bottom Sheet for Study Hub */}
-          <BottomSheet
-            isOpen={mobileSheetOpen}
-            onClose={() => setMobileSheetOpen(false)}
-            title={labels.dashboard?.reading?.studyTool || 'Study tools'}
-            height="half"
-          >
-            {/* Mobile Tabs */}
-            <div className="flex border-b border-border mb-4 -mx-5 px-5">
-              {(
-                [
-                  {
-                    key: 'grammar',
-                    label: labels.dashboard?.reading?.grammar || 'Grammar',
-                    icon: Sparkles,
-                  },
-                  { key: 'notes', label: labels.dashboard?.reading?.note || 'Notes', icon: PenLine },
-                ] as const
-              ).map(tab => (
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-bold transition-colors border-b-2 -mb-[2px] ${
-                    activeTab === tab.key
-                      ? 'border-lime-500 text-lime-600'
-                      : 'border-transparent text-muted-foreground'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </Button>
-              ))}
-            </div>
-
-            {/* Mobile Content */}
-
-            {activeTab === 'grammar' && (
-              <div className="space-y-2">
-                {grammarList.slice(0, 5).map((g: GrammarItem) => (
-                  <div key={g.id} className="p-3 bg-muted rounded-lg">
-                    <div className="font-bold text-foreground">{g.title}</div>
-                    <div className="text-sm text-muted-foreground">{g.explanation}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {activeTab === 'notes' && (
-              <div className="space-y-2">
-                {notes.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    {labels.dashboard?.reading?.selectedText || 'Select text to add a note'}
-                  </p>
-                ) : (
-                  notes.map(note => (
-                    <div
-                      key={note.id}
-                      className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400"
-                    >
-                      <div className="font-bold text-sm">{note.text}</div>
-                      <div className="text-xs text-muted-foreground">{note.comment}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </BottomSheet>
-        </>
+        <ReadingLoadedContent
+          labels={labels}
+          onBack={onBack}
+          unitTitle={unitTitle}
+          unitData={unitData}
+          selectedUnitIndex={selectedUnitIndex}
+          selectableUnitIndices={selectableUnitIndices}
+          formatLessonLabel={formatLessonLabel}
+          setSelectedUnitIndex={setSelectedUnitIndex}
+          articles={articles}
+          activeArticleIndex={activeArticleIndex}
+          setActiveArticleIndex={setActiveArticleIndex}
+          grammarList={grammarList}
+          showSettings={showSettings}
+          setShowSettings={setShowSettings}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          isSerif={isSerif}
+          setIsSerif={setIsSerif}
+          readerRef={readerRef}
+          renderContent={renderContent}
+          language={language}
+          completingUnit={completingUnit}
+          onCompleteUnit={() => {
+            void handleCompleteUnit();
+          }}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          notes={notes}
+          aiMessages={aiMessages}
+          aiInput={aiInput}
+          setAiInput={setAiInput}
+          sendAiMessage={sendAiMessage}
+          selectedWord={selectedWord}
+          setSelectedWord={setSelectedWord}
+          saveWordToVocab={saveWordToVocab}
+          speak={speak}
+          selectionToolbar={selectionToolbar}
+          setSelectionToolbar={setSelectionToolbar}
+          setNoteModal={setNoteModal}
+          addHighlight={addHighlight}
+          noteModal={noteModal}
+          saveNote={saveNote}
+          mobileSheetOpen={mobileSheetOpen}
+          setMobileSheetOpen={setMobileSheetOpen}
+        />
       )}
     </div>
   );

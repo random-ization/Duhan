@@ -37,7 +37,7 @@ const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 export default function VideoManager() {
   // Convex hooks
   type VideoRow = Omit<VideoLesson, 'id'> & { _id: string };
-  const videoRows = useQuery(qRef<NoArgs, VideoRow[]>('videos:list'));
+  const videoRows = useQuery(qRef<NoArgs, VideoRow[]>('videos:listAdmin'));
   const videos = useMemo<VideoLesson[]>(
     () => (videoRows ?? []).map(v => ({ ...v, id: v._id })),
     [videoRows]
@@ -384,13 +384,11 @@ export default function VideoManager() {
                   {formatDuration(video.duration)}
                 </div>
                 <div
-                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                    (() => {
-                      if (video.level === 'Beginner') return 'bg-green-100 text-green-700';
-                      if (video.level === 'Intermediate') return 'bg-yellow-100 text-yellow-700';
-                      return 'bg-red-100 text-red-700';
-                    })()
-                  }`}
+                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${(() => {
+                    if (video.level === 'Beginner') return 'bg-green-100 text-green-700';
+                    if (video.level === 'Intermediate') return 'bg-yellow-100 text-yellow-700';
+                    return 'bg-red-100 text-red-700';
+                  })()}`}
                 >
                   {video.level}
                 </div>
@@ -455,7 +453,9 @@ export default function VideoManager() {
 
             <div className="p-6 space-y-6">
               <div>
-                <label htmlFor="video-title" className="block text-sm font-bold text-zinc-700 mb-2">视频标题 *</label>
+                <label htmlFor="video-title" className="block text-sm font-bold text-zinc-700 mb-2">
+                  视频标题 *
+                </label>
                 <input
                   id="video-title"
                   type="text"
@@ -467,7 +467,9 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label htmlFor="video-desc" className="block text-sm font-bold text-zinc-700 mb-2">视频简介</label>
+                <label htmlFor="video-desc" className="block text-sm font-bold text-zinc-700 mb-2">
+                  视频简介
+                </label>
                 <textarea
                   id="video-desc"
                   value={description}
@@ -479,7 +481,9 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label htmlFor="video-level" className="block text-sm font-bold text-zinc-700 mb-2">难度等级 *</label>
+                <label htmlFor="video-level" className="block text-sm font-bold text-zinc-700 mb-2">
+                  难度等级 *
+                </label>
                 <select
                   id="video-level"
                   value={level}
@@ -539,7 +543,12 @@ export default function VideoManager() {
               </div>
 
               <div>
-                <label htmlFor="video-thumbnail" className="block text-sm font-bold text-zinc-700 mb-2">封面图片</label>
+                <label
+                  htmlFor="video-thumbnail"
+                  className="block text-sm font-bold text-zinc-700 mb-2"
+                >
+                  封面图片
+                </label>
                 <input
                   id="video-thumbnail"
                   ref={thumbnailInputRef}

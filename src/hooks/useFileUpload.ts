@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
+import { uploadFileToStorage } from '../utils/storageUpload';
 
 interface UploadResult {
   url: string;
@@ -12,44 +13,20 @@ export const useFileUpload = () => {
   // Use S3-compatible storage (DigitalOcean Spaces) via convex/storage.ts
   const getUploadUrl = useAction(
     aRef<
-      { filename: string; contentType: string; folder?: string },
-      { uploadUrl: string; publicUrl: string; headers: Record<string, string> }
+      { filename: string; contentType: string; fileSize: number; folder?: string },
+      { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
     >('storage:getUploadUrl')
   );
 
   const uploadFile = async (file: File, folder: string = 'uploads'): Promise<UploadResult> => {
     setUploading(true);
     try {
-      // Validate input
-      if (!file) {
-        throw new Error('No file provided');
-      }
-      if (file.size === 0) {
-        throw new Error('File is empty');
-      }
-
-      // 1. Get presigned URL and public URL from backend
-      const { uploadUrl, publicUrl, headers } = await getUploadUrl({
-        filename: file.name,
-        contentType: file.type,
+      const { url } = await uploadFileToStorage({
+        file,
         folder,
+        getUploadUrl,
       });
-
-      // 2. Upload file directly to S3/Spaces
-      const result = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: headers, // Important: Include signed headers
-        body: file,
-      });
-
-      if (!result.ok) {
-        throw new Error(`Upload failed: ${result.status} ${result.statusText}`);
-      }
-
-      // 3. Return the public access URL
-      // Note: S3 uploads don't return a storageId in the same way Convex storage does.
-      // We return the direct URL.
-      return { url: publicUrl };
+      return { url };
     } catch (error) {
       console.error('File upload error:', error);
       // Re-throw with more context

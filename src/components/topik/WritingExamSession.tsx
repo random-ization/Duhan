@@ -57,6 +57,7 @@ const MAX_LENGTH: Record<number, number> = {
   54: 700,
 };
 const WARNING_SECONDS = 5 * 60; // 5 minutes
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -396,6 +397,328 @@ const QuestionPrompt: React.FC<QuestionPromptProps> = ({
   );
 };
 
+type WritingTranslationFn = ReturnType<typeof useTranslation>['t'];
+
+function getSaveStatusClass(saveStatus: SaveStatus): string {
+  if (saveStatus === 'saving') return 'text-amber-500';
+  if (saveStatus === 'saved') return 'text-emerald-600 dark:text-emerald-400';
+  if (saveStatus === 'error') return 'text-destructive';
+  return 'text-muted-foreground';
+}
+
+function getSaveStatusText(saveStatus: SaveStatus, t: WritingTranslationFn): string {
+  if (saveStatus === 'saving') {
+    return t('topikWriting.session.saving', { defaultValue: 'Saving...' });
+  }
+  if (saveStatus === 'saved') {
+    return t('topikWriting.session.saved', { defaultValue: '✓ Saved' });
+  }
+  if (saveStatus === 'error') {
+    return t('topikWriting.session.saveError', { defaultValue: 'Save Failed' });
+  }
+  return t('topikWriting.session.saveIdle', { defaultValue: 'Auto-save' });
+}
+
+const SessionHeader: React.FC<{
+  t: WritingTranslationFn;
+  questions: WritingQuestion[];
+  activeQuestion: number;
+  localAnswers: Record<number, string>;
+  answeredCount: number;
+  totalScore: number;
+  saveStatus: SaveStatus;
+  remainingMs: number;
+  isSubmitting: boolean;
+  isExiting: boolean;
+  onSelectQuestion: (questionNumber: number) => void;
+  onRequestExit: () => void;
+  onRequestSubmit: () => void;
+}> = ({
+  t,
+  questions,
+  activeQuestion,
+  localAnswers,
+  answeredCount,
+  totalScore,
+  saveStatus,
+  remainingMs,
+  isSubmitting,
+  isExiting,
+  onSelectQuestion,
+  onRequestExit,
+  onRequestSubmit,
+}) => (
+  <header className="flex items-center justify-between px-6 py-3 border-b-2 border-border bg-card shrink-0 gap-4">
+    <div className="flex items-center gap-3">
+      <div className="font-black text-foreground text-base">
+        {t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+      </div>
+      <div className="text-xs text-muted-foreground font-bold bg-muted px-2 py-1 rounded-md">
+        {answeredCount}/{questions.length} · {totalScore}{' '}
+        {t('topikWriting.session.points', { defaultValue: 'pts' })}
+      </div>
+    </div>
+
+    <div className="flex items-center gap-2">
+      {questions.map(question => (
+        <QuestionTab
+          key={question.number}
+          number={question.number}
+          isActive={question.number === activeQuestion}
+          hasContent={hasMeaningfulContent(question.number, localAnswers[question.number] ?? '')}
+          onClick={() => onSelectQuestion(question.number)}
+        />
+      ))}
+    </div>
+
+    <div className="flex items-center gap-3">
+      <div className={cn('text-[11px] font-bold transition-all', getSaveStatusClass(saveStatus))}>
+        {getSaveStatusText(saveStatus, t)}
+      </div>
+
+      <Timer remainingMs={remainingMs} />
+
+      <button
+        type="button"
+        onClick={onRequestExit}
+        disabled={isSubmitting || isExiting}
+        className={cn(
+          'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
+          'bg-card text-muted-foreground border-border',
+          'hover:bg-muted active:scale-95',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+      >
+        <LogOut size={14} />
+        {t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+      </button>
+
+      <button
+        type="button"
+        onClick={onRequestSubmit}
+        disabled={isSubmitting || isExiting}
+        className={cn(
+          'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
+          'bg-primary text-primary-foreground border-primary',
+          'hover:opacity-90 active:scale-95',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+      >
+        <Send size={14} />
+        {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
+      </button>
+    </div>
+  </header>
+);
+
+const SubmitConfirmDialog: React.FC<{
+  open: boolean;
+  t: WritingTranslationFn;
+  answeredCount: number;
+  totalQuestions: number;
+  isSubmitting: boolean;
+  isExiting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}> = ({ open, t, answeredCount, totalQuestions, isSubmitting, isExiting, onCancel, onConfirm }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-card rounded-2xl border-2 border-border p-8 shadow-2xl max-w-md w-full mx-4 space-y-5">
+        <div className="flex items-center gap-3">
+          <AlertTriangle size={28} className="text-amber-500 shrink-0" />
+          <div>
+            <h3 className="font-black text-foreground text-lg">
+              {t('topikWriting.session.submitConfirmTitle', { defaultValue: 'Submit Exam?' })}
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              {t('topikWriting.session.submitConfirmDesc', {
+                ans: answeredCount,
+                total: totalQuestions,
+                defaultValue: `Answered ${answeredCount}/${totalQuestions} questions. You cannot change your answers after submitting.`,
+              })}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
+          >
+            {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting || isExiting}
+            className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-sm hover:opacity-90 transition disabled:opacity-50"
+          >
+            {isSubmitting
+              ? t('topikWriting.session.submitting', { defaultValue: 'Submitting...' })
+              : t('topikWriting.session.confirmSubmit', { defaultValue: 'Confirm Submit' })}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExitConfirmDialog: React.FC<{
+  open: boolean;
+  t: WritingTranslationFn;
+  isSubmitting: boolean;
+  isExiting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}> = ({ open, t, isSubmitting, isExiting, onCancel, onConfirm }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-card rounded-2xl border-2 border-border p-8 shadow-2xl max-w-md w-full mx-4 space-y-5">
+        <div className="flex items-center gap-3">
+          <AlertTriangle size={28} className="text-amber-500 shrink-0" />
+          <div>
+            <h3 className="font-black text-foreground text-lg">
+              {t('topikWriting.session.exitConfirmTitle', { defaultValue: 'Exit Exam?' })}
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              {t('topikWriting.session.exitConfirmDesc', {
+                defaultValue:
+                  'Your current answers will be saved as a draft. You can return later to continue this exam.',
+              })}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
+          >
+            {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting || isExiting}
+            className="flex-1 py-2.5 rounded-xl bg-card border-2 border-border text-foreground font-black text-sm hover:bg-muted transition disabled:opacity-50"
+          >
+            {isExiting
+              ? t('topikWriting.session.exiting', { defaultValue: 'Exiting...' })
+              : t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WritingSessionBody: React.FC<{
+  t: WritingTranslationFn;
+  currentQuestion: WritingQuestion | undefined;
+  isDualFillQuestion: boolean;
+  isImageOnlyPromptQuestion: boolean;
+  localAnswers: Record<number, string>;
+  onAnswerChange: (questionNumber: number, text: string) => void;
+}> = ({
+  t,
+  currentQuestion,
+  isDualFillQuestion,
+  isImageOnlyPromptQuestion,
+  localAnswers,
+  onAnswerChange,
+}) => {
+  if (!currentQuestion) return null;
+
+  const maxLength = MAX_LENGTH[currentQuestion.number] ?? 200;
+
+  if (isDualFillQuestion) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-muted/20 p-4 md:p-6 xl:p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <section className="rounded-2xl border-2 border-border bg-card p-4 md:p-6 shadow-sm">
+            <div className="flex items-center gap-3 flex-wrap mb-4">
+              <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg font-black text-sm">
+                {t('topikWriting.session.questionX', {
+                  num: currentQuestion.number,
+                  defaultValue: `Question ${currentQuestion.number}`,
+                })}
+              </div>
+              <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border">
+                {currentQuestion.score} {t('topikWriting.session.points', { defaultValue: 'pts' })}
+              </div>
+            </div>
+            <QuestionPrompt
+              question={currentQuestion}
+              hideTextContent={isImageOnlyPromptQuestion}
+              hideMetaHeader
+            />
+          </section>
+
+          <section className="rounded-2xl border-2 border-border bg-background p-4 md:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-sm text-foreground uppercase tracking-wide">
+                {t('topikWriting.session.answerArea', { defaultValue: 'Answer Area' })}
+              </h3>
+              <span className="text-xs text-muted-foreground font-medium">
+                {t('topikWriting.session.maxLength', {
+                  count: maxLength,
+                  defaultValue: `Max ${maxLength} chars`,
+                })}
+              </span>
+            </div>
+            <DualFillBlankInputs
+              value={localAnswers[currentQuestion.number] ?? ''}
+              onChange={text => onAnswerChange(currentQuestion.number, text)}
+              maxLength={maxLength}
+            />
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-0">
+      <div className="xl:col-span-5 bg-muted/30 border-r-2 border-border overflow-y-auto p-4 md:p-6 xl:p-8 flex flex-col gap-6">
+        <QuestionPrompt question={currentQuestion} />
+      </div>
+
+      <div className="xl:col-span-7 bg-background overflow-y-auto p-4 md:p-6 xl:p-8 relative">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-black text-sm text-foreground uppercase tracking-wide">
+            {WONGOJI_QUESTIONS.has(currentQuestion.number)
+              ? t('topikWriting.session.wongojiAnswer', { defaultValue: 'Wongoji Answer' })
+              : t('topikWriting.session.answerArea', { defaultValue: 'Answer Area' })}
+          </h3>
+          <span className="text-xs text-muted-foreground font-medium">
+            {t('topikWriting.session.maxLength', {
+              count: MAX_LENGTH[currentQuestion.number] ?? 600,
+              defaultValue: `Max ${MAX_LENGTH[currentQuestion.number] ?? 600} chars`,
+            })}
+          </span>
+        </div>
+
+        {WONGOJI_QUESTIONS.has(currentQuestion.number) ? (
+          <WongojiEditor
+            value={localAnswers[currentQuestion.number] ?? ''}
+            onChange={text => onAnswerChange(currentQuestion.number, text)}
+            maxLength={MAX_LENGTH[currentQuestion.number] ?? 600}
+            className="flex-1"
+          />
+        ) : (
+          <FillBlankTextarea
+            value={localAnswers[currentQuestion.number] ?? ''}
+            onChange={text => onAnswerChange(currentQuestion.number, text)}
+            maxLength={MAX_LENGTH[currentQuestion.number] ?? 200}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
@@ -428,7 +751,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasAutoSubmitted = useRef(false);
@@ -572,263 +895,54 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans">
-      {/* ── Navbar ── */}
-      <header className="flex items-center justify-between px-6 py-3 border-b-2 border-border bg-card shrink-0 gap-4">
-        {/* Left: exam info */}
-        <div className="flex items-center gap-3">
-          <div className="font-black text-foreground text-base">
-            {t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
-          </div>
-          <div className="text-xs text-muted-foreground font-bold bg-muted px-2 py-1 rounded-md">
-            {answeredCount}/{questions.length} · {totalScore}{' '}
-            {t('topikWriting.session.points', { defaultValue: 'pts' })}
-          </div>
-        </div>
+      <SessionHeader
+        t={t}
+        questions={questions}
+        activeQuestion={activeQuestion}
+        localAnswers={localAnswers}
+        answeredCount={answeredCount}
+        totalScore={totalScore}
+        saveStatus={saveStatus}
+        remainingMs={remainingMs}
+        isSubmitting={isSubmitting}
+        isExiting={isExiting}
+        onSelectQuestion={setActiveQuestion}
+        onRequestExit={() => setShowExitConfirm(true)}
+        onRequestSubmit={() => setShowConfirm(true)}
+      />
 
-        {/* Center: question navigator */}
-        <div className="flex items-center gap-2">
-          {questions.map(q => (
-            <QuestionTab
-              key={q.number}
-              number={q.number}
-              isActive={q.number === activeQuestion}
-              hasContent={hasMeaningfulContent(q.number, localAnswers[q.number] ?? '')}
-              onClick={() => setActiveQuestion(q.number)}
-            />
-          ))}
-        </div>
+      <SubmitConfirmDialog
+        open={showConfirm}
+        t={t}
+        answeredCount={answeredCount}
+        totalQuestions={questions.length}
+        isSubmitting={isSubmitting}
+        isExiting={isExiting}
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={() => {
+          void handleSubmit(true);
+        }}
+      />
 
-        {/* Right: timer + save status + submit */}
-        <div className="flex items-center gap-3">
-          {/* Auto-save indicator */}
-          <div
-            className={cn(
-              'text-[11px] font-bold transition-all',
-              saveStatus === 'saving'
-                ? 'text-amber-500'
-                : saveStatus === 'saved'
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : saveStatus === 'error'
-                    ? 'text-destructive'
-                    : 'text-muted-foreground'
-            )}
-          >
-            {saveStatus === 'saving'
-              ? t('topikWriting.session.saving', { defaultValue: 'Saving...' })
-              : saveStatus === 'saved'
-                ? t('topikWriting.session.saved', { defaultValue: '✓ Saved' })
-                : saveStatus === 'error'
-                  ? t('topikWriting.session.saveError', { defaultValue: 'Save Failed' })
-                  : t('topikWriting.session.saveIdle', { defaultValue: 'Auto-save' })}
-          </div>
+      <ExitConfirmDialog
+        open={showExitConfirm}
+        t={t}
+        isSubmitting={isSubmitting}
+        isExiting={isExiting}
+        onCancel={() => setShowExitConfirm(false)}
+        onConfirm={() => {
+          void handleExit();
+        }}
+      />
 
-          <Timer remainingMs={remainingMs} />
-
-          <button
-            type="button"
-            onClick={() => setShowExitConfirm(true)}
-            disabled={isSubmitting || isExiting}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
-              'bg-card text-muted-foreground border-border',
-              'hover:bg-muted active:scale-95',
-              'disabled:opacity-50 disabled:cursor-not-allowed'
-            )}
-          >
-            <LogOut size={14} />
-            {t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            disabled={isSubmitting || isExiting}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
-              'bg-primary text-primary-foreground border-primary',
-              'hover:opacity-90 active:scale-95',
-              'disabled:opacity-50 disabled:cursor-not-allowed'
-            )}
-          >
-            <Send size={14} />
-            {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
-          </button>
-        </div>
-      </header>
-
-      {/* ── Confirm dialog overlay ── */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border-2 border-border p-8 shadow-2xl max-w-md w-full mx-4 space-y-5">
-            <div className="flex items-center gap-3">
-              <AlertTriangle size={28} className="text-amber-500 shrink-0" />
-              <div>
-                <h3 className="font-black text-foreground text-lg">
-                  {t('topikWriting.session.submitConfirmTitle', { defaultValue: 'Submit Exam?' })}
-                </h3>
-                <p className="text-muted-foreground text-sm mt-1">
-                  {t('topikWriting.session.submitConfirmDesc', {
-                    ans: answeredCount,
-                    total: questions.length,
-                    defaultValue: `Answered ${answeredCount}/${questions.length} questions. You cannot change your answers after submitting.`,
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
-              >
-                {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSubmit(true)}
-                disabled={isSubmitting || isExiting}
-                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-sm hover:opacity-90 transition disabled:opacity-50"
-              >
-                {isSubmitting
-                  ? t('topikWriting.session.submitting', { defaultValue: 'Submitting...' })
-                  : t('topikWriting.session.confirmSubmit', { defaultValue: 'Confirm Submit' })}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showExitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border-2 border-border p-8 shadow-2xl max-w-md w-full mx-4 space-y-5">
-            <div className="flex items-center gap-3">
-              <AlertTriangle size={28} className="text-amber-500 shrink-0" />
-              <div>
-                <h3 className="font-black text-foreground text-lg">
-                  {t('topikWriting.session.exitConfirmTitle', {
-                    defaultValue: 'Exit Exam?',
-                  })}
-                </h3>
-                <p className="text-muted-foreground text-sm mt-1">
-                  {t('topikWriting.session.exitConfirmDesc', {
-                    defaultValue:
-                      'Your current answers will be saved as a draft. You can return later to continue this exam.',
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
-              >
-                {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleExit()}
-                disabled={isSubmitting || isExiting}
-                className="flex-1 py-2.5 rounded-xl bg-card border-2 border-border text-foreground font-black text-sm hover:bg-muted transition disabled:opacity-50"
-              >
-                {isExiting
-                  ? t('topikWriting.session.exiting', { defaultValue: 'Exiting...' })
-                  : t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Main content ── */}
-      {currentQuestion &&
-        (isDualFillQuestion ? (
-          <div className="flex-1 overflow-y-auto bg-muted/20 p-4 md:p-6 xl:p-8">
-            <div className="max-w-5xl mx-auto space-y-6">
-              <section className="rounded-2xl border-2 border-border bg-card p-4 md:p-6 shadow-sm">
-                <div className="flex items-center gap-3 flex-wrap mb-4">
-                  <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg font-black text-sm">
-                    {t('topikWriting.session.questionX', {
-                      num: currentQuestion.number,
-                      defaultValue: `Question ${currentQuestion.number}`,
-                    })}
-                  </div>
-                  <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border">
-                    {currentQuestion.score}{' '}
-                    {t('topikWriting.session.points', { defaultValue: 'pts' })}
-                  </div>
-                </div>
-                <QuestionPrompt
-                  question={currentQuestion}
-                  hideTextContent={isImageOnlyPromptQuestion}
-                  hideMetaHeader={true}
-                />
-              </section>
-
-              <section className="rounded-2xl border-2 border-border bg-background p-4 md:p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-black text-sm text-foreground uppercase tracking-wide">
-                    {t('topikWriting.session.answerArea', { defaultValue: 'Answer Area' })}
-                  </h3>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {t('topikWriting.session.maxLength', {
-                      count: MAX_LENGTH[currentQuestion.number] ?? 200,
-                      defaultValue: `Max ${MAX_LENGTH[currentQuestion.number] ?? 200} chars`,
-                    })}
-                  </span>
-                </div>
-                <DualFillBlankInputs
-                  value={localAnswers[currentQuestion.number] ?? ''}
-                  onChange={text => handleAnswerChange(currentQuestion.number, text)}
-                  maxLength={MAX_LENGTH[currentQuestion.number] ?? 200}
-                />
-              </section>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-hidden grid grid-cols-1 xl:grid-cols-12 gap-0">
-            {/* ── Left side: Prompt ── */}
-            <div className="xl:col-span-5 bg-muted/30 border-r-2 border-border overflow-y-auto p-4 md:p-6 xl:p-8 flex flex-col gap-6">
-              <QuestionPrompt question={currentQuestion} />
-            </div>
-
-            {/* ── Right side: Answer area ── */}
-            <div className="xl:col-span-7 bg-background overflow-y-auto p-4 md:p-6 xl:p-8 relative">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-black text-sm text-foreground uppercase tracking-wide">
-                  {WONGOJI_QUESTIONS.has(currentQuestion.number)
-                    ? t('topikWriting.session.wongojiAnswer', {
-                        defaultValue: 'Wongoji Answer',
-                      })
-                    : t('topikWriting.session.answerArea', {
-                        defaultValue: 'Answer Area',
-                      })}
-                </h3>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {t('topikWriting.session.maxLength', {
-                    count: MAX_LENGTH[currentQuestion.number] ?? 600,
-                    defaultValue: `Max ${MAX_LENGTH[currentQuestion.number] ?? 600} chars`,
-                  })}
-                </span>
-              </div>
-
-              {WONGOJI_QUESTIONS.has(currentQuestion.number) ? (
-                <WongojiEditor
-                  value={localAnswers[currentQuestion.number] ?? ''}
-                  onChange={text => handleAnswerChange(currentQuestion.number, text)}
-                  maxLength={MAX_LENGTH[currentQuestion.number] ?? 600}
-                  className="flex-1"
-                />
-              ) : (
-                <FillBlankTextarea
-                  value={localAnswers[currentQuestion.number] ?? ''}
-                  onChange={text => handleAnswerChange(currentQuestion.number, text)}
-                  maxLength={MAX_LENGTH[currentQuestion.number] ?? 200}
-                />
-              )}
-            </div>
-          </div>
-        ))}
+      <WritingSessionBody
+        t={t}
+        currentQuestion={currentQuestion}
+        isDualFillQuestion={isDualFillQuestion}
+        isImageOnlyPromptQuestion={isImageOnlyPromptQuestion}
+        localAnswers={localAnswers}
+        onAnswerChange={handleAnswerChange}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +34,24 @@ type CuratedArticle = {
   bookmarkText: string;
   tone: 'default' | 'warm' | 'dark';
 };
+
+type UserFeedData = {
+  news: NewsItem[];
+  articles: NewsItem[];
+  refresh: {
+    needsInitialization: boolean;
+    hasReadSinceRefresh: boolean;
+    autoRefreshEligible: boolean;
+    nextAutoRefreshAt: number | null;
+    manualRefreshLimit: number;
+    manualRefreshUsed: number;
+    manualRefreshRemaining: number;
+    lastRefreshedAt: number | null;
+    userScoped: boolean;
+  };
+};
+
+type DifficultyTranslator = (key: string, options?: Record<string, unknown>) => string;
 
 function getDifficultyChip(
   level: 'L1' | 'L2' | 'L3',
@@ -100,17 +118,402 @@ function estimateReadingMinutes(bodyText: string) {
   return Math.max(1, Math.round(length / 450));
 }
 
+function resolveFeedLanguage(language: string): 'zh' | 'en' | 'vi' | 'mn' {
+  if (language === 'zh' || language === 'en' || language === 'vi' || language === 'mn') {
+    return language;
+  }
+  return 'en';
+}
+
+function canAutoRefreshFeed(params: {
+  feedReady: boolean;
+  userId: string | undefined;
+  eligible: boolean | undefined;
+  isLocked: boolean;
+}): boolean {
+  return Boolean(params.feedReady && params.userId && params.eligible && !params.isLocked);
+}
+
+function getDifficultyFilterLabel(item: DifficultyFilter, t: DifficultyTranslator): string {
+  if (item === 'ALL') return t('readingDiscovery.filters.all', { defaultValue: 'All' });
+  if (item === 'L1') return t('readingDiscovery.filters.l1', { defaultValue: 'Beginner' });
+  if (item === 'L2') return t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' });
+  return t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' });
+}
+
+const DifficultyFilterButtons: React.FC<{
+  difficultyFilter: DifficultyFilter;
+  onSelect: (item: DifficultyFilter) => void;
+  t: DifficultyTranslator;
+}> = ({ difficultyFilter, onSelect, t }) => (
+  <>
+    {(['ALL', 'L1', 'L2', 'L3'] as DifficultyFilter[]).map(item => {
+      const selected = difficultyFilter === item;
+      return (
+        <Button
+          key={item}
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => onSelect(item)}
+          className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+            selected
+              ? 'border-foreground bg-primary text-primary-foreground'
+              : 'border-border bg-card text-muted-foreground hover:border-border'
+          }`}
+        >
+          {getDifficultyFilterLabel(item, t)}
+        </Button>
+      );
+    })}
+  </>
+);
+
+const FeaturedNewsCard: React.FC<{
+  featuredNews: NewsItem;
+  language: string;
+  t: DifficultyTranslator;
+  onOpen: (id: string) => void;
+}> = ({ featuredNews, language, t, onOpen }) => {
+  const chip = getDifficultyChip(featuredNews.difficultyLevel, t);
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={() => onOpen(featuredNews._id)}
+      className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl bg-primary p-6 text-left transition hover:-translate-y-1 hover:shadow-2xl"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-foreground/20 to-transparent" />
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="mb-16 flex items-start justify-between gap-2">
+          <span className="rounded-lg border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold text-primary-foreground">
+            {getSourceLabel(featuredNews.sourceKey)}
+          </span>
+          <span className="text-xs font-medium text-primary-foreground/80">
+            {formatRelativeTime(featuredNews.publishedAt, language)}
+          </span>
+        </div>
+        <div>
+          <span
+            className={`mb-3 inline-block rounded border px-2 py-1 text-[10px] font-bold ${chip.className}`}
+          >
+            {chip.text}
+          </span>
+          <h3 className="mb-3 text-2xl font-black leading-snug text-primary-foreground transition group-hover:text-primary-foreground/85">
+            {featuredNews.title}
+          </h3>
+          <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground/75">
+            <span>
+              {t('readingDiscovery.news.aiExtracted', {
+                defaultValue: 'AI extracted {{count}} words',
+                count: Math.max(5, Math.round(featuredNews.bodyText.length / 95)),
+              })}
+            </span>
+            <span>•</span>
+            <span>
+              {t('readingDiscovery.news.readingMinutes', {
+                defaultValue: '~{{minutes}} min read',
+                minutes: estimateReadingMinutes(featuredNews.bodyText),
+              })}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Button>
+  );
+};
+
+const SecondaryNewsCard: React.FC<{
+  item: NewsItem;
+  language: string;
+  t: DifficultyTranslator;
+  onOpen: (id: string) => void;
+}> = ({ item, language, t, onOpen }) => {
+  const chip = getDifficultyChip(item.difficultyLevel, t);
+  return (
+    <Button
+      key={item._id}
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={() => onOpen(item._id)}
+      className="group !flex !items-stretch !justify-between flex-col rounded-3xl border border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:shadow-xl"
+    >
+      <div className="mb-6 flex items-start justify-between">
+        <span className="rounded-lg border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+          {getSourceLabel(item.sourceKey)}
+        </span>
+        <span className="text-xs font-medium text-muted-foreground">
+          {formatRelativeTime(item.publishedAt, language)}
+        </span>
+      </div>
+      <div>
+        <span className="mb-3 inline-block rounded border border-border bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+          {chip.text}
+        </span>
+        <h3 className="mb-3 text-lg font-black leading-snug text-foreground transition group-hover:text-primary">
+          {item.title}
+        </h3>
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <span>
+            {t('readingDiscovery.news.aiExtracted', {
+              defaultValue: 'AI extracted {{count}} words',
+              count: Math.max(5, Math.round(item.bodyText.length / 95)),
+            })}
+          </span>
+          <span>•</span>
+          <span>
+            {t('readingDiscovery.news.readingMinutes', {
+              defaultValue: '~{{minutes}} min read',
+              minutes: estimateReadingMinutes(item.bodyText),
+            })}
+          </span>
+        </div>
+      </div>
+    </Button>
+  );
+};
+
+const LiveNewsContent: React.FC<{
+  feedReady: boolean;
+  feed: UserFeedData | undefined;
+  topNews: NewsItem[];
+  featuredNews: NewsItem | undefined;
+  secondaryNews: NewsItem[];
+  language: string;
+  t: DifficultyTranslator;
+  onOpen: (id: string) => void;
+}> = ({ feedReady, feed, topNews, featuredNews, secondaryNews, language, t, onOpen }) => {
+  if (!feedReady || feed === undefined) {
+    return (
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
+        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
+        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
+        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
+      </div>
+    );
+  }
+
+  if (topNews.length === 0) {
+    return (
+      <div className="rounded-3xl border border-border bg-card px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
+        {t('readingDiscovery.news.empty', {
+          defaultValue: 'No news available yet. Please run ingestion from admin.',
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
+      {featuredNews ? (
+        <FeaturedNewsCard featuredNews={featuredNews} language={language} t={t} onOpen={onOpen} />
+      ) : null}
+      {secondaryNews.map(item => (
+        <SecondaryNewsCard key={item._id} item={item} language={language} t={t} onOpen={onOpen} />
+      ))}
+    </div>
+  );
+};
+
+type CardTone = 'default' | 'warm' | 'dark';
+
+function getCardToneStyles(tone: CardTone) {
+  if (tone === 'dark') {
+    return {
+      baseClass: 'border-border bg-primary text-primary-foreground',
+      titleClass: 'text-primary-foreground group-hover:text-primary-foreground/85',
+      textClass: 'text-primary-foreground/75',
+      badgeClass: 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground',
+      sourceTypeClass: 'text-primary-foreground/80',
+      sourceClass: 'text-primary-foreground/75',
+      iconClass: 'border border-primary-foreground/25 bg-primary-foreground/10',
+      borderClass: 'border-border/60',
+      bookmarkClass: 'text-primary-foreground/80',
+    };
+  }
+  if (tone === 'warm') {
+    return {
+      baseClass:
+        'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25',
+      titleClass: 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300',
+      textClass: 'text-muted-foreground',
+      badgeClass:
+        'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300',
+      sourceTypeClass: 'text-muted-foreground',
+      sourceClass: 'text-muted-foreground',
+      iconClass: 'bg-card',
+      borderClass: 'border-border/70',
+      bookmarkClass: 'text-muted-foreground',
+    };
+  }
+  return {
+    baseClass: 'bg-card border-border',
+    titleClass: 'text-foreground group-hover:text-primary',
+    textClass: 'text-muted-foreground',
+    badgeClass:
+      'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300',
+    sourceTypeClass: 'text-muted-foreground',
+    sourceClass: 'text-muted-foreground',
+    iconClass: 'bg-card',
+    borderClass: 'border-border/70',
+    bookmarkClass: 'text-muted-foreground',
+  };
+}
+
+function getToneFromIndex(index: number): CardTone {
+  const tone = index % 3;
+  if (tone === 2) return 'dark';
+  if (tone === 1) return 'warm';
+  return 'default';
+}
+
+const ArticleNewsCard: React.FC<{
+  item: NewsItem;
+  tone: CardTone;
+  t: DifficultyTranslator;
+  onOpen: (id: string) => void;
+}> = ({ item, tone, t, onOpen }) => {
+  const styles = getCardToneStyles(tone);
+  const sourceTypeText = item.section || '위키백과 알찬 글';
+  return (
+    <Button
+      key={item._id}
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={() => onOpen(item._id)}
+      className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
+    >
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className={`grid h-10 w-10 place-items-center rounded-full text-xl ${styles.iconClass}`}
+        >
+          🏛️
+        </div>
+        <div>
+          <div className={`text-[11px] font-bold uppercase tracking-wider ${styles.sourceClass}`}>
+            Wikipedia
+          </div>
+          <div className={`text-sm font-bold ${styles.sourceTypeClass}`}>{sourceTypeText}</div>
+        </div>
+      </div>
+      <h3 className={`mb-3 text-2xl font-black tracking-tight transition ${styles.titleClass}`}>
+        {item.title}
+      </h3>
+      <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${styles.textClass}`}>
+        {(item.summary || item.bodyText || '').slice(0, 160)}
+      </p>
+      <div
+        className={`mt-auto flex items-center justify-between border-t pt-4 ${styles.borderClass}`}
+      >
+        <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${styles.badgeClass}`}>
+          {getDifficultyChip(item.difficultyLevel, t).text} •{' '}
+          {t('readingDiscovery.articles.typeEncyclopedia', {
+            defaultValue: 'Encyclopedia',
+          })}
+        </span>
+        <span className={`text-xs font-semibold ${styles.bookmarkClass}`}>
+          🔖 {t('readingDiscovery.articles.recommended', { defaultValue: 'Recommended' })}
+        </span>
+      </div>
+    </Button>
+  );
+};
+
+const CuratedArticleCard: React.FC<{ item: CuratedArticle }> = ({ item }) => {
+  const styles = getCardToneStyles(item.tone);
+  return (
+    <article
+      key={item.id}
+      className={`group flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
+    >
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className={`grid h-10 w-10 place-items-center rounded-full text-xl ${styles.iconClass}`}
+        >
+          {item.icon}
+        </div>
+        <div>
+          <div className={`text-[11px] font-bold uppercase tracking-wider ${styles.sourceClass}`}>
+            {item.source}
+          </div>
+          <div className={`text-sm font-bold ${styles.sourceTypeClass}`}>{item.sourceType}</div>
+        </div>
+      </div>
+      <h3 className={`mb-3 text-2xl font-black tracking-tight transition ${styles.titleClass}`}>
+        {item.title}
+        {item.subtitle ? (
+          <span className={`mt-1 block text-lg font-bold ${styles.sourceTypeClass}`}>
+            ({item.subtitle})
+          </span>
+        ) : null}
+      </h3>
+      <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${styles.textClass}`}>
+        {item.excerpt}
+      </p>
+      <div
+        className={`mt-auto flex items-center justify-between border-t pt-4 ${styles.borderClass}`}
+      >
+        <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${styles.badgeClass}`}>
+          {item.badge}
+        </span>
+        <span className={`text-xs font-semibold ${styles.bookmarkClass}`}>
+          🔖 {item.bookmarkText}
+        </span>
+      </div>
+    </article>
+  );
+};
+
+const ArchiveContent: React.FC<{
+  feedReady: boolean;
+  featuredArticles: NewsItem[] | undefined;
+  curatedArticles: CuratedArticle[];
+  t: DifficultyTranslator;
+  onOpen: (id: string) => void;
+}> = ({ feedReady, featuredArticles, curatedArticles, t, onOpen }) => {
+  if (!feedReady || featuredArticles === undefined) {
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
+        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
+        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
+      </div>
+    );
+  }
+
+  if (featuredArticles.length > 0) {
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {featuredArticles.slice(0, 6).map((item, index) => (
+          <ArticleNewsCard
+            key={item._id}
+            item={item}
+            tone={getToneFromIndex(index)}
+            t={t}
+            onOpen={onOpen}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      {curatedArticles.map(item => (
+        <CuratedArticleCard key={item.id} item={item} />
+      ))}
+    </div>
+  );
+};
+
 export default function ReadingDiscoveryPage() {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { user } = useAuth();
-  const language =
-    i18n.language === 'zh' ||
-    i18n.language === 'en' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn'
-      ? i18n.language
-      : 'en';
+  const language = resolveFeedLanguage(i18n.language);
   const userId = user?.id;
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
   const [feedReady, setFeedReady] = useState<boolean>(() => !userId);
@@ -146,26 +549,17 @@ export default function ReadingDiscoveryPage() {
   const feed = useQuery(
     NEWS.getUserFeed,
     feedReady ? { newsLimit: 24, articleLimit: 12 } : 'skip'
-  ) as
-    | {
-        news: NewsItem[];
-        articles: NewsItem[];
-        refresh: {
-          needsInitialization: boolean;
-          hasReadSinceRefresh: boolean;
-          autoRefreshEligible: boolean;
-          nextAutoRefreshAt: number | null;
-          manualRefreshLimit: number;
-          manualRefreshUsed: number;
-          manualRefreshRemaining: number;
-          lastRefreshedAt: number | null;
-          userScoped: boolean;
-        };
-      }
-    | undefined;
+  ) as UserFeedData | undefined;
 
   useEffect(() => {
-    if (!feedReady || !userId || !feed?.refresh.autoRefreshEligible || autoRefreshLockRef.current)
+    if (
+      !canAutoRefreshFeed({
+        feedReady,
+        userId,
+        eligible: feed?.refresh.autoRefreshEligible,
+        isLocked: autoRefreshLockRef.current,
+      })
+    )
       return;
     autoRefreshLockRef.current = true;
     void refreshUserFeedIfEligible({ newsLimit: 24, articleLimit: 12 })
@@ -393,149 +787,23 @@ export default function ReadingDiscoveryPage() {
                 <span className="text-[11px]">{feed?.refresh.manualRefreshRemaining ?? 0}/3</span>
               </Button>
             )}
-            {(['ALL', 'L1', 'L2', 'L3'] as DifficultyFilter[]).map(item => {
-              const selected = difficultyFilter === item;
-              const label =
-                item === 'ALL'
-                  ? t('readingDiscovery.filters.all', { defaultValue: 'All' })
-                  : item === 'L1'
-                    ? t('readingDiscovery.filters.l1', { defaultValue: 'Beginner' })
-                    : item === 'L2'
-                      ? t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' })
-                      : t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' });
-              return (
-                <Button
-                  key={item}
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setDifficultyFilter(item)}
-                  className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                    selected
-                      ? 'border-foreground bg-primary text-primary-foreground'
-                      : 'border-border bg-card text-muted-foreground hover:border-border'
-                  }`}
-                >
-                  {label}
-                </Button>
-              );
-            })}
+            <DifficultyFilterButtons
+              difficultyFilter={difficultyFilter}
+              onSelect={setDifficultyFilter}
+              t={t}
+            />
           </div>
         </div>
-
-        {!feedReady || feed === undefined ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
-            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-            <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-          </div>
-        ) : topNews.length === 0 ? (
-          <div className="rounded-3xl border border-border bg-card px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
-            {t('readingDiscovery.news.empty', {
-              defaultValue: 'No news available yet. Please run ingestion from admin.',
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
-            {featuredNews && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => navigate(`/reading/${featuredNews._id}`)}
-                className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl bg-primary p-6 text-left transition hover:-translate-y-1 hover:shadow-2xl"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-foreground/20 to-transparent" />
-                <div className="relative z-10 flex h-full flex-col justify-between">
-                  <div className="mb-16 flex items-start justify-between gap-2">
-                    <span className="rounded-lg border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold text-primary-foreground">
-                      {getSourceLabel(featuredNews.sourceKey)}
-                    </span>
-                    <span className="text-xs font-medium text-primary-foreground/80">
-                      {formatRelativeTime(featuredNews.publishedAt, language)}
-                    </span>
-                  </div>
-                  <div>
-                    {(() => {
-                      const chip = getDifficultyChip(featuredNews.difficultyLevel, t);
-                      return (
-                        <span
-                          className={`mb-3 inline-block rounded border px-2 py-1 text-[10px] font-bold ${chip.className}`}
-                        >
-                          {chip.text}
-                        </span>
-                      );
-                    })()}
-                    <h3 className="mb-3 text-2xl font-black leading-snug text-primary-foreground transition group-hover:text-primary-foreground/85">
-                      {featuredNews.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground/75">
-                      <span>
-                        {t('readingDiscovery.news.aiExtracted', {
-                          defaultValue: 'AI extracted {{count}} words',
-                          count: Math.max(5, Math.round(featuredNews.bodyText.length / 95)),
-                        })}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {t('readingDiscovery.news.readingMinutes', {
-                          defaultValue: '~{{minutes}} min read',
-                          minutes: estimateReadingMinutes(featuredNews.bodyText),
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Button>
-            )}
-
-            {secondaryNews.map(item => {
-              const chip = getDifficultyChip(item.difficultyLevel, t);
-              return (
-                <Button
-                  key={item._id}
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => navigate(`/reading/${item._id}`)}
-                  className="group !flex !items-stretch !justify-between flex-col rounded-3xl border border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className="mb-6 flex items-start justify-between">
-                    <span className="rounded-lg border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
-                      {getSourceLabel(item.sourceKey)}
-                    </span>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {formatRelativeTime(item.publishedAt, language)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="mb-3 inline-block rounded border border-border bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
-                      {chip.text}
-                    </span>
-                    <h3 className="mb-3 text-lg font-black leading-snug text-foreground transition group-hover:text-primary">
-                      {item.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                      <span>
-                        {t('readingDiscovery.news.aiExtracted', {
-                          defaultValue: 'AI extracted {{count}} words',
-                          count: Math.max(5, Math.round(item.bodyText.length / 95)),
-                        })}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {t('readingDiscovery.news.readingMinutes', {
-                          defaultValue: '~{{minutes}} min read',
-                          minutes: estimateReadingMinutes(item.bodyText),
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        )}
+        <LiveNewsContent
+          feedReady={feedReady}
+          feed={feed}
+          topNews={topNews}
+          featuredNews={featuredNews}
+          secondaryNews={secondaryNews}
+          language={language}
+          t={t}
+          onOpen={id => navigate(`/reading/${id}`)}
+        />
       </section>
 
       <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
@@ -564,211 +832,13 @@ export default function ReadingDiscoveryPage() {
           </Button>
         </div>
 
-        {!feedReady || featuredArticles === undefined ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-            <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-          </div>
-        ) : featuredArticles.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {featuredArticles.slice(0, 6).map((item, index) => {
-              const tone = index % 3;
-              const baseClass =
-                tone === 2
-                  ? 'border-border bg-primary text-primary-foreground'
-                  : tone === 1
-                    ? 'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25'
-                    : 'bg-card border-border';
-              const titleClass =
-                tone === 2
-                  ? 'text-primary-foreground group-hover:text-primary-foreground/85'
-                  : tone === 1
-                    ? 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300'
-                    : 'text-foreground group-hover:text-primary';
-              const textClass = tone === 2 ? 'text-primary-foreground/75' : 'text-muted-foreground';
-              const badgeClass =
-                tone === 2
-                  ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground'
-                  : tone === 1
-                    ? 'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300'
-                    : 'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300';
-              const sourceTypeText = item.section || '위키백과 알찬 글';
-
-              return (
-                <Button
-                  key={item._id}
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => navigate(`/reading/${item._id}`)}
-                  className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
-                >
-                  <div className="mb-4 flex items-center gap-3">
-                    <div
-                      className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
-                        tone === 2
-                          ? 'border border-primary-foreground/25 bg-primary-foreground/10'
-                          : 'bg-card'
-                      }`}
-                    >
-                      🏛️
-                    </div>
-                    <div>
-                      <div
-                        className={`text-[11px] font-bold uppercase tracking-wider ${
-                          tone === 2 ? 'text-primary-foreground/75' : 'text-muted-foreground'
-                        }`}
-                      >
-                        Wikipedia
-                      </div>
-                      <div
-                        className={`text-sm font-bold ${tone === 2 ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
-                      >
-                        {sourceTypeText}
-                      </div>
-                    </div>
-                  </div>
-
-                  <h3
-                    className={`mb-3 text-2xl font-black tracking-tight transition ${titleClass}`}
-                  >
-                    {item.title}
-                  </h3>
-
-                  <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${textClass}`}>
-                    {(item.summary || item.bodyText || '').slice(0, 160)}
-                  </p>
-
-                  <div
-                    className={`mt-auto flex items-center justify-between border-t pt-4 ${
-                      tone === 2 ? 'border-border/60' : 'border-border/70'
-                    }`}
-                  >
-                    <span
-                      className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
-                    >
-                      {getDifficultyChip(item.difficultyLevel, t).text} •{' '}
-                      {t('readingDiscovery.articles.typeEncyclopedia', {
-                        defaultValue: 'Encyclopedia',
-                      })}
-                    </span>
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      🔖{' '}
-                      {t('readingDiscovery.articles.recommended', { defaultValue: 'Recommended' })}
-                    </span>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {curatedArticles.map(item => {
-              const baseClass =
-                item.tone === 'dark'
-                  ? 'border-border bg-primary text-primary-foreground'
-                  : item.tone === 'warm'
-                    ? 'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25'
-                    : 'bg-card border-border';
-              const titleClass =
-                item.tone === 'dark'
-                  ? 'text-primary-foreground group-hover:text-primary-foreground/85'
-                  : item.tone === 'warm'
-                    ? 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300'
-                    : 'text-foreground group-hover:text-primary';
-              const textClass =
-                item.tone === 'dark' ? 'text-primary-foreground/75' : 'text-muted-foreground';
-              const badgeClass =
-                item.tone === 'dark'
-                  ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground'
-                  : item.tone === 'warm'
-                    ? 'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300'
-                    : 'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300';
-
-              return (
-                <article
-                  key={item.id}
-                  className={`group flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:shadow-xl ${baseClass}`}
-                >
-                  <div className="mb-4 flex items-center gap-3">
-                    <div
-                      className={`grid h-10 w-10 place-items-center rounded-full text-xl ${
-                        item.tone === 'dark'
-                          ? 'border border-primary-foreground/25 bg-primary-foreground/10'
-                          : 'bg-card'
-                      }`}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div
-                        className={`text-[11px] font-bold uppercase tracking-wider ${
-                          item.tone === 'dark'
-                            ? 'text-primary-foreground/75'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {item.source}
-                      </div>
-                      <div
-                        className={`text-sm font-bold ${
-                          item.tone === 'dark'
-                            ? 'text-primary-foreground/80'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {item.sourceType}
-                      </div>
-                    </div>
-                  </div>
-
-                  <h3
-                    className={`mb-3 text-2xl font-black tracking-tight transition ${titleClass}`}
-                  >
-                    {item.title}
-                    {item.subtitle && (
-                      <span
-                        className={`mt-1 block text-lg font-bold ${
-                          item.tone === 'dark'
-                            ? 'text-primary-foreground/80'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        ({item.subtitle})
-                      </span>
-                    )}
-                  </h3>
-
-                  <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${textClass}`}>
-                    {item.excerpt}
-                  </p>
-
-                  <div
-                    className={`mt-auto flex items-center justify-between border-t pt-4 ${
-                      item.tone === 'dark' ? 'border-border/60' : 'border-border/70'
-                    }`}
-                  >
-                    <span
-                      className={`rounded-md border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
-                    >
-                      {item.badge}
-                    </span>
-                    <span
-                      className={`text-xs font-semibold ${
-                        item.tone === 'dark'
-                          ? 'text-primary-foreground/80'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      🔖 {item.bookmarkText}
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+        <ArchiveContent
+          feedReady={feedReady}
+          featuredArticles={featuredArticles}
+          curatedArticles={curatedArticles}
+          t={t}
+          onOpen={id => navigate(`/reading/${id}`)}
+        />
       </section>
 
       <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-muted-foreground">

@@ -1,9 +1,10 @@
 import React from 'react';
 import type { ExamAttempt } from '../../../types';
 import { AchievementGallery } from '../../../components/profile/AchievementGallery';
+import type { ProfileLabels } from '../types';
 
 export const ProfileStatsTab: React.FC<{
-  labels: Record<string, any>;
+  labels: ProfileLabels;
   dayStreak: number;
   savedWordsCount: number;
   examsTaken: number;
@@ -70,10 +71,11 @@ export const ProfileStatsTab: React.FC<{
               </div>
               <div className="text-right">
                 <div
-                  className={`font-bold text-lg ${exam.score / exam.maxScore >= 0.6
-                    ? 'text-green-600 dark:text-emerald-200'
-                    : 'text-muted-foreground'
-                    }`}
+                  className={`font-bold text-lg ${
+                    exam.score / exam.maxScore >= 0.6
+                      ? 'text-green-600 dark:text-emerald-200'
+                      : 'text-muted-foreground'
+                  }`}
                 >
                   {Math.round((exam.score / exam.maxScore) * 100)}%
                 </div>

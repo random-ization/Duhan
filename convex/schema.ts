@@ -90,16 +90,6 @@ const GrammarLocalizedTextValidator = v.object({
   mn: v.optional(v.string()),
 });
 
-const GrammarSectionsValidator = v.object({
-  introduction: v.optional(GrammarLocalizedTextValidator),
-  intro: v.optional(GrammarLocalizedTextValidator),
-  core: v.optional(GrammarLocalizedTextValidator),
-  comparative: v.optional(GrammarLocalizedTextValidator),
-  cultural: v.optional(GrammarLocalizedTextValidator),
-  commonMistakes: v.optional(GrammarLocalizedTextValidator),
-  review: v.optional(GrammarLocalizedTextValidator),
-});
-
 const GrammarQuizItemValidator = v.object({
   prompt: GrammarLocalizedTextValidator,
   answer: v.optional(GrammarLocalizedTextValidator),
@@ -132,6 +122,9 @@ export default defineSchema({
     subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
     subscriptionExpiry: v.optional(v.string()), // ISO Date or timestamp string
     avatar: v.optional(v.string()),
+    totalStudyMinutes: v.optional(v.number()),
+    savedWordsCount: v.optional(v.number()),
+    mistakesCount: v.optional(v.number()),
 
     // Auth
     googleId: v.optional(v.string()),
@@ -686,6 +679,8 @@ export default defineSchema({
     examId: v.id('topik_exams'),
     score: v.number(),
     totalQuestions: v.number(),
+    maxScore: v.optional(v.number()),
+    correctCount: v.optional(v.number()),
     sectionScores: v.optional(v.record(v.string(), v.number())),
     duration: v.optional(v.number()),
     answers: v.optional(v.record(v.string(), v.number())),
@@ -1091,12 +1086,14 @@ export default defineSchema({
   koreanItems: defineTable({
     korean: v.string(),
     romanization: v.optional(v.string()),
-    translations: v.optional(v.object({
-      zh: v.optional(v.string()),
-      en: v.optional(v.string()),
-      mn: v.optional(v.string()),
-      vi: v.optional(v.string()),
-    })),
+    translations: v.optional(
+      v.object({
+        zh: v.optional(v.string()),
+        en: v.optional(v.string()),
+        mn: v.optional(v.string()),
+        vi: v.optional(v.string()),
+      })
+    ),
     category: v.optional(v.string()),
     createdAt: v.optional(v.number()),
   }),

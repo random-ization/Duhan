@@ -102,9 +102,14 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       }
 
       // 2. Check for existing account with same email (if not linking)
-      const existingByEmail = await ctx.db
-        .query('users')
-        .filter(q => q.eq(q.field('email'), email))
+      const usersQuery = ctx.db.query('users') as {
+        withIndex: (
+          indexName: 'email',
+          builder: (q: { eq: (field: 'email', value: string) => unknown }) => unknown
+        ) => { take: (limit: number) => Promise<Array<{ _id: Id<'users'> }>> };
+      };
+      const existingByEmail = await usersQuery
+        .withIndex('email', q => q.eq('email', email))
         .take(1);
 
       if (!isLinking && existingByEmail.length > 0) {
@@ -309,6 +314,8 @@ async function createNewUser(
     ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
     createdAt: Date.now(),
     tier: 'FREE',
+    savedWordsCount: 0,
+    mistakesCount: 0,
   };
 
   if (isPasswordProvider && typeof args.profile.name === 'string') {

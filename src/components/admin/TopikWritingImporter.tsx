@@ -168,7 +168,7 @@ export const TopikWritingImporter: React.FC = () => {
     mRef<SaveWritingExamArgs, SaveWritingExamResult>('topikWriting:saveWritingExam')
   );
   const { uploadFile, uploading } = useFileUpload();
-  const examsQuery = useQuery(TOPIK.getExams, {});
+  const examsQuery = useQuery(TOPIK.getExams, { type: 'WRITING', limit: 200 });
 
   const [legacyId, setLegacyId] = useState(createNewLegacyId());
   const [title, setTitle] = useState('TOPIK II 写作 - 新试卷');
@@ -189,10 +189,7 @@ export const TopikWritingImporter: React.FC = () => {
     return (Array.isArray(examsQuery) ? examsQuery : examsQuery.page || []) as TopikExamMeta[];
   }, [examsQuery]);
 
-  const writingExams = useMemo(
-    () => allExams.filter(exam => exam.type === 'WRITING').sort((a, b) => b.round - a.round),
-    [allExams]
-  );
+  const writingExams = useMemo(() => allExams.sort((a, b) => b.round - a.round), [allExams]);
 
   const selectedExistingExam = useMemo(
     () => writingExams.find(exam => exam._id === selectedExamDbId) ?? null,

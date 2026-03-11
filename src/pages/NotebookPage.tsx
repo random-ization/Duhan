@@ -5,6 +5,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import NoteCard from '../components/notebook/NoteCard';
 import NoteDetailModal from '../components/notebook/NoteDetailModal';
+import type { NotebookListResult } from '../components/notebook/types';
 import { qRef } from '../utils/convexRefs';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
@@ -36,23 +37,9 @@ const DesktopNotebookPage: React.FC = () => {
 
   // Query notes list from Convex.
   const type = activeTab === 'ALL' ? undefined : activeTab;
-  const notebooksResult = useQuery(
-    qRef<
-      { type?: string },
-      {
-        success: boolean;
-        data?: Array<{
-          id: string;
-          type: string;
-          title: string;
-          preview?: string | null;
-          tags: string[];
-          createdAt: string;
-        }>;
-      }
-    >('notebooks:list'),
-    { type }
-  );
+  const notebooksResult = useQuery(qRef<{ type?: string }, NotebookListResult>('notebooks:list'), {
+    type,
+  });
   const loading = notebooksResult === undefined;
   const notes: Note[] = useMemo(() => {
     if (!notebooksResult?.data) return [];
@@ -169,10 +156,11 @@ const DesktopNotebookPage: React.FC = () => {
                     <TabsTrigger
                       key={tab.key}
                       value={tab.key}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        isActive
                           ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:bg-indigo-500 dark:text-primary-foreground dark:shadow-indigo-500/20'
                           : 'bg-muted text-muted-foreground hover:bg-muted'
-                        }`}
+                      }`}
                     >
                       <Icon className="w-4 h-4" />
                       {tabLabel}

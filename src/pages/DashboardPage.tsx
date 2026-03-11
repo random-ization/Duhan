@@ -105,13 +105,522 @@ const SortableItem = ({
   );
 };
 
+type DashboardTranslateFn = ReturnType<typeof useTranslation>['t'];
+
+interface DashboardCardContext {
+  t: DashboardTranslateFn;
+  isSpeaking: boolean;
+  dailyPhrase: DailyPhraseData | null | undefined;
+  onSpeakDailyPhrase: () => void;
+  isInstituteNameLoading: boolean;
+  instituteName: string;
+  selectedLevel?: number | string | null;
+  currentUnit: number;
+  progressPercent: number;
+  wordsToReview: number;
+}
+
+type DashboardUserLite = {
+  lastUnit?: number;
+  name?: string | null;
+  tier?: string | null;
+  subscriptionType?: string | null;
+} | null;
+
+type DashboardCourseProgress = {
+  completedUnits: number[];
+  totalUnits: number;
+  progressPercent: number;
+  lastUnitIndex?: number;
+} | null;
+
+type DashboardInstitute = { id: string; name: string };
+
+type DashboardProgressStats = {
+  currentUnit: number;
+  progressPercent: number;
+};
+
+type DashboardVocabBookEntry = {
+  progress: {
+    status: string;
+    nextReviewAt?: number | null;
+  };
+};
+
+function getGreetingMessage(t: DashboardTranslateFn) {
+  const hour = new Date().getHours();
+  if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
+  if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
+  return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
+}
+
+function getCardStyleForId(id: string) {
+  if (id === 'tiger') {
+    return 'md:col-span-1 md:row-span-2';
+  }
+  return 'md:col-span-1';
+}
+
+function resolveDashboardLanguage(language: string | null | undefined) {
+  if (language) return language;
+  return 'en';
+}
+
+function getFilteredCardOrder(
+  cardOrder: string[],
+  dashboardView: string | null,
+  practiceCards: Set<string>
+) {
+  if (dashboardView === 'practice') {
+    return cardOrder.filter(id => practiceCards.has(id));
+  }
+  return cardOrder.filter(id => !practiceCards.has(id));
+}
+
+function getVocabBookCountArgs(user: DashboardUserLite) {
+  if (!user) return 'skip' as const;
+  return { includeMastered: true, savedByUserOnly: true };
+}
+
+function isDueReview(item: DashboardVocabBookEntry, now: number) {
+  const nextReviewAt = item.progress.nextReviewAt;
+  return (
+    item.progress.status !== 'MASTERED' && typeof nextReviewAt === 'number' && nextReviewAt <= now
+  );
+}
+
+function getDueReviewCount(vocabBook: DashboardVocabBookEntry[] | undefined, now: number) {
+  if (!vocabBook) return 0;
+  return vocabBook.filter(item => isDueReview(item, now)).length;
+}
+
+function getCourseProgressArgs(user: DashboardUserLite, selectedInstitute: string | null) {
+  if (!user || !selectedInstitute) return 'skip' as const;
+  return { courseId: selectedInstitute };
+}
+
+function getProgressStats(
+  courseProgress: DashboardCourseProgress | undefined,
+  user: DashboardUserLite
+): DashboardProgressStats {
+  const completedUnits = courseProgress?.completedUnits ?? [];
+  const totalUnits = courseProgress?.totalUnits || 10;
+  const inferredUnit =
+    completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, totalUnits) : 1;
+  const currentUnit = courseProgress?.lastUnitIndex || user?.lastUnit || inferredUnit;
+  const progressPercent =
+    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
+  return { currentUnit, progressPercent };
+}
+
+function resolveInstituteName(
+  selectedInstitute: string | null,
+  institutes: DashboardInstitute[] | undefined,
+  institutesLoading: boolean,
+  t: DashboardTranslateFn
+) {
+  if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
+  if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
+  const institute = institutes?.find(item => item.id === selectedInstitute);
+  if (institute) return institute.name;
+  return selectedInstitute;
+}
+
+function getWordsToReview(vocabBookCount: { count: number } | null | undefined) {
+  if (!vocabBookCount) return 0;
+  return vocabBookCount.count;
+}
+
+function getIsPremiumUser(user: DashboardUserLite) {
+  return user?.tier === 'PAID' || user?.tier === 'PREMIUM' || !!user?.subscriptionType;
+}
+
+function getLearnerName(user: DashboardUserLite) {
+  const firstName = user?.name?.split(' ')[0];
+  if (firstName) return firstName;
+  return 'Learner';
+}
+
+function getDashboardGridClassName(isEditing: boolean) {
+  if (isEditing) {
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all scale-[0.98] rounded-3xl bg-muted p-4 ring-4 ring-primary/20';
+  }
+  return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all';
+}
+
+const TigerCard: React.FC<{
+  isSpeaking: boolean;
+  dailyPhrase: DailyPhraseData | null | undefined;
+  onSpeakDailyPhrase: () => void;
+}> = ({ isSpeaking, dailyPhrase, onSpeakDailyPhrase }) => (
+  <BentoCard
+    className="flex flex-col items-center justify-center text-center h-full"
+    bgClass="bg-[#FFE066] dark:bg-amber-400/12"
+    borderClass="border-amber-300 dark:border-amber-300/20"
+  >
+    <div
+      className="absolute inset-0 opacity-10"
+      style={{
+        backgroundImage: 'radial-gradient(black 1px, transparent 1px)',
+        backgroundSize: '10px 10px',
+      }}
+    ></div>
+    <button
+      type="button"
+      className={`w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500 cursor-pointer ${isSpeaking ? 'animate-pulse scale-110' : ''} bg-transparent border-0 p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full`}
+      onClick={e => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSpeakDailyPhrase();
+      }}
+    >
+      <img
+        src={ASSETS.tiger}
+        className="w-full h-full object-contain pointer-events-none"
+        alt="tiger coach"
+      />
+    </button>
+    <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition min-w-[200px]">
+      {dailyPhrase ? (
+        <div className="flex flex-col gap-1 text-center">
+          <p className="font-bold text-foreground text-lg leading-tight">{dailyPhrase.korean}</p>
+          {dailyPhrase.romanization && (
+            <p className="text-[11px] text-muted-foreground/70 italic">
+              {dailyPhrase.romanization}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+            {dailyPhrase.translation}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2 py-1">
+          <Skeleton className="h-5 w-40 mx-auto bg-muted/20" />
+          <Skeleton className="h-3 w-32 mx-auto bg-muted/20" />
+        </div>
+      )}
+    </div>
+  </BentoCard>
+);
+
+const TextbookCard: React.FC<
+  Pick<
+    DashboardCardContext,
+    | 't'
+    | 'isInstituteNameLoading'
+    | 'instituteName'
+    | 'selectedLevel'
+    | 'currentUnit'
+    | 'progressPercent'
+  >
+> = ({ t, isInstituteNameLoading, instituteName, selectedLevel, currentUnit, progressPercent }) => (
+  <BentoCard
+    onClickPath="/courses"
+    bgClass="bg-sky-50 dark:bg-sky-400/10"
+    borderClass="border-sky-200 dark:border-sky-300/20"
+    className="h-full"
+  >
+    <div className="relative z-10 h-full flex flex-col justify-between">
+      <div className="flex justify-between items-start">
+        <h3 className="font-black text-2xl text-foreground leading-tight">
+          {isInstituteNameLoading ? (
+            <span className="inline-flex flex-col gap-2">
+              <Skeleton className="h-7 w-44 bg-blue-200/60 dark:bg-blue-300/20" />
+              <Skeleton className="h-5 w-24 bg-blue-200/45 dark:bg-blue-300/15" />
+            </span>
+          ) : (
+            <>
+              {instituteName}
+              <br />
+              {selectedLevel
+                ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
+                    '{level}',
+                    String(selectedLevel)
+                  )
+                : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
+            </>
+          )}
+        </h3>
+        <div className="bg-card dark:bg-blue-400/14 border-2 border-blue-200 dark:border-blue-300/25 text-blue-600 dark:text-blue-200 px-2 py-1 rounded-lg text-xs font-bold">
+          {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}
+        </div>
+      </div>
+      <div className="mt-4">
+        <div className="flex justify-between text-xs font-bold text-blue-400 dark:text-blue-200 mb-1">
+          <span>
+            {t('dashboard.textbook.chapter', { defaultValue: 'Chapter {unit}' }).replace(
+              '{unit}',
+              String(currentUnit)
+            )}
+          </span>
+          <span>{progressPercent}%</span>
+        </div>
+        <div className="w-full bg-card dark:bg-blue-400/14 h-3 rounded-full border-2 border-blue-100 dark:border-blue-300/20 overflow-hidden">
+          <div
+            className="bg-blue-500 dark:bg-blue-300/75 h-full border-r-2 border-blue-600 dark:border-blue-300/40"
+            style={{ width: `${progressPercent}% ` }}
+          ></div>
+        </div>
+      </div>
+    </div>
+    <img
+      src={ASSETS.book}
+      className="absolute -right-4 -bottom-4 w-28 h-28 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
+      alt="books"
+    />
+  </BentoCard>
+);
+
+function renderDashboardCard(id: string, context: DashboardCardContext) {
+  const {
+    t,
+    isSpeaking,
+    dailyPhrase,
+    onSpeakDailyPhrase,
+    isInstituteNameLoading,
+    instituteName,
+    selectedLevel,
+    currentUnit,
+    progressPercent,
+    wordsToReview,
+  } = context;
+  switch (id) {
+    case 'tiger':
+      return (
+        <TigerCard
+          isSpeaking={isSpeaking}
+          dailyPhrase={dailyPhrase}
+          onSpeakDailyPhrase={onSpeakDailyPhrase}
+        />
+      );
+    case 'textbook':
+      return (
+        <TextbookCard
+          t={t}
+          isInstituteNameLoading={isInstituteNameLoading}
+          instituteName={instituteName}
+          selectedLevel={selectedLevel}
+          currentUnit={currentUnit}
+          progressPercent={progressPercent}
+        />
+      );
+    case 'reading':
+      return (
+        <BentoCard
+          onClickPath="/reading"
+          bgClass="bg-cyan-50 dark:bg-cyan-400/10"
+          borderClass="border-cyan-200 dark:border-cyan-300/20"
+          className="h-full"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="inline-block bg-cyan-500 dark:bg-cyan-400/30 text-white dark:text-cyan-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                {t('reading', { defaultValue: 'Reading' })}
+              </div>
+              <h3 className="font-black text-xl text-foreground leading-tight">
+                {t('dashboard.readingHub.title', { defaultValue: 'Reading Discovery' })}
+              </h3>
+              <p className="text-muted-foreground font-bold text-sm mt-1">
+                {t('dashboard.readingHub.subtitle', {
+                  defaultValue: 'Korean reading feed and annotation tools',
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
+                {t('dashboard.readingHub.tagNews', { defaultValue: 'News' })}
+              </div>
+              <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
+                {t('dashboard.readingHub.tagArticles', { defaultValue: 'Article' })}
+              </div>
+            </div>
+          </div>
+          <img
+            src={ASSETS.books}
+            className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
+            alt="reading"
+          />
+        </BentoCard>
+      );
+    case 'youtube':
+      return (
+        <BentoCard
+          onClickPath="/videos"
+          bgClass="bg-rose-50 dark:bg-rose-400/10"
+          borderClass="border-rose-200 dark:border-rose-300/20"
+          className="h-full"
+        >
+          <div className="relative z-10">
+            <h3 className="font-black text-2xl text-foreground whitespace-pre-wrap">
+              {t('dashboard.video.cardTitle', { defaultValue: 'Immersion\nVideo' })}
+            </h3>
+            <div className="mt-2 inline-block bg-red-500 dark:bg-red-400/30 text-white dark:text-red-100 px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 dark:border-red-300/30 shadow-sm">
+              {t('dashboard.video.new', { defaultValue: 'New Updates' })}
+            </div>
+          </div>
+          <img
+            src={ASSETS.tv}
+            className="absolute -right-4 -bottom-4 w-28 h-28 group-hover:scale-110 group-hover:rotate-3 transition duration-300"
+            alt="tv"
+          />
+        </BentoCard>
+      );
+    case 'podcast':
+      return (
+        <BentoCard
+          onClickPath="/podcasts"
+          bgClass="bg-violet-100 dark:bg-violet-400/12"
+          borderClass="border-violet-200 dark:border-violet-300/20"
+          className="h-full"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="inline-block bg-violet-500 dark:bg-violet-400/30 text-white dark:text-violet-100 border-2 border-violet-400 dark:border-violet-300/25 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
+                {t('dashboard.podcast.label', { defaultValue: 'Podcast' })}
+              </div>
+              <h3 className="font-bold text-lg mt-2 leading-tight text-foreground">
+                {t('dashboard.podcast.title', { defaultValue: 'Latest Podcast' })}
+                <br />
+                {t('dashboard.podcast.subtitle', { defaultValue: 'Iyagi Series' })}
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 h-3 items-end">
+                <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
+                <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-2/3 animate-pulse"></div>
+                <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
+              </div>
+              <span className="text-xs font-mono text-violet-600 dark:text-violet-200 font-bold">
+                {t('dashboard.podcast.listen', { defaultValue: 'Listen Now' })}
+              </span>
+            </div>
+          </div>
+          <img
+            src={ASSETS.headphone}
+            className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
+            alt="podcast"
+          />
+        </BentoCard>
+      );
+    case 'vocab':
+      return (
+        <BentoCard
+          onClickPath="/vocab-book"
+          bgClass="bg-indigo-50 dark:bg-indigo-400/10"
+          borderClass="border-indigo-200 dark:border-indigo-300/20"
+          className="h-full"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="inline-block bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                {t('dashboard.vocab.label', { defaultValue: 'Vocab Book' })}
+              </div>
+              <h3 className="font-black text-xl text-foreground leading-tight">
+                {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
+              </h3>
+              <p className="text-muted-foreground font-bold text-sm mt-1">
+                {t('dashboard.vocab.subtitle', { defaultValue: 'Saved words and definitions' })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-200 font-bold text-sm">
+              {t('dashboard.vocab.count', { defaultValue: '{count} Words' }).replace(
+                '{count}',
+                String(wordsToReview)
+              )}
+            </div>
+          </div>
+          <img
+            src={ASSETS.vocabBook}
+            className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-12 transition duration-300"
+            alt="vocab"
+          />
+        </BentoCard>
+      );
+    case 'notes':
+      return (
+        <BentoCard
+          onClickPath="/notebook"
+          bgClass="bg-orange-50 dark:bg-orange-400/10"
+          borderClass="border-orange-200 dark:border-orange-300/20"
+          className="h-full"
+        >
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <FileText size={80} className="text-amber-600 dark:text-amber-300/70 rotate-12" />
+          </div>
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="inline-block bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                {t('dashboard.notes.label', { defaultValue: 'Notebook' })}
+              </div>
+              <h3 className="font-black text-xl text-foreground leading-tight">
+                {t('dashboard.notes.title', { defaultValue: 'Study Notes' })}
+              </h3>
+              <p className="text-muted-foreground font-bold text-sm mt-1">
+                {t('dashboard.notes.subtitle', { defaultValue: 'Mistakes and memos' })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-400/14 flex items-center justify-center text-[9px] font-bold text-red-600 dark:text-red-200">
+                {t('dashboard.notes.mistake', { defaultValue: 'Err' })}
+              </div>
+              <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-400/14 flex items-center justify-center text-[9px] font-bold text-emerald-600 dark:text-emerald-200">
+                {t('dashboard.notes.memo', { defaultValue: 'Mem' })}
+              </div>
+            </div>
+          </div>
+          <img
+            src={ASSETS.memo}
+            className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
+            alt="notebook"
+          />
+        </BentoCard>
+      );
+    case 'typing':
+      return (
+        <BentoCard
+          onClickPath="/typing"
+          bgClass="bg-emerald-50 dark:bg-emerald-400/10"
+          borderClass="border-emerald-200 dark:border-emerald-300/20"
+          className="h-full"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="inline-block bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
+                {t('typing.label', { defaultValue: 'Typing' })}
+              </div>
+              <h3 className="font-black text-xl text-foreground leading-tight">
+                {t('typing.title', { defaultValue: 'Typing' })}
+              </h3>
+              <p className="text-muted-foreground font-bold text-sm mt-1">
+                {t('typing.subtitle', { defaultValue: 'Practice' })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="bg-card/80 dark:bg-emerald-400/12 px-2 py-1 rounded text-[10px] font-bold text-emerald-600 dark:text-emerald-200 border border-emerald-100 dark:border-emerald-300/20">
+                {t('typing.unit', { defaultValue: 'WPM' })}
+              </div>
+            </div>
+          </div>
+          <img
+            src={ASSETS.typing}
+            className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
+            alt="typing"
+          />
+        </BentoCard>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function DashboardPage() {
   const { user, language } = useAuth();
   const { speak, isLoading: isSpeaking } = useTTS();
   const dailyPhrase = useQuery(
     qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'),
     {
-      language: language || 'en',
+      language: resolveDashboardLanguage(language),
     }
   );
   const isMobile = useIsMobile();
@@ -127,28 +636,23 @@ export default function DashboardPage() {
   // Card groups
   const PRACTICE_CARDS = useMemo(() => new Set(['vocab', 'notes', 'typing']), []);
   const filteredCardOrder = useMemo(
-    () =>
-      dashboardView === 'practice'
-        ? cardOrder.filter(id => PRACTICE_CARDS.has(id))
-        : cardOrder.filter(id => !PRACTICE_CARDS.has(id)),
+    () => getFilteredCardOrder(cardOrder, dashboardView, PRACTICE_CARDS),
     [cardOrder, dashboardView, PRACTICE_CARDS]
   );
   const vocabBookCount = useQuery(
     qRef<{ includeMastered?: boolean; savedByUserOnly?: boolean }, { count: number }>(
       'vocab:getVocabBookCount'
     ),
-    user ? { includeMastered: true, savedByUserOnly: true } : 'skip'
+    getVocabBookCountArgs(user)
   );
 
   const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });
   const [now] = React.useState(() => Date.now());
 
-  const dueReviews = (vocabBook || []).filter(
-    item =>
-      item.progress.status !== 'MASTERED' &&
-      !!item.progress.nextReviewAt &&
-      item.progress.nextReviewAt <= now
-  ).length;
+  const dueReviews = useMemo(
+    () => getDueReviewCount(vocabBook as DashboardVocabBookEntry[] | undefined, now),
+    [vocabBook, now]
+  );
   const courseProgress = useQuery(
     qRef<
       { courseId: string },
@@ -159,7 +663,7 @@ export default function DashboardPage() {
         lastUnitIndex?: number;
       } | null
     >('progress:getCourseProgress'),
-    user && selectedInstitute ? { courseId: selectedInstitute } : 'skip'
+    getCourseProgressArgs(user, selectedInstitute)
   );
 
   // Sensors
@@ -172,367 +676,47 @@ export default function DashboardPage() {
     })
   );
 
-  const wordsToReview = vocabBookCount?.count || 0;
-
-  // Calculate Progress (use course progress if available)
-  const completedUnits = courseProgress?.completedUnits ?? [];
-  const totalUnits = courseProgress?.totalUnits || 10;
-  const inferredUnit =
-    completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, totalUnits) : 1;
-  const currentUnit = courseProgress?.lastUnitIndex || user?.lastUnit || inferredUnit;
-  const progressPercent =
-    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
+  const wordsToReview = getWordsToReview(vocabBookCount);
+  const { currentUnit, progressPercent } = useMemo(
+    () => getProgressStats(courseProgress, user),
+    [courseProgress, user]
+  );
 
   // Lookup institute name
-  const instituteName = useMemo(() => {
-    if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
-    if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
-    const inst = institutes?.find(i => i.id === selectedInstitute);
-    return inst ? inst.name : selectedInstitute;
-  }, [selectedInstitute, institutes, institutesLoading, t]);
+  const instituteName = useMemo(
+    () =>
+      resolveInstituteName(
+        selectedInstitute,
+        institutes as DashboardInstitute[] | undefined,
+        institutesLoading,
+        t
+      ),
+    [selectedInstitute, institutes, institutesLoading, t]
+  );
   const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
+  const greeting = getGreetingMessage(t);
+  const isPremiumUser = getIsPremiumUser(user);
+  const learnerName = getLearnerName(user);
+  const gridClassName = getDashboardGridClassName(isEditing);
+  const onSpeakDailyPhrase = () => {
+    if (dailyPhrase?.korean) speak(dailyPhrase.korean);
+  };
+  const cardContext: DashboardCardContext = {
+    t,
+    isSpeaking,
+    dailyPhrase,
+    onSpeakDailyPhrase,
+    isInstituteNameLoading,
+    instituteName,
+    selectedLevel,
+    currentUnit,
+    progressPercent,
+    wordsToReview,
+  };
 
   if (isMobile) {
     return <MobileDashboard />;
   }
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
-    if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
-    return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
-  };
-
-  // Render Card Content based on ID
-  const renderCard = (id: string) => {
-    switch (id) {
-      case 'tiger':
-        return (
-          <BentoCard
-            className="flex flex-col items-center justify-center text-center h-full"
-            bgClass="bg-[#FFE066] dark:bg-amber-400/12"
-            borderClass="border-amber-300 dark:border-amber-300/20"
-          >
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: 'radial-gradient(black 1px, transparent 1px)',
-                backgroundSize: '10px 10px',
-              }}
-            ></div>
-            <button
-              type="button"
-              className={`w-36 h-36 drop-shadow-xl animate-float group-hover:scale-110 transition duration-500 cursor-pointer ${isSpeaking ? 'animate-pulse scale-110' : ''} bg-transparent border-0 p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full`}
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (dailyPhrase?.korean) speak(dailyPhrase.korean);
-              }}
-            >
-              <img
-                src={ASSETS.tiger}
-                className="w-full h-full object-contain pointer-events-none"
-                alt="tiger coach"
-              />
-            </button>
-            <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition min-w-[200px]">
-              {dailyPhrase ? (
-                <div className="flex flex-col gap-1 text-center">
-                  <p className="font-bold text-foreground text-lg leading-tight">
-                    {dailyPhrase.korean}
-                  </p>
-                  {dailyPhrase.romanization && (
-                    <p className="text-[11px] text-muted-foreground/70 italic">
-                      {dailyPhrase.romanization}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">
-                    {dailyPhrase.translation}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2 py-1">
-                  <Skeleton className="h-5 w-40 mx-auto bg-muted/20" />
-                  <Skeleton className="h-3 w-32 mx-auto bg-muted/20" />
-                </div>
-              )}
-            </div>
-          </BentoCard>
-        );
-      case 'textbook':
-        return (
-          <BentoCard
-            onClickPath="/courses"
-            bgClass="bg-sky-50 dark:bg-sky-400/10"
-            borderClass="border-sky-200 dark:border-sky-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <h3 className="font-black text-2xl text-foreground leading-tight">
-                  {isInstituteNameLoading ? (
-                    <span className="inline-flex flex-col gap-2">
-                      <Skeleton className="h-7 w-44 bg-blue-200/60 dark:bg-blue-300/20" />
-                      <Skeleton className="h-5 w-24 bg-blue-200/45 dark:bg-blue-300/15" />
-                    </span>
-                  ) : (
-                    <>
-                      {instituteName}
-                      <br />
-                      {selectedLevel
-                        ? t('dashboard.textbook.level', { defaultValue: 'Level {level}' }).replace(
-                            '{level}',
-                            String(selectedLevel)
-                          )
-                        : t('dashboard.textbook.selectLevel', { defaultValue: 'Select Level' })}
-                    </>
-                  )}
-                </h3>
-                <div className="bg-card dark:bg-blue-400/14 border-2 border-blue-200 dark:border-blue-300/25 text-blue-600 dark:text-blue-200 px-2 py-1 rounded-lg text-xs font-bold">
-                  {t('dashboard.textbook.inProgress', { defaultValue: 'In Progress' })}
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="flex justify-between text-xs font-bold text-blue-400 dark:text-blue-200 mb-1">
-                  <span>
-                    {t('dashboard.textbook.chapter', { defaultValue: 'Chapter {unit}' }).replace(
-                      '{unit}',
-                      String(currentUnit)
-                    )}
-                  </span>
-                  <span>{progressPercent}%</span>
-                </div>
-                <div className="w-full bg-card dark:bg-blue-400/14 h-3 rounded-full border-2 border-blue-100 dark:border-blue-300/20 overflow-hidden">
-                  <div
-                    className="bg-blue-500 dark:bg-blue-300/75 h-full border-r-2 border-blue-600 dark:border-blue-300/40"
-                    style={{ width: `${progressPercent}% ` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-            <img
-              src={ASSETS.book}
-              className="absolute -right-4 -bottom-4 w-28 h-28 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-              alt="books"
-            />
-          </BentoCard>
-        );
-      case 'reading':
-        return (
-          <BentoCard
-            onClickPath="/reading"
-            bgClass="bg-cyan-50 dark:bg-cyan-400/10"
-            borderClass="border-cyan-200 dark:border-cyan-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="inline-block bg-cyan-500 dark:bg-cyan-400/30 text-white dark:text-cyan-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {t('reading', { defaultValue: 'Reading' })}
-                </div>
-                <h3 className="font-black text-xl text-foreground leading-tight">
-                  {t('dashboard.readingHub.title', { defaultValue: 'Reading Discovery' })}
-                </h3>
-                <p className="text-muted-foreground font-bold text-sm mt-1">
-                  {t('dashboard.readingHub.subtitle', {
-                    defaultValue: 'Korean reading feed and annotation tools',
-                  })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
-                  {t('dashboard.readingHub.tagNews', { defaultValue: 'News' })}
-                </div>
-                <div className="bg-card/90 dark:bg-cyan-400/12 px-2 py-1 rounded text-[10px] font-bold text-cyan-700 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-300/20">
-                  {t('dashboard.readingHub.tagArticles', { defaultValue: 'Article' })}
-                </div>
-              </div>
-            </div>
-            <img
-              src={ASSETS.books}
-              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-              alt="reading"
-            />
-          </BentoCard>
-        );
-      case 'youtube':
-        return (
-          <BentoCard
-            onClickPath="/videos"
-            bgClass="bg-rose-50 dark:bg-rose-400/10"
-            borderClass="border-rose-200 dark:border-rose-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10">
-              <h3 className="font-black text-2xl text-foreground whitespace-pre-wrap">
-                {t('dashboard.video.cardTitle', { defaultValue: 'Immersion\nVideo' })}
-              </h3>
-              <div className="mt-2 inline-block bg-red-500 dark:bg-red-400/30 text-white dark:text-red-100 px-3 py-1 rounded-lg text-xs font-bold border-2 border-red-700 dark:border-red-300/30 shadow-sm">
-                {t('dashboard.video.new', { defaultValue: 'New Updates' })}
-              </div>
-            </div>
-            <img
-              src={ASSETS.tv}
-              className="absolute -right-4 -bottom-4 w-28 h-28 group-hover:scale-110 group-hover:rotate-3 transition duration-300"
-              alt="tv"
-            />
-          </BentoCard>
-        );
-      case 'podcast':
-        return (
-          <BentoCard
-            onClickPath="/podcasts"
-            bgClass="bg-violet-100 dark:bg-violet-400/12"
-            borderClass="border-violet-200 dark:border-violet-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="inline-block bg-violet-500 dark:bg-violet-400/30 text-white dark:text-violet-100 border-2 border-violet-400 dark:border-violet-300/25 text-[10px] font-black px-2 py-0.5 rounded-md uppercase transform -rotate-2">
-                  {t('dashboard.podcast.label', { defaultValue: 'Podcast' })}
-                </div>
-                <h3 className="font-bold text-lg mt-2 leading-tight text-foreground">
-                  {t('dashboard.podcast.title', { defaultValue: 'Latest Podcast' })}
-                  <br />
-                  {t('dashboard.podcast.subtitle', { defaultValue: 'Iyagi Series' })}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1 h-3 items-end">
-                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
-                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-2/3 animate-pulse"></div>
-                  <div className="w-1 bg-violet-500 dark:bg-violet-300/75 h-full animate-pulse"></div>
-                </div>
-                <span className="text-xs font-mono text-violet-600 dark:text-violet-200 font-bold">
-                  {t('dashboard.podcast.listen', { defaultValue: 'Listen Now' })}
-                </span>
-              </div>
-            </div>
-            <img
-              src={ASSETS.headphone}
-              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
-              alt="podcast"
-            />
-          </BentoCard>
-        );
-      case 'vocab':
-        return (
-          <BentoCard
-            onClickPath="/vocab-book"
-            bgClass="bg-indigo-50 dark:bg-indigo-400/10"
-            borderClass="border-indigo-200 dark:border-indigo-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="inline-block bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {t('dashboard.vocab.label', { defaultValue: 'Vocab Book' })}
-                </div>
-                <h3 className="font-black text-xl text-foreground leading-tight">
-                  {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
-                </h3>
-                <p className="text-muted-foreground font-bold text-sm mt-1">
-                  {t('dashboard.vocab.subtitle', { defaultValue: 'Saved words and definitions' })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-200 font-bold text-sm">
-                {t('dashboard.vocab.count', { defaultValue: '{count} Words' }).replace(
-                  '{count}',
-                  String(wordsToReview)
-                )}
-              </div>
-            </div>
-            <img
-              src={ASSETS.vocabBook}
-              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-12 transition duration-300"
-              alt="vocab"
-            />
-          </BentoCard>
-        );
-      case 'notes':
-        return (
-          <BentoCard
-            onClickPath="/notebook"
-            bgClass="bg-orange-50 dark:bg-orange-400/10"
-            borderClass="border-orange-200 dark:border-orange-300/20"
-            className="h-full"
-          >
-            <div className="absolute -right-4 -bottom-4 opacity-10">
-              <FileText size={80} className="text-amber-600 dark:text-amber-300/70 rotate-12" />
-            </div>
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="inline-block bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {t('dashboard.notes.label', { defaultValue: 'Notebook' })}
-                </div>
-                <h3 className="font-black text-xl text-foreground leading-tight">
-                  {t('dashboard.notes.title', { defaultValue: 'Study Notes' })}
-                </h3>
-                <p className="text-muted-foreground font-bold text-sm mt-1">
-                  {t('dashboard.notes.subtitle', { defaultValue: 'Mistakes and memos' })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-400/14 flex items-center justify-center text-[9px] font-bold text-red-600 dark:text-red-200">
-                  {t('dashboard.notes.mistake', { defaultValue: 'Err' })}
-                </div>
-                <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-400/14 flex items-center justify-center text-[9px] font-bold text-emerald-600 dark:text-emerald-200">
-                  {t('dashboard.notes.memo', { defaultValue: 'Mem' })}
-                </div>
-              </div>
-            </div>
-            <img
-              src={ASSETS.memo}
-              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-              alt="notebook"
-            />
-          </BentoCard>
-        );
-      case 'typing':
-        return (
-          <BentoCard
-            onClickPath="/typing"
-            bgClass="bg-emerald-50 dark:bg-emerald-400/10"
-            borderClass="border-emerald-200 dark:border-emerald-300/20"
-            className="h-full"
-          >
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="inline-block bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-2">
-                  {t('typing.label', { defaultValue: 'Typing' })}
-                </div>
-                <h3 className="font-black text-xl text-foreground leading-tight">
-                  {t('typing.title', { defaultValue: 'Typing' })}
-                </h3>
-                <p className="text-muted-foreground font-bold text-sm mt-1">
-                  {t('typing.subtitle', { defaultValue: 'Practice' })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-card/80 dark:bg-emerald-400/12 px-2 py-1 rounded text-[10px] font-bold text-emerald-600 dark:text-emerald-200 border border-emerald-100 dark:border-emerald-300/20">
-                  {t('typing.unit', { defaultValue: 'WPM' })}
-                </div>
-              </div>
-            </div>
-            <img
-              src={ASSETS.typing}
-              className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
-              alt="typing"
-            />
-          </BentoCard>
-        );
-      default:
-        return null;
-    }
-  };
-
-  // Card styling mapping (for spans)
-  const getCardStyle = (id: string) => {
-    if (id === 'tiger') {
-      return 'md:col-span-1 md:row-span-2';
-    }
-    return 'md:col-span-1';
-  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -556,9 +740,9 @@ export default function DashboardPage() {
           />
           {/* SVG Underline Header */}
           <h1 className="text-3xl md:text-4xl md:text-5xl font-black font-display text-foreground tracking-tight mb-2">
-            {getGreeting()},{' '}
+            {greeting},{' '}
             <span className="text-primary dark:text-primary-foreground relative inline-block">
-              {user?.name?.split(' ')[0] || 'Learner'}
+              {learnerName}
               <svg
                 className="absolute -bottom-1 left-0 -z-10 h-3 w-full text-primary/25 dark:text-primary/30"
                 viewBox="0 0 100 10"
@@ -578,7 +762,7 @@ export default function DashboardPage() {
           <DictionarySearchDropdown />
 
           {/* Simplified Premium Badge */}
-          {(user?.tier === 'PAID' || user?.tier === 'PREMIUM' || user?.subscriptionType) && (
+          {isPremiumUser && (
             <Button
               onClick={() => navigate('/pricing/details')}
               variant="ghost"
@@ -607,12 +791,15 @@ export default function DashboardPage() {
       {/* 3. Sortable Grid */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={filteredCardOrder} strategy={rectSortingStrategy}>
-          <div
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all ${isEditing ? 'scale-[0.98] rounded-3xl bg-muted p-4 ring-4 ring-primary/20' : ''} `}
-          >
+          <div className={gridClassName}>
             {filteredCardOrder.map(id => (
-              <SortableItem key={id} id={id} isEditing={isEditing} className={getCardStyle(id)}>
-                {renderCard(id)}
+              <SortableItem
+                key={id}
+                id={id}
+                isEditing={isEditing}
+                className={getCardStyleForId(id)}
+              >
+                {renderDashboardCard(id, cardContext)}
               </SortableItem>
             ))}
           </div>

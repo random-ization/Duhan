@@ -3,8 +3,46 @@ import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator } from 'convex/server';
 import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from './queryLimits';
 import { requireAdmin } from './utils';
+import {
+  buildExamScoreInfo,
+  countCorrectAnswers,
+  normalizeExamAttemptAnswers,
+} from './examAttemptMetrics';
 
 const SCAN_PAGE_SIZE = 500;
+const ADMIN_OVERVIEW_USERS_LIMIT = 5000;
+const ADMIN_OVERVIEW_GRAMMAR_LIMIT = 2000;
+const ADMIN_OVERVIEW_UNITS_LIMIT = 2000;
+const ADMIN_OVERVIEW_EXAMS_LIMIT = 2000;
+const ADMIN_OVERVIEW_INSTITUTES_LIMIT = 500;
+const ADMIN_BACKFILL_BATCH_LIMIT = 25;
+
+const formatCappedCount = (count: number, limit: number): number | string =>
+  count > limit ? `${limit}+` : count;
+
+const toAdminUserListItem = (u: {
+  _id: unknown;
+  email?: string;
+  name?: string;
+  role?: string;
+  tier?: string;
+  avatar?: string;
+  isVerified?: boolean;
+  createdAt?: number;
+  subscriptionType?: string;
+  subscriptionExpiry?: string;
+}) => ({
+  id: u._id,
+  email: u.email,
+  name: u.name,
+  role: u.role,
+  tier: u.tier,
+  avatar: u.avatar,
+  isVerified: u.isVerified,
+  createdAt: u.createdAt,
+  subscriptionType: u.subscriptionType,
+  subscriptionExpiry: u.subscriptionExpiry,
+});
 
 // Get all users with real database pagination
 export const getUsers = query({
@@ -17,18 +55,7 @@ export const getUsers = query({
 
     return {
       ...results,
-      page: results.page.map(u => ({
-        id: u._id,
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        tier: u.tier,
-        avatar: u.avatar,
-        isVerified: u.isVerified,
-        createdAt: u.createdAt,
-        subscriptionType: u.subscriptionType,
-        subscriptionExpiry: u.subscriptionExpiry,
-      })),
+      page: results.page.map(toAdminUserListItem),
     };
   },
 });
@@ -42,7 +69,30 @@ export const searchUsers = query({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const limit = args.limit || 20;
-    const searchLower = args.search.toLowerCase();
+    const searchTerm = args.search.trim();
+    const searchLower = searchTerm.toLowerCase();
+
+    if (searchTerm.includes('@')) {
+      const exactMatches = new Map<string, ReturnType<typeof toAdminUserListItem>>();
+      const exactCandidates = [searchTerm];
+      if (searchLower !== searchTerm) {
+        exactCandidates.push(searchLower);
+      }
+
+      for (const email of exactCandidates) {
+        const exactUser = await ctx.db
+          .query('users')
+          .withIndex('email', q => q.eq('email', email))
+          .unique();
+        if (exactUser) {
+          exactMatches.set(exactUser._id.toString(), toAdminUserListItem(exactUser));
+        }
+      }
+
+      if (exactMatches.size > 0) {
+        return [...exactMatches.values()].slice(0, limit);
+      }
+    }
 
     // OPTIMIZATION: Limit collection to prevent full table scan
     // Collect with a reasonable maximum to prevent query explosion
@@ -58,18 +108,7 @@ export const searchUsers = query({
           (u.name || '').toLowerCase().includes(searchLower)
       )
       .slice(0, limit)
-      .map(u => ({
-        id: u._id,
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        tier: u.tier,
-        avatar: u.avatar,
-        isVerified: u.isVerified,
-        createdAt: u.createdAt,
-        subscriptionType: u.subscriptionType,
-        subscriptionExpiry: u.subscriptionExpiry,
-      }));
+      .map(toAdminUserListItem);
 
     return filtered;
   },
@@ -257,14 +296,26 @@ export const getOverviewStats = query({
   args: {},
   handler: async ctx => {
     await requireAdmin(ctx);
-    // NOTE: Convex only allows one paginated query per function.
-    // This stats query intentionally avoids paginate() and uses collect/take.
-    const users = await ctx.db.query('users').collect();
-    const userCount = users.length;
+    const users = await ctx.db.query('users').take(ADMIN_OVERVIEW_USERS_LIMIT + 1);
+    const userCount = formatCappedCount(users.length, ADMIN_OVERVIEW_USERS_LIMIT);
 
-    // Count institutes (exclude archived)
-    const institutes = await ctx.db.query('institutes').collect();
-    const instituteCount = institutes.filter(i => i.isArchived !== true).length;
+    const visibleInstitutes = await Promise.all([
+      ctx.db
+        .query('institutes')
+        .withIndex('by_archived', q => q.eq('isArchived', false))
+        .collect(),
+      ctx.db
+        .query('institutes')
+        .withIndex('by_archived', q => q.eq('isArchived', undefined))
+        .take(ADMIN_OVERVIEW_INSTITUTES_LIMIT + 1),
+    ]);
+    const instituteIds = new Set<string>();
+    for (const batch of visibleInstitutes) {
+      for (const institute of batch) {
+        instituteIds.add(institute._id.toString());
+      }
+    }
+    const instituteCount = formatCappedCount(instituteIds.size, ADMIN_OVERVIEW_INSTITUTES_LIMIT);
 
     // Count vocabulary words (master dictionary, capped)
     const vocabLimit = 10000;
@@ -272,19 +323,21 @@ export const getOverviewStats = query({
     const vocabCount = vocabProbe.length > vocabLimit ? `${vocabLimit}+` : vocabProbe.length;
 
     // Count grammar points
-    const grammarPoints = await ctx.db.query('grammar_points').take(1000);
-    const grammarCount = grammarPoints.length;
+    const grammarPoints = await ctx.db
+      .query('grammar_points')
+      .take(ADMIN_OVERVIEW_GRAMMAR_LIMIT + 1);
+    const grammarCount = formatCappedCount(grammarPoints.length, ADMIN_OVERVIEW_GRAMMAR_LIMIT);
 
     // Count textbook units
     const units = await ctx.db
       .query('textbook_units')
       .withIndex('by_archived', q => q.eq('isArchived', false))
-      .take(1000);
-    const unitCount = units.length;
+      .take(ADMIN_OVERVIEW_UNITS_LIMIT + 1);
+    const unitCount = formatCappedCount(units.length, ADMIN_OVERVIEW_UNITS_LIMIT);
 
     // Count TOPIK exams
-    const exams = await ctx.db.query('topik_exams').collect();
-    const examCount = exams.length;
+    const exams = await ctx.db.query('topik_exams').take(ADMIN_OVERVIEW_EXAMS_LIMIT + 1);
+    const examCount = formatCappedCount(exams.length, ADMIN_OVERVIEW_EXAMS_LIMIT);
 
     return {
       users: userCount,
@@ -356,6 +409,93 @@ export const getAiUsageStats = query({
       summary,
       byFeature,
       daily,
+    };
+  },
+});
+
+export const backfillCachedMetrics = mutation({
+  args: {
+    limit: v.optional(v.number()),
+    userCursor: v.optional(v.string()),
+    examAttemptCursor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const limit = Math.max(1, Math.min(args.limit ?? ADMIN_BACKFILL_BATCH_LIMIT, 100));
+
+    const usersBatch = await ctx.db
+      .query('users')
+      .paginate({ numItems: limit, cursor: args.userCursor ?? null });
+    let usersUpdated = 0;
+
+    for (const user of usersBatch.page) {
+      const patch: { savedWordsCount?: number; mistakesCount?: number } = {};
+
+      if (typeof user.savedWordsCount !== 'number') {
+        const savedWords = await ctx.db
+          .query('saved_words')
+          .withIndex('by_user', q => q.eq('userId', user._id))
+          .collect();
+        patch.savedWordsCount = savedWords.length;
+      }
+
+      if (typeof user.mistakesCount !== 'number') {
+        const mistakes = await ctx.db
+          .query('mistakes')
+          .withIndex('by_user', q => q.eq('userId', user._id))
+          .collect();
+        patch.mistakesCount = mistakes.length;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(user._id, patch);
+        usersUpdated += 1;
+      }
+    }
+
+    const examAttemptsBatch = await ctx.db
+      .query('exam_attempts')
+      .paginate({ numItems: limit, cursor: args.examAttemptCursor ?? null });
+    let examAttemptsUpdated = 0;
+    const examScoreCache = new Map<string, ReturnType<typeof buildExamScoreInfo>>();
+
+    for (const attempt of examAttemptsBatch.page) {
+      if (typeof attempt.maxScore === 'number' && typeof attempt.correctCount === 'number') {
+        continue;
+      }
+
+      const cacheKey = attempt.examId.toString();
+      let scoreInfo = examScoreCache.get(cacheKey);
+      if (!scoreInfo) {
+        const questions = await ctx.db
+          .query('topik_questions')
+          .withIndex('by_exam', q => q.eq('examId', attempt.examId))
+          .collect();
+        scoreInfo = buildExamScoreInfo(questions);
+        examScoreCache.set(cacheKey, scoreInfo);
+      }
+
+      const { answersByNumber } = normalizeExamAttemptAnswers(
+        (attempt.answers || {}) as Record<string, number>,
+        scoreInfo
+      );
+
+      await ctx.db.patch(attempt._id, {
+        maxScore: scoreInfo.totalScore,
+        correctCount: countCorrectAnswers(answersByNumber, scoreInfo.correctAnswerMap),
+      });
+      examAttemptsUpdated += 1;
+    }
+
+    return {
+      usersScanned: usersBatch.page.length,
+      usersUpdated,
+      nextUserCursor: usersBatch.isDone ? null : usersBatch.continueCursor,
+      examAttemptsScanned: examAttemptsBatch.page.length,
+      examAttemptsUpdated,
+      nextExamAttemptCursor: examAttemptsBatch.isDone ? null : examAttemptsBatch.continueCursor,
+      done: usersBatch.isDone && examAttemptsBatch.isDone,
     };
   },
 });

@@ -6,6 +6,7 @@ import { toErrorMessage } from './errors';
 type WebhookResult = { success: boolean; error?: string };
 type WebhookArgs = { body: string; signature: string };
 type DeepgramWebhookArgs = { episodeId: string; language?: string; payloadJson: string };
+const WEBHOOK_ERROR_RESPONSE = 'Webhook processing failed';
 
 const creemWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
   'payments:handleWebhook'
@@ -45,11 +46,11 @@ http.route({
       if (result.success) {
         return new Response('OK', { status: 200 });
       } else {
-        return new Response(result.error || 'Webhook processing failed', { status: 400 });
+        return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
       }
     } catch (error: unknown) {
       console.error('Webhook error:', toErrorMessage(error));
-      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
+      return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     }
   }),
 });
@@ -86,11 +87,11 @@ http.route({
       if (result.success) {
         return new Response('OK', { status: 200 });
       } else {
-        return new Response(result.error || 'Webhook processing failed', { status: 400 });
+        return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
       }
     } catch (error: unknown) {
       console.error('Lemon Squeezy webhook error:', toErrorMessage(error));
-      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
+      return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     }
   }),
 });
@@ -142,10 +143,10 @@ http.route({
       if (result.success) {
         return new Response('OK', { status: 200 });
       }
-      return new Response(result.error || 'Webhook processing failed', { status: 400 });
+      return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     } catch (error: unknown) {
       console.error('Deepgram webhook error:', toErrorMessage(error));
-      return new Response(`Webhook error: ${toErrorMessage(error)}`, { status: 400 });
+      return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     }
   }),
 });

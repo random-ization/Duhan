@@ -10,6 +10,14 @@ import { Button } from '../components/ui';
 
 type VerifyState = 'idle' | 'loading' | 'success' | 'error';
 
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' ? message : undefined;
+  }
+  return undefined;
+};
+
 const VerifyEmailPage: React.FC = () => {
   const { t } = useTranslation();
   const language = useCurrentLanguage();
@@ -44,15 +52,16 @@ const VerifyEmailPage: React.FC = () => {
             defaultValue: 'Your email has been verified successfully.',
           })
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorMessage = getErrorMessage(err);
         if (cancelled) return;
         setState('error');
         setMessage(
-          err?.message === 'INVALID_OR_EXPIRED_TOKEN'
+          errorMessage === 'INVALID_OR_EXPIRED_TOKEN'
             ? t('auth.verifyEmailInvalidToken', {
                 defaultValue: 'This verification link is invalid or expired.',
               })
-            : err?.message || t('common.error', { defaultValue: 'Something went wrong.' })
+            : errorMessage || t('common.error', { defaultValue: 'Something went wrong.' })
         );
       }
     };
@@ -76,12 +85,13 @@ const VerifyEmailPage: React.FC = () => {
               defaultValue: 'Verification email sent. Please check your inbox.',
             })
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err);
       setState('error');
       setMessage(
-        err?.message === 'UNAUTHORIZED'
+        errorMessage === 'UNAUTHORIZED'
           ? t('auth.loginRequired', { defaultValue: 'Please log in first.' })
-          : err?.message || t('common.error', { defaultValue: 'Something went wrong.' })
+          : errorMessage || t('common.error', { defaultValue: 'Something went wrong.' })
       );
     }
   };

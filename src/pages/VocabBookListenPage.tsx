@@ -23,6 +23,7 @@ import { VocabBookListenSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import type { VocabBookItemDto } from '../../convex/vocab';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type ListenMode = 'BASIC' | 'ADVANCED';
@@ -58,7 +59,7 @@ const VocabBookListenPage: React.FC = () => {
     search: q || undefined,
   });
   const loading = vocabBookResult === undefined;
-  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
+  const items = useMemo<VocabBookItemDto[]>(() => vocabBookResult ?? [], [vocabBookResult]);
 
   const filtered = useMemo(() => {
     return items.filter(item => {
@@ -124,7 +125,7 @@ const VocabBookListenPage: React.FC = () => {
     await speak(text, { voice: KOREAN_VOICE, rate });
   };
 
-  const playAdvancedMode = async (word: any, myRunId: number) => {
+  const playAdvancedMode = async (word: VocabBookItemDto, myRunId: number) => {
     const rate = rateForSpeed(speed);
     if (repeatCount === 'INFINITE') {
       while (myRunId === runIdRef.current) {
@@ -142,7 +143,7 @@ const VocabBookListenPage: React.FC = () => {
     goNext();
   };
 
-  const playBasicMode = async (word: any, myRunId: number) => {
+  const playBasicMode = async (word: VocabBookItemDto, myRunId: number) => {
     await speakKorean(word.word);
     if (myRunId !== runIdRef.current) return;
 

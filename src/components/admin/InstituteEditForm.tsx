@@ -28,6 +28,21 @@ interface InstituteEditFormProps {
   onUpdate: () => void;
 }
 
+const DEFAULT_THEME_COLOR = '#6366f1';
+
+const normalizeFormData = (formData: Partial<Institute>) => ({
+  name: formData.name ?? '',
+  nameZh: formData.nameZh ?? '',
+  nameEn: formData.nameEn ?? '',
+  nameVi: formData.nameVi ?? '',
+  nameMn: formData.nameMn ?? '',
+  displayLevel: formData.displayLevel ?? '',
+  volume: formData.volume ?? '',
+  publisher: formData.publisher ?? '',
+  themeColor: formData.themeColor ?? DEFAULT_THEME_COLOR,
+  totalUnits: formData.totalUnits ?? 0,
+});
+
 export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
   editingId,
   showNewForm,
@@ -39,6 +54,12 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
   onCreate,
   onUpdate,
 }) => {
+  const normalizedForm = normalizeFormData(formData);
+  const updateForm = (updates: Partial<Institute>) => setFormData({ ...formData, ...updates });
+  const canSubmit = normalizedForm.name.trim().length > 0;
+  const submitAction = showNewForm ? onCreate : onUpdate;
+  const submitLabel = showNewForm ? '创建教材' : '保存教材';
+
   if (!editingId && !showNewForm) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-zinc-400">
@@ -70,8 +91,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
           id="inst-name"
           type="text"
           placeholder="如：首尔大学韩国语"
-          value={formData.name || ''}
-          onChange={e => setFormData({ ...formData, name: e.target.value })}
+          value={normalizedForm.name}
+          onChange={e => updateForm({ name: e.target.value })}
           className="w-full p-3 border-2 border-zinc-900 rounded-lg font-bold focus:shadow-[2px_2px_0px_0px_#18181B] outline-none"
           aria-label="教材名称(韩语)"
         />
@@ -86,8 +107,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-name-zh"
             type="text"
             placeholder="如：首尔大学韩国语"
-            value={formData.nameZh || ''}
-            onChange={e => setFormData({ ...formData, nameZh: e.target.value })}
+            value={normalizedForm.nameZh}
+            onChange={e => updateForm({ nameZh: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg"
             aria-label="教材名称(中文)"
           />
@@ -100,8 +121,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-name-en"
             type="text"
             placeholder="e.g. Seoul National University Korean"
-            value={formData.nameEn || ''}
-            onChange={e => setFormData({ ...formData, nameEn: e.target.value })}
+            value={normalizedForm.nameEn}
+            onChange={e => updateForm({ nameEn: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg"
             aria-label="教材名称(英语)"
           />
@@ -114,8 +135,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-name-vi"
             type="text"
             placeholder="Ví dụ: Tiếng Hàn Đại học Quốc gia Seoul"
-            value={formData.nameVi || ''}
-            onChange={e => setFormData({ ...formData, nameVi: e.target.value })}
+            value={normalizedForm.nameVi}
+            onChange={e => updateForm({ nameVi: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg"
             aria-label="教材名称(越南语)"
           />
@@ -128,8 +149,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-name-mn"
             type="text"
             placeholder="Жишээ: Сөүл Үндэсний Их Сургуулийн Солонгос хэл"
-            value={formData.nameMn || ''}
-            onChange={e => setFormData({ ...formData, nameMn: e.target.value })}
+            value={normalizedForm.nameMn}
+            onChange={e => updateForm({ nameMn: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg"
             aria-label="教材名称(蒙古语)"
           />
@@ -144,8 +165,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
 
           <select
             id="inst-level"
-            value={formData.displayLevel || ''}
-            onChange={e => setFormData({ ...formData, displayLevel: e.target.value })}
+            value={normalizedForm.displayLevel}
+            onChange={e => updateForm({ displayLevel: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg bg-white"
             aria-label="选择级别"
           >
@@ -165,8 +186,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-volume"
             type="text"
             placeholder="如：上册、下册"
-            value={formData.volume || ''}
-            onChange={e => setFormData({ ...formData, volume: e.target.value })}
+            value={normalizedForm.volume}
+            onChange={e => updateForm({ volume: e.target.value })}
             className="w-full p-2 border-2 border-zinc-300 rounded-lg"
             aria-label="册号"
           />
@@ -179,8 +200,8 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
         </label>
         <select
           id="inst-publisher"
-          value={formData.publisher || ''}
-          onChange={e => setFormData({ ...formData, publisher: e.target.value })}
+          value={normalizedForm.publisher}
+          onChange={e => updateForm({ publisher: e.target.value })}
           className="w-full p-2 border-2 border-zinc-300 rounded-lg bg-white"
           aria-label="选择出版社"
         >
@@ -208,15 +229,15 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             <input
               id="inst-theme-color"
               type="color"
-              value={formData.themeColor || '#6366f1'}
-              onChange={e => setFormData({ ...formData, themeColor: e.target.value })}
+              value={normalizedForm.themeColor}
+              onChange={e => updateForm({ themeColor: e.target.value })}
               className="w-12 h-10 border-2 border-zinc-300 rounded-lg cursor-pointer"
               aria-label="主题颜色选择器"
             />
             <input
               type="text"
-              value={formData.themeColor || '#6366f1'}
-              onChange={e => setFormData({ ...formData, themeColor: e.target.value })}
+              value={normalizedForm.themeColor}
+              onChange={e => updateForm({ themeColor: e.target.value })}
               className="flex-1 p-2 border-2 border-zinc-300 rounded-lg font-mono text-sm"
               aria-label="主题颜色十六进制值"
             />
@@ -230,10 +251,9 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
             id="inst-total-units"
             type="number"
             min={0}
-            value={formData.totalUnits || 0}
+            value={normalizedForm.totalUnits}
             onChange={e =>
-              setFormData({
-                ...formData,
+              updateForm({
                 totalUnits: Number.parseInt(e.target.value, 10) || 0,
               })
             }
@@ -252,13 +272,13 @@ export const InstituteEditForm: React.FC<InstituteEditFormProps> = ({
           取消
         </button>
         <button
-          onClick={showNewForm ? onCreate : onUpdate}
-          disabled={saving || !formData.name?.trim()}
+          onClick={submitAction}
+          disabled={saving || !canSubmit}
           className="flex-1 py-3 bg-lime-300 border-2 border-zinc-900 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-lime-400 disabled:opacity-50 shadow-[2px_2px_0px_0px_#18181B] active:translate-y-0.5 active:shadow-none transition-all"
-          aria-label={showNewForm ? '创建教材' : '保存教材'}
+          aria-label={submitLabel}
         >
           {saving ? <Loader2 className="animate-spin w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {showNewForm ? '创建' : '保存'}
+          {submitLabel}
         </button>
       </div>
     </div>

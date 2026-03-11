@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';
 import type { Language } from '../../../types';
-import { getLabels } from '../../../utils/i18n';
+import { getLabels, Labels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
 import TestCardTrueFalse from './test/TestCardTrueFalse';
 import TestCardMultipleChoice from './test/TestCardMultipleChoice';
@@ -144,7 +144,7 @@ type ResultScreenProps = Readonly<{
   stats: { totalQuestions: number; correctQuestions: number; seconds: number | null };
   setStage: (s: TestStage) => void;
   onClose?: () => void;
-  labels: any;
+  labels: Labels;
   cards: TestCard[];
   answers: Partial<Record<string, TestCardAnswer>>;
 }>;
@@ -168,7 +168,10 @@ function ResultScreen({
     };
   };
 
-  const getCorrectnessLabel = (cardType: QuestionType, correctness: any) => {
+  const getCorrectnessLabel = (
+    cardType: QuestionType,
+    correctness: { correctCount: number; totalCount: number; allCorrect: boolean }
+  ) => {
     if (cardType === 'FILL_10') {
       return `${correctness.correctCount}/${correctness.totalCount}`;
     }

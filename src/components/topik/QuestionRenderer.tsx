@@ -31,11 +31,117 @@ interface AIAnalysis {
   wrongOptions: Record<string, string>;
 }
 
+interface ReviewCopy {
+  aiErrorMessage: string;
+  saveFailedMessage: string;
+  saveFailedShort: string;
+  savedToast: string;
+}
+
 // Korean serif font for authentic TOPIK paper look
 const FONT_SERIF = "font-['Batang','KoPubBatang','Times_New_Roman',serif]";
 
 // Unicode circle numbers for TOPIK-style options
 const CIRCLE_NUMBERS = ['①', '②', '③', '④'];
+const DEFAULT_AI_ERROR_MESSAGE = 'AI is busy right now. Please try again later.';
+const DEFAULT_SAVE_FAILED_MESSAGE = 'Failed to save. Please try again.';
+const HIGHLIGHT_BASE_CLASS =
+  'box-decoration-clone cursor-pointer transition-all duration-200 px-0.5 rounded-sm ';
+
+type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
+type HighlightVariant = 'note' | 'active' | 'default';
+
+const HIGHLIGHT_STYLE_MAP: Record<HighlightVariant, Record<HighlightColor, string>> = {
+  note: {
+    yellow:
+      'bg-yellow-50/50 dark:bg-yellow-500/15 border-b-4 border-double border-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-500/25',
+    green:
+      'bg-green-50/50 dark:bg-green-500/15 border-b-4 border-double border-green-500 hover:bg-green-100 dark:hover:bg-green-500/25',
+    blue: 'bg-blue-50/50 dark:bg-blue-500/15 border-b-4 border-double border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-500/25',
+    pink: 'bg-pink-50/50 dark:bg-pink-500/15 border-b-4 border-double border-pink-500 hover:bg-pink-100 dark:hover:bg-pink-500/25',
+  },
+  active: {
+    yellow: 'bg-yellow-400 text-yellow-900',
+    green: 'bg-green-400 text-green-900',
+    blue: 'bg-blue-400 text-blue-900',
+    pink: 'bg-pink-400 text-pink-900',
+  },
+  default: {
+    yellow: 'bg-yellow-300/60 hover:bg-yellow-400/60',
+    green: 'bg-green-300/60 hover:bg-green-400/60',
+    blue: 'bg-blue-300/60 hover:bg-blue-400/60',
+    pink: 'bg-pink-300/60 hover:bg-pink-400/60',
+  },
+};
+
+const normalizeHighlightColor = (color: string): HighlightColor => {
+  if (color === 'green' || color === 'blue' || color === 'pink') return color;
+  return 'yellow';
+};
+
+const getQuestionText = (question: TopikQuestion): string =>
+  question.question || question.passage || '';
+
+const getNotebookTitle = (questionText: string, questionIndex: number): string =>
+  questionText.length > 30
+    ? questionText.substring(0, 30) + '...'
+    : questionText || `TOPIK Q${questionIndex + 1}`;
+
+const buildNotebookContent = (
+  question: TopikQuestion,
+  aiAnalysis: AIAnalysis,
+  correctAnswer: number
+) => ({
+  questionText: getQuestionText(question),
+  options: question.options,
+  correctAnswer,
+  imageUrl: question.imageUrl || question.image,
+  aiAnalysis: {
+    translation: aiAnalysis.translation,
+    keyPoint: aiAnalysis.keyPoint,
+    analysis: aiAnalysis.analysis,
+    wrongOptions: aiAnalysis.wrongOptions,
+  },
+});
+
+const stringifyUnknown = (val: unknown): string => {
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return '[Complex Data]';
+  }
+};
+
+const safeToString = (val: unknown): string | null => {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+    return String(val);
+  }
+  if (typeof val === 'object') {
+    const record = val as Record<string, unknown>;
+    if (typeof record.text === 'string') return record.text;
+    return stringifyUnknown(val);
+  }
+  if (typeof val === 'function' || typeof val === 'symbol') return val.toString();
+  return stringifyUnknown(val);
+};
+
+const getReviewCopy = (labels: ReturnType<typeof getLabels>): ReviewCopy => {
+  const review = labels.dashboard?.topik?.mobile?.review;
+  const {
+    aiError = DEFAULT_AI_ERROR_MESSAGE,
+    saveFailed = DEFAULT_SAVE_FAILED_MESSAGE,
+    saveFailedShort = 'Save failed',
+    savedToast = 'Saved to notebook',
+  } = review ?? {};
+
+  return {
+    aiErrorMessage: aiError,
+    saveFailedMessage: saveFailed,
+    saveFailedShort,
+    savedToast,
+  };
+};
 
 const CircleNumber = ({ num, isSelected }: { num: number; isSelected: boolean }) => {
   return (
@@ -366,7 +472,7 @@ const ExplanationView = ({
 }: {
   showCorrect: boolean;
   question: TopikQuestion;
-  labels: any;
+  labels: { explanation?: string };
   isInline?: boolean;
 }) => {
   if (!showCorrect || !question.explanation) return null;
@@ -377,6 +483,451 @@ const ExplanationView = ({
       <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
       <div className="leading-relaxed">{question.explanation}</div>
     </div>
+  );
+};
+
+const QuestionTextView = ({
+  question,
+  questionIndex,
+  highlightText,
+  onTextSelect,
+  isInline,
+}: {
+  question: TopikQuestion;
+  questionIndex: number;
+  highlightText: (t: string) => string;
+  onTextSelect?: (e: React.MouseEvent) => void;
+  isInline: boolean;
+}) => {
+  if (!question.question) return null;
+
+  const html = highlightText(
+    question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
+  );
+
+  if (isInline) {
+    return (
+      <div className="flex items-start mb-3">
+        <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>
+          {questionIndex + 1}.
+        </span>
+        <div className={`text-lg leading-loose flex-1 cursor-text text-foreground ${FONT_SERIF}`}>
+          <TextSelectionWrapper onMouseUp={onTextSelect}>
+            <div dangerouslySetInnerHTML={{ __html: html }} />
+          </TextSelectionWrapper>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`text-lg leading-loose mb-3 cursor-text text-foreground ${FONT_SERIF}`}>
+      <TextSelectionWrapper onMouseUp={onTextSelect}>
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </TextSelectionWrapper>
+    </div>
+  );
+};
+
+const QuestionMainContent = ({
+  question,
+  questionIndex,
+  userAnswer,
+  showCorrect,
+  onAnswerChange,
+  onTextSelect,
+  hidePassage,
+  isInline,
+  highlightText,
+  getOptionStatus,
+  labels,
+  aiAnalysis,
+  aiLoading,
+  aiError,
+  isSaving,
+  isSaved,
+  handleAIAnalysis,
+  handleSaveToNotebook,
+}: {
+  question: TopikQuestion;
+  questionIndex: number;
+  userAnswer?: number;
+  showCorrect: boolean;
+  onAnswerChange?: (optionIndex: number) => void;
+  onTextSelect?: (e: React.MouseEvent) => void;
+  hidePassage: boolean;
+  isInline: boolean;
+  highlightText: (t: string) => string;
+  getOptionStatus: (i: number) => 'correct' | 'incorrect' | null;
+  labels: { explanation?: string };
+  aiAnalysis: AIAnalysis | null;
+  aiLoading: boolean;
+  aiError: string | null;
+  isSaving: boolean;
+  isSaved: boolean;
+  handleAIAnalysis: () => void;
+  handleSaveToNotebook: () => void;
+}) => {
+  const questionImage = question.imageUrl || question.image;
+  return (
+    <div className={isInline ? undefined : 'flex items-start'}>
+      {!isInline && (
+        <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
+          {questionIndex + 1}.
+        </span>
+      )}
+      <div className={isInline ? undefined : 'flex-1'}>
+        {!isInline && questionImage && (
+          <div className="mb-4 flex justify-center bg-card p-2 border border-foreground/10 rounded">
+            <img
+              src={questionImage}
+              alt={`Question ${questionIndex + 1}`}
+              className="max-h-[300px] object-contain"
+            />
+          </div>
+        )}
+        <PassageView
+          question={question}
+          highlightText={highlightText}
+          onTextSelect={onTextSelect}
+          hidePassage={hidePassage}
+          isInline={isInline}
+        />
+        <QuestionTextView
+          question={question}
+          questionIndex={questionIndex}
+          highlightText={highlightText}
+          onTextSelect={onTextSelect}
+          isInline={isInline}
+        />
+        <ContextBoxView
+          question={question}
+          questionIndex={questionIndex}
+          highlightText={highlightText}
+          onTextSelect={onTextSelect}
+          isInline={isInline}
+        />
+        <OptionsView
+          question={question}
+          userAnswer={userAnswer}
+          showCorrect={showCorrect}
+          onAnswerChange={onAnswerChange}
+          onTextSelect={onTextSelect}
+          highlightText={highlightText}
+          getOptionStatus={getOptionStatus}
+          isInline={isInline}
+        />
+        <ExplanationView
+          showCorrect={showCorrect}
+          question={question}
+          labels={labels}
+          isInline={isInline}
+        />
+        <AIAnalysisSection
+          showCorrect={showCorrect}
+          aiAnalysis={aiAnalysis}
+          aiLoading={aiLoading}
+          aiError={aiError}
+          isSaving={isSaving}
+          isSaved={isSaved}
+          handleAIAnalysis={handleAIAnalysis}
+          handleSaveToNotebook={handleSaveToNotebook}
+          isInline={isInline}
+        />
+      </div>
+    </div>
+  );
+};
+
+const resolveOptionStatus = (
+  optionIndex: number,
+  showCorrect: boolean,
+  correctAnswer?: number,
+  userAnswer?: number
+): 'correct' | 'incorrect' | null => {
+  if (!showCorrect) return null;
+  if (optionIndex === correctAnswer) return 'correct';
+  if (optionIndex === userAnswer && optionIndex !== correctAnswer) return 'incorrect';
+  return null;
+};
+
+const buildHighlightedText = (
+  text: string,
+  questionAnnotations: Annotation[],
+  activeAnnotationId: string | null | undefined,
+  getHighlightClass: (isActive: boolean, hasNote?: boolean, color?: string) => string
+): string => {
+  if (questionAnnotations.length === 0) return text;
+
+  let result = text;
+  questionAnnotations.forEach(annotation => {
+    const annotatedText = annotation.text || annotation.selectedText;
+    if (!annotatedText) return;
+    const isActive =
+      activeAnnotationId === annotation.id || (annotation.id === 'temp' && !activeAnnotationId);
+    const hasNote = Boolean(annotation.note?.trim());
+    const className = getHighlightClass(isActive, hasNote, annotation.color || 'yellow');
+    const annotatedRegExpSource = annotatedText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    const regex = new RegExp(`(${annotatedRegExpSource})`, 'gi');
+    result = result.replace(
+      regex,
+      `<mark data-annotation-id="${annotation.id}" class="${className}">$1</mark>`
+    );
+  });
+
+  // Sanitize the final HTML to prevent XSS
+  return sanitizeStrictHtml(result);
+};
+
+const useQuestionReviewActions = ({
+  question,
+  questionIndex,
+  correctAnswer,
+  aiErrorMessage,
+  saveFailedMessage,
+}: {
+  question: TopikQuestion;
+  questionIndex: number;
+  correctAnswer?: number;
+  aiErrorMessage: string;
+  saveFailedMessage: string;
+}) => {
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [showSaveToast, setShowSaveToast] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const analyzeQuestionAction = useAction(
+    aRef<
+      { question: string; options: string[]; correctAnswer: number; type: string },
+      { success?: boolean; data?: AIAnalysis }
+    >('ai:analyzeQuestion')
+  );
+
+  const saveNotebook = useMutation(
+    mRef<
+      { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
+      unknown
+    >('notebooks:save')
+  );
+
+  const triggerSaveToast = useCallback((error: string | null = null) => {
+    setSaveError(error);
+    setShowSaveToast(true);
+    setTimeout(() => setShowSaveToast(false), 4000);
+  }, []);
+
+  const dismissSaveToast = useCallback(() => {
+    setShowSaveToast(false);
+    setSaveError(null);
+  }, []);
+
+  const handleAIAnalysis = useCallback(async () => {
+    if (aiLoading || aiAnalysis) return;
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const result = (await analyzeQuestionAction({
+        question: getQuestionText(question),
+        options: question.options,
+        correctAnswer: correctAnswer ?? 0,
+        type: 'TOPIK_QUESTION',
+      })) as { success?: boolean; data?: AIAnalysis };
+
+      if (result?.success && result.data) setAiAnalysis(result.data);
+      else setAiError(aiErrorMessage);
+    } catch (err) {
+      console.error('[AI Analysis] Error:', err);
+      setAiError(aiErrorMessage);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiLoading, aiAnalysis, analyzeQuestionAction, question, correctAnswer, aiErrorMessage]);
+
+  const handleSaveToNotebook = useCallback(async () => {
+    if (!aiAnalysis || isSaving || isSaved) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const questionText = getQuestionText(question);
+      const title = getNotebookTitle(questionText, questionIndex);
+
+      console.log('[Save to Notebook] Saving...', { title, type: 'MISTAKE' });
+
+      const result = await saveNotebook({
+        type: 'MISTAKE',
+        title,
+        content: buildNotebookContent(question, aiAnalysis, correctAnswer ?? 0),
+        tags: ['TOPIK', 'AI-Analysis', 'Review'],
+      });
+
+      console.log('[Save to Notebook] Result:', result);
+
+      if (!result) throw new Error('Save failed');
+      setIsSaved(true);
+      triggerSaveToast();
+    } catch (err: unknown) {
+      console.error('[Save to Notebook] Error:', err);
+      triggerSaveToast((err as Error)?.message || saveFailedMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    aiAnalysis,
+    isSaving,
+    isSaved,
+    question,
+    questionIndex,
+    correctAnswer,
+    saveNotebook,
+    triggerSaveToast,
+    saveFailedMessage,
+  ]);
+
+  return {
+    aiAnalysis,
+    aiLoading,
+    aiError,
+    isSaving,
+    isSaved,
+    showSaveToast,
+    saveError,
+    handleAIAnalysis,
+    handleSaveToNotebook,
+    dismissSaveToast,
+  };
+};
+
+const useQuestionHighlighting = ({
+  annotations,
+  contextKey,
+  activeAnnotationId,
+  showCorrect,
+  correctAnswer,
+  userAnswer,
+}: {
+  annotations: Annotation[];
+  contextKey: string;
+  activeAnnotationId?: string | null;
+  showCorrect: boolean;
+  correctAnswer?: number;
+  userAnswer?: number;
+}) => {
+  const getHighlightClass = useCallback(
+    (isActive: boolean, hasNote: boolean = false, color: string = 'yellow') => {
+      const variant: HighlightVariant =
+        hasNote && !isActive ? 'note' : isActive ? 'active' : 'default';
+      const resolvedColor = normalizeHighlightColor(color);
+      return HIGHLIGHT_BASE_CLASS + HIGHLIGHT_STYLE_MAP[variant][resolvedColor];
+    },
+    []
+  );
+
+  const questionAnnotations = useMemo(
+    () => annotations.filter(annotation => annotation.contextKey === contextKey),
+    [annotations, contextKey]
+  );
+
+  const highlightText = useCallback(
+    (text: string) =>
+      buildHighlightedText(text, questionAnnotations, activeAnnotationId, getHighlightClass),
+    [questionAnnotations, activeAnnotationId, getHighlightClass]
+  );
+
+  const getOptionStatus = useCallback(
+    (optionIndex: number) =>
+      resolveOptionStatus(optionIndex, showCorrect, correctAnswer, userAnswer),
+    [showCorrect, correctAnswer, userAnswer]
+  );
+
+  return { highlightText, getOptionStatus };
+};
+
+const SaveToastShell = ({
+  containerClass,
+  buttonClass,
+  icon,
+  title,
+  body,
+  onDismiss,
+}: {
+  containerClass: string;
+  buttonClass: string;
+  icon: React.ReactNode;
+  title: string;
+  body: React.ReactNode;
+  onDismiss: () => void;
+}) => (
+  <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+    <div
+      className={`${containerClass} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3`}
+    >
+      {icon}
+      <div>
+        <p className="font-medium">{title}</p>
+        {body}
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={onDismiss}
+        className={`ml-2 p-1 ${buttonClass} rounded`}
+      >
+        <X className="w-4 h-4" />
+      </Button>
+    </div>
+  </div>
+);
+
+const SaveToast = ({
+  show,
+  saveError,
+  saveFailedShort,
+  savedToast,
+  onDismiss,
+}: {
+  show: boolean;
+  saveError: string | null;
+  saveFailedShort: string;
+  savedToast: string;
+  onDismiss: () => void;
+}) => {
+  if (!show) return null;
+
+  if (saveError) {
+    return (
+      <SaveToastShell
+        containerClass="bg-red-600"
+        buttonClass="hover:bg-red-500"
+        icon={<X className="w-5 h-5" />}
+        title={saveFailedShort}
+        body={<p className="text-red-100 text-sm">{saveError}</p>}
+        onDismiss={onDismiss}
+      />
+    );
+  }
+
+  return (
+    <SaveToastShell
+      containerClass="bg-emerald-600"
+      buttonClass="hover:bg-emerald-500"
+      icon={<BookmarkCheck className="w-5 h-5" />}
+      title={savedToast}
+      body={
+        <a href="/notebook" className="text-emerald-100 text-sm hover:text-white underline">
+          View notebook →
+        </a>
+      }
+      onDismiss={onDismiss}
+    />
   );
 };
 
@@ -397,406 +948,69 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     showInlineNumber = false,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
+    const reviewCopy = useMemo(() => getReviewCopy(labels), [labels]);
     const contextKey = useMemo(
       () => `${contextPrefix}-Q${questionIndex}`,
       [contextPrefix, questionIndex]
     );
 
-    const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiError, setAiError] = useState<string | null>(null);
+    const {
+      aiAnalysis,
+      aiLoading,
+      aiError,
+      isSaving,
+      isSaved,
+      showSaveToast,
+      saveError,
+      handleAIAnalysis,
+      handleSaveToNotebook,
+      dismissSaveToast,
+    } = useQuestionReviewActions({
+      question,
+      questionIndex,
+      correctAnswer,
+      aiErrorMessage: reviewCopy.aiErrorMessage,
+      saveFailedMessage: reviewCopy.saveFailedMessage,
+    });
 
-    // Save to notebook state
-    const [isSaving, setIsSaving] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
-
-    // Convex AI action
-    const analyzeQuestionAction = useAction(
-      aRef<
-        { question: string; options: string[]; correctAnswer: number; type: string },
-        { success?: boolean; data?: AIAnalysis }
-      >('ai:analyzeQuestion')
-    );
-
-    // AI Analysis handler - Using Convex
-    const handleAIAnalysis = useCallback(async () => {
-      if (aiLoading || aiAnalysis) return;
-
-      setAiLoading(true);
-      setAiError(null);
-
-      try {
-        const questionText = question.question || question.passage || '';
-
-        const result = (await analyzeQuestionAction({
-          question: questionText,
-          options: question.options,
-          correctAnswer: correctAnswer ?? 0,
-          type: 'TOPIK_QUESTION',
-        })) as { success?: boolean; data?: AIAnalysis };
-
-        if (result?.success && result.data) {
-          setAiAnalysis(result.data);
-        } else {
-          setAiError(labels.dashboard?.topik?.mobile?.review?.aiError || 'AI is busy right now. Please try again later.');
-        }
-      } catch (err) {
-        console.error('[AI Analysis] Error:', err);
-        setAiError(labels.dashboard?.topik?.mobile?.review?.aiError || 'AI is busy right now. Please try again later.');
-      } finally {
-        setAiLoading(false);
-      }
-    }, [question, correctAnswer, aiLoading, aiAnalysis, analyzeQuestionAction, labels.dashboard?.topik?.mobile?.review?.aiError]);
-
-    // Save to Notebook handler
-    const [showSaveToast, setShowSaveToast] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-
-    const saveNotebook = useMutation(
-      mRef<
-        { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
-        unknown
-      >('notebooks:save')
-    );
-
-    const handleSaveToNotebook = useCallback(async () => {
-      if (!aiAnalysis || isSaving || isSaved) return;
-
-      setIsSaving(true);
-      setSaveError(null);
-
-      try {
-        const questionText = question.question || question.passage || '';
-        const title =
-          questionText.length > 30
-            ? questionText.substring(0, 30) + '...'
-            : questionText || `TOPIK Q${questionIndex + 1}`;
-
-        console.log('[Save to Notebook] Saving...', { title, type: 'MISTAKE' });
-
-        const result = await saveNotebook({
-          type: 'MISTAKE',
-          title,
-          content: {
-            questionText,
-            options: question.options,
-            correctAnswer: correctAnswer ?? 0,
-            imageUrl: question.imageUrl || question.image,
-            aiAnalysis: {
-              translation: aiAnalysis.translation,
-              keyPoint: aiAnalysis.keyPoint,
-              analysis: aiAnalysis.analysis,
-              wrongOptions: aiAnalysis.wrongOptions,
-            },
-          },
-          tags: ['TOPIK', 'AI-Analysis', 'Review'],
-        });
-
-        console.log('[Save to Notebook] Result:', result);
-
-        if (result) {
-          setIsSaved(true);
-          setShowSaveToast(true);
-          // Auto hide toast after 4 seconds
-          setTimeout(() => setShowSaveToast(false), 4000);
-        } else {
-          throw new Error('Save failed');
-        }
-      } catch (err: unknown) {
-        console.error('[Save to Notebook] Error:', err);
-        setSaveError(
-          (err as Error)?.message || labels.dashboard?.topik?.mobile?.review?.saveFailed || 'Failed to save. Please try again.'
-        );
-        setShowSaveToast(true);
-        setTimeout(() => setShowSaveToast(false), 4000);
-      } finally {
-        setIsSaving(false);
-      }
-    }, [aiAnalysis, isSaving, isSaved, question, questionIndex, correctAnswer, saveNotebook, labels.dashboard?.topik?.mobile?.review?.saveFailed]);
-
-    // Helper for highlight styles
-    // Default highlight uses background; highlights with notes use underline styling.
-    const getHighlightClass = useCallback(
-      (isActive: boolean, hasNote: boolean = false, color: string = 'yellow') => {
-        const base =
-          'box-decoration-clone cursor-pointer transition-all duration-200 px-0.5 rounded-sm ';
-
-        // Highlight with notes: underline style.
-        if (hasNote && !isActive) {
-          switch (color) {
-            case 'green':
-              return (
-                base +
-                'bg-green-50/50 dark:bg-green-500/15 border-b-4 border-double border-green-500 hover:bg-green-100 dark:hover:bg-green-500/25'
-              );
-            case 'blue':
-              return (
-                base +
-                'bg-blue-50/50 dark:bg-blue-500/15 border-b-4 border-double border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-500/25'
-              );
-            case 'pink':
-              return (
-                base +
-                'bg-pink-50/50 dark:bg-pink-500/15 border-b-4 border-double border-pink-500 hover:bg-pink-100 dark:hover:bg-pink-500/25'
-              );
-            case 'yellow':
-            default:
-              return (
-                base +
-                'bg-yellow-50/50 dark:bg-yellow-500/15 border-b-4 border-double border-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-500/25'
-              );
-          }
-        }
-
-        // Active state.
-        if (isActive) {
-          switch (color) {
-            case 'green':
-              return base + 'bg-green-400 text-green-900';
-            case 'blue':
-              return base + 'bg-blue-400 text-blue-900';
-            case 'pink':
-              return base + 'bg-pink-400 text-pink-900';
-            case 'yellow':
-            default:
-              return base + 'bg-yellow-400 text-yellow-900';
-          }
-        }
-
-        // Default highlight without note.
-        switch (color) {
-          case 'green':
-            return base + 'bg-green-300/60 hover:bg-green-400/60';
-          case 'blue':
-            return base + 'bg-blue-300/60 hover:bg-blue-400/60';
-          case 'pink':
-            return base + 'bg-pink-300/60 hover:bg-pink-400/60';
-          case 'yellow':
-          default:
-            return base + 'bg-yellow-300/60 hover:bg-yellow-400/60';
-        }
-      },
-      []
-    );
-
-    // Get annotations for this question
-    const questionAnnotations = useMemo(
-      () => annotations.filter(a => a.contextKey === contextKey),
-      [annotations, contextKey]
-    );
-
-    // Highlight annotated text
-    const highlightText = useCallback(
-      (text: string) => {
-        if (questionAnnotations.length === 0) return text;
-        let result = text;
-        questionAnnotations.forEach(annotation => {
-          const annotatedText = annotation.text || annotation.selectedText;
-          if (!annotatedText) return;
-          const isActive =
-            activeAnnotationId === annotation.id ||
-            (annotation.id === 'temp' && !activeAnnotationId);
-          const hasNote = Boolean(annotation.note?.trim());
-          const className = getHighlightClass(isActive, hasNote, annotation.color || 'yellow');
-          const annotatedRegExpSource = annotatedText.replaceAll(
-            /[.*+?^${}()|[\]\\]/g,
-            String.raw`\$&`
-          );
-          const regex = new RegExp(`(${annotatedRegExpSource})`, 'gi');
-          result = result.replace(
-            regex,
-            `<mark data-annotation-id="${annotation.id}" class="${className}">$1</mark>`
-          );
-        });
-        // Sanitize the final HTML to prevent XSS
-        return sanitizeStrictHtml(result);
-      },
-      [questionAnnotations, activeAnnotationId, getHighlightClass]
-    );
-
-    const getOptionStatus = useCallback(
-      (optionIndex: number) => {
-        if (!showCorrect) return null;
-        if (optionIndex === correctAnswer) return 'correct';
-        if (optionIndex === userAnswer && optionIndex !== correctAnswer) return 'incorrect';
-        return null;
-      },
-      [showCorrect, correctAnswer, userAnswer]
-    );
-
-    // Options grid logic is handled inside OptionsView based on question.options length
+    const { highlightText, getOptionStatus } = useQuestionHighlighting({
+      annotations,
+      contextKey,
+      activeAnnotationId,
+      showCorrect,
+      correctAnswer,
+      userAnswer,
+    });
 
     return (
       <div className="break-inside-avoid">
-        {showInlineNumber ? (
-          <div>
-            <PassageView
-              question={question}
-              highlightText={highlightText}
-              onTextSelect={onTextSelect}
-              isInline={true}
-              hidePassage={hidePassage}
-            />
-            {question.question && (
-              <div className="flex items-start mb-3">
-                <span className={`text-lg font-bold mr-2 min-w-[32px] ${FONT_SERIF}`}>
-                  {questionIndex + 1}.
-                </span>
-                <div
-                  className={`text-lg leading-loose flex-1 cursor-text text-foreground ${FONT_SERIF}`}
-                >
-                  <TextSelectionWrapper onMouseUp={onTextSelect}>
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: highlightText(
-                          question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
-                        ),
-                      }}
-                    />
-                  </TextSelectionWrapper>
-                </div>
-              </div>
-            )}
-            <ContextBoxView
-              question={question}
-              questionIndex={questionIndex}
-              highlightText={highlightText}
-              onTextSelect={onTextSelect}
-              isInline={true}
-            />
-            <OptionsView
-              question={question}
-              userAnswer={userAnswer}
-              showCorrect={showCorrect}
-              onAnswerChange={onAnswerChange}
-              onTextSelect={onTextSelect}
-              highlightText={highlightText}
-              getOptionStatus={getOptionStatus}
-              isInline={true}
-            />
-            <ExplanationView
-              showCorrect={showCorrect}
-              question={question}
-              labels={labels}
-              isInline={true}
-            />
-            <AIAnalysisSection
-              showCorrect={showCorrect}
-              aiAnalysis={aiAnalysis}
-              aiLoading={aiLoading}
-              aiError={aiError}
-              isSaving={isSaving}
-              isSaved={isSaved}
-              handleAIAnalysis={handleAIAnalysis}
-              handleSaveToNotebook={handleSaveToNotebook}
-              isInline={true}
-            />
-          </div>
-        ) : (
-          <div className="flex items-start">
-            <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
-              {questionIndex + 1}.
-            </span>
-            <div className="flex-1">
-              {(question.imageUrl || question.image) && (
-                <div className="mb-4 flex justify-center bg-card p-2 border border-foreground/10 rounded">
-                  <img
-                    src={question.imageUrl || question.image}
-                    alt={`Question ${questionIndex + 1}`}
-                    className="max-h-[300px] object-contain"
-                  />
-                </div>
-              )}
-              <PassageView
-                question={question}
-                highlightText={highlightText}
-                onTextSelect={onTextSelect}
-                hidePassage={hidePassage}
-              />
-              {question.question && (
-                <div
-                  className={`text-lg leading-loose mb-3 cursor-text text-foreground ${FONT_SERIF}`}
-                >
-                  <TextSelectionWrapper onMouseUp={onTextSelect}>
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: highlightText(
-                          question.question.replaceAll(/\(\s*\)/g, '( &nbsp;&nbsp;&nbsp;&nbsp; )')
-                        ),
-                      }}
-                    />
-                  </TextSelectionWrapper>
-                </div>
-              )}
-              <ContextBoxView
-                question={question}
-                questionIndex={questionIndex}
-                highlightText={highlightText}
-                onTextSelect={onTextSelect}
-              />
-              <OptionsView
-                question={question}
-                userAnswer={userAnswer}
-                showCorrect={showCorrect}
-                onAnswerChange={onAnswerChange}
-                onTextSelect={onTextSelect}
-                highlightText={highlightText}
-                getOptionStatus={getOptionStatus}
-              />
-              <ExplanationView showCorrect={showCorrect} question={question} labels={labels} />
-              <AIAnalysisSection
-                showCorrect={showCorrect}
-                aiAnalysis={aiAnalysis}
-                aiLoading={aiLoading}
-                aiError={aiError}
-                isSaving={isSaving}
-                isSaved={isSaved}
-                handleAIAnalysis={handleAIAnalysis}
-                handleSaveToNotebook={handleSaveToNotebook}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Save Success/Error Toast */}
-        {showSaveToast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
-            <div
-              className={`${saveError ? 'bg-red-600' : 'bg-emerald-600'} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3`}
-            >
-              {saveError ? <X className="w-5 h-5" /> : <BookmarkCheck className="w-5 h-5" />}
-              <div>
-                <p className="font-medium">
-                  {saveError
-                    ? labels.dashboard?.topik?.mobile?.review?.saveFailedShort || 'Save failed'
-                    : labels.dashboard?.topik?.mobile?.review?.savedToast || 'Saved to notebook'}
-                </p>
-                {saveError ? (
-                  <p className="text-red-100 text-sm">{saveError}</p>
-                ) : (
-                  <a
-                    href="/notebook"
-                    className="text-emerald-100 text-sm hover:text-white underline"
-                  >
-                    View notebook →
-                  </a>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => {
-                  setShowSaveToast(false);
-                  setSaveError(null);
-                }}
-                className={`ml-2 p-1 ${saveError ? 'hover:bg-red-500' : 'hover:bg-emerald-500'} rounded`}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <QuestionMainContent
+          question={question}
+          questionIndex={questionIndex}
+          userAnswer={userAnswer}
+          showCorrect={showCorrect}
+          onAnswerChange={onAnswerChange}
+          onTextSelect={onTextSelect}
+          hidePassage={hidePassage}
+          isInline={showInlineNumber}
+          highlightText={highlightText}
+          getOptionStatus={getOptionStatus}
+          labels={labels}
+          aiAnalysis={aiAnalysis}
+          aiLoading={aiLoading}
+          aiError={aiError}
+          isSaving={isSaving}
+          isSaved={isSaved}
+          handleAIAnalysis={handleAIAnalysis}
+          handleSaveToNotebook={handleSaveToNotebook}
+        />
+        <SaveToast
+          show={showSaveToast}
+          saveError={saveError}
+          saveFailedShort={reviewCopy.saveFailedShort}
+          savedToast={reviewCopy.savedToast}
+          onDismiss={dismissSaveToast}
+        />
       </div>
     );
   }
@@ -819,26 +1033,7 @@ const SanitizedAIAnalysisDisplay = ({
   isSaved: boolean;
   onSave: () => void;
 }) => {
-  // Helper to safely convert anything to string or return null
-  const safeString = (val: unknown): string | null => {
-    if (val === null || val === undefined) return null;
-    if (typeof val === 'string') return val;
-    if (typeof val === 'number') return String(val);
-    if (typeof val === 'boolean') return String(val);
-    if (typeof val === 'object') {
-      try {
-        // If it's a simple object with a 'text' property (common AI failure mode), use that
-        const record = val as Record<string, unknown>;
-        if (typeof record.text === 'string') return record.text;
-        return JSON.stringify(val);
-      } catch {
-        return '[Complex Data]';
-      }
-    }
-    return typeof val === 'function' || typeof val === 'symbol'
-      ? val.toString()
-      : JSON.stringify(val);
-  };
+  const safeString = safeToString;
 
   // Helper to safely extract wrong options
   const safeWrongOptions = (opts: unknown): [string, string][] => {

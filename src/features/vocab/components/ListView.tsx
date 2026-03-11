@@ -21,23 +21,15 @@ const getPosLabel = (
   labels: ReturnType<typeof getLabels>
 ): string => {
   const posType = partOfSpeech ?? pos ?? 'NOUN';
-
-  switch (posType) {
-    case 'VERB_T':
-      return labels.pos?.verb_t ?? 'v.t.';
-    case 'VERB_I':
-      return labels.pos?.verb_i ?? 'v.i.';
-    case 'ADJ':
-      return labels.pos?.adj ?? 'adj.';
-    case 'NOUN':
-      return labels.pos?.noun ?? 'n.';
-    case 'ADV':
-      return labels.pos?.adv ?? 'adv.';
-    case 'PARTICLE':
-      return labels.pos?.particle ?? 'part.';
-    default:
-      return posType;
-  }
+  const posLabels: Record<string, string> = {
+    VERB_T: labels.pos?.verb_t ?? 'v.t.',
+    VERB_I: labels.pos?.verb_i ?? 'v.i.',
+    ADJ: labels.pos?.adj ?? 'adj.',
+    NOUN: labels.pos?.noun ?? 'n.',
+    ADV: labels.pos?.adv ?? 'adv.',
+    PARTICLE: labels.pos?.particle ?? 'part.',
+  };
+  return posLabels[posType] ?? posType;
 };
 
 const ListView: React.FC<ListViewProps> = React.memo(({ words, settings, language }) => {

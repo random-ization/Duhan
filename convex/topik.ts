@@ -8,6 +8,7 @@ import { normalizeAnswerMap } from './validation';
 import { hasActiveSubscription } from './subscription';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
+const DEFAULT_TOPIK_EXAMS_LIMIT = 200;
 
 const autoSubmitMutation = makeFunctionReference<'mutation', AutoSubmitArgs, void>(
   'topik:autoSubmit'
@@ -129,12 +130,21 @@ const toTopikExamDto = async (
 export const getExams = query({
   args: {
     paginationOpts: v.optional(paginationOptsValidator),
+    type: v.optional(v.union(v.literal('READING'), v.literal('LISTENING'), v.literal('WRITING'))),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const query = ctx.db.query('topik_exams').order('desc');
+    const limit = Math.max(1, Math.min(args.limit ?? DEFAULT_TOPIK_EXAMS_LIMIT, 500));
+    const examType = args.type;
+    const examsQuery = examType
+      ? ctx.db
+          .query('topik_exams')
+          .withIndex('by_type', q => q.eq('type', examType))
+          .order('desc')
+      : ctx.db.query('topik_exams').order('desc');
 
     if (args.paginationOpts) {
-      const results = await query.paginate(args.paginationOpts);
+      const results = await examsQuery.paginate(args.paginationOpts);
       const pageWithUrls = await Promise.all(results.page.map(exam => toTopikExamDto(ctx, exam)));
 
       return {
@@ -143,14 +153,7 @@ export const getExams = query({
       };
     }
 
-    const exams: Awaited<ReturnType<typeof query.paginate>>['page'] = [];
-    let cursor: string | null = null;
-    do {
-      const batch = await query.paginate({ numItems: 200, cursor });
-      exams.push(...batch.page);
-      cursor = batch.isDone ? null : batch.continueCursor;
-    } while (cursor);
-
+    const exams = await examsQuery.take(limit);
     return Promise.all(exams.map(exam => toTopikExamDto(ctx, exam)));
   },
 });
@@ -685,7 +688,7 @@ export const checkExamQuestions = mutation({
     // Find exam by round
     const exam = await ctx.db
       .query('topik_exams')
-      .filter(q => q.eq(q.field('round'), args.round))
+      .withIndex('by_round', q => q.eq('round', args.round))
       .first();
 
     if (!exam) {
@@ -731,7 +734,7 @@ export const removeDuplicateQuestions = mutation({
     // Find exam by round
     const exam = await ctx.db
       .query('topik_exams')
-      .filter(q => q.eq(q.field('round'), args.round))
+      .withIndex('by_round', q => q.eq('round', args.round))
       .first();
 
     if (!exam) {
@@ -779,7 +782,7 @@ export const updateQ39to41ForNewFormat = mutation({
     // Find exam by round
     const exam = await ctx.db
       .query('topik_exams')
-      .filter(q => q.eq(q.field('round'), args.round))
+      .withIndex('by_round', q => q.eq('round', args.round))
       .first();
 
     if (!exam) {

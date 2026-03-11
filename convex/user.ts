@@ -1,9 +1,29 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type MutationCtx } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
+import type { Id } from './_generated/dataModel';
 
 import { getAuthUserId } from './utils';
 import { asId } from './id';
 import { normalizeAnswerMap, normalizeFiniteNumberMap } from './validation';
+import {
+  buildExamScoreInfo,
+  countCorrectAnswers,
+  normalizeExamAttemptAnswers,
+} from './examAttemptMetrics';
+
+const updateUserCounter = async (
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  field: 'savedWordsCount' | 'mistakesCount',
+  delta: number
+) => {
+  const user = await ctx.db.get(userId);
+  if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
+
+  await ctx.db.patch(userId, {
+    [field]: Math.max(0, (user[field] || 0) + delta),
+  });
+};
 
 // Save a word to user's personal list
 export const saveSavedWord = mutation({
@@ -28,6 +48,7 @@ export const saveSavedWord = mutation({
       exampleTranslation,
       createdAt: Date.now(),
     });
+    await updateUserCounter(ctx, userId, 'savedWordsCount', 1);
     return { success: true };
   },
 });
@@ -63,6 +84,13 @@ export const getSavedWordsCount = query({
   args: {},
   handler: async ctx => {
     const userId = await getAuthUserId(ctx);
+    const user = await ctx.db.get(userId);
+    if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
+
+    if (typeof user.savedWordsCount === 'number') {
+      return { count: user.savedWordsCount };
+    }
+
     const rows = await ctx.db
       .query('saved_words')
       .withIndex('by_user', q => q.eq('userId', userId))
@@ -101,6 +129,13 @@ export const getMistakesCount = query({
   args: {},
   handler: async ctx => {
     const userId = await getAuthUserId(ctx);
+    const user = await ctx.db.get(userId);
+    if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
+
+    if (typeof user.mistakesCount === 'number') {
+      return { count: user.mistakesCount };
+    }
+
     const rows = await ctx.db
       .query('mistakes')
       .withIndex('by_user', q => q.eq('userId', userId))
@@ -128,36 +163,21 @@ export const getExamAttempts = query({
     const examsArray = await Promise.all(examIds.map(id => ctx.db.get(id)));
     const examsMap = new Map(examsArray.filter(Boolean).map(e => [e!._id.toString(), e!]));
 
-    const scoreMap = new Map<
-      string,
-      {
-        totalScore: number;
-        correctAnswerMap: Map<number, number>;
-        indexToNumber: number[];
-        numberToIndex: Map<number, number>;
-      }
-    >();
+    const attemptsNeedingQuestionFallback = sorted.filter(
+      attempt => attempt.maxScore === undefined || attempt.correctCount === undefined
+    );
+    const examIdsNeedingQuestionFallback = [
+      ...new Set(attemptsNeedingQuestionFallback.map(attempt => attempt.examId)),
+    ];
+
+    const scoreMap = new Map<string, ReturnType<typeof buildExamScoreInfo>>();
     await Promise.all(
-      examIds.map(async examId => {
+      examIdsNeedingQuestionFallback.map(async examId => {
         const questions = await ctx.db
           .query('topik_questions')
           .withIndex('by_exam', q => q.eq('examId', examId))
           .collect();
-        const sortedQuestions = questions.slice().sort((a, b) => a.number - b.number);
-        const totalScore = sortedQuestions.reduce((sum, q) => sum + (q.score || 0), 0);
-        const correctAnswerMap = new Map<number, number>(
-          sortedQuestions.map(q => [q.number, q.correctAnswer])
-        );
-        const indexToNumber = sortedQuestions.map(q => q.number);
-        const numberToIndex = new Map<number, number>(
-          sortedQuestions.map((q, idx) => [q.number, idx])
-        );
-        scoreMap.set(examId.toString(), {
-          totalScore,
-          correctAnswerMap,
-          indexToNumber,
-          numberToIndex,
-        });
+        scoreMap.set(examId.toString(), buildExamScoreInfo(questions));
       })
     );
 
@@ -166,50 +186,19 @@ export const getExamAttempts = query({
         const exam = examsMap.get(a.examId.toString());
         if (!exam) return null;
 
-        const answers = (a.answers || {}) as Record<string, number>;
-        const entries = Object.entries(answers)
-          .map(([k, v]) => [Number(k), v] as const)
-          .filter(([k]) => Number.isFinite(k));
-
-        const scoreInfo = scoreMap.get(a.examId.toString());
-        const totalScore = scoreInfo?.totalScore ?? 0;
-        const correctAnswerMap = scoreInfo?.correctAnswerMap ?? new Map<number, number>();
-        const indexToNumber = scoreInfo?.indexToNumber ?? [];
-        const numberToIndex = scoreInfo?.numberToIndex ?? new Map<number, number>();
-
-        const numericKeys = entries.map(([k]) => k);
-        const maxKey = numericKeys.length > 0 ? Math.max(...numericKeys) : -1;
-        const hasZero = numericKeys.includes(0);
-        const isZeroBased =
-          hasZero || (numericKeys.length > 0 && maxKey <= Math.max(indexToNumber.length - 1, 0));
-
-        const answersByNumber = new Map<number, number>();
-        const userAnswers: Record<number, number> = {};
-
-        for (const [key, value] of entries) {
-          if (isZeroBased) {
-            const idx = key;
-            userAnswers[idx] = value;
-            const qNum = indexToNumber[idx] ?? idx + 1;
-            if (Number.isFinite(qNum)) {
-              answersByNumber.set(qNum, value);
-            }
-          } else {
-            const qNum = key;
-            answersByNumber.set(qNum, value);
-            const idx = numberToIndex.get(qNum);
-            if (idx !== undefined) {
-              userAnswers[idx] = value;
-            } else if (qNum > 0) {
-              userAnswers[qNum - 1] = value;
-            }
-          }
-        }
-
-        let correctCount = 0;
-        for (const [qNum, ans] of answersByNumber.entries()) {
-          if (correctAnswerMap.get(qNum) === ans) correctCount++;
-        }
+        const scoreInfo = scoreMap.get(a.examId.toString()) || {
+          totalScore: a.maxScore || 0,
+          correctAnswerMap: new Map<number, number>(),
+          indexToNumber: [],
+          numberToIndex: new Map<number, number>(),
+        };
+        const { answersByNumber, userAnswers } = normalizeExamAttemptAnswers(
+          (a.answers || {}) as Record<string, number>,
+          scoreInfo
+        );
+        const correctCount =
+          a.correctCount ?? countCorrectAnswers(answersByNumber, scoreInfo.correctAnswerMap);
+        const totalScore = a.maxScore ?? scoreInfo.totalScore;
 
         return {
           id: a._id,
@@ -251,6 +240,7 @@ export const saveMistake = mutation({
       reviewCount: 0,
       createdAt: Date.now(),
     });
+    await updateUserCounter(ctx, userId, 'mistakesCount', 1);
 
     return { success: true };
   },
@@ -305,21 +295,30 @@ export const saveExamAttempt = mutation({
     if (!exam)
       throw new ConvexError({ code: 'EXAM_NOT_FOUND', message: `Exam not found: ${examId}` });
 
-    // Resolve total questions if not provided
-    let totalQuestions = args.totalQuestions;
-    if (!totalQuestions) {
-      const questions = await ctx.db
-        .query('topik_questions')
-        .withIndex('by_exam', q => q.eq('examId', exam._id))
-        .collect();
-      totalQuestions = questions.length;
-    }
+    const questions = await ctx.db
+      .query('topik_questions')
+      .withIndex('by_exam', q => q.eq('examId', exam._id))
+      .collect();
+    const scoreInfo = buildExamScoreInfo(questions);
+    const normalizedAttemptAnswers = normalizeExamAttemptAnswers(
+      (answers || {}) as Record<string, number>,
+      scoreInfo
+    );
+
+    const totalQuestions = args.totalQuestions || questions.length;
+    const maxScore = scoreInfo.totalScore;
+    const correctCount = countCorrectAnswers(
+      normalizedAttemptAnswers.answersByNumber,
+      scoreInfo.correctAnswerMap
+    );
 
     const attemptId = await ctx.db.insert('exam_attempts', {
       userId,
       examId: exam._id,
       score,
       totalQuestions,
+      maxScore,
+      correctCount,
       sectionScores,
       duration,
       answers,
@@ -338,6 +337,7 @@ export const removeSavedWord = mutation({
     if (!row) return { success: false, error: 'Not found' };
     if (row.userId !== userId) throw new ConvexError({ code: 'FORBIDDEN' });
     await ctx.db.delete(args.savedWordId);
+    await updateUserCounter(ctx, userId, 'savedWordsCount', -1);
     return { success: true };
   },
 });
@@ -351,6 +351,10 @@ export const clearMistakes = mutation({
       .withIndex('by_user', q => q.eq('userId', userId))
       .collect();
     await Promise.all(rows.map(r => ctx.db.delete(r._id)));
+    const user = await ctx.db.get(userId);
+    if (user) {
+      await ctx.db.patch(userId, { mistakesCount: 0 });
+    }
     return { success: true, deleted: rows.length };
   },
 });
@@ -363,6 +367,7 @@ export const removeMistake = mutation({
     if (!row) return { success: false, error: 'Not found' };
     if (row.userId !== userId) throw new ConvexError({ code: 'FORBIDDEN' });
     await ctx.db.delete(args.mistakeId);
+    await updateUserCounter(ctx, userId, 'mistakesCount', -1);
     return { success: true };
   },
 });
@@ -381,14 +386,19 @@ export const logActivity = mutation({
     if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
 
     const { activityType, duration, itemsStudied, metadata } = args;
+    const minutes = Math.max(0, duration || 0);
 
     await ctx.db.insert('activity_logs', {
       userId,
       activityType,
-      duration,
+      duration: minutes,
       itemsStudied,
       metadata,
       createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(userId, {
+      totalStudyMinutes: (user.totalStudyMinutes || 0) + minutes,
     });
 
     return { success: true };

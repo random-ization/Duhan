@@ -43,6 +43,177 @@ interface ExamListProps {
   onDeleteAttempt?: (attemptId: string) => void;
 }
 
+type LabelsShape = ReturnType<typeof getLabels>;
+
+const ExamHistoryView: React.FC<{
+  exams: TopikExam[];
+  history: ExamAttempt[];
+  labels: LabelsShape;
+  onBack?: () => void;
+  onReviewAttempt: (attempt: ExamAttempt) => void;
+  onDeleteAttempt?: (attemptId: string) => void;
+  pendingDeleteAttemptId: string | null;
+  setPendingDeleteAttemptId: (attemptId: string | null) => void;
+}> = ({
+  exams,
+  history,
+  labels,
+  onBack,
+  onReviewAttempt,
+  onDeleteAttempt,
+  pendingDeleteAttemptId,
+  setPendingDeleteAttemptId,
+}) => (
+  <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onBack}
+            className="group flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+          </Button>
+        )}
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            {getLabel(labels, ['topikExamList', 'historyTitle']) ||
+              labels.examHistory ||
+              'Exam History'}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {getLabel(labels, ['topikExamList', 'historySubtitle']) ||
+              'Review your past performance'}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      {history.length === 0 && (
+        <div className="text-center py-20 bg-card rounded-3xl border border-border border-dashed">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <History className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">
+            {getLabel(labels, ['topikExamList', 'noHistory']) ||
+              labels.noHistory ||
+              'No exam history yet'}
+          </p>
+        </div>
+      )}
+
+      {history.map((attempt, idx) => {
+        const matchingExam = exams.find(e => e.id === attempt.examId);
+        const totalScore = attempt.maxScore || attempt.totalScore || 100;
+        const percentage = totalScore > 0 ? (attempt.score / totalScore) * 100 : 0;
+        const passed = percentage >= 60;
+
+        const attemptRecord = attempt as unknown as Record<string, unknown>;
+        const attemptTotalQuestions =
+          typeof attemptRecord.totalQuestions === 'number'
+            ? attemptRecord.totalQuestions
+            : undefined;
+        const totalQuestions: number | string = matchingExam
+          ? matchingExam.questions?.length || '?'
+          : (attemptTotalQuestions ?? '?');
+        const correctCount = attempt.correctCount ?? '?';
+
+        return (
+          <div
+            key={attempt.id || idx}
+            className="group bg-card rounded-2xl p-6 border border-border hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${
+                  passed ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                }`}
+              >
+                {percentage.toFixed(0)}
+              </div>
+              <div>
+                <h3 className="font-bold text-muted-foreground text-lg mb-1">
+                  {attempt.examTitle}
+                </h3>
+                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    {attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {correctCount} / {totalQuestions} {labels.correct}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 md:self-center self-end">
+              <Button
+                type="button"
+                size="auto"
+                onClick={() => onReviewAttempt(attempt)}
+                className="px-5 py-2.5 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 hover:text-indigo-700 dark:hover:text-indigo-200 rounded-xl font-bold transition-colors flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                <span>{getLabel(labels, ['topikExamList', 'review']) || 'Review'}</span>
+              </Button>
+
+              {onDeleteAttempt && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => setPendingDeleteAttemptId(attempt.id)}
+                  className="p-2.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/15 rounded-xl transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    <AlertDialog
+      open={pendingDeleteAttemptId !== null}
+      onOpenChange={open => {
+        if (!open) setPendingDeleteAttemptId(null);
+      }}
+    >
+      <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-black text-foreground">
+            {getLabel(labels, ['topikExamList', 'deleteAttemptTitle']) || 'Delete attempt?'}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+            {getLabel(labels, ['topikExamList', 'deleteConfirm']) || 'Delete this attempt?'}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-row justify-end gap-2">
+          <AlertDialogCancel onClick={() => setPendingDeleteAttemptId(null)}>
+            {getLabel(labels, ['common', 'cancel']) || 'Cancel'}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              if (pendingDeleteAttemptId && onDeleteAttempt)
+                onDeleteAttempt(pendingDeleteAttemptId);
+              setPendingDeleteAttemptId(null);
+            }}
+          >
+            {getLabel(labels, ['common', 'delete']) || 'Delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>
+);
+
 export const ExamList: React.FC<ExamListProps> = ({
   exams,
   history,
@@ -87,159 +258,18 @@ export const ExamList: React.FC<ExamListProps> = ({
     });
   }, [exams, filterType, searchQuery]);
 
-  // --- HISTORY VIEW ---
   if (showHistoryView) {
     return (
-      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {onBack && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={onBack}
-                className="group flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
-              >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-              </Button>
-            )}
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">
-                {getLabel(labels, ['topikExamList', 'historyTitle']) ||
-                  labels.examHistory ||
-                  'Exam History'}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {getLabel(labels, ['topikExamList', 'historySubtitle']) ||
-                  'Review your past performance'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {history.length === 0 && (
-            <div className="text-center py-20 bg-card rounded-3xl border border-border border-dashed">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <History className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground font-medium">
-                {getLabel(labels, ['topikExamList', 'noHistory']) ||
-                  labels.noHistory ||
-                  'No exam history yet'}
-              </p>
-            </div>
-          )}
-
-          {history.map((attempt, idx) => {
-            const matchingExam = exams.find(e => e.id === attempt.examId);
-            const totalScore = attempt.maxScore || attempt.totalScore || 100;
-            const percentage = totalScore > 0 ? (attempt.score / totalScore) * 100 : 0;
-            const passed = percentage >= 60;
-
-            const attemptRecord = attempt as unknown as Record<string, unknown>;
-            const attemptTotalQuestions =
-              typeof attemptRecord.totalQuestions === 'number'
-                ? attemptRecord.totalQuestions
-                : undefined;
-            const totalQuestions: number | string = matchingExam
-              ? matchingExam.questions?.length || '?'
-              : (attemptTotalQuestions ?? '?');
-            const correctCount = attempt.correctCount ?? '?';
-
-            return (
-              <div
-                key={attempt.id || idx}
-                className="group bg-card rounded-2xl p-6 border border-border hover:border-indigo-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${
-                      passed ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                    }`}
-                  >
-                    {percentage.toFixed(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-muted-foreground text-lg mb-1">
-                      {attempt.examTitle}
-                    </h3>
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {attempt.timestamp
-                          ? new Date(attempt.timestamp).toLocaleDateString()
-                          : 'N/A'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        {correctCount} / {totalQuestions} {labels.correct}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 md:self-center self-end">
-                  <Button
-                    type="button"
-                    size="auto"
-                    onClick={() => onReviewAttempt(attempt)}
-                    className="px-5 py-2.5 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 hover:text-indigo-700 dark:hover:text-indigo-200 rounded-xl font-bold transition-colors flex items-center gap-2"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>{getLabel(labels, ['topikExamList', 'review']) || 'Review'}</span>
-                  </Button>
-
-                  {onDeleteAttempt && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={() => setPendingDeleteAttemptId(attempt.id)}
-                      className="p-2.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/15 rounded-xl transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <AlertDialog
-          open={pendingDeleteAttemptId !== null}
-          onOpenChange={open => {
-            if (!open) setPendingDeleteAttemptId(null);
-          }}
-        >
-          <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-black text-foreground">
-                {getLabel(labels, ['topikExamList', 'deleteAttemptTitle']) || 'Delete attempt?'}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
-                {getLabel(labels, ['topikExamList', 'deleteConfirm']) || 'Delete this attempt?'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row justify-end gap-2">
-              <AlertDialogCancel onClick={() => setPendingDeleteAttemptId(null)}>
-                {getLabel(labels, ['common', 'cancel']) || 'Cancel'}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  if (pendingDeleteAttemptId && onDeleteAttempt)
-                    onDeleteAttempt(pendingDeleteAttemptId);
-                  setPendingDeleteAttemptId(null);
-                }}
-              >
-                {getLabel(labels, ['common', 'delete']) || 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      <ExamHistoryView
+        exams={exams}
+        history={history}
+        labels={labels}
+        onBack={onBack}
+        onReviewAttempt={onReviewAttempt}
+        onDeleteAttempt={onDeleteAttempt}
+        pendingDeleteAttemptId={pendingDeleteAttemptId}
+        setPendingDeleteAttemptId={setPendingDeleteAttemptId}
+      />
     );
   }
 

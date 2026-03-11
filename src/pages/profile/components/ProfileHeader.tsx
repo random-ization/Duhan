@@ -1,12 +1,13 @@
 import React from 'react';
 import { Camera, CheckCircle, XCircle, Crown, Calendar, Trophy } from 'lucide-react';
 import { User } from '../../../types';
+import type { ProfileLabels } from '../types';
 import { Button } from '../../../components/ui';
 import { Input } from '../../../components/ui';
 
 interface ProfileHeaderProps {
   user: User;
-  labels: any;
+  labels: ProfileLabels;
   displayName: string;
   isEditingName: boolean;
   setIsEditingName: (val: boolean) => void;

@@ -31,6 +31,210 @@ import { Input } from '../components/ui';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
+type LabelsBundle = ReturnType<typeof getLabels>;
+
+const ACTIVE_EXPORT_MODE_BUTTON_CLASS =
+  'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]';
+const INACTIVE_EXPORT_MODE_BUTTON_CLASS = 'border-border bg-card hover:border-border';
+
+const getExportModeButtonClass = (active: boolean): string =>
+  `!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${active ? ACTIVE_EXPORT_MODE_BUTTON_CLASS : INACTIVE_EXPORT_MODE_BUTTON_CLASS}`;
+
+const getShuffleTrackClass = (enabled: boolean): string =>
+  `w-12 h-7 rounded-full transition-all relative ${enabled ? 'bg-orange-500 dark:bg-orange-400/80' : 'bg-muted'}`;
+
+const getShuffleThumbClass = (enabled: boolean): string =>
+  `absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${enabled ? 'left-6' : 'left-1'}`;
+
+const withFallback = (value: string | undefined, fallback: string): string => value || fallback;
+
+type ExportModalCopy = {
+  exportPdfButton: string;
+  exportingButton: string;
+  exportPdfTitle: string;
+  wordSheetTitle: string;
+  closeLabel: string;
+  shuffleLabel: string;
+  a4Title: string;
+  a4Description: string;
+  koListTitle: string;
+  koListDescription: string;
+};
+
+const getExportModalCopy = (labels: LabelsBundle): ExportModalCopy => ({
+  exportPdfButton: withFallback(labels.vocabBook?.exportPdf, 'Export PDF'),
+  exportingButton: withFallback(labels.vocabBook?.exporting, 'Exporting...'),
+  exportPdfTitle: withFallback(labels.vocabBook?.exportPdfTitle, 'Export PDF'),
+  wordSheetTitle: withFallback(labels.vocabBook?.wordSheetTitle, 'Word Sheet'),
+  closeLabel: withFallback(labels.common?.close, 'Close'),
+  shuffleLabel: withFallback(labels.vocabBook?.exportModes?.shuffleLabel, 'Shuffle'),
+  a4Title: withFallback(labels.vocabBook?.exportModes?.a4Title, 'A4 Dictation'),
+  a4Description: withFallback(labels.vocabBook?.exportModes?.a4Desc, 'Two-way test'),
+  koListTitle: withFallback(labels.vocabBook?.exportModes?.koListTitle, 'Korean List'),
+  koListDescription: withFallback(labels.vocabBook?.exportModes?.koListDesc, 'Write the meaning'),
+});
+
+type ExportModeOption = {
+  mode: ExportMode;
+  title: string;
+  description: string;
+};
+
+const ExportModeButtons: React.FC<{
+  options: ExportModeOption[];
+  selectedMode: ExportMode;
+  onSelect: (mode: ExportMode) => void;
+}> = ({ options, selectedMode, onSelect }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    {options.map(option => (
+      <Button
+        key={option.mode}
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => onSelect(option.mode)}
+        className={getExportModeButtonClass(selectedMode === option.mode)}
+      >
+        <p className="font-black text-foreground">{option.title}</p>
+        <p className="text-xs font-bold text-muted-foreground mt-1">{option.description}</p>
+      </Button>
+    ))}
+  </div>
+);
+
+const VocabExportModal: React.FC<{
+  labels: LabelsBundle;
+  exportOpen: boolean;
+  exporting: boolean;
+  exportMode: ExportMode;
+  exportShuffle: boolean;
+  exportSubtitle: string;
+  langListLabel: string;
+  langListDesc: string;
+  visibleItemsCount: number;
+  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
+  onSelectMode: (mode: ExportMode) => void;
+  onToggleShuffle: () => void;
+  onExport: () => void;
+}> = ({
+  labels,
+  exportOpen,
+  exporting,
+  exportMode,
+  exportShuffle,
+  exportSubtitle,
+  langListLabel,
+  langListDesc,
+  visibleItemsCount,
+  onOpenChange,
+  onClose,
+  onSelectMode,
+  onToggleShuffle,
+  onExport,
+}) => {
+  const copy = getExportModalCopy(labels);
+  const currentButtonText = exporting ? copy.exportingButton : copy.exportPdfButton;
+  const modeOptions: ExportModeOption[] = [
+    {
+      mode: 'A4_DICTATION',
+      title: copy.a4Title,
+      description: copy.a4Description,
+    },
+    {
+      mode: 'LANG_LIST',
+      title: langListLabel,
+      description: langListDesc,
+    },
+    {
+      mode: 'KO_LIST',
+      title: copy.koListTitle,
+      description: copy.koListDescription,
+    },
+  ];
+
+  return (
+    <Dialog open={exportOpen} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogOverlay
+          unstyled
+          forceMount
+          closeOnClick={!exporting}
+          className="fixed inset-0 z-[80] bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+        />
+        <DialogContent
+          unstyled
+          forceMount
+          closeOnEscape={!exporting}
+          lockBodyScroll={false}
+          className="fixed inset-0 z-[81] flex items-end sm:items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
+        >
+          <motion.div
+            initial={false}
+            animate={exportOpen ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            className="pointer-events-auto w-full max-w-xl bg-card rounded-[28px] border-[3px] border-border shadow-2xl p-6"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+                  {copy.exportPdfTitle}
+                </p>
+                <h2 className="text-2xl font-black text-foreground">{copy.wordSheetTitle}</h2>
+                <p className="text-sm font-bold text-muted-foreground mt-1">{exportSubtitle}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={onClose}
+                className="p-2 rounded-xl hover:bg-muted disabled:opacity-40"
+                aria-label={copy.closeLabel}
+                disabled={exporting}
+              >
+                <X className="w-5 h-5 text-muted-foreground" />
+              </Button>
+            </div>
+
+            <ExportModeButtons
+              options={modeOptions}
+              selectedMode={exportMode}
+              onSelect={onSelectMode}
+            />
+
+            <div className="mt-5 rounded-2xl border-2 border-border bg-muted p-4 flex items-center justify-between">
+              <span className="font-black text-muted-foreground">{copy.shuffleLabel}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={onToggleShuffle}
+                className={getShuffleTrackClass(exportShuffle)}
+                aria-label="shuffle"
+              >
+                <span className={getShuffleThumbClass(exportShuffle)} />
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onExport}
+              disabled={exporting || visibleItemsCount === 0}
+              loading={exporting}
+              loadingText={currentButtonText}
+              loadingIconClassName="w-5 h-5"
+              className="mt-6 w-full py-4 rounded-2xl bg-orange-500 dark:bg-orange-400/80 text-primary-foreground font-black border-[3px] border-orange-400 dark:border-orange-300/35 shadow-[0_12px_35px_rgba(249,115,22,0.25)] dark:shadow-[0_12px_35px_rgba(253,186,116,0.2)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {currentButtonText}
+            </Button>
+          </motion.div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
+  );
+};
 
 const VocabBookPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
@@ -345,8 +549,9 @@ const VocabBookPage: React.FC = () => {
                 >
                   {btn.label}
                   <span
-                    className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${isActive ? 'bg-card/20' : 'bg-muted'
-                      }`}
+                    className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
+                      isActive ? 'bg-card/20' : 'bg-muted'
+                    }`}
                   >
                     {btn.count}
                   </span>
@@ -529,156 +734,33 @@ const VocabBookPage: React.FC = () => {
   };
 
   const renderExportModal = () => {
-    const buttonText = labels.vocabBook?.exportPdf || 'Export PDF';
-    const exportingText = labels.vocabBook?.exporting || 'Exporting...';
-
-    const currentButtonText = exporting ? exportingText : buttonText;
+    const handleDialogOpenChange = (open: boolean) => {
+      if (!open && exporting) return;
+      setExportOpen(open);
+    };
 
     return (
-      <Dialog
-        open={exportOpen}
-        onOpenChange={open => {
-          if (!open && !exporting) {
-            setExportOpen(false);
-          }
+      <VocabExportModal
+        labels={labels}
+        exportOpen={exportOpen}
+        exporting={exporting}
+        exportMode={exportMode}
+        exportShuffle={exportShuffle}
+        exportSubtitle={exportSubtitle}
+        langListLabel={langListLabel}
+        langListDesc={langListDesc}
+        visibleItemsCount={visibleItems.length}
+        onOpenChange={handleDialogOpenChange}
+        onClose={() => {
+          if (exporting) return;
+          setExportOpen(false);
         }}
-      >
-        <DialogPortal>
-          <DialogOverlay
-            unstyled
-            forceMount
-            closeOnClick={!exporting}
-            className="fixed inset-0 z-[80] bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
-          />
-          <DialogContent
-            unstyled
-            forceMount
-            closeOnEscape={!exporting}
-            lockBodyScroll={false}
-            className="fixed inset-0 z-[81] flex items-end sm:items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
-          >
-            <motion.div
-              initial={false}
-              animate={exportOpen ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-              className="pointer-events-auto w-full max-w-xl bg-card rounded-[28px] border-[3px] border-border shadow-2xl p-6"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
-                    {labels.vocabBook?.exportPdfTitle || 'Export PDF'}
-                  </p>
-                  <h2 className="text-2xl font-black text-foreground">
-                    {labels.vocabBook?.wordSheetTitle || 'Word Sheet'}
-                  </h2>
-                  <p className="text-sm font-bold text-muted-foreground mt-1">{exportSubtitle}</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => {
-                    if (!exporting) {
-                      setExportOpen(false);
-                    }
-                  }}
-                  className="p-2 rounded-xl hover:bg-muted disabled:opacity-40"
-                  aria-label={labels.common?.close || 'Close'}
-                  disabled={exporting}
-                >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setExportMode('A4_DICTATION')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'A4_DICTATION'
-                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                    : 'border-border bg-card hover:border-border'
-                    }`}
-                >
-                  <p className="font-black text-foreground">
-                    {labels.vocabBook?.exportModes?.a4Title || 'A4 Dictation'}
-                  </p>
-                  <p className="text-xs font-bold text-muted-foreground mt-1">
-                    {labels.vocabBook?.exportModes?.a4Desc || 'Two-way test'}
-                  </p>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setExportMode('LANG_LIST')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'LANG_LIST'
-                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                    : 'border-border bg-card hover:border-border'
-                    }`}
-                >
-                  <p className="font-black text-foreground">{langListLabel}</p>
-                  <p className="text-xs font-bold text-muted-foreground mt-1">{langListDesc}</p>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setExportMode('KO_LIST')}
-                  className={`!flex !w-full !flex-col !items-start !justify-start p-4 rounded-2xl border-[3px] text-left transition-all ${exportMode === 'KO_LIST'
-                    ? 'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]'
-                    : 'border-border bg-card hover:border-border'
-                    }`}
-                >
-                  <p className="font-black text-foreground">
-                    {labels.vocabBook?.exportModes?.koListTitle || 'Korean List'}
-                  </p>
-                  <p className="text-xs font-bold text-muted-foreground mt-1">
-                    {labels.vocabBook?.exportModes?.koListDesc || 'Write the meaning'}
-                  </p>
-                </Button>
-              </div>
-
-              <div className="mt-5 rounded-2xl border-2 border-border bg-muted p-4 flex items-center justify-between">
-                <span className="font-black text-muted-foreground">
-                  {labels.vocabBook?.exportModes?.shuffleLabel || 'Shuffle'}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setExportShuffle(v => !v)}
-                  className={`w-12 h-7 rounded-full transition-all relative ${exportShuffle ? 'bg-orange-500 dark:bg-orange-400/80' : 'bg-muted'
-                    }`}
-                  aria-label="shuffle"
-                >
-                  <span
-                    className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${exportShuffle ? 'left-6' : 'left-1'
-                      }`}
-                  />
-                </Button>
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={onExport}
-                disabled={exporting || visibleItems.length === 0}
-                loading={exporting}
-                loadingText={currentButtonText}
-                loadingIconClassName="w-5 h-5"
-                className="mt-6 w-full py-4 rounded-2xl bg-orange-500 dark:bg-orange-400/80 text-primary-foreground font-black border-[3px] border-orange-400 dark:border-orange-300/35 shadow-[0_12px_35px_rgba(249,115,22,0.25)] dark:shadow-[0_12px_35px_rgba(253,186,116,0.2)] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {currentButtonText}
-              </Button>
-            </motion.div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
+        onSelectMode={setExportMode}
+        onToggleShuffle={() => setExportShuffle(v => !v)}
+        onExport={() => {
+          void onExport();
+        }}
+      />
     );
   };
 
@@ -767,7 +849,7 @@ const VocabBookPage: React.FC = () => {
         language={language}
         onStartLearn={() => startLearning('immerse')}
         onStartTest={() => startLearning('dictation')}
-        onManageList={() => { }} // Placeholder or navigate to list view if exists
+        onManageList={() => {}} // Placeholder or navigate to list view if exists
       />
     );
   }

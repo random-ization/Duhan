@@ -17,7 +17,7 @@ import { useQuery, useAction } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
-import type { MediaPlayerInstance } from '@vidstack/react';
+import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
 import { aRef, qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -72,6 +72,157 @@ interface SearchResult {
   num: number;
   entries: DictionaryEntry[];
 }
+
+type SelectedWordState = {
+  word: string;
+  meaning: string;
+  position: { x: number; y: number };
+};
+
+type SearchDictionaryFn = (args: {
+  query: string;
+  translationLang?: string;
+  start?: number;
+  num?: number;
+  part?: string;
+  sort?: string;
+}) => Promise<SearchResult>;
+
+const POPUP_WIDTH = 260;
+const POPUP_HEIGHT = 180;
+const POPUP_PADDING = 8;
+
+const resolveTranslationLang = (language: Language): Language | undefined => {
+  if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
+    return language;
+  }
+  return undefined;
+};
+
+const toVideoData = (convexVideo: ConvexVideoDoc | null | undefined): VideoData | null => {
+  if (!convexVideo) return null;
+  return {
+    ...convexVideo,
+    id: convexVideo._id,
+    thumbnailUrl: convexVideo.thumbnailUrl || undefined,
+    duration: convexVideo.duration || undefined,
+    description: convexVideo.description || undefined,
+    transcriptData: convexVideo.transcriptData || undefined,
+  };
+};
+
+const getActiveSegment = (video: VideoData | null, currentTime: number): number => {
+  if (!video?.transcriptData) return -1;
+  return video.transcriptData.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
+};
+
+const getVideoLoadError = (
+  convexVideo: ConvexVideoDoc | null | undefined,
+  labels: ReturnType<typeof getLabels>
+): string | null => {
+  if (convexVideo !== null) return null;
+  return getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found';
+};
+
+const getPopupPosition = (rect: DOMRect): { x: number; y: number } => {
+  const x = Math.min(
+    Math.max(POPUP_PADDING, rect.left),
+    Math.max(POPUP_PADDING, window.innerWidth - POPUP_WIDTH - POPUP_PADDING)
+  );
+  const y = Math.min(
+    Math.max(POPUP_PADDING, rect.bottom + POPUP_PADDING),
+    Math.max(POPUP_PADDING, window.innerHeight - POPUP_HEIGHT - POPUP_PADDING)
+  );
+  return { x, y };
+};
+
+const updateMeaningIfCurrent = (
+  requestRef: React.MutableRefObject<number>,
+  requestId: number,
+  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>,
+  meaning: string
+) => {
+  if (requestRef.current !== requestId) return;
+  setSelectedWord(prev => (prev ? { ...prev, meaning } : prev));
+};
+
+const fetchWordMeaning = async ({
+  clickedWord,
+  fallbackMeaning,
+  translationLang,
+  searchDictionary,
+  requestRef,
+  requestId,
+  setSelectedWord,
+}: {
+  clickedWord: string;
+  fallbackMeaning: string;
+  translationLang: Language | undefined;
+  searchDictionary: SearchDictionaryFn;
+  requestRef: React.MutableRefObject<number>;
+  requestId: number;
+  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
+}) => {
+  try {
+    const res = await searchDictionary({
+      query: clickedWord,
+      translationLang,
+      num: 10,
+      part: 'word',
+      sort: 'dict',
+    });
+    const meaning = extractBestMeaning(res, clickedWord, fallbackMeaning);
+    updateMeaningIfCurrent(requestRef, requestId, setSelectedWord, meaning);
+  } catch {
+    updateMeaningIfCurrent(requestRef, requestId, setSelectedWord, fallbackMeaning);
+  }
+};
+
+const processWordClickEvent = ({
+  labels,
+  dictionaryRequestRef,
+  translationLang,
+  searchDictionary,
+  setSelectedWord,
+  e,
+}: {
+  labels: ReturnType<typeof getLabels>;
+  dictionaryRequestRef: React.MutableRefObject<number>;
+  translationLang: Language | undefined;
+  searchDictionary: SearchDictionaryFn;
+  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
+  e: React.MouseEvent | React.KeyboardEvent;
+}) => {
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
+  const wordEl = target.closest<HTMLElement>('[data-word]');
+  if (!wordEl) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+  const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
+  if (!clickedWord) return;
+
+  const fallbackMeaning = labels.dashboard?.common?.noMeaning || 'No meaning available';
+  const requestId = dictionaryRequestRef.current + 1;
+  dictionaryRequestRef.current = requestId;
+
+  setSelectedWord({
+    word: clickedWord,
+    meaning: labels.dashboard?.common?.loading || 'Looking up...',
+    position: getPopupPosition(wordEl.getBoundingClientRect()),
+  });
+
+  void fetchWordMeaning({
+    clickedWord,
+    fallbackMeaning,
+    translationLang,
+    searchDictionary,
+    requestRef: dictionaryRequestRef,
+    requestId,
+    setSelectedWord,
+  });
+};
 
 // Word popup component (similar to ListeningModule)
 interface WordPopupProps {
@@ -142,6 +293,109 @@ const WordPopup: React.FC<WordPopupProps> = ({
   );
 };
 
+interface TranscriptPanelContentProps {
+  video: VideoData;
+  labels: ReturnType<typeof getLabels>;
+  activeSegmentIndex: number;
+  segmentRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
+  seekTo: (time: number) => void;
+  formatTime: (seconds: number) => string;
+  handleWordClick: (e: React.MouseEvent | React.KeyboardEvent) => void;
+  showTranslation: boolean;
+}
+
+const TranscriptPanelContent: React.FC<TranscriptPanelContentProps> = ({
+  video,
+  labels,
+  activeSegmentIndex,
+  segmentRefs,
+  seekTo,
+  formatTime,
+  handleWordClick,
+  showTranslation,
+}) => {
+  if (!video.transcriptData || video.transcriptData.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
+        <p className="font-bold">
+          {getLabel(labels, ['dashboard', 'video', 'noSubtitles']) || 'No Subtitles'}
+        </p>
+        <p className="text-sm mt-1">
+          {getLabel(labels, ['dashboard', 'video', 'noSubtitlesDesc']) ||
+            'This video has no subtitles yet'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {video.transcriptData.map((segment, index) => {
+        const isActive = index === activeSegmentIndex;
+        const segmentId = `segment-${index}-${segment.start}`;
+
+        return (
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            key={segmentId}
+            ref={el => {
+              segmentRefs.current[index] = el;
+            }}
+            onClick={() => seekTo(segment.start)}
+            className={`!block !font-normal p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-300 ${
+              isActive
+                ? 'bg-indigo-100 border-indigo-400 dark:bg-indigo-400/12 dark:border-indigo-300/40 shadow-[4px_4px_0px_0px_#6366f1] dark:shadow-[4px_4px_0px_0px_rgba(129,140,248,0.3)] scale-[1.02]'
+                : 'bg-card border-border hover:border-border'
+            }`}
+          >
+            <div className="text-xs font-mono text-muted-foreground mb-2">
+              {formatTime(segment.start)} - {formatTime(segment.end)}
+            </div>
+
+            <div
+              className={`text-lg font-medium leading-relaxed text-left w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-300 dark:focus-visible:ring-indigo-200 rounded px-1 ${
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+              onClick={handleWordClick}
+            >
+              {segment.text.split(/(\s+)/).map((part, wordIndex) => {
+                const word = part.trim();
+                if (!word) {
+                  const spaceId = `space-${index}-${wordIndex}`;
+                  return <span key={spaceId}>{part}</span>;
+                }
+                const wordId = `word-${index}-${wordIndex}-${word}`;
+                return (
+                  <span
+                    key={wordId}
+                    data-word={word}
+                    className={`cursor-pointer rounded px-0.5 transition-colors ${
+                      isActive
+                        ? 'hover:bg-indigo-200 dark:hover:bg-indigo-300/20'
+                        : 'hover:bg-yellow-100 dark:hover:bg-amber-300/20'
+                    }`}
+                  >
+                    {word}
+                  </span>
+                );
+              })}
+            </div>
+
+            {showTranslation && segment.translation && (
+              <div className="text-sm text-muted-foreground mt-2 border-t border-border pt-2">
+                {segment.translation}
+              </div>
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  );
+};
+
 const DesktopVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
@@ -165,12 +419,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
     >('dictionary:searchDictionary')
   );
   const dictionaryRequestRef = useRef(0);
-  const translationLang = useMemo(() => {
-    if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
-      return language;
-    }
-    return undefined;
-  }, [language]);
+  const translationLang = useMemo(() => resolveTranslationLang(language), [language]);
 
   useEffect(() => stopTTS, [stopTTS]);
 
@@ -180,11 +429,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false); // Mobile transcript sheet state
 
   // Word popup state
-  const [selectedWord, setSelectedWord] = useState<{
-    word: string;
-    meaning: string;
-    position: { x: number; y: number };
-  } | null>(null);
+  const [selectedWord, setSelectedWord] = useState<SelectedWordState | null>(null);
 
   // Convex Integration
   const convexVideo = useQuery(
@@ -193,31 +438,16 @@ const DesktopVideoPlayerPage: React.FC = () => {
   );
 
   // Derived Data State
-  const video = useMemo<VideoData | null>(() => {
-    if (!convexVideo) return null;
-    return {
-      ...convexVideo,
-      id: convexVideo._id,
-      thumbnailUrl: convexVideo.thumbnailUrl || undefined,
-      duration: convexVideo.duration || undefined,
-      description: convexVideo.description || undefined,
-      transcriptData: convexVideo.transcriptData || undefined,
-    };
-  }, [convexVideo]);
+  const video = useMemo<VideoData | null>(() => toVideoData(convexVideo), [convexVideo]);
 
   const loading = convexVideo === undefined;
-  const error =
-    convexVideo === null
-      ? getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found'
-      : null;
+  const error = getVideoLoadError(convexVideo, labels);
 
   // Derived Player State
-  const activeSegmentIndex = useMemo(() => {
-    if (!video?.transcriptData) return -1;
-    return video.transcriptData.findIndex(
-      seg => currentTime >= seg.start && currentTime <= seg.end
-    );
-  }, [video, currentTime]);
+  const activeSegmentIndex = useMemo(
+    () => getActiveSegment(video, currentTime),
+    [video, currentTime]
+  );
 
   // Side Effect: Auto-scroll to active segment
   useEffect(() => {
@@ -230,10 +460,8 @@ const DesktopVideoPlayerPage: React.FC = () => {
   }, [activeSegmentIndex]);
 
   // Handle video time update
-  const handleTimeUpdate = (detail: any) => {
-    if (detail?.currentTime !== undefined) {
-      setCurrentTime(detail.currentTime);
-    }
+  const handleTimeUpdate = (detail: MediaTimeUpdateEventDetail) => {
+    setCurrentTime(detail.currentTime);
   };
 
   // Seek to specific time
@@ -246,47 +474,14 @@ const DesktopVideoPlayerPage: React.FC = () => {
 
   // Handle word popup
   const handleWordClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    const target = e.target as any;
-    const wordEl = target.closest('[data-word]') as HTMLElement | null;
-    if (wordEl) {
-      e.preventDefault();
-      e.stopPropagation();
-      const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
-      if (!clickedWord) return;
-      const rect = wordEl.getBoundingClientRect();
-      const fallbackMeaning = labels.dashboard?.common?.noMeaning || 'No meaning available';
-      const requestId = dictionaryRequestRef.current + 1;
-      dictionaryRequestRef.current = requestId;
-      const popoverWidth = 260;
-      const popoverHeight = 180;
-      const x = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - popoverWidth - 8));
-      const y = Math.min(
-        Math.max(8, rect.bottom + 8),
-        Math.max(8, window.innerHeight - popoverHeight - 8)
-      );
-      setSelectedWord({
-        word: clickedWord,
-        meaning: labels.dashboard?.common?.loading || 'Looking up...',
-        position: { x, y },
-      });
-      void (async () => {
-        try {
-          const res = await searchDictionary({
-            query: clickedWord,
-            translationLang,
-            num: 10,
-            part: 'word',
-            sort: 'dict',
-          });
-          if (dictionaryRequestRef.current !== requestId) return;
-          const meaning = extractBestMeaning(res, clickedWord, fallbackMeaning);
-          setSelectedWord(prev => (prev ? { ...prev, meaning } : prev));
-        } catch {
-          if (dictionaryRequestRef.current !== requestId) return;
-          setSelectedWord(prev => (prev ? { ...prev, meaning: fallbackMeaning } : prev));
-        }
-      })();
-    }
+    processWordClickEvent({
+      labels,
+      dictionaryRequestRef,
+      translationLang,
+      searchDictionary: searchDictionary as SearchDictionaryFn,
+      setSelectedWord,
+      e,
+    });
   };
 
   const speak = useCallback(
@@ -332,82 +527,16 @@ const DesktopVideoPlayerPage: React.FC = () => {
   }
 
   const transcriptBody = (
-    <div className="space-y-3">
-      {!video.transcriptData || video.transcriptData.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p className="font-bold">
-            {getLabel(labels, ['dashboard', 'video', 'noSubtitles']) || 'No Subtitles'}
-          </p>
-          <p className="text-sm mt-1">
-            {getLabel(labels, ['dashboard', 'video', 'noSubtitlesDesc']) ||
-              'This video has no subtitles yet'}
-          </p>
-        </div>
-      ) : (
-        video.transcriptData.map((segment, index) => {
-          const isActive = index === activeSegmentIndex;
-          const segmentId = `segment-${index}-${segment.start}`;
-
-          return (
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              key={segmentId}
-              ref={el => {
-                segmentRefs.current[index] = el;
-              }}
-              onClick={() => seekTo(segment.start)}
-              className={`!block !font-normal p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-300 ${
-                isActive
-                  ? 'bg-indigo-100 border-indigo-400 dark:bg-indigo-400/12 dark:border-indigo-300/40 shadow-[4px_4px_0px_0px_#6366f1] dark:shadow-[4px_4px_0px_0px_rgba(129,140,248,0.3)] scale-[1.02]'
-                  : 'bg-card border-border hover:border-border'
-              }`}
-            >
-              <div className="text-xs font-mono text-muted-foreground mb-2">
-                {formatTime(segment.start)} - {formatTime(segment.end)}
-              </div>
-
-              <div
-                className={`text-lg font-medium leading-relaxed text-left w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-300 dark:focus-visible:ring-indigo-200 rounded px-1 ${
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
-                }`}
-                onClick={handleWordClick}
-              >
-                {segment.text.split(/(\s+)/).map((part, wordIndex) => {
-                  const word = part.trim();
-                  if (!word) {
-                    const spaceId = `space-${index}-${wordIndex}`;
-                    return <span key={spaceId}>{part}</span>;
-                  }
-                  const wordId = `word-${index}-${wordIndex}-${word}`;
-                  return (
-                    <span
-                      key={wordId}
-                      data-word={word}
-                      className={`cursor-pointer rounded px-0.5 transition-colors ${
-                        isActive
-                          ? 'hover:bg-indigo-200 dark:hover:bg-indigo-300/20'
-                          : 'hover:bg-yellow-100 dark:hover:bg-amber-300/20'
-                      }`}
-                    >
-                      {word}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {showTranslation && segment.translation && (
-                <div className="text-sm text-muted-foreground mt-2 border-t border-border pt-2">
-                  {segment.translation}
-                </div>
-              )}
-            </Button>
-          );
-        })
-      )}
-    </div>
+    <TranscriptPanelContent
+      video={video}
+      labels={labels}
+      activeSegmentIndex={activeSegmentIndex}
+      segmentRefs={segmentRefs}
+      seekTo={seekTo}
+      formatTime={formatTime}
+      handleWordClick={handleWordClick}
+      showTranslation={showTranslation}
+    />
   );
 
   return (

@@ -199,6 +199,178 @@ const TOPIK_LISTENING_STRUCTURE: {
   },
 ];
 
+type ExamSection = {
+  range: [number, number];
+  instruction: string;
+  grouped?: boolean;
+};
+
+const resolveExamStructure = (examType: TopikExam['type']): ExamSection[] =>
+  examType === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
+
+const findSectionForQuestion = (structure: ExamSection[], qIndex: number): ExamSection | null => {
+  const qNum = qIndex + 1;
+  for (const section of structure) {
+    if (qNum >= section.range[0] && qNum <= section.range[1]) {
+      return section;
+    }
+  }
+  return null;
+};
+
+const getSharedPassage = (
+  structure: ExamSection[],
+  questions: TopikExam['questions'],
+  qIndex: number
+): string | null => {
+  const section = findSectionForQuestion(structure, qIndex);
+  if (!section?.grouped) return null;
+  const firstQIndex = section.range[0] - 1;
+  return questions[firstQIndex]?.passage ?? null;
+};
+
+const formatDuration = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+type ListeningAudioPanelProps = {
+  audioPlayerOpen: boolean;
+  audioError: boolean;
+  isPlaying: boolean;
+  onToggleAudio: () => void;
+  t: TranslateFn;
+};
+
+const ListeningAudioPanel: React.FC<ListeningAudioPanelProps> = ({
+  audioPlayerOpen,
+  audioError,
+  isPlaying,
+  onToggleAudio,
+  t,
+}) => (
+  <div
+    className={clsx(
+      'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-xl mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
+      audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]',
+      audioError
+        ? 'shadow-red-900/20 dark:shadow-red-950/25'
+        : 'shadow-primary/25 dark:shadow-primary/15'
+    )}
+  >
+    <Button
+      variant="ghost"
+      size="auto"
+      onClick={onToggleAudio}
+      disabled={audioError}
+      className={clsx(
+        'w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform',
+        audioError
+          ? 'bg-red-500 dark:bg-red-400/75 opacity-50 cursor-not-allowed'
+          : 'bg-indigo-500 dark:bg-indigo-400/75'
+      )}
+    >
+      {audioError ? (
+        <X className="w-4 h-4 text-white" />
+      ) : isPlaying ? (
+        <Pause className="w-4 h-4 fill-white ml-0.5" />
+      ) : (
+        <Play className="w-4 h-4 fill-white ml-0.5" />
+      )}
+    </Button>
+    <div className="flex-1 min-w-0">
+      <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
+        {audioError
+          ? t('dashboard.topik.mobile.session.audioError', { defaultValue: 'Audio Error' })
+          : t('dashboard.topik.mobile.session.listeningAudio', {
+              defaultValue: 'Listening Audio',
+            })}
+      </div>
+      {audioError ? (
+        <div className="text-xs text-red-300 dark:text-red-200 truncate">
+          {t('dashboard.topik.mobile.session.audioLoadFailed', {
+            defaultValue: 'Failed to load audio file',
+          })}
+        </div>
+      ) : (
+        <div className="h-1 bg-muted rounded-full overflow-hidden flex gap-0.5">
+          {isPlaying && (
+            <div className="h-full bg-indigo-400 dark:bg-indigo-300/85 w-full animate-[pulse_1s_ease-in-out_infinite]" />
+          )}
+          {!isPlaying && <div className="h-full bg-muted w-full" />}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+type SessionNavigationBarProps = {
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onSubmit: () => void;
+  t: TranslateFn;
+};
+
+const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
+  currentQuestionIndex,
+  totalQuestions,
+  onPrev,
+  onNext,
+  onSubmit,
+  t,
+}) => {
+  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+  return (
+    <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
+      <Button
+        variant="ghost"
+        size="auto"
+        onClick={onPrev}
+        disabled={currentQuestionIndex === 0}
+        className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground active:bg-muted transition-colors disabled:opacity-30 disabled:active:bg-muted"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </Button>
+
+      <div className="flex-1 flex flex-col justify-center px-2">
+        <div className="bg-muted h-1.5 rounded-full overflow-hidden">
+          <div
+            className="bg-indigo-500 dark:bg-indigo-300/75 h-full transition-all duration-300"
+            style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {isLastQuestion ? (
+        <Button
+          variant="ghost"
+          size="auto"
+          onClick={onSubmit}
+          className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-200/80 dark:shadow-green-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        >
+          <span>{t('dashboard.topik.mobile.session.finish', { defaultValue: 'Finish' })}</span>
+          <CheckCircle2 className="w-5 h-5" />
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="auto"
+          onClick={onNext}
+          className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-indigo-200/80 dark:shadow-indigo-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        >
+          <span>{t('dashboard.topik.mobile.session.next', { defaultValue: 'Next' })}</span>
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
 interface MobileExamSessionProps {
   exam: TopikExam;
   language: Language;
@@ -229,41 +401,15 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const sanitize = (html?: string) => sanitizeStrictHtml(String(html ?? ''));
 
-  const structure = exam.type === 'LISTENING' ? TOPIK_LISTENING_STRUCTURE : TOPIK_READING_STRUCTURE;
+  const structure = resolveExamStructure(exam.type);
   const examTypeLabel =
     exam.type === 'LISTENING'
       ? t('dashboard.topik.listening', { defaultValue: 'Listening' })
       : t('dashboard.topik.reading', { defaultValue: 'Reading' });
 
-  // --- Helper Functions ---
-  const getSectionForQuestion = (qIndex: number) => {
-    const qNum = qIndex + 1;
-    for (const section of structure) {
-      if (qNum >= section.range[0] && qNum <= section.range[1]) {
-        return section;
-      }
-    }
-    return null;
-  };
-
-  const getPassageContent = (qIndex: number) => {
-    // If grouped, usually the FIRST question in the group has the passage in the data?
-    // In TopikQuestion model, `passage` field might be populated on the first question of the group.
-    // Or it might be populated on all?
-    // Let's find the first question of the group.
-    const section = getSectionForQuestion(qIndex);
-    if (!section || !section.grouped) return null;
-
-    // Find the question object corresponding to the start of the range
-    // questions array is 0-indexed, range is 1-indexed.
-    const firstQIndex = section.range[0] - 1;
-    const firstQuestion = exam.questions[firstQIndex];
-    return firstQuestion?.passage || null;
-  };
-
   const currentQuestion = exam.questions[currentQuestionIndex];
-  const section = getSectionForQuestion(currentQuestionIndex);
-  const sharedPassage = getPassageContent(currentQuestionIndex);
+  const section = findSectionForQuestion(structure, currentQuestionIndex);
+  const sharedPassage = getSharedPassage(structure, exam.questions, currentQuestionIndex);
   const isPassageView = !!sharedPassage;
 
   // Audio Logic
@@ -303,25 +449,11 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
     }
   };
 
-  // Format Timer
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   // Navigation
-  const handleNext = () => {
-    if (currentQuestionIndex < exam.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    }
-  };
+  const handleNext = () =>
+    setCurrentQuestionIndex(prev => Math.min(prev + 1, exam.questions.length - 1));
 
-  const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
+  const handlePrev = () => setCurrentQuestionIndex(prev => Math.max(prev - 1, 0));
 
   const answeredCount = Object.keys(userAnswers).length;
 
@@ -424,7 +556,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
               )}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>{formatTime(timeLeft)}</span>
+              <span>{formatDuration(timeLeft)}</span>
             </div>
           </div>
         </div>
@@ -486,105 +618,24 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
         {/* Audio Player (Floating above Nav) */}
         {exam.type === 'LISTENING' && exam.audioUrl && (
-          <div
-            className={clsx(
-              'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-xl mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
-              audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]',
-              audioError
-                ? 'shadow-red-900/20 dark:shadow-red-950/25'
-                : 'shadow-primary/25 dark:shadow-primary/15'
-            )}
-          >
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={toggleAudio}
-              disabled={audioError}
-              className={clsx(
-                'w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform',
-                audioError
-                  ? 'bg-red-500 dark:bg-red-400/75 opacity-50 cursor-not-allowed'
-                  : 'bg-indigo-500 dark:bg-indigo-400/75'
-              )}
-            >
-              {audioError ? (
-                <X className="w-4 h-4 text-white" />
-              ) : isPlaying ? (
-                <Pause className="w-4 h-4 fill-white ml-0.5" />
-              ) : (
-                <Play className="w-4 h-4 fill-white ml-0.5" />
-              )}
-            </Button>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
-                {audioError
-                  ? t('dashboard.topik.mobile.session.audioError', { defaultValue: 'Audio Error' })
-                  : t('dashboard.topik.mobile.session.listeningAudio', {
-                      defaultValue: 'Listening Audio',
-                    })}
-              </div>
-              {audioError ? (
-                <div className="text-xs text-red-300 dark:text-red-200 truncate">
-                  {t('dashboard.topik.mobile.session.audioLoadFailed', {
-                    defaultValue: 'Failed to load audio file',
-                  })}
-                </div>
-              ) : (
-                <div className="h-1 bg-muted rounded-full overflow-hidden flex gap-0.5">
-                  {isPlaying && (
-                    <div className="h-full bg-indigo-400 dark:bg-indigo-300/85 w-full animate-[pulse_1s_ease-in-out_infinite]" />
-                  )}
-                  {!isPlaying && <div className="h-full bg-muted w-full" />}
-                </div>
-              )}
-            </div>
-          </div>
+          <ListeningAudioPanel
+            audioPlayerOpen={audioPlayerOpen}
+            audioError={audioError}
+            isPlaying={isPlaying}
+            onToggleAudio={toggleAudio}
+            t={t}
+          />
         )}
 
         {/* Navigation Bar */}
-        <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={handlePrev}
-            disabled={currentQuestionIndex === 0}
-            className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground active:bg-muted transition-colors disabled:opacity-30 disabled:active:bg-muted"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-
-          {/* Quick Nav Indicator / Progress Context */}
-          <div className="flex-1 flex flex-col justify-center px-2">
-            <div className="bg-muted h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-indigo-500 dark:bg-indigo-300/75 h-full transition-all duration-300"
-                style={{ width: `${((currentQuestionIndex + 1) / exam.questions.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {currentQuestionIndex === exam.questions.length - 1 ? (
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={onSubmit}
-              className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-200/80 dark:shadow-green-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-            >
-              <span>{t('dashboard.topik.mobile.session.finish', { defaultValue: 'Finish' })}</span>
-              <CheckCircle2 className="w-5 h-5" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={handleNext}
-              className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-indigo-200/80 dark:shadow-indigo-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-            >
-              <span>{t('dashboard.topik.mobile.session.next', { defaultValue: 'Next' })}</span>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          )}
-        </div>
+        <SessionNavigationBar
+          currentQuestionIndex={currentQuestionIndex}
+          totalQuestions={exam.questions.length}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onSubmit={onSubmit}
+          t={t}
+        />
       </div>
     </div>
   );

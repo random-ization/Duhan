@@ -28,7 +28,7 @@ export const INSTITUTES = {
 
 export const STORAGE = {
   getUploadUrl: aRef<
-    { filename: string; contentType: string; folder?: string },
+    { filename: string; contentType: string; fileSize: number; folder?: string },
     { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
   >('storage:getUploadUrl'),
 };
@@ -397,12 +397,21 @@ export type TopikSaveExamArgs = {
 
 export const TOPIK = {
   getExams: qRef<
-    { paginationOpts?: PaginationOptions },
+    {
+      paginationOpts?: PaginationOptions;
+      type?: 'READING' | 'LISTENING' | 'WRITING';
+      limit?: number;
+    },
     PaginationResult<TopikExamDto> | TopikExamDto[]
   >('topik:getExams'),
-  getExamsPaginated: qRef<{ paginationOpts: PaginationOptions }, PaginationResult<TopikExamDto>>(
-    'topik:getExams'
-  ),
+  getExamsPaginated: qRef<
+    {
+      paginationOpts: PaginationOptions;
+      type?: 'READING' | 'LISTENING' | 'WRITING';
+      limit?: number;
+    },
+    PaginationResult<TopikExamDto>
+  >('topik:getExams'),
   getExamById: qRef<{ examId: string }, TopikExamDto | null>('topik:getExamById'),
   getExamQuestions: qRef<{ examId: string }, TopikQuestionDto[]>('topik:getExamQuestions'),
   // Mutations

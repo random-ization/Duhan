@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, MessageSquare, Lightbulb } from 'lucide-react';
+import { X, BookOpen, MessageSquare, Lightbulb, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from './ui';
@@ -37,7 +37,7 @@ const SectionTitle = ({
   title,
   colorClass,
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   colorClass: string;
 }) => (
@@ -47,13 +47,7 @@ const SectionTitle = ({
   </div>
 );
 
-const VocabularySection = ({
-  items,
-  title,
-}: {
-  items: VocabularyItem[];
-  title: string;
-}) => (
+const VocabularySection = ({ items, title }: { items: VocabularyItem[]; title: string }) => (
   <section>
     <SectionTitle icon={BookOpen} title={title} colorClass="text-amber-500" />
     <div className="grid grid-cols-2 gap-3">

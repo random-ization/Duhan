@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { Navigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams, useLocation, type Location } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { VocabModule } from '../features/vocab';
@@ -16,10 +16,34 @@ import { qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
+type SavedWordRow = {
+  id: string;
+  korean: string;
+  english: string;
+  exampleSentence?: string;
+  exampleTranslation?: string;
+  createdAt: number;
+};
+
+type MistakeRow = {
+  id: string;
+  korean: string;
+  english: string;
+  context?: string;
+  createdAt: number;
+};
+
+type LocalizedNavigate = ReturnType<typeof useLocalizedNavigate>;
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+type AppLanguage = ReturnType<typeof useAuth>['language'];
+type InstituteLookup = { id: string; name: string; [key: string]: unknown };
+type CustomWordList = ReturnType<typeof useModuleState>['derivedCustomList'];
+type CustomListType = ReturnType<typeof useModuleState>['derivedListType'];
+
 const useModuleState = (
   listParam: string | null,
-  savedWordsData: any[] | undefined,
-  mistakesData: any[] | undefined
+  savedWordsData: SavedWordRow[] | undefined,
+  mistakesData: MistakeRow[] | undefined
 ) => {
   const derivedCustomList = useMemo(() => {
     if (listParam === 'saved') {
@@ -53,7 +77,7 @@ const useModuleState = (
 const useRouteInfo = (
   moduleParam: string | undefined,
   instituteId: string | undefined,
-  location: any
+  location: Location
 ) => {
   const isCourseRoute = useMemo(
     () => Boolean(instituteId) && location.pathname.includes('/course/'),
@@ -73,7 +97,7 @@ const useRouteInfo = (
 const useModuleNavigation = (
   isCourseRoute: boolean,
   instituteId: string | undefined,
-  navigate: any
+  navigate: LocalizedNavigate
 ) => {
   const handleBack = () => {
     navigate(isCourseRoute && instituteId ? `/course/${instituteId}` : '/dashboard/course');
@@ -95,23 +119,6 @@ const useModuleType = (effectiveModuleParam: string | undefined) => {
   }, [effectiveModuleParam]);
 };
 
-type SavedWordRow = {
-  id: string;
-  korean: string;
-  english: string;
-  exampleSentence?: string;
-  exampleTranslation?: string;
-  createdAt: number;
-};
-
-type MistakeRow = {
-  id: string;
-  korean: string;
-  english: string;
-  context?: string;
-  createdAt: number;
-};
-
 const useModuleData = (listParam: string | null) => {
   const savedWordsData = useQuery(
     qRef<{ limit?: number }, SavedWordRow[]>('user:getSavedWords'),
@@ -122,6 +129,135 @@ const useModuleData = (listParam: string | null) => {
     listParam === 'mistakes' ? { limit: 500 } : 'skip'
   );
   return { savedWordsData, mistakesData };
+};
+
+const resolveInstituteName = ({
+  institutes,
+  institutesLoading,
+  effectiveInstitute,
+  language,
+  t,
+}: {
+  institutes: InstituteLookup[] | undefined;
+  institutesLoading: boolean;
+  effectiveInstitute: string | undefined;
+  language: AppLanguage;
+  t: TranslateFn;
+}): string => {
+  if (institutesLoading && effectiveInstitute) {
+    return t('common.loading', { defaultValue: 'Loading...' });
+  }
+  const institute = institutes?.find(i => i.id === effectiveInstitute);
+  if (!institute) return 'Korean';
+  return getLocalizedContent(institute, 'name', language) || institute.name;
+};
+
+const resolveModuleLabel = (currentModule: LearningModuleType | null, t: TranslateFn): string => {
+  switch (currentModule) {
+    case LearningModuleType.READING:
+      return t('courseDashboard.modules.reading', { defaultValue: 'Reading' });
+    case LearningModuleType.LISTENING:
+      return t('courseDashboard.modules.listening', { defaultValue: 'Listening' });
+    case LearningModuleType.VOCABULARY:
+      return t('courseDashboard.modules.vocabulary', { defaultValue: 'Vocabulary' });
+    case LearningModuleType.GRAMMAR:
+      return t('courseDashboard.modules.grammar', { defaultValue: 'Grammar' });
+    default:
+      return t('module.title', { defaultValue: 'Module' });
+  }
+};
+
+const shouldRedirectForMissingSelection = ({
+  currentModule,
+  isCourseRoute,
+  selectedInstitute,
+  selectedLevel,
+}: {
+  currentModule: LearningModuleType | null;
+  isCourseRoute: boolean;
+  selectedInstitute: string | null;
+  selectedLevel: number | null;
+}): boolean => {
+  if (!currentModule) return true;
+  if (isCourseRoute) return false;
+  return !selectedInstitute || !selectedLevel;
+};
+
+const getModuleRedirectSubPath = (
+  currentModule: LearningModuleType | null,
+  isCustomList: boolean
+): 'grammar' | 'vocab' | null => {
+  if (currentModule === LearningModuleType.GRAMMAR) return 'grammar';
+  if (currentModule === LearningModuleType.VOCABULARY && !isCustomList) return 'vocab';
+  return null;
+};
+
+const renderModuleContent = ({
+  currentModule,
+  isCustomList,
+  currentCourse,
+  instituteName,
+  language,
+  derivedCustomList,
+  derivedListType,
+  onRecordMistake,
+  onSaveWord,
+  effectiveInstitute,
+  effectiveLevel,
+  t,
+  handleBack,
+}: {
+  currentModule: LearningModuleType | null;
+  isCustomList: boolean;
+  currentCourse: { instituteId: string; level: number; textbookUnit: number };
+  instituteName: string;
+  language: AppLanguage;
+  derivedCustomList: CustomWordList;
+  derivedListType: CustomListType;
+  onRecordMistake: ReturnType<typeof useUserActions>['recordMistake'];
+  onSaveWord: ReturnType<typeof useUserActions>['saveWord'];
+  effectiveInstitute: string;
+  effectiveLevel: number;
+  t: TranslateFn;
+  handleBack: () => void;
+}) => {
+  switch (currentModule) {
+    case LearningModuleType.VOCABULARY:
+      return isCustomList ? (
+        <VocabModule
+          course={currentCourse}
+          instituteName={instituteName}
+          language={language}
+          levelContexts={{}}
+          customWordList={derivedCustomList}
+          customListType={derivedListType}
+          onRecordMistake={onRecordMistake}
+          onSaveWord={onSaveWord}
+        />
+      ) : null;
+    case LearningModuleType.READING:
+      return (
+        <ReadingModule
+          courseId={effectiveInstitute}
+          unitIndex={effectiveLevel}
+          unitTitle={t('module.unitTitle', { unit: effectiveLevel })}
+          language={language}
+          onBack={handleBack}
+        />
+      );
+    case LearningModuleType.LISTENING:
+      return (
+        <ListeningModule
+          courseId={effectiveInstitute}
+          unitIndex={effectiveLevel}
+          unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
+          language={language}
+          onBack={handleBack}
+        />
+      );
+    default:
+      return null;
+  }
 };
 
 const ModulePage: React.FC = () => {
@@ -181,27 +317,14 @@ const ModulePage: React.FC = () => {
     [effectiveInstitute, effectiveLevel]
   );
 
-  const institute = institutes?.find(i => i.id === effectiveInstitute);
-  const instituteName =
-    institutesLoading && effectiveInstitute
-      ? t('common.loading', { defaultValue: 'Loading...' })
-      : (institute ? getLocalizedContent(institute, 'name', language) || institute.name : null) ||
-        'Korean';
-  const moduleLabel = useMemo(() => {
-    if (currentModule === LearningModuleType.READING) {
-      return t('courseDashboard.modules.reading', { defaultValue: 'Reading' });
-    }
-    if (currentModule === LearningModuleType.LISTENING) {
-      return t('courseDashboard.modules.listening', { defaultValue: 'Listening' });
-    }
-    if (currentModule === LearningModuleType.VOCABULARY) {
-      return t('courseDashboard.modules.vocabulary', { defaultValue: 'Vocabulary' });
-    }
-    if (currentModule === LearningModuleType.GRAMMAR) {
-      return t('courseDashboard.modules.grammar', { defaultValue: 'Grammar' });
-    }
-    return t('module.title', { defaultValue: 'Module' });
-  }, [currentModule, t]);
+  const instituteName = resolveInstituteName({
+    institutes: institutes as InstituteLookup[] | undefined,
+    institutesLoading,
+    effectiveInstitute,
+    language,
+    t,
+  });
+  const moduleLabel = resolveModuleLabel(currentModule, t);
 
   const isCustomList = listParam === 'saved' || listParam === 'mistakes';
 
@@ -224,62 +347,39 @@ const ModulePage: React.FC = () => {
 
   if (!user) return <Navigate to="/" replace />;
 
-  if (!currentModule || (!isCourseRoute && (!selectedInstitute || !selectedLevel))) {
+  if (
+    shouldRedirectForMissingSelection({
+      currentModule,
+      isCourseRoute,
+      selectedInstitute,
+      selectedLevel,
+    })
+  ) {
     const redirectPath = isCourseRoute && instituteId ? `/course/${instituteId}` : '/dashboard';
     return <Navigate to={redirectPath} replace />;
   }
 
   const courseBase = effectiveInstitute ? `/course/${effectiveInstitute}` : '/courses';
+  const subPath = getModuleRedirectSubPath(currentModule, isCustomList);
 
-  if (
-    currentModule === LearningModuleType.GRAMMAR ||
-    (currentModule === LearningModuleType.VOCABULARY && !isCustomList)
-  ) {
-    const subPath = currentModule === LearningModuleType.GRAMMAR ? 'grammar' : 'vocab';
+  if (subPath) {
     return <Navigate to={`${courseBase}/${subPath}`} replace />;
   }
-
-  const renderModule = () => {
-    switch (currentModule) {
-      case LearningModuleType.VOCABULARY:
-        return (
-          isCustomList && (
-            <VocabModule
-              course={currentCourse}
-              instituteName={instituteName}
-              language={language}
-              levelContexts={{}}
-              customWordList={derivedCustomList}
-              customListType={derivedListType}
-              onRecordMistake={recordMistake}
-              onSaveWord={saveWord}
-            />
-          )
-        );
-      case LearningModuleType.READING:
-        return (
-          <ReadingModule
-            courseId={effectiveInstitute}
-            unitIndex={effectiveLevel}
-            unitTitle={t('module.unitTitle', { unit: effectiveLevel })}
-            language={language}
-            onBack={handleBack}
-          />
-        );
-      case LearningModuleType.LISTENING:
-        return (
-          <ListeningModule
-            courseId={effectiveInstitute}
-            unitIndex={effectiveLevel}
-            unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
-            language={language}
-            onBack={handleBack}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  const moduleContent = renderModuleContent({
+    currentModule,
+    isCustomList,
+    currentCourse,
+    instituteName,
+    language,
+    derivedCustomList,
+    derivedListType,
+    onRecordMistake: recordMistake,
+    onSaveWord: saveWord,
+    effectiveInstitute: effectiveInstitute || '',
+    effectiveLevel,
+    t,
+    handleBack,
+  });
 
   return (
     <div className="p-6">
@@ -294,7 +394,7 @@ const ModulePage: React.FC = () => {
       <div className="mb-6">
         <BackButton onClick={handleBack} />
       </div>
-      {renderModule()}
+      {moduleContent}
     </div>
   );
 };

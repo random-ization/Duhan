@@ -59,6 +59,14 @@ interface HistoryItem {
   duration?: number;
 }
 
+const getTrendingList = (
+  activeTab: 'community' | 'weekly',
+  trending: { external: PodcastChannel[]; internal: PodcastChannel[] }
+): PodcastChannel[] => {
+  if (activeTab === 'community') return trending.external;
+  return trending.internal;
+};
+
 // --- SUB-COMPONENTS ---
 
 // 1. VIDEO TAB
@@ -297,14 +305,14 @@ const PodcastTab: React.FC<{
   const history = useMemo(() => historyData ?? [], [historyData]);
 
   // Determine Featured (Last played or Top Trending)
-  const lastPlayed = history.length > 0 ? history[0] : null;
+  const lastPlayed = history.at(0) ?? null;
   let featuredChannel: PodcastChannel | null = null;
   if (!lastPlayed) {
     if (trending.internal.length > 0) featuredChannel = trending.internal[0];
     else if (trending.external.length > 0) featuredChannel = trending.external[0];
   }
 
-  const listToShow = activeTab === 'community' ? trending.external : trending.internal;
+  const listToShow = getTrendingList(activeTab, trending);
 
   const getLocale = (lang: string) => {
     if (lang === 'zh') return 'zh-CN';

@@ -21,7 +21,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-amber-900 dark:border-amber-300/50',
     light: 'bg-amber-50 dark:bg-amber-400/10',
   },
-  \u5ef6\u4e16\u5927\u5b66: {
+  延世大学: {
     bg: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
     accent: 'bg-indigo-500 dark:bg-indigo-400/70',
@@ -35,7 +35,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-indigo-900 dark:border-indigo-300/50',
     light: 'bg-indigo-50 dark:bg-indigo-400/10',
   },
-  \u9996\u5c14\u5927\u5b66: {
+  首尔大学: {
     bg: 'bg-rose-100 dark:bg-rose-400/16',
     text: 'text-rose-600 dark:text-rose-300',
     accent: 'bg-rose-500 dark:bg-rose-400/70',
@@ -49,7 +49,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-rose-900 dark:border-rose-300/50',
     light: 'bg-rose-50 dark:bg-rose-400/10',
   },
-  \u4e2d\u592e\u5927\u5b66: {
+  中央大学: {
     bg: 'bg-emerald-100 dark:bg-emerald-400/16',
     text: 'text-emerald-600 dark:text-emerald-300',
     accent: 'bg-emerald-500 dark:bg-emerald-400/70',
@@ -63,7 +63,7 @@ const PUBLISHER_THEMES: Record<
     border: 'border-emerald-900 dark:border-emerald-300/50',
     light: 'bg-emerald-50 dark:bg-emerald-400/10',
   },
-  \u9ed8\u8ba4: {
+  默认: {
     bg: 'bg-muted',
     text: 'text-muted-foreground',
     accent: 'bg-primary',
@@ -83,7 +83,7 @@ const PUBLISHER_TRANSLATIONS: Record<
     vi: 'Tài nguyên giáo dục mở',
     mn: 'Нээлттэй боловсролын эх сурвалж',
   },
-  \u5ef6\u4e16\u5927\u5b66: {
+  延世大学: {
     ko: '연세대학교',
     zh: '\u5ef6\u4e16\u5927\u5b66',
     en: 'Yonsei University',
@@ -97,7 +97,7 @@ const PUBLISHER_TRANSLATIONS: Record<
     vi: 'Đại học Yonsei',
     mn: 'Ёнсэ их сургууль',
   },
-  \u9996\u5c14\u5927\u5b66: {
+  首尔大学: {
     ko: '서울대학교',
     zh: '\u9996\u5c14\u5927\u5b66',
     en: 'Seoul National University',
@@ -111,7 +111,7 @@ const PUBLISHER_TRANSLATIONS: Record<
     vi: 'Đại học Quốc gia Seoul',
     mn: 'Сөүлийн үндэсний их сургууль',
   },
-  \u4e2d\u592e\u5927\u5b66: {
+  中央大学: {
     ko: '중앙대학교',
     zh: '\u4e2d\u592e\u5927\u5b66',
     en: 'Chung-Ang University',
@@ -170,28 +170,18 @@ const CoursesOverview: React.FC = () => {
     (publisher: string) => {
       const data = publishersByName.get(publisher);
       const fallback = PUBLISHER_TRANSLATIONS[publisher];
-      const primary = data?.nameKo || fallback?.ko || publisher;
-      let localized: string | undefined;
-      switch (currentLang) {
-        case 'zh':
-          localized = data?.nameZh || fallback?.zh;
-          break;
-        case 'en':
-          localized = data?.nameEn || fallback?.en;
-          break;
-        case 'vi':
-          localized = data?.nameVi || fallback?.vi;
-          break;
-        case 'mn':
-          localized = data?.nameMn || fallback?.mn;
-          break;
-        default:
-          localized = undefined;
-          break;
-      }
+      const primary = data?.nameKo ?? fallback?.ko ?? publisher;
+      const localizedByLang: Record<string, string | undefined> = {
+        zh: data?.nameZh ?? fallback?.zh,
+        en: data?.nameEn ?? fallback?.en,
+        vi: data?.nameVi ?? fallback?.vi,
+        mn: data?.nameMn ?? fallback?.mn,
+      };
+      const localized = localizedByLang[currentLang];
+      const displayLocalized = localized === primary ? undefined : localized;
       return {
         primary,
-        localized: localized && localized !== primary ? localized : undefined,
+        localized: displayLocalized,
       };
     },
     [currentLang, publishersByName]
@@ -455,7 +445,7 @@ const CoursesOverview: React.FC = () => {
                     }}
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
-                      {groupCourses.map(course => (
+                      {groupCourses.map(course =>
                         (() => {
                           const uiMeta = getCourseUiMeta(course);
                           return (
@@ -542,7 +532,7 @@ const CoursesOverview: React.FC = () => {
                             </Button>
                           );
                         })()
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>

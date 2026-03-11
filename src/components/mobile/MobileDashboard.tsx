@@ -25,100 +25,103 @@ const ASSETS = {
   vocabBook: '/emojis/flashcards_icon_3d_1769658215552.png',
 };
 
-export const MobileDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const { t } = useTranslation();
-  const navigate = useLocalizedNavigate();
-  const { selectedInstitute, selectedLevel } = useLearningSelection();
-  const { institutes, isLoading: institutesLoading } = useData();
+type UserStats = {
+  streak: number;
+  dailyMinutes: number;
+  dailyGoal: number;
+  vocabStats: { dueReviews: number };
+};
 
-  // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
+const getGreetingLabel = (t: (key: string, opts?: Record<string, unknown>) => string) => {
+  const hour = new Date().getHours();
+  if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
+  if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
+  return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
+};
 
-  // 1. User Stats (Streak, Minutes)
-  type UserStats = {
-    streak: number;
-    dailyMinutes: number;
-    dailyGoal: number;
-    vocabStats: { dueReviews: number };
-  };
-  const userStats = useQuery(qRef<NoArgs, UserStats>('userStats:getStats'));
+const calculateTopScore = (examAttempts: ExamAttempt[] | null | undefined) => {
+  if (!examAttempts || examAttempts.length === 0) return 0;
+  return Math.max(...examAttempts.map(e => e.score));
+};
 
-  // 2. Vocab Count
-  const vocabBookCount = useQuery(
-    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
-    user ? { includeMastered: true } : 'skip'
-  );
-  const wordsToReview = vocabBookCount?.count || 0;
+const resolveInstituteName = ({
+  selectedInstitute,
+  institutesLoading,
+  institutes,
+  t,
+}: {
+  selectedInstitute: string | null;
+  institutesLoading: boolean;
+  institutes: ReturnType<typeof useData>['institutes'];
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) => {
+  if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
+  if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
+  const institute = institutes?.find(i => i.id === selectedInstitute);
+  return institute ? institute.name : selectedInstitute;
+};
 
-  // 3. Exam Attempts (for Best Score)
-  const examAttempts = useQuery(
-    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
-    user ? { limit: 200 } : 'skip'
-  );
-  const topScore = useMemo(() => {
-    if (!examAttempts || examAttempts.length === 0) return 0;
-    return Math.max(...examAttempts.map(e => e.score));
-  }, [examAttempts]);
-
-  // 4. Course Progress
-  const courseProgress = useQuery(
-    qRef<
-      { courseId: string },
-      {
-        completedUnits: number[];
-        totalUnits: number;
-        progressPercent: number;
-        lastUnitIndex?: number;
-      } | null
-    >('progress:getCourseProgress'),
-    user && selectedInstitute ? { courseId: selectedInstitute } : 'skip'
-  );
-
-  // -- Derived Data --
-  const completedUnits = courseProgress?.completedUnits ?? [];
-  const totalUnits = courseProgress?.totalUnits || 10;
+const resolveCurrentUnit = ({
+  completedUnits,
+  totalUnits,
+  lastUnitIndex,
+  userLastUnit,
+}: {
+  completedUnits: number[];
+  totalUnits: number;
+  lastUnitIndex?: number;
+  userLastUnit?: number;
+}) => {
   const inferredUnit =
     completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, totalUnits) : 1;
-  const currentUnit = courseProgress?.lastUnitIndex || user?.lastUnit || inferredUnit;
-  const progressPercent =
-    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
+  return lastUnitIndex || userLastUnit || inferredUnit;
+};
 
-  const instituteName = useMemo(() => {
-    if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
-    if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
-    const inst = institutes?.find(i => i.id === selectedInstitute);
-    return inst ? inst.name : selectedInstitute;
-  }, [selectedInstitute, institutes, institutesLoading, t]);
-  const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
+const computeGoalPercent = (stats: UserStats) =>
+  Math.min(100, (stats.dailyMinutes / Math.max(stats.dailyGoal, 1)) * 100);
 
-  // -- Search Logic --
-  const [searchQuery, setSearchQuery] = useState('');
-  const handleSearch = (e: React.FormEvent) => {
+const MobileDashboardLayout = ({
+  user,
+  t,
+  navigate,
+  searchQuery,
+  setSearchQuery,
+  stats,
+  goalPercent,
+  greeting,
+  instituteName,
+  isInstituteNameLoading,
+  selectedLevel,
+  currentUnit,
+  progressPercent,
+  wordsToReview,
+  topScore,
+}: {
+  user: ReturnType<typeof useAuth>['user'];
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  navigate: ReturnType<typeof useLocalizedNavigate>;
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  stats: UserStats;
+  goalPercent: number;
+  greeting: string;
+  instituteName: string;
+  isInstituteNameLoading: boolean;
+  selectedLevel: number | string | null | undefined;
+  currentUnit: number;
+  progressPercent: number;
+  wordsToReview: number;
+  topScore: number;
+}) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim().length >= 1) {
-      navigate(`/dictionary/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    const query = searchQuery.trim();
+    if (!query) return;
+    navigate(`/dictionary/search?q=${encodeURIComponent(query)}`);
   };
-
-  // -- Render Helpers --
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
-    if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
-    return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
-  };
-
-  const stats = userStats || {
-    streak: 0,
-    dailyMinutes: 0,
-    dailyGoal: 30,
-    vocabStats: { dueReviews: 0 },
-  };
-  const goalPercent = Math.min(100, (stats.dailyMinutes / (stats.dailyGoal || 1)) * 100);
 
   return (
     <div className="relative min-h-screen pb-24 bg-transparent overflow-hidden">
-      {/* 1. Header */}
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="flex justify-between items-center gap-3 mb-3">
           <div className="flex items-center gap-3">
@@ -137,9 +140,7 @@ export const MobileDashboard: React.FC = () => {
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-card"></div>
             </div>
             <div>
-              <h1 className="text-sm font-extrabold text-foreground leading-none">
-                {getGreeting()},
-              </h1>
+              <h1 className="text-sm font-extrabold text-foreground leading-none">{greeting},</h1>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
                 {user?.name?.split(' ')[0] || 'Learner'}
               </p>
@@ -155,8 +156,7 @@ export const MobileDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Dictionary Search Input */}
-        <form onSubmit={handleSearch} className="relative">
+        <form onSubmit={handleSearchSubmit} className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
             <Search className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -173,7 +173,6 @@ export const MobileDashboard: React.FC = () => {
       </header>
 
       <main className="relative z-10 px-4 space-y-5 pt-5 animate-in fade-in duration-500">
-        {/* 2. Learner Stats Card */}
         <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200/60 dark:shadow-slate-950/30 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
@@ -231,7 +230,6 @@ export const MobileDashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* 3. Textbook (Hero) */}
         <Button
           variant="ghost"
           size="auto"
@@ -283,9 +281,7 @@ export const MobileDashboard: React.FC = () => {
           />
         </Button>
 
-        {/* 4. Tools Grid */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Vocab */}
           <Button
             variant="ghost"
             size="auto"
@@ -310,7 +306,6 @@ export const MobileDashboard: React.FC = () => {
             />
           </Button>
 
-          {/* Notes */}
           <Button
             variant="ghost"
             size="auto"
@@ -337,7 +332,6 @@ export const MobileDashboard: React.FC = () => {
             />
           </Button>
 
-          {/* Typing */}
           <Button
             variant="ghost"
             size="auto"
@@ -362,7 +356,6 @@ export const MobileDashboard: React.FC = () => {
             />
           </Button>
 
-          {/* TOPIK */}
           <Button
             variant="ghost"
             size="auto"
@@ -389,9 +382,7 @@ export const MobileDashboard: React.FC = () => {
           </Button>
         </div>
 
-        {/* 5. Media Grid */}
         <div className="grid grid-cols-1 gap-3 pb-8">
-          {/* Podcast */}
           <Button
             variant="ghost"
             size="auto"
@@ -419,7 +410,6 @@ export const MobileDashboard: React.FC = () => {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Button>
 
-          {/* Video */}
           <Button
             variant="ghost"
             size="auto"
@@ -447,5 +437,97 @@ export const MobileDashboard: React.FC = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+export const MobileDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
+  const { selectedInstitute, selectedLevel } = useLearningSelection();
+  const { institutes, isLoading: institutesLoading } = useData();
+
+  // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
+
+  // 1. User Stats (Streak, Minutes)
+  const userStats = useQuery(qRef<NoArgs, UserStats>('userStats:getStats'));
+
+  // 2. Vocab Count
+  const vocabBookCount = useQuery(
+    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
+    user ? { includeMastered: true } : 'skip'
+  );
+  const wordsToReview = vocabBookCount?.count || 0;
+
+  // 3. Exam Attempts (for Best Score)
+  const examAttempts = useQuery(
+    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
+    user ? { limit: 200 } : 'skip'
+  );
+  const topScore = useMemo(() => calculateTopScore(examAttempts), [examAttempts]);
+
+  // 4. Course Progress
+  const courseProgress = useQuery(
+    qRef<
+      { courseId: string },
+      {
+        completedUnits: number[];
+        totalUnits: number;
+        progressPercent: number;
+        lastUnitIndex?: number;
+      } | null
+    >('progress:getCourseProgress'),
+    user && selectedInstitute ? { courseId: selectedInstitute } : 'skip'
+  );
+
+  // -- Derived Data --
+  const completedUnits = courseProgress?.completedUnits ?? [];
+  const totalUnits = courseProgress?.totalUnits || 10;
+  const currentUnit = resolveCurrentUnit({
+    completedUnits,
+    totalUnits,
+    lastUnitIndex: courseProgress?.lastUnitIndex,
+    userLastUnit: user?.lastUnit,
+  });
+  const progressPercent =
+    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
+
+  const instituteName = useMemo(
+    () => resolveInstituteName({ selectedInstitute, institutesLoading, institutes, t }),
+    [selectedInstitute, institutesLoading, institutes, t]
+  );
+  const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
+
+  // -- Search Logic --
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // -- Render Helpers --
+  const stats = userStats || {
+    streak: 0,
+    dailyMinutes: 0,
+    dailyGoal: 30,
+    vocabStats: { dueReviews: 0 },
+  };
+  const goalPercent = computeGoalPercent(stats);
+  const greeting = getGreetingLabel(t);
+
+  return (
+    <MobileDashboardLayout
+      user={user}
+      t={t}
+      navigate={navigate}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      stats={stats}
+      goalPercent={goalPercent}
+      greeting={greeting}
+      instituteName={instituteName}
+      isInstituteNameLoading={isInstituteNameLoading}
+      selectedLevel={selectedLevel}
+      currentUnit={currentUnit}
+      progressPercent={progressPercent}
+      wordsToReview={wordsToReview}
+      topScore={topScore}
+    />
   );
 };

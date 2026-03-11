@@ -2,6 +2,8 @@ import { mutation, query } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { getOptionalAuthUserId, getAuthUserId } from './utils';
 
+const prefixRangeEnd = (prefix: string) => `${prefix}\uffff`;
+
 // Get annotations for a specific context (courseId_unitId)
 export const getByContext = query({
   args: {
@@ -41,24 +43,27 @@ export const getByPrefix = query({
     const userId = await getOptionalAuthUserId(ctx);
     if (!userId) return [];
 
-    const limit = args.limit ?? 2000;
+    const limit = Math.max(1, Math.min(args.limit ?? 2000, 4000));
     const rows = await ctx.db
       .query('annotations')
-      .withIndex('by_user', q => q.eq('userId', userId))
+      .withIndex('by_user_context', q =>
+        q
+          .eq('userId', userId)
+          .gte('contextKey', args.prefix)
+          .lt('contextKey', prefixRangeEnd(args.prefix))
+      )
       .take(limit);
 
-    return rows
-      .filter(r => r.contextKey.startsWith(args.prefix))
-      .map(a => ({
-        id: a._id,
-        contextKey: a.contextKey,
-        text: a.text,
-        note: a.note,
-        color: a.color,
-        startOffset: a.startOffset,
-        endOffset: a.endOffset,
-        createdAt: a.createdAt,
-      }));
+    return rows.map(a => ({
+      id: a._id,
+      contextKey: a.contextKey,
+      text: a.text,
+      note: a.note,
+      color: a.color,
+      startOffset: a.startOffset,
+      endOffset: a.endOffset,
+      createdAt: a.createdAt,
+    }));
   },
 });
 

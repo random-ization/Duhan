@@ -29,6 +29,476 @@ type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 const KOREAN_VOICE = 'ko-KR-SunHiNeural';
 const ZH_VOICE = 'zh-CN-XiaoxiaoNeural';
 
+const PLAY_COUNT_OPTIONS = [1, 2, 3] as const;
+const GAP_SECOND_OPTIONS = [2, 4, 6, 8] as const;
+
+const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+const formatTemplate = (template: string, vars: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
+
+const DictationEmptyState = ({ labels }: { labels: ReturnType<typeof getLabels> }) => (
+  <div className="py-24 text-center">
+    <p className="text-xl font-black text-muted-foreground">
+      {labels.vocab?.noDueNow || labels.dashboard?.vocab?.noDueNow || 'No words yet'}
+    </p>
+    <p className="text-muted-foreground font-medium mt-2">
+      {labels.vocab?.tryAnotherFilter || 'Try another category or search'}
+    </p>
+  </div>
+);
+
+const DictationPlayerPanel = ({
+  mode,
+  labels,
+  statusText,
+  playing,
+  onPrev,
+  onStop,
+  onStartPlayback,
+  onNext,
+}: {
+  mode: DictationMode;
+  labels: ReturnType<typeof getLabels>;
+  statusText: string;
+  playing: boolean;
+  onPrev: () => void;
+  onStop: () => void;
+  onStartPlayback: () => void;
+  onNext: () => void;
+}) => (
+  <div className="space-y-5">
+    <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+            {mode === 'HEAR_PRONUNCIATION'
+              ? labels.vocab?.dictationHearPron || 'Hear pronunciation'
+              : labels.vocab?.dictationHearMeaning || 'Hear meaning'}
+          </p>
+          <h1 className="text-3xl font-black text-foreground mt-1">
+            {labels.vocab?.dictationPlayerTitle || 'Dictation Player'}
+          </h1>
+          <p className="mt-2 text-muted-foreground font-bold">
+            {labels.vocab?.dictationPlayerSubtitle || 'Listen and write'}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+            {statusText}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onPrev}
+          className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border inline-flex items-center gap-2"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          {labels.common?.prev || 'Previous'}
+        </Button>
+
+        {playing ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onStop}
+            className="px-5 py-3 rounded-2xl bg-rose-500 dark:bg-rose-400/80 text-primary-foreground font-black border-[3px] border-rose-400 dark:border-rose-300/35 inline-flex items-center gap-2"
+          >
+            <Square className="w-5 h-5" />
+            {labels.vocab?.stop || 'Stop'}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onStartPlayback}
+            className="px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-black border-[3px] border-border inline-flex items-center gap-2"
+          >
+            <Play className="w-5 h-5" />
+            {labels.vocab?.play || 'Play'}
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onNext}
+          className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+        >
+          {labels.common?.next || 'Next'}
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+      </div>
+    </div>
+  </div>
+);
+
+const DictationSetupPanel = ({
+  mode,
+  setMode,
+  labels,
+  playCount,
+  setPlayCount,
+  gapSeconds,
+  setGapSeconds,
+  autoNext,
+  setAutoNext,
+  onStart,
+}: {
+  mode: DictationMode;
+  setMode: React.Dispatch<React.SetStateAction<DictationMode>>;
+  labels: ReturnType<typeof getLabels>;
+  playCount: 1 | 2 | 3;
+  setPlayCount: React.Dispatch<React.SetStateAction<1 | 2 | 3>>;
+  gapSeconds: 2 | 4 | 6 | 8;
+  setGapSeconds: React.Dispatch<React.SetStateAction<2 | 4 | 6 | 8>>;
+  autoNext: boolean;
+  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  onStart: () => void;
+}) => (
+  <div className="space-y-5">
+    <div className="grid grid-cols-2 gap-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setMode('HEAR_PRONUNCIATION')}
+        className={`!flex !w-full !items-start !justify-start p-5 rounded-3xl border-[3px] text-left transition-all ${
+          mode === 'HEAR_PRONUNCIATION'
+            ? 'border-rose-400 bg-card shadow-[0_10px_30px_rgba(244,63,94,0.12)] dark:border-rose-300/35 dark:shadow-[0_10px_30px_rgba(251,113,133,0.14)]'
+            : 'border-border bg-card'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-400/14 flex items-center justify-center">
+            <Mic className="w-6 h-6 text-rose-600 dark:text-rose-300" />
+          </div>
+          <div>
+            <p className="font-black text-foreground">
+              {labels.vocab?.dictationHearPron || 'Hear pronunciation'}
+            </p>
+            <p className="text-xs font-bold text-muted-foreground">
+              {labels.vocab?.dictationHearPronDesc || 'Write the word/meaning'}
+            </p>
+          </div>
+        </div>
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={() => setMode('HEAR_MEANING')}
+        className={`!flex !w-full !items-start !justify-start p-5 rounded-3xl border-[3px] text-left transition-all ${
+          mode === 'HEAR_MEANING'
+            ? 'border-rose-400 bg-card shadow-[0_10px_30px_rgba(244,63,94,0.12)] dark:border-rose-300/35 dark:shadow-[0_10px_30px_rgba(251,113,133,0.14)]'
+            : 'border-border bg-card'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center">
+            <Type className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
+          </div>
+          <div>
+            <p className="font-black text-foreground">
+              {labels.vocab?.dictationHearMeaning || 'Hear meaning'}
+            </p>
+            <p className="text-xs font-bold text-muted-foreground">
+              {labels.vocab?.dictationHearMeaningDesc || 'Write the word'}
+            </p>
+          </div>
+        </div>
+      </Button>
+    </div>
+
+    <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6 space-y-6">
+      <div>
+        <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
+          {labels.vocab?.repeatCount || 'Repetitions'}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {PLAY_COUNT_OPTIONS.map(v => (
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              key={v}
+              onClick={() => setPlayCount(v)}
+              className={`py-3 rounded-2xl border-[3px] font-black ${
+                playCount === v
+                  ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
+                  : 'border-border bg-card text-muted-foreground'
+              }`}
+            >
+              {formatTemplate(labels.vocab?.repeatTimes || '{count}x', { count: v })}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
+          {labels.vocab?.playGap || 'Repeat interval'}
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {GAP_SECOND_OPTIONS.map(v => (
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              key={v}
+              onClick={() => setGapSeconds(v)}
+              className={`py-3 rounded-2xl border-[3px] font-black ${
+                gapSeconds === v
+                  ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
+                  : 'border-border bg-card text-muted-foreground'
+              }`}
+            >
+              {formatTemplate(labels.vocab?.seconds || '{count}s', { count: v })}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
+        <span className="font-black text-muted-foreground">
+          {labels.vocab?.autoNext || 'Auto next'}
+        </span>
+        <Switch
+          checked={autoNext}
+          onCheckedChange={setAutoNext}
+          className="h-6 w-11 data-[state=checked]:bg-rose-500 dark:data-[state=checked]:bg-rose-400/80 data-[state=unchecked]:bg-background border border-border"
+        />
+      </label>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={onStart}
+        className="w-full py-4 rounded-2xl bg-rose-500 dark:bg-rose-400/80 text-primary-foreground font-black border-[3px] border-rose-400 dark:border-rose-300/35"
+      >
+        {labels.vocab?.dictationStartButton || 'Start playback'}
+      </Button>
+    </div>
+  </div>
+);
+
+const DictationContent = ({
+  total,
+  started,
+  labels,
+  mode,
+  statusText,
+  playing,
+  onPrev,
+  onStop,
+  onStartPlayback,
+  onNext,
+  setMode,
+  playCount,
+  setPlayCount,
+  gapSeconds,
+  setGapSeconds,
+  autoNext,
+  setAutoNext,
+  onStart,
+}: {
+  total: number;
+  started: boolean;
+  labels: ReturnType<typeof getLabels>;
+  mode: DictationMode;
+  statusText: string;
+  playing: boolean;
+  onPrev: () => void;
+  onStop: () => void;
+  onStartPlayback: () => void;
+  onNext: () => void;
+  setMode: React.Dispatch<React.SetStateAction<DictationMode>>;
+  playCount: 1 | 2 | 3;
+  setPlayCount: React.Dispatch<React.SetStateAction<1 | 2 | 3>>;
+  gapSeconds: 2 | 4 | 6 | 8;
+  setGapSeconds: React.Dispatch<React.SetStateAction<2 | 4 | 6 | 8>>;
+  autoNext: boolean;
+  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  onStart: () => void;
+}) => {
+  if (total === 0) return <DictationEmptyState labels={labels} />;
+  if (started) {
+    return (
+      <DictationPlayerPanel
+        mode={mode}
+        labels={labels}
+        statusText={statusText}
+        playing={playing}
+        onPrev={onPrev}
+        onStop={onStop}
+        onStartPlayback={onStartPlayback}
+        onNext={onNext}
+      />
+    );
+  }
+  return (
+    <DictationSetupPanel
+      mode={mode}
+      setMode={setMode}
+      labels={labels}
+      playCount={playCount}
+      setPlayCount={setPlayCount}
+      gapSeconds={gapSeconds}
+      setGapSeconds={setGapSeconds}
+      autoNext={autoNext}
+      setAutoNext={setAutoNext}
+      onStart={onStart}
+    />
+  );
+};
+
+const DictationPageShell = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">
+    {children}
+  </div>
+);
+
+const DictationTopBar = ({
+  labels,
+  progressText,
+  onBack,
+  onOpenSettings,
+}: {
+  labels: ReturnType<typeof getLabels>;
+  progressText: string;
+  onBack: () => void;
+  onOpenSettings?: () => void;
+}) => (
+  <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-rose-100 dark:border-rose-300/20">
+    <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
+      <Button
+        type="button"
+        variant="ghost"
+        size="auto"
+        onClick={onBack}
+        className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
+        aria-label={labels.common?.back || 'Back'}
+      >
+        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+      </Button>
+
+      <div className="text-center">
+        <p className="text-xs font-black text-rose-500 dark:text-rose-300 tracking-wider uppercase">
+          {labels.vocab?.modeDictation || 'Dictation'}
+        </p>
+        <p className="text-sm font-black text-muted-foreground">{progressText}</p>
+      </div>
+
+      {onOpenSettings ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onOpenSettings}
+          className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
+          aria-label={labels.vocab?.settings || 'Settings'}
+        >
+          <Settings2 className="w-5 h-5 text-muted-foreground" />
+        </Button>
+      ) : (
+        <div className="w-12" />
+      )}
+    </div>
+  </div>
+);
+
+const DictationSettingsDialog = ({
+  open,
+  labels,
+  autoNext,
+  setAutoNext,
+  onClose,
+}: {
+  open: boolean;
+  labels: ReturnType<typeof getLabels>;
+  autoNext: boolean;
+  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  onClose: () => void;
+}) => (
+  <Dialog open={open} onOpenChange={open => !open && onClose()}>
+    <DialogPortal>
+      <DialogOverlay
+        unstyled
+        forceMount
+        className="fixed inset-0 z-[80] bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+      />
+      <DialogContent
+        unstyled
+        forceMount
+        closeOnEscape={false}
+        lockBodyScroll={false}
+        className="fixed inset-0 z-[81] flex items-end sm:items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
+      >
+        <motion.div
+          initial={false}
+          animate={open ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+          className="pointer-events-auto w-full max-w-lg bg-card rounded-[28px] border-[3px] border-border shadow-2xl p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+                {labels.vocab?.settings || labels.settings || 'Settings'}
+              </p>
+              <h2 className="text-2xl font-black text-foreground">
+                {labels.vocab?.modeDictation || 'Dictation'}
+              </h2>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-muted"
+              aria-label={labels.common?.close || 'Close'}
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
+              <span className="font-black text-muted-foreground">
+                {labels.vocab?.autoNext || 'Auto next'}
+              </span>
+              <Switch
+                checked={autoNext}
+                onCheckedChange={setAutoNext}
+                className="h-6 w-11 data-[state=checked]:bg-rose-500 dark:data-[state=checked]:bg-rose-400/80 data-[state=unchecked]:bg-background border border-border"
+              />
+            </label>
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={onClose}
+            className="mt-6 w-full py-3 rounded-2xl bg-primary text-primary-foreground font-black"
+          >
+            {labels.done || 'Done'}
+          </Button>
+        </motion.div>
+      </DialogContent>
+    </DialogPortal>
+  </Dialog>
+);
+
 const VocabBookDictationPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -65,8 +535,6 @@ const VocabBookDictationPage: React.FC = () => {
 
   const [mode, setMode] = useState<DictationMode>('HEAR_PRONUNCIATION');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const format = (template: string, vars: Record<string, string | number>) =>
-    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
   const [playCount, setPlayCount] = useState<1 | 2 | 3>(2);
   const [gapSeconds, setGapSeconds] = useState<2 | 4 | 6 | 8>(2);
@@ -111,7 +579,7 @@ const VocabBookDictationPage: React.FC = () => {
       await speak(promptText, { voice });
       if (myRunId !== runIdRef.current) return;
       if (i < playCount) {
-        await new Promise<void>(resolve => setTimeout(resolve, gapMs));
+        await wait(gapMs);
       }
     }
     setRepeatIteration(0);
@@ -131,7 +599,7 @@ const VocabBookDictationPage: React.FC = () => {
         if (!autoNext) return;
         if (indexRef.current >= total - 1) return;
         setIndex(i => Math.min(total - 1, i + 1));
-        await new Promise<void>(resolve => setTimeout(resolve, 50));
+        await wait(50);
       }
     } finally {
       if (myRunId === runIdRef.current) {
@@ -148,7 +616,7 @@ const VocabBookDictationPage: React.FC = () => {
     setIndex(i => Math.max(0, i - 1));
     if (wasPlaying) {
       void (async () => {
-        await new Promise<void>(resolve => setTimeout(resolve, 60));
+        await wait(60);
         await startPlayback();
       })();
     }
@@ -160,7 +628,7 @@ const VocabBookDictationPage: React.FC = () => {
     stopAll();
     setIndex(i => Math.min(total - 1, i + 1));
     if (wasPlaying) {
-      await new Promise<void>(resolve => setTimeout(resolve, 60));
+      await wait(60);
       await startPlayback();
     }
   };
@@ -168,379 +636,72 @@ const VocabBookDictationPage: React.FC = () => {
   const start = async () => {
     setStarted(true);
     setIndex(0);
-    await new Promise<void>(resolve => setTimeout(resolve, 60));
+    await wait(60);
     await startPlayback();
   };
-
-  const getStatusText = () => {
-    if (repeatIteration > 0) {
-      return format(labels.vocab?.dictationStatusPlaying || 'Playing {current}/{total}', {
-        current: repeatIteration,
-        total: playCount,
-      });
-    }
-    return labels.vocab?.dictationStatusIdle || 'Idle';
-  };
-
-  const renderContent = () => {
-    if (total === 0) {
-      return (
-        <div className="py-24 text-center">
-          <p className="text-xl font-black text-muted-foreground">
-            {labels.vocab?.noDueNow || labels.dashboard?.vocab?.noDueNow || 'No words yet'}
-          </p>
-          <p className="text-muted-foreground font-medium mt-2">
-            {labels.vocab?.tryAnotherFilter || 'Try another category or search'}
-          </p>
-        </div>
-      );
-    }
-
-    if (started) {
-      return (
-        <div className="space-y-5">
-          <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
-                  {mode === 'HEAR_PRONUNCIATION'
-                    ? labels.vocab?.dictationHearPron || 'Hear pronunciation'
-                    : labels.vocab?.dictationHearMeaning || 'Hear meaning'}
-                </p>
-                <h1 className="text-3xl font-black text-foreground mt-1">
-                  {labels.vocab?.dictationPlayerTitle || 'Dictation Player'}
-                </h1>
-                <p className="mt-2 text-muted-foreground font-bold">
-                  {labels.vocab?.dictationPlayerSubtitle || 'Listen and write'}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
-                  {getStatusText()}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={prev}
-                className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border inline-flex items-center gap-2"
-              >
-                <ChevronLeft className="w-5 h-5" />
-                {labels.common?.prev || 'Previous'}
-              </Button>
-
-              {playing ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={stopAll}
-                  className="px-5 py-3 rounded-2xl bg-rose-500 dark:bg-rose-400/80 text-primary-foreground font-black border-[3px] border-rose-400 dark:border-rose-300/35 inline-flex items-center gap-2"
-                >
-                  <Square className="w-5 h-5" />
-                  {labels.vocab?.stop || 'Stop'}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={startPlayback}
-                  className="px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-black border-[3px] border-border inline-flex items-center gap-2"
-                >
-                  <Play className="w-5 h-5" />
-                  {labels.vocab?.play || 'Play'}
-                </Button>
-              )}
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={next}
-                className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
-              >
-                {labels.common?.next || 'Next'}
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setMode('HEAR_PRONUNCIATION')}
-            className={`!flex !w-full !items-start !justify-start p-5 rounded-3xl border-[3px] text-left transition-all ${
-              mode === 'HEAR_PRONUNCIATION'
-                ? 'border-rose-400 bg-card shadow-[0_10px_30px_rgba(244,63,94,0.12)] dark:border-rose-300/35 dark:shadow-[0_10px_30px_rgba(251,113,133,0.14)]'
-                : 'border-border bg-card'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-400/14 flex items-center justify-center">
-                <Mic className="w-6 h-6 text-rose-600 dark:text-rose-300" />
-              </div>
-              <div>
-                <p className="font-black text-foreground">
-                  {labels.vocab?.dictationHearPron || 'Hear pronunciation'}
-                </p>
-                <p className="text-xs font-bold text-muted-foreground">
-                  {labels.vocab?.dictationHearPronDesc || 'Write the word/meaning'}
-                </p>
-              </div>
-            </div>
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setMode('HEAR_MEANING')}
-            className={`!flex !w-full !items-start !justify-start p-5 rounded-3xl border-[3px] text-left transition-all ${
-              mode === 'HEAR_MEANING'
-                ? 'border-rose-400 bg-card shadow-[0_10px_30px_rgba(244,63,94,0.12)] dark:border-rose-300/35 dark:shadow-[0_10px_30px_rgba(251,113,133,0.14)]'
-                : 'border-border bg-card'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center">
-                <Type className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
-              </div>
-              <div>
-                <p className="font-black text-foreground">
-                  {labels.vocab?.dictationHearMeaning || 'Hear meaning'}
-                </p>
-                <p className="text-xs font-bold text-muted-foreground">
-                  {labels.vocab?.dictationHearMeaningDesc || 'Write the word'}
-                </p>
-              </div>
-            </div>
-          </Button>
-        </div>
-
-        <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6 space-y-6">
-          <div>
-            <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
-              {labels.vocab?.repeatCount || 'Repetitions'}
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {([1, 2, 3] as const).map(v => (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  key={v}
-                  onClick={() => setPlayCount(v)}
-                  className={`py-3 rounded-2xl border-[3px] font-black ${
-                    playCount === v
-                      ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
-                      : 'border-border bg-card text-muted-foreground'
-                  }`}
-                >
-                  {format(labels.vocab?.repeatTimes || '{count}x', { count: v })}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
-              {labels.vocab?.playGap || 'Repeat interval'}
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {([2, 4, 6, 8] as const).map(v => (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  key={v}
-                  onClick={() => setGapSeconds(v)}
-                  className={`py-3 rounded-2xl border-[3px] font-black ${
-                    gapSeconds === v
-                      ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
-                      : 'border-border bg-card text-muted-foreground'
-                  }`}
-                >
-                  {format(labels.vocab?.seconds || '{count}s', { count: v })}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
-            <span className="font-black text-muted-foreground">
-              {labels.vocab?.autoNext || 'Auto next'}
-            </span>
-            <Switch
-              checked={autoNext}
-              onCheckedChange={setAutoNext}
-              className="h-6 w-11 data-[state=checked]:bg-rose-500 dark:data-[state=checked]:bg-rose-400/80 data-[state=unchecked]:bg-background border border-border"
-            />
-          </label>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={start}
-            className="w-full py-4 rounded-2xl bg-rose-500 dark:bg-rose-400/80 text-primary-foreground font-black border-[3px] border-rose-400 dark:border-rose-300/35"
-          >
-            {labels.vocab?.dictationStartButton || 'Start playback'}
-          </Button>
-        </div>
-      </div>
-    );
-  };
+  const statusText =
+    repeatIteration > 0
+      ? formatTemplate(labels.vocab?.dictationStatusPlaying || 'Playing {current}/{total}', {
+          current: repeatIteration,
+          total: playCount,
+        })
+      : labels.vocab?.dictationStatusIdle || 'Idle';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">
-        <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-rose-100 dark:border-rose-300/20">
-          <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => navigate('/vocab-book')}
-              className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
-              aria-label={labels.common?.back || 'Back'}
-            >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            </Button>
-
-            <div className="text-center">
-              <p className="text-xs font-black text-rose-500 dark:text-rose-300 tracking-wider uppercase">
-                {labels.vocab?.modeDictation || 'Dictation'}
-              </p>
-              <p className="text-sm font-black text-muted-foreground" />
-            </div>
-
-            <div className="w-12" />
-          </div>
-        </div>
+      <DictationPageShell>
+        <DictationTopBar labels={labels} progressText="" onBack={() => navigate('/vocab-book')} />
         <VocabBookDictationSkeleton />
-      </div>
+      </DictationPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">
-      <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-rose-100 dark:border-rose-300/20">
-        <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/vocab-book')}
-            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
-            aria-label={labels.common?.back || 'Back'}
-          >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Button>
+    <DictationPageShell>
+      <DictationTopBar
+        labels={labels}
+        progressText={started ? `${index + 1}/${total || 0}` : ''}
+        onBack={() => navigate('/vocab-book')}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
-          <div className="text-center">
-            <p className="text-xs font-black text-rose-500 dark:text-rose-300 tracking-wider uppercase">
-              {labels.vocab?.modeDictation || 'Dictation'}
-            </p>
-            <p className="text-sm font-black text-muted-foreground">
-              {started ? `${index + 1}/${total || 0}` : ''}
-            </p>
-          </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setSettingsOpen(true)}
-            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
-            aria-label={labels.vocab?.settings || 'Settings'}
-          >
-            <Settings2 className="w-5 h-5 text-muted-foreground" />
-          </Button>
-        </div>
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <DictationContent
+          total={total}
+          started={started}
+          labels={labels}
+          mode={mode}
+          statusText={statusText}
+          playing={playing}
+          onPrev={prev}
+          onStop={stopAll}
+          onStartPlayback={() => {
+            void startPlayback();
+          }}
+          onNext={() => {
+            void next();
+          }}
+          setMode={setMode}
+          playCount={playCount}
+          setPlayCount={setPlayCount}
+          gapSeconds={gapSeconds}
+          setGapSeconds={setGapSeconds}
+          autoNext={autoNext}
+          setAutoNext={setAutoNext}
+          onStart={() => {
+            void start();
+          }}
+        />
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">{renderContent()}</div>
-
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogPortal>
-          <DialogOverlay
-            unstyled
-            forceMount
-            className="fixed inset-0 z-[80] bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
-          />
-          <DialogContent
-            unstyled
-            forceMount
-            closeOnEscape={false}
-            lockBodyScroll={false}
-            className="fixed inset-0 z-[81] flex items-end sm:items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
-          >
-            <motion.div
-              initial={false}
-              animate={settingsOpen ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-              className="pointer-events-auto w-full max-w-lg bg-card rounded-[28px] border-[3px] border-border shadow-2xl p-6"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
-                    {labels.vocab?.settings || labels.settings || 'Settings'}
-                  </p>
-                  <h2 className="text-2xl font-black text-foreground">
-                    {labels.vocab?.modeDictation || 'Dictation'}
-                  </h2>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setSettingsOpen(false)}
-                  className="p-2 rounded-xl hover:bg-muted"
-                  aria-label={labels.common?.close || 'Close'}
-                >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
-                  <span className="font-black text-muted-foreground">
-                    {labels.vocab?.autoNext || 'Auto next'}
-                  </span>
-                  <Switch
-                    checked={autoNext}
-                    onCheckedChange={setAutoNext}
-                    className="h-6 w-11 data-[state=checked]:bg-rose-500 dark:data-[state=checked]:bg-rose-400/80 data-[state=unchecked]:bg-background border border-border"
-                  />
-                </label>
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => setSettingsOpen(false)}
-                className="mt-6 w-full py-3 rounded-2xl bg-primary text-primary-foreground font-black"
-              >
-                {labels.done || 'Done'}
-              </Button>
-            </motion.div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
-    </div>
+      <DictationSettingsDialog
+        open={settingsOpen}
+        labels={labels}
+        autoNext={autoNext}
+        setAutoNext={setAutoNext}
+        onClose={() => setSettingsOpen(false)}
+      />
+    </DictationPageShell>
   );
 };
 

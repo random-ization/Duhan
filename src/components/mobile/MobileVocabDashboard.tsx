@@ -6,7 +6,7 @@ import { Button } from '../ui';
 interface MobileVocabDashboardProps {
   readonly unitId: string;
   readonly instituteName: string;
-  readonly words: any[];
+  readonly words: readonly unknown[];
   readonly masteredCount: number;
   readonly language: string;
   readonly onStartLearn: () => void;

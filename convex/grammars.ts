@@ -1,4 +1,4 @@
-import { mutation, query, type MutationCtx } from './_generated/server';
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { toErrorMessage } from './errors';
@@ -65,6 +65,12 @@ type GrammarRecord = {
   searchPatterns?: string[];
 };
 
+type GrammarProgressRecord = {
+  grammarId: Id<'grammar_points'>;
+  status: string;
+  proficiency: number;
+};
+
 export type GrammarStatsDto = {
   total: number;
   mastered: number;
@@ -73,6 +79,51 @@ export type GrammarStatsDto = {
 const isVisibleInstitute = <T extends { isArchived?: boolean }>(
   institute: T | null | undefined
 ): institute is T => !!institute && institute.isArchived !== true;
+
+const uniqueGrammarIds = (
+  grammarIds: ReadonlyArray<Id<'grammar_points'>>
+): Id<'grammar_points'>[] => {
+  const seen = new Set<string>();
+  const uniqueIds: Id<'grammar_points'>[] = [];
+
+  for (const grammarId of grammarIds) {
+    const key = grammarId.toString();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueIds.push(grammarId);
+  }
+
+  return uniqueIds;
+};
+
+const getProgressMapForGrammarIds = async (
+  ctx: QueryCtx,
+  userId: Id<'users'> | null,
+  grammarIds: ReadonlyArray<Id<'grammar_points'>>
+): Promise<Map<string, GrammarProgressRecord>> => {
+  if (!userId || grammarIds.length === 0) {
+    return new Map();
+  }
+
+  const progressEntries = await Promise.all(
+    uniqueGrammarIds(grammarIds).map(async grammarId => {
+      const progress = await ctx.db
+        .query('user_grammar_progress')
+        .withIndex('by_user_grammar', q => q.eq('userId', userId).eq('grammarId', grammarId))
+        .unique();
+
+      return progress ? ([grammarId.toString(), progress] as const) : null;
+    })
+  );
+
+  const progressMap = new Map<string, GrammarProgressRecord>();
+  for (const entry of progressEntries) {
+    if (!entry) continue;
+    progressMap.set(entry[0], entry[1]);
+  }
+
+  return progressMap;
+};
 
 // Get Grammar stats for sidebar
 export const getStats = query({
@@ -109,18 +160,15 @@ export const getStats = query({
       .take(MAX_GRAMMAR_POINTS);
 
     if (!userId) return { total: courseGrammars.length, mastered: 0 };
-    // ...
 
-    // 2. Fetch progress
-    // OPTIMIZATION: Limit to prevent excessive queries
-    const MAX_PROGRESS_ITEMS = 5000;
-    const progress = await ctx.db
-      .query('user_grammar_progress')
-      .filter(q => q.eq(q.field('userId'), userId))
-      .take(MAX_PROGRESS_ITEMS);
+    const progressMap = await getProgressMapForGrammarIds(
+      ctx,
+      userId,
+      courseGrammars.map(link => link.grammarId)
+    );
 
     // Count mastered
-    const mastered = progress.filter(p => p.status === 'MASTERED').length;
+    const mastered = [...progressMap.values()].filter(p => p.status === 'MASTERED').length;
 
     return {
       total: courseGrammars.length,
@@ -174,19 +222,11 @@ export const getByCourse = query({
       .collect();
 
     // OPTIMIZATION: Batch fetch all grammars and progress
-    const grammarIds = [...new Set(links.map(l => l.grammarId))];
+    const grammarIds = uniqueGrammarIds(links.map(link => link.grammarId));
     const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
     const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
 
-    // Batch fetch user progress if userId exists
-    let progressMap = new Map();
-    if (userId) {
-      const allProgress = await ctx.db
-        .query('user_grammar_progress')
-        .withIndex('by_user_grammar', q => q.eq('userId', userId))
-        .collect();
-      progressMap = new Map(allProgress.map(p => [p.grammarId.toString(), p]));
-    }
+    const progressMap = await getProgressMapForGrammarIds(ctx, userId, grammarIds);
 
     // Assemble data in memory
     const results = links.map(link => {
@@ -316,19 +356,11 @@ export const getUnitGrammar = query({
       );
 
       // 3. OPTIMIZATION: Batch fetch grammars and progress
-      const grammarIds = [...new Set(sortedGrammars.map(l => l.grammarId))];
+      const grammarIds = uniqueGrammarIds(sortedGrammars.map(link => link.grammarId));
       const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
       const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
 
-      // Batch fetch user progress if userId exists
-      let progressMap = new Map();
-      if (userId) {
-        const allProgress = await ctx.db
-          .query('user_grammar_progress')
-          .withIndex('by_user_grammar', q => q.eq('userId', userId))
-          .collect();
-        progressMap = new Map(allProgress.map(p => [p.grammarId.toString(), p]));
-      }
+      const progressMap = await getProgressMapForGrammarIds(ctx, userId, grammarIds);
 
       // 4. Assemble data in memory
       const results = sortedGrammars.map(link => {
@@ -529,7 +561,9 @@ export const updateUnitId = mutation({
     const existing = await ctx.db
       .query('course_grammars')
       .withIndex('by_course_unit') // We can also use a filter if we dont have by_course_grammar
-      .filter(q => q.eq(q.field('courseId'), args.courseId) && q.eq(q.field('grammarId'), args.grammarId))
+      .filter(
+        q => q.eq(q.field('courseId'), args.courseId) && q.eq(q.field('grammarId'), args.grammarId)
+      )
       .unique();
 
     if (existing) {

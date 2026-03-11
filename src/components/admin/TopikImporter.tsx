@@ -719,6 +719,50 @@ function parseCorrectAnswer(answerRaw: string): number {
   return 0;
 }
 
+const OPTION_KEY_SETS = [
+  ['选项A', '选项1', 'A', 'optionA', 'option1', '①'],
+  ['选项B', '选项2', 'B', 'optionB', 'option2', '②'],
+  ['选项C', '选项3', 'C', 'optionC', 'option3', '③'],
+  ['选项D', '选项4', 'D', 'optionD', 'option4', '④'],
+] as const;
+
+function getQuestionOptions(row: Record<string, any>): [string, string, string, string] {
+  const options = OPTION_KEY_SETS.map(keys => getRowValue(row, [...keys]));
+  return options as [string, string, string, string];
+}
+
+function hasCompleteOptions(options: [string, string, string, string]): boolean {
+  return options.every(Boolean);
+}
+
+function resolveQuestionText(row: Record<string, any>, config?: QuestionConfig | null): string {
+  const excelQuestion = getRowValue(row, ['问题', 'question', '질문']);
+  if (config?.needsQuestionInput && excelQuestion) return excelQuestion;
+  return config?.question || '';
+}
+
+function getOptionalQuestionFields(row: Record<string, any>): {
+  image?: string;
+  explanation?: string;
+  optionImages?: [string, string, string, string];
+} {
+  const image = getRowValue(row, ['图片URL', 'image', 'imageUrl', '图片']) || undefined;
+  const explanation = getRowValue(row, ['解析', 'explanation', '해설']) || undefined;
+  const optionImages = [
+    getRowValue(row, ['选项A图片', 'optionImageA']),
+    getRowValue(row, ['选项B图片', 'optionImageB']),
+    getRowValue(row, ['选项C图片', 'optionImageC']),
+    getRowValue(row, ['选项D图片', 'optionImageD']),
+  ] as [string, string, string, string];
+
+  const hasAnyOptionImage = optionImages.some(Boolean);
+  return {
+    image,
+    explanation,
+    optionImages: hasAnyOptionImage ? optionImages : undefined,
+  };
+}
+
 function parseQuestionRow(
   row: Record<string, any>,
   rowIndex: number,
@@ -729,12 +773,8 @@ function parseQuestionRow(
     return { question: null, error: `第${rowIndex}行: 缺少有效题号` };
   }
 
-  const optionA = getRowValue(row, ['选项A', '选项1', 'A', 'optionA', 'option1', '①']);
-  const optionB = getRowValue(row, ['选项B', '选项2', 'B', 'optionB', 'option2', '②']);
-  const optionC = getRowValue(row, ['选项C', '选项3', 'C', 'optionC', 'option3', '③']);
-  const optionD = getRowValue(row, ['选项D', '选项4', 'D', 'optionD', 'option4', '④']);
-
-  if (!optionA || !optionB || !optionC || !optionD) {
+  const options = getQuestionOptions(row);
+  if (!hasCompleteOptions(options)) {
     return { question: null, error: `第${questionNum}题: 选项不完整` };
   }
 
@@ -744,11 +784,9 @@ function parseQuestionRow(
   const config = getQuestionConfig(questionNum, examType);
 
   const useFixedOptions = config?.fixedOptions?.length === 4;
-  const finalOptions = useFixedOptions ? config.fixedOptions : [optionA, optionB, optionC, optionD];
-
-  const excelQuestion = getRowValue(row, ['问题', 'question', '질문']);
-  const finalQuestion =
-    config?.needsQuestionInput && excelQuestion ? excelQuestion : config?.question || '';
+  const finalOptions = useFixedOptions ? config.fixedOptions : options;
+  const finalQuestion = resolveQuestionText(row, config);
+  const optionalFields = getOptionalQuestionFields(row);
 
   const question: ParsedQuestion = {
     id: questionNum,
@@ -762,19 +800,9 @@ function parseQuestionRow(
     instruction: config?.instruction || '',
   };
 
-  const imageUrl = getRowValue(row, ['图片URL', 'image', 'imageUrl', '图片']);
-  if (imageUrl) question.image = imageUrl;
-
-  const explanation = getRowValue(row, ['解析', 'explanation', '해설']);
-  if (explanation) question.explanation = explanation;
-
-  const optImgA = getRowValue(row, ['选项A图片', 'optionImageA']);
-  const optImgB = getRowValue(row, ['选项B图片', 'optionImageB']);
-  const optImgC = getRowValue(row, ['选项C图片', 'optionImageC']);
-  const optImgD = getRowValue(row, ['选项D图片', 'optionImageD']);
-  if (optImgA || optImgB || optImgC || optImgD) {
-    question.optionImages = [optImgA, optImgB, optImgC, optImgD];
-  }
+  if (optionalFields.image) question.image = optionalFields.image;
+  if (optionalFields.explanation) question.explanation = optionalFields.explanation;
+  if (optionalFields.optionImages) question.optionImages = optionalFields.optionImages;
 
   return { question, error: null };
 }

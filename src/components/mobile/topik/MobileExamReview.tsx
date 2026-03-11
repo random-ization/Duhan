@@ -36,6 +36,84 @@ interface AIAnalysis {
 }
 
 type ViewMode = 'OVERVIEW' | 'DETAIL';
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const ReviewResultBanner: React.FC<{ isCorrect: boolean; t: TranslateFn }> = ({ isCorrect, t }) => (
+  <div
+    className={clsx(
+      'mb-6 rounded-2xl p-4 flex items-center gap-3 border shadow-sm',
+      isCorrect
+        ? 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-300/25 text-emerald-800 dark:text-emerald-200'
+        : 'bg-red-50 dark:bg-red-500/12 border-red-100 dark:border-red-300/25 text-red-800 dark:text-red-200'
+    )}
+  >
+    <div
+      className={clsx(
+        'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
+        isCorrect
+          ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-600 dark:text-emerald-300'
+          : 'bg-red-100 dark:bg-red-500/16 text-red-500 dark:text-red-300'
+      )}
+    >
+      {isCorrect ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+    </div>
+    <div>
+      <div className="font-black text-lg">
+        {isCorrect
+          ? t('dashboard.topik.mobile.review.resultCorrect', { defaultValue: 'Correct!' })
+          : t('dashboard.topik.mobile.review.resultIncorrect', {
+              defaultValue: 'Incorrect',
+            })}
+      </div>
+      <div className="text-xs opacity-80 font-medium">
+        {isCorrect
+          ? t('dashboard.topik.mobile.review.resultCorrectHint', {
+              defaultValue: 'Good job!',
+            })
+          : t('dashboard.topik.mobile.review.resultIncorrectHint', {
+              defaultValue: 'Review the explanation below.',
+            })}
+      </div>
+    </div>
+  </div>
+);
+
+const ReviewSaveToast: React.FC<{ show: boolean; saveError: string | null; t: TranslateFn }> = ({
+  show,
+  saveError,
+  t,
+}) => {
+  if (!show) return null;
+  return (
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-[90%] max-w-sm">
+      <div
+        className={clsx(
+          'px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border',
+          saveError
+            ? 'bg-red-50 dark:bg-red-500/14 text-red-800 dark:text-red-200 border-red-200 dark:border-red-300/25'
+            : 'bg-emerald-600 dark:bg-emerald-500/70 text-white border-emerald-500 dark:border-emerald-300/35'
+        )}
+      >
+        {saveError ? (
+          <X className="w-5 h-5 shrink-0" />
+        ) : (
+          <BookmarkCheck className="w-5 h-5 shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm">
+            {saveError
+              ? t('dashboard.topik.mobile.review.saveFailedShort', {
+                  defaultValue: 'Failed to Save',
+                })
+              : t('dashboard.topik.mobile.review.savedToast', {
+                  defaultValue: 'Saved to Notebook',
+                })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   exam,
@@ -636,44 +714,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
         <div className="flex-1 overflow-y-auto pb-safe" ref={detailScrollRef}>
           <div className="p-4 pb-32 max-w-lg mx-auto w-full">
-            {/* Result Banner */}
-            <div
-              className={clsx(
-                'mb-6 rounded-2xl p-4 flex items-center gap-3 border shadow-sm',
-                isCorrect
-                  ? 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-300/25 text-emerald-800 dark:text-emerald-200'
-                  : 'bg-red-50 dark:bg-red-500/12 border-red-100 dark:border-red-300/25 text-red-800 dark:text-red-200'
-              )}
-            >
-              <div
-                className={clsx(
-                  'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-                  isCorrect
-                    ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-600 dark:text-emerald-300'
-                    : 'bg-red-100 dark:bg-red-500/16 text-red-500 dark:text-red-300'
-                )}
-              >
-                {isCorrect ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
-              </div>
-              <div>
-                <div className="font-black text-lg">
-                  {isCorrect
-                    ? t('dashboard.topik.mobile.review.resultCorrect', { defaultValue: 'Correct!' })
-                    : t('dashboard.topik.mobile.review.resultIncorrect', {
-                        defaultValue: 'Incorrect',
-                      })}
-                </div>
-                <div className="text-xs opacity-80 font-medium">
-                  {isCorrect
-                    ? t('dashboard.topik.mobile.review.resultCorrectHint', {
-                        defaultValue: 'Good job!',
-                      })
-                    : t('dashboard.topik.mobile.review.resultIncorrectHint', {
-                        defaultValue: 'Review the explanation below.',
-                      })}
-                </div>
-              </div>
-            </div>
+            <ReviewResultBanner isCorrect={isCorrect} t={t} />
 
             <QuestionContent />
 
@@ -825,36 +866,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        {/* Save Toast */}
-        {showSaveToast && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-[90%] max-w-sm">
-            <div
-              className={clsx(
-                'px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border',
-                saveError
-                  ? 'bg-red-50 dark:bg-red-500/14 text-red-800 dark:text-red-200 border-red-200 dark:border-red-300/25'
-                  : 'bg-emerald-600 dark:bg-emerald-500/70 text-white border-emerald-500 dark:border-emerald-300/35'
-              )}
-            >
-              {saveError ? (
-                <X className="w-5 h-5 shrink-0" />
-              ) : (
-                <BookmarkCheck className="w-5 h-5 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm">
-                  {saveError
-                    ? t('dashboard.topik.mobile.review.saveFailedShort', {
-                        defaultValue: 'Failed to Save',
-                      })
-                    : t('dashboard.topik.mobile.review.savedToast', {
-                        defaultValue: 'Saved to Notebook',
-                      })}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <ReviewSaveToast show={showSaveToast} saveError={saveError} t={t} />
       </div>
     );
   };

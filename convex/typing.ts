@@ -149,15 +149,19 @@ export const saveRecord = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error('Unauthorized');
 
+    const userByToken = await ctx.db
+      .query('users')
+      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
+      .first();
+    const email = identity.email;
     const userRecord =
-      (await ctx.db
-        .query('users')
-        .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-        .first()) ||
-      (await ctx.db
-        .query('users')
-        .filter(q => q.eq(q.field('email'), identity.email))
-        .first());
+      userByToken ||
+      (email
+        ? await ctx.db
+            .query('users')
+            .withIndex('email', q => q.eq('email', email))
+            .unique()
+        : null);
 
     if (!userRecord) throw new Error('User not found');
 
@@ -175,15 +179,19 @@ export const getUserStats = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
+    const userByToken = await ctx.db
+      .query('users')
+      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
+      .first();
+    const email = identity.email;
     const userRecord =
-      (await ctx.db
-        .query('users')
-        .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-        .first()) ||
-      (await ctx.db
-        .query('users')
-        .filter(q => q.eq(q.field('email'), identity.email))
-        .first());
+      userByToken ||
+      (email
+        ? await ctx.db
+            .query('users')
+            .withIndex('email', q => q.eq('email', email))
+            .unique()
+        : null);
 
     if (!userRecord) return null;
 

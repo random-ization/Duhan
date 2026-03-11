@@ -7,6 +7,14 @@ import { LocalizedLink } from '../components/LocalizedLink';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' ? message : undefined;
+  }
+  return undefined;
+};
+
 const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation();
   const language = useCurrentLanguage();
@@ -28,8 +36,10 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       await requestPasswordReset({ email, language });
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err?.message || t('common.error', { defaultValue: 'Something went wrong.' }));
+    } catch (err: unknown) {
+      setError(
+        getErrorMessage(err) || t('common.error', { defaultValue: 'Something went wrong.' })
+      );
     } finally {
       setLoading(false);
     }

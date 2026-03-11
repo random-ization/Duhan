@@ -31,16 +31,60 @@ function isPremiumVideoLevel(level: string | undefined): boolean {
   );
 }
 
+function mapVideoListItem(video: {
+  _id: string;
+  title: string;
+  description?: string;
+  thumbnailUrl?: string;
+  level: string;
+  duration?: number;
+  views: number;
+  youtubeId?: string;
+  createdAt: number;
+}) {
+  return {
+    id: video._id,
+    _id: video._id,
+    title: video.title,
+    description: video.description,
+    thumbnailUrl: video.thumbnailUrl,
+    level: video.level,
+    duration: video.duration,
+    views: video.views,
+    youtubeId: video.youtubeId,
+    createdAt: video.createdAt,
+  };
+}
+
+function mapAdminVideoListItem(video: {
+  _id: string;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  level: string;
+  duration?: number;
+  views: number;
+  youtubeId?: string;
+  createdAt: number;
+}) {
+  return {
+    ...mapVideoListItem(video),
+    videoUrl: video.videoUrl,
+  };
+}
+
 export const list = query({
   args: {
     level: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const level = args.level;
     let videos;
-    if (args.level) {
+    if (level) {
       videos = await ctx.db
         .query('videos')
-        .withIndex('by_level', q => q.eq('level', args.level!))
+        .withIndex('by_level', q => q.eq('level', level))
         .collect();
     } else {
       videos = await ctx.db.query('videos').collect();
@@ -50,20 +94,32 @@ export const list = query({
     return videos
       .slice()
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map(v => ({
-        id: v._id,
-        _id: v._id,
-        title: v.title,
-        description: v.description,
-        videoUrl: v.videoUrl,
-        thumbnailUrl: v.thumbnailUrl,
-        level: v.level,
-        duration: v.duration,
-        views: v.views,
-        youtubeId: v.youtubeId,
-        createdAt: v.createdAt,
-        // Exclude: transcriptData (large)
-      }));
+      .map(mapVideoListItem);
+  },
+});
+
+export const listAdmin = query({
+  args: {
+    level: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const level = args.level;
+    let videos;
+    if (level) {
+      videos = await ctx.db
+        .query('videos')
+        .withIndex('by_level', q => q.eq('level', level))
+        .collect();
+    } else {
+      videos = await ctx.db.query('videos').collect();
+    }
+
+    return videos
+      .slice()
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(mapAdminVideoListItem);
   },
 });
 
@@ -120,7 +176,11 @@ export const create = mutation({
     });
 
     if (args.transcriptData !== undefined) {
-      const transcriptWrite = await replaceVideoTranscriptChunks(ctx, id, args.transcriptData ?? null);
+      const transcriptWrite = await replaceVideoTranscriptChunks(
+        ctx,
+        id,
+        args.transcriptData ?? null
+      );
       await ctx.db.patch(id, {
         transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
         transcriptChunkCount: transcriptWrite.chunkCount,

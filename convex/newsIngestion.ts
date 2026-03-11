@@ -9,6 +9,7 @@ import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { toErrorMessage } from './errors';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
+import { cleanArticleBodyText } from '../constants/news-cleanup';
 
 const normalizedArticleValidator = v.object({
   sourceGuid: v.optional(v.string()),
@@ -43,30 +44,6 @@ const SOURCE_PRIORITY: Record<string, number> = {
   naver_news_search: 7,
   wiki_ko_featured: 8,
 };
-
-const BODY_NOISE_TOKENS = [
-  'addeventlistener(',
-  'tlistener(',
-  'oncontentready',
-  'contentaudio.load',
-  "soundobj.attr('data-on'",
-  'audioplayer.pause',
-  'location.href',
-  'membership/login',
-  'onclick=',
-  'function(',
-  'var ',
-  'const ',
-  '=>',
-];
-
-const BODY_TRAILING_MARKERS = [
-  '트렌드뉴스 많이 본 댓글 순',
-  '많이 본 뉴스',
-  '많이 본 기사',
-  '무단 전재',
-  '재배포 금지',
-];
 
 const BLOCKED_TOPIC_PATTERNS = [
   /정치|국회|대통령|청와대|정당|총선|대선|지방선거|여야|국정감사|탄핵|청문회/i,
@@ -126,7 +103,7 @@ export const ingestBatch = internalMutation({
         }
 
         const rawBody = raw.bodyText || raw.summary || title;
-        const bodyText = cleanArticleBodyText(rawBody);
+        const bodyText = cleanArticleBodyText(rawBody, { collapseWhitespaceOnFallback: true });
         const summary = raw.summary ? normalizeWhitespace(raw.summary) : undefined;
         const section = raw.section ? normalizeWhitespace(raw.section) : undefined;
         const publishedAt = raw.publishedAt || now;
@@ -304,10 +281,10 @@ export const listRecent = query({
 
     const rows = effectiveDifficulty
       ? await ctx.db
-        .query('news_articles')
-        .withIndex('by_difficulty_published', q => q.eq('difficultyLevel', effectiveDifficulty))
-        .order('desc')
-        .take(limit)
+          .query('news_articles')
+          .withIndex('by_difficulty_published', q => q.eq('difficultyLevel', effectiveDifficulty))
+          .order('desc')
+          .take(limit)
       : await ctx.db.query('news_articles').withIndex('by_published').order('desc').take(limit);
 
     return rows.filter(row => row.status === 'active');
@@ -686,7 +663,8 @@ async function fetchNewsCandidates(ctx: ReadCtx, limit: number): Promise<NewsArt
     .take(Math.min(Math.max(limit, USER_FEED_NEWS_LIMIT), USER_FEED_MAX_NEWS_SCAN));
 
   return rows.filter(
-    row => row.sourceKey !== WIKI_SOURCE_KEY && (row.bodyText?.length ?? 0) <= MAX_ARTICLE_BODY_LENGTH
+    row =>
+      row.sourceKey !== WIKI_SOURCE_KEY && (row.bodyText?.length ?? 0) <= MAX_ARTICLE_BODY_LENGTH
   );
 }
 
@@ -766,54 +744,6 @@ function normalizeUrl(raw: string): string {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
-}
-
-function isNoiseChunk(chunk: string): boolean {
-  const lower = chunk.toLowerCase();
-  if (BODY_NOISE_TOKENS.some(token => lower.includes(token))) return true;
-
-  const hangulCount = (chunk.match(/[가-힣]/g) || []).length;
-  const latinCount = (chunk.match(/[A-Za-z]/g) || []).length;
-  const symbolCount = (chunk.match(/[{};=_<>]/g) || []).length;
-
-  if (/https?:\/\/\S+/i.test(chunk) && hangulCount < 12) return true;
-  if (symbolCount >= 4 && hangulCount < 20) return true;
-  if (latinCount > hangulCount * 2 && hangulCount < 10) return true;
-
-  return false;
-}
-
-function cleanArticleBodyText(rawText: string): string {
-  const plain = rawText
-    .replace(/\r\n/g, '\n')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!plain) return normalizeWhitespace(rawText);
-
-  const chunks = plain
-    .split(/(?<=[.!?。！？])\s+|\n+/)
-    .map(chunk => chunk.trim())
-    .filter(Boolean);
-  const filteredChunks = chunks.filter(chunk => !isNoiseChunk(chunk));
-
-  let cleaned = normalizeWhitespace(filteredChunks.join(' '));
-  if (!cleaned) cleaned = normalizeWhitespace(plain);
-
-  for (const marker of BODY_TRAILING_MARKERS) {
-    const markerIndex = cleaned.indexOf(marker);
-    if (markerIndex > 0) {
-      cleaned = cleaned.slice(0, markerIndex).trim();
-      break;
-    }
-  }
-
-  const firstHangulIndex = cleaned.search(/[가-힣]/);
-  if (firstHangulIndex > 40) {
-    cleaned = cleaned.slice(firstHangulIndex).trim();
-  }
-
-  return cleaned || normalizeWhitespace(rawText);
 }
 
 function normalizeTitle(title: string): string {

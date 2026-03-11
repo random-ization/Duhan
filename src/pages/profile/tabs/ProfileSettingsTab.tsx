@@ -1,8 +1,9 @@
 import React from 'react';
 import { LanguageSwitcher } from '../../../components/common/LanguageSwitcher';
+import type { ProfileLabels } from '../types';
 
 interface ProfileSettingsTabProps {
-  labels: any;
+  labels: ProfileLabels;
 }
 
 export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }) => {

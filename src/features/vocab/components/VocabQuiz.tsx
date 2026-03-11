@@ -54,6 +54,7 @@ export interface QuizQuestion {
 export type OptionState = 'normal' | 'selected' | 'correct' | 'wrong';
 type GameState = 'PLAYING' | 'COMPLETE';
 export type WritingState = 'INPUT' | 'CORRECT' | 'WRONG';
+export type PendingAdvanceReason = 'WRONG' | 'DONT_KNOW' | null;
 
 // Shuffle helper
 const shuffleArray = <T,>(array: readonly T[]): T[] => {
@@ -99,213 +100,277 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           className="fixed inset-0 z-[51] flex items-center justify-center p-4 pointer-events-none"
         >
           <div className="pointer-events-auto bg-card rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-foreground">
-                🎯 {labels.dashboard?.quiz?.quizSettings || `${modeLabel} Settings`}
-              </h2>
-              <Button
-                variant="ghost"
-                size="auto"
-                type="button"
-                onClick={() => setShowSettings(false)}
-                className="p-2 hover:bg-muted rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </Button>
-            </div>
-
-            {/* Question Type */}
-            <div className="mb-5">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                {labels.dashboard?.quiz?.questionType || 'Question Type'}
-              </h3>
-              <div className="space-y-2">
-                <label
-                  htmlFor="mc-toggle"
-                  className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
-                >
-                  <span className="font-bold text-muted-foreground">
-                    {labels.dashboard?.quiz?.multipleChoice || '📝 Multiple Choice'}
-                  </span>
-                  <Checkbox
-                    id="mc-toggle"
-                    checked={settings.multipleChoice}
-                    onChange={e => setSettings(s => ({ ...s, multipleChoice: e.target.checked }))}
-                    className="w-5 h-5 accent-blue-500"
-                  />
-                </label>
-                <label
-                  htmlFor="writing-toggle"
-                  className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
-                >
-                  <span className="font-bold text-muted-foreground">
-                    {labels.dashboard?.quiz?.writingFill || '✏️ Writing Fill'}
-                  </span>
-                  <Checkbox
-                    id="writing-toggle"
-                    checked={settings.writingMode}
-                    onChange={e => setSettings(s => ({ ...s, writingMode: e.target.checked }))}
-                    className="w-5 h-5 accent-blue-500"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* MC Direction */}
-            {settings.multipleChoice && (
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                  {labels.dashboard?.quiz?.mcDirection || 'MC Direction'}
-                </h3>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="mc-dir-kr-native"
-                    className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'KR_TO_NATIVE' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-muted border-2 border-transparent'}`}
-                  >
-                    <Radio
-                      id="mc-dir-kr-native"
-                      name="mc-dir"
-                      checked={settings.mcDirection === 'KR_TO_NATIVE'}
-                      onChange={() => setSettings(s => ({ ...s, mcDirection: 'KR_TO_NATIVE' }))}
-                      className="mr-3"
-                    />
-                    <span className="font-medium">
-                      {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
-                    </span>
-                  </label>
-                  <label
-                    htmlFor="mc-dir-native-kr"
-                    className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'NATIVE_TO_KR' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-muted border-2 border-transparent'}`}
-                  >
-                    <Radio
-                      id="mc-dir-native-kr"
-                      name="mc-dir"
-                      checked={settings.mcDirection === 'NATIVE_TO_KR'}
-                      onChange={() => setSettings(s => ({ ...s, mcDirection: 'NATIVE_TO_KR' }))}
-                      className="mr-3"
-                    />
-                    <span className="font-medium">
-                      {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Writing Direction */}
-            {settings.writingMode && (
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                  {labels.dashboard?.quiz?.writingDirection || 'Writing Direction'}
-                </h3>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="writing-dir-kr-native"
-                    className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'KR_TO_NATIVE' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-muted border-2 border-transparent'}`}
-                  >
-                    <Radio
-                      id="writing-dir-kr-native"
-                      name="writing-dir"
-                      checked={settings.writingDirection === 'KR_TO_NATIVE'}
-                      onChange={() =>
-                        setSettings(s => ({ ...s, writingDirection: 'KR_TO_NATIVE' }))
-                      }
-                      className="mr-3"
-                    />
-                    <span className="font-medium">
-                      {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
-                    </span>
-                  </label>
-                  <label
-                    htmlFor="writing-dir-native-kr"
-                    className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'NATIVE_TO_KR' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-muted border-2 border-transparent'}`}
-                  >
-                    <Radio
-                      id="writing-dir-native-kr"
-                      name="writing-dir"
-                      checked={settings.writingDirection === 'NATIVE_TO_KR'}
-                      onChange={() =>
-                        setSettings(s => ({ ...s, writingDirection: 'NATIVE_TO_KR' }))
-                      }
-                      className="mr-3"
-                    />
-                    <span className="font-medium">
-                      {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Audio Settings */}
-            <div className="mb-5">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
-                {labels.dashboard?.quiz?.audioSettings || 'Audio Settings'}
-              </h3>
-              <div className="space-y-2">
-                <label
-                  htmlFor="auto-read-toggle"
-                  className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
-                  aria-label={labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
-                >
-                  <span className="flex flex-col">
-                    <span className="font-bold text-muted-foreground">
-                      {labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {labels.dashboard?.quiz?.autoReadDesc ||
-                        'Auto play Korean pronunciation each question'}
-                    </span>
-                  </span>
-                  <Checkbox
-                    id="auto-read-toggle"
-                    checked={settings.autoTTS}
-                    onChange={e => setSettings(s => ({ ...s, autoTTS: e.target.checked }))}
-                    className="w-5 h-5 accent-green-500"
-                    aria-label={labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words'}
-                  />
-                </label>
-                <label
-                  htmlFor="sound-effects-toggle"
-                  className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
-                  aria-label={labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
-                >
-                  <span className="flex flex-col">
-                    <span className="font-bold text-muted-foreground">
-                      {labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {labels.dashboard?.quiz?.soundEffectsDesc ||
-                        'Correct/incorrect feedback sounds'}
-                    </span>
-                  </span>
-                  <Checkbox
-                    id="sound-effects-toggle"
-                    checked={settings.soundEffects}
-                    onChange={e => setSettings(s => ({ ...s, soundEffects: e.target.checked }))}
-                    className="w-5 h-5 accent-green-500"
-                    aria-label={labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects'}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="auto"
-              type="button"
-              onClick={applySettings}
-              disabled={!settings.multipleChoice && !settings.writingMode}
-              className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-muted disabled:opacity-50"
-            >
-              {labels.dashboard?.quiz?.applyRestart || 'Apply & Restart'}
-            </Button>
+            <SettingsModalHeader
+              labels={labels}
+              modeLabel={modeLabel}
+              onClose={() => setShowSettings(false)}
+            />
+            <QuestionTypeSection labels={labels} settings={settings} setSettings={setSettings} />
+            <McDirectionSection labels={labels} settings={settings} setSettings={setSettings} />
+            <WritingDirectionSection
+              labels={labels}
+              settings={settings}
+              setSettings={setSettings}
+            />
+            <AudioSettingsSection labels={labels} settings={settings} setSettings={setSettings} />
+            <ApplySettingsButton labels={labels} settings={settings} onClick={applySettings} />
           </div>
         </DialogContent>
       </DialogPortal>
     </Dialog>
   );
 };
+
+const SettingsModalHeader: React.FC<{
+  labels: Labels;
+  modeLabel: string;
+  onClose: () => void;
+}> = ({ labels, modeLabel, onClose }) => (
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-xl font-black text-foreground">
+      🎯 {labels.dashboard?.quiz?.quizSettings || `${modeLabel} Settings`}
+    </h2>
+    <Button
+      variant="ghost"
+      size="auto"
+      type="button"
+      onClick={onClose}
+      className="p-2 hover:bg-muted rounded-full transition-colors"
+    >
+      <X className="w-5 h-5 text-muted-foreground" />
+    </Button>
+  </div>
+);
+
+const QuestionTypeSection: React.FC<{
+  labels: Labels;
+  settings: QuizSettings;
+  setSettings: React.Dispatch<React.SetStateAction<QuizSettings>>;
+}> = ({ labels, settings, setSettings }) => (
+  <div className="mb-5">
+    <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+      {labels.dashboard?.quiz?.questionType || 'Question Type'}
+    </h3>
+    <div className="space-y-2">
+      <label
+        htmlFor="mc-toggle"
+        className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
+      >
+        <span className="font-bold text-muted-foreground">
+          {labels.dashboard?.quiz?.multipleChoice || '📝 Multiple Choice'}
+        </span>
+        <Checkbox
+          id="mc-toggle"
+          checked={settings.multipleChoice}
+          onChange={e => setSettings(state => ({ ...state, multipleChoice: e.target.checked }))}
+          className="w-5 h-5 accent-blue-500"
+        />
+      </label>
+      <label
+        htmlFor="writing-toggle"
+        className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
+      >
+        <span className="font-bold text-muted-foreground">
+          {labels.dashboard?.quiz?.writingFill || '✏️ Writing Fill'}
+        </span>
+        <Checkbox
+          id="writing-toggle"
+          checked={settings.writingMode}
+          onChange={e => setSettings(state => ({ ...state, writingMode: e.target.checked }))}
+          className="w-5 h-5 accent-blue-500"
+        />
+      </label>
+    </div>
+  </div>
+);
+
+const McDirectionSection: React.FC<{
+  labels: Labels;
+  settings: QuizSettings;
+  setSettings: React.Dispatch<React.SetStateAction<QuizSettings>>;
+}> = ({ labels, settings, setSettings }) => {
+  if (!settings.multipleChoice) return null;
+  return (
+    <div className="mb-5">
+      <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+        {labels.dashboard?.quiz?.mcDirection || 'MC Direction'}
+      </h3>
+      <div className="space-y-2">
+        <label
+          htmlFor="mc-dir-kr-native"
+          className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'KR_TO_NATIVE' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-muted border-2 border-transparent'}`}
+        >
+          <Radio
+            id="mc-dir-kr-native"
+            name="mc-dir"
+            checked={settings.mcDirection === 'KR_TO_NATIVE'}
+            onChange={() => setSettings(state => ({ ...state, mcDirection: 'KR_TO_NATIVE' }))}
+            className="mr-3"
+          />
+          <span className="font-medium">
+            {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
+          </span>
+        </label>
+        <label
+          htmlFor="mc-dir-native-kr"
+          className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.mcDirection === 'NATIVE_TO_KR' ? 'bg-blue-50 border-2 border-blue-300' : 'bg-muted border-2 border-transparent'}`}
+        >
+          <Radio
+            id="mc-dir-native-kr"
+            name="mc-dir"
+            checked={settings.mcDirection === 'NATIVE_TO_KR'}
+            onChange={() => setSettings(state => ({ ...state, mcDirection: 'NATIVE_TO_KR' }))}
+            className="mr-3"
+          />
+          <span className="font-medium">
+            {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+};
+
+const WritingDirectionSection: React.FC<{
+  labels: Labels;
+  settings: QuizSettings;
+  setSettings: React.Dispatch<React.SetStateAction<QuizSettings>>;
+}> = ({ labels, settings, setSettings }) => {
+  if (!settings.writingMode) return null;
+  return (
+    <div className="mb-5">
+      <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+        {labels.dashboard?.quiz?.writingDirection || 'Writing Direction'}
+      </h3>
+      <div className="space-y-2">
+        <label
+          htmlFor="writing-dir-kr-native"
+          className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'KR_TO_NATIVE' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-muted border-2 border-transparent'}`}
+        >
+          <Radio
+            id="writing-dir-kr-native"
+            name="writing-dir"
+            checked={settings.writingDirection === 'KR_TO_NATIVE'}
+            onChange={() => setSettings(state => ({ ...state, writingDirection: 'KR_TO_NATIVE' }))}
+            className="mr-3"
+          />
+          <span className="font-medium">
+            {labels.dashboard?.quiz?.krToNative || 'Korean → Meaning'}
+          </span>
+        </label>
+        <label
+          htmlFor="writing-dir-native-kr"
+          className={`flex items-center p-3 rounded-xl cursor-pointer ${settings.writingDirection === 'NATIVE_TO_KR' ? 'bg-purple-50 border-2 border-purple-300' : 'bg-muted border-2 border-transparent'}`}
+        >
+          <Radio
+            id="writing-dir-native-kr"
+            name="writing-dir"
+            checked={settings.writingDirection === 'NATIVE_TO_KR'}
+            onChange={() => setSettings(state => ({ ...state, writingDirection: 'NATIVE_TO_KR' }))}
+            className="mr-3"
+          />
+          <span className="font-medium">
+            {labels.dashboard?.quiz?.nativeToKr || 'Meaning → Korean'}
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+};
+
+type AudioSettingsText = {
+  sectionTitle: string;
+  autoReadTitle: string;
+  autoReadDescription: string;
+  soundEffectsTitle: string;
+  soundEffectsDescription: string;
+};
+
+function getAudioSettingsText(labels: Labels): AudioSettingsText {
+  return {
+    sectionTitle: labels.dashboard?.quiz?.audioSettings || 'Audio Settings',
+    autoReadTitle: labels.dashboard?.quiz?.autoRead || '🔊 Auto Read Words',
+    autoReadDescription:
+      labels.dashboard?.quiz?.autoReadDesc || 'Auto play Korean pronunciation each question',
+    soundEffectsTitle: labels.dashboard?.quiz?.soundEffects || '🎵 Sound Effects',
+    soundEffectsDescription:
+      labels.dashboard?.quiz?.soundEffectsDesc || 'Correct/incorrect feedback sounds',
+  };
+}
+
+const AudioToggleRow: React.FC<{
+  id: string;
+  checked: boolean;
+  title: string;
+  description: string;
+  onToggle: (checked: boolean) => void;
+}> = ({ id, checked, title, description, onToggle }) => (
+  <label
+    htmlFor={id}
+    className="flex items-center justify-between p-3 bg-muted rounded-xl cursor-pointer hover:bg-muted"
+    aria-label={title}
+  >
+    <span className="flex flex-col">
+      <span className="font-bold text-muted-foreground">{title}</span>
+      <span className="text-xs text-muted-foreground">{description}</span>
+    </span>
+    <Checkbox
+      id={id}
+      checked={checked}
+      onChange={e => onToggle(e.target.checked)}
+      className="w-5 h-5 accent-green-500"
+      aria-label={title}
+    />
+  </label>
+);
+
+const AudioSettingsSection: React.FC<{
+  labels: Labels;
+  settings: QuizSettings;
+  setSettings: React.Dispatch<React.SetStateAction<QuizSettings>>;
+}> = ({ labels, settings, setSettings }) => {
+  const text = getAudioSettingsText(labels);
+  return (
+    <div className="mb-5">
+      <h3 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+        {text.sectionTitle}
+      </h3>
+      <div className="space-y-2">
+        <AudioToggleRow
+          id="auto-read-toggle"
+          checked={settings.autoTTS}
+          title={text.autoReadTitle}
+          description={text.autoReadDescription}
+          onToggle={checked => setSettings(state => ({ ...state, autoTTS: checked }))}
+        />
+        <AudioToggleRow
+          id="sound-effects-toggle"
+          checked={settings.soundEffects}
+          title={text.soundEffectsTitle}
+          description={text.soundEffectsDescription}
+          onToggle={checked => setSettings(state => ({ ...state, soundEffects: checked }))}
+        />
+      </div>
+    </div>
+  );
+};
+
+const ApplySettingsButton: React.FC<{
+  labels: Labels;
+  settings: QuizSettings;
+  onClick: () => void;
+}> = ({ labels, settings, onClick }) => (
+  <Button
+    variant="ghost"
+    size="auto"
+    type="button"
+    onClick={onClick}
+    disabled={!settings.multipleChoice && !settings.writingMode}
+    className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-muted disabled:opacity-50"
+  >
+    {labels.dashboard?.quiz?.applyRestart || 'Apply & Restart'}
+  </Button>
+);
 
 interface WritingInputProps {
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -315,9 +380,71 @@ interface WritingInputProps {
   handleWritingSubmit: () => void;
   direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
   targetWord: VocabItem;
-  labels: any;
+  labels: Labels;
   isLearn: boolean;
 }
+
+function getWritingPlaceholder(direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR', labels: Labels): string {
+  if (direction === 'KR_TO_NATIVE') {
+    return labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...';
+  }
+  return labels.dashboard?.quiz?.enterKorean || 'Enter Korean...';
+}
+
+function getWritingCorrectAnswer(
+  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR',
+  targetWord: VocabItem
+): string {
+  return direction === 'KR_TO_NATIVE' ? targetWord.english : targetWord.korean;
+}
+
+const WritingFeedback: React.FC<{
+  writingState: WritingState;
+  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
+  targetWord: VocabItem;
+  labels: Labels;
+}> = ({ writingState, direction, targetWord, labels }) => {
+  if (writingState === 'CORRECT') {
+    return (
+      <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2">
+        <Check className="w-6 h-6" /> {labels.dashboard?.quiz?.correct || 'Correct'}!
+      </div>
+    );
+  }
+
+  if (writingState !== 'WRONG') return null;
+
+  return (
+    <div className="mt-4 text-center">
+      <p className="text-red-600 font-bold mb-2">✕ {labels.dashboard?.quiz?.wrong || 'Wrong'}</p>
+      <p className="text-muted-foreground">
+        {labels.dashboard?.quiz?.correctAnswer || 'Correct Answer'}:{' '}
+        <strong className="text-green-600">{getWritingCorrectAnswer(direction, targetWord)}</strong>
+      </p>
+    </div>
+  );
+};
+
+const WritingSubmitButton: React.FC<{
+  writingState: WritingState;
+  writingInput: string;
+  handleWritingSubmit: () => void;
+  labels: Labels;
+}> = ({ writingState, writingInput, handleWritingSubmit, labels }) => {
+  if (writingState !== 'INPUT') return null;
+  return (
+    <Button
+      variant="ghost"
+      size="auto"
+      type="button"
+      onClick={handleWritingSubmit}
+      disabled={!writingInput.trim()}
+      className="w-full mt-4 py-4 bg-primary text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50"
+    >
+      {labels.dashboard?.quiz?.submit || 'Submit Answer'}
+    </Button>
+  );
+};
 
 const WritingInput: React.FC<WritingInputProps> = ({
   inputRef,
@@ -330,6 +457,8 @@ const WritingInput: React.FC<WritingInputProps> = ({
   labels,
   isLearn,
 }) => {
+  const placeholder = getWritingPlaceholder(direction, labels);
+
   const getWritingStateClass = (state: WritingState) => {
     if (state === 'CORRECT') return 'bg-green-50 border-green-400';
     if (state === 'WRONG') return 'bg-red-50 border-red-400';
@@ -347,46 +476,24 @@ const WritingInput: React.FC<WritingInputProps> = ({
           value={writingInput}
           onChange={e => setWritingInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
-          placeholder={
-            direction === 'KR_TO_NATIVE'
-              ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
-              : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
-          }
+          placeholder={placeholder}
           disabled={writingState !== 'INPUT'}
           className={`w-full !h-auto !px-0 !py-0 !border-0 !bg-transparent !shadow-none ${isLearn ? 'text-xl' : 'text-2xl'} font-bold text-center outline-none focus-visible:!ring-0`}
           autoFocus
         />
-        {writingState === 'CORRECT' && (
-          <div className="mt-4 text-center text-green-600 font-bold flex items-center justify-center gap-2">
-            <Check className="w-6 h-6" /> {labels.dashboard?.quiz?.correct || 'Correct'}!
-          </div>
-        )}
-        {writingState === 'WRONG' && (
-          <div className="mt-4 text-center">
-            <p className="text-red-600 font-bold mb-2">
-              ✕ {labels.dashboard?.quiz?.wrong || 'Wrong'}
-            </p>
-            <p className="text-muted-foreground">
-              {labels.dashboard?.quiz?.correctAnswer || 'Correct Answer'}:{' '}
-              <strong className="text-green-600">
-                {direction === 'KR_TO_NATIVE' ? targetWord.english : targetWord.korean}
-              </strong>
-            </p>
-          </div>
-        )}
+        <WritingFeedback
+          writingState={writingState}
+          direction={direction}
+          targetWord={targetWord}
+          labels={labels}
+        />
       </div>
-      {writingState === 'INPUT' && (
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          onClick={handleWritingSubmit}
-          disabled={!writingInput.trim()}
-          className="w-full mt-4 py-4 bg-primary text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50"
-        >
-          {labels.dashboard?.quiz?.submit || 'Submit Answer'}
-        </Button>
-      )}
+      <WritingSubmitButton
+        writingState={writingState}
+        writingInput={writingInput}
+        handleWritingSubmit={handleWritingSubmit}
+        labels={labels}
+      />
     </div>
   );
 };
@@ -500,7 +607,7 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({ promptText, questionT
 
 interface ScoreBadgeProps {
   correctCount: number;
-  labels: any;
+  labels: Labels;
   isWriting: boolean;
   isLearn: boolean;
 }
@@ -523,7 +630,7 @@ const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting
 );
 
 interface ProgressHeaderProps {
-  labels: any;
+  labels: Labels;
   currentBatchNum: number;
   questionIndex: number;
   totalQuestions: number;
@@ -582,11 +689,29 @@ interface CompleteScreenProps {
   correctCount: number;
   totalQuestionsAnswered: number;
   totalQuestions: number;
-  labels: any;
+  labels: Labels;
   variant: 'quiz' | 'learn';
   hasNextUnit?: boolean;
   onNextUnit?: () => void;
   restartGame: () => void;
+}
+
+function getCompleteTitle(labels: Labels, variant: 'quiz' | 'learn'): string {
+  const configuredTitle = labels.dashboard?.quiz?.complete as unknown as string;
+  if (configuredTitle) return configuredTitle;
+  if (variant === 'learn') {
+    return labels.vocabQuiz?.learnCompleteTitle || '🎉 Learning Complete!';
+  }
+  return '🎉 Quiz Complete!';
+}
+
+function getFinishedText(labels: Labels, variant: 'quiz' | 'learn'): string {
+  const configuredText = labels.dashboard?.quiz?.youFinished as unknown as string;
+  if (configuredText) return configuredText;
+  if (variant === 'learn') {
+    return labels.vocabQuiz?.learnCompleteSubtitle || 'You finished this learning round!';
+  }
+  return 'You finished all questions!';
 }
 
 const CompleteScreen: React.FC<CompleteScreenProps> = ({
@@ -602,24 +727,8 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
   // Use totalQuestionsAnswered for accurate percentage across all rounds
   const finalTotal = totalQuestionsAnswered > 0 ? totalQuestionsAnswered : totalQuestions;
   const percentage = Math.round((correctCount / finalTotal) * 100);
-
-  let completeTitle: string = (labels.dashboard?.quiz?.complete as unknown as string) || '';
-  if (!completeTitle) {
-    if (variant === 'learn') {
-      completeTitle = labels.vocabQuiz?.learnCompleteTitle || '🎉 Learning Complete!';
-    } else {
-      completeTitle = '🎉 Quiz Complete!';
-    }
-  }
-
-  let finishedText: string = (labels.dashboard?.quiz?.youFinished as unknown as string) || '';
-  if (!finishedText) {
-    if (variant === 'learn') {
-      finishedText = labels.vocabQuiz?.learnCompleteSubtitle || 'You finished this learning round!';
-    } else {
-      finishedText = 'You finished all questions!';
-    }
-  }
+  const completeTitle = getCompleteTitle(labels, variant);
+  const finishedText = getFinishedText(labels, variant);
 
   return (
     <div className="bg-card rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
@@ -705,9 +814,7 @@ const useQuizGame = ({
   ]);
   const [isLocked, setIsLocked] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
-  const [pendingAdvanceReason, setPendingAdvanceReason] = useState<'WRONG' | 'DONT_KNOW' | null>(
-    null
-  );
+  const [pendingAdvanceReason, setPendingAdvanceReason] = useState<PendingAdvanceReason>(null);
 
   const [writingInput, setWritingInput] = useState('');
   const [writingState, setWritingState] = useState<WritingState>('INPUT');
@@ -1185,8 +1292,8 @@ const useQuizTTS = (autoTTS: boolean, speakTTS: (text: string) => void) => {
 
 interface NotEnoughWordsProps {
   wordsCount: number;
-  labels: any;
-  variant: string;
+  labels: Labels;
+  variant: 'quiz' | 'learn';
 }
 
 const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({ wordsCount, labels, variant }) => {
@@ -1210,6 +1317,88 @@ const NotEnoughWords: React.FC<NotEnoughWordsProps> = ({ wordsCount, labels, var
   );
 };
 
+const NUMBER_KEY_TO_OPTION_INDEX: Record<string, number> = {
+  '1': 0,
+  '2': 1,
+  '3': 2,
+  '4': 3,
+  Numpad1: 0,
+  Numpad2: 1,
+  Numpad3: 2,
+  Numpad4: 3,
+};
+
+function isModifierOnlyKey(key: string): boolean {
+  return key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta';
+}
+
+function shouldIgnoreQuizHotkey(params: {
+  event: KeyboardEvent;
+  showSettings: boolean;
+  isInputTarget: (target: EventTarget | null) => boolean;
+}): boolean {
+  const { event, showSettings, isInputTarget } = params;
+  if (event.metaKey || event.ctrlKey || event.altKey) return true;
+  if (isModifierOnlyKey(event.key)) return true;
+  if (showSettings) return true;
+  return isInputTarget(event.target);
+}
+
+function tryHandlePendingAdvance(params: {
+  event: KeyboardEvent;
+  pendingAdvance: boolean;
+  setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
+  nextQuestionRef: React.RefObject<() => void>;
+}): boolean {
+  const { event, pendingAdvance, setPendingAdvanceReason, nextQuestionRef } = params;
+  if (!pendingAdvance) return false;
+  event.preventDefault();
+  setPendingAdvanceReason(null);
+  nextQuestionRef.current?.();
+  return true;
+}
+
+function tryHandleSpeakHotkey(params: {
+  event: KeyboardEvent;
+  currentQuestion: QuizQuestion;
+  speakWord: (text: string, force?: boolean) => void;
+}): boolean {
+  const { event, currentQuestion, speakWord } = params;
+  if (event.code !== 'Space') return false;
+  event.preventDefault();
+  speakWord(currentQuestion.targetWord.korean, true);
+  return true;
+}
+
+function tryHandleChoiceHotkey(params: {
+  event: KeyboardEvent;
+  currentQuestion: QuizQuestion;
+  isLocked: boolean;
+  handleOptionClick: (index: number) => void;
+}): boolean {
+  const { event, currentQuestion, isLocked, handleOptionClick } = params;
+  if (currentQuestion.type !== 'MULTIPLE_CHOICE' || isLocked) return false;
+  const mapped = NUMBER_KEY_TO_OPTION_INDEX[event.key] ?? NUMBER_KEY_TO_OPTION_INDEX[event.code];
+  if (mapped === undefined) return false;
+  event.preventDefault();
+  handleOptionClick(mapped);
+  return true;
+}
+
+function tryHandleWritingHotkey(params: {
+  event: KeyboardEvent;
+  currentQuestion: QuizQuestion;
+  writingState: WritingState;
+  handleWritingSubmit: () => void;
+}): boolean {
+  const { event, currentQuestion, writingState, handleWritingSubmit } = params;
+  if (currentQuestion.type !== 'WRITING') return false;
+  if (writingState !== 'INPUT' || event.key !== 'Enter') return false;
+  event.preventDefault();
+  handleWritingSubmit();
+  return true;
+}
+
 const useQuizKeyboard = ({
   pendingAdvance,
   showSettings,
@@ -1228,7 +1417,7 @@ const useQuizKeyboard = ({
   currentQuestion: QuizQuestion | undefined;
   writingState: WritingState;
   nextQuestionRef: React.RefObject<() => void>;
-  setPendingAdvanceReason: (reason: any) => void;
+  setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   handleOptionClick: (index: number) => void;
   handleWritingSubmit: () => void;
   speakWord: (text: string, force?: boolean) => void;
@@ -1242,49 +1431,33 @@ const useQuizKeyboard = ({
     };
 
     const handler = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
-      if (showSettings) return;
-      if (isInputTarget(e.target)) return;
-
-      if (pendingAdvance) {
-        e.preventDefault();
-        setPendingAdvanceReason(null);
-        nextQuestionRef.current?.();
+      if (shouldIgnoreQuizHotkey({ event: e, showSettings, isInputTarget })) return;
+      if (
+        tryHandlePendingAdvance({
+          event: e,
+          pendingAdvance,
+          setPendingAdvanceReason,
+          nextQuestionRef,
+        })
+      )
         return;
-      }
-
       if (!currentQuestion) return;
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        speakWord(currentQuestion.targetWord.korean, true);
+      if (tryHandleSpeakHotkey({ event: e, currentQuestion, speakWord })) return;
+      if (
+        tryHandleChoiceHotkey({
+          event: e,
+          currentQuestion,
+          isLocked,
+          handleOptionClick,
+        })
+      )
         return;
-      }
-
-      if (currentQuestion.type === 'MULTIPLE_CHOICE' && !isLocked) {
-        const keyMap: Record<string, number> = {
-          '1': 0,
-          '2': 1,
-          '3': 2,
-          '4': 3,
-          Numpad1: 0,
-          Numpad2: 1,
-          Numpad3: 2,
-          Numpad4: 3,
-        };
-        const mapped = keyMap[e.key] ?? keyMap[e.code];
-        if (mapped !== undefined) {
-          e.preventDefault();
-          handleOptionClick(mapped);
-          return;
-        }
-      }
-
-      if (currentQuestion.type === 'WRITING' && writingState === 'INPUT' && e.key === 'Enter') {
-        e.preventDefault();
-        handleWritingSubmit();
-      }
+      void tryHandleWritingHotkey({
+        event: e,
+        currentQuestion,
+        writingState,
+        handleWritingSubmit,
+      });
     };
 
     globalThis.addEventListener('keydown', handler);
@@ -1305,7 +1478,7 @@ const useQuizKeyboard = ({
 
 interface QuizContentProps {
   currentQuestion: QuizQuestion;
-  labels: any;
+  labels: Labels;
   isLearn: boolean;
   currentBatchNum: number;
   questionIndex: number;
@@ -1319,7 +1492,7 @@ interface QuizContentProps {
   handleDontKnow: () => void;
   pendingAdvance: boolean;
   language: Language;
-  setPendingAdvanceReason: (reason: any) => void;
+  setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   nextQuestionRef: React.RefObject<() => void>;
   inputRef: React.RefObject<HTMLInputElement | null>;
   writingInput: string;
@@ -1327,6 +1500,44 @@ interface QuizContentProps {
   writingState: WritingState;
   handleWritingSubmit: () => void;
 }
+
+function getQuizPromptText(
+  currentQuestion: QuizQuestion,
+  labels: Labels,
+  isWriting: boolean
+): string {
+  if (isWriting) {
+    return currentQuestion.direction === 'KR_TO_NATIVE'
+      ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
+      : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...';
+  }
+  return currentQuestion.direction === 'KR_TO_NATIVE'
+    ? labels.dashboard?.quiz?.questionMeaning || 'What does this word mean?'
+    : labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?';
+}
+
+const DontKnowAction: React.FC<{
+  visible: boolean;
+  handleDontKnow: () => void;
+  isLocked: boolean;
+  labels: Labels;
+}> = ({ visible, handleDontKnow, isLocked, labels }) => {
+  if (!visible) return null;
+  return (
+    <div className="flex items-center justify-end">
+      <Button
+        variant="ghost"
+        size="auto"
+        type="button"
+        onClick={handleDontKnow}
+        disabled={isLocked}
+        className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
+      >
+        {labels.vocabQuiz?.dontKnow || "I don't know"}
+      </Button>
+    </div>
+  );
+};
 
 const QuizContent: React.FC<QuizContentProps> = ({
   currentQuestion,
@@ -1357,28 +1568,14 @@ const QuizContent: React.FC<QuizContentProps> = ({
     currentQuestion.direction === 'NATIVE_TO_KR'
       ? currentQuestion.targetWord.english
       : currentQuestion.targetWord.korean;
-
-  let promptText = '';
-  if (isWriting) {
-    promptText =
-      currentQuestion.direction === 'KR_TO_NATIVE'
-        ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
-        : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...';
-  } else {
-    promptText =
-      currentQuestion.direction === 'KR_TO_NATIVE'
-        ? labels.dashboard?.quiz?.questionMeaning || 'What does this word mean?'
-        : labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?';
-  }
+  const promptText = getQuizPromptText(currentQuestion, labels, isWriting);
+  const containerClass = isLearn
+    ? 'rounded-3xl border border-border shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
+    : 'rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8';
+  const showDontKnow = isLearn && !pendingAdvance && !isWriting && Boolean(currentQuestion.options);
 
   return (
-    <div
-      className={`bg-card ${
-        isLearn
-          ? 'rounded-3xl border border-border shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
-          : 'rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8'
-      }`}
-    >
+    <div className={`bg-card ${containerClass}`}>
       <ProgressHeader
         labels={labels}
         currentBatchNum={currentBatchNum}
@@ -1409,20 +1606,12 @@ const QuizContent: React.FC<QuizContentProps> = ({
         />
       )}
 
-      {isLearn && !pendingAdvance && !isWriting && currentQuestion.options ? (
-        <div className="flex items-center justify-end">
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={handleDontKnow}
-            disabled={isLocked}
-            className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
-          >
-            {labels.vocabQuiz?.dontKnow || "I don't know"}
-          </Button>
-        </div>
-      ) : null}
+      <DontKnowAction
+        visible={showDontKnow}
+        handleDontKnow={handleDontKnow}
+        isLocked={isLocked}
+        labels={labels}
+      />
 
       {pendingAdvance ? (
         <PendingAdvanceBanner

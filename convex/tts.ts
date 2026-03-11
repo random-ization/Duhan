@@ -4,6 +4,13 @@ import { v } from 'convex/values';
 import crypto from 'node:crypto';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
+import {
+  getSpacesCoreConfig,
+  getSpacesHost,
+  getSpacesRegion,
+  toSpacesCdnHost,
+} from './spacesConfig';
+import { getSignatureKey } from './awsSigV4';
 
 // Azure Cognitive Services TTS with S3 caching
 // Caches generated audio in DigitalOcean Spaces to reduce API costs
@@ -84,19 +91,13 @@ function createSSML(
 /**
  * Generate AWS Signature V4 for S3 upload
  */
-/**
- * Generate AWS Signature V4 for S3 upload
- */
 async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string> {
-  const endpoint = process.env.SPACES_ENDPOINT;
-  const bucket = process.env.SPACES_BUCKET;
-  const accessKeyId = process.env.SPACES_KEY;
-  const secretAccessKey = process.env.SPACES_SECRET;
-  const region = process.env.SPACES_REGION;
-
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey || !region) {
+  const spaces = getSpacesCoreConfig();
+  const region = getSpacesRegion();
+  if (!spaces || !region) {
     throw new Error('Storage config missing');
   }
+  const { endpoint, bucket, accessKeyId, secretAccessKey } = spaces;
 
   const service = 's3';
   const contentType = 'audio/mpeg';
@@ -106,7 +107,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
   const amzDate = now.toISOString().split('.')[0].replaceAll(/[:-]/g, '') + 'Z';
   const dateStamp = amzDate.slice(0, 8);
 
-  const host = new URL(endpoint).host;
+  const host = getSpacesHost(endpoint);
   const endpointHost = `${bucket}.${host}`;
   // Encode key for special characters
   const uri = '/' + key.split('/').map(encodeURIComponent).join('/');
@@ -130,21 +131,6 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
     credentialScope,
     crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
   ].join('\n');
-
-  const getSignatureKey = (
-    key: string,
-    dateStamp: string,
-    regionName: string,
-    serviceName: string
-  ) => {
-    const kDate = crypto
-      .createHmac('sha256', 'AWS4' + key)
-      .update(dateStamp)
-      .digest();
-    const kRegion = crypto.createHmac('sha256', kDate).update(regionName).digest();
-    const kService = crypto.createHmac('sha256', kRegion).update(serviceName).digest();
-    return crypto.createHmac('sha256', kService).update('aws4_request').digest();
-  };
 
   const signingKey = getSignatureKey(secretAccessKey, dateStamp, region, service);
   const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
@@ -174,7 +160,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
   }
 
   // Return CDN URL
-  const cdnHost = host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com');
+  const cdnHost = toSpacesCdnHost(host);
   return `https://${bucket}.${cdnHost}${uri}`; // Use encoded URI
 }
 
@@ -182,13 +168,11 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
  * Check if audio exists in S3 cache
  */
 async function checkS3Cache(key: string): Promise<string | null> {
-  const bucket = process.env.SPACES_BUCKET;
-  const endpoint = process.env.SPACES_ENDPOINT;
-
-  if (!bucket || !endpoint) return null;
-
-  const host = new URL(endpoint).host;
-  const cdnHost = host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com');
+  const spaces = getSpacesCoreConfig();
+  if (!spaces) return null;
+  const { bucket, endpoint } = spaces;
+  const host = getSpacesHost(endpoint);
+  const cdnHost = toSpacesCdnHost(host);
   const url = `https://${bucket}.${cdnHost}/${key}`;
 
   try {
@@ -207,7 +191,7 @@ function normalizePublicAudioUrl(inputUrl: string): string {
     const url = new URL(inputUrl);
     const host = url.host;
     if (host.endsWith('.digitaloceanspaces.com') && !host.includes('.cdn.')) {
-      const cdnHost = host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com');
+      const cdnHost = toSpacesCdnHost(host);
       url.host = cdnHost;
       return url.toString();
     }
@@ -269,9 +253,11 @@ export const speak = action({
 
         const cachedUrl = await checkS3Cache(cacheKey);
         if (cachedUrl) {
-          void ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl }).catch(error => {
-            console.warn('Failed to upsert TTS cache after S3 hit:', error);
-          });
+          void ctx
+            .runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl })
+            .catch(error => {
+              console.warn('Failed to upsert TTS cache after S3 hit:', error);
+            });
           console.log('TTS cache hit:', args.text.substring(0, 20));
           return {
             success: true,

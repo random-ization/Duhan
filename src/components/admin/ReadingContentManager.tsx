@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
-import {
-  BookOpen,
-  Plus,
-  Loader2,
-} from 'lucide-react';
+import { BookOpen, Plus, Loader2 } from 'lucide-react';
 import { NoArgs, aRef, mRef, qRef } from '../../utils/convexRefs';
 import { UnitListItem } from './UnitListItem';
 import { ReadingEditor, UnitContent } from './ReadingEditor';
@@ -33,8 +29,8 @@ export const ReadingContentManager: React.FC = () => {
   const [audioUploading, setAudioUploading] = useState(false);
   const getUploadUrl = useAction(
     aRef<
-      { filename: string; contentType: string; folder: string },
-      { uploadUrl: string; publicUrl: string }
+      { filename: string; contentType: string; fileSize: number; folder: string },
+      { uploadUrl: string; publicUrl: string; headers: Record<string, string> }
     >('storage:getUploadUrl')
   );
 
@@ -292,19 +288,17 @@ export const ReadingContentManager: React.FC = () => {
 
     setAudioUploading(true);
     try {
-      const { uploadUrl, publicUrl } = (await getUploadUrl({
+      const { uploadUrl, publicUrl, headers } = await getUploadUrl({
         filename: file.name,
         contentType: file.type || 'audio/mpeg',
+        fileSize: file.size,
         folder: `reading-audio/${selectedCourseId}`,
-      })) as { uploadUrl: string; publicUrl: string };
+      });
 
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: {
-          'Content-Type': file.type || 'audio/mpeg',
-          'x-amz-acl': 'public-read',
-        },
+        headers,
       });
 
       if (!uploadRes.ok) throw new Error('上传失败');

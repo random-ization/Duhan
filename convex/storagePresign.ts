@@ -1,6 +1,13 @@
 'use node';
 import crypto from 'node:crypto';
 import { ConvexError } from 'convex/values';
+import {
+  getSpacesCdnBaseUrl,
+  getSpacesCoreConfig,
+  getSpacesHost,
+  getSpacesRegion,
+} from './spacesConfig';
+import { getSignatureKey } from './awsSigV4';
 
 type PresignArgs = {
   filename: string;
@@ -20,15 +27,12 @@ export type PresignResult = {
 };
 
 export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
-  const endpoint = process.env.SPACES_ENDPOINT;
-  const bucket = process.env.SPACES_BUCKET;
-  const accessKeyId = process.env.SPACES_KEY;
-  const secretAccessKey = process.env.SPACES_SECRET;
-  const region = process.env.SPACES_REGION;
-
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey || !region) {
+  const spaces = getSpacesCoreConfig();
+  const region = getSpacesRegion();
+  if (!spaces || !region) {
     throw new ConvexError({ code: 'STORAGE_CONFIG_MISSING' });
   }
+  const { endpoint, bucket, accessKeyId, secretAccessKey } = spaces;
 
   const folder = args.folder || 'uploads';
   const key = args.key ?? `${folder}/${Date.now()}-${args.filename}`;
@@ -39,7 +43,7 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
   const amzDate = now.toISOString().split('.')[0].replaceAll(/[:-]/g, '') + 'Z';
   const dateStamp = amzDate.slice(0, 8);
 
-  const host = new URL(endpoint).host;
+  const host = getSpacesHost(endpoint);
   const endpointHost = `${bucket}.${host}`;
   const uri = '/' + key.split('/').map(encodeURIComponent).join('/');
 
@@ -75,28 +79,11 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
     crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
   ].join('\n');
 
-  const getSignatureKey = (
-    keyValue: string,
-    dateStampValue: string,
-    regionName: string,
-    serviceName: string
-  ) => {
-    const kDate = crypto
-      .createHmac('sha256', 'AWS4' + keyValue)
-      .update(dateStampValue)
-      .digest();
-    const kRegion = crypto.createHmac('sha256', kDate).update(regionName).digest();
-    const kService = crypto.createHmac('sha256', kRegion).update(serviceName).digest();
-    return crypto.createHmac('sha256', kService).update('aws4_request').digest();
-  };
-
   const signingKey = getSignatureKey(secretAccessKey, dateStamp, region, service);
   const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
 
   const uploadUrl = `https://${endpointHost}${uri}?${sortedQuery}&X-Amz-Signature=${signature}`;
-  const cdnUrl =
-    process.env.SPACES_CDN_URL ||
-    `https://${bucket}.${host.replace('digitaloceanspaces.com', 'cdn.digitaloceanspaces.com')}`;
+  const cdnUrl = getSpacesCdnBaseUrl(bucket, host);
   const publicUrl = `${cdnUrl}${uri}`;
 
   return {

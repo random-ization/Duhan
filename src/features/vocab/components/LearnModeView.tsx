@@ -56,6 +56,30 @@ const getInputStyle = (showFeedback: boolean, isCorrect: boolean): string => {
   return isCorrect ? 'border-emerald-500 bg-emerald-50' : 'border-red-500 bg-red-50';
 };
 
+const isChoiceQuestionType = (questionType: QuestionType): boolean =>
+  questionType.startsWith('CHOICE');
+const isWritingQuestionType = (questionType: QuestionType): boolean =>
+  questionType.startsWith('WRITING');
+const isKoreanToNativeType = (questionType: QuestionType): boolean =>
+  questionType.includes('K_TO_N');
+
+const getCorrectAnswerForType = (
+  questionType: QuestionType,
+  item: ExtendedVocabularyItem
+): string => (isKoreanToNativeType(questionType) ? item.english : item.korean);
+
+const getPromptForType = (questionType: QuestionType, item: ExtendedVocabularyItem): string =>
+  isKoreanToNativeType(questionType) ? item.korean : item.english;
+
+const buildChoices = (
+  questionType: QuestionType,
+  correctAnswer: string,
+  generateDistractors: (correctAnswer: string, count?: number) => string[]
+): string[] =>
+  isChoiceQuestionType(questionType)
+    ? shuffleArray([correctAnswer, ...generateDistractors(correctAnswer)])
+    : [];
+
 const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
   ({ words, settings, language, allWords, onComplete, onRecordMistake }) => {
     const labels = useMemo(() => getLabels(language), [language]);
@@ -101,15 +125,10 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
       if (!currentItem) return;
 
       let correct = false;
-      if (currentQuestionType.startsWith('CHOICE')) {
-        const correctAnswer = currentQuestionType.includes('K_TO_N')
-          ? currentItem.english
-          : currentItem.korean;
+      const correctAnswer = getCorrectAnswerForType(currentQuestionType, currentItem);
+      if (isChoiceQuestionType(currentQuestionType)) {
         correct = selectedAnswer === correctAnswer;
-      } else if (currentQuestionType.startsWith('WRITING')) {
-        const correctAnswer = currentQuestionType.includes('N_TO_K')
-          ? currentItem.korean
-          : currentItem.english;
+      } else if (isWritingQuestionType(currentQuestionType)) {
         correct = userInput.trim().toLowerCase() === correctAnswer.toLowerCase();
       }
 
@@ -147,17 +166,14 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
       );
     }
 
-    const prompt = currentQuestionType.includes('K_TO_N')
-      ? currentItem.korean
-      : currentItem.english;
-    const correctAnswer = currentQuestionType.includes('K_TO_N')
-      ? currentItem.english
-      : currentItem.korean;
+    const prompt = getPromptForType(currentQuestionType, currentItem);
+    const correctAnswer = getCorrectAnswerForType(currentQuestionType, currentItem);
+    const isWritingQuestion = isWritingQuestionType(currentQuestionType);
+    const isChoiceQuestion = isChoiceQuestionType(currentQuestionType);
+    const isKoreanToNativeQuestion = isKoreanToNativeType(currentQuestionType);
 
     // Generate choices for multiple choice
-    const choices = currentQuestionType.startsWith('CHOICE')
-      ? shuffleArray([correctAnswer, ...generateDistractors(correctAnswer)])
-      : [];
+    const choices = buildChoices(currentQuestionType, correctAnswer, generateDistractors);
 
     return (
       <div className="w-full max-w-4xl mx-auto">
@@ -175,19 +191,17 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
             {/* Question Prompt */}
             <div className="flex-1 flex flex-col items-center justify-center mb-8">
               <div className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                {currentQuestionType.startsWith('WRITING') ? (
+                {isWritingQuestion ? (
                   <Pencil className="w-4 h-4" />
                 ) : (
                   <AlignLeft className="w-4 h-4" />
                 )}
-                {currentQuestionType.startsWith('WRITING')
-                  ? labels.writingMode
-                  : labels.multipleChoice}
+                {isWritingQuestion ? labels.writingMode : labels.multipleChoice}
               </div>
 
               <div className="flex items-center gap-4 mb-8">
                 <h2 className="text-5xl font-bold text-muted-foreground text-center">{prompt}</h2>
-                {currentQuestionType.includes('K_TO_N') && (
+                {isKoreanToNativeQuestion && (
                   <Button
                     variant="ghost"
                     size="auto"
@@ -208,7 +222,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
 
             {/* Answers Section */}
             <div className="space-y-4">
-              {currentQuestionType.startsWith('CHOICE') ? (
+              {isChoiceQuestion ? (
                 // Multiple Choice
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {choices.map((choice, _idx) => {
@@ -296,9 +310,7 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
                   variant="ghost"
                   size="auto"
                   onClick={checkAnswer}
-                  disabled={
-                    currentQuestionType.startsWith('CHOICE') ? !selectedAnswer : !userInput.trim()
-                  }
+                  disabled={isChoiceQuestion ? !selectedAnswer : !userInput.trim()}
                   className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-muted disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center gap-2"
                 >
                   {labels.checkAnswer || 'Check Answer'}

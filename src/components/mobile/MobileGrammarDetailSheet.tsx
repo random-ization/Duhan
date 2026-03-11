@@ -20,6 +20,45 @@ interface MobileGrammarDetailSheetProps {
   ) => void;
 }
 
+type AiCheckResponse = { success?: boolean; data?: { nuance?: unknown } } | null;
+
+type AiFeedbackState = {
+  isCorrect: boolean;
+  feedback: string;
+  correctedSentence?: string;
+  progress?: { proficiency: number; status: string };
+};
+
+const NEGATIVE_FEEDBACK_MARKERS = ['incorrect', '\u9519\u8BEF', 'Incorrect'] as const;
+
+const getFeedbackText = (nuance: unknown): string =>
+  typeof nuance === 'string' ? nuance : 'Analysis complete';
+
+const isNegativeFeedback = (feedback: string): boolean =>
+  NEGATIVE_FEEDBACK_MARKERS.some(marker =>
+    marker === 'incorrect' ? feedback.toLowerCase().startsWith(marker) : feedback.includes(marker)
+  );
+
+const triggerConfetti = (setShowConfetti: (value: boolean) => void) => {
+  setShowConfetti(true);
+  setTimeout(() => setShowConfetti(false), 2000);
+};
+
+const getRulesObject = (grammar: GrammarPointData): Record<string, unknown> =>
+  (grammar.conjugationRules ?? grammar.construction ?? {}) as Record<string, unknown>;
+
+const getExamples = (
+  grammar: GrammarPointData
+): Array<{ kr?: string; cn?: string; en?: string }> =>
+  Array.isArray(grammar.examples)
+    ? (grammar.examples as Array<{ kr?: string; cn?: string; en?: string }>)
+    : [];
+
+const getExampleTranslation = (example: { cn?: string; en?: string }): string =>
+  example.cn ?? example.en ?? '';
+
+const isEmptySentence = (sentence: string): boolean => sentence.trim().length === 0;
+
 export default function MobileGrammarDetailSheet({
   grammar,
   onClose,
@@ -27,12 +66,7 @@ export default function MobileGrammarDetailSheet({
 }: MobileGrammarDetailSheetProps) {
   const { i18n } = useTranslation();
   const [practiceSentence, setPracticeSentence] = useState('');
-  const [aiFeedback, setAiFeedback] = useState<{
-    isCorrect: boolean;
-    feedback: string;
-    correctedSentence?: string;
-    progress?: { proficiency: number; status: string };
-  } | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -74,15 +108,11 @@ export default function MobileGrammarDetailSheet({
         language: i18n.language,
       });
 
-      const res = response as { success?: boolean; data?: { nuance?: unknown } } | null;
+      const res = response as AiCheckResponse;
       if (res?.success && res.data) {
         // Logic duplicated from desktop component
-        const data = res.data;
-        let feedback = typeof data.nuance === 'string' ? data.nuance : 'Analysis complete';
-        const isFeedbackNegative =
-          feedback.toLowerCase().startsWith('incorrect') ||
-          feedback.includes('\u9519\u8BEF') ||
-          feedback.includes('Incorrect');
+        const feedback = getFeedbackText(res.data.nuance);
+        const isFeedbackNegative = isNegativeFeedback(feedback);
 
         const finalIsCorrect = !isFeedbackNegative;
 
@@ -96,8 +126,7 @@ export default function MobileGrammarDetailSheet({
           progress = updateRes;
 
           if (updateRes.proficiency >= 100) {
-            setShowConfetti(true);
-            setTimeout(() => setShowConfetti(false), 2000);
+            triggerConfetti(setShowConfetti);
           }
 
           onProficiencyUpdate?.(
@@ -130,20 +159,18 @@ export default function MobileGrammarDetailSheet({
     }).then(res => {
       onProficiencyUpdate?.(grammar.id, res.proficiency, res.status as GrammarPointData['status']);
       if (res.status === 'MASTERED') {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 2000);
+        triggerConfetti(setShowConfetti);
       }
     });
   };
 
   if (!grammar) return null;
 
-  const rulesObject = (grammar.conjugationRules || grammar.construction || {}) as Record<
-    string,
-    unknown
-  >;
+  const rulesObject = getRulesObject(grammar);
+  const examples = getExamples(grammar);
   const proficiency = aiFeedback?.progress?.proficiency ?? grammar.proficiency ?? 0;
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
+  const isCheckDisabled = isChecking || isEmptySentence(practiceSentence);
 
   return (
     <Sheet open onOpenChange={open => !open && onClose()}>
@@ -245,13 +272,13 @@ export default function MobileGrammarDetailSheet({
                 Examples
               </h3>
               <div className="space-y-3">
-                {(Array.isArray(grammar.examples) ? grammar.examples : []).map((ex: any, i) => (
+                {examples.map((ex, i) => (
                   <div
                     key={i}
                     className="bg-muted border-2 border-border rounded-xl p-4 active:bg-muted transition-colors"
                   >
                     <p className="font-bold text-foreground mb-1">{ex.kr}</p>
-                    <p className="text-sm text-muted-foreground">{ex.cn || ex.en}</p>
+                    <p className="text-sm text-muted-foreground">{getExampleTranslation(ex)}</p>
                   </div>
                 ))}
               </div>
@@ -284,7 +311,7 @@ export default function MobileGrammarDetailSheet({
               />
               <Button
                 onClick={handleCheck}
-                disabled={isChecking || !practiceSentence.trim()}
+                disabled={isCheckDisabled}
                 loading={isChecking}
                 loadingText="Checking..."
                 loadingIconClassName="w-3 h-3"

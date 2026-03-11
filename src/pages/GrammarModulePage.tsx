@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import { GRAMMARS, INSTITUTES, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import MobileGrammarView from '../components/mobile/MobileGrammarView';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Button, Input } from '../components/ui';
+import { Button } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 
 const GrammarModulePage: React.FC = () => {
@@ -26,8 +26,7 @@ const GrammarModulePage: React.FC = () => {
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGrammar, setSelectedGrammar] = useState<GrammarPointData | null>(null);
-  const [pendingGrammarId, setPendingGrammarId] = useState<string | null>(null);
+  const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
 
   const { user } = useAuth();
 
@@ -44,13 +43,11 @@ const GrammarModulePage: React.FC = () => {
     }
     return 10;
   }, [allCourseGrammar]);
-
-  useEffect(() => {
-    if (selectedUnit > totalUnits) {
-      setSelectedUnit(totalUnits);
-      setSelectedGrammar(null);
-    }
-  }, [selectedUnit, totalUnits]);
+  const activeSelectedUnit = Math.max(1, Math.min(selectedUnit, totalUnits));
+  const clampUnit = useCallback(
+    (unit: number) => Math.max(1, Math.min(unit, totalUnits)),
+    [totalUnits]
+  );
 
   const normalizeStatus = (value: unknown): GrammarPointData['status'] => {
     if (value === 'NEW' || value === 'LEARNING' || value === 'MASTERED') return value;
@@ -60,7 +57,7 @@ const GrammarModulePage: React.FC = () => {
   // Convex Integration
   const grammarListQuery = useQuery(
     GRAMMARS.getUnitGrammar,
-    instituteId ? { courseId: instituteId, unitId: selectedUnit } : 'skip'
+    instituteId ? { courseId: instituteId, unitId: activeSelectedUnit } : 'skip'
   );
   const updateStatusMutation = useMutation(GRAMMARS.updateStatus);
   const updateLearningProgressMutation = useMutation(
@@ -74,10 +71,10 @@ const GrammarModulePage: React.FC = () => {
     if (!instituteId) return;
     void updateLearningProgressMutation({
       lastInstitute: instituteId,
-      lastUnit: selectedUnit,
+      lastUnit: activeSelectedUnit,
       lastModule: 'GRAMMAR',
     });
-  }, [updateLearningProgressMutation, instituteId, selectedUnit]);
+  }, [updateLearningProgressMutation, instituteId, activeSelectedUnit]);
 
   // Derive loading state and grammarList directly from query
   const isGrammarLoading = grammarListQuery === undefined;
@@ -102,16 +99,10 @@ const GrammarModulePage: React.FC = () => {
     });
   }, [grammarList, localUpdates]);
 
-  // Handle pending grammar fetches across units
-  useEffect(() => {
-    if (pendingGrammarId && grammarListWithUpdates.length > 0) {
-      const found = grammarListWithUpdates.find(g => g.id === pendingGrammarId);
-      if (found) {
-        setSelectedGrammar(found);
-        setPendingGrammarId(null);
-      }
-    }
-  }, [grammarListWithUpdates, pendingGrammarId]);
+  const selectedGrammar = useMemo<GrammarPointData | null>(() => {
+    if (!selectedGrammarId) return null;
+    return grammarListWithUpdates.find(g => g.id === selectedGrammarId) || null;
+  }, [grammarListWithUpdates, selectedGrammarId]);
 
   // Handle proficiency update (Optimistic UI)
   const handleProficiencyUpdate = (
@@ -125,10 +116,6 @@ const GrammarModulePage: React.FC = () => {
       next.set(grammarId, { proficiency, status });
       return next;
     });
-
-    if (selectedGrammar?.id === grammarId) {
-      setSelectedGrammar(prev => (prev ? { ...prev, proficiency, status } : null));
-    }
   };
 
   const handleToggleStatus = async (grammarId: string) => {
@@ -144,10 +131,6 @@ const GrammarModulePage: React.FC = () => {
       next.set(grammarId, { ...prev.get(grammarId), status: newStatus });
       return next;
     });
-
-    if (selectedGrammar?.id === grammarId) {
-      setSelectedGrammar(prev => (prev ? { ...prev, status: newStatus } : null));
-    }
 
     try {
       await updateStatusMutation({
@@ -175,28 +158,21 @@ const GrammarModulePage: React.FC = () => {
   }, [grammarListWithUpdates, searchQuery]);
 
   const currentIndex = useMemo(() => {
-    if (!selectedGrammar || !grammarListWithUpdates) return -1;
-    return grammarListWithUpdates.findIndex(g => g.id === selectedGrammar.id);
-  }, [selectedGrammar, grammarListWithUpdates]);
+    if (!selectedGrammarId || !grammarListWithUpdates) return -1;
+    return grammarListWithUpdates.findIndex(g => g.id === selectedGrammarId);
+  }, [selectedGrammarId, grammarListWithUpdates]);
 
   const handleNext = () => {
     if (currentIndex >= 0 && currentIndex < grammarListWithUpdates.length - 1) {
-      setSelectedGrammar(grammarListWithUpdates[currentIndex + 1]);
+      setSelectedGrammarId(grammarListWithUpdates[currentIndex + 1].id);
     }
   };
 
   const handlePrev = () => {
     if (currentIndex > 0) {
-      setSelectedGrammar(grammarListWithUpdates[currentIndex - 1]);
+      setSelectedGrammarId(grammarListWithUpdates[currentIndex - 1].id);
     }
   };
-
-  // Generate unit list for sidebar
-  const unitList = useMemo(() => {
-    return Array.from({ length: totalUnits }, (_, i) =>
-      t('grammarModule.unitLabel', { defaultValue: 'Unit {{count}}', count: i + 1 })
-    );
-  }, [totalUnits, t]);
 
   if (instituteQuery === undefined) {
     return (
@@ -211,17 +187,17 @@ const GrammarModulePage: React.FC = () => {
   if (isMobile) {
     return (
       <MobileGrammarView
-        selectedUnit={selectedUnit}
+        selectedUnit={activeSelectedUnit}
         totalUnits={totalUnits}
         onSelectUnit={u => {
-          setSelectedUnit(u);
-          setSelectedGrammar(null); // Clear selection on unit change
+          setSelectedUnit(clampUnit(u));
+          setSelectedGrammarId(null);
         }}
         grammarPoints={isGrammarLoading ? [] : displayedPoints}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         selectedGrammar={selectedGrammar}
-        onSelectGrammar={setSelectedGrammar}
+        onSelectGrammar={grammar => setSelectedGrammarId(grammar?.id ?? null)}
         onToggleStatus={handleToggleStatus}
         isLoading={isGrammarLoading}
         onProficiencyUpdate={handleProficiencyUpdate}
@@ -260,18 +236,10 @@ const GrammarModulePage: React.FC = () => {
           courseGrammars={allCourseGrammar || []}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          selectedGrammarId={selectedGrammar?.id}
+          selectedGrammarId={selectedGrammarId || undefined}
           onSelectGrammar={(id, unitId) => {
-            if (unitId !== selectedUnit) {
-              setSelectedUnit(unitId);
-            }
-            const grammar = grammarListWithUpdates.find(g => g.id === id);
-            if (grammar) {
-              setSelectedGrammar(grammar);
-            } else {
-              setSelectedGrammar(null); // Show loading skeleton or empty state while unit loads
-              setPendingGrammarId(id);
-            }
+            if (unitId !== activeSelectedUnit) setSelectedUnit(clampUnit(unitId));
+            setSelectedGrammarId(id);
           }}
         />
 
@@ -283,10 +251,7 @@ const GrammarModulePage: React.FC = () => {
           hasPrev={currentIndex > 0}
         />
 
-        <GrammarAuxiliaryPane
-          grammar={selectedGrammar}
-          onToggleStatus={handleToggleStatus}
-        />
+        <GrammarAuxiliaryPane grammar={selectedGrammar} onToggleStatus={handleToggleStatus} />
       </div>
     </div>
   );

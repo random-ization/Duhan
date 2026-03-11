@@ -4,14 +4,16 @@ import { cn } from '../../lib/utils';
 import { Button } from '../ui';
 import { Input } from '../ui';
 import type {
+  PendingAdvanceReason,
   QuizQuestion,
   OptionState,
   WritingState,
 } from '../../features/vocab/components/VocabQuiz';
+import type { Labels } from '../../utils/i18n';
 
 interface MobileVocabQuizProps {
   readonly currentQuestion: QuizQuestion;
-  readonly labels: any;
+  readonly labels: Labels;
   readonly isLearn: boolean;
   readonly questionIndex: number;
   readonly totalQuestions: number;
@@ -22,16 +24,175 @@ interface MobileVocabQuizProps {
   readonly isLocked: boolean;
   readonly handleDontKnow: () => void;
   readonly pendingAdvance: boolean;
-  readonly setPendingAdvanceReason: (reason: any) => void;
+  readonly setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   readonly nextQuestionRef: React.RefObject<() => void>;
 
   // Writing props
-  readonly inputRef: React.RefObject<HTMLInputElement>;
+  readonly inputRef: React.RefObject<HTMLInputElement | null>;
   readonly writingInput: string;
   readonly setWritingInput: (value: string) => void;
   readonly writingState: WritingState;
   readonly handleWritingSubmit: () => void;
 }
+
+const getQuestionText = (question: QuizQuestion): string =>
+  question.direction === 'NATIVE_TO_KR' ? question.targetWord.english : question.targetWord.korean;
+
+const getPromptText = (question: QuizQuestion, isWriting: boolean, labels: Labels): string => {
+  if (isWriting) {
+    return question.direction === 'KR_TO_NATIVE'
+      ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
+      : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...';
+  }
+  return question.direction === 'KR_TO_NATIVE'
+    ? labels.dashboard?.quiz?.questionMeaning || 'What does this mean?'
+    : labels.dashboard?.quiz?.questionKorean || 'What is the Korean?';
+};
+
+const getOptionClass = (state: OptionState) => {
+  const base =
+    'relative w-full p-5 rounded-2xl border-b-4 border-2 font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-between';
+  switch (state) {
+    case 'correct':
+      return cn(base, 'bg-lime-100 border-lime-500 text-lime-800 border-b-lime-600');
+    case 'wrong':
+      return cn(base, 'bg-rose-100 border-rose-500 text-rose-800 border-b-rose-600 animate-shake');
+    case 'selected':
+      return cn(base, 'bg-indigo-100 border-indigo-500 text-indigo-800');
+    default:
+      return cn(base, 'bg-card border-border text-muted-foreground hover:bg-muted');
+  }
+};
+
+const WritingAnswerArea: React.FC<{
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  writingInput: string;
+  setWritingInput: (value: string) => void;
+  writingState: WritingState;
+  handleWritingSubmit: () => void;
+  labels: Labels;
+  currentQuestion: QuizQuestion;
+}> = ({
+  inputRef,
+  writingInput,
+  setWritingInput,
+  writingState,
+  handleWritingSubmit,
+  labels,
+  currentQuestion,
+}) => (
+  <div className="space-y-4">
+    <div
+      className={cn(
+        'relative bg-card rounded-2xl border-2 p-4 transition-colors',
+        writingState === 'CORRECT'
+          ? 'border-lime-500 bg-lime-50'
+          : writingState === 'WRONG'
+            ? 'border-rose-500 bg-rose-50'
+            : 'border-border focus-within:border-indigo-500 shadow-sm'
+      )}
+    >
+      <Input
+        ref={inputRef}
+        type="text"
+        value={writingInput}
+        onChange={e => setWritingInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
+        className="w-full text-2xl font-bold text-center bg-transparent outline-none text-muted-foreground placeholder:text-muted-foreground"
+        placeholder="Type answer..."
+        disabled={writingState !== 'INPUT'}
+        autoCapitalize="none"
+        autoComplete="off"
+      />
+    </div>
+
+    {writingState === 'INPUT' && (
+      <Button
+        variant="ghost"
+        size="auto"
+        onClick={handleWritingSubmit}
+        disabled={!writingInput.trim()}
+        className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+      >
+        {labels.dashboard?.quiz?.submit || 'Check'}
+      </Button>
+    )}
+
+    {writingState === 'CORRECT' && (
+      <div className="flex items-center justify-center gap-2 text-lime-600 font-bold animate-in zoom-in">
+        <Check size={24} />
+        <span>Correct!</span>
+      </div>
+    )}
+    {writingState === 'WRONG' && (
+      <div className="text-center animate-in zoom-in">
+        <p className="text-rose-600 font-bold mb-1 flex items-center justify-center gap-2">
+          <X size={20} /> Wrong
+        </p>
+        <p className="text-muted-foreground text-sm">Correct answer:</p>
+        <p className="text-foreground font-black text-lg">
+          {currentQuestion.direction === 'KR_TO_NATIVE'
+            ? currentQuestion.targetWord.english
+            : currentQuestion.targetWord.korean}
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+const ChoiceAnswerArea: React.FC<{
+  currentQuestion: QuizQuestion;
+  optionStates: readonly OptionState[];
+  handleOptionClick: (index: number) => void;
+  isLocked: boolean;
+}> = ({ currentQuestion, optionStates, handleOptionClick, isLocked }) => (
+  <div className="space-y-3">
+    {currentQuestion.options?.map((option, idx) => {
+      const state = optionStates[idx];
+      const text = currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
+      return (
+        <Button
+          variant="ghost"
+          size="auto"
+          key={`${option.id}-${idx}`}
+          onClick={() => handleOptionClick(idx)}
+          className={getOptionClass(state)}
+          disabled={isLocked}
+        >
+          <span>{text}</span>
+          {state === 'correct' && <Check className="text-lime-600" size={24} />}
+          {state === 'wrong' && <X className="text-rose-600" size={24} />}
+        </Button>
+      );
+    })}
+  </div>
+);
+
+const PendingAdvanceBar: React.FC<{
+  setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
+  nextQuestionRef: React.RefObject<() => void>;
+}> = ({ setPendingAdvanceReason, nextQuestionRef }) => (
+  <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border pb-safe shadow-lg animate-in slide-in-from-bottom-full z-50">
+    <div className="flex items-center justify-between mb-3 px-2">
+      <div>
+        <p className="font-black text-muted-foreground">Review this later</p>
+        <p className="text-xs text-muted-foreground">We&apos;ll ask you again soon.</p>
+      </div>
+    </div>
+    <Button
+      variant="ghost"
+      size="auto"
+      onClick={() => {
+        setPendingAdvanceReason(null);
+        nextQuestionRef.current?.();
+      }}
+      className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+    >
+      <span>Continue</span>
+      <ChevronRight size={20} />
+    </Button>
+  </div>
+);
 
 export function MobileVocabQuiz({
   currentQuestion,
@@ -65,38 +226,8 @@ export function MobileVocabQuiz({
   }, [currentQuestion, writingState, inputRef]);
 
   const isWriting = currentQuestion.type === 'WRITING';
-
-  const questionText =
-    currentQuestion.direction === 'NATIVE_TO_KR'
-      ? currentQuestion.targetWord.english
-      : currentQuestion.targetWord.korean;
-
-  const promptText = isWriting
-    ? currentQuestion.direction === 'KR_TO_NATIVE'
-      ? labels.dashboard?.quiz?.enterMeaning || 'Enter meaning...'
-      : labels.dashboard?.quiz?.enterKorean || 'Enter Korean...'
-    : currentQuestion.direction === 'KR_TO_NATIVE'
-      ? labels.dashboard?.quiz?.questionMeaning || 'What does this mean?'
-      : labels.dashboard?.quiz?.questionKorean || 'What is the Korean?';
-
-  // Helper for option class
-  const getOptionClass = (state: OptionState) => {
-    const base =
-      'relative w-full p-5 rounded-2xl border-b-4 border-2 font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-between';
-    switch (state) {
-      case 'correct':
-        return cn(base, 'bg-lime-100 border-lime-500 text-lime-800 border-b-lime-600');
-      case 'wrong':
-        return cn(
-          base,
-          'bg-rose-100 border-rose-500 text-rose-800 border-b-rose-600 animate-shake'
-        );
-      case 'selected':
-        return cn(base, 'bg-indigo-100 border-indigo-500 text-indigo-800');
-      default:
-        return cn(base, 'bg-card border-border text-muted-foreground hover:bg-muted');
-    }
-  };
+  const questionText = getQuestionText(currentQuestion);
+  const promptText = getPromptText(currentQuestion, isWriting, labels);
 
   return (
     <div className="flex flex-col h-full bg-muted">
@@ -141,89 +272,22 @@ export function MobileVocabQuiz({
         {/* Answer Area */}
         <div className="flex-1 pb-safe-offset">
           {isWriting ? (
-            <div className="space-y-4">
-              <div
-                className={cn(
-                  'relative bg-card rounded-2xl border-2 p-4 transition-colors',
-                  writingState === 'CORRECT'
-                    ? 'border-lime-500 bg-lime-50'
-                    : writingState === 'WRONG'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-border focus-within:border-indigo-500 shadow-sm'
-                )}
-              >
-                <Input
-                  ref={inputRef as any}
-                  type="text"
-                  value={writingInput}
-                  onChange={e => setWritingInput(e.target.value)}
-                  onKeyDown={e =>
-                    e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()
-                  }
-                  className="w-full text-2xl font-bold text-center bg-transparent outline-none text-muted-foreground placeholder:text-muted-foreground"
-                  placeholder={isWriting ? 'Type answer...' : ''}
-                  disabled={writingState !== 'INPUT'}
-                  autoCapitalize="none"
-                  autoComplete="off"
-                />
-              </div>
-
-              {writingState === 'INPUT' && (
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  onClick={handleWritingSubmit}
-                  disabled={!writingInput.trim()}
-                  className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
-                >
-                  {labels.dashboard?.quiz?.submit || 'Check'}
-                </Button>
-              )}
-
-              {/* Feedback for Writing */}
-              {writingState === 'CORRECT' && (
-                <div className="flex items-center justify-center gap-2 text-lime-600 font-bold animate-in zoom-in">
-                  <Check size={24} />
-                  <span>Correct!</span>
-                </div>
-              )}
-              {writingState === 'WRONG' && (
-                <div className="text-center animate-in zoom-in">
-                  <p className="text-rose-600 font-bold mb-1 flex items-center justify-center gap-2">
-                    <X size={20} /> Wrong
-                  </p>
-                  <p className="text-muted-foreground text-sm">Correct answer:</p>
-                  <p className="text-foreground font-black text-lg">
-                    {currentQuestion.direction === 'KR_TO_NATIVE'
-                      ? currentQuestion.targetWord.english
-                      : currentQuestion.targetWord.korean}
-                  </p>
-                </div>
-              )}
-            </div>
+            <WritingAnswerArea
+              inputRef={inputRef}
+              writingInput={writingInput}
+              setWritingInput={setWritingInput}
+              writingState={writingState}
+              handleWritingSubmit={handleWritingSubmit}
+              labels={labels}
+              currentQuestion={currentQuestion}
+            />
           ) : (
-            <div className="space-y-3">
-              {currentQuestion.options?.map((option, idx) => {
-                const state = optionStates[idx];
-                const text =
-                  currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
-
-                return (
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    key={`${option.id}-${idx}`}
-                    onClick={() => handleOptionClick(idx)}
-                    className={getOptionClass(state)}
-                    disabled={isLocked}
-                  >
-                    <span>{text}</span>
-                    {state === 'correct' && <Check className="text-lime-600" size={24} />}
-                    {state === 'wrong' && <X className="text-rose-600" size={24} />}
-                  </Button>
-                );
-              })}
-            </div>
+            <ChoiceAnswerArea
+              currentQuestion={currentQuestion}
+              optionStates={optionStates}
+              handleOptionClick={handleOptionClick}
+              isLocked={isLocked}
+            />
           )}
 
           {/* I don't know button (Learn mode only) */}
@@ -241,26 +305,10 @@ export function MobileVocabQuiz({
 
           {/* Continue / Next Button (if Pending Advance) */}
           {pendingAdvance && (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border pb-safe shadow-lg animate-in slide-in-from-bottom-full z-50">
-              <div className="flex items-center justify-between mb-3 px-2">
-                <div>
-                  <p className="font-black text-muted-foreground">Review this later</p>
-                  <p className="text-xs text-muted-foreground">We&apos;ll ask you again soon.</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={() => {
-                  setPendingAdvanceReason(null);
-                  nextQuestionRef.current?.();
-                }}
-                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <span>Continue</span>
-                <ChevronRight size={20} />
-              </Button>
-            </div>
+            <PendingAdvanceBar
+              setPendingAdvanceReason={setPendingAdvanceReason}
+              nextQuestionRef={nextQuestionRef}
+            />
           )}
         </div>
       </div>

@@ -19,6 +19,7 @@ type SpeakActionResult = {
 };
 
 type SpeakActionFn = (args: SpeakActionArgs) => Promise<SpeakActionResult>;
+type RequestIdRef = { current: number };
 
 // Keep a tiny debounce to coalesce rapid duplicate triggers without adding
 // noticeable click-to-sound latency.
@@ -42,6 +43,28 @@ function runSpeakActionWithDedupe(
   });
   inFlightSpeakRequests.set(dedupeKey, request);
   return request;
+}
+
+function isStaleRequest(myRequestId: number, requestIdRef: RequestIdRef): boolean {
+  return myRequestId !== requestIdRef.current;
+}
+
+function failCurrentRequest({
+  message,
+  myRequestId,
+  requestIdRef,
+  setError,
+  setIsLoading,
+}: {
+  message: string;
+  myRequestId: number;
+  requestIdRef: RequestIdRef;
+  setError: (message: string) => void;
+  setIsLoading: (value: boolean) => void;
+}): false {
+  setError(message);
+  if (myRequestId === requestIdRef.current) setIsLoading(false);
+  return false;
 }
 
 /**
@@ -238,14 +261,16 @@ export const useTTS = () => {
 
         let result = await runSpeakAction(false);
 
-        if (myRequestId !== requestIdRef.current) {
-          return false;
-        }
+        if (isStaleRequest(myRequestId, requestIdRef)) return false;
 
         if (!result.success) {
-          setError(result.error || 'TTS service unavailable');
-          if (myRequestId === requestIdRef.current) setIsLoading(false);
-          return false;
+          return failCurrentRequest({
+            message: result.error || 'TTS service unavailable',
+            myRequestId,
+            requestIdRef,
+            setError,
+            setIsLoading,
+          });
         }
 
         let played = await playFromResult(result);
@@ -255,25 +280,35 @@ export const useTTS = () => {
         cache.delete(cacheKey);
         persistCache(cache);
         result = await runSpeakAction(true);
-        if (myRequestId !== requestIdRef.current) {
-          return false;
-        }
+        if (isStaleRequest(myRequestId, requestIdRef)) return false;
         if (!result.success) {
-          setError(result.error || 'TTS service unavailable');
-          if (myRequestId === requestIdRef.current) setIsLoading(false);
-          return false;
+          return failCurrentRequest({
+            message: result.error || 'TTS service unavailable',
+            myRequestId,
+            requestIdRef,
+            setError,
+            setIsLoading,
+          });
         }
         played = await playFromResult(result);
         if (played) return true;
 
-        setError('Audio playback failed');
-        if (myRequestId === requestIdRef.current) setIsLoading(false);
-        return false;
+        return failCurrentRequest({
+          message: 'Audio playback failed',
+          myRequestId,
+          requestIdRef,
+          setError,
+          setIsLoading,
+        });
       } catch (error) {
         console.error('TTS error:', error);
-        setError(error instanceof Error ? error.message : String(error));
-        if (myRequestId === requestIdRef.current) setIsLoading(false);
-        return false;
+        return failCurrentRequest({
+          message: error instanceof Error ? error.message : String(error),
+          myRequestId,
+          requestIdRef,
+          setError,
+          setIsLoading,
+        });
       }
     },
     [getCache, handleAudioPlayback, speakAction, stopCurrentAudio]

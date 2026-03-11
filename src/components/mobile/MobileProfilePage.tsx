@@ -26,6 +26,21 @@ import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
 import { Button } from '../ui';
 import { Input } from '../ui';
+import { uploadAvatarImage, validateAvatarFile } from '../../utils/storageUpload';
+
+const MobileAvatarContent = ({
+  isUploadingAvatar,
+  avatar,
+}: {
+  isUploadingAvatar: boolean;
+  avatar?: string | null;
+}) => {
+  if (isUploadingAvatar) return <Loading size="sm" />;
+  if (avatar) return <img src={avatar} alt="Profile" className="w-full h-full object-cover" />;
+  return (
+    <UserIcon className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+  );
+};
 
 export const MobileProfilePage: React.FC = () => {
   const { user, updateUser, language } = useAuth();
@@ -61,31 +76,40 @@ export const MobileProfilePage: React.FC = () => {
   // -- MUTATIONS --
   const changePasswordMutation = useMutation(mRef('auth:changePassword'));
   const unlinkAuthProviderMutation = useMutation(mRef('auth:unlinkAuthProvider'));
-  const getUploadUrlAction = useAction(aRef('storage:getUploadUrl'));
+  const getUploadUrlAction = useAction(
+    aRef<
+      { filename: string; contentType: string; fileSize: number; folder?: string },
+      { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
+    >('storage:getUploadUrl')
+  );
 
   // -- HANDLERS --
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    const validationError = validateAvatarFile(file);
+    if (validationError === 'missing') return;
+    if (validationError === 'invalid_type') {
+      toast.error(labels.profile?.uploadImageError || 'Please upload an image file');
+      return;
+    }
+    if (validationError === 'too_large') {
+      toast.error(labels.profile?.imageTooLarge || 'Image size must be less than 5MB');
+      return;
+    }
 
     setIsUploadingAvatar(true);
     try {
-      const { uploadUrl, publicUrl } = (await getUploadUrlAction({
-        filename: file.name,
-        contentType: file.type,
-      })) as any;
-
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' },
-        body: file,
+      await uploadAvatarImage({
+        file: file!,
+        getUploadUrl: getUploadUrlAction,
+        saveAvatar: async avatarUrl => {
+          await updateUser({ avatar: avatarUrl });
+        },
       });
-
-      await updateUser({ avatar: publicUrl });
       toast.success(t('avatarUpdated', { defaultValue: 'Avatar updated' }));
     } catch (err) {
       console.error(err);
-      toast.error(t('error', { defaultValue: 'Failed' }));
+      toast.error(t('uploadAvatarFailed', { defaultValue: 'Failed to upload avatar' }));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -121,6 +145,8 @@ export const MobileProfilePage: React.FC = () => {
 
   const displayName = user.name || 'User';
   const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
+  const dayStreak = user.statistics?.dayStreak ?? 0;
+  const savedWordsCount = vocabBookCount?.count ?? 0;
 
   // Helper for accounts
   const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);
@@ -128,6 +154,64 @@ export const MobileProfilePage: React.FC = () => {
     isLinked
       ? 'bg-red-50 text-red-600 dark:bg-red-400/12 dark:text-red-200'
       : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-400/12 dark:text-indigo-200';
+  const tabContentByKey = {
+    info: (
+      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+        <ProfileInfoTab
+          labels={labels}
+          user={user}
+          displayName={displayName}
+          userIdDisplay={userIdDisplay}
+        />
+      </div>
+    ),
+    stats: (
+      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+        <ProfileStatsTab
+          labels={labels}
+          dayStreak={dayStreak}
+          savedWordsCount={savedWordsCount}
+          examsTaken={examsTaken}
+          averageScore={averageScore}
+          examHistory={examHistory}
+        />
+      </div>
+    ),
+    security: (
+      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+        <ProfileSecurityTab
+          labels={labels}
+          handlePasswordChange={handlePasswordChange}
+          currentPassword={currentPassword}
+          setCurrentPassword={setCurrentPassword}
+          newPassword={newPassword}
+          setNewPassword={setNewPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
+          isChangingPassword={isChangingPassword}
+          accountSectionTitle="Social Accounts"
+          linkedProviders={linkedProviders}
+          linkedCount={linkedAccounts?.length || 0}
+          accountsLoading={linkedAccounts === undefined}
+          linkedLabel="Linked"
+          notLinkedLabel="Not linked"
+          unlinkLabel="Unlink"
+          linkLabel="Connect"
+          signIn={signIn}
+          unlinkAuthProviderMutation={unlinkAuthProviderMutation}
+          getAccountButtonClass={getAccountButtonClass}
+          success={toast.success}
+          error={toast.error}
+          toErrorMessage={toErrorMessage}
+        />
+      </div>
+    ),
+    settings: (
+      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+        <ProfileSettingsTab labels={labels} />
+      </div>
+    ),
+  } as const;
 
   return (
     <div className="min-h-[100dvh] bg-muted pb-20">
@@ -155,16 +239,7 @@ export const MobileProfilePage: React.FC = () => {
         <div className="flex flex-col items-center">
           <div className="relative mb-4">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-border shadow-lg bg-muted relative">
-              {(() => {
-                if (isUploadingAvatar) return <Loading size="sm" />;
-                if (user.avatar)
-                  return (
-                    <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
-                  );
-                return (
-                  <UserIcon className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                );
-              })()}
+              <MobileAvatarContent isUploadingAvatar={isUploadingAvatar} avatar={user.avatar} />
             </div>
             <Button
               variant="ghost"
@@ -214,67 +289,7 @@ export const MobileProfilePage: React.FC = () => {
       </div>
 
       {/* Content Body */}
-      <div className="p-4 pt-6">
-        {activeTab === 'info' && (
-          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
-            <ProfileInfoTab
-              labels={labels}
-              user={user}
-              displayName={displayName}
-              userIdDisplay={userIdDisplay}
-            />
-          </div>
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
-            <ProfileStatsTab
-              labels={labels}
-              dayStreak={user.statistics?.dayStreak || 0}
-              savedWordsCount={vocabBookCount?.count || 0}
-              examsTaken={examsTaken}
-              averageScore={averageScore}
-              examHistory={examHistory}
-            />
-          </div>
-        )}
-
-        {activeTab === 'security' && (
-          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
-            <ProfileSecurityTab
-              labels={labels}
-              handlePasswordChange={handlePasswordChange}
-              currentPassword={currentPassword}
-              setCurrentPassword={setCurrentPassword}
-              newPassword={newPassword}
-              setNewPassword={setNewPassword}
-              confirmPassword={confirmPassword}
-              setConfirmPassword={setConfirmPassword}
-              isChangingPassword={isChangingPassword}
-              accountSectionTitle="Social Accounts"
-              linkedProviders={linkedProviders}
-              linkedCount={linkedAccounts?.length || 0}
-              accountsLoading={linkedAccounts === undefined}
-              linkedLabel="Linked"
-              notLinkedLabel="Not linked"
-              unlinkLabel="Unlink"
-              linkLabel="Connect"
-              signIn={signIn}
-              unlinkAuthProviderMutation={unlinkAuthProviderMutation}
-              getAccountButtonClass={getAccountButtonClass}
-              success={toast.success}
-              error={toast.error}
-              toErrorMessage={toErrorMessage}
-            />
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
-            <ProfileSettingsTab labels={labels} />
-          </div>
-        )}
-      </div>
+      <div className="p-4 pt-6">{tabContentByKey[activeTab]}</div>
     </div>
   );
 };

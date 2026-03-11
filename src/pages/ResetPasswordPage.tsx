@@ -7,6 +7,14 @@ import { LocalizedLink } from '../components/LocalizedLink';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' ? message : undefined;
+  }
+  return undefined;
+};
+
 const ResetPasswordPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -51,15 +59,16 @@ const ResetPasswordPage: React.FC = () => {
     try {
       await confirmPasswordReset({ token, newPassword });
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err);
       const message =
-        err?.message === 'INVALID_OR_EXPIRED_TOKEN'
+        errorMessage === 'INVALID_OR_EXPIRED_TOKEN'
           ? t('auth.invalidResetToken', { defaultValue: 'Invalid or expired reset token.' })
-          : err?.message === 'WEAK_PASSWORD'
+          : errorMessage === 'WEAK_PASSWORD'
             ? t('auth.passwordTooShort', {
                 defaultValue: 'Password must be at least 8 characters long.',
               })
-            : err?.message || t('common.error', { defaultValue: 'Something went wrong.' });
+            : errorMessage || t('common.error', { defaultValue: 'Something went wrong.' });
       setError(message);
     } finally {
       setLoading(false);

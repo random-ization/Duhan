@@ -1,8 +1,9 @@
 import React from 'react';
 import type { User } from '../../../types';
+import type { ProfileLabels } from '../types';
 
 export const ProfileInfoTab: React.FC<{
-  labels: Record<string, any>;
+  labels: ProfileLabels;
   user: User;
   displayName: string;
   userIdDisplay: string;

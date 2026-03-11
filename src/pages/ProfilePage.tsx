@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useMutation, useAction, useQuery } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
@@ -21,10 +21,90 @@ import { ProfileSettingsTab } from './profile/tabs/ProfileSettingsTab';
 import { useExamStats } from './profile/hooks/useExamStats';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileProfilePage } from '../components/mobile/MobileProfilePage';
+import { uploadAvatarImage, validateAvatarFile } from '../utils/storageUpload';
 
 interface ProfileProps {
   language: Language;
 }
+
+const firstString = (...values: Array<string | null | undefined>): string => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '';
+};
+
+const firstPositiveTimestamp = (...values: Array<number | null | undefined>): number => {
+  for (const value of values) {
+    if (typeof value === 'number' && value > 0) return value;
+  }
+  return 0;
+};
+
+const buildProfileIdentity = ({
+  user,
+  labels,
+}: {
+  user: User & { _id?: string; _creationTime?: number; createdAt?: number; joinDate?: number };
+  labels: ReturnType<typeof getLabels>;
+}) => {
+  const displayName = firstString(
+    user.name,
+    user.email?.split('@')[0],
+    labels.profile?.unnamed,
+    'Unnamed'
+  );
+  const rawUserId = firstString(user.id, user._id, '');
+  const userIdDisplay = rawUserId ? rawUserId.slice(0, 8) : '—';
+  const joinedTimestamp = firstPositiveTimestamp(
+    user.createdAt,
+    user.joinDate,
+    user._creationTime,
+    0
+  );
+
+  return {
+    displayName,
+    userIdDisplay,
+    joinedDateLabel: joinedTimestamp ? new Date(joinedTimestamp).toLocaleDateString() : '—',
+  };
+};
+
+const buildAccountLinkMeta = ({
+  labels,
+  linkedAccounts,
+}: {
+  labels: ReturnType<typeof getLabels>;
+  linkedAccounts: { provider: string }[] | undefined;
+}) => ({
+  linkedProviders: new Set(linkedAccounts?.map(account => account.provider) ?? []),
+  linkedCount: linkedAccounts?.length ?? 0,
+  accountsLoading: linkedAccounts === undefined,
+  linkLabel: firstString(labels.profile?.link?.connect, 'Connect'),
+  unlinkLabel: firstString(labels.profile?.link?.unlink, 'Unlink'),
+  linkedLabel: firstString(labels.profile?.link?.linked, 'Linked'),
+  notLinkedLabel: firstString(labels.profile?.link?.notLinked, 'Not linked'),
+  accountSectionTitle: firstString(labels.profile?.link?.sectionTitle, 'Social Accounts'),
+});
+
+const buildProfileDerived = ({
+  user,
+  labels,
+  linkedAccounts,
+}: {
+  user: User & { _id?: string; _creationTime?: number; createdAt?: number; joinDate?: number };
+  labels: ReturnType<typeof getLabels>;
+  linkedAccounts: { provider: string }[] | undefined;
+}) => {
+  const identity = buildProfileIdentity({ user, labels });
+  const accountMeta = buildAccountLinkMeta({ labels, linkedAccounts });
+
+  return {
+    ...identity,
+    ...accountMeta,
+    isProfileIncomplete: !user.name?.trim() || !user.avatar,
+  };
+};
 
 const Profile: React.FC<ProfileProps> = ({ language }) => {
   const { user, updateUser } = useAuth();
@@ -71,7 +151,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
   );
   const getUploadUrlAction = useAction(
     aRef<
-      { filename: string; contentType: string; folder?: string },
+      { filename: string; contentType: string; fileSize: number; folder?: string },
       { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
     >('storage:getUploadUrl')
   );
@@ -86,27 +166,29 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     return <MobileProfilePage />;
   }
 
-  const displayName =
-    user.name || user.email?.split('@')[0] || labels.profile?.unnamed || 'Unnamed';
   const userMeta = user as User & {
     _id?: string;
     _creationTime?: number;
     createdAt?: number;
     joinDate?: number;
   };
-  const rawUserId = userMeta.id || userMeta._id || '';
-  const userIdDisplay = rawUserId ? rawUserId.slice(0, 8) : '—';
-  const joinedTimestamp = userMeta.createdAt || userMeta.joinDate || userMeta._creationTime || 0;
-  const joinedDateLabel = joinedTimestamp ? new Date(joinedTimestamp).toLocaleDateString() : '—';
-  const linkedProviders = new Set(linkedAccounts?.map(account => account.provider) ?? []);
-  const linkedCount = linkedAccounts?.length ?? 0;
-  const accountsLoading = linkedAccounts === undefined;
-  const linkLabel = labels.profile?.link?.connect || 'Connect';
-  const unlinkLabel = labels.profile?.link?.unlink || 'Unlink';
-  const linkedLabel = labels.profile?.link?.linked || 'Linked';
-  const notLinkedLabel = labels.profile?.link?.notLinked || 'Not linked';
-  const accountSectionTitle = labels.profile?.link?.sectionTitle || 'Social Accounts';
-  const isProfileIncomplete = !user.name?.trim() || !user.avatar;
+  const {
+    displayName,
+    userIdDisplay,
+    joinedDateLabel,
+    linkedProviders,
+    linkedCount,
+    accountsLoading,
+    linkLabel,
+    unlinkLabel,
+    linkedLabel,
+    notLinkedLabel,
+    accountSectionTitle,
+    isProfileIncomplete,
+  } = buildProfileDerived({ user: userMeta, labels, linkedAccounts });
+  const dayStreak = user.statistics?.dayStreak ?? 0;
+  const savedWordsCount = vocabBookCount?.count ?? 0;
+  const settingsTabLabel = firstString(labels.generalSettings, 'General');
 
   const handleNameUpdate = async () => {
     if (!newName.trim() || newName === user.name) {
@@ -125,35 +207,26 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    const validationError = validateAvatarFile(file);
+    if (validationError === 'missing') return;
+    if (validationError === 'invalid_type') {
       error(labels.profile?.uploadImageError || 'Please upload an image file');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (validationError === 'too_large') {
       error(labels.profile?.imageTooLarge || 'Image size must be less than 5MB');
       return;
     }
+
     setIsUploadingAvatar(true);
     try {
-      // 1. Get Upload URL
-      const { uploadUrl, publicUrl } = (await getUploadUrlAction({
-        filename: file.name,
-        contentType: file.type,
-      })) as { uploadUrl: string; publicUrl: string };
-
-      // 2. Upload to S3
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.type,
-          'x-amz-acl': 'public-read',
+      await uploadAvatarImage({
+        file: file!,
+        getUploadUrl: getUploadUrlAction,
+        saveAvatar: async avatarUrl => {
+          await updateUser({ avatar: avatarUrl });
         },
-        body: file,
       });
-
-      // 3. Persist profile update
-      await updateUser({ avatar: publicUrl });
       success(labels.avatarUpdated || 'Avatar updated');
     } catch (err) {
       console.error('Avatar upload failed:', err);
@@ -180,9 +253,6 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         newPassword,
       });
       success(labels.passwordUpdated || 'Password updated');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -233,6 +303,55 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     }
     return 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-400/12 dark:text-indigo-200 dark:hover:bg-indigo-400/18';
   };
+
+  const tabContentByKey = {
+    info: (
+      <ProfileInfoTab
+        labels={labels}
+        user={user}
+        displayName={displayName}
+        userIdDisplay={userIdDisplay}
+      />
+    ),
+    security: (
+      <ProfileSecurityTab
+        labels={labels}
+        handlePasswordChange={handlePasswordChange}
+        currentPassword={currentPassword}
+        setCurrentPassword={setCurrentPassword}
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
+        isChangingPassword={isChangingPassword}
+        accountSectionTitle={accountSectionTitle}
+        linkedProviders={linkedProviders}
+        linkedCount={linkedCount}
+        accountsLoading={accountsLoading}
+        linkedLabel={linkedLabel}
+        notLinkedLabel={notLinkedLabel}
+        unlinkLabel={unlinkLabel}
+        linkLabel={linkLabel}
+        signIn={signIn}
+        unlinkAuthProviderMutation={unlinkAuthProviderMutation}
+        getAccountButtonClass={getAccountButtonClass}
+        success={success}
+        error={error}
+        toErrorMessage={toErrorMessage}
+      />
+    ),
+    stats: (
+      <ProfileStatsTab
+        labels={labels}
+        dayStreak={dayStreak}
+        savedWordsCount={savedWordsCount}
+        examsTaken={examsTaken}
+        averageScore={averageScore}
+        examHistory={examHistory}
+      />
+    ),
+    settings: <ProfileSettingsTab labels={labels} />,
+  } as const;
 
   return (
     <div className="max-w-[1000px] mx-auto pb-20">
@@ -289,7 +408,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
         <ProfileTabButton
           id="settings"
           icon={Settings}
-          label={labels.generalSettings || 'General'}
+          label={settingsTabLabel}
           active={activeTab === 'settings'}
           onSelect={setActiveTab}
         />
@@ -297,55 +416,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
 
       {/* Content Area */}
       <div className="bg-card rounded-3xl p-8 border border-border shadow-sm min-h-[400px]">
-        {activeTab === 'info' && (
-          <ProfileInfoTab
-            labels={labels}
-            user={user}
-            displayName={displayName}
-            userIdDisplay={userIdDisplay}
-          />
-        )}
-
-        {activeTab === 'security' && (
-          <ProfileSecurityTab
-            labels={labels}
-            handlePasswordChange={handlePasswordChange}
-            currentPassword={currentPassword}
-            setCurrentPassword={setCurrentPassword}
-            newPassword={newPassword}
-            setNewPassword={setNewPassword}
-            confirmPassword={confirmPassword}
-            setConfirmPassword={setConfirmPassword}
-            isChangingPassword={isChangingPassword}
-            accountSectionTitle={accountSectionTitle}
-            linkedProviders={linkedProviders}
-            linkedCount={linkedCount}
-            accountsLoading={accountsLoading}
-            linkedLabel={linkedLabel}
-            notLinkedLabel={notLinkedLabel}
-            unlinkLabel={unlinkLabel}
-            linkLabel={linkLabel}
-            signIn={signIn}
-            unlinkAuthProviderMutation={unlinkAuthProviderMutation}
-            getAccountButtonClass={getAccountButtonClass}
-            success={success}
-            error={error}
-            toErrorMessage={toErrorMessage}
-          />
-        )}
-
-        {activeTab === 'stats' && (
-          <ProfileStatsTab
-            labels={labels}
-            dayStreak={user.statistics?.dayStreak || 0}
-            savedWordsCount={vocabBookCount?.count || 0}
-            examsTaken={examsTaken}
-            averageScore={averageScore}
-            examHistory={examHistory}
-          />
-        )}
-
-        {activeTab === 'settings' && <ProfileSettingsTab labels={labels} />}
+        {tabContentByKey[activeTab]}
       </div>
     </div>
   );

@@ -22,6 +22,55 @@ interface Institute {
   totalUnits?: number;
 }
 
+type InstituteFormData = Partial<Institute>;
+
+type CreateInstitutePayload = {
+  id: string;
+  name: string;
+  nameZh?: string;
+  nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
+  levels: Array<{ level: number; units: number }>;
+  publisher: string;
+  displayLevel: string;
+  volume: string;
+  themeColor: string;
+  totalUnits: number;
+  coverUrl: string;
+};
+
+const DEFAULT_THEME_COLOR = '#6366f1';
+
+const trimToEmpty = (value?: string): string => value?.trim() ?? '';
+
+const buildInstituteId = (name: string): string =>
+  `${name
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^\w\s가-힣]/g, '')
+    .replaceAll(/\s+/g, '-')
+    .replaceAll(/-+/g, '-')}-${Date.now().toString(36)}`;
+
+const buildCreateInstitutePayload = (formData: InstituteFormData): CreateInstitutePayload => {
+  const totalUnits = formData.totalUnits ?? 0;
+  return {
+    id: buildInstituteId(trimToEmpty(formData.name)),
+    name: trimToEmpty(formData.name),
+    nameZh: trimToEmpty(formData.nameZh),
+    nameEn: trimToEmpty(formData.nameEn),
+    nameVi: trimToEmpty(formData.nameVi),
+    nameMn: trimToEmpty(formData.nameMn),
+    levels: [{ level: 1, units: formData.totalUnits ?? 10 }],
+    publisher: trimToEmpty(formData.publisher),
+    displayLevel: trimToEmpty(formData.displayLevel),
+    volume: trimToEmpty(formData.volume),
+    themeColor: formData.themeColor ?? DEFAULT_THEME_COLOR,
+    totalUnits,
+    coverUrl: '',
+  };
+};
+
 export const InstituteManager: React.FC = () => {
   // React Query / Convex Pagination
   type InstituteRow = Partial<Institute> & { _id?: string };
@@ -50,7 +99,7 @@ export const InstituteManager: React.FC = () => {
   const [showNewForm, setShowNewForm] = useState(false);
 
   // Form fields
-  const [formData, setFormData] = useState<Partial<Institute>>({
+  const [formData, setFormData] = useState<InstituteFormData>({
     name: '',
     nameZh: '',
     nameEn: '',
@@ -59,29 +108,12 @@ export const InstituteManager: React.FC = () => {
     publisher: '',
     displayLevel: '',
     volume: '',
-    themeColor: '#6366f1',
+    themeColor: DEFAULT_THEME_COLOR,
     totalUnits: 0,
   });
 
   const createInstituteMutation = useMutation(
-    mRef<
-      {
-        id: string;
-        name: string;
-        nameZh?: string;
-        nameEn?: string;
-        nameVi?: string;
-        nameMn?: string;
-        levels: Array<{ level: number; units: number }>;
-        publisher: string;
-        displayLevel: string;
-        volume: string;
-        themeColor: string;
-        totalUnits: number;
-        coverUrl: string;
-      },
-      unknown
-    >('admin:createInstitute')
+    mRef<CreateInstitutePayload, unknown>('admin:createInstitute')
   );
   const updateInstituteMutation = useMutation(
     mRef<
@@ -118,32 +150,7 @@ export const InstituteManager: React.FC = () => {
     }
     setSaving(true);
     try {
-      // Generate a slug-based ID from name
-      const generatedId =
-        formData.name
-          .trim()
-          .toLowerCase()
-          .replaceAll(/[^\w\s가-힣]/g, '')
-          .replaceAll(/\s+/g, '-')
-          .replaceAll(/-+/g, '-') +
-        '-' +
-        Date.now().toString(36);
-
-      await createInstituteMutation({
-        id: generatedId,
-        name: formData.name.trim(),
-        nameZh: formData.nameZh?.trim() || '',
-        nameEn: formData.nameEn?.trim() || '',
-        nameVi: formData.nameVi?.trim() || '',
-        nameMn: formData.nameMn?.trim() || '',
-        levels: [{ level: 1, units: formData.totalUnits || 10 }],
-        publisher: formData.publisher?.trim() || '',
-        displayLevel: formData.displayLevel?.trim() || '',
-        volume: formData.volume?.trim() || '',
-        themeColor: formData.themeColor || '#6366f1',
-        totalUnits: formData.totalUnits || 0,
-        coverUrl: '', // No longer using coverUrl in create
-      });
+      await createInstituteMutation(buildCreateInstitutePayload(formData));
       setShowNewForm(false);
       resetForm();
     } catch (e) {
@@ -205,7 +212,7 @@ export const InstituteManager: React.FC = () => {
       publisher: inst.publisher || '',
       displayLevel: inst.displayLevel || '',
       volume: inst.volume || '',
-      themeColor: inst.themeColor || '#6366f1',
+      themeColor: inst.themeColor || DEFAULT_THEME_COLOR,
       totalUnits: inst.totalUnits || 0,
     });
     setShowNewForm(false);
@@ -221,7 +228,7 @@ export const InstituteManager: React.FC = () => {
       publisher: '',
       displayLevel: '',
       volume: '',
-      themeColor: '#6366f1',
+      themeColor: DEFAULT_THEME_COLOR,
       totalUnits: 0,
     });
   };

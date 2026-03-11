@@ -394,19 +394,17 @@ const ReadingImporter: React.FC = () => {
         updatedFiles[i] = { ...af, status: 'uploading' };
         setAudioFiles([...updatedFiles]);
 
-        const { uploadUrl, publicUrl } = (await getUploadUrl({
+        const { uploadUrl, publicUrl, headers } = await getUploadUrl({
           filename: af.file.name,
           contentType: af.file.type || 'audio/mpeg',
+          fileSize: af.file.size,
           folder: `reading-audio/${form.courseId}`,
-        })) as { uploadUrl: string; publicUrl: string };
+        });
 
         const uploadRes = await fetch(uploadUrl, {
           method: 'PUT',
           body: af.file,
-          headers: {
-            'Content-Type': af.file.type || 'audio/mpeg',
-            'x-amz-acl': 'public-read',
-          },
+          headers,
         });
 
         if (!uploadRes.ok) throw new Error('Upload failed');

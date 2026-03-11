@@ -31,6 +31,13 @@ import {
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui';
 
+type PricePlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
+type PriceEntry = { amount: string; currency: string; formatted: string };
+type VariantPrices = {
+  GLOBAL: Partial<Record<PricePlan, PriceEntry>>;
+  REGIONAL: Partial<Record<PricePlan, PriceEntry>>;
+};
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -85,11 +92,18 @@ const useFeatureCards = () => {
   return { expandedFeatureCards, toggleFeatureCard };
 };
 
-const LandingJsonLd = ({ description, prices }: { description: string; prices: any }) => {
+const LandingJsonLd = ({
+  description,
+  prices,
+}: {
+  description: string;
+  prices: VariantPrices | null;
+}) => {
   const getPrice = (plan: 'MONTHLY' | 'ANNUAL' | 'LIFETIME') => {
     // SEO Prices are usually Global
-    if (prices && prices.GLOBAL && prices.GLOBAL[plan]) {
-      return prices.GLOBAL[plan].amount;
+    const amount = prices?.GLOBAL?.[plan]?.amount;
+    if (amount) {
+      return amount;
     }
     if (plan === 'MONTHLY') return '6.90';
     if (plan === 'ANNUAL') return '49.00';
@@ -1348,7 +1362,7 @@ const LandingPricing = ({
 }: {
   showLocalizedPromo: boolean;
   navigate: (path: string) => void;
-  prices: any;
+  prices: VariantPrices | null;
 }) => {
   const { t } = useTranslation();
 
@@ -1357,8 +1371,9 @@ const LandingPricing = ({
     plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME',
     region: 'GLOBAL' | 'REGIONAL'
   ) => {
-    if (prices && prices[region] && prices[region][plan]) {
-      return prices[region][plan].amount;
+    const amount = prices?.[region]?.[plan]?.amount;
+    if (amount) {
+      return amount;
     }
     // Fallbacks
     if (region === 'REGIONAL') {
@@ -1692,7 +1707,7 @@ export default function Landing() {
   const { expandedFeatureCards, toggleFeatureCard } = useFeatureCards();
 
   // Dynamic Pricing for Landing
-  const [prices, setPrices] = useState<any>(null);
+  const [prices, setPrices] = useState<VariantPrices | null>(null);
   const getPrices = useAction(api.lemonsqueezy.getVariantPrices);
 
   useEffect(() => {

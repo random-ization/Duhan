@@ -33,6 +33,219 @@ const pickQuestionType = (settings: VocabSettings): QuestionType => {
   return randomType || 'CHOICE_K_TO_N';
 };
 
+const isChoiceQuestionType = (questionType: QuestionType): boolean =>
+  questionType.startsWith('CHOICE');
+const isWritingQuestionType = (questionType: QuestionType): boolean =>
+  questionType.startsWith('WRITING');
+const isKoreanToNativeType = (questionType: QuestionType): boolean =>
+  questionType.includes('K_TO_N');
+
+const getPromptForType = (
+  questionType: QuestionType,
+  item: ExtendedVocabularyItem | undefined
+): string | undefined => (isKoreanToNativeType(questionType) ? item?.korean : item?.english);
+
+const getCorrectAnswerForType = (
+  questionType: QuestionType,
+  item: ExtendedVocabularyItem | undefined
+): string | undefined => (isKoreanToNativeType(questionType) ? item?.english : item?.korean);
+
+const shouldAutoSpeak = (questionType: QuestionType, correct: boolean): boolean =>
+  questionType.includes('N_TO_K') || (questionType.includes('K_TO_N') && !correct);
+
+const getChoiceVariantClass = (
+  reveal: boolean,
+  isCorrectChoice: boolean,
+  isSelected: boolean
+): string => {
+  if (reveal) {
+    if (isCorrectChoice) return 'bg-emerald-100 border-emerald-500 text-emerald-700 shadow-none';
+    if (isSelected) return 'bg-red-100 border-red-500 text-red-700 shadow-none';
+    return 'opacity-50 bg-muted border-border';
+  }
+  if (isSelected) return 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-200';
+  return 'bg-card border-border text-muted-foreground hover:bg-muted';
+};
+
+const canSubmitCurrentAnswer = (
+  questionType: QuestionType,
+  selectedAnswer: string | null,
+  userInput: string
+): boolean => {
+  if (isChoiceQuestionType(questionType)) return Boolean(selectedAnswer);
+  return Boolean(userInput.trim());
+};
+
+const MobileQuestionCard: React.FC<{
+  currentQuestionType: QuestionType;
+  prompt: string | undefined;
+  currentItem: ExtendedVocabularyItem;
+  labels: ReturnType<typeof getLabels>;
+  speakTTS: (text: string) => Promise<boolean>;
+}> = ({ currentQuestionType, prompt, currentItem, labels, speakTTS }) => (
+  <div className="bg-card rounded-[2rem] shadow-sm border border-border p-8 flex flex-col items-center justify-center min-h-[30vh] md:min-h-[40vh] mb-6 relative overflow-hidden">
+    <div className="absolute top-6 left-6 flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+      {isWritingQuestionType(currentQuestionType) ? (
+        <Pencil className="w-3 h-3" />
+      ) : (
+        <AlignLeft className="w-3 h-3" />
+      )}
+      {isWritingQuestionType(currentQuestionType)
+        ? labels.writingMode || 'Writing'
+        : labels.multipleChoice || 'Multiple Choice'}
+    </div>
+
+    <h2
+      className={cn(
+        'font-black text-foreground text-center leading-tight',
+        prompt && prompt.length > 20 ? 'text-2xl' : 'text-4xl'
+      )}
+    >
+      {prompt}
+    </h2>
+    {isKoreanToNativeType(currentQuestionType) && (
+      <Button
+        variant="ghost"
+        size="auto"
+        onClick={() => speakTTS(prompt || '')}
+        className="mt-4 p-3 rounded-full bg-muted text-indigo-600 active:scale-95 transition-transform"
+      >
+        <Volume2 className="w-6 h-6" />
+      </Button>
+    )}
+    {currentItem.pos && (
+      <span className="mt-4 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-bold uppercase">
+        {currentItem.pos}
+      </span>
+    )}
+  </div>
+);
+
+const MobileInteractionArea: React.FC<{
+  currentQuestionType: QuestionType;
+  choices: string[];
+  selectedAnswer: string | null;
+  correctAnswer: string | undefined;
+  showFeedback: boolean;
+  setSelectedAnswer: (value: string) => void;
+  userInput: string;
+  setUserInput: (value: string) => void;
+}> = ({
+  currentQuestionType,
+  choices,
+  selectedAnswer,
+  correctAnswer,
+  showFeedback,
+  setSelectedAnswer,
+  userInput,
+  setUserInput,
+}) => {
+  if (isChoiceQuestionType(currentQuestionType)) {
+    return (
+      <div className="grid grid-cols-1 gap-3">
+        {choices.map((choice, idx) => {
+          const isSelected = selectedAnswer === choice;
+          const isCorrectChoice = choice === correctAnswer;
+          const reveal = showFeedback;
+          const variantClass = getChoiceVariantClass(reveal, isCorrectChoice, isSelected);
+
+          return (
+            <Button
+              variant="ghost"
+              size="auto"
+              key={idx}
+              disabled={reveal}
+              onClick={() => setSelectedAnswer(choice)}
+              className={cn(
+                'w-full p-4 rounded-xl border-2 text-left font-bold text-lg transition-all active:scale-[0.98] shadow-sm flex items-center justify-between',
+                variantClass
+              )}
+            >
+              <span>{choice}</span>
+              {reveal && isCorrectChoice && <Check className="w-5 h-5 text-emerald-600" />}
+              {reveal && isSelected && !isCorrectChoice && <X className="w-5 h-5 text-red-600" />}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Input
+        autoFocus
+        value={userInput}
+        onChange={e => setUserInput(e.target.value)}
+        className="h-16 text-xl rounded-xl border-2 border-border bg-card focus:border-indigo-500 font-bold text-center"
+        placeholder="Type answer..."
+        disabled={showFeedback}
+      />
+    </div>
+  );
+};
+
+const MobileFooterAction: React.FC<{
+  showFeedback: boolean;
+  currentQuestionType: QuestionType;
+  selectedAnswer: string | null;
+  userInput: string;
+  labels: ReturnType<typeof getLabels>;
+  checkAnswer: () => void;
+  isCorrect: boolean;
+  handleNext: () => void;
+  learnIndex: number;
+  total: number;
+}> = ({
+  showFeedback,
+  currentQuestionType,
+  selectedAnswer,
+  userInput,
+  labels,
+  checkAnswer,
+  isCorrect,
+  handleNext,
+  learnIndex,
+  total,
+}) => {
+  if (!showFeedback) {
+    const canSubmit = canSubmitCurrentAnswer(currentQuestionType, selectedAnswer, userInput);
+    return (
+      <Button
+        size="lg"
+        className="w-full h-14 text-lg font-bold rounded-xl shadow-lg shadow-indigo-200"
+        onClick={checkAnswer}
+        disabled={!canSubmit}
+      >
+        {labels.checkAnswer || 'Check Answer'}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      size="lg"
+      className={cn(
+        'w-full h-14 text-lg font-bold rounded-xl shadow-lg',
+        isCorrect
+          ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'
+          : 'bg-primary hover:bg-muted shadow-slate-200'
+      )}
+      onClick={handleNext}
+    >
+      {learnIndex < total - 1 ? (
+        <span className="flex items-center gap-2">
+          {labels.next || 'Next'} <ArrowRight className="w-5 h-5" />
+        </span>
+      ) : (
+        <span className="flex items-center gap-2">
+          {labels.finish || 'Finish'} <ArrowRight className="w-5 h-5" />
+        </span>
+      )}
+    </Button>
+  );
+};
+
 export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
   words,
   settings,
@@ -77,15 +290,11 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
     [allWords, currentQuestionType]
   );
 
-  const prompt = currentQuestionType.includes('K_TO_N')
-    ? currentItem?.korean
-    : currentItem?.english;
-  const correctAnswer = currentQuestionType.includes('K_TO_N')
-    ? currentItem?.english
-    : currentItem?.korean;
+  const prompt = getPromptForType(currentQuestionType, currentItem);
+  const correctAnswer = getCorrectAnswerForType(currentQuestionType, currentItem);
 
   const choices = useMemo(() => {
-    if (!currentItem || !currentQuestionType.startsWith('CHOICE')) return [];
+    if (!currentItem || !isChoiceQuestionType(currentQuestionType)) return [];
     return shuffleArray([correctAnswer!, ...generateDistractors(correctAnswer!)]);
   }, [currentItem, currentQuestionType, correctAnswer, generateDistractors]);
 
@@ -93,7 +302,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
     if (!currentItem) return;
     let correct = false;
 
-    if (currentQuestionType.startsWith('CHOICE')) {
+    if (isChoiceQuestionType(currentQuestionType)) {
       correct = selectedAnswer === correctAnswer;
     } else {
       correct = userInput.trim().toLowerCase() === correctAnswer?.toLowerCase();
@@ -103,10 +312,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
     setShowFeedback(true);
 
     // Auto speak if korean
-    if (
-      currentQuestionType.includes('N_TO_K') ||
-      (currentQuestionType.includes('K_TO_N') && !correct)
-    ) {
+    if (shouldAutoSpeak(currentQuestionType, correct)) {
       speakTTS(currentItem.korean);
     }
 
@@ -170,142 +376,43 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
         />
       </div>
 
-      {/* Content */}
       <div className="flex-1 flex flex-col p-6 overflow-y-auto">
-        {/* Question Card */}
-        <div className="bg-card rounded-[2rem] shadow-sm border border-border p-8 flex flex-col items-center justify-center min-h-[30vh] md:min-h-[40vh] mb-6 relative overflow-hidden">
-          <div className="absolute top-6 left-6 flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-            {currentQuestionType.startsWith('WRITING') ? (
-              <Pencil className="w-3 h-3" />
-            ) : (
-              <AlignLeft className="w-3 h-3" />
-            )}
-            {currentQuestionType.startsWith('WRITING')
-              ? labels.writingMode || 'Writing'
-              : labels.multipleChoice || 'Multiple Choice'}
-          </div>
+        <MobileQuestionCard
+          currentQuestionType={currentQuestionType}
+          prompt={prompt}
+          currentItem={currentItem}
+          labels={labels}
+          speakTTS={speakTTS}
+        />
 
-          <h2
-            className={cn(
-              'font-black text-foreground text-center leading-tight',
-              prompt && prompt.length > 20 ? 'text-2xl' : 'text-4xl'
-            )}
-          >
-            {prompt}
-          </h2>
-          {currentQuestionType.includes('K_TO_N') && (
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={() => speakTTS(prompt || '')}
-              className="mt-4 p-3 rounded-full bg-muted text-indigo-600 active:scale-95 transition-transform"
-            >
-              <Volume2 className="w-6 h-6" />
-            </Button>
-          )}
-          {currentItem.pos && (
-            <span className="mt-4 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-bold uppercase">
-              {currentItem.pos}
-            </span>
-          )}
-        </div>
-
-        {/* Interact Area */}
         <div className="flex-1">
-          {currentQuestionType.startsWith('CHOICE') ? (
-            <div className="grid grid-cols-1 gap-3">
-              {choices.map((choice, idx) => {
-                const isSelected = selectedAnswer === choice;
-                const isCorrectChoice = choice === correctAnswer;
-                const reveal = showFeedback;
-
-                let variantClass = 'bg-card border-border text-muted-foreground hover:bg-muted';
-                if (reveal) {
-                  if (isCorrectChoice)
-                    variantClass = 'bg-emerald-100 border-emerald-500 text-emerald-700 shadow-none';
-                  else if (isSelected)
-                    variantClass = 'bg-red-100 border-red-500 text-red-700 shadow-none';
-                  else variantClass = 'opacity-50 bg-muted border-border';
-                } else if (isSelected) {
-                  variantClass =
-                    'bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-200';
-                }
-
-                return (
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    key={idx}
-                    disabled={reveal}
-                    onClick={() => setSelectedAnswer(choice)}
-                    className={cn(
-                      'w-full p-4 rounded-xl border-2 text-left font-bold text-lg transition-all active:scale-[0.98] shadow-sm flex items-center justify-between',
-                      variantClass
-                    )}
-                  >
-                    <span>{choice}</span>
-                    {reveal && isCorrectChoice && <Check className="w-5 h-5 text-emerald-600" />}
-                    {reveal && isSelected && !isCorrectChoice && (
-                      <X className="w-5 h-5 text-red-600" />
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Input
-                autoFocus
-                value={userInput}
-                onChange={e => setUserInput(e.target.value)}
-                className="h-16 text-xl rounded-xl border-2 border-border bg-card focus:border-indigo-500 font-bold text-center"
-                placeholder="Type answer..."
-                disabled={showFeedback}
-              />
-            </div>
-          )}
+          <MobileInteractionArea
+            currentQuestionType={currentQuestionType}
+            choices={choices}
+            selectedAnswer={selectedAnswer}
+            correctAnswer={correctAnswer}
+            showFeedback={showFeedback}
+            setSelectedAnswer={setSelectedAnswer}
+            userInput={userInput}
+            setUserInput={setUserInput}
+          />
         </div>
       </div>
 
       {/* Footer Action */}
       <div className="p-4 bg-card border-t border-border sticky bottom-0 z-20">
-        {!showFeedback ? (
-          <Button
-            size="lg"
-            className="w-full h-14 text-lg font-bold rounded-xl shadow-lg shadow-indigo-200"
-            onClick={() => {
-              if (currentQuestionType.startsWith('WRITING') && !userInput.trim()) return;
-              if (currentQuestionType.startsWith('CHOICE') && !selectedAnswer) return;
-              checkAnswer();
-            }}
-            disabled={
-              currentQuestionType.startsWith('CHOICE') ? !selectedAnswer : !userInput.trim()
-            }
-          >
-            {labels.checkAnswer || 'Check Answer'}
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            className={cn(
-              'w-full h-14 text-lg font-bold rounded-xl shadow-lg',
-              isCorrect
-                ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'
-                : 'bg-primary hover:bg-muted shadow-slate-200'
-            )}
-            onClick={handleNext}
-          >
-            {learnIndex < learnQueue.length - 1 ? (
-              <span className="flex items-center gap-2">
-                {labels.next || 'Next'} <ArrowRight className="w-5 h-5" />
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                {labels.finish || 'Finish'} <ArrowRight className="w-5 h-5" />
-              </span>
-            )}
-          </Button>
-        )}
+        <MobileFooterAction
+          showFeedback={showFeedback}
+          currentQuestionType={currentQuestionType}
+          selectedAnswer={selectedAnswer}
+          userInput={userInput}
+          labels={labels}
+          checkAnswer={checkAnswer}
+          isCorrect={isCorrect}
+          handleNext={handleNext}
+          learnIndex={learnIndex}
+          total={learnQueue.length}
+        />
       </div>
 
       {/* Incorrect Sheet */}

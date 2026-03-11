@@ -151,7 +151,8 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     ],
     readAudioFailed: '\u8bfb\u53d6\u97f3\u9891\u5931\u8d25',
     missingAudioLink: '\u7f3a\u5c11\u97f3\u9891\u94fe\u63a5',
-    audioLinkTooLong: '\u97f3\u9891\u94fe\u63a5\u8fc7\u957f\uff0c\u65e0\u6cd5\u63d0\u4ea4\u8f6c\u5199\u8bf7\u6c42',
+    audioLinkTooLong:
+      '\u97f3\u9891\u94fe\u63a5\u8fc7\u957f\uff0c\u65e0\u6cd5\u63d0\u4ea4\u8f6c\u5199\u8bf7\u6c42',
     transcriptTimeout: '\u5b57\u5e55\u751f\u6210\u8d85\u65f6\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5',
     audioLinkTooLarge:
       '\u97f3\u9891\u94fe\u63a5\u8fc7\u5927\uff0c\u8f6c\u5199\u8bf7\u6c42\u88ab\u62e6\u622a\uff0c\u8bf7\u5148\u4e0a\u4f20\u97f3\u9891\u540e\u518d\u8bd5',
@@ -351,6 +352,364 @@ const AnalysisContent: React.FC<{
   );
 };
 
+const TranscriptLineRow: React.FC<{
+  line: TranscriptLine;
+  index: number;
+  activeLineIndex: number;
+  currentTime: number;
+  showTranslation: boolean;
+  noTranslationText: string;
+  onSeek: (time: number) => void;
+  onAnalyze: (line: TranscriptLine) => void;
+  formatTime: (seconds: number) => string;
+}> = ({
+  line,
+  index,
+  activeLineIndex,
+  currentTime,
+  showTranslation,
+  noTranslationText,
+  onSeek,
+  onAnalyze,
+  formatTime,
+}) => {
+  const isActive = index === activeLineIndex;
+  return (
+    <div
+      id={`line-${index}`}
+      className={`
+                                        group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
+                                        ${
+                                          isActive
+                                            ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
+                                            : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
+                                        }
+                                    `}
+    >
+      <div className="flex gap-4 items-start">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onSeek(line.start)}
+          className={`
+                                                flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
+                                                    : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
+                                                }
+                                            `}
+        >
+          {formatTime(line.start)}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0"
+          onClick={() => onSeek(line.start)}
+        >
+          <div className="flex w-full flex-col items-start space-y-2">
+            <div
+              className={`
+                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
+                                                    ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
+                                                `}
+            >
+              {line.words && line.words.length > 0 ? (
+                line.words.map((word, wordIndex) => {
+                  const isWordActive = currentTime >= word.start && currentTime < word.end;
+                  return (
+                    <span
+                      key={`${word.start}-${word.word}-${wordIndex}`}
+                      className={`
+                                                                        rounded px-0.5 transition-all duration-75
+                                                                        ${
+                                                                          isWordActive
+                                                                            ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
+                                                                            : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
+                                                                        }
+                                                                    `}
+                    >
+                      {word.word}
+                    </span>
+                  );
+                })
+              ) : (
+                <span>{line.text}</span>
+              )}
+            </div>
+
+            {showTranslation && (
+              <p
+                className={`
+                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
+                                                        ${
+                                                          isActive
+                                                            ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
+                                                            : 'text-muted-foreground border-border'
+                                                        }
+                                                    `}
+              >
+                {line.translation || (
+                  <span className="text-muted-foreground italic text-sm">{noTranslationText}</span>
+                )}
+              </p>
+            )}
+          </div>
+        </Button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={event => {
+                event.stopPropagation();
+                onAnalyze(line);
+              }}
+              aria-label="Analyze this sentence"
+              className={`
+                                                p-2 rounded-full transition-all flex-none
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
+                                                    : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
+                                                }
+                                                hover:scale-110 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-primary-foreground
+                                            `}
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">Analyze this sentence</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
+
+const TranscriptStreamBody: React.FC<{
+  showTranscriptLoader: boolean;
+  isGeneratingTranscript: boolean;
+  transcriptError: string | null;
+  transcriptLoading: boolean;
+  transcript: TranscriptLine[];
+  activeLineIndex: number;
+  currentTime: number;
+  showTranslation: boolean;
+  copy: UiCopy;
+  onRetry: () => void;
+  onSeek: (time: number) => void;
+  onAnalyze: (line: TranscriptLine) => void;
+  formatTime: (seconds: number) => string;
+}> = ({
+  showTranscriptLoader,
+  isGeneratingTranscript,
+  transcriptError,
+  transcriptLoading,
+  transcript,
+  activeLineIndex,
+  currentTime,
+  showTranslation,
+  copy,
+  onRetry,
+  onSeek,
+  onAnalyze,
+  formatTime,
+}) => (
+  <>
+    {showTranscriptLoader && (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-400/30 border-t-indigo-600 rounded-full animate-spin" />
+        <p className="text-muted-foreground font-medium animate-pulse">
+          {copy.generatingSmartSubtitle}
+        </p>
+        {isGeneratingTranscript && (
+          <Badge variant="secondary" className="text-xs shadow-sm">
+            {copy.firstGenerationHint}
+          </Badge>
+        )}
+      </div>
+    )}
+
+    {transcriptError && !transcriptLoading && (
+      <Card className="border border-destructive/30 p-6 text-center shadow-sm mx-4 mt-8">
+        <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-3 text-destructive">
+          <Volume2 className="w-6 h-6" />
+        </div>
+        <h3 className="text-muted-foreground font-bold mb-1">{copy.cannotLoadSubtitle}</h3>
+        <p className="text-sm text-muted-foreground mb-4">{transcriptError}</p>
+        <Button onClick={onRetry} size="default" className="px-6 py-2">
+          {copy.retry}
+        </Button>
+      </Card>
+    )}
+
+    {!transcriptLoading && !transcriptError && transcript.length === 0 && (
+      <Card className="text-center py-16 text-muted-foreground border-dashed">
+        <p>{copy.noSubtitleContent}</p>
+      </Card>
+    )}
+
+    {transcript.length > 0 &&
+      transcript.map((line, idx) => (
+        <TranscriptLineRow
+          key={`${line.start}-${line.text}-${idx}`}
+          line={line}
+          index={idx}
+          activeLineIndex={activeLineIndex}
+          currentTime={currentTime}
+          showTranslation={showTranslation}
+          noTranslationText={copy.noTranslation}
+          onSeek={onSeek}
+          onAnalyze={onAnalyze}
+          formatTime={formatTime}
+        />
+      ))}
+  </>
+);
+
+const PlayPauseIcon: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =>
+  isPlaying ? (
+    <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
+  ) : (
+    <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
+  );
+
+const PlaylistSheetBody: React.FC<{
+  playlist: PodcastEpisode[];
+  copy: UiCopy;
+  episode: PodcastEpisode;
+  channel: PodcastChannel;
+  onPlayEpisode: (episode: PodcastEpisode) => void;
+  formatTime: (seconds: number) => string;
+}> = ({ playlist, copy, episode, channel, onPlayEpisode, formatTime }) => {
+  if (playlist.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-40 text-muted-foreground space-y-2">
+        <ListMusic className="w-8 h-8 opacity-20" />
+        <p className="text-sm">{copy.noOtherEpisodes}</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      {playlist.map(item => {
+        const isCurrent =
+          item.guid === episode.guid ||
+          item.id === episode.id ||
+          item.audioUrl === episode.audioUrl;
+        return (
+          <Button
+            key={item.guid || item.id}
+            onClick={() => onPlayEpisode(item)}
+            variant="ghost"
+            size="auto"
+            className={`
+                                            w-full text-left p-3 rounded-xl transition-all border justify-start items-start
+                                            ${
+                                              isCurrent
+                                                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-100 dark:border-indigo-400/30 ring-1 ring-indigo-200 dark:ring-indigo-400/30'
+                                                : 'bg-card border-transparent hover:bg-muted hover:border-border'
+                                            }
+                                            font-normal
+                                        `}
+          >
+            <div className="flex gap-3">
+              <div className="relative flex-none w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                <img
+                  src={item.image || item.itunes?.image || channel.artworkUrl || channel.image}
+                  className="w-full h-full object-cover"
+                  alt=""
+                />
+                {isCurrent && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-card rounded-full animate-ping" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4
+                  className={`text-sm font-bold truncate mb-0.5 ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}
+                >
+                  {item.title}
+                </h4>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{item.pubDate ? new Date(item.pubDate).toLocaleDateString() : ''}</span>
+                  <span>•</span>
+                  <span>
+                    {formatTime(typeof item.duration === 'string' ? 0 : item.duration || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Button>
+        );
+      })}
+    </>
+  );
+};
+
+const AnalysisDialog: React.FC<{
+  analyzingLine: TranscriptLine | null;
+  showAnalysis: boolean;
+  analysisLoading: boolean;
+  analysisData: AnalysisData | null;
+  setShowAnalysis: React.Dispatch<React.SetStateAction<boolean>>;
+}> = ({ analyzingLine, showAnalysis, analysisLoading, analysisData, setShowAnalysis }) => {
+  if (!analyzingLine) return null;
+  return (
+    <Dialog open={showAnalysis} onOpenChange={open => !open && setShowAnalysis(false)}>
+      <DialogPortal>
+        <DialogOverlay
+          unstyled
+          forceMount
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+        />
+        <DialogContent
+          unstyled
+          forceMount
+          closeOnEscape={false}
+          lockBodyScroll={false}
+          className="fixed inset-0 z-[101] flex items-end md:items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
+        >
+          <div className="relative bg-card w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl pointer-events-auto transform transition-transform duration-300 md:max-h-[80vh] max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-start justify-between bg-muted/50">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 uppercase tracking-wide">
+                    AI Analysis
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-foreground leading-snug">
+                  {analyzingLine.text}
+                </h3>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAnalysis(false)}
+                className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-muted-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-8 bg-card flex-1">
+              <AnalysisContent loading={analysisLoading} data={analysisData} />
+            </div>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
+  );
+};
+
 interface PodcastEpisode {
   id?: string;
   guid?: string;
@@ -363,6 +722,99 @@ interface PodcastEpisode {
   pubDate?: string;
   duration?: number | string;
   description?: string;
+}
+
+type PodcastChannel = {
+  itunesId?: string;
+  id?: string;
+  title?: string;
+  author?: string;
+  feedUrl?: string;
+  artworkUrl?: string;
+  artwork?: string;
+  image?: string;
+};
+
+type HistoryRecord = {
+  episodeGuid: string;
+  episodeTitle: string;
+  channelName: string;
+  progress: number;
+  duration?: number;
+};
+
+type SubscriptionChannel = {
+  _id?: string;
+  id?: string;
+  itunesId?: string;
+  title?: string;
+  author?: string;
+  feedUrl?: string;
+  artworkUrl?: string;
+};
+
+function buildMockTranscript(copy: UiCopy): TranscriptLine[] {
+  return MOCK_TRANSCRIPT_BASE.map((line, index) => ({
+    ...line,
+    translation: copy.mockTranslations[index] || '',
+  }));
+}
+
+function buildEpisodeFromSearchParams(searchParams: URLSearchParams): PodcastEpisode {
+  const audioUrl = searchParams.get('audioUrl');
+  const title = searchParams.get('title');
+  const guid = searchParams.get('guid');
+  if (!audioUrl) {
+    return {
+      title: '',
+      audioUrl: '',
+      channelTitle: '',
+      channelArtwork: '',
+      guid: '',
+    };
+  }
+  return {
+    guid: guid || '',
+    title: title || 'Unknown Episode',
+    audioUrl: decodeURIComponent(audioUrl),
+    channelTitle: searchParams.get('channelTitle') || 'Unknown Channel',
+    channelArtwork: searchParams.get('channelArtwork') || '',
+  };
+}
+
+function resolveEpisodeFromState(state: unknown, searchParams: URLSearchParams): PodcastEpisode {
+  const stateEpisode = (state as { episode?: PodcastEpisode } | null)?.episode;
+  if (stateEpisode?.audioUrl) return stateEpisode;
+  return buildEpisodeFromSearchParams(searchParams);
+}
+
+function resolvePodcastChannel(state: unknown): PodcastChannel {
+  return (
+    (state as { channel?: PodcastChannel } | null)?.channel ??
+    (state as { episode?: { channel?: PodcastChannel } } | null)?.episode?.channel ??
+    {}
+  );
+}
+
+function getHistoryBaseRecord(
+  episodeKey: string,
+  episode: PodcastEpisode,
+  channel: PodcastChannel
+): {
+  episodeGuid: string;
+  episodeTitle: string;
+  episodeUrl: string;
+  channelName: string;
+  channelImage?: string;
+} {
+  return {
+    episodeGuid: episodeKey,
+    episodeTitle: episode.title || 'Unknown Episode',
+    episodeUrl: episode.audioUrl || '',
+    channelName: channel.title || episode.channelTitle || 'Unknown Channel',
+    channelImage:
+      channel.artworkUrl || channel.artwork || channel.image || episode.channelArtwork || undefined,
+  };
 }
 
 // CDN Domain for transcript cache
@@ -398,6 +850,332 @@ const MOCK_TRANSCRIPT_BASE: Omit<TranscriptLine, 'translation'>[] = [
   },
 ];
 
+function getTranscriptCacheKey(id: string, language: string) {
+  return `transcript_${id}_${language}`;
+}
+
+function loadTranscriptFromLocalCache(id: string, language: string): TranscriptLine[] | null {
+  const localCacheKey = getTranscriptCacheKey(id, language);
+  try {
+    const cachedData = localStorage.getItem(localCacheKey);
+    if (!cachedData) return null;
+    const parsed = JSON.parse(cachedData) as {
+      language?: string;
+      segments?: TranscriptLine[];
+    };
+    if (parsed.language && parsed.language !== language) return null;
+    if (!parsed.segments || parsed.segments.length === 0) return null;
+    const hasTranslation = parsed.segments.some(
+      segment => typeof segment.translation === 'string' && segment.translation.trim().length > 0
+    );
+    if (!hasTranslation && language) return null;
+    console.log('[Transcript] Loaded from localStorage (instant)');
+    return parsed.segments;
+  } catch {
+    return null;
+  }
+}
+
+function saveTranscriptToLocalCache(id: string, language: string, segments: TranscriptLine[]) {
+  if (!segments || segments.length === 0) return;
+  const localCacheKey = getTranscriptCacheKey(id, language);
+  try {
+    localStorage.setItem(
+      localCacheKey,
+      JSON.stringify({
+        segments,
+        language,
+        cachedAt: Date.now(),
+      })
+    );
+  } catch (storageError) {
+    logger.warn('Failed to cache transcript locally', storageError);
+  }
+}
+
+function shouldMarkTranscriptLoaded(segments: TranscriptLine[], targetLanguage: string) {
+  if (!targetLanguage) return true;
+  return segments.some(
+    segment => typeof segment.translation === 'string' && segment.translation.trim().length > 0
+  );
+}
+
+function shouldSkipTranscriptLoad(
+  force: boolean,
+  loadKey: string,
+  transcriptLoadKeyRef: React.MutableRefObject<string | null>,
+  transcriptLoadedKeyRef: React.MutableRefObject<string | null>
+) {
+  if (force) return false;
+  return transcriptLoadKeyRef.current === loadKey || transcriptLoadedKeyRef.current === loadKey;
+}
+
+function applyLoadedTranscript(args: {
+  segments: TranscriptLine[];
+  targetLanguage: string;
+  loadKey: string;
+  setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
+  setTranscriptLoading?: React.Dispatch<React.SetStateAction<boolean>>;
+  transcriptLoadedKeyRef: React.MutableRefObject<string | null>;
+}) {
+  const {
+    segments,
+    targetLanguage,
+    loadKey,
+    setTranscript,
+    setTranscriptLoading,
+    transcriptLoadedKeyRef,
+  } = args;
+  setTranscript(segments);
+  if (setTranscriptLoading) setTranscriptLoading(false);
+  if (shouldMarkTranscriptLoaded(segments, targetLanguage)) {
+    transcriptLoadedKeyRef.current = loadKey;
+  }
+}
+
+function getTranscriptErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Unknown error';
+}
+
+async function tryRecoverTranscriptConnectionError(args: {
+  message: string;
+  episodeId: string;
+  targetLanguage: string;
+  loadKey: string;
+  retryLoadTranscriptFromS3: (episodeId: string) => Promise<TranscriptLine[] | null>;
+  setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
+  setTranscriptLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsGeneratingTranscript: React.Dispatch<React.SetStateAction<boolean>>;
+  transcriptLoadedKeyRef: React.MutableRefObject<string | null>;
+  transcriptLoadKeyRef: React.MutableRefObject<string | null>;
+}) {
+  const {
+    message,
+    episodeId,
+    targetLanguage,
+    loadKey,
+    retryLoadTranscriptFromS3,
+    setTranscript,
+    setTranscriptLoading,
+    setIsGeneratingTranscript,
+    transcriptLoadedKeyRef,
+    transcriptLoadKeyRef,
+  } = args;
+  if (!message.includes('Connection lost while action was in flight')) {
+    return false;
+  }
+  const s3Fallback = await retryLoadTranscriptFromS3(episodeId);
+  if (!s3Fallback) return false;
+  applyLoadedTranscript({
+    segments: s3Fallback,
+    targetLanguage,
+    loadKey,
+    setTranscript,
+    setTranscriptLoading,
+    transcriptLoadedKeyRef,
+  });
+  saveTranscriptToLocalCache(episodeId, targetLanguage, s3Fallback);
+  setIsGeneratingTranscript(false);
+  transcriptLoadKeyRef.current = null;
+  return true;
+}
+
+function validateTranscriptAudioUrl(transcriptAudioUrl: string, copy: UiCopy) {
+  if (!transcriptAudioUrl) {
+    throw new Error(copy.missingAudioLink);
+  }
+  if (transcriptAudioUrl.length > MAX_SAFE_URL_LENGTH) {
+    throw new Error(copy.audioLinkTooLong);
+  }
+}
+
+function getTranscriptKickoffError(
+  kickoff: { success?: boolean; error?: string } | null | undefined
+) {
+  if (kickoff?.success) return null;
+  return kickoff?.error || 'Failed to start transcription';
+}
+
+async function handleTranscriptLoadFailure(args: {
+  error: unknown;
+  episodeId: string;
+  targetLanguage: string;
+  loadKey: string;
+  retryLoadTranscriptFromS3: (episodeId: string) => Promise<TranscriptLine[] | null>;
+  setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
+  setTranscriptLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsGeneratingTranscript: React.Dispatch<React.SetStateAction<boolean>>;
+  setTranscriptError: React.Dispatch<React.SetStateAction<string | null>>;
+  transcriptLoadedKeyRef: React.MutableRefObject<string | null>;
+  transcriptLoadKeyRef: React.MutableRefObject<string | null>;
+  copy: UiCopy;
+  mockTranscript: TranscriptLine[];
+}) {
+  const {
+    error,
+    episodeId,
+    targetLanguage,
+    loadKey,
+    retryLoadTranscriptFromS3,
+    setTranscript,
+    setTranscriptLoading,
+    setIsGeneratingTranscript,
+    setTranscriptError,
+    transcriptLoadedKeyRef,
+    transcriptLoadKeyRef,
+    copy,
+    mockTranscript,
+  } = args;
+  const message = getTranscriptErrorMessage(error);
+  const recovered = await tryRecoverTranscriptConnectionError({
+    message,
+    episodeId,
+    targetLanguage,
+    loadKey,
+    retryLoadTranscriptFromS3,
+    setTranscript,
+    setTranscriptLoading,
+    setIsGeneratingTranscript,
+    transcriptLoadedKeyRef,
+    transcriptLoadKeyRef,
+  });
+  if (recovered) return;
+
+  if (message.includes('Maximum content size')) {
+    setTranscript([]);
+    setTranscriptError(copy.audioLinkTooLarge);
+    setTranscriptLoading(false);
+    setIsGeneratingTranscript(false);
+    return;
+  }
+  if (import.meta.env.DEV) {
+    setTranscript(mockTranscript);
+    setTranscriptError(`${copy.failedPrefix}: ${message}`);
+    return;
+  }
+  setTranscript([]);
+  setTranscriptError(copy.transcriptUnavailable);
+}
+
+function formatPlaybackTime(seconds: number) {
+  if (!seconds) return '00:00';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+function buildEpisodeHash(episode: Pick<PodcastEpisode, 'title' | 'audioUrl'>) {
+  let hash = 0;
+  const text = `${episode.title}-${episode.audioUrl}`;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash << 5) - hash + text.codePointAt(index)!;
+    hash = Math.trunc(hash);
+  }
+  return `ep_${Math.abs(hash).toString(16)}`;
+}
+
+function getEpisodeIdForTranscript(episode: Pick<PodcastEpisode, 'guid' | 'title' | 'audioUrl'>) {
+  if (episode.guid) return encodeURIComponent(episode.guid);
+  return buildEpisodeHash(episode);
+}
+
+function getEpisodeKeyForHistory(episode: Pick<PodcastEpisode, 'guid' | 'title' | 'audioUrl'>) {
+  if (episode.guid) return episode.guid;
+  return buildEpisodeHash(episode);
+}
+
+async function loadTranscriptFromS3Cache(episodeId: string) {
+  if (!CDN_DOMAIN) return null;
+  try {
+    const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
+    const response = await fetch(s3Url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.segments || data;
+  } catch {
+    return null;
+  }
+}
+
+const waitMilliseconds = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function waitForTranscriptFromS3WithDelays(episodeId: string, delays: number[]) {
+  if (!CDN_DOMAIN) return null;
+  for (const delay of delays) {
+    await waitMilliseconds(delay);
+    const data = await loadTranscriptFromS3Cache(episodeId);
+    if (data && Array.isArray(data) && data.length > 0) {
+      return data as TranscriptLine[];
+    }
+  }
+  return null;
+}
+
+function inferAudioExtensionFromType(contentType: string) {
+  if (contentType.includes('wav')) return 'wav';
+  if (contentType.includes('ogg')) return 'ogg';
+  if (contentType.includes('webm')) return 'webm';
+  if (contentType.includes('m4a')) return 'm4a';
+  if (contentType.includes('mp4')) return 'mp4';
+  return 'mp3';
+}
+
+async function resolveTranscriptAudioUrlWithUpload(args: {
+  rawUrl: string;
+  episodeId: string;
+  readAudioFailedText: string;
+  uploadFile: (file: File, folder?: string) => Promise<{ url: string }>;
+}) {
+  const { rawUrl, episodeId, readAudioFailedText, uploadFile } = args;
+  if (!rawUrl) return '';
+  const cacheKey = `transcript_audio_url_${episodeId}`;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return cached;
+  } catch {
+    /* ignore cache errors */
+  }
+
+  const isHttp = /^https?:\/\//i.test(rawUrl);
+  const isBlob = rawUrl.startsWith('blob:');
+  const isData = rawUrl.startsWith('data:');
+  const looksLikeBase64 = !isHttp && !isBlob && !isData && rawUrl.length > 10000;
+  const urlTooLong = rawUrl.length > MAX_SAFE_URL_LENGTH;
+  const shouldUpload = isBlob || isData || looksLikeBase64 || urlTooLong;
+  if (!shouldUpload) {
+    return rawUrl;
+  }
+
+  let blob: Blob;
+  if (isBlob || isData) {
+    const response = await fetch(rawUrl);
+    if (!response.ok) {
+      throw new Error(readAudioFailedText);
+    }
+    blob = await response.blob();
+  } else {
+    const binary = atob(rawUrl);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    blob = new Blob([bytes], { type: 'audio/mpeg' });
+  }
+
+  const extension = inferAudioExtensionFromType(blob.type || 'audio/mpeg');
+  const file = new File([blob], `${episodeId}.${extension}`, {
+    type: blob.type || 'audio/mpeg',
+  });
+  const { url } = await uploadFile(file, 'podcasts');
+  try {
+    localStorage.setItem(cacheKey, url);
+  } catch {
+    /* ignore cache errors */
+  }
+  return url;
+}
+
 const PodcastPlayerPage: React.FC = () => {
   const { state } = useLocation();
   const navigate = useLocalizedNavigate();
@@ -406,61 +1184,15 @@ const PodcastPlayerPage: React.FC = () => {
   const uiLang: UiLang = language;
   const copy = UI_COPY[uiLang];
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
-  const mockTranscript = useMemo(
-    () =>
-      MOCK_TRANSCRIPT_BASE.map((line, idx) => ({
-        ...line,
-        translation: copy.mockTranslations[idx] || '',
-      })),
-    [copy.mockTranslations]
-  );
-
-  const getEpisodeFromUrl = useCallback(() => {
-    // Try to reconstruct from URL params
-    const audioUrl = searchParams.get('audioUrl');
-    const title = searchParams.get('title');
-    const guid = searchParams.get('guid');
-
-    if (audioUrl) {
-      return {
-        guid: guid || '',
-        title: title || 'Unknown Episode',
-        audioUrl: decodeURIComponent(audioUrl),
-        channelTitle: searchParams.get('channelTitle') || 'Unknown Channel',
-        channelArtwork: searchParams.get('channelArtwork') || '',
-      };
-    }
-
-    return {
-      title: '',
-      audioUrl: '',
-      channelTitle: '',
-      channelArtwork: '',
-      guid: '',
-    };
-  }, [searchParams]);
+  const mockTranscript = useMemo(() => buildMockTranscript(copy), [copy]);
 
   // 🔥 FIX: Support URL params for page refresh
   // Priority: state > URL params > fallback
-  const episode: PodcastEpisode = useMemo(() => {
-    if (state?.episode?.audioUrl) return state.episode;
-    return getEpisodeFromUrl();
-  }, [state, getEpisodeFromUrl]);
-
-  type PodcastChannel = {
-    itunesId?: string;
-    id?: string;
-    title?: string;
-    author?: string;
-    feedUrl?: string;
-    artworkUrl?: string;
-    artwork?: string;
-    image?: string;
-  };
-  const channel: PodcastChannel =
-    (state as { channel?: PodcastChannel } | null)?.channel ??
-    (state as { episode?: { channel?: PodcastChannel } } | null)?.episode?.channel ??
-    {};
+  const episode: PodcastEpisode = useMemo(
+    () => resolveEpisodeFromState(state, searchParams),
+    [state, searchParams]
+  );
+  const channel = useMemo(() => resolvePodcastChannel(state), [state]);
 
   useEffect(() => {
     if (!episode.audioUrl) {
@@ -562,24 +1294,8 @@ const PodcastPlayerPage: React.FC = () => {
     episodeId?: string;
   };
   const recordHistory = useMutation(mRef<RecordHistoryArgs, unknown>('podcasts:recordHistory'));
-  type HistoryRecord = {
-    episodeGuid: string;
-    episodeTitle: string;
-    channelName: string;
-    progress: number;
-    duration?: number;
-  };
   const historyData = useQuery(qRef<NoArgs, HistoryRecord[]>('podcasts:getHistory'));
   const history = useMemo(() => historyData ?? [], [historyData]);
-  type SubscriptionChannel = {
-    _id?: string;
-    id?: string;
-    itunesId?: string;
-    title?: string;
-    author?: string;
-    feedUrl?: string;
-    artworkUrl?: string;
-  };
   const subscriptionsData = useQuery(
     qRef<NoArgs, SubscriptionChannel[]>('podcasts:getSubscriptions')
   );
@@ -602,165 +1318,34 @@ const PodcastPlayerPage: React.FC = () => {
   const { uploadFile } = useFileUpload();
 
   // --- Helpers ---
-  const formatTime = (seconds: number) => {
-    if (!seconds) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-  const getEpisodeId = useCallback(() => {
-    if (episode.guid) return encodeURIComponent(episode.guid);
-    let hash = 0;
-    const str = `${episode.title}-${episode.audioUrl}`;
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.codePointAt(i)!;
-      hash = Math.trunc(hash);
-    }
-    return `ep_${Math.abs(hash).toString(16)}`;
-  }, [episode.guid, episode.title, episode.audioUrl]);
-  const getEpisodeKey = useCallback(() => {
-    if (episode.guid) return episode.guid;
-    let hash = 0;
-    const str = `${episode.title}-${episode.audioUrl}`;
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.codePointAt(i)!;
-      hash = Math.trunc(hash);
-    }
-    return `ep_${Math.abs(hash).toString(16)}`;
-  }, [episode.guid, episode.title, episode.audioUrl]);
+  const formatTime = formatPlaybackTime;
+  const getEpisodeId = useCallback(() => getEpisodeIdForTranscript(episode), [episode]);
+  const getEpisodeKey = useCallback(() => getEpisodeKeyForHistory(episode), [episode]);
   const episodeKey = useMemo(() => getEpisodeKey(), [getEpisodeKey]);
   const historyBase = useMemo(
-    () => ({
-      episodeGuid: episodeKey,
-      episodeTitle: episode.title || 'Unknown Episode',
-      episodeUrl: episode.audioUrl || '',
-      channelName: channel.title || episode.channelTitle || 'Unknown Channel',
-      channelImage:
-        channel.artworkUrl ||
-        channel.artwork ||
-        channel.image ||
-        episode.channelArtwork ||
-        undefined,
-    }),
-    [
-      episodeKey,
-      episode.title,
-      episode.audioUrl,
-      channel.title,
-      channel.artworkUrl,
-      channel.artwork,
-      channel.image,
-      episode.channelTitle,
-      episode.channelArtwork,
-    ]
+    () => getHistoryBaseRecord(episodeKey, episode, channel),
+    [episodeKey, episode, channel]
   );
 
-  const loadTranscriptFromS3 = async (episodeId: string) => {
-    if (!CDN_DOMAIN) return null;
-    try {
-      const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
-      const s3Res = await fetch(s3Url);
-      if (s3Res.ok) {
-        const data = await s3Res.json();
-        return data.segments || data;
-      }
-    } catch {
-      /* Fallback to API */
-    }
-    return null;
-  };
+  const retryLoadTranscriptFromS3 = useCallback(
+    async (episodeId: string) => waitForTranscriptFromS3WithDelays(episodeId, [4000, 6000, 8000]),
+    []
+  );
 
-  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const retryLoadTranscriptFromS3 = useCallback(async (episodeId: string) => {
-    if (!CDN_DOMAIN) return null;
-    const delays = [4000, 6000, 8000];
-    for (const delay of delays) {
-      await wait(delay);
-      const data = await loadTranscriptFromS3(episodeId);
-      if (data && Array.isArray(data) && data.length > 0) {
-        return data;
-      }
-    }
-    return null;
-  }, []);
-
-  const waitForTranscriptFromS3 = useCallback(async (episodeId: string) => {
-    if (!CDN_DOMAIN) return null;
-    const delays = [5000, 5000, 10000, 10000, 15000, 15000, 20000];
-    for (const delay of delays) {
-      await wait(delay);
-      const data = await loadTranscriptFromS3(episodeId);
-      if (data && Array.isArray(data) && data.length > 0) {
-        return data;
-      }
-    }
-    return null;
-  }, []);
-
-  const inferAudioExtension = (contentType: string) => {
-    if (contentType.includes('wav')) return 'wav';
-    if (contentType.includes('ogg')) return 'ogg';
-    if (contentType.includes('webm')) return 'webm';
-    if (contentType.includes('m4a')) return 'm4a';
-    if (contentType.includes('mp4')) return 'mp4';
-    return 'mp3';
-  };
+  const waitForTranscriptFromS3 = useCallback(
+    async (episodeId: string) =>
+      waitForTranscriptFromS3WithDelays(episodeId, [5000, 5000, 10000, 10000, 15000, 15000, 20000]),
+    []
+  );
 
   const resolveTranscriptAudioUrl = useCallback(
     async (rawUrl: string, episodeId: string) => {
-      if (!rawUrl) return '';
-
-      const cacheKey = `transcript_audio_url_${episodeId}`;
-      try {
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) return cached;
-      } catch {
-        /* ignore cache errors */
-      }
-
-      const isHttp = /^https?:\/\//i.test(rawUrl);
-      const isBlob = rawUrl.startsWith('blob:');
-      const isData = rawUrl.startsWith('data:');
-      const looksLikeBase64 = !isHttp && !isBlob && !isData && rawUrl.length > 10000;
-      const urlTooLong = rawUrl.length > MAX_SAFE_URL_LENGTH;
-      const shouldUpload = isBlob || isData || looksLikeBase64 || urlTooLong;
-
-      if (!shouldUpload) {
-        return rawUrl;
-      }
-
-      let blob: Blob;
-      if (isBlob || isData) {
-        const res = await fetch(rawUrl);
-        if (!res.ok) {
-          throw new Error(copy.readAudioFailed);
-        }
-        blob = await res.blob();
-      } else {
-        // Raw base64 fallback
-        const binary = atob(rawUrl);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i += 1) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-        blob = new Blob([bytes], { type: 'audio/mpeg' });
-      }
-
-      const ext = inferAudioExtension(blob.type || 'audio/mpeg');
-      const file = new File([blob], `${episodeId}.${ext}`, {
-        type: blob.type || 'audio/mpeg',
+      return resolveTranscriptAudioUrlWithUpload({
+        rawUrl,
+        episodeId,
+        readAudioFailedText: copy.readAudioFailed,
+        uploadFile,
       });
-
-      const { url } = await uploadFile(file, 'podcasts');
-
-      try {
-        localStorage.setItem(cacheKey, url);
-      } catch {
-        /* ignore cache errors */
-      }
-
-      return url;
     },
     [copy.readAudioFailed, uploadFile]
   );
@@ -780,81 +1365,25 @@ const PodcastPlayerPage: React.FC = () => {
       const episodeId = getEpisodeId();
       const targetLanguage = language;
       const loadKey = `${episodeId}:${targetLanguage}`;
-
-      const getTranscriptCacheKey = (id: string, lang: string) => `transcript_${id}_${lang}`;
-
-      const loadTranscriptFromLocal = (id: string, lang: string) => {
-        const localCacheKey = getTranscriptCacheKey(id, lang);
-        try {
-          const cachedData = localStorage.getItem(localCacheKey);
-          if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            if (parsed.language && parsed.language !== lang) {
-              return null;
-            }
-            if (parsed.segments && parsed.segments.length > 0) {
-              const hasTranslation = parsed.segments.some(
-                (seg: TranscriptLine) =>
-                  typeof seg.translation === 'string' && seg.translation.trim().length > 0
-              );
-              if (!hasTranslation && lang) {
-                return null;
-              }
-              console.log('[Transcript] Loaded from localStorage (instant)');
-              return parsed.segments;
-            }
-          }
-        } catch {
-          /* localStorage error */
-        }
-        return null;
-      };
-
-      const saveTranscriptToLocal = (id: string, lang: string, segments: TranscriptLine[]) => {
-        if (!segments || segments.length === 0) return;
-        const localCacheKey = getTranscriptCacheKey(id, lang);
-        try {
-          localStorage.setItem(
-            localCacheKey,
-            JSON.stringify({
-              segments,
-              language: lang,
-              cachedAt: Date.now(),
-            })
-          );
-        } catch (storageError) {
-          logger.warn('Failed to cache transcript locally', storageError);
-        }
-      };
-
-      if (!force) {
-        if (transcriptLoadKeyRef.current === loadKey) {
-          return;
-        }
-        if (transcriptLoadedKeyRef.current === loadKey) {
-          return;
-        }
+      if (shouldSkipTranscriptLoad(force, loadKey, transcriptLoadKeyRef, transcriptLoadedKeyRef)) {
+        return;
       }
 
       transcriptLoadKeyRef.current = loadKey;
       setTranscriptLoading(true);
       setTranscriptError(null);
 
-      const shouldMarkLoaded = (segments: TranscriptLine[]) => {
-        if (!targetLanguage) return true;
-        return segments.some(
-          seg => typeof seg.translation === 'string' && seg.translation.trim().length > 0
-        );
-      };
-
       // Step 0: Check localStorage
-      const localData = loadTranscriptFromLocal(episodeId, targetLanguage);
+      const localData = loadTranscriptFromLocalCache(episodeId, targetLanguage);
       if (localData) {
-        setTranscript(localData);
-        setTranscriptLoading(false);
-        if (shouldMarkLoaded(localData)) {
-          transcriptLoadedKeyRef.current = loadKey;
-        }
+        applyLoadedTranscript({
+          segments: localData,
+          targetLanguage,
+          loadKey,
+          setTranscript,
+          setTranscriptLoading,
+          transcriptLoadedKeyRef,
+        });
         transcriptLoadKeyRef.current = null;
         return;
       }
@@ -869,12 +1398,15 @@ const PodcastPlayerPage: React.FC = () => {
             if (s3Res.ok) {
               const data = await s3Res.json();
               const segments = data.segments || data;
-              setTranscript(segments);
-              setTranscriptLoading(false);
+              applyLoadedTranscript({
+                segments,
+                targetLanguage,
+                loadKey,
+                setTranscript,
+                setTranscriptLoading,
+                transcriptLoadedKeyRef,
+              });
               prefilledFromS3 = true;
-              if (shouldMarkLoaded(segments)) {
-                transcriptLoadedKeyRef.current = loadKey;
-              }
             }
           } catch {
             /* Ignore S3 error */
@@ -884,12 +1416,15 @@ const PodcastPlayerPage: React.FC = () => {
         // Step 1.5: Convex DB fallback (if CDN missing)
         const dbResult = await getTranscript({ episodeId, language: targetLanguage });
         if (dbResult?.segments && dbResult.segments.length > 0) {
-          setTranscript(dbResult.segments);
-          saveTranscriptToLocal(episodeId, targetLanguage, dbResult.segments);
-          setTranscriptLoading(false);
-          if (shouldMarkLoaded(dbResult.segments)) {
-            transcriptLoadedKeyRef.current = loadKey;
-          }
+          applyLoadedTranscript({
+            segments: dbResult.segments,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            setTranscriptLoading,
+            transcriptLoadedKeyRef,
+          });
+          saveTranscriptToLocalCache(episodeId, targetLanguage, dbResult.segments);
           return;
         }
 
@@ -897,76 +1432,59 @@ const PodcastPlayerPage: React.FC = () => {
         setIsGeneratingTranscript(true);
 
         const transcriptAudioUrl = await resolveTranscriptAudioUrl(episode.audioUrl, episodeId);
-        if (!transcriptAudioUrl) {
-          throw new Error(copy.missingAudioLink);
-        }
-        if (transcriptAudioUrl.length > MAX_SAFE_URL_LENGTH) {
-          throw new Error(copy.audioLinkTooLong);
-        }
+        validateTranscriptAudioUrl(transcriptAudioUrl, copy);
 
         const kickoff = await requestTranscript({
           audioUrl: transcriptAudioUrl,
           episodeId,
           language: targetLanguage,
         });
-
-        if (!kickoff?.success) {
-          const errorMsg = kickoff?.error || 'Failed to start transcription';
-          throw new Error(errorMsg);
-        }
+        const kickoffError = getTranscriptKickoffError(kickoff);
+        if (kickoffError) throw new Error(kickoffError);
 
         const s3Ready = await waitForTranscriptFromS3(episodeId);
         if (s3Ready && !prefilledFromS3) {
-          setTranscript(s3Ready);
-          setTranscriptLoading(false);
+          applyLoadedTranscript({
+            segments: s3Ready,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            setTranscriptLoading,
+            transcriptLoadedKeyRef,
+          });
           prefilledFromS3 = true;
-          if (shouldMarkLoaded(s3Ready)) {
-            transcriptLoadedKeyRef.current = loadKey;
-          }
         }
 
         const dbFallback = await getTranscript({ episodeId, language: targetLanguage });
         if (dbFallback?.segments && dbFallback.segments.length > 0) {
-          setTranscript(dbFallback.segments);
-          saveTranscriptToLocal(episodeId, targetLanguage, dbFallback.segments);
-          if (shouldMarkLoaded(dbFallback.segments)) {
-            transcriptLoadedKeyRef.current = loadKey;
-          }
+          applyLoadedTranscript({
+            segments: dbFallback.segments,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            transcriptLoadedKeyRef,
+          });
+          saveTranscriptToLocalCache(episodeId, targetLanguage, dbFallback.segments);
         } else if (!s3Ready) {
           throw new Error(copy.transcriptTimeout);
         }
       } catch (err) {
         console.error('Transcript failed:', err);
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        if (
-          typeof message === 'string' &&
-          message.includes('Connection lost while action was in flight')
-        ) {
-          const s3Fallback = await retryLoadTranscriptFromS3(episodeId);
-          if (s3Fallback) {
-            setTranscript(s3Fallback);
-            saveTranscriptToLocal(episodeId, targetLanguage, s3Fallback);
-            setTranscriptLoading(false);
-            setIsGeneratingTranscript(false);
-            transcriptLoadedKeyRef.current = loadKey;
-            transcriptLoadKeyRef.current = null;
-            return;
-          }
-        }
-        if (typeof message === 'string' && message.includes('Maximum content size')) {
-          setTranscript([]);
-          setTranscriptError(copy.audioLinkTooLarge);
-          setTranscriptLoading(false);
-          setIsGeneratingTranscript(false);
-          return;
-        }
-        if (import.meta.env.DEV) {
-          setTranscript(mockTranscript);
-          setTranscriptError(`${copy.failedPrefix}: ${message}`);
-        } else {
-          setTranscript([]);
-          setTranscriptError(copy.transcriptUnavailable);
-        }
+        await handleTranscriptLoadFailure({
+          error: err,
+          episodeId,
+          targetLanguage,
+          loadKey,
+          retryLoadTranscriptFromS3,
+          setTranscript,
+          setTranscriptLoading,
+          setIsGeneratingTranscript,
+          setTranscriptError,
+          transcriptLoadedKeyRef,
+          transcriptLoadKeyRef,
+          copy,
+          mockTranscript,
+        });
       } finally {
         setTranscriptLoading(false);
         setIsGeneratingTranscript(false);
@@ -974,12 +1492,7 @@ const PodcastPlayerPage: React.FC = () => {
       }
     },
     [
-      copy.audioLinkTooLarge,
-      copy.audioLinkTooLong,
-      copy.failedPrefix,
-      copy.missingAudioLink,
-      copy.transcriptTimeout,
-      copy.transcriptUnavailable,
+      copy,
       episode.audioUrl,
       requestTranscript,
       getTranscript,
@@ -1350,134 +1863,6 @@ const PodcastPlayerPage: React.FC = () => {
     });
   };
 
-  const renderTranscriptLine = (line: TranscriptLine, idx: number) => {
-    const isActive = idx === activeLineIndex;
-
-    return (
-      <div
-        key={`${line.start}-${line.text}-${idx}`}
-        id={`line-${idx}`}
-        className={`
-                                        group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
-                                        ${
-                                          isActive
-                                            ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
-                                            : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
-                                        }
-                                    `}
-      >
-        <div className="flex gap-4 items-start">
-          {/* Timestamp Bubble */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => seekTo(line.start)}
-            className={`
-                                                flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
-                                                ${
-                                                  isActive
-                                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
-                                                    : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
-                                                }
-                                            `}
-          >
-            {formatTime(line.start)}
-          </Button>
-
-          {/* Content */}
-          <Button
-            type="button"
-            variant="ghost"
-            className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0"
-            onClick={() => seekTo(line.start)}
-          >
-            <div className="flex w-full flex-col items-start space-y-2">
-              {/* Text Content with Karaoke Support */}
-              <div
-                className={`
-                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
-                                                    ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
-                                                `}
-              >
-                {line.words && line.words.length > 0 ? (
-                  line.words.map((w, i) => {
-                    const isWordActive = currentTime >= w.start && currentTime < w.end;
-                    return (
-                      <span
-                        key={`${w.start}-${w.word}-${i}`}
-                        className={`
-                                                                        rounded px-0.5 transition-all duration-75
-                                                                        ${
-                                                                          isWordActive
-                                                                            ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
-                                                                            : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
-                                                                        }
-                                                                    `}
-                      >
-                        {w.word}
-                      </span>
-                    );
-                  })
-                ) : (
-                  <span>{line.text}</span>
-                )}
-              </div>
-
-              {/* Translation */}
-              {showTranslation && (
-                <p
-                  className={`
-                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
-                                                        ${
-                                                          isActive
-                                                            ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
-                                                            : 'text-muted-foreground border-border'
-                                                        }
-                                                    `}
-                >
-                  {line.translation || (
-                    <span className="text-muted-foreground italic text-sm">{copy.noTranslation}</span>
-                  )}
-                </p>
-              )}
-            </div>
-          </Button>
-
-          {/* Analyze Button (Visible on Hover/Active) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={e => {
-                  e.stopPropagation();
-                  analyze(line);
-                }}
-                aria-label="Analyze this sentence"
-                className={`
-                                                p-2 rounded-full transition-all flex-none
-                                                ${
-                                                  isActive
-                                                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
-                                                    : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
-                                                }
-                                                hover:scale-110 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-primary-foreground
-                                            `}
-              >
-                <Sparkles className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent side="top">Analyze this sentence</TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-muted text-foreground overflow-hidden font-sans">
       {/* Header - Fixed on Mobile, Part of layout on Desktop */}
@@ -1567,7 +1952,9 @@ const PodcastPlayerPage: React.FC = () => {
                     <Languages className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold text-muted-foreground">{copy.translationSubtitle}</p>
+                    <p className="text-sm font-bold text-muted-foreground">
+                      {copy.translationSubtitle}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
                     </p>
@@ -1675,49 +2062,21 @@ const PodcastPlayerPage: React.FC = () => {
           </div>
 
           <div className="max-w-3xl mx-auto p-4 md:p-8 lg:p-12 space-y-2">
-            {/* Loading State */}
-            {showTranscriptLoader && (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-                <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-400/30 border-t-indigo-600 rounded-full animate-spin" />
-                <p className="text-muted-foreground font-medium animate-pulse">
-                  {copy.generatingSmartSubtitle}
-                </p>
-                {isGeneratingTranscript && (
-                  <Badge variant="secondary" className="text-xs shadow-sm">
-                    {copy.firstGenerationHint}
-                  </Badge>
-                )}
-              </div>
-            )}
-
-            {/* Error State */}
-            {transcriptError && !transcriptLoading && (
-              <Card className="border border-destructive/30 p-6 text-center shadow-sm mx-4 mt-8">
-                <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-3 text-destructive">
-                  <Volume2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-muted-foreground font-bold mb-1">{copy.cannotLoadSubtitle}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{transcriptError}</p>
-                <Button
-                  onClick={() => loadTranscriptChunked(true)}
-                  size="default"
-                  className="px-6 py-2"
-                >
-                  {copy.retry}
-                </Button>
-              </Card>
-            )}
-
-            {/* Empty State */}
-            {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-              <Card className="text-center py-16 text-muted-foreground border-dashed">
-                <p>{copy.noSubtitleContent}</p>
-              </Card>
-            )}
-
-            {/* Transcript List */}
-            {transcript.length > 0 &&
-              transcript.map((line, idx) => renderTranscriptLine(line, idx))}
+            <TranscriptStreamBody
+              showTranscriptLoader={showTranscriptLoader}
+              isGeneratingTranscript={isGeneratingTranscript}
+              transcriptError={transcriptError}
+              transcriptLoading={transcriptLoading}
+              transcript={transcript}
+              activeLineIndex={activeLineIndex}
+              currentTime={currentTime}
+              showTranslation={showTranslation}
+              copy={copy}
+              onRetry={() => loadTranscriptChunked(true)}
+              onSeek={seekTo}
+              onAnalyze={analyze}
+              formatTime={formatTime}
+            />
 
             {/* Player Bar (Aligned with Transcript Width) */}
             <div className="sticky bottom-4 z-30 pt-6">
@@ -1795,11 +2154,7 @@ const PodcastPlayerPage: React.FC = () => {
                       onClick={togglePlay}
                       className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100 dark:hover:ring-indigo-300/35"
                     >
-                      {isPlaying ? (
-                        <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
-                      ) : (
-                        <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
-                      )}
+                      <PlayPauseIcon isPlaying={isPlaying} />
                     </Button>
 
                     <Button
@@ -1906,124 +2261,27 @@ const PodcastPlayerPage: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                {playlist.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-40 text-muted-foreground space-y-2">
-                    <ListMusic className="w-8 h-8 opacity-20" />
-                    <p className="text-sm">{copy.noOtherEpisodes}</p>
-                  </div>
-                ) : (
-                  playlist.map(ep => {
-                    const isCurrent =
-                      ep.guid === episode.guid ||
-                      ep.id === episode.id ||
-                      ep.audioUrl === episode.audioUrl;
-                    return (
-                      <Button
-                        key={ep.guid || ep.id}
-                        onClick={() => playEpisode(ep)}
-                        variant="ghost"
-                        size="auto"
-                        className={`
-                                            w-full text-left p-3 rounded-xl transition-all border justify-start items-start
-                                            ${
-                                              isCurrent
-                                                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-100 dark:border-indigo-400/30 ring-1 ring-indigo-200 dark:ring-indigo-400/30'
-                                                : 'bg-card border-transparent hover:bg-muted hover:border-border'
-                                            }
-                                            font-normal
-                                        `}
-                      >
-                        <div className="flex gap-3">
-                          <div className="relative flex-none w-12 h-12 rounded-lg overflow-hidden bg-muted">
-                            <img
-                              src={
-                                ep.image || ep.itunes?.image || channel.artworkUrl || channel.image
-                              }
-                              className="w-full h-full object-cover"
-                              alt=""
-                            />
-                            {isCurrent && (
-                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-card rounded-full animate-ping" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4
-                              className={`text-sm font-bold truncate mb-0.5 ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}
-                            >
-                              {ep.title}
-                            </h4>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>
-                                {ep.pubDate ? new Date(ep.pubDate).toLocaleDateString() : ''}
-                              </span>
-                              <span>•</span>
-                              <span>
-                                {formatTime(typeof ep.duration === 'string' ? 0 : ep.duration || 0)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Button>
-                    );
-                  })
-                )}
+                <PlaylistSheetBody
+                  playlist={playlist}
+                  copy={copy}
+                  episode={episode}
+                  channel={channel}
+                  onPlayEpisode={playEpisode}
+                  formatTime={formatTime}
+                />
               </div>
             </div>
           </SheetContent>
         </SheetPortal>
       </Sheet>
 
-      {/* AI Analysis Modal/Sheet */}
-      {analyzingLine && (
-        <Dialog open={showAnalysis} onOpenChange={open => !open && setShowAnalysis(false)}>
-          <DialogPortal>
-            <DialogOverlay
-              unstyled
-              forceMount
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
-            />
-            <DialogContent
-              unstyled
-              forceMount
-              closeOnEscape={false}
-              lockBodyScroll={false}
-              className="fixed inset-0 z-[101] flex items-end md:items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
-            >
-              <div className="relative bg-card w-full md:w-[600px] md:rounded-2xl rounded-t-2xl shadow-2xl pointer-events-auto transform transition-transform duration-300 md:max-h-[80vh] max-h-[85vh] flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="px-6 py-4 border-b border-border flex items-start justify-between bg-muted/50">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 uppercase tracking-wide">
-                        AI Analysis
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-foreground leading-snug">
-                      {analyzingLine.text}
-                    </h3>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowAnalysis(false)}
-                    className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-muted-foreground transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-
-                {/* Body */}
-                <div className="overflow-y-auto p-6 space-y-8 bg-card flex-1">
-                  <AnalysisContent loading={analysisLoading} data={analysisData} />
-                </div>
-              </div>
-            </DialogContent>
-          </DialogPortal>
-        </Dialog>
-      )}
+      <AnalysisDialog
+        analyzingLine={analyzingLine}
+        showAnalysis={showAnalysis}
+        analysisLoading={analysisLoading}
+        analysisData={analysisData}
+        setShowAnalysis={setShowAnalysis}
+      />
     </div>
   );
 };

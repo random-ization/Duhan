@@ -78,17 +78,21 @@ async function findCurrentUserId(ctx: QueryCtx | MutationCtx): Promise<Id<'users
     return null;
   }
 
-  const userRecord =
-    (await ctx.db
-      .query('users')
-      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-      .first()) ||
-    (identity.email
-      ? await ctx.db
-          .query('users')
-          .filter(q => q.eq(q.field('email'), identity.email))
-          .first()
-      : null);
+  const userByToken = await ctx.db
+    .query('users')
+    .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
+    .first();
+  if (userByToken) {
+    return userByToken._id;
+  }
+
+  const email = identity.email;
+  const userRecord = email
+    ? await ctx.db
+        .query('users')
+        .withIndex('email', q => q.eq('email', email))
+        .unique()
+    : null;
 
   return userRecord?._id ?? null;
 }

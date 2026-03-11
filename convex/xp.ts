@@ -132,17 +132,40 @@ export const getMyXpStats = query({
       return null;
     }
 
-    const userRecord =
-      (await ctx.db
-        .query('users')
-        .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-        .first()) ||
-      (identity.email
-        ? await ctx.db
-            .query('users')
-            .filter(q => q.eq(q.field('email'), identity.email))
-            .first()
-        : null);
+    const userByToken = await ctx.db
+      .query('users')
+      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
+      .first();
+    if (userByToken) {
+      const weekIdentifier = getCurrentWeekIdentifier();
+      const currentWeekStats = await ctx.db
+        .query('user_xp_stats')
+        .withIndex('by_user_week', q =>
+          q.eq('userId', userByToken._id).eq('weekIdentifier', weekIdentifier)
+        )
+        .first();
+
+      const latestStats =
+        currentWeekStats ||
+        (await ctx.db
+          .query('user_xp_stats')
+          .withIndex('by_user_week', q => q.eq('userId', userByToken._id))
+          .order('desc')
+          .first());
+
+      return {
+        currentWeekXp: currentWeekStats?.currentWeekXp ?? 0,
+        totalXp: currentWeekStats?.totalXp ?? latestStats?.totalXp ?? 0,
+      };
+    }
+
+    const email = identity.email;
+    const userRecord = email
+      ? await ctx.db
+          .query('users')
+          .withIndex('email', q => q.eq('email', email))
+          .unique()
+      : null;
 
     if (!userRecord) {
       return null;

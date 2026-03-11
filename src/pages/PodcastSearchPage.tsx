@@ -8,7 +8,7 @@ import { Input } from '../components/ui';
 import { Badge } from '../components/ui';
 import { Card, CardContent } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
-import { getLabel, getLabels } from '../utils/i18n';
+import { getLabel, getLabels, type Labels } from '../utils/i18n';
 import { aRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -19,7 +19,7 @@ interface SearchResultsContentProps {
   error: string | null;
   results: PodcastChannel[];
   query: string;
-  labels: any;
+  labels: Labels;
   navigate: (path: string) => void;
 }
 

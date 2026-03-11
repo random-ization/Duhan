@@ -6,6 +6,7 @@ import { TopikExam, Language } from '../../types';
 import { QuestionRenderer } from '../topik/QuestionRenderer';
 import { MobileQuestionNav } from './MobileQuestionNav';
 import { BottomSheet } from '../common/BottomSheet';
+import { sanitizeStrictHtml } from '../../utils/sanitize';
 // import { getLabels } from '../../utils/i18n'; // Unused for now
 
 interface MobileExamSessionProps {
@@ -179,7 +180,11 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         <div className="h-full overflow-y-auto bg-muted p-4 rounded-xl">
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm text-lg leading-loose font-serif">
             {currentQuestion?.passage && (
-              <div dangerouslySetInnerHTML={{ __html: currentQuestion.passage }} />
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeStrictHtml(currentQuestion.passage),
+                }}
+              />
             )}
             {!currentQuestion?.passage && (
               <div className="text-center text-muted-foreground py-10">

@@ -41,6 +41,15 @@ const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xl
 
 const ITEMS_PER_PAGE = 20;
 
+const getResolvedCourse = (
+  selectedCourse: string,
+  institutes: InstituteRow[] | undefined
+): string => {
+  if (selectedCourse !== 'ALL') return selectedCourse;
+  const firstInstitute = institutes?.[0];
+  return firstInstitute?.id ?? firstInstitute?._id ?? '';
+};
+
 const VocabDashboard: React.FC = () => {
   const institutes = useQuery(INSTITUTES.getAll, {}) as unknown as InstituteRow[] | undefined;
   const [selectedCourse, setSelectedCourse] = useState<string>('ALL');
@@ -56,8 +65,7 @@ const VocabDashboard: React.FC = () => {
 
   const updateVocab = useMutation(VOCAB.updateVocab);
 
-  const resolvedCourse =
-    selectedCourse === 'ALL' ? institutes?.[0]?.id || institutes?.[0]?._id || '' : selectedCourse;
+  const resolvedCourse = getResolvedCourse(selectedCourse, institutes);
 
   const {
     results: words,
@@ -126,16 +134,16 @@ const VocabDashboard: React.FC = () => {
     setEditForm({
       word: word.word,
       meaning: word.meaning,
-      meaningEn: word.meaningEn || '',
-      meaningVi: word.meaningVi || '',
-      meaningMn: word.meaningMn || '',
-      partOfSpeech: word.partOfSpeech || '',
+      meaningEn: word.meaningEn ?? '',
+      meaningVi: word.meaningVi ?? '',
+      meaningMn: word.meaningMn ?? '',
+      partOfSpeech: word.partOfSpeech ?? '',
       unitId: word.unitId,
-      exampleSentence: word.exampleSentence || '',
-      exampleMeaning: word.exampleMeaning || '',
-      exampleMeaningEn: word.exampleMeaningEn || '',
-      exampleMeaningVi: word.exampleMeaningVi || '',
-      exampleMeaningMn: word.exampleMeaningMn || '',
+      exampleSentence: word.exampleSentence ?? '',
+      exampleMeaning: word.exampleMeaning ?? '',
+      exampleMeaningEn: word.exampleMeaningEn ?? '',
+      exampleMeaningVi: word.exampleMeaningVi ?? '',
+      exampleMeaningMn: word.exampleMeaningMn ?? '',
     });
   };
 

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { LocalizedLink } from '../../../components/LocalizedLink';
+import type { ProfileLabels, SocialSignInOptions } from '../types';
 import { Button, Input } from '../../../components/ui';
 interface ProfileSecurityTabProps {
-  labels: any;
+  labels: ProfileLabels;
   handlePasswordChange: (e: React.FormEvent) => Promise<void>;
   currentPassword: string;
   setCurrentPassword: (val: string) => void;
@@ -20,8 +21,8 @@ interface ProfileSecurityTabProps {
   notLinkedLabel: string;
   unlinkLabel: string;
   linkLabel: string;
-  signIn: (providerId: string, options?: any) => Promise<any>;
-  unlinkAuthProviderMutation: (args: { provider: string }) => Promise<any>;
+  signIn: (providerId: string, options?: SocialSignInOptions) => Promise<unknown>;
+  unlinkAuthProviderMutation: (args: { provider: string }) => Promise<unknown>;
   getAccountButtonClass: (
     isLinked: boolean,
     accountsLoading: boolean,
@@ -29,7 +30,7 @@ interface ProfileSecurityTabProps {
   ) => string;
   success: (msg: string) => void;
   error: (msg: string) => void;
-  toErrorMessage: (err: any) => string;
+  toErrorMessage: (err: unknown) => string;
 }
 
 export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
