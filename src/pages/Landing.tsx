@@ -37,6 +37,36 @@ type VariantPrices = {
   GLOBAL: Partial<Record<PricePlan, PriceEntry>>;
   REGIONAL: Partial<Record<PricePlan, PriceEntry>>;
 };
+type LandingFaqItem = { question: string; answer: string };
+type LandingSeoLanguage = 'en' | 'zh' | 'vi' | 'mn';
+
+const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
+const LANDING_LIST_NAMES: Record<LandingSeoLanguage, string> = {
+  en: 'Featured Korean Learning Guides',
+  zh: '精选韩语学习指南',
+  vi: 'Hướng dẫn học tiếng Hàn nổi bật',
+  mn: 'Онцлох солонгос сурах гарын авлага',
+};
+
+function normalizeLandingSeoLanguage(language: string): LandingSeoLanguage {
+  return LANDING_SEO_LANGUAGES.has(language as LandingSeoLanguage)
+    ? (language as LandingSeoLanguage)
+    : 'en';
+}
+
+function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
+  const guideSlugs = ['topik-guide', 'korean-vocabulary', 'topik-writing'] as const;
+
+  return guideSlugs.map(slug => {
+    const path = `/${language}/learn/${slug}`;
+    const meta = getRouteMeta(path);
+    return {
+      name: meta.title,
+      description: meta.description,
+      url: `https://koreanstudy.me${path}`,
+    };
+  });
+}
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -95,10 +125,18 @@ const useFeatureCards = () => {
 const LandingJsonLd = ({
   description,
   prices,
+  faqItems,
+  language,
+  canonicalUrl,
 }: {
   description: string;
   prices: VariantPrices | null;
+  faqItems: LandingFaqItem[];
+  language: LandingSeoLanguage;
+  canonicalUrl: string;
 }) => {
+  const featuredGuides = getFeaturedGuidesForJsonLd(language);
+
   const getPrice = (plan: 'MONTHLY' | 'ANNUAL' | 'LIFETIME') => {
     // SEO Prices are usually Global
     const amount = prices?.GLOBAL?.[plan]?.amount;
@@ -116,50 +154,97 @@ const LandingJsonLd = ({
       dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           '@context': 'https://schema.org',
-          '@type': 'SoftwareApplication',
-          name: 'DuHan Korean Learning',
-          description,
-          applicationCategory: 'EducationalApplication',
-          operatingSystem: 'Web',
-          url: 'https://koreanstudy.me',
-          offers: [
+          '@graph': [
             {
-              '@type': 'Offer',
-              name: 'Monthly Subscription',
-              price: getPrice('MONTHLY'),
-              priceCurrency: 'USD',
-              priceValidUntil: '2026-12-31',
-              availability: 'https://schema.org/InStock',
+              '@type': 'Organization',
+              name: 'DuHan',
+              url: 'https://koreanstudy.me',
+              logo: 'https://koreanstudy.me/logo.png',
             },
             {
-              '@type': 'Offer',
-              name: 'Annual Subscription',
-              price: getPrice('ANNUAL'),
-              priceCurrency: 'USD',
-              priceValidUntil: '2026-12-31',
-              availability: 'https://schema.org/InStock',
+              '@type': 'WebSite',
+              name: 'DuHan Korean Learning',
+              url: 'https://koreanstudy.me',
+              inLanguage: language,
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: `https://koreanstudy.me/${language}/learn?q={search_term_string}`,
+                },
+                'query-input': 'required name=search_term_string',
+              },
             },
             {
-              '@type': 'Offer',
-              name: 'Lifetime Access',
-              price: getPrice('LIFETIME'),
-              priceCurrency: 'USD',
-              priceValidUntil: '2026-12-31',
-              availability: 'https://schema.org/InStock',
+              '@type': 'SoftwareApplication',
+              name: 'DuHan Korean Learning',
+              description,
+              applicationCategory: 'EducationalApplication',
+              operatingSystem: 'Web',
+              url: canonicalUrl,
+              inLanguage: language,
+              offers: [
+                {
+                  '@type': 'Offer',
+                  name: 'Monthly Subscription',
+                  price: getPrice('MONTHLY'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Annual Subscription',
+                  price: getPrice('ANNUAL'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Lifetime Access',
+                  price: getPrice('LIFETIME'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
+              ],
             },
+            {
+              '@type': 'FAQPage',
+              mainEntity: faqItems.map(item => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: item.answer,
+                },
+              })),
+            },
+            {
+              '@type': 'ItemList',
+              name: LANDING_LIST_NAMES[language],
+              itemListElement: featuredGuides.map((guide, index) => ({
+                '@type': 'ListItem',
+                position: index + 1,
+                name: guide.name,
+                url: guide.url,
+              })),
+            },
+            ...featuredGuides.map(guide => ({
+              '@type': 'Course',
+              name: guide.name,
+              description: guide.description,
+              inLanguage: language,
+              provider: {
+                '@type': 'Organization',
+                name: 'DuHan',
+                sameAs: 'https://koreanstudy.me',
+              },
+              hasCourseInstance: {
+                '@type': 'CourseInstance',
+                courseMode: 'online',
+                url: guide.url,
+              },
+            })),
           ],
-          aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: '4.8',
-            ratingCount: '500',
-            bestRating: '5',
-            worstRating: '1',
-          },
-          publisher: {
-            '@type': 'Organization',
-            name: 'DuHan',
-            url: 'https://koreanstudy.me',
-          },
         }),
       }}
     />
@@ -1659,6 +1744,88 @@ const LandingFaq = () => {
   );
 };
 
+const LandingGuidesCluster = () => {
+  const { t } = useTranslation();
+
+  const guideLinks = [
+    {
+      to: '/learn/topik-guide',
+      title: t('landing.guides.topik.title', { defaultValue: 'TOPIK Preparation Guide' }),
+      description: t('landing.guides.topik.description', {
+        defaultValue: 'Understand exam structure, scoring, and weekly prep loops.',
+      }),
+    },
+    {
+      to: '/learn/korean-vocabulary',
+      title: t('landing.guides.vocab.title', { defaultValue: 'Korean Vocabulary System' }),
+      description: t('landing.guides.vocab.description', {
+        defaultValue: 'Retain words long term with SRS, dictation, and context review.',
+      }),
+    },
+    {
+      to: '/learn/topik-writing',
+      title: t('landing.guides.writing.title', { defaultValue: 'TOPIK Writing Strategy' }),
+      description: t('landing.guides.writing.description', {
+        defaultValue: 'Use clear templates and timed revision checklists for higher scores.',
+      }),
+    },
+  ];
+
+  return (
+    <section id="guides" className="py-20 bg-card border-t border-border">
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-3xl"
+        >
+          <h2 className="text-3xl font-heading font-bold">
+            {t('landing.guides.title', {
+              defaultValue: 'Start with practical Korean study guides',
+            })}
+          </h2>
+          <p className="mt-3 text-base text-muted-foreground leading-relaxed">
+            {t('landing.guides.subtitle', {
+              defaultValue:
+                'Build your roadmap with SEO-optimized guide pages for TOPIK, vocabulary, grammar, and writing.',
+            })}
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="mt-8 grid gap-4 md:grid-cols-3"
+        >
+          {guideLinks.map(guide => (
+            <motion.article
+              key={guide.to}
+              variants={fadeInUp}
+              className="rounded-2xl border border-border bg-muted p-5"
+            >
+              <h3 className="text-lg font-extrabold leading-snug">{guide.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                {guide.description}
+              </p>
+              <LocalizedLink
+                to={guide.to}
+                className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
+              >
+                {t('landing.guides.readMore', { defaultValue: 'Read guide' })}
+                <ArrowRight className="h-4 w-4" />
+              </LocalizedLink>
+            </motion.article>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
 const LandingFooter = () => {
   const { t } = useTranslation();
 
@@ -1677,6 +1844,9 @@ const LandingFooter = () => {
           <a href="#topik" className="hover:text-foreground">
             {t('landing.footer.about')}
           </a>
+          <LocalizedLink to="/learn" className="hover:text-foreground">
+            {t('landing.footer.learnGuides', { defaultValue: 'Learn Guides' })}
+          </LocalizedLink>
           <LocalizedLink to="/privacy" className="hover:text-foreground">
             {t('common.privacy')}
           </LocalizedLink>
@@ -1719,6 +1889,15 @@ export default function Landing() {
   const localizedSeoTitle = t('landing.seo.title', { defaultValue: meta.title });
   const localizedSeoDescription = t('landing.seo.description', { defaultValue: meta.description });
   const localizedSeoKeywords = t('landing.seo.keywords', { defaultValue: meta.keywords || '' });
+  const normalizedLanguage = normalizeLandingSeoLanguage(
+    ((i18n.language || 'en').split('-')[0] || 'en').toLowerCase()
+  );
+  const faqItems: LandingFaqItem[] = [
+    { question: t('landing.faq.q1'), answer: t('landing.faq.a1') },
+    { question: t('landing.faq.q2'), answer: t('landing.faq.a2') },
+    { question: t('landing.faq.q3'), answer: t('landing.faq.a3') },
+  ];
+  const canonicalUrl = `https://koreanstudy.me${location.pathname === '/' ? '' : location.pathname}`;
   const showLocalizedPromo =
     i18n.language === 'zh' ||
     i18n.language === 'vi' ||
@@ -1737,7 +1916,13 @@ export default function Landing() {
         keywords={localizedSeoKeywords}
         noIndex={meta.noIndex}
       />
-      <LandingJsonLd description={localizedSeoDescription} prices={prices} />
+      <LandingJsonLd
+        description={localizedSeoDescription}
+        prices={prices}
+        faqItems={faqItems}
+        language={normalizedLanguage}
+        canonicalUrl={canonicalUrl}
+      />
       <LandingNav
         isScrolled={isScrolled}
         mobileMenuOpen={mobileMenuOpen}
@@ -1769,6 +1954,9 @@ export default function Landing() {
           navigate={navigate}
           prices={prices}
         />
+        <div className="w-full h-px bg-muted" />
+
+        <LandingGuidesCluster />
         <div className="w-full h-px bg-muted" />
 
         <LandingFaq />

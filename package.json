@@ -7,6 +7,11 @@
     "dev": "vite",
     "build": "npm run generate:seo && vite build && npm run prerender",
     "generate:seo": "node scripts/generate-seo-files.mjs",
+    "generate:seo:outreach": "node scripts/generate-seo-outreach-assets.mjs",
+    "seo:audit": "node scripts/seo-audit.mjs",
+    "seo:audit:strict": "node scripts/seo-audit.mjs --fail-on-warning",
+    "seo:ping": "node scripts/ping-search-engines.mjs",
+    "seo:ping:dry": "node scripts/ping-search-engines.mjs --dry-run",
     "prerender": "node scripts/prerender.mjs",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-3000}",
     "preview": "vite preview",
@@ -25,7 +30,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "check:release": "npm run lint && npm run typecheck && npm run i18n:guard && npm run color:guard && npm run test:run && npm run build",
+    "check:release": "npm run lint && npm run typecheck && npm run i18n:guard && npm run color:guard && npm run test:run && npm run build && npm run seo:audit:strict",
     "prepare": "husky"
   },
   "dependencies": {

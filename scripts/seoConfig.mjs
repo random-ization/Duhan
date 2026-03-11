@@ -1,12 +1,11 @@
 export { SUPPORTED_LANGUAGES, withLang } from '../src/seo/publicRoutesData.mjs';
 
 import {
-  SUPPORTED_LANGUAGES,
+  buildLocalizedPublicRoutes,
   PUBLIC_ROUTES as PUBLIC_ROUTE_OBJECTS,
-  withLang,
 } from '../src/seo/publicRoutesData.mjs';
 
 export const PUBLIC_ROUTES = PUBLIC_ROUTE_OBJECTS.map((r) => r.path);
 
-export const getLanguageRoutes = () =>
-  SUPPORTED_LANGUAGES.flatMap((lang) => PUBLIC_ROUTES.map((route) => withLang(lang, route)));
+export const getLanguageRoutes = ({ includeNoIndex = true } = {}) =>
+  buildLocalizedPublicRoutes({ includeNoIndex }).map((route) => route.path);

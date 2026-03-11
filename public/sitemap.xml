@@ -1,150 +1,579 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <url>
     <loc>https://koreanstudy.me/en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/en/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/en/pricing/details</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/en/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/terms" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/terms" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/privacy" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/en/refund</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/refund" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/refund" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://koreanstudy.me/en/learn</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/topik-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/korean-grammar</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/korean-vocabulary</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/reading-practice</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/korean-pronunciation</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/learn/topik-writing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://koreanstudy.me/zh</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/pricing/details</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/terms" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/terms" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/privacy" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/zh/refund</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/refund" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/refund" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://koreanstudy.me/zh/learn</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/topik-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/korean-grammar</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/korean-vocabulary</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/reading-practice</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/korean-pronunciation</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/learn/topik-writing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://koreanstudy.me/vi</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/pricing/details</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/terms" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/terms" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/privacy" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/vi/refund</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/refund" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/refund" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://koreanstudy.me/vi/learn</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/topik-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/korean-grammar</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/korean-vocabulary</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/reading-practice</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/korean-pronunciation</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/learn/topik-writing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://koreanstudy.me/mn</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/pricing/details</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/terms" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/terms" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/privacy" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://koreanstudy.me/mn/refund</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/refund" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/refund" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/topik-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-guide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-guide" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/korean-grammar</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-grammar" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-grammar" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/korean-vocabulary</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-vocabulary" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-vocabulary" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/reading-practice</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/reading-practice" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/reading-practice" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/korean-pronunciation</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/korean-pronunciation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/korean-pronunciation" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/learn/topik-writing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/learn/topik-writing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn/topik-writing" />
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
 </urlset>

@@ -14,12 +14,31 @@ export const isValidLanguage = (lang: string): lang is Language => {
   return SUPPORTED_LANGUAGES.includes(lang as Language);
 };
 
+export const normalizeLocalizedPathname = (path: string): string => {
+  if (!path) return '/';
+
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  const collapsedSlashes = withLeadingSlash.replace(/\/{2,}/g, '/');
+  const trimmedTrailingSlash = collapsedSlashes.replace(/\/+$/, '') || '/';
+  if (trimmedTrailingSlash === '/') return '/';
+
+  const segments = trimmedTrailingSlash.split('/').filter(Boolean);
+  if (segments.length === 0) return '/';
+
+  const maybeLanguage = segments[0].toLowerCase();
+  if (isValidLanguage(maybeLanguage)) {
+    segments[0] = maybeLanguage;
+  }
+
+  return `/${segments.join('/')}`;
+};
+
 const getBrowserPreferredLanguage = (): Language | null => {
   if (typeof navigator === 'undefined') return null;
 
   const rawLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
   for (const raw of rawLanguages) {
-    const normalized = raw.split(/[-_]/)[0];
+    const normalized = raw.split(/[-_]/)[0].toLowerCase();
     if (isValidLanguage(normalized)) {
       return normalized;
     }
@@ -31,14 +50,16 @@ const getBrowserPreferredLanguage = (): Language | null => {
 const getStoredUserLanguage = (): Language | null => {
   const stored = localStorage.getItem('preferredLanguage');
   const storedSource = localStorage.getItem('preferredLanguageSource');
-  if (storedSource === 'user' && stored && isValidLanguage(stored)) {
-    return stored;
+  const normalized = stored ? stored.toLowerCase() : null;
+  if (storedSource === 'user' && normalized && isValidLanguage(normalized)) {
+    return normalized;
   }
   return null;
 };
 
 const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', hash = '') => {
-  const segments = pathname.split('/').filter(Boolean);
+  const normalizedPathname = normalizeLocalizedPathname(pathname);
+  const segments = normalizedPathname.split('/').filter(Boolean);
   if (segments[0] && isValidLanguage(segments[0])) {
     segments[0] = nextLang;
   } else {
@@ -50,6 +71,7 @@ const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', h
 // Get language from URL or detect from browser
 export const detectLanguage = async (): Promise<Language> => {
   const stored = localStorage.getItem('preferredLanguage');
+  const normalizedStored = stored ? stored.toLowerCase() : null;
   const userLanguage = getStoredUserLanguage();
 
   // 1. If user explicitly chose a language, prioritize it above all else
@@ -70,8 +92,8 @@ export const detectLanguage = async (): Promise<Language> => {
   if (country === 'MN') return 'mn';
 
   // 4. Fallback to stored preference (legacy logic or auto-saved)
-  if (stored && isValidLanguage(stored)) {
-    return stored;
+  if (normalizedStored && isValidLanguage(normalizedStored)) {
+    return normalizedStored;
   }
 
   return DEFAULT_LANGUAGE;
@@ -97,14 +119,22 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    const normalizedPathname = normalizeLocalizedPathname(location.pathname);
+    if (normalizedPathname !== location.pathname) {
+      navigate(`${normalizedPathname}${location.search}${location.hash}`, { replace: true });
+      return;
+    }
+
     // If no valid language in URL, redirect to detected language
     if (!lang || !isValidLanguage(lang)) {
       let cancelled = false;
 
       detectLanguage().then(detectedLang => {
         if (cancelled) return;
-        const segments = location.pathname.split('/').filter(Boolean);
-        const rest = segments.length > 0 ? `/${segments.slice(1).join('/')}` : '/';
+        const segments = normalizedPathname.split('/').filter(Boolean);
+        const hasLanguagePrefix = segments[0] ? isValidLanguage(segments[0]) : false;
+        const restSegments = hasLanguagePrefix ? segments.slice(1) : segments;
+        const rest = restSegments.length > 0 ? `/${restSegments.join('/')}` : '';
         const newPath = `/${detectedLang}${rest}${location.search}${location.hash}`;
         navigate(newPath, { replace: true });
       });

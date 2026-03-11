@@ -6,6 +6,7 @@ import {
   DEFAULT_LANGUAGE,
   isValidLanguage,
 } from '../components/LanguageRouter';
+import { getRouteSeoConfig } from './publicRoutes';
 
 interface SEOProps {
   title: string;
@@ -16,12 +17,24 @@ interface SEOProps {
   noIndex?: boolean;
 }
 
+const OG_LOCALE_BY_LANGUAGE: Record<string, string> = {
+  en: 'en_US',
+  zh: 'zh_CN',
+  vi: 'vi_VN',
+  mn: 'mn_MN',
+};
+
+const toOgLocale = (language: string): string => {
+  const normalized = (language || DEFAULT_LANGUAGE).split('-')[0].toLowerCase();
+  return OG_LOCALE_BY_LANGUAGE[normalized] || OG_LOCALE_BY_LANGUAGE.en;
+};
+
 export const SEO: React.FC<SEOProps> = ({
   title,
   description,
   keywords,
   canonicalUrl,
-  ogImage = '/logo.png',
+  ogImage,
   noIndex = false,
 }) => {
   const location = useLocation();
@@ -30,19 +43,36 @@ export const SEO: React.FC<SEOProps> = ({
 
   // Get current language from URL (preferred) or i18n
   const currentLanguage = lang && isValidLanguage(lang) ? lang : i18n.language || DEFAULT_LANGUAGE;
+  const routeSeo = getRouteSeoConfig(location.pathname);
 
   const siteUrl = 'https://koreanstudy.me';
 
-  // Extract path without language prefix for hreflang generation
-  const pathWithoutLang =
-    location.pathname.replace(/^\/(en|zh|vi|mn)(\/|$)/, '/').replace(/\/+$/, '') || '/';
-
-  // Normalize pathname: remove trailing slash (except for root "/")
-  const normalizedPathname =
-    location.pathname === '/' ? '/' : location.pathname.replace(/\/+$/, '');
-
-  const fullCanonicalUrl = canonicalUrl || `${siteUrl}${normalizedPathname}`;
-  const fullOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
+  const normalizedCanonicalPath =
+    routeSeo.canonicalPath === '/' ? '/' : routeSeo.canonicalPath.replace(/\/+$/, '');
+  const canonicalPathWithoutLang = routeSeo.basePath || '/';
+  const hreflangLanguages =
+    routeSeo.hreflangLanguages.length > 0 ? routeSeo.hreflangLanguages : SUPPORTED_LANGUAGES;
+  const xDefaultLanguage = hreflangLanguages.includes(DEFAULT_LANGUAGE)
+    ? DEFAULT_LANGUAGE
+    : hreflangLanguages[0];
+  const isArticleRoute = routeSeo.basePath.startsWith('/learn/') && routeSeo.basePath !== '/learn';
+  const ogType = isArticleRoute ? 'article' : 'website';
+  const articlePublishedTime =
+    isArticleRoute && routeSeo.publishedAt ? `${routeSeo.publishedAt}T00:00:00Z` : null;
+  const articleModifiedTime =
+    isArticleRoute && (routeSeo.updatedAt || routeSeo.publishedAt)
+      ? `${routeSeo.updatedAt || routeSeo.publishedAt}T00:00:00Z`
+      : null;
+  const currentOgLocale = toOgLocale(currentLanguage);
+  const alternateOgLocales = hreflangLanguages
+    .filter(lng => lng !== currentLanguage)
+    .map(lng => toOgLocale(lng));
+  const shouldNoIndex = noIndex || routeSeo.noIndex;
+  const fullCanonicalUrl = canonicalUrl || `${siteUrl}${normalizedCanonicalPath}`;
+  const resolvedOgImage = ogImage || routeSeo.ogImage || '/logo.png';
+  const fullOgImage = resolvedOgImage.startsWith('http')
+    ? resolvedOgImage
+    : `${siteUrl}${resolvedOgImage}`;
 
   // Dynamically update <html lang> attribute
   useEffect(() => {
@@ -99,6 +129,19 @@ export const SEO: React.FC<SEOProps> = ({
       document.head.querySelectorAll(selector).forEach(node => node.remove());
     };
 
+    const replaceMultiPropertyMeta = (property: string, contents: string[], tag: string) => {
+      document.head
+        .querySelectorAll(`meta[property="${property}"][data-duhan-seo="${tag}"]`)
+        .forEach(node => node.remove());
+      for (const content of contents) {
+        const el = document.createElement('meta');
+        el.setAttribute('property', property);
+        el.setAttribute('content', content);
+        el.dataset.duhanSeo = tag;
+        document.head.appendChild(el);
+      }
+    };
+
     document.title = title;
 
     upsertMeta({ name: 'description', content: description, tag: 'description' });
@@ -107,31 +150,58 @@ export const SEO: React.FC<SEOProps> = ({
     }
     upsertLink({ rel: 'canonical', href: fullCanonicalUrl, tag: 'canonical' });
 
-    if (noIndex) {
-      upsertMeta({ name: 'robots', content: 'noindex, nofollow', tag: 'robots' });
+    if (shouldNoIndex) {
+      upsertMeta({ name: 'robots', content: 'noindex, follow', tag: 'robots' });
     } else {
       removeManagedMeta('robots', 'robots');
     }
 
     removeManagedLinks('alternate', 'hreflang');
-    for (const lng of SUPPORTED_LANGUAGES) {
-      const href = `${siteUrl}/${lng}${pathWithoutLang === '/' ? '' : pathWithoutLang}`;
+    for (const lng of hreflangLanguages) {
+      const href = `${siteUrl}/${lng}${canonicalPathWithoutLang === '/' ? '' : canonicalPathWithoutLang}`;
       upsertLink({ rel: 'alternate', hreflang: lng, href, tag: 'hreflang' });
     }
-    upsertLink({
-      rel: 'alternate',
-      hreflang: 'x-default',
-      href: `${siteUrl}/${DEFAULT_LANGUAGE}${pathWithoutLang === '/' ? '' : pathWithoutLang}`,
-      tag: 'hreflang',
-    });
+    if (xDefaultLanguage) {
+      upsertLink({
+        rel: 'alternate',
+        hreflang: 'x-default',
+        href: `${siteUrl}/${xDefaultLanguage}${canonicalPathWithoutLang === '/' ? '' : canonicalPathWithoutLang}`,
+        tag: 'hreflang',
+      });
+    }
 
-    upsertMeta({ property: 'og:type', content: 'website', tag: 'og:type' });
+    upsertMeta({ property: 'og:type', content: ogType, tag: 'og:type' });
     upsertMeta({ property: 'og:url', content: fullCanonicalUrl, tag: 'og:url' });
     upsertMeta({ property: 'og:title', content: title, tag: 'og:title' });
     upsertMeta({ property: 'og:description', content: description, tag: 'og:description' });
     upsertMeta({ property: 'og:image', content: fullOgImage, tag: 'og:image' });
     upsertMeta({ property: 'og:site_name', content: 'DuHan', tag: 'og:site_name' });
-    upsertMeta({ property: 'og:locale', content: currentLanguage, tag: 'og:locale' });
+    upsertMeta({ property: 'og:locale', content: currentOgLocale, tag: 'og:locale' });
+    replaceMultiPropertyMeta('og:locale:alternate', alternateOgLocales, 'og:locale:alternate');
+    if (articlePublishedTime) {
+      upsertMeta({
+        property: 'article:published_time',
+        content: articlePublishedTime,
+        tag: 'article:published_time',
+      });
+    } else {
+      removeManagedMeta('article:published_time');
+    }
+    if (articleModifiedTime) {
+      upsertMeta({
+        property: 'article:modified_time',
+        content: articleModifiedTime,
+        tag: 'article:modified_time',
+      });
+      upsertMeta({
+        property: 'og:updated_time',
+        content: articleModifiedTime,
+        tag: 'og:updated_time',
+      });
+    } else {
+      removeManagedMeta('article:modified_time');
+      removeManagedMeta('og:updated_time');
+    }
 
     upsertMeta({ property: 'twitter:card', content: 'summary_large_image', tag: 'twitter:card' });
     upsertMeta({ property: 'twitter:url', content: fullCanonicalUrl, tag: 'twitter:url' });
@@ -155,8 +225,15 @@ export const SEO: React.FC<SEOProps> = ({
     keywords,
     fullCanonicalUrl,
     fullOgImage,
-    noIndex,
-    pathWithoutLang,
+    shouldNoIndex,
+    canonicalPathWithoutLang,
+    hreflangLanguages,
+    xDefaultLanguage,
+    ogType,
+    articlePublishedTime,
+    articleModifiedTime,
+    currentOgLocale,
+    alternateOgLocales,
     siteUrl,
     currentLanguage,
   ]);

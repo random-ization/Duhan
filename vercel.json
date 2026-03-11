@@ -6,6 +6,126 @@
       "permanent": true
     },
     {
+      "source": "/EN",
+      "destination": "/en",
+      "permanent": true
+    },
+    {
+      "source": "/En",
+      "destination": "/en",
+      "permanent": true
+    },
+    {
+      "source": "/eN",
+      "destination": "/en",
+      "permanent": true
+    },
+    {
+      "source": "/EN/:path*",
+      "destination": "/en/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/En/:path*",
+      "destination": "/en/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/eN/:path*",
+      "destination": "/en/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/ZH",
+      "destination": "/zh",
+      "permanent": true
+    },
+    {
+      "source": "/Zh",
+      "destination": "/zh",
+      "permanent": true
+    },
+    {
+      "source": "/zH",
+      "destination": "/zh",
+      "permanent": true
+    },
+    {
+      "source": "/ZH/:path*",
+      "destination": "/zh/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/Zh/:path*",
+      "destination": "/zh/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/zH/:path*",
+      "destination": "/zh/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/VI",
+      "destination": "/vi",
+      "permanent": true
+    },
+    {
+      "source": "/Vi",
+      "destination": "/vi",
+      "permanent": true
+    },
+    {
+      "source": "/vI",
+      "destination": "/vi",
+      "permanent": true
+    },
+    {
+      "source": "/VI/:path*",
+      "destination": "/vi/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/Vi/:path*",
+      "destination": "/vi/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/vI/:path*",
+      "destination": "/vi/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/MN",
+      "destination": "/mn",
+      "permanent": true
+    },
+    {
+      "source": "/Mn",
+      "destination": "/mn",
+      "permanent": true
+    },
+    {
+      "source": "/mN",
+      "destination": "/mn",
+      "permanent": true
+    },
+    {
+      "source": "/MN/:path*",
+      "destination": "/mn/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/Mn/:path*",
+      "destination": "/mn/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/mN/:path*",
+      "destination": "/mn/:path*",
+      "permanent": true
+    },
+    {
       "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)/",
       "destination": "/en/:path",
       "permanent": true

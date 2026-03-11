@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Korean Reading Practice Strategy">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#082f49" /><stop offset="100%" stop-color="#0284c7" /></linearGradient></defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <text x="80" y="140" fill="#7dd3fc" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">DuHan Learn Guide</text>
+  <text x="80" y="270" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="800">Korean Reading</text>
+  <text x="80" y="340" fill="#e0f2fe" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="600">Speed and comprehension strategy</text>
+</svg>

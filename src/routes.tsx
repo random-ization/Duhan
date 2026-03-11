@@ -10,6 +10,7 @@ import {
   DEFAULT_LANGUAGE,
   detectLanguage,
   isValidLanguage,
+  normalizeLocalizedPathname,
 } from './components/LanguageRouter';
 
 // Lazy load pages for code splitting
@@ -22,6 +23,8 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PricingDetailsPage = lazy(() => import('./pages/PricingDetailsPage'));
+const LearnHubPage = lazy(() => import('./pages/LearnHubPage'));
+const LearnGuidePage = lazy(() => import('./pages/LearnGuidePage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
@@ -79,7 +82,7 @@ const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
     let cancelled = false;
     detectLanguage().then(detectedLang => {
       if (cancelled) return;
-      const nextPathname = keepPathname ? location.pathname : '/';
+      const nextPathname = keepPathname ? normalizeLocalizedPathname(location.pathname) : '/';
       const normalizedPath = nextPathname === '/' ? '' : nextPathname;
       setTarget(`/${detectedLang}${normalizedPath}${location.search}${location.hash}`);
     });
@@ -129,6 +132,8 @@ const LanguageAwareRoutes: React.FC = () => {
         />
         <Route path="pricing" element={withPageLoader(<SubscriptionPage />)} />
         <Route path="pricing/details" element={withPageLoader(<PricingDetailsPage />)} />
+        <Route path="learn" element={withPageLoader(<LearnHubPage />)} />
+        <Route path="learn/:guideSlug" element={withPageLoader(<LearnGuidePage />)} />
         <Route path="payment/success" element={withPageLoader(<PaymentSuccessPage />)} />
         <Route path="preview/mobile" element={withPageLoader(<MobilePreviewPage />)} />
         {/* === Admin login page (public) === */}
