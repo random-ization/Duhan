@@ -7,7 +7,6 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import dotenv from "dotenv";
-import fs from "fs";
 
 dotenv.config({ path: ".env.local" });
 
@@ -37,7 +36,7 @@ async function fetchFromGithub(fileName) {
         const res = await fetch(url);
         if (!res.ok) return null;
         return await res.text();
-    } catch (e) {
+    } catch {
         return null;
     }
 }

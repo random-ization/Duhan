@@ -76,7 +76,7 @@ function stripMarkdownInline(input: string): string {
     .trim();
 }
 
-// REMOVED `stripMarkdownKeepBreaks` and replaced its usages with raw text 
+// REMOVED `stripMarkdownKeepBreaks` and replaced its usages with raw text
 
 function sectionText(lines: string[]): string {
   // Preserve tables and internal formatting completely
@@ -103,9 +103,7 @@ function toPlainText(markdown: string): string {
 
 function toRawMarkdown(markdown: string): string {
   // Returns raw markdown without destructive stripping, just normalizes excessive newlines
-  return markdown
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return markdown.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function parseSections(
@@ -120,7 +118,11 @@ function parseSections(
   for (const line of lines) {
     const headingMatch = line.match(/^##\s+(.+)$/);
     if (headingMatch) {
-      sections.push({ heading: currentHeading, rawHeading: currentRawHeading, lines: currentLines });
+      sections.push({
+        heading: currentHeading,
+        rawHeading: currentRawHeading,
+        lines: currentLines,
+      });
       currentRawHeading = headingMatch[1].trim();
       currentHeading = currentRawHeading.toLowerCase();
       currentLines = [];
@@ -154,9 +156,7 @@ function inferTitle(content: string, fileName: string): string {
   const fromProcessingKeyword = content.match(/^Processing keyword:\s*(.+)\s*$/m)?.[1]?.trim();
   if (fromProcessingKeyword) return fromProcessingKeyword;
 
-  const fromMainHeading = content
-    .match(/^#\s*Korean Grammar Point:\s*(.+)\s*$/m)?.[1]
-    ?.trim();
+  const fromMainHeading = content.match(/^#\s*Korean Grammar Point:\s*(.+)\s*$/m)?.[1]?.trim();
   if (fromMainHeading) return fromMainHeading;
 
   const baseName = fileName.replace(/\.md$/i, '').replace(/_/g, ' ').trim();
@@ -215,11 +215,6 @@ function parseMarkdownGrammar(content: string, fileName: string): ParsedGrammar 
   const intro = sections.find(section => section.heading.includes('introduction'))?.content || '';
   const core =
     sections.find(section => section.heading.includes('core grammar explanation'))?.content || '';
-  const comparative =
-    sections.find(section => section.heading.includes('comparative analysis'))?.content || '';
-  const mistakes =
-    sections.find(section => section.heading.includes('common mistakes'))?.content || '';
-  const review = sections.find(section => section.heading.includes('summary and review'))?.content || '';
 
   const summaryCandidate =
     firstParagraph(intro) || firstParagraph(core) || firstParagraph(toPlainText(content));
@@ -241,7 +236,10 @@ function parseMarkdownGrammar(content: string, fileName: string): ParsedGrammar 
       .trim()
   );
   const explanationCandidate =
-    fullDetailedExplanation || fallbackFullText || truncate(toPlainText(content), 6000) || summaryCandidate;
+    fullDetailedExplanation ||
+    fallbackFullText ||
+    truncate(toPlainText(content), 6000) ||
+    summaryCandidate;
 
   const toSectionKey = (
     heading: string

@@ -310,21 +310,19 @@ type SeedMutationsInternalRefs = {
   >;
 };
 
-const seedMutationsInternal: SeedMutationsInternalRefs = (internal as unknown as {
-  seedMutations: SeedMutationsInternalRefs;
-}).seedMutations;
+const seedMutationsInternal: SeedMutationsInternalRefs = (
+  internal as unknown as {
+    seedMutations: SeedMutationsInternalRefs;
+  }
+).seedMutations;
 
-function resolveYskSeedConfig(args: {
-  courseId?: string;
-  book?: number;
-}): YskSeedConfig {
+function resolveYskSeedConfig(args: { courseId?: string; book?: number }): YskSeedConfig {
   const explicitCourseId = args.courseId?.trim();
   if (explicitCourseId && YSK_SEED_CONFIGS[explicitCourseId]) {
     return YSK_SEED_CONFIGS[explicitCourseId];
   }
 
-  const book =
-    args.book === 2 || args.book === 3 || args.book === 4 ? args.book : DEFAULT_YSK_BOOK;
+  const book = args.book === 2 || args.book === 3 || args.book === 4 ? args.book : DEFAULT_YSK_BOOK;
   const mappedCourseId = YSK_BOOK_TO_COURSE[book];
   return YSK_SEED_CONFIGS[mappedCourseId] ?? YSK_SEED_CONFIGS[DEFAULT_YSK_COURSE_ID];
 }
@@ -339,7 +337,9 @@ function buildH5pPostApiUrl(config: YskSeedConfig, chapterId: number): string {
 }
 
 function buildH5pContentFileUrl(config: YskSeedConfig, h5pId: number, path: string): string {
-  return normalizeUrl(`https://ysk.upenn.domains/${config.pressbooksSlug}/files/h5p/content/${h5pId}/${path}`);
+  return normalizeUrl(
+    `https://ysk.upenn.domains/${config.pressbooksSlug}/files/h5p/content/${h5pId}/${path}`
+  );
 }
 
 function decodeHtml(value: string): string {
@@ -380,21 +380,6 @@ function stripHtml(value: string): string {
 
 function cleanText(value: string): string {
   return normalizeWhitespace(stripHtml(decodeHtml(value)));
-}
-
-function cleanMultilineText(value: string): string {
-  return decodeHtml(value)
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<\/tr>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\r/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
 }
 
 function dedupe<T>(items: T[], keyFn: (item: T) => string): T[] {
@@ -667,11 +652,7 @@ function htmlToLines(value: string): string[] {
     .filter(Boolean);
 }
 
-function extractSectionWithin(
-  html: string,
-  startRegex: RegExp,
-  stopRegexes: RegExp[]
-): string {
+function extractSectionWithin(html: string, startRegex: RegExp, stopRegexes: RegExp[]): string {
   const start = startRegex.exec(html);
   if (!start) return '';
 
@@ -772,7 +753,9 @@ function hasSufficientReadingQuality(lines: string[]): boolean {
       /[.!?。？！]$/.test(line) ||
       (line.length >= 8 && /(?:요|다|니다|까요|세요|예요|이에요)[.!?]?$/.test(line))
   ).length;
-  const promptLike = lines.filter(line => /^(?:어디|누구|무엇|언제|왜|어떻게)\??$/.test(line)).length;
+  const promptLike = lines.filter(line =>
+    /^(?:어디|누구|무엇|언제|왜|어떻게)\??$/.test(line)
+  ).length;
   const glossaryLike = lines.filter(line => /[:=]/.test(line) && /[A-Za-z]/.test(line)).length;
 
   if (sentenceLike < 2) return false;
@@ -809,7 +792,8 @@ function isNoisyReadingText(value: string): boolean {
     return true;
   }
 
-  const bracketRatio = lines.filter(line => /[\[\]]/.test(line)).length / lines.length;
+  const bracketRatio =
+    lines.filter(line => line.includes('[') || line.includes(']')).length / lines.length;
   if (bracketRatio >= 0.4) return true;
 
   const shortRatio = lines.filter(line => line.length < 8).length / lines.length;
@@ -916,9 +900,7 @@ function extractListeningScriptLines(html: string): string[] {
       }
 
       if (/^i can\b/i.test(normalized)) continue;
-      if (
-        /^lesson\s*\d+\s*(?:wb\s*link|integrated performance task link)\b/i.test(normalized)
-      )
+      if (/^lesson\s*\d+\s*(?:wb\s*link|integrated performance task link)\b/i.test(normalized))
         continue;
       if (/^interpretive task\b/i.test(normalized)) continue;
       if (/^문법\s*\d+/.test(normalized)) continue;
@@ -970,9 +952,7 @@ function extractListeningScriptLines(html: string): string[] {
   let capture = false;
 
   for (const line of lines) {
-    const normalized = normalizeWhitespace(
-      line.replace(/\b\d{7,}\b/g, '').replace(/\s{2,}/g, ' ')
-    );
+    const normalized = normalizeWhitespace(line.replace(/\b\d{7,}\b/g, '').replace(/\s{2,}/g, ' '));
     if (!normalized) continue;
 
     if (
@@ -995,7 +975,8 @@ function extractListeningScriptLines(html: string): string[] {
     }
 
     if (/^i can\b/i.test(normalized)) continue;
-    if (/^lesson\s*\d+\s*(?:wb\s*link|integrated performance task link)\b/i.test(normalized)) continue;
+    if (/^lesson\s*\d+\s*(?:wb\s*link|integrated performance task link)\b/i.test(normalized))
+      continue;
     if (/^interpretive task\b/i.test(normalized)) continue;
     if (/^문법\s*\d+/.test(normalized)) continue;
     if (!/[가-힣]/.test(normalized)) continue;
@@ -1016,7 +997,8 @@ function extractListeningScriptLines(html: string): string[] {
 }
 
 function buildTranscriptFromLines(lines: string[]): SeedTranscriptSegment[] {
-  const speakerOnlyPattern = /^[\p{Script=Hangul}A-Za-z][\p{Script=Hangul}A-Za-z0-9\s·.'’()_-]{0,24}[:：]$/u;
+  const speakerOnlyPattern =
+    /^[\p{Script=Hangul}A-Za-z][\p{Script=Hangul}A-Za-z0-9\s·.'’()_-]{0,24}[:：]$/u;
 
   const coalesced: string[] = [];
   const normalizedLines = lines
@@ -1088,10 +1070,9 @@ function extractGrammarSectionHtml(html: string): string {
       if (match) {
         const startAt = match.index + match[0].length;
         const rest = html.slice(startAt);
-        const end = new RegExp(
-          `<a\\s+id=["']#?${grammarPrefix}tasks["'][^>]*><\\/a>`,
-          'i'
-        ).exec(rest);
+        const end = new RegExp(`<a\\s+id=["']#?${grammarPrefix}tasks["'][^>]*><\\/a>`, 'i').exec(
+          rest
+        );
         section = end ? rest.slice(0, end.index) : rest;
       }
     }
@@ -1120,7 +1101,11 @@ function isGrammarNoiseLine(line: string): boolean {
   if (/^(?:\d+\s*)+$/.test(text)) return true;
   if (/^[0-9]{2,}$/.test(text)) return true;
   if (/^[-–—=~_./\\|]+$/.test(text)) return true;
-  if (/^(?:연습|exercise|practice|interpretive task|interpersonal task|let's cook|i got this|now you try)/i.test(text))
+  if (
+    /^(?:연습|exercise|practice|interpretive task|interpersonal task|let's cook|i got this|now you try)/i.test(
+      text
+    )
+  )
     return true;
   const compact = text.replace(/\s+/g, '');
   if (!compact) return true;
@@ -1140,7 +1125,11 @@ function isGrammarHeadingCandidate(title: string): boolean {
   const cleaned = normalizeGrammarTitle(title);
   if (!cleaned) return false;
   if (cleaned.length < 3 || cleaned.length > 180) return false;
-  if (/^(?:연습|exercise|practice|lesson focus|goals|setting up|let's cook|interpretive task|interpersonal task|korean flavors|check|async|listening script)/i.test(cleaned))
+  if (
+    /^(?:연습|exercise|practice|lesson focus|goals|setting up|let's cook|interpretive task|interpersonal task|korean flavors|check|async|listening script)/i.test(
+      cleaned
+    )
+  )
     return false;
   if (/^(?:for|when|you|we)\s/i.test(cleaned) && cleaned.length > 90) return false;
   if (/^[0-9\s]+$/.test(cleaned)) return false;
@@ -1151,7 +1140,8 @@ function isGrammarHeadingCandidate(title: string): boolean {
 }
 
 function extractGrammarExamplesFromLines(lines: string[]): ParsedGrammarExample[] {
-  const skipHeading = /^(?:문법|연습|conjugation|dictionary form|example|summary|present|past|future|recipe|odd but true|note|compare|table|맛보기)\b/i;
+  const skipHeading =
+    /^(?:문법|연습|conjugation|dictionary form|example|summary|present|past|future|recipe|odd but true|note|compare|table|맛보기)\b/i;
   const candidates = lines
     .map(line => normalizeWhitespace(line))
     .filter(Boolean)
@@ -1201,7 +1191,9 @@ function extractGrammarPointsFromSection(sectionHtml: string): ParsedGrammarPoin
 
     const blockStart = (match.index ?? 0) + match[0].length;
     const blockEnd =
-      i + 1 < headingMatches.length ? headingMatches[i + 1].index ?? sectionHtml.length : sectionHtml.length;
+      i + 1 < headingMatches.length
+        ? (headingMatches[i + 1].index ?? sectionHtml.length)
+        : sectionHtml.length;
     const blockHtml = sectionHtml.slice(blockStart, blockEnd);
     const blockLines = htmlToLines(blockHtml)
       .map(line => normalizeWhitespace(line.replace(/\b\d{7,}\b/g, '').replace(/\s{2,}/g, ' ')))
@@ -1227,16 +1219,15 @@ function extractGrammarPointsFromSection(sectionHtml: string): ParsedGrammarPoin
     displayOrder += 1;
   }
 
-  return dedupe(
-    output,
-    item => item.title.toLowerCase().replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim()
+  return dedupe(output, item =>
+    item.title.toLowerCase().replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim()
   ).slice(0, 8);
 }
 
 function extractKoreanWord(value: string): string | null {
   const match = value.match(/[가-힣][가-힣0-9\s'’\-·()]+/);
   if (!match) return null;
-  let normalized = normalizeWhitespace(match[0]).replace(/^[\-\s]+|[\-\s]+$/g, '');
+  let normalized = normalizeWhitespace(match[0]).replace(/^[-\s]+|[-\s]+$/g, '');
   const openParens = (normalized.match(/\(/g) || []).length;
   const closeParens = (normalized.match(/\)/g) || []).length;
   if (openParens > closeParens) {
@@ -1305,7 +1296,9 @@ function extractMeaning(value: string): string | null {
 
   const englishCandidates = candidates.filter(candidate => /[A-Za-z]/.test(candidate));
   const preferred =
-    englishCandidates.find(candidate => !isGenericMeaning(candidate) && !isGrammarGloss(candidate)) ||
+    englishCandidates.find(
+      candidate => !isGenericMeaning(candidate) && !isGrammarGloss(candidate)
+    ) ||
     englishCandidates.find(candidate => !isGenericMeaning(candidate)) ||
     englishCandidates[0] ||
     candidates[0];
@@ -1421,8 +1414,10 @@ function extractVocabularyFromLists(html: string): ParsedVocabItem[] {
       const leftHasKorean = /[가-힣]/.test(left);
       const rightHasKorean = /[가-힣]/.test(right);
 
-      const word = leftHasKorean && !rightHasKorean ? extractKoreanWord(left) : extractKoreanWord(right);
-      const meaning = leftHasKorean && !rightHasKorean ? extractMeaning(right) : extractMeaning(left);
+      const word =
+        leftHasKorean && !rightHasKorean ? extractKoreanWord(left) : extractKoreanWord(right);
+      const meaning =
+        leftHasKorean && !rightHasKorean ? extractMeaning(right) : extractMeaning(left);
       if (!word || !meaning) continue;
       if (!/[A-Za-z]/.test(meaning)) continue;
 
@@ -1438,10 +1433,7 @@ function extractVocabulary(html: string): ParsedVocabItem[] {
   const section = extractVocabularySectionHtml(html);
 
   const source = section || html;
-  const merged = [
-    ...extractVocabularyFromTables(source),
-    ...extractVocabularyFromLists(source),
-  ];
+  const merged = [...extractVocabularyFromTables(source), ...extractVocabularyFromLists(source)];
   return dedupe(merged, item => item.word);
 }
 
@@ -1520,7 +1512,9 @@ function readZipEntry(buffer: Uint8Array, entry: ZipEntry): Uint8Array {
   if (entry.compressionMethod === 8) {
     return inflateRawSync(Buffer.from(compressed));
   }
-  throw new Error(`Unsupported ZIP compression method ${entry.compressionMethod} for ${entry.name}`);
+  throw new Error(
+    `Unsupported ZIP compression method ${entry.compressionMethod} for ${entry.name}`
+  );
 }
 
 function collectAudioPathsFromObject(value: unknown): string[] {
@@ -1542,7 +1536,11 @@ function collectAudioPathsFromObject(value: unknown): string[] {
     const record = node as Record<string, unknown>;
     const path = record.path;
     const mime = record.mime;
-    if (typeof path === 'string' && typeof mime === 'string' && mime.toLowerCase().startsWith('audio/')) {
+    if (
+      typeof path === 'string' &&
+      typeof mime === 'string' &&
+      mime.toLowerCase().startsWith('audio/')
+    ) {
       found.push(path.replace(/^\.?\//, ''));
     }
     for (const next of Object.values(record)) visit(next);
@@ -1652,7 +1650,10 @@ async function inspectH5pExport(
   return result;
 }
 
-function parseUnitMeta(rawTitle: string, fallbackUnitIndex: number): { unitIndex: number; title: string } {
+function parseUnitMeta(
+  rawTitle: string,
+  fallbackUnitIndex: number
+): { unitIndex: number; title: string } {
   const title = cleanText(rawTitle);
 
   const lessonMatch = title.match(/\blesson\s*(\d{1,3})\b/i);
@@ -1756,7 +1757,9 @@ function parseChapter(
     grammarPoints = extractGrammarPointsFromSection(extractGrammarSectionHtml(contentHtml));
     if (grammarPoints.length === 0) warnings.push('Grammar extraction returned empty list');
   } catch (error) {
-    warnings.push(`Grammar extraction failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    warnings.push(
+      `Grammar extraction failed: ${error instanceof Error ? error.message : 'unknown error'}`
+    );
   }
 
   if (h5pIds.length > 0) {
@@ -1864,7 +1867,10 @@ export const seedYsk = action({
     });
     const yskApiCandidates = getYskApiCandidates(config);
     const page = Math.max(1, Math.floor(args.page ?? DEFAULT_PAGE));
-    const perPage = Math.max(1, Math.min(MAX_PER_PAGE, Math.floor(args.perPage ?? DEFAULT_PER_PAGE)));
+    const perPage = Math.max(
+      1,
+      Math.min(MAX_PER_PAGE, Math.floor(args.perPage ?? DEFAULT_PER_PAGE))
+    );
     const importAllPages = args.importAllPages !== false;
     const maxPages = Math.max(1, Math.floor(args.maxPages ?? DEFAULT_MAX_PAGES));
     const uploadAudioToS3 = args.uploadAudioToS3 !== false;
@@ -1964,7 +1970,9 @@ export const seedYsk = action({
 
         parsedChapter.readingText = composeReadingText(parsedChapter, h5pTextSnippets);
         if (parsedChapter.readingText && isNoisyReadingText(parsedChapter.readingText)) {
-          parsedChapter.warnings.push('Composed reading looked noisy; replaced with title fallback');
+          parsedChapter.warnings.push(
+            'Composed reading looked noisy; replaced with title fallback'
+          );
           parsedChapter.readingText = '';
         }
         if (!parsedChapter.readingText) {
@@ -1999,7 +2007,10 @@ export const seedYsk = action({
     }
 
     const totalVocab = parsed.reduce((sum, chapter) => sum + chapter.vocabulary.length, 0);
-    const totalGrammarPoints = parsed.reduce((sum, chapter) => sum + chapter.grammarPoints.length, 0);
+    const totalGrammarPoints = parsed.reduce(
+      (sum, chapter) => sum + chapter.grammarPoints.length,
+      0
+    );
     const totalTranscriptSegments = parsed.reduce(
       (sum, chapter) => sum + chapter.transcriptData.length,
       0
@@ -2122,8 +2133,9 @@ export const seedYsk = action({
         skippedUnits++;
       }
 
-      const grammarItems = dedupe(chapter.grammarPoints, item =>
-        `${chapter.unitIndex}::${item.title.toLowerCase()}`
+      const grammarItems = dedupe(
+        chapter.grammarPoints,
+        item => `${chapter.unitIndex}::${item.title.toLowerCase()}`
       );
       for (const grammar of grammarItems) {
         const link = await ctx.runMutation(seedMutationsInternal.upsertCourseGrammar, {
@@ -2178,11 +2190,14 @@ export const seedYsk = action({
       bulkImportResults.push({ unitId, count: items.length, result });
     }
 
-    const sanitizeResult = await ctx.runMutation(seedMutationsInternal.sanitizeCourseVocabularyMeanings, {
-      courseId: config.courseId,
-      dryRun: false,
-      clearOtherLocales: true,
-    });
+    const sanitizeResult = await ctx.runMutation(
+      seedMutationsInternal.sanitizeCourseVocabularyMeanings,
+      {
+        courseId: config.courseId,
+        dryRun: false,
+        clearOtherLocales: true,
+      }
+    );
     const wordFormSanitizeResult = await ctx.runMutation(
       seedMutationsInternal.sanitizeCourseVocabularyWordForms,
       {
@@ -2224,7 +2239,9 @@ export const seedYsk = action({
         linksRemoved: grammarLinksRemoved,
       },
       vocabularyImports: {
-        strategy: canUseAdminBulkImport ? 'api.vocab.bulkImport' : 'internal.seedMutations.bulkImportVocabulary',
+        strategy: canUseAdminBulkImport
+          ? 'api.vocab.bulkImport'
+          : 'internal.seedMutations.bulkImportVocabulary',
         batches: bulkImportResults.length,
         byUnit: bulkImportResults,
       },
