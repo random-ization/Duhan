@@ -20,6 +20,19 @@ interface ErrorBoundaryState {
   errorInfo: React.ErrorInfo | null;
 }
 
+const CHUNK_RELOAD_GUARD_KEY = 'duhan:chunk-reload-attempted';
+
+function isChunkLoadError(error: Error | null): boolean {
+  if (!error) return false;
+  const message = String(error.message || error).toLowerCase();
+  return (
+    message.includes('failed to fetch dynamically imported module') ||
+    message.includes('chunkloaderror') ||
+    message.includes('loading chunk') ||
+    message.includes('importing a module script failed')
+  );
+}
+
 /**
  * React Error Boundary Component
  * Prevents entire app from crashing when a component throws an error
@@ -50,10 +63,24 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       componentStack: errorInfo.componentStack,
     });
 
+    // Recover from stale build chunks (e.g. old cached HTML points to removed hashed asset).
+    if (isChunkLoadError(error) && typeof globalThis.window !== 'undefined') {
+      const alreadyTried = globalThis.window.sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY) === '1';
+      if (!alreadyTried) {
+        globalThis.window.sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, '1');
+        globalThis.location.reload();
+        return;
+      }
+    }
+
     this.setState({ errorInfo });
   }
 
   handleReset = () => {
+    if (isChunkLoadError(this.state.error)) {
+      this.handleReload();
+      return;
+    }
     this.setState({ hasError: false, error: null, errorInfo: null });
     this.props.onReset?.();
   };

@@ -1,3 +1,4 @@
+'use node';
 import crypto from 'node:crypto';
 
 export function getSignatureKey(
