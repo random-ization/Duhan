@@ -7,6 +7,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
+import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import {
   ArrowRight,
@@ -1881,7 +1882,9 @@ export default function Landing() {
   const getPrices = useAction(api.lemonsqueezy.getVariantPrices);
 
   useEffect(() => {
-    getPrices({}).then(setPrices).catch(console.error);
+    runConvexActionWithRetry(getPrices, {}, { retries: 2, initialDelayMs: 300 })
+      .then(setPrices)
+      .catch(console.error);
   }, [getPrices]);
 
   // Condition return AFTER hooks

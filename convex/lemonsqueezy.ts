@@ -44,6 +44,11 @@ type VariantPrice = {
   formatted: string;
 };
 
+type VariantPricesResponse = {
+  GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
+  REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
+};
+
 const grantAccessMutation = makeFunctionReference<
   'mutation',
   GrantAccessArgs,
@@ -99,16 +104,29 @@ const parseVariantPrices = (value: unknown): VariantPrice[] => {
   return data.flatMap(entry => {
     if (!isRecord(entry)) return [];
     const id = readStringish(entry, ['id']);
-    const price = getPath(entry, ['attributes', 'price']);
-    const formatted = readString(entry, ['attributes', 'price_formatted']);
+    const rawPrice = getPath(entry, ['attributes', 'price']);
+    const price =
+      typeof rawPrice === 'number'
+        ? rawPrice
+        : typeof rawPrice === 'string'
+          ? Number(rawPrice)
+          : Number.NaN;
+    const formatted =
+      readString(entry, ['attributes', 'price_formatted']) ||
+      (Number.isFinite(price) ? `$${(price / 100).toFixed(2)}` : '');
 
-    if (!id || typeof price !== 'number' || !Number.isFinite(price) || !formatted) {
+    if (!id || !Number.isFinite(price) || !formatted) {
       return [];
     }
 
     return [{ id, priceCents: price, formatted }];
   });
 };
+
+const emptyVariantPrices = (): VariantPricesResponse => ({
+  GLOBAL: {},
+  REGIONAL: {},
+});
 
 /**
  * Create a Lemon Squeezy checkout session
@@ -217,32 +235,51 @@ export const getVariantPrices = action({
   handler: async () => {
     const apiKey = process.env[API_KEY_ENV];
     if (!apiKey) {
-      throw new Error(`Missing ${API_KEY_ENV} environment variable`);
+      console.warn(`[LemonSqueezy] ${API_KEY_ENV} missing, returning empty prices.`);
+      return emptyVariantPrices();
+    }
+
+    const prices = emptyVariantPrices();
+    const configuredVariantIds = new Set(
+      Object.values(VARIANT_MAP)
+        .flatMap(regionPlans => Object.values(regionPlans))
+        .filter(id => typeof id === 'string' && id.length > 0)
+    );
+
+    if (configuredVariantIds.size === 0) {
+      console.warn('[LemonSqueezy] No variant IDs configured, returning empty prices.');
+      return prices;
     }
 
     // Fetch all variants from Lemon Squeezy
     // We request 100 per page to likely get all in one go
-    const response = await fetch(`${LEMONSQUEEZY_API_URL}/variants?page[size]=100`, {
-      headers: {
-        Accept: 'application/vnd.api+json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[LemonSqueezy] Failed to fetch variants:', response.status, errorText);
-      throw new Error(`Lemon Squeezy API error: ${response.status}`);
+    let variants: VariantPrice[] = [];
+    try {
+      const response = await fetch(`${LEMONSQUEEZY_API_URL}/variants?page[size]=100`, {
+        headers: {
+          Accept: 'application/vnd.api+json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[LemonSqueezy] Failed to fetch variants:', response.status, errorText);
+        return prices;
+      }
+
+      const data: unknown = await response.json();
+      variants = parseVariantPrices(data);
+    } catch (error: unknown) {
+      console.error('[LemonSqueezy] Failed to load variant prices:', toErrorMessage(error));
+      return prices;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data: unknown = await response.json();
-    const variants = parseVariantPrices(data);
-
-    // Build pricing map
-    const prices = {
-      GLOBAL: {} as Record<string, { amount: string; currency: string; formatted: string }>,
-      REGIONAL: {} as Record<string, { amount: string; currency: string; formatted: string }>,
-    };
 
     // Helper to find variant data
     const findVariant = (paramsId: string | undefined) => {

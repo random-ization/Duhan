@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAction } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { aRef, NoArgs } from '../../utils/convexRefs';
+import { runConvexActionWithRetry } from '../../utils/convexActionRetry';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
@@ -75,7 +76,7 @@ export const MobileSubscriptionPage: React.FC = () => {
   );
 
   useEffect(() => {
-    getVariantPrices({})
+    runConvexActionWithRetry(getVariantPrices, {}, { retries: 2, initialDelayMs: 300 })
       .then(setPrices)
       .catch(err => {
         logger.warn('Failed to load variant prices for mobile subscription', err);
@@ -90,12 +91,16 @@ export const MobileSubscriptionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const { checkoutUrl } = await createCheckoutSession({
-        plan: billingInterval,
-        userId: user.id?.toString() || '',
-        userEmail: user.email || '',
-        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-      });
+      const { checkoutUrl } = await runConvexActionWithRetry(
+        createCheckoutSession,
+        {
+          plan: billingInterval,
+          userId: user.id?.toString() || '',
+          userEmail: user.email || '',
+          region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        },
+        { retries: 1, initialDelayMs: 250 }
+      );
       globalThis.location.href = checkoutUrl;
     } catch (error) {
       const err = error as Error;

@@ -7,6 +7,7 @@ import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { aRef } from '../utils/convexRefs';
+import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
@@ -89,7 +90,7 @@ export default function PricingDetailsPage() {
   );
 
   useEffect(() => {
-    getPrices({})
+    runConvexActionWithRetry(getPrices, {}, { retries: 2, initialDelayMs: 300 })
       .then(setPrices)
       .catch(err => {
         logger.error('Failed to fetch prices', err);
@@ -189,13 +190,17 @@ export default function PricingDetailsPage() {
 
     try {
       setCheckoutPendingPlan(plan);
-      const { checkoutUrl } = await createCheckoutSession({
-        plan,
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name,
-        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-      });
+      const { checkoutUrl } = await runConvexActionWithRetry(
+        createCheckoutSession,
+        {
+          plan,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        },
+        { retries: 1, initialDelayMs: 250 }
+      );
       globalThis.location.assign(checkoutUrl);
     } catch (err) {
       logger.error('Failed to create checkout', err);
