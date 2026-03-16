@@ -38,57 +38,46 @@ export const getStats = query({
         .collect(),
     ]);
 
+    const [vocabProgress, grammarProgress] = await Promise.all([
+      ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('user_grammar_progress')
+        .withIndex('by_user_grammar', q => q.eq('userId', userId))
+        .collect(),
+    ]);
+
     let vocabTotal = 0;
     let dueReviews = 0;
     let masteredWords = 0;
     let todayWordsStudied = 0;
-    let vocabCursor: string | null = null;
-
-    do {
-      const page = await ctx.db
-        .query('user_vocab_progress')
-        .withIndex('by_user', q => q.eq('userId', userId))
-        .paginate({ cursor: vocabCursor, numItems: SCAN_PAGE_SIZE });
-
-      for (const progress of page.page) {
-        vocabTotal += 1;
-        if (progress.nextReviewAt && progress.nextReviewAt <= now) {
-          dueReviews += 1;
-        }
-        if (progress.status === 'MASTERED') {
-          masteredWords += 1;
-        }
-        if (progress.lastReviewedAt && progress.lastReviewedAt >= todayStart) {
-          todayWordsStudied += 1;
-        }
+    for (const progress of vocabProgress) {
+      vocabTotal += 1;
+      if (progress.nextReviewAt && progress.nextReviewAt <= now) {
+        dueReviews += 1;
       }
-
-      vocabCursor = page.isDone ? null : page.continueCursor;
-    } while (vocabCursor);
+      if (progress.status === 'MASTERED') {
+        masteredWords += 1;
+      }
+      if (progress.lastReviewedAt && progress.lastReviewedAt >= todayStart) {
+        todayWordsStudied += 1;
+      }
+    }
 
     let grammarTotal = 0;
     let masteredGrammar = 0;
     let todayGrammarStudied = 0;
-    let grammarCursor: string | null = null;
-
-    do {
-      const page = await ctx.db
-        .query('user_grammar_progress')
-        .withIndex('by_user_grammar', q => q.eq('userId', userId))
-        .paginate({ cursor: grammarCursor, numItems: SCAN_PAGE_SIZE });
-
-      for (const progress of page.page) {
-        grammarTotal += 1;
-        if (progress.status === 'MASTERED') {
-          masteredGrammar += 1;
-        }
-        if (progress.lastStudiedAt >= todayStart) {
-          todayGrammarStudied += 1;
-        }
+    for (const progress of grammarProgress) {
+      grammarTotal += 1;
+      if (progress.status === 'MASTERED') {
+        masteredGrammar += 1;
       }
-
-      grammarCursor = page.isDone ? null : page.continueCursor;
-    } while (grammarCursor);
+      if (progress.lastStudiedAt >= todayStart) {
+        todayGrammarStudied += 1;
+      }
+    }
 
     const activitySummary = createActivitySummaryState(
       user?.totalStudyMinutes ?? 0,

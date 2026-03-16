@@ -30,6 +30,12 @@ export const normalizeLocalizedPathname = (path: string): string => {
     segments[0] = maybeLanguage;
   }
 
+  // Canonicalize legacy route aliases to keep deep links stable.
+  const contentRootIndex = isValidLanguage(segments[0] || '') ? 1 : 0;
+  if ((segments[contentRootIndex] || '').toLowerCase() === 'vocabbook') {
+    segments[contentRootIndex] = 'vocab-book';
+  }
+
   return `/${segments.join('/')}`;
 };
 
@@ -114,7 +120,7 @@ interface LanguageRouterProps {
  */
 export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
   const { lang } = useParams<{ lang: string }>();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -176,7 +182,7 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
       <div className="min-h-screen flex items-center justify-center bg-card">
         <div className="flex items-center gap-3 text-muted-foreground font-medium">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-slate-600" />
-          <span>Loading…</span>
+          <span>{t('loading', { defaultValue: 'Loading...' })}</span>
         </div>
       </div>
     );

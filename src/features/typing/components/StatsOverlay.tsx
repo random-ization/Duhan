@@ -1,5 +1,6 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { TypingStats } from '../hooks/useKoreanTyping';
 import { Button } from '../../../components/ui';
 
@@ -10,6 +11,7 @@ interface StatsOverlayProps {
 }
 
 export const StatsOverlay: React.FC<StatsOverlayProps> = ({ stats, onRestart, visible }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -24,7 +26,7 @@ export const StatsOverlay: React.FC<StatsOverlayProps> = ({ stats, onRestart, vi
         <div className="flex flex-col items-center">
           <div className="text-6xl font-black text-indigo-600 mb-2">{stats.accuracy}%</div>
           <div className="text-xl font-bold text-muted-foreground uppercase tracking-widest">
-            Accuracy
+            {t('typing.statsOverlay.accuracy', { defaultValue: 'Accuracy' })}
           </div>
         </div>
       </div>
@@ -39,7 +41,7 @@ export const StatsOverlay: React.FC<StatsOverlayProps> = ({ stats, onRestart, vi
           <RotateCcw className="w-8 h-8" />
         </div>
         <span className="text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-          Press Tab to Restart
+          {t('typing.statsOverlay.restartHint', { defaultValue: 'Press Tab to Restart' })}
         </span>
       </Button>
     </div>

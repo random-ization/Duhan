@@ -36,6 +36,17 @@ interface ReviewCopy {
   saveFailedMessage: string;
   saveFailedShort: string;
   savedToast: string;
+  analyzing: string;
+  aiTitle: string;
+  viewNotebook: string;
+  saved: string;
+  save: string;
+  saving: string;
+  translation: string;
+  keyPoint: string;
+  analysis: string;
+  wrongOptions: string;
+  optionLabel: string;
 }
 
 // Korean serif font for authentic TOPIK paper look
@@ -43,6 +54,7 @@ const FONT_SERIF = "font-['Batang','KoPubBatang','Times_New_Roman',serif]";
 
 // Unicode circle numbers for TOPIK-style options
 const CIRCLE_NUMBERS = ['①', '②', '③', '④'];
+const TOPIK_BOGI_HEADER = '<보 기>';
 const DEFAULT_AI_ERROR_MESSAGE = 'AI is busy right now. Please try again later.';
 const DEFAULT_SAVE_FAILED_MESSAGE = 'Failed to save. Please try again.';
 const HIGHLIGHT_BASE_CLASS =
@@ -128,11 +140,21 @@ const safeToString = (val: unknown): string | null => {
 
 const getReviewCopy = (labels: ReturnType<typeof getLabels>): ReviewCopy => {
   const review = labels.dashboard?.topik?.mobile?.review;
+  const common = labels.common;
   const {
     aiError = DEFAULT_AI_ERROR_MESSAGE,
     saveFailed = DEFAULT_SAVE_FAILED_MESSAGE,
     saveFailedShort = 'Save failed',
     savedToast = 'Saved to notebook',
+    aiThinking = 'Analyzing...',
+    aiTitle = 'AI Analysis',
+    saved = 'Saved',
+    save = 'Save',
+    saving = 'Saving...',
+    translation = 'Translation',
+    keyPoint = 'Key Point',
+    analysis = 'Analysis',
+    wrongOptions = 'Wrong Options',
   } = review ?? {};
 
   return {
@@ -140,6 +162,17 @@ const getReviewCopy = (labels: ReturnType<typeof getLabels>): ReviewCopy => {
     saveFailedMessage: saveFailed,
     saveFailedShort,
     savedToast,
+    analyzing: aiThinking,
+    aiTitle,
+    viewNotebook: common?.viewNotebook || 'View notebook →',
+    saved,
+    save,
+    saving,
+    translation,
+    keyPoint,
+    analysis,
+    wrongOptions,
+    optionLabel: common?.option || 'Option',
   };
 };
 
@@ -219,7 +252,7 @@ const ContextBoxView = ({
         <div className="flex items-center justify-center gap-2 mb-0">
           <div className="flex-1 h-px bg-foreground"></div>
           <span className={`${FONT_SERIF} text-base font-bold tracking-widest px-2`}>
-            &lt;보 &nbsp; 기&gt;
+            {TOPIK_BOGI_HEADER}
           </span>
           <div className="flex-1 h-px bg-foreground"></div>
         </div>
@@ -313,7 +346,7 @@ const OptionsView = ({
               {imgUrl ? (
                 <img
                   src={imgUrl}
-                  alt={`Option ${optionIndex + 1}`}
+                  alt={String(optionIndex + 1)}
                   className="w-full h-full object-contain bg-card"
                 />
               ) : (
@@ -417,6 +450,7 @@ const AIAnalysisSection = ({
   isSaved,
   handleAIAnalysis,
   handleSaveToNotebook,
+  copy,
   isInline = false,
 }: {
   showCorrect: boolean;
@@ -427,6 +461,7 @@ const AIAnalysisSection = ({
   isSaved: boolean;
   handleAIAnalysis: () => void;
   handleSaveToNotebook: () => void;
+  copy: ReviewCopy;
   isInline?: boolean;
 }) => {
   if (!showCorrect) return null;
@@ -438,12 +473,12 @@ const AIAnalysisSection = ({
           size="auto"
           onClick={handleAIAnalysis}
           loading={aiLoading}
-          loadingText="Analyzing..."
+          loadingText={copy.analyzing}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <>
             <Sparkles className="w-4 h-4" />
-            <span className="font-medium">AI Analysis</span>
+            <span className="font-medium">{copy.aiTitle}</span>
           </>
         </Button>
       )}
@@ -458,6 +493,7 @@ const AIAnalysisSection = ({
           isSaving={isSaving}
           isSaved={isSaved}
           onSave={handleSaveToNotebook}
+          copy={copy}
         />
       )}
     </div>
@@ -548,6 +584,7 @@ const QuestionMainContent = ({
   isSaved,
   handleAIAnalysis,
   handleSaveToNotebook,
+  reviewCopy,
 }: {
   question: TopikQuestion;
   questionIndex: number;
@@ -567,6 +604,7 @@ const QuestionMainContent = ({
   isSaved: boolean;
   handleAIAnalysis: () => void;
   handleSaveToNotebook: () => void;
+  reviewCopy: ReviewCopy;
 }) => {
   const questionImage = question.imageUrl || question.image;
   return (
@@ -581,7 +619,7 @@ const QuestionMainContent = ({
           <div className="mb-4 flex justify-center bg-card p-2 border border-foreground/10 rounded">
             <img
               src={questionImage}
-              alt={`Question ${questionIndex + 1}`}
+              alt={String(questionIndex + 1)}
               className="max-h-[300px] object-contain"
             />
           </div>
@@ -632,6 +670,7 @@ const QuestionMainContent = ({
           isSaved={isSaved}
           handleAIAnalysis={handleAIAnalysis}
           handleSaveToNotebook={handleSaveToNotebook}
+          copy={reviewCopy}
           isInline={isInline}
         />
       </div>
@@ -892,12 +931,14 @@ const SaveToast = ({
   saveError,
   saveFailedShort,
   savedToast,
+  viewNotebook,
   onDismiss,
 }: {
   show: boolean;
   saveError: string | null;
   saveFailedShort: string;
   savedToast: string;
+  viewNotebook: string;
   onDismiss: () => void;
 }) => {
   if (!show) return null;
@@ -923,7 +964,7 @@ const SaveToast = ({
       title={savedToast}
       body={
         <a href="/notebook" className="text-emerald-100 text-sm hover:text-white underline">
-          View notebook →
+          {viewNotebook}
         </a>
       }
       onDismiss={onDismiss}
@@ -1003,12 +1044,14 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           isSaved={isSaved}
           handleAIAnalysis={handleAIAnalysis}
           handleSaveToNotebook={handleSaveToNotebook}
+          reviewCopy={reviewCopy}
         />
         <SaveToast
           show={showSaveToast}
           saveError={saveError}
           saveFailedShort={reviewCopy.saveFailedShort}
           savedToast={reviewCopy.savedToast}
+          viewNotebook={reviewCopy.viewNotebook}
           onDismiss={dismissSaveToast}
         />
       </div>
@@ -1027,11 +1070,13 @@ const SanitizedAIAnalysisDisplay = ({
   isSaving,
   isSaved,
   onSave,
+  copy,
 }: {
   analysis: AIAnalysis; // Use the moved AIAnalysis interface here
   isSaving: boolean;
   isSaved: boolean;
   onSave: () => void;
+  copy: ReviewCopy;
 }) => {
   const safeString = safeToString;
 
@@ -1068,13 +1113,13 @@ const SanitizedAIAnalysisDisplay = ({
       return (
         <>
           <BookmarkCheck className="w-4 h-4" />
-          Saved
+          {copy.saved}
         </>
       );
     return (
       <>
         <Bookmark className="w-4 h-4" />
-        Save
+        {copy.save}
       </>
     );
   };
@@ -1084,7 +1129,7 @@ const SanitizedAIAnalysisDisplay = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-indigo-600" />
-          <span className="font-bold text-indigo-700">AI Analysis</span>
+          <span className="font-bold text-indigo-700">{copy.aiTitle}</span>
         </div>
 
         {/* Save to Notebook Button */}
@@ -1095,7 +1140,7 @@ const SanitizedAIAnalysisDisplay = ({
           onClick={onSave}
           disabled={isSaving || isSaved}
           loading={isSaving}
-          loadingText="Saving..."
+          loadingText={copy.saving}
           className={getSaveBtnClass()}
         >
           {getSaveBtnContent()}
@@ -1105,7 +1150,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Translation */}
       {translation && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Translation</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">{copy.translation}</div>
           <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {translation}
           </div>
@@ -1115,7 +1160,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Key Point */}
       {keyPoint && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Key Point</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">{copy.keyPoint}</div>
           <div className="inline-block bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full text-sm font-medium">
             {keyPoint}
           </div>
@@ -1125,7 +1170,7 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Analysis */}
       {analysisText && (
         <div className="mb-4">
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Analysis</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">{copy.analysis}</div>
           <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-lg">
             {analysisText}
           </div>
@@ -1135,11 +1180,13 @@ const SanitizedAIAnalysisDisplay = ({
       {/* Wrong Options */}
       {wrongOptions.length > 0 && (
         <div>
-          <div className="text-sm font-semibold text-indigo-700 mb-1.5">Wrong Options</div>
+          <div className="text-sm font-semibold text-indigo-700 mb-1.5">{copy.wrongOptions}</div>
           <div className="space-y-2">
             {wrongOptions.map(([key, value]) => (
               <div key={key} className="bg-card/60 p-3 rounded-lg">
-                <span className="font-medium text-muted-foreground">Option {key}:</span>
+                <span className="font-medium text-muted-foreground">
+                  {copy.optionLabel} {key}:
+                </span>
                 <span className="text-muted-foreground">{value}</span>
               </div>
             ))}

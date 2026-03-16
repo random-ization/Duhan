@@ -227,6 +227,15 @@ interface ExamReviewUiCopy {
   canvasLoading: string;
   canvasSaving: string;
   canvasSynced: string;
+  titleKor: string;
+  titleEn: string;
+  scrollDownReview: string;
+  periodReading: string;
+  periodListening: string;
+  sectionReading: string;
+  sectionListening: string;
+  pageHeader: string;
+  range: string;
   endOfSection: string;
 }
 
@@ -239,6 +248,15 @@ const EXAM_REVIEW_UI_DEFAULTS = {
   canvasLoading: 'Loading...',
   canvasSaving: 'Saving...',
   canvasSynced: 'Synced',
+  titleKor: '한 국 어 능 력 시 험',
+  titleEn: 'The {{round}}th Test of Proficiency in Korean',
+  scrollDownReview: '[Scroll down to review]',
+  periodReading: '2nd Session',
+  periodListening: '1st Session',
+  sectionReading: 'Reading',
+  sectionListening: 'Listening',
+  pageHeader: 'Round {{round}} TOPIK II {{paperType}} · {{period}} ({{section}})',
+  range: 'TOPIK II {{section}} (Q1 ~ Q{{count}})',
   endOfSection: 'End of Section',
 };
 
@@ -257,6 +275,17 @@ const getExamReviewUiCopy = (labels: ReturnType<typeof getLabels>): ExamReviewUi
     canvasLoading: review.canvasLoading,
     canvasSaving: review.canvasSaving,
     canvasSynced: review.canvasSynced,
+    titleKor: mobileReview.titleKor || EXAM_REVIEW_UI_DEFAULTS.titleKor,
+    titleEn: mobileReview.titleEn || EXAM_REVIEW_UI_DEFAULTS.titleEn,
+    scrollDownReview: mobileReview.scrollDownReview || EXAM_REVIEW_UI_DEFAULTS.scrollDownReview,
+    periodReading: mobileReview.periodReading || EXAM_REVIEW_UI_DEFAULTS.periodReading,
+    periodListening: mobileReview.periodListening || EXAM_REVIEW_UI_DEFAULTS.periodListening,
+    sectionReading:
+      mobileReview.sectionReading || labels.reading || EXAM_REVIEW_UI_DEFAULTS.sectionReading,
+    sectionListening:
+      mobileReview.sectionListening || labels.listening || EXAM_REVIEW_UI_DEFAULTS.sectionListening,
+    pageHeader: mobileReview.pageHeader || EXAM_REVIEW_UI_DEFAULTS.pageHeader,
+    range: mobileReview.range || EXAM_REVIEW_UI_DEFAULTS.range,
     endOfSection: review.endOfSection,
   };
 };
@@ -1145,11 +1174,11 @@ const ReviewPaper = ({
         <div className="flex items-baseline justify-center gap-4 mb-2">
           <span className="text-xl md:text-2xl font-bold">제{exam.round}회</span>
           <span className="text-3xl md:text-5xl font-bold tracking-wider">
-            한 국 어 능 력 시 험
+            {reviewCopy.titleKor}
           </span>
         </div>
         <div className="text-center text-sm md:text-lg italic opacity-80">
-          The {exam.round}th Test of Proficiency in Korean
+          {reviewCopy.titleEn.replace('{{round}}', String(exam.round))}
         </div>
       </div>
 
@@ -1171,29 +1200,42 @@ const ReviewPaper = ({
         <div className="border-2 border-foreground w-80 md:w-96">
           <div className="flex">
             <div className="w-1/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl border-r-2 border-foreground">
-              {exam.type === 'READING' ? '2교시' : '1교시'}
+              {exam.type === 'READING' ? reviewCopy.periodReading : reviewCopy.periodListening}
             </div>
             <div className="w-2/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl">
-              {exam.type === 'READING' ? '읽기' : '듣기'}
+              {exam.type === 'READING' ? reviewCopy.sectionReading : reviewCopy.sectionListening}
             </div>
           </div>
         </div>
       </div>
 
       <div className="text-center text-sm text-muted-foreground mb-8 font-sans">
-        [Scroll down to review]
+        {reviewCopy.scrollDownReview}
       </div>
     </div>
 
     <div className="bg-card border-b border-foreground mx-8 md:mx-12 mb-8 pb-1">
       <div className="flex justify-between items-end">
         <div className="font-bold text-sm text-muted-foreground">
-          제{exam.round}회 한국어능력시험 II {exam.paperType || 'B'}형{' '}
-          {exam.type === 'READING' ? '2교시 (읽기)' : '1교시 (듣기)'}
+          {reviewCopy.pageHeader
+            .replace('{{round}}', String(exam.round))
+            .replace('{{paperType}}', exam.paperType || 'B')
+            .replace(
+              '{{period}}',
+              exam.type === 'READING' ? reviewCopy.periodReading : reviewCopy.periodListening
+            )
+            .replace(
+              '{{section}}',
+              exam.type === 'READING' ? reviewCopy.sectionReading : reviewCopy.sectionListening
+            )}
         </div>
         <div className="font-bold bg-muted px-4 py-1 rounded-full text-sm">
-          TOPIK Ⅱ {exam.type === 'READING' ? '읽기' : '듣기'} (1번 ~ {exam.questions.length}
-          번)
+          {reviewCopy.range
+            .replace(
+              '{{section}}',
+              exam.type === 'READING' ? reviewCopy.sectionReading : reviewCopy.sectionListening
+            )
+            .replace('{{count}}', String(exam.questions.length))}
         </div>
       </div>
     </div>

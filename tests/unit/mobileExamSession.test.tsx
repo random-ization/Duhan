@@ -46,7 +46,7 @@ describe('MobileExamSession', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /show passage/i }));
+    fireEvent.click(screen.getByRole('button', { name: /passage/i }));
 
     expect(screen.getByText('Safe Passage')).toBeInTheDocument();
     expect(container.querySelector('script')).toBeNull();

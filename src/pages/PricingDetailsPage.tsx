@@ -10,6 +10,7 @@ import { aRef } from '../utils/convexRefs';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
+import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import {
@@ -182,9 +183,9 @@ export default function PricingDetailsPage() {
     navigate(`/auth?redirect=${encoded}`);
   };
 
-  const startCheckout = async (plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME') => {
+  const startCheckout = async (plan: CheckoutPlan) => {
     if (!user) {
-      redirectTo(`/pricing/details?plan=${plan}`);
+      redirectTo(buildPricingDetailsPath(plan));
       return;
     }
 

@@ -27,6 +27,8 @@ import type { VocabBookItemDto } from '../../convex/vocab';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type ListenMode = 'BASIC' | 'ADVANCED';
+const PAGE_SIZE = 80;
+const PREFETCH_THRESHOLD = 10;
 
 const KOREAN_VOICE = 'ko-KR-SunHiNeural';
 const ZH_VOICE = 'zh-CN-XiaoxiaoNeural';
@@ -54,12 +56,35 @@ const VocabBookListenPage: React.FC = () => {
       ? (categoryParam as VocabBookCategory)
       : 'DUE';
 
-  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+  const [pageCursor, setPageCursor] = useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [index, setIndex] = useState(0);
+  const indexRef = useRef(0);
+
+  const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: q || undefined,
+    savedByUserOnly: true,
+    category,
+    cursor: pageCursor || undefined,
+    limit: PAGE_SIZE,
   });
-  const loading = vocabBookResult === undefined;
-  const items = useMemo<VocabBookItemDto[]>(() => vocabBookResult ?? [], [vocabBookResult]);
+  const loading = vocabBookPage === undefined && loadedItems.length === 0;
+  const loadingMore = vocabBookPage === undefined && loadedItems.length > 0;
+
+  useEffect(() => {
+    if (!vocabBookPage) return;
+    setNextCursor(vocabBookPage.nextCursor);
+    setLoadedItems(prev => {
+      if (pageCursor === null) return vocabBookPage.items;
+      const existing = new Set(prev.map(item => String(item.id)));
+      const appended = vocabBookPage.items.filter(item => !existing.has(String(item.id)));
+      return [...prev, ...appended];
+    });
+  }, [vocabBookPage, pageCursor]);
+
+  const items = useMemo<VocabBookItemDto[]>(() => loadedItems, [loadedItems]);
 
   const filtered = useMemo(() => {
     return items.filter(item => {
@@ -85,18 +110,26 @@ const VocabBookListenPage: React.FC = () => {
   const [repeatCount, setRepeatCount] = useState<1 | 2 | 3 | 'INFINITE'>(2);
   const [speed, setSpeed] = useState<0.8 | 1 | 1.2 | 1.4>(1);
 
-  const [index, setIndex] = useState(0);
-  const indexRef = useRef(0);
+  useEffect(() => {
+    setPageCursor(null);
+    setLoadedItems([]);
+    setNextCursor(null);
+    setIndex(0);
+  }, [category, q]);
+
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
 
-  useEffect(() => {
-    setIndex(0);
-  }, [category, q]);
-
   const total = filtered.length;
   const current = filtered[index];
+
+  useEffect(() => {
+    if (!nextCursor || loadingMore || total === 0) return;
+    if (total - index <= PREFETCH_THRESHOLD) {
+      setPageCursor(nextCursor);
+    }
+  }, [index, total, nextCursor, loadingMore]);
 
   const runIdRef = useRef(0);
   const [playing, setPlaying] = useState(false);
@@ -231,6 +264,11 @@ const VocabBookListenPage: React.FC = () => {
           <p className="text-sm font-black text-muted-foreground">
             {total === 0 ? '0/0' : `${index + 1}/${total}`}
           </p>
+          {loadingMore && (
+            <p className="text-[10px] font-bold text-muted-foreground">
+              {labels.common?.loading || 'Loading...'}
+            </p>
+          )}
         </div>
 
         <Button

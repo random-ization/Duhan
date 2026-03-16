@@ -34,6 +34,7 @@
   "days": "days",
   "hours": "hrs",
   "joinedDate": "Joined",
+  "lastUpdated": "Last updated:",
   "selectInstitute": "Select Textbook Series",
   "selectLevel": "Select Book / Level",
   "backInst": "Back to Series",
@@ -63,6 +64,8 @@
     "exporting": "Exporting...",
     "signInToExport": "Please sign in to export",
     "exportFailed": "Export failed. Please try again.",
+    "expandMeaning": "Expand meaning",
+    "collapseMeaning": "Collapse meaning",
     "markMastered": "Mark as mastered",
     "unmarkMastered": "Unmark mastered",
     "exportModes": {
@@ -297,11 +300,17 @@
   "quickLinks": "Quick Links",
   "footerDescription": "Your comprehensive Korean language learning platform",
   "allRightsReserved": "All rights reserved.",
+  "footer": {
+    "joinDiscord": "Join our Discord",
+    "copyright": "© 2026 DuHan Inc. All rights reserved."
+  },
   "preview": "Preview",
   "markdownTip": "Formatting tips: Use # for headings (# H1, ## H2, ### H3), - or * for bullet lists, 1. for numbered lists, blank lines for paragraphs",
   "enterTitle": "Enter document title",
   "enterContent": "Enter document content...",
   "coursesOverview": {
+    "pageTitle": "Courses",
+    "subtitle": "Browse your textbooks",
     "backToHome": "Back to Home",
     "navTitle": "Premium Benefits & Features",
     "activatePremium": "Unlock Premium",
@@ -355,12 +364,19 @@
     "levelTag": "Lv {{level}}",
     "unitsCount": "{{count}} units",
     "units": "Units",
+    "publishers": {
+      "oer": "Open Educational Resources",
+      "yonsei": "Yonsei University",
+      "seoulNational": "Seoul National University",
+      "chungAng": "Chung-Ang University"
+    },
     "otherPublisher": "Other",
     "viewAll": "View All"
   },
   "courseDashboard": {
     "defaultCourseName": "Korean 1A",
     "defaultDisplayLevel": "Book 1",
+    "defaultPublisher": "Publisher",
     "backToShelf": "Back to Library",
     "courseMeta": "{{level}} · Lesson 1-{{totalUnits}}",
     "recentUnit": "Recently studied: Unit {{unit}}",
@@ -389,6 +405,7 @@
     }
   },
   "module": {
+    "title": "Module",
     "unitTitle": "Unit {{unit}}",
     "listeningUnitTitle": "Unit {{unit}} · Listening"
   },
@@ -493,6 +510,9 @@
       "quote": "Don't give up! Just 5 more minutes!",
       "action": "Start Quiz"
     },
+    "alt": {
+      "tigerCoach": "Tiger coach"
+    },
     "daily": {
       "label": "Daily Phrase",
       "quote": "Well begun is half done.",
@@ -548,6 +568,7 @@
         "nextExamNameFallback": "TOPIK II",
         "typeReadingShort": "READ",
         "typeListeningShort": "LIST",
+        "typeWritingShort": "WRITE",
         "minuteShort": "{{minutes}}m",
         "questionCountShort": "{{count}}Q",
         "bestScore": "{{score}}%",
@@ -575,7 +596,17 @@
           "listeningAudio": "Listening Audio",
           "audioLoadFailed": "Failed to load audio file",
           "finish": "Finish",
-          "next": "Next"
+          "next": "Next",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "The {{round}}th Test of Proficiency in Korean",
+          "scrollDownStart": "[Scroll down to start]",
+          "periodReading": "2nd Session",
+          "periodListening": "1st Session",
+          "sectionReading": "Reading",
+          "sectionListening": "Listening",
+          "pageHeader": "Round {{round}} TOPIK II {{paperType}} · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (Q1 ~ Q{{count}})",
+          "endOfSection": "End of Section"
         },
         "review": {
           "mode": "Review Mode",
@@ -600,6 +631,7 @@
           "aiThinking": "Thinking...",
           "aiTitle": "AI Analysis",
           "save": "Save",
+          "saving": "Saving...",
           "saved": "Saved",
           "translation": "Translation",
           "keyPoint": "Key Point",
@@ -607,7 +639,16 @@
           "next": "Next",
           "saveFailed": "Failed to save, please try again.",
           "saveFailedShort": "Failed to Save",
-          "savedToast": "Saved to Notebook"
+          "savedToast": "Saved to Notebook",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "The {{round}}th Test of Proficiency in Korean",
+          "scrollDownReview": "[Scroll down to review]",
+          "periodReading": "2nd Session",
+          "periodListening": "1st Session",
+          "sectionReading": "Reading",
+          "sectionListening": "Listening",
+          "pageHeader": "Round {{round}} TOPIK II {{paperType}} · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (Q1 ~ Q{{count}})"
         }
       },
       "totalAttempts": "Attempts",
@@ -673,6 +714,7 @@
       "preparing": "Content is being prepared...",
       "views": "{count} views",
       "notFound": "Video not found",
+      "loadingPlayer": "Loading player...",
       "error": "Failed to load",
       "back": "Back to Library",
       "subtitleList": "Subtitles",
@@ -888,6 +930,11 @@
     }
   },
   "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "navigation": "Sidebar navigation",
+    "learn": "Learn",
+    "practice": "Practice",
     "dashboard": "Dashboard",
     "textbooks": "Textbooks",
     "topik": "TOPIK Exams",
@@ -907,7 +954,8 @@
     "wpm": "WPM",
     "acc": "ACC",
     "nextSentence": "Next Sentence",
-    "focusInput": "Focus Input"
+    "focusInput": "Focus Input",
+    "switchImeWarning": "English input detected. Please switch to Korean IME."
   },
   "notes": {
     "title": "Notebook",
@@ -962,14 +1010,25 @@
     }
   },
   "annotationMenu": {
+    "none": "None",
     "saveToVocab": "Save to Vocab",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "pen": "Pen",
+    "highlight": "Highlight",
+    "eraser": "Eraser",
+    "undo": "Undo",
+    "clear": "Clear",
+    "save": "Save"
   },
   "audioPlayer": {
     "restart": "Restart",
     "changeSpeed": "Change speed",
     "mute": "Mute",
     "unmute": "Unmute"
+  },
+  "mobileAudioPlayer": {
+    "rewind10": "Rewind 10s",
+    "forward10": "Forward 10s"
   },
   "grammarCard": {
     "type": {
@@ -982,10 +1041,77 @@
     "allPoints": "All grammar points",
     "empty": "No grammar points in this unit"
   },
+  "mobileDictionarySheet": {
+    "dictionaryForm": "Dictionary form",
+    "definition": "Definition",
+    "relatedGrammar": "Related Grammar",
+    "saveToNotebook": "Save to Notebook"
+  },
+  "mobileListeningModule": {
+    "listening": "Listening",
+    "noTranscript": "No transcript available"
+  },
+  "mobileQuestionNav": {
+    "title": "Question Navigator",
+    "current": "Current",
+    "answered": "Answered",
+    "todo": "To do"
+  },
+  "mobileSpeakingModule": {
+    "title": "Speaking Practice",
+    "listenToReference": "Listen to Reference",
+    "tapMicToRecord": "Tap mic to record",
+    "tapToStop": "Tap to Stop",
+    "recorded": "Recorded",
+    "tapToRecord": "Tap to Record"
+  },
   "grammarModule": {
     "title": "Grammar Training",
+    "directoryTitle": "Grammar workbook",
+    "selectGrammarHint": "Select a grammar point to begin studying",
+    "proficiency": "STUDY PROGRESS",
+    "status": "Proficiency",
+    "markMastery": "Mark learned",
+    "unmarkMastery": "Mastered",
     "searchPlaceholder": "Search grammar points...",
-    "unitLabel": "Unit {{count}}"
+    "unitLabel": "Unit {{count}}",
+    "aiPlaceholder": "Type your sentence here and let AI check it...",
+    "sentencePracticeWith": "Sentence practice with:",
+    "checkNow": "Check now",
+    "units": {
+      "unit1": "Speculation & inference",
+      "unit2": "Contrast & shifts",
+      "unit3": "Cause & reason",
+      "unit4": "Purpose & intent",
+      "unit5": "Progress & completion",
+      "unit6": "State & continuity",
+      "unit7": "Degree & limits",
+      "unit8": "Hypothesis & assumption",
+      "unit9": "Concession & inclusion",
+      "unit10": "Chance & change",
+      "unit11": "Reported speech",
+      "unit12": "Necessity & experience",
+      "unit13": "Listing & sequence",
+      "unit14": "Standards & range",
+      "unit15": "Particles & nuance"
+    },
+    "unitsShort": {
+      "unit1": "Speculation",
+      "unit2": "Contrast",
+      "unit3": "Reason",
+      "unit4": "Purpose",
+      "unit5": "Aspect",
+      "unit6": "State",
+      "unit7": "Degree",
+      "unit8": "Hypothesis",
+      "unit9": "Concession",
+      "unit10": "Opportunity",
+      "unit11": "Indirect",
+      "unit12": "Necessity",
+      "unit13": "Listing",
+      "unit14": "Standard",
+      "unit15": "Particles"
+    }
   },
   "analysisSheet": {
     "title": "AI sentence analysis",
@@ -1007,6 +1133,15 @@
     "meTag": "(Me)"
   },
   "achievements": {
+    "achievementUnlocked": "Achievement Unlocked",
+    "defaultLearner": "DuHan Learner",
+    "categoryLabel": "Category",
+    "appName": "DuHan App",
+    "categoryLabels": {
+      "TYPING": "Typing Legend",
+      "VOCAB": "Vocab Master",
+      "STREAK": "Streak Keeper"
+    },
     "aiTutorTagline": "Your personal Korean AI tutor",
     "saveReportImage": "Save report image",
     "galleryEmpty": "Complete typing or vocab practice to unlock your first badge!"
@@ -1066,6 +1201,12 @@
     "practicePlaceholder": "Make a sentence with {{title}}...",
     "checking": "Checking...",
     "check": "Check",
+    "comparative": "Similar grammar comparison",
+    "commonMistakes": "Common mistakes",
+    "condition": "Condition",
+    "rule": "Rule",
+    "quizzes": "Practice quizzes",
+    "customNote": "Instructor note",
     "feedback": {
       "correct": "✓ Great job!",
       "incorrect": "✗ Needs improvement"
@@ -1076,10 +1217,12 @@
     "explanation": "Detailed explanation",
     "markMastered": "Mark as mastered",
     "rules": "Conjugation rules",
-    "examples": "Usage examples"
+    "examples": "Usage examples",
+    "answerShort": "Ans."
   },
   "podcast": {
     "title": "Podcasts",
+    "badge": "Podcast",
     "nowPlaying": "Now Playing",
     "mySubscriptions": "My Subscriptions",
     "viewAll": "View All",
@@ -1103,56 +1246,64 @@
     "minutes": "mins",
     "expand": "Expand",
     "collapse": "Collapse",
+    "filterOptions": {
+      "all": "All",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "daily": "Daily",
+      "news": "News",
+      "picks": "Picks"
+    },
     "msg": {
-      "LOADING_TRANSCRIPT": "AI 正在生成智能字幕...",
-      "LOADING_FIRST_TIME": "首次生成约需 1 分钟",
-      "LOADING_HISTORY": "加载历史记录...",
-      "LOADING_EPISODES": "加载剧集列表...",
-      "ERROR_LOAD_HISTORY": "无法加载历史记录，请稍后重试",
-      "ERROR_LOAD_TRANSCRIPT": "使用演示字幕 (AI 生成失败)",
-      "ERROR_LOAD_PLAYLIST": "无法加载播放列表",
-      "ERROR_SUBSCRIBE_FAILED": "订阅失败，请稍后重试",
-      "ERROR_UNSUBSCRIBE_FAILED": "取消订阅失败",
-      "ERROR_NETWORK": "网络错误，请检查您的网络连接",
-      "ERROR_INVALID_EPISODE": "无效的剧集链接",
-      "EMPTY_HISTORY": "暂无播放记录",
-      "EMPTY_TRANSCRIPT": "暂无字幕内容",
-      "EMPTY_PLAYLIST": "暂无其他剧集",
-      "EMPTY_SUBSCRIPTIONS": "还没有订阅任何频道",
-      "EMPTY_SEARCH": "未找到相关播客",
-      "EMPTY_TRENDING": "暂无数据",
-      "ACTION_RETRY": "重试",
-      "ACTION_SUBSCRIBE": "订阅",
-      "ACTION_UNSUBSCRIBE": "取消订阅",
-      "ACTION_PLAY": "播放",
-      "ACTION_EXPLORE": "探索频道",
-      "ACTION_SEARCH": "搜索韩语播客...",
-      "ACTION_REGENERATE": "重新生成字幕 (修正排版)",
-      "ACTION_REGENERATE_CONFIRM": "重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？",
-      "PLAYER_TRANSLATION_TITLE": "翻译字幕",
-      "PLAYER_TRANSLATION_DESC": "显示中文翻译",
-      "PLAYER_AUTO_SCROLL_ON": "自动滚动",
-      "PLAYER_AUTO_SCROLL_OFF": "自动滚动",
+      "LOADING_TRANSCRIPT": "AI is generating smart subtitles...",
+      "LOADING_FIRST_TIME": "First-time generation takes about 1 minute",
+      "LOADING_HISTORY": "Loading playback history...",
+      "LOADING_EPISODES": "Loading episode list...",
+      "ERROR_LOAD_HISTORY": "Unable to load history, please try again later",
+      "ERROR_LOAD_TRANSCRIPT": "Using demo subtitles (AI generation failed)",
+      "ERROR_LOAD_PLAYLIST": "Unable to load playlist",
+      "ERROR_SUBSCRIBE_FAILED": "Subscription failed, please try again later",
+      "ERROR_UNSUBSCRIBE_FAILED": "Unsubscribe failed",
+      "ERROR_NETWORK": "Network error, please check your connection",
+      "ERROR_INVALID_EPISODE": "Invalid episode link",
+      "EMPTY_HISTORY": "No playback history yet",
+      "EMPTY_TRANSCRIPT": "No subtitle content yet",
+      "EMPTY_PLAYLIST": "No other episodes available",
+      "EMPTY_SUBSCRIPTIONS": "No subscribed channels yet",
+      "EMPTY_SEARCH": "No matching podcasts found",
+      "EMPTY_TRENDING": "No data available",
+      "ACTION_RETRY": "Retry",
+      "ACTION_SUBSCRIBE": "Subscribe",
+      "ACTION_UNSUBSCRIBE": "Unsubscribe",
+      "ACTION_PLAY": "Play",
+      "ACTION_EXPLORE": "Explore channel",
+      "ACTION_SEARCH": "Search Korean podcasts...",
+      "ACTION_REGENERATE": "Regenerate subtitles (fix formatting)",
+      "ACTION_REGENERATE_CONFIRM": "Regenerating subtitles may take 1-2 minutes. Continue?",
+      "PLAYER_TRANSLATION_TITLE": "Subtitle translation",
+      "PLAYER_TRANSLATION_DESC": "Show translated subtitles",
+      "PLAYER_AUTO_SCROLL_ON": "Auto-scroll",
+      "PLAYER_AUTO_SCROLL_OFF": "Auto-scroll",
       "PLAYER_BACK_TO_FEED": "Back to Feed",
-      "PLAYER_PLAYLIST": "播放列表",
-      "PLAYER_FAVORITE": "收藏此集",
-      "PLAYER_SHARE": "分享",
+      "PLAYER_PLAYLIST": "Playlist",
+      "PLAYER_FAVORITE": "Favorite this episode",
+      "PLAYER_SHARE": "Share",
       "PLAYER_LOOP": "Loop",
       "PLAYER_LOOP_ACTIVE": "Loop Active",
       "PLAYER_SET_B": "Set B",
-      "DASHBOARD_TITLE": "播客学韩语",
-      "DASHBOARD_LATEST": "最新更新",
-      "DASHBOARD_EDITOR_PICKS": "编辑推荐",
-      "DASHBOARD_TRENDING": "热门榜单",
+      "DASHBOARD_TITLE": "Learn Korean with Podcasts",
+      "DASHBOARD_LATEST": "Latest Updates",
+      "DASHBOARD_EDITOR_PICKS": "Editor's Picks",
+      "DASHBOARD_TRENDING": "Trending",
       "DASHBOARD_APPLE_TOP": "Apple Top 10",
-      "DASHBOARD_COMMUNITY": "社区热播",
-      "DASHBOARD_VIEW_ALL": "查看全部",
-      "DASHBOARD_SEARCH_RESULTS": "搜索结果",
-      "DASHBOARD_CANCEL": "取消",
-      "DASHBOARD_NO_RECOMMENDATIONS": "暂无推荐，开始搜索并订阅吧！",
-      "HISTORY_TITLE": "播放历史",
-      "TIME_TODAY": "今天",
-      "TIME_YESTERDAY": "昨天",
+      "DASHBOARD_COMMUNITY": "Community Highlights",
+      "DASHBOARD_VIEW_ALL": "View all",
+      "DASHBOARD_SEARCH_RESULTS": "Search results",
+      "DASHBOARD_CANCEL": "Cancel",
+      "DASHBOARD_NO_RECOMMENDATIONS": "No recommendations yet. Start searching and subscribing!",
+      "HISTORY_TITLE": "Playback history",
+      "TIME_TODAY": "Today",
+      "TIME_YESTERDAY": "Yesterday",
       "TIME_DAYS_AGO": "days ago"
     }
   },
@@ -1161,7 +1312,33 @@
     "title": "Korean Typing",
     "subtitle": "Word / Sentence / Article",
     "speed": "Speed",
-    "unit": "WPM"
+    "unit": "WPM",
+    "statsOverlay": {
+      "accuracy": "Accuracy",
+      "restartHint": "Press Tab to Restart"
+    },
+    "typingArea": {
+      "clickToFocus": "Click to focus"
+    },
+    "wordPractice": {
+      "noWordsAvailable": "No words available",
+      "wordToType": "Word to Type",
+      "noMeaning": "No meaning",
+      "wordDrillLabel": "Word practice"
+    },
+    "resultsModal": {
+      "userAlt": "User",
+      "targetAchieved": "{{targetWpm}} WPM achieved!",
+      "targetMissed": "{{targetWpm}} WPM not reached",
+      "speedLabel": "Speed (WPM)",
+      "bestSpeed": "Best {{highestWpm}} WPM",
+      "speedValue": "{{wpm}} WPM",
+      "accuracyLabel": "Accuracy (%)",
+      "errorCount": "Errors {{errorCount}}",
+      "durationLabel": "Duration",
+      "stopButton": "Stop",
+      "retryButton": "Try again"
+    }
   },
   "vocabLabel": "Vocabulary",
   "vocab": {
@@ -1186,6 +1363,8 @@
     "meaningFront": "Meaning Front",
     "sessionComplete": "Session Complete!",
     "wordsUnit": "words",
+    "reviewed": "reviewed",
+    "loadingMatch": "Loading match...",
     "remembered": "Remembered",
     "forgot": "Forgot",
     "rating": {
@@ -1499,6 +1678,7 @@
       "title": "Culture & Archive",
       "subtitle": "Korean folktales, Wikipedia featured entries, and literature for close reading",
       "viewAll": "View all articles",
+      "sourceWikipedia": "Wikipedia",
       "typeEncyclopedia": "Encyclopedia",
       "recommended": "Recommended"
     },
@@ -1515,6 +1695,12 @@
       "literatureBookmark": "Literary Notes"
     },
     "footer": "Powered by Convex newsIngestion:getUserFeed (auto refresh after 24h post-read, manual refresh up to 3/day)"
+  },
+  "practiceHub": {
+    "subtitle": "TOPIK, typing and vocab drills"
+  },
+  "mediaHub": {
+    "subtitle": "Videos, podcasts and reading"
   },
   "readingArticle": {
     "difficulty": {

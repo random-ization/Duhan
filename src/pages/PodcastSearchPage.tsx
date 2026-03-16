@@ -87,7 +87,7 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
                 </p>
                 <div className="flex gap-2">
                   <Badge variant="secondary" className="text-xs">
-                    Podcast
+                    {labels.podcast?.badge || 'Podcast'}
                   </Badge>
                 </div>
               </div>

@@ -7,59 +7,40 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { Button } from '../ui';
 import { Input } from '../ui';
 
-const PUBLISHER_THEMES: Record<
-  string,
-  {
-    gradient: string;
-    chipBg: string;
-    chipText: string;
-    levelBg: string;
-    levelText: string;
-  }
-> = {
-  OER: {
+type PublisherTheme = {
+  gradient: string;
+  chipBg: string;
+  chipText: string;
+  levelBg: string;
+  levelText: string;
+};
+
+type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'default';
+type KnownPublisherKey = Exclude<PublisherKey, 'default'>;
+
+const PUBLISHER_THEMES: Record<PublisherKey, PublisherTheme> = {
+  oer: {
     gradient: 'from-amber-500 to-amber-600 dark:from-amber-300 dark:to-amber-400',
     chipBg: 'bg-amber-100 dark:bg-amber-400/18',
     chipText: 'text-amber-700 dark:text-amber-200',
     levelBg: 'bg-amber-50 dark:bg-amber-400/14',
     levelText: 'text-amber-700 dark:text-amber-200',
   },
-  \u5ef6\u4e16\u5927\u5b66: {
+  yonsei: {
     gradient: 'from-indigo-500 to-indigo-600 dark:from-indigo-300 dark:to-indigo-400',
     chipBg: 'bg-indigo-100 dark:bg-indigo-400/18',
     chipText: 'text-indigo-700 dark:text-indigo-200',
     levelBg: 'bg-indigo-50 dark:bg-indigo-400/14',
     levelText: 'text-indigo-700 dark:text-indigo-200',
   },
-  연세대학교: {
-    gradient: 'from-indigo-500 to-indigo-600 dark:from-indigo-300 dark:to-indigo-400',
-    chipBg: 'bg-indigo-100 dark:bg-indigo-400/18',
-    chipText: 'text-indigo-700 dark:text-indigo-200',
-    levelBg: 'bg-indigo-50 dark:bg-indigo-400/14',
-    levelText: 'text-indigo-700 dark:text-indigo-200',
-  },
-  \u9996\u5c14\u5927\u5b66: {
+  seoulNational: {
     gradient: 'from-rose-500 to-rose-600 dark:from-rose-300 dark:to-rose-400',
     chipBg: 'bg-rose-100 dark:bg-rose-400/18',
     chipText: 'text-rose-700 dark:text-rose-200',
     levelBg: 'bg-rose-50 dark:bg-rose-400/14',
     levelText: 'text-rose-700 dark:text-rose-200',
   },
-  서울대학교: {
-    gradient: 'from-rose-500 to-rose-600 dark:from-rose-300 dark:to-rose-400',
-    chipBg: 'bg-rose-100 dark:bg-rose-400/18',
-    chipText: 'text-rose-700 dark:text-rose-200',
-    levelBg: 'bg-rose-50 dark:bg-rose-400/14',
-    levelText: 'text-rose-700 dark:text-rose-200',
-  },
-  \u4e2d\u592e\u5927\u5b66: {
-    gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-300 dark:to-emerald-400',
-    chipBg: 'bg-emerald-100 dark:bg-emerald-400/18',
-    chipText: 'text-emerald-700 dark:text-emerald-200',
-    levelBg: 'bg-emerald-50 dark:bg-emerald-400/14',
-    levelText: 'text-emerald-700 dark:text-emerald-200',
-  },
-  중앙대학교: {
+  chungAng: {
     gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-300 dark:to-emerald-400',
     chipBg: 'bg-emerald-100 dark:bg-emerald-400/18',
     chipText: 'text-emerald-700 dark:text-emerald-200',
@@ -75,15 +56,94 @@ const PUBLISHER_THEMES: Record<
   },
 };
 
-const PUBLISHER_TRANSLATIONS: Record<string, { ko: string; en: string; zh: string }> = {
-  OER: { ko: '오픈 교재', zh: '开放教育资源', en: 'Open Educational Resources' },
-  \u5ef6\u4e16\u5927\u5b66: { ko: '연세대학교', zh: '\u5ef6\u4e16\u5927\u5b66', en: 'Yonsei' },
-  연세대학교: { ko: '연세대학교', zh: '\u5ef6\u4e16\u5927\u5b66', en: 'Yonsei' },
-  \u9996\u5c14\u5927\u5b66: { ko: '서울대학교', zh: '\u9996\u5c14\u5927\u5b66', en: "Seoul Nat'l" },
-  서울대학교: { ko: '서울대학교', zh: '\u9996\u5c14\u5927\u5b66', en: "Seoul Nat'l" },
-  \u4e2d\u592e\u5927\u5b66: { ko: '중앙대학교', zh: '\u4e2d\u592e\u5927\u5b66', en: 'Ewha' },
-  중앙대학교: { ko: '중앙대학교', zh: '\u4e2d\u592e\u5927\u5b66', en: 'Ewha' },
+const PUBLISHER_TRANSLATION_KEYS: Record<KnownPublisherKey, string> = {
+  oer: 'coursesLibrary.publishers.oer',
+  yonsei: 'coursesLibrary.publishers.yonsei',
+  seoulNational: 'coursesLibrary.publishers.seoulNational',
+  chungAng: 'coursesLibrary.publishers.chungAng',
 };
+
+const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
+  oer: '오픈 교재',
+  yonsei: '연세대학교',
+  seoulNational: '서울대학교',
+  chungAng: '중앙대학교',
+};
+
+const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
+  oer: 'Open Educational Resources',
+  yonsei: 'Yonsei University',
+  seoulNational: 'Seoul National University',
+  chungAng: 'Chung-Ang University',
+};
+
+const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
+  { key: 'oer', pattern: /\b(oer|open educational resources?)\b/i },
+  { key: 'yonsei', pattern: /(yonsei|연세대학교|\u5ef6\u4e16\u5927\u5b66)/i },
+  { key: 'seoulNational', pattern: /(seoul national|snu|서울대학교|\u9996\u5c14\u5927\u5b66)/i },
+  { key: 'chungAng', pattern: /(chung-?ang|중앙대학교|\u4e2d\u592e\u5927\u5b66)/i },
+];
+
+function resolvePublisherKey(publisher: string): KnownPublisherKey | undefined {
+  const normalizedPublisher = publisher.trim();
+  if (!normalizedPublisher) return undefined;
+  for (const matcher of PUBLISHER_MATCHERS) {
+    if (matcher.pattern.test(normalizedPublisher)) return matcher.key;
+  }
+  return undefined;
+}
+
+function normalizeLanguageTag(language: string): string {
+  return (language || 'en').split('-')[0];
+}
+
+function getTranslatedPublisherFallback(
+  i18nLanguage: string,
+  t: (key: string, options?: { defaultValue?: string }) => string,
+  key: KnownPublisherKey
+): string {
+  const normalizedLanguage = normalizeLanguageTag(i18nLanguage);
+  if (normalizedLanguage === 'ko') {
+    return PUBLISHER_KO_FALLBACK[key];
+  }
+  return t(PUBLISHER_TRANSLATION_KEYS[key], { defaultValue: PUBLISHER_EN_FALLBACK[key] });
+}
+
+function getPublisherLocalizedFromData(
+  publisher: Publisher | undefined,
+  language: string
+): string | undefined {
+  switch (language) {
+    case 'zh':
+      return publisher?.nameZh;
+    case 'ko':
+      return publisher?.nameKo;
+    case 'vi':
+      return publisher?.nameVi;
+    case 'mn':
+      return publisher?.nameMn;
+    default:
+      return publisher?.nameEn;
+  }
+}
+
+function getThemeByPublisher(publisher: string): PublisherTheme {
+  const publisherKey = resolvePublisherKey(publisher);
+  if (!publisherKey) return PUBLISHER_THEMES.default;
+  return PUBLISHER_THEMES[publisherKey];
+}
+
+const THEME_FALLBACK_ENTRIES: Array<{ pattern: RegExp; theme: PublisherTheme }> = [
+  { pattern: /amber/i, theme: PUBLISHER_THEMES.oer },
+  { pattern: /indigo/i, theme: PUBLISHER_THEMES.yonsei },
+  { pattern: /rose/i, theme: PUBLISHER_THEMES.seoulNational },
+  { pattern: /emerald/i, theme: PUBLISHER_THEMES.chungAng },
+];
+
+function getThemeByPublisherNameFallback(publisher: string): PublisherTheme {
+  const matched = THEME_FALLBACK_ENTRIES.find(entry => entry.pattern.test(publisher));
+  return matched?.theme ?? PUBLISHER_THEMES.default;
+}
 
 type Course = {
   id: string;
@@ -100,6 +160,8 @@ type Publisher = {
   nameKo?: string;
   nameZh?: string;
   nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
 };
 
 const MobileCoursesOverview: React.FC = () => {
@@ -120,25 +182,27 @@ const MobileCoursesOverview: React.FC = () => {
 
   const getPublisherLabel = useCallback(
     (publisher: string) => {
-      const fallback = PUBLISHER_TRANSLATIONS[publisher];
+      const normalizedLang = normalizeLanguageTag(currentLang);
       const data = publishersByName.get(publisher);
-      switch (currentLang) {
-        case 'zh':
-          return data?.nameZh || fallback?.zh || publisher;
-        case 'ko':
-          return data?.nameKo || fallback?.ko || publisher;
-        default:
-          return data?.nameEn || fallback?.en || publisher;
+      const localizedByData = getPublisherLocalizedFromData(data, normalizedLang);
+      if (localizedByData) return localizedByData;
+
+      const publisherKey = resolvePublisherKey(publisher);
+      if (publisherKey) {
+        return getTranslatedPublisherFallback(i18n.language, t, publisherKey);
       }
+
+      return publisher;
     },
-    [currentLang, publishersByName]
+    [currentLang, i18n.language, publishersByName, t]
   );
 
   const getTheme = useCallback((publisher: string) => {
-    for (const key of Object.keys(PUBLISHER_THEMES)) {
-      if (publisher.includes(key)) return PUBLISHER_THEMES[key];
+    const matchedTheme = getThemeByPublisher(publisher);
+    if (matchedTheme !== PUBLISHER_THEMES.default) {
+      return matchedTheme;
     }
-    return PUBLISHER_THEMES.default;
+    return getThemeByPublisherNameFallback(publisher);
   }, []);
 
   const getCourseUiMeta = useCallback((course: Course) => {
@@ -224,7 +288,10 @@ const MobileCoursesOverview: React.FC = () => {
         {isLoading && (
           <div className="space-y-5">
             {[1, 2].map(i => (
-              <section key={i} className="rounded-2xl border border-border bg-card/70 p-3 animate-pulse">
+              <section
+                key={i}
+                className="rounded-2xl border border-border bg-card/70 p-3 animate-pulse"
+              >
                 <div className="h-5 w-28 bg-muted rounded mb-3" />
                 <div className="space-y-3">
                   {[1, 2, 3].map(j => (

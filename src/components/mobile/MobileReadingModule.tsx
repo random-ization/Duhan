@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, PlayCircle, Settings2, Sparkles, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { InteractiveWordChip } from './InteractiveWordChip';
@@ -17,6 +18,7 @@ export function MobileReadingModule({
   onBack,
   onWordClick,
 }: MobileReadingModuleProps) {
+  const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Parse text into "bubbles"
@@ -58,7 +60,7 @@ export function MobileReadingModule({
 
         <div className="flex flex-col items-center">
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            Reading Practice
+            {t('readingModule.mobile.title', { defaultValue: 'Reading Practice' })}
           </span>
           <h1 className="text-sm font-black text-foreground truncate max-w-[200px]">{unitTitle}</h1>
         </div>
@@ -82,20 +84,22 @@ export function MobileReadingModule({
               <BookOpen size={24} className="text-white" />
             </div>
             <span className="bg-card/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
-              LEVEL 1
+              {t('readingModule.mobile.levelBadge', { defaultValue: 'LEVEL 1' })}
             </span>
           </div>
           <h2 className="text-2xl font-black mb-2 opacity-90 leading-tight">
-            Let&apos;s read today&apos;s story.
+            {t('readingModule.mobile.storyTitle', { defaultValue: "Let's read today's story." })}
           </h2>
           <p className="text-sm opacity-80 font-medium">
-            Tap any underlined word to see its meaning.
+            {t('readingModule.mobile.storyHint', {
+              defaultValue: 'Tap any underlined word to see its meaning.',
+            })}
           </p>
         </div>
 
         {textSegments.length === 0 && (
           <div className="text-center text-muted-foreground py-10 font-bold">
-            No text content available.
+            {t('dashboard.reading.noContent')}
           </div>
         )}
 
@@ -149,10 +153,11 @@ export function MobileReadingModule({
           className="flex-1 h-14 bg-primary rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-slate-900/20"
         >
           {isPlaying ? (
-            <>Stop Audio</>
+            <>{t('readingModule.mobile.stopAudio', { defaultValue: 'Stop Audio' })}</>
           ) : (
             <>
-              <PlayCircle className="fill-current" /> Play Full Audio
+              <PlayCircle className="fill-current" />{' '}
+              {t('readingModule.mobile.playFullAudio', { defaultValue: 'Play Full Audio' })}
             </>
           )}
         </Button>

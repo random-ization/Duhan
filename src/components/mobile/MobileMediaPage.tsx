@@ -332,14 +332,14 @@ const PodcastTab: React.FC<{
           size="auto"
           className="px-4 py-2 bg-primary text-primary-foreground border-2 border-foreground dark:border-border rounded-xl text-xs font-bold whitespace-nowrap"
         >
-          All
+          {t('podcast.filterOptions.all', { defaultValue: 'All' })}
         </Button>
         <Button
           variant="ghost"
           size="auto"
           className="px-4 py-2 bg-card text-muted-foreground border-2 border-border rounded-xl text-xs font-bold whitespace-nowrap"
         >
-          Beginner
+          {t('podcast.filterOptions.beginner', { defaultValue: 'Beginner' })}
         </Button>
         <Button
           variant="ghost"

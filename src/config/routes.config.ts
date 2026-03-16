@@ -11,6 +11,7 @@ export interface RouteUiConfig {
   headerType: MobileHeaderType;
   headerAction: MobileHeaderAction;
   headerTitle: string;
+  headerTitleDefault?: string;
   allowHiddenChrome: boolean;
 }
 
@@ -21,7 +22,8 @@ const DEFAULT_ROUTE_UI_CONFIG: RouteUiConfig = {
   hasFooter: true,
   headerType: 'section',
   headerAction: 'none',
-  headerTitle: 'Duhan',
+  headerTitle: 'common.appName',
+  headerTitleDefault: 'Duhan',
   allowHiddenChrome: false,
 };
 
@@ -41,7 +43,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
         hasHeader: false,
         headerType: 'dashboard',
         headerAction: 'streak',
-        headerTitle: 'Dashboard',
+        headerTitle: 'nav.dashboard',
+        headerTitleDefault: 'Dashboard',
       };
     }
     return {
@@ -49,7 +52,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       hasHeader: false,
       headerType: 'detail',
       headerAction: 'more',
-      headerTitle: 'Dashboard',
+      headerTitle: 'nav.dashboard',
+      headerTitleDefault: 'Dashboard',
     };
   },
   courses: () => ({
@@ -57,33 +61,38 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasHeader: false,
     headerType: 'section',
     headerAction: 'search',
-    headerTitle: 'Courses',
+    headerTitle: 'nav.courses',
+    headerTitleDefault: 'Courses',
   }),
   course: () => ({
     hasFooter: false,
     hasHeader: false,
     headerType: 'detail',
     headerAction: 'more',
-    headerTitle: 'Course',
+    headerTitle: 'course.title',
+    headerTitleDefault: 'Course',
   }),
   practice: () => ({
     hasFooter: false,
     headerType: 'section',
-    headerAction: 'filter',
-    headerTitle: 'Practice',
+    headerAction: 'none',
+    headerTitle: 'nav.practice',
+    headerTitleDefault: 'Practice',
   }),
   media: () => ({
     hasFooter: false,
     headerType: 'section',
     headerAction: 'filter',
-    headerTitle: 'Media',
+    headerTitle: 'nav.media',
+    headerTitleDefault: 'Media',
   }),
   reading: () => ({
     hasFooter: false,
     hasHeader: false,
     headerType: 'section',
     headerAction: 'none',
-    headerTitle: 'Reading',
+    headerTitle: 'nav.reading',
+    headerTitleDefault: 'Reading',
   }),
   topik: segments => {
     if (segments[1] === 'writing') {
@@ -94,7 +103,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
         hasFooter: false,
         headerType: 'detail',
         headerAction: 'none',
-        headerTitle: 'TOPIK Writing',
+        headerTitle: 'dashboard.topik.writing',
+        headerTitleDefault: 'TOPIK Writing',
         allowHiddenChrome: true,
       };
     }
@@ -105,7 +115,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
         hasHeader: false,
         headerType: 'section',
         headerAction: 'filter',
-        headerTitle: 'TOPIK',
+        headerTitle: 'nav.topik',
+        headerTitleDefault: 'TOPIK',
       };
     }
     return {
@@ -113,7 +124,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       hasHeader: false,
       headerType: 'detail',
       headerAction: 'more',
-      headerTitle: 'TOPIK Exam',
+      headerTitle: 'dashboard.topik.realExam',
+      headerTitleDefault: 'TOPIK Exam',
       allowHiddenChrome: true,
     };
   },
@@ -123,14 +135,16 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasHeader: false,
     headerType: 'detail',
     headerAction: 'more',
-    headerTitle: 'Typing',
+    headerTitle: 'sidebar.typing',
+    headerTitleDefault: 'Typing',
     allowHiddenChrome: true,
   }),
   'vocab-book': segments => ({
     hasFooter: false,
     headerType: IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '') ? 'detail' : 'section',
     headerAction: IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '') ? 'more' : 'filter',
-    headerTitle: 'Vocab',
+    headerTitle: 'dashboard.vocab.title',
+    headerTitleDefault: 'Vocab',
     hasDesktopSidebar: !IMMERSIVE_VOCAB_ROUTES.has(segments[1] || ''),
     hasBottomNav: !IMMERSIVE_VOCAB_ROUTES.has(segments[1] || ''),
     hasHeader: false,
@@ -141,7 +155,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasHeader: false,
     headerType: 'section',
     headerAction: 'filter',
-    headerTitle: 'Vocab',
+    headerTitle: 'dashboard.vocab.title',
+    headerTitleDefault: 'Vocab',
   }),
   podcasts: segments => {
     if (segments[1] === 'player') {
@@ -158,7 +173,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       hasHeader: false,
       headerType: 'section',
       headerAction: 'filter',
-      headerTitle: 'Podcasts',
+      headerTitle: 'nav.podcasts',
+      headerTitleDefault: 'Podcasts',
     };
   },
   videos: () => ({
@@ -166,7 +182,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasHeader: false,
     headerType: 'section',
     headerAction: 'filter',
-    headerTitle: 'Videos',
+    headerTitle: 'nav.videos',
+    headerTitleDefault: 'Videos',
   }),
   video: () => ({
     hasDesktopSidebar: false,
@@ -180,21 +197,24 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasHeader: false,
     headerType: 'section',
     headerAction: 'search',
-    headerTitle: 'Notebook',
+    headerTitle: 'nav.notebook',
+    headerTitleDefault: 'Notebook',
   }),
   profile: () => ({
     hasFooter: false,
     hasHeader: false,
     headerType: 'section',
     headerAction: 'none',
-    headerTitle: 'Profile',
+    headerTitle: 'nav.profile',
+    headerTitleDefault: 'Profile',
   }),
   dictionary: () => ({
     hasFooter: false,
     hasHeader: false,
     headerType: 'detail',
     headerAction: 'more',
-    headerTitle: 'Dictionary',
+    headerTitle: 'dashboard.dictionary.label',
+    headerTitleDefault: 'Dictionary',
   }),
 };
 

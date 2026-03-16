@@ -587,19 +587,27 @@ const TypingSelectChevron: React.FC = () => (
   </div>
 );
 
-const TypingFooterUser: React.FC<{ userAvatar?: string | null; userName?: string | null }> = ({
-  userAvatar,
-  userName,
-}) => (
+const TypingFooterUser: React.FC<{
+  userAvatar?: string | null;
+  userName?: string | null;
+  t: TypingTranslateFn;
+}> = ({ userAvatar, userName, t }) => (
   <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-muted-foreground font-medium">
     <div className="w-6 h-6 rounded-full bg-muted overflow-hidden">
       {userAvatar ? (
-        <img src={userAvatar} alt="User" className="w-full h-full object-cover" />
+        <img
+          src={userAvatar}
+          alt={t('typingGame.userAvatarAlt', { defaultValue: 'User' })}
+          className="w-full h-full object-cover"
+        />
       ) : (
         <Ghost className="w-3 h-3 text-muted-foreground m-auto mt-1.5" />
       )}
     </div>
-    <span>Logged in as {userName || 'Guest'}</span>
+    <span>
+      {t('typingGame.loggedInAs', { defaultValue: 'Logged in as' })}{' '}
+      {userName || t('typingGame.guest', { defaultValue: 'Guest' })}
+    </span>
   </div>
 );
 
@@ -612,6 +620,7 @@ const WordModeSelectors: React.FC<{
   onCourseIdChange: (courseId: string) => void;
   selectedUnitId: number;
   onUnitChange: (unitId: number) => void;
+  t: TypingTranslateFn;
 }> = ({
   selectedCourseName,
   coursesByName,
@@ -621,6 +630,7 @@ const WordModeSelectors: React.FC<{
   onCourseIdChange,
   selectedUnitId,
   onUnitChange,
+  t,
 }) => (
   <div className="space-y-2">
     <div className="space-y-2">
@@ -631,7 +641,7 @@ const WordModeSelectors: React.FC<{
           className={SELECT_BOX_CLASS}
         >
           <option value="" disabled>
-            Select Course
+            {t('typingGame.selectCourse', { defaultValue: 'Select Course' })}
           </option>
           {Object.keys(coursesByName).map(name => (
             <option key={name} value={name}>
@@ -665,7 +675,7 @@ const WordModeSelectors: React.FC<{
         >
           {Array.from({ length: 20 }, (_, index) => index + 1).map(unit => (
             <option key={unit} value={unit}>
-              Unit {unit}
+              {t('typing.unit')} {unit}
             </option>
           ))}
         </Select>
@@ -728,6 +738,7 @@ const TypingModeSelectorPanel: React.FC<{
   selectedCategoryId: string;
   selectedCategoryIcon: string;
   onCategoryChange: (categoryId: string) => void;
+  t: TypingTranslateFn;
 }> = props => {
   const panelByMode: Record<PracticeMode, React.ReactNode> = {
     word: (
@@ -740,6 +751,7 @@ const TypingModeSelectorPanel: React.FC<{
         onCourseIdChange={props.onCourseIdChange}
         selectedUnitId={props.selectedUnitId}
         onUnitChange={props.onUnitChange}
+        t={props.t}
       />
     ),
     paragraph: (
@@ -764,7 +776,8 @@ const TypingKeyboardDeck: React.FC<{
   nextJamo: string | null;
   currentTargetChar: string;
   hasError: boolean;
-}> = ({ nextJamo, currentTargetChar, hasError }) => (
+  t: TypingTranslateFn;
+}> = ({ nextJamo, currentTargetChar, hasError, t }) => (
   <div className="flex-shrink-0 bg-card border-t border-border py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
     <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
       <div className="flex justify-between items-center px-4">
@@ -772,13 +785,13 @@ const TypingKeyboardDeck: React.FC<{
           <span
             className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500 dark:bg-red-300' : 'bg-blue-500 dark:bg-blue-300'} animate-pulse`}
           ></span>
-          <span>Next Key:</span>
+          <span>{t('typingGame.nextKey', { defaultValue: 'Next Key:' })}</span>
           <span className="text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/14 px-2 py-0.5 rounded text-[11px] border border-blue-100 dark:border-blue-300/25">
-            {nextJamo || 'Enter'}
+            {nextJamo || t('typingGame.enterKey', { defaultValue: 'Enter' })}
           </span>
         </div>
         <div className="text-[10px] text-muted-foreground font-mono tracking-widest">
-          2-SET KOREAN
+          {t('typingGame.keyboardLayout', { defaultValue: '2-SET KOREAN' })}
         </div>
       </div>
       <div className="p-3 bg-muted/50 rounded-3xl border border-border/60 select-none">
@@ -872,7 +885,8 @@ const WordModeContent: React.FC<{
   }) => Promise<void>;
   onStatsUpdate: (stats: SessionStats) => void;
   onBack: () => void;
-}> = ({ words, onComplete, onStatsUpdate, onBack }) =>
+  t: TypingTranslateFn;
+}> = ({ words, onComplete, onStatsUpdate, onBack, t }) =>
   words ? (
     <WordPractice
       words={words}
@@ -882,7 +896,7 @@ const WordModeContent: React.FC<{
     />
   ) : (
     <div className="flex-1 flex items-center justify-center text-muted-foreground font-medium animate-pulse">
-      Loading words...
+      {t('typingGame.loadingWords', { defaultValue: 'Loading words...' })}
     </div>
   );
 
@@ -898,6 +912,7 @@ const ParagraphModeContent: React.FC<{
   nextJamo: string | null;
   currentTargetChar: string;
   hasError: boolean;
+  t: TypingTranslateFn;
 }> = ({
   targetChars,
   currentTypingIndex,
@@ -910,6 +925,7 @@ const ParagraphModeContent: React.FC<{
   nextJamo,
   currentTargetChar,
   hasError,
+  t,
 }) => (
   <div className="flex-1 flex flex-col items-center justify-start bg-card min-h-0 w-full overflow-y-auto custom-scrollbar">
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center gap-8 py-10 px-8 flex-1">
@@ -942,6 +958,7 @@ const ParagraphModeContent: React.FC<{
       nextJamo={nextJamo}
       currentTargetChar={currentTargetChar}
       hasError={hasError}
+      t={t}
     />
   </div>
 );
@@ -956,6 +973,7 @@ const SentenceModeContent: React.FC<{
   nextJamo: string | null;
   currentTargetChar: string;
   hasError: boolean;
+  t: TypingTranslateFn;
 }> = ({
   targetChars,
   currentTypingIndex,
@@ -966,6 +984,7 @@ const SentenceModeContent: React.FC<{
   nextJamo,
   currentTargetChar,
   hasError,
+  t,
 }) => (
   <>
     <div className="flex-1 flex flex-col items-center justify-evenly bg-card min-h-0 w-full">
@@ -996,7 +1015,7 @@ const SentenceModeContent: React.FC<{
               onClick={onFocusInput}
             >
               <div className="bg-blue-500 dark:bg-blue-400/80 text-primary-foreground px-6 py-2 rounded-full font-bold shadow-lg transform -translate-y-2 animate-bounce">
-                Click to Focus
+                {t('typingGame.clickToFocus', { defaultValue: 'Click to Focus' })}
               </div>
             </Button>
           )}
@@ -1010,7 +1029,9 @@ ${isFocused ? 'border-blue-100 dark:border-blue-300/30 shadow-lg shadow-blue-500
         >
           <span className="text-lg lg:text-xl font-medium text-muted-foreground mr-1 opacity-50 select-none">
             {userInput.slice(-15) || (
-              <span className="text-muted-foreground text-sm">Start typing...</span>
+              <span className="text-muted-foreground text-sm">
+                {t('typingGame.startTyping', { defaultValue: 'Start typing...' })}
+              </span>
             )}
           </span>
           {isFocused && (
@@ -1037,6 +1058,7 @@ ${index === 0 ? 'w-[85%] bg-card/60 p-3 text-base text-muted-foreground shadow-s
       nextJamo={nextJamo}
       currentTargetChar={currentTargetChar}
       hasError={hasError}
+      t={t}
     />
   </>
 );
@@ -1065,6 +1087,7 @@ const TypingMainContent: React.FC<{
   nextJamo: string | null;
   currentTargetChar: string;
   hasError: boolean;
+  t: TypingTranslateFn;
 }> = props => {
   const contentByMode: Record<PracticeMode, React.ReactNode> = {
     word: (
@@ -1073,6 +1096,7 @@ const TypingMainContent: React.FC<{
         onComplete={props.onWordComplete}
         onStatsUpdate={props.onWordStatsUpdate}
         onBack={props.onBackToLobby}
+        t={props.t}
       />
     ),
     paragraph: (
@@ -1088,6 +1112,7 @@ const TypingMainContent: React.FC<{
         nextJamo={props.nextJamo}
         currentTargetChar={props.currentTargetChar}
         hasError={props.hasError}
+        t={props.t}
       />
     ),
     sentence: (
@@ -1101,6 +1126,7 @@ const TypingMainContent: React.FC<{
         nextJamo={props.nextJamo}
         currentTargetChar={props.currentTargetChar}
         hasError={props.hasError}
+        t={props.t}
       />
     ),
   };
@@ -1139,7 +1165,9 @@ const TypingSidebar: React.FC<{
     paragraph: (
       <div className="bg-card p-4 rounded-2xl shadow-sm border border-border/50 transition-transform hover:scale-[1.02]">
         <div className="flex justify-between items-end mb-2">
-          <span className="text-xs text-muted-foreground font-medium">Progress</span>
+          <span className="text-xs text-muted-foreground font-medium">
+            {props.t('dashboard.quiz.progress')}
+          </span>
           <span className="text-sm font-bold text-muted-foreground tabular-nums">
             <span className="text-blue-600 dark:text-blue-300">{props.currentTypingIndex}</span>
             <span className="text-muted-foreground mx-1">/</span>
@@ -1168,7 +1196,9 @@ const TypingSidebar: React.FC<{
         onClick={props.onBackToLobby}
       >
         <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-        <span className="text-sm font-bold text-muted-foreground">Back onto Lobby</span>
+        <span className="text-sm font-bold text-muted-foreground">
+          {props.t('typingLobby.back')}
+        </span>
       </Button>
 
       <div className="px-6 py-6 flex flex-col items-center">
@@ -1192,18 +1222,21 @@ const TypingSidebar: React.FC<{
             selectedCategoryId={props.selectedCategoryId}
             selectedCategoryIcon={props.selectedCategoryIcon}
             onCategoryChange={props.onCategoryChange}
+            t={props.t}
           />
         </div>
       </div>
 
       <div className="flex-1 px-6 space-y-4 overflow-y-auto">
         <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-          My Stats
+          {props.t('typingGame.myStats', { defaultValue: 'My Stats' })}
         </div>
 
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border/50 transition-transform hover:scale-[1.02]">
           <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-muted-foreground font-medium">Time</span>
+            <span className="text-xs text-muted-foreground font-medium">
+              {props.t('typingGame.time', { defaultValue: 'Time' })}
+            </span>
             <span className="text-lg font-mono font-bold text-muted-foreground tabular-nums">
               {props.formatTime(props.elapsedTime)}
             </span>
@@ -1226,7 +1259,9 @@ const TypingSidebar: React.FC<{
             </div>
           </div>
           <div className="bg-card p-3 rounded-2xl shadow-sm border border-border/50 text-center transition-transform hover:scale-[1.02]">
-            <div className="text-[10px] text-muted-foreground font-bold mb-1">Accuracy</div>
+            <div className="text-[10px] text-muted-foreground font-bold mb-1">
+              {props.t('typingGame.accuracy', { defaultValue: 'Accuracy' })}
+            </div>
             <div className="text-xl font-bold text-emerald-500 dark:text-emerald-300 tabular-nums">
               {props.liveStats.accuracy.toFixed(0)}%
             </div>
@@ -1234,7 +1269,9 @@ const TypingSidebar: React.FC<{
         </div>
 
         <div className="bg-card/50 p-3 rounded-2xl border border-border text-center">
-          <span className="text-[10px] text-muted-foreground">Best Record</span>
+          <span className="text-[10px] text-muted-foreground">
+            {props.t('typingGame.bestRecord', { defaultValue: 'Best Record' })}
+          </span>
           <div className="text-sm font-bold text-muted-foreground">{props.bestWpm} WPM</div>
         </div>
       </div>
@@ -1247,9 +1284,9 @@ const TypingSidebar: React.FC<{
           onClick={props.onStopPractice}
           className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 dark:bg-blue-400/80 dark:hover:bg-blue-300/80 text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 dark:shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
-          <span>Stop Practice</span>
+          <span>{props.t('typingGame.stopPractice', { defaultValue: 'Stop Practice' })}</span>
         </Button>
-        <TypingFooterUser userAvatar={props.userAvatar} userName={props.userName} />
+        <TypingFooterUser userAvatar={props.userAvatar} userName={props.userName} t={props.t} />
       </div>
     </aside>
   );
@@ -1399,6 +1436,7 @@ const DesktopTypingGameLayout: React.FC<{
         nextJamo={nextJamo}
         currentTargetChar={currentTargetChar}
         hasError={hasError}
+        t={t}
       />
       {showHiddenInput && (
         <HiddenInput
@@ -1825,7 +1863,7 @@ const DesktopTypingPage: React.FC = () => {
   if (gameState === 'lobby') {
     return (
       <TypingLobby
-        onBack={() => navigate('/dashboard?view=practice')}
+        onBack={() => navigate('/practice')}
         onStartWord={handleStartWord}
         onStartSentence={handleStartSentence}
         onStartParagraph={handleStartParagraph}

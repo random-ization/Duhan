@@ -7,7 +7,7 @@ import { QuestionRenderer } from '../topik/QuestionRenderer';
 import { MobileQuestionNav } from './MobileQuestionNav';
 import { BottomSheet } from '../common/BottomSheet';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
-// import { getLabels } from '../../utils/i18n'; // Unused for now
+import { getLabels } from '../../utils/i18n';
 
 interface MobileExamSessionProps {
   exam: TopikExam;
@@ -28,6 +28,8 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
   onSubmit,
   onExit: _onExit,
 }) => {
+  const labels = getLabels(language);
+  const sessionCopy = labels.dashboard?.topik?.mobile?.session;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showPassage, setShowPassage] = useState(false);
@@ -62,6 +64,15 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
 
   // Calculate answered count
   const answeredCount = Object.keys(userAnswers).length;
+  const answeredLabel = sessionCopy?.answeredCount
+    ? sessionCopy.answeredCount
+        .replace('{{current}}', String(answeredCount))
+        .replace('{{total}}', String(totalQuestions))
+    : `${answeredCount}/${totalQuestions} Answered`;
+  const passageLabel =
+    sessionCopy?.passageFor
+      ?.replace('{{start}}', String(currentQuestionIndex + 1))
+      .replace('{{end}}', String(currentQuestionIndex + 1)) || 'Passage';
 
   return (
     <div className="flex flex-col h-[100dvh] bg-muted overflow-hidden">
@@ -77,9 +88,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
             <Clock className="w-3.5 h-3.5" />
             {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
           </div>
-          <div className="text-xs font-bold text-muted-foreground">
-            {answeredCount}/{totalQuestions} Answered
-          </div>
+          <div className="text-xs font-bold text-muted-foreground">{answeredLabel}</div>
         </div>
         <Button
           variant="ghost"
@@ -87,7 +96,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           onClick={onSubmit}
           className="text-indigo-600 font-bold hover:bg-indigo-50 hover:text-indigo-700"
         >
-          Submit
+          {sessionCopy?.finish || 'Submit'}
         </Button>
       </div>
 
@@ -110,7 +119,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
               className="shadow-lg bg-card text-muted-foreground border border-border hover:bg-muted font-bold gap-2 rounded-full"
             >
               <FileText className="w-4 h-4 text-indigo-500" />
-              Show Passage
+              {passageLabel}
             </Button>
           </div>
         )}
@@ -155,7 +164,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
             <LayoutGrid className="w-3 h-3" />
-            View All
+            {sessionCopy?.questionMap || 'View All'}
           </div>
         </Button>
 
@@ -175,7 +184,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         isOpen={showPassage}
         onClose={() => setShowPassage(false)}
         height="full"
-        title="Passage"
+        title={passageLabel}
       >
         <div className="h-full overflow-y-auto bg-muted p-4 rounded-xl">
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm text-lg leading-loose font-serif">
@@ -188,7 +197,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
             )}
             {!currentQuestion?.passage && (
               <div className="text-center text-muted-foreground py-10">
-                No passage for this question.
+                {sessionCopy?.noPassage || 'No passage for this question.'}
               </div>
             )}
           </div>

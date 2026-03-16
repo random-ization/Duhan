@@ -31,12 +31,14 @@ import { uploadAvatarImage, validateAvatarFile } from '../../utils/storageUpload
 const MobileAvatarContent = ({
   isUploadingAvatar,
   avatar,
+  altLabel,
 }: {
   isUploadingAvatar: boolean;
   avatar?: string | null;
+  altLabel: string;
 }) => {
   if (isUploadingAvatar) return <Loading size="sm" />;
-  if (avatar) return <img src={avatar} alt="Profile" className="w-full h-full object-cover" />;
+  if (avatar) return <img src={avatar} alt={altLabel} className="w-full h-full object-cover" />;
   return (
     <UserIcon className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
   );
@@ -109,7 +111,7 @@ export const MobileProfilePage: React.FC = () => {
       toast.success(t('avatarUpdated', { defaultValue: 'Avatar updated' }));
     } catch (err) {
       console.error(err);
-      toast.error(t('uploadAvatarFailed', { defaultValue: 'Failed to upload avatar' }));
+      toast.error(t('profile.uploadAvatarFailed', { defaultValue: 'Failed to upload avatar' }));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -143,7 +145,7 @@ export const MobileProfilePage: React.FC = () => {
 
   if (!user) return <Loading fullScreen />;
 
-  const displayName = user.name || 'User';
+  const displayName = user.name || t('profile.unnamed', { defaultValue: 'User' });
   const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
   const dayStreak = user.statistics?.dayStreak ?? 0;
   const savedWordsCount = vocabBookCount?.count ?? 0;
@@ -189,14 +191,14 @@ export const MobileProfilePage: React.FC = () => {
           confirmPassword={confirmPassword}
           setConfirmPassword={setConfirmPassword}
           isChangingPassword={isChangingPassword}
-          accountSectionTitle="Social Accounts"
+          accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
           linkedProviders={linkedProviders}
           linkedCount={linkedAccounts?.length || 0}
           accountsLoading={linkedAccounts === undefined}
-          linkedLabel="Linked"
-          notLinkedLabel="Not linked"
-          unlinkLabel="Unlink"
-          linkLabel="Connect"
+          linkedLabel={labels.profile?.link?.linked || 'Linked'}
+          notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
+          unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
+          linkLabel={labels.profile?.link?.connect || 'Connect'}
           signIn={signIn}
           unlinkAuthProviderMutation={unlinkAuthProviderMutation}
           getAccountButtonClass={getAccountButtonClass}
@@ -239,7 +241,11 @@ export const MobileProfilePage: React.FC = () => {
         <div className="flex flex-col items-center">
           <div className="relative mb-4">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-border shadow-lg bg-muted relative">
-              <MobileAvatarContent isUploadingAvatar={isUploadingAvatar} avatar={user.avatar} />
+              <MobileAvatarContent
+                isUploadingAvatar={isUploadingAvatar}
+                avatar={user.avatar}
+                altLabel={t('profile.title', { defaultValue: 'Profile' })}
+              />
             </div>
             <Button
               variant="ghost"

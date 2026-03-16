@@ -80,65 +80,75 @@ const WritingAnswerArea: React.FC<{
   handleWritingSubmit,
   labels,
   currentQuestion,
-}) => (
-  <div className="space-y-4">
-    <div
-      className={cn(
-        'relative bg-card rounded-2xl border-2 p-4 transition-colors',
-        writingState === 'CORRECT'
-          ? 'border-lime-500 bg-lime-50'
-          : writingState === 'WRONG'
-            ? 'border-rose-500 bg-rose-50'
-            : 'border-border focus-within:border-indigo-500 shadow-sm'
-      )}
-    >
-      <Input
-        ref={inputRef}
-        type="text"
-        value={writingInput}
-        onChange={e => setWritingInput(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
-        className="w-full text-2xl font-bold text-center bg-transparent outline-none text-muted-foreground placeholder:text-muted-foreground"
-        placeholder="Type answer..."
-        disabled={writingState !== 'INPUT'}
-        autoCapitalize="none"
-        autoComplete="off"
-      />
-    </div>
+}) => {
+  const dashboardQuiz = labels.dashboard?.quiz;
+  const placeholder =
+    currentQuestion.direction === 'KR_TO_NATIVE'
+      ? dashboardQuiz?.enterMeaning || 'Enter meaning...'
+      : dashboardQuiz?.enterKorean || 'Enter Korean...';
 
-    {writingState === 'INPUT' && (
-      <Button
-        variant="ghost"
-        size="auto"
-        onClick={handleWritingSubmit}
-        disabled={!writingInput.trim()}
-        className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+  return (
+    <div className="space-y-4">
+      <div
+        className={cn(
+          'relative bg-card rounded-2xl border-2 p-4 transition-colors',
+          writingState === 'CORRECT'
+            ? 'border-lime-500 bg-lime-50'
+            : writingState === 'WRONG'
+              ? 'border-rose-500 bg-rose-50'
+              : 'border-border focus-within:border-indigo-500 shadow-sm'
+        )}
       >
-        {labels.dashboard?.quiz?.submit || 'Check'}
-      </Button>
-    )}
+        <Input
+          ref={inputRef}
+          type="text"
+          value={writingInput}
+          onChange={e => setWritingInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
+          className="w-full text-2xl font-bold text-center bg-transparent outline-none text-muted-foreground placeholder:text-muted-foreground"
+          placeholder={placeholder}
+          disabled={writingState !== 'INPUT'}
+          autoCapitalize="none"
+          autoComplete="off"
+        />
+      </div>
 
-    {writingState === 'CORRECT' && (
-      <div className="flex items-center justify-center gap-2 text-lime-600 font-bold animate-in zoom-in">
-        <Check size={24} />
-        <span>Correct!</span>
-      </div>
-    )}
-    {writingState === 'WRONG' && (
-      <div className="text-center animate-in zoom-in">
-        <p className="text-rose-600 font-bold mb-1 flex items-center justify-center gap-2">
-          <X size={20} /> Wrong
-        </p>
-        <p className="text-muted-foreground text-sm">Correct answer:</p>
-        <p className="text-foreground font-black text-lg">
-          {currentQuestion.direction === 'KR_TO_NATIVE'
-            ? currentQuestion.targetWord.english
-            : currentQuestion.targetWord.korean}
-        </p>
-      </div>
-    )}
-  </div>
-);
+      {writingState === 'INPUT' && (
+        <Button
+          variant="ghost"
+          size="auto"
+          onClick={handleWritingSubmit}
+          disabled={!writingInput.trim()}
+          className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+        >
+          {labels.dashboard?.quiz?.submit || 'Check'}
+        </Button>
+      )}
+
+      {writingState === 'CORRECT' && (
+        <div className="flex items-center justify-center gap-2 text-lime-600 font-bold animate-in zoom-in">
+          <Check size={24} />
+          <span>{dashboardQuiz?.correct || 'Correct!'}</span>
+        </div>
+      )}
+      {writingState === 'WRONG' && (
+        <div className="text-center animate-in zoom-in">
+          <p className="text-rose-600 font-bold mb-1 flex items-center justify-center gap-2">
+            <X size={20} /> {dashboardQuiz?.incorrect || 'Wrong'}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {dashboardQuiz?.correctAnswer || 'Correct answer:'}
+          </p>
+          <p className="text-foreground font-black text-lg">
+            {currentQuestion.direction === 'KR_TO_NATIVE'
+              ? currentQuestion.targetWord.english
+              : currentQuestion.targetWord.korean}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ChoiceAnswerArea: React.FC<{
   currentQuestion: QuizQuestion;
@@ -169,14 +179,19 @@ const ChoiceAnswerArea: React.FC<{
 );
 
 const PendingAdvanceBar: React.FC<{
+  labels: Labels;
   setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   nextQuestionRef: React.RefObject<() => void>;
-}> = ({ setPendingAdvanceReason, nextQuestionRef }) => (
+}> = ({ labels, setPendingAdvanceReason, nextQuestionRef }) => (
   <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border pb-safe shadow-lg animate-in slide-in-from-bottom-full z-50">
     <div className="flex items-center justify-between mb-3 px-2">
       <div>
-        <p className="font-black text-muted-foreground">Review this later</p>
-        <p className="text-xs text-muted-foreground">We&apos;ll ask you again soon.</p>
+        <p className="font-black text-muted-foreground">
+          {labels.dashboard?.quiz?.reviewLater || 'Review this later'}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {labels.dashboard?.quiz?.reviewSoon || "We'll ask you again soon."}
+        </p>
       </div>
     </div>
     <Button
@@ -188,7 +203,7 @@ const PendingAdvanceBar: React.FC<{
       }}
       className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
     >
-      <span>Continue</span>
+      <span>{labels.common?.continue || 'Continue'}</span>
       <ChevronRight size={20} />
     </Button>
   </div>
@@ -299,13 +314,14 @@ export function MobileVocabQuiz({
               className="w-full mt-4 py-3 text-muted-foreground font-bold text-sm hover:text-muted-foreground flex items-center justify-center gap-2"
             >
               <HelpCircle size={16} />
-              <span>I&apos;t know</span>
+              <span>{labels.dashboard?.quiz?.dontKnow || "I don't know"}</span>
             </Button>
           )}
 
           {/* Continue / Next Button (if Pending Advance) */}
           {pendingAdvance && (
             <PendingAdvanceBar
+              labels={labels}
               setPendingAdvanceReason={setPendingAdvanceReason}
               nextQuestionRef={nextQuestionRef}
             />
@@ -316,7 +332,6 @@ export function MobileVocabQuiz({
       <style>{`
           @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
           .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-          .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
           .pb-safe-offset { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
         `}</style>
     </div>

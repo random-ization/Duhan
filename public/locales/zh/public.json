@@ -113,13 +113,25 @@
     "on": "开启",
     "off": "关闭",
     "page": "页面",
-    "search": "搜索"
+    "breadcrumb": "面包屑导航",
+    "search": "搜索",
+    "loading": "正在加载...",
+    "error": "出了点问题。",
+    "allRightsReserved": "保留所有权利。"
+  },
+  "learnHub": {
+    "badge": "DuHan 学习指南中心",
+    "englishContent": "英文内容",
+    "readGuide": "阅读指南",
+    "roadmap": "通过 TOPIK 练习、词汇复习和语法训练，构建你的学习路线图。",
+    "collectionName": "韩语学习指南"
   },
   "landing": {
     "seo": {
       "title": "DuHan - 在线学习韩语 | 交互式韩语学习平台",
       "description": "通过 DuHan 交互式平台高效学习韩语。系统化学习词汇、语法、TOPIK 备考、播客与视频内容，让韩语学习更高效。",
-      "keywords": "韩语学习, 在线学韩语, TOPIK, 韩语词汇, 韩语语法, 韩国语学习, 韩语课程"
+      "keywords": "韩语学习, 在线学韩语, TOPIK, 韩语词汇, 韩语语法, 韩国语学习, 韩语课程",
+      "featuredGuidesListName": "精选韩语学习指南"
     },
     "nav": {
       "topik": "TOPIK",
@@ -330,8 +342,26 @@
       "q3": "如果不满意可以退款吗？",
       "a3": "我们提供 30 天无理由退款保证。如果你觉得 DuHan 没能帮到你，发邮件给我们即可全额退款。"
     },
+    "guides": {
+      "title": "从实用的韩语学习指南开始",
+      "subtitle": "通过为 TOPIK、词汇、语法和写作打造的 SEO 优化指南页面，规划你的学习路线。",
+      "topik": {
+        "title": "TOPIK 备考指南",
+        "description": "了解考试结构、评分方式和每周备考循环。"
+      },
+      "vocab": {
+        "title": "韩语词汇体系",
+        "description": "通过 SRS、听写和语境复习长期记住单词。"
+      },
+      "writing": {
+        "title": "TOPIK 写作策略",
+        "description": "使用清晰的模板与限时修改清单，提升分数。"
+      },
+      "readMore": "阅读指南"
+    },
     "footer": {
       "about": "关于我们",
+      "learnGuides": "学习指南",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     }
   },
@@ -569,6 +599,7 @@
     "placeholderEmail": "电子邮箱",
     "placeholderPassword": "密码",
     "forgotPassword": "忘记密码?",
+    "forgotPasswordDescription": "请输入邮箱，我们将向你发送密码重置链接。",
     "loginButton": "开始游戏 (登录)",
     "signupButton": "注册账户",
     "orContinue": "或通过以下方式继续",
@@ -579,6 +610,8 @@
     "resendSuccess": "重置链接已发送！请检查您的收件箱。",
     "resendError": "无法重置密码，请检查邮箱地址是否正确。",
     "backToLogin": "返回登录",
+    "resetPassword": "重置密码",
+    "resetPasswordDescription": "为你的账户设置一个新密码。",
     "recoverPassword": "找回密码",
     "recoveryDesc": "请输入您的已注册邮箱，我们将发送一条恢复信号。",
     "verifyingEmail": "正在验证您的邮箱...",
@@ -599,7 +632,11 @@
     "resetSuccessDesc": "您已退出登录，请使用新密码重新登录",
     "invalidLink": "无效链接",
     "invalidLinkDesc": "链接已失效或缺失令牌，请重新请求",
+    "invalidResetToken": "重置令牌无效或缺失。",
     "requestAgain": "重新请求",
+    "passwordMismatch": "两次输入的密码不一致。",
+    "passwordResetEmailSent": "如果该邮箱存在，我们已发送重置链接。请查看收件箱。",
+    "passwordResetSuccess": "你的密码已成功重置。",
     "alt": {
       "rocket": "火箭"
     },
@@ -609,6 +646,14 @@
     },
     "newPasswordLabel": "新密码",
     "resetFailed": "重置密码失败，请稍后重试。",
+    "sendVerificationEmail": "发送验证邮件",
+    "verifyEmail": "验证邮箱",
+    "verifyEmailSuccess": "你的邮箱已成功验证。",
+    "verifyEmailSent": "验证邮件已发送，请查看收件箱。",
+    "verifyEmailAlreadyVerified": "你的邮箱已验证。",
+    "verifyEmailInvalidToken": "该验证链接无效或已过期。",
+    "verifyEmailDescription": "点击下方按钮发送验证邮件。",
+    "loginRequired": "请先登录。",
     "networkError": "网络错误。请检查网络后重试。"
   },
   "errors": {

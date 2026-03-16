@@ -25,6 +25,7 @@ import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
+import { notify } from '../utils/notify';
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
 type ReminderLevel = 'none' | 'good' | 'warn' | 'danger';
@@ -148,7 +149,17 @@ const TopikPage: React.FC = () => {
   // Mobile Lobby View
   if (isMobile) {
     return (
-      <MobileTopikPage onSelectExam={id => navigate(`/topik/${id}`)} topikExams={topikExams} />
+      <MobileTopikPage
+        onSelectExam={id => {
+          const targetExam = topikExams.find(exam => exam.id === id);
+          if ((targetExam?.type as string) === 'WRITING') {
+            navigate(`/topik/writing/${id}`);
+            return;
+          }
+          navigate(`/topik/${id}`);
+        }}
+        topikExams={topikExams}
+      />
     );
   }
 
@@ -163,14 +174,14 @@ const TopikPage: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="flex items-center gap-4 mb-4">
-          <BackButton onClick={() => navigate('/dashboard?view=practice')} />
+          <BackButton onClick={() => navigate('/practice')} />
           <div>
             <h2 className="text-4xl font-black font-display text-foreground tracking-tight">
               {t('dashboard.topik.examCenter')}
             </h2>
             <p className="text-muted-foreground font-bold">{t('dashboard.topik.realExam')}</p>
           </div>
-          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="trophy" />
+          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="" />
         </div>
 
         {/* ─── TOPIK Stats Card ─── */}
@@ -240,7 +251,7 @@ const TopikPage: React.FC = () => {
                 {/* ── Panel 1: Core Stats ── */}
                 <div className="p-6 space-y-4">
                   <div className="flex items-center gap-2">
-                    <img src="/emojis/Trophy.png" className="w-8 h-8" alt="trophy" />
+                    <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
                     <span className="font-black text-sm text-foreground uppercase tracking-wider">
                       {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
                     </span>
@@ -470,7 +481,13 @@ const TopikPage: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <button
                         type="button"
-                        onClick={() => alert(t('dashboard.topik.writingComingSoon'))}
+                        onClick={() =>
+                          notify.info(
+                            t('dashboard.topik.writingComingSoon', {
+                              defaultValue: 'Writing module is coming soon.',
+                            })
+                          )
+                        }
                         className="flex items-stretch text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full"
                       >
                         <div className="p-4 flex flex-col items-center justify-center text-white w-32 shrink-0 relative overflow-hidden bg-rose-500">

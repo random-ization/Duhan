@@ -536,7 +536,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               <div className="mt-4 bg-muted rounded-xl overflow-hidden border border-border relative aspect-[4/3] flex items-center justify-center">
                 <img
                   src={questionImage}
-                  alt="Question Visual"
+                  alt={q.number ? String(q.number) : ''}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -597,7 +597,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                       {badge}
                       <img
                         src={imgUrl}
-                        alt={`Option ${idx + 1}`}
+                        alt={String(idx + 1)}
                         className="w-full h-full object-contain"
                       />
                       <div

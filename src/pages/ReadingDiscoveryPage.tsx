@@ -394,7 +394,9 @@ const ArticleNewsCard: React.FC<{
         </div>
         <div>
           <div className={`text-[11px] font-bold uppercase tracking-wider ${styles.sourceClass}`}>
-            Wikipedia
+            {t('readingDiscovery.articles.sourceWikipedia', {
+              defaultValue: 'Wikipedia',
+            })}
           </div>
           <div className={`text-sm font-bold ${styles.sourceTypeClass}`}>{sourceTypeText}</div>
         </div>

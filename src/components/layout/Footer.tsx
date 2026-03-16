@@ -4,6 +4,10 @@ import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
 
 export default function Footer() {
   const { t } = useTranslation();
+  const joinDiscordLabel = t('footer.joinDiscord', { defaultValue: 'Join our Discord' });
+  const copyright = t('footer.copyright', {
+    defaultValue: '© 2026 DuHan Inc. All rights reserved.',
+  });
   return (
     <footer className="mt-auto py-8 text-center text-muted-foreground">
       <div className="flex justify-center gap-6 text-xs font-bold uppercase tracking-wider mb-2 items-center">
@@ -34,8 +38,8 @@ export default function Footer() {
               href="https://discord.gg/XBURUx5eav"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Join our Discord"
-              title="Join our Discord"
+              aria-label={joinDiscordLabel}
+              title={joinDiscordLabel}
               className="hover:text-indigo-500 transition"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -44,11 +48,11 @@ export default function Footer() {
             </a>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">Join our Discord</TooltipContent>
+            <TooltipContent side="top">{joinDiscordLabel}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
       </div>
-      <p className="text-[10px] opacity-60">© 2026 DuHan Inc. All rights reserved.</p>
+      <p className="text-[10px] opacity-60">{copyright}</p>
     </footer>
   );
 }

@@ -14,23 +14,25 @@ export default function ReviewDashboardPage() {
   const { t } = useTranslation();
   const [now] = useState(() => Date.now());
 
-  // Reuse the existing query for now to differentiate "due" items
-  const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 }) || [];
+  const reviewSummary = useQuery(VOCAB.getReviewSummary, {}) || null;
+  const reviewQueue = useQuery(VOCAB.getDueForReview) || [];
   const userStats = useQuery(
     qRef<NoArgs, { streak: number } & Record<string, unknown>>('userStats:getStats')
   );
   const streak = userStats?.streak ?? 0;
 
-  const dueItems = vocabBook.filter(
-    item =>
-      item.progress.status !== 'MASTERED' &&
-      !!item.progress.nextReviewAt &&
-      item.progress.nextReviewAt <= now
+  const dueItems = reviewQueue.filter(
+    item => !!item.progress.nextReviewAt && item.progress.nextReviewAt <= now
   );
-
-  const learnedCount = vocabBook.filter(i => i.progress.status !== 'NEW').length;
-  // Mock logic for accuracy/time for now
-  const accuracy = 94;
+  const dueNowCount = reviewSummary?.dueNow ?? dueItems.length;
+  const learnedCount = reviewSummary
+    ? Math.max(0, reviewSummary.total - reviewSummary.unlearned)
+    : reviewQueue.filter(i => i.progress.status !== 'NEW').length;
+  const accuracy =
+    reviewSummary && reviewSummary.total > 0
+      ? Math.round((reviewSummary.mastered / reviewSummary.total) * 100)
+      : 0;
+  const visibleDueItems = dueItems.slice(0, 200);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 font-sans pb-24">
@@ -41,13 +43,7 @@ export default function ReviewDashboardPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                if (window.innerWidth < 768) {
-                  navigate('/practice');
-                } else {
-                  navigate('/dashboard?view=practice');
-                }
-              }}
+              onClick={() => navigate('/practice')}
               className="rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -59,8 +55,8 @@ export default function ReviewDashboardPage() {
               </h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 {t('reviewPage.dashboard.subtitle', {
-                  count: dueItems.length,
-                  defaultValue: `Keep your streak alive! You have ${dueItems.length} words due.`,
+                  count: dueNowCount,
+                  defaultValue: `Keep your streak alive! You have ${dueNowCount} words due.`,
                 })}
               </p>
             </div>
@@ -85,7 +81,9 @@ export default function ReviewDashboardPage() {
             icon={<Target className="text-emerald-500" />}
             label={t('reviewPage.stats.accuracy', { defaultValue: 'Accuracy' })}
             value={`${accuracy}%`}
-            subtext={t('reviewPage.stats.accuracy_sub', { defaultValue: '+2% from last week' })}
+            subtext={t('reviewPage.stats.accuracy_sub', {
+              defaultValue: 'Derived from mastered ratio',
+            })}
           />
           <StatsCard
             icon={<Zap className="text-indigo-500" />}
@@ -96,7 +94,7 @@ export default function ReviewDashboardPage() {
           <StatsCard
             icon={<Clock className="text-rose-500" />}
             label={t('reviewPage.stats.due', { defaultValue: 'Due Now' })}
-            value={dueItems.length}
+            value={dueNowCount}
             subtext={t('reviewPage.stats.due_sub', { defaultValue: 'Ready to review' })}
           />
         </div>
@@ -125,8 +123,8 @@ export default function ReviewDashboardPage() {
             <ModeCard
               title={t('reviewPage.modes.full.title', { defaultValue: 'Full Review' })}
               description={t('reviewPage.modes.full.desc', {
-                count: dueItems.length,
-                defaultValue: `Clear all ${dueItems.length} due words`,
+                count: dueNowCount,
+                defaultValue: `Clear all ${dueNowCount} due words`,
               })}
               icon={<Brain className="w-8 h-8 text-indigo-500" />}
               color="bg-indigo-50 dark:bg-indigo-900/10"
@@ -178,7 +176,7 @@ export default function ReviewDashboardPage() {
                       })}
                     </div>
                   ) : (
-                    dueItems.map(item => (
+                    visibleDueItems.map(item => (
                       <div
                         key={item.id}
                         className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
@@ -198,10 +196,19 @@ export default function ReviewDashboardPage() {
                           variant="outline"
                           className="text-amber-600 border-amber-200 bg-amber-50"
                         >
-                          Due
+                          {t('reviewPage.queue.due', { defaultValue: 'Due Review' })}
                         </Badge>
                       </div>
                     ))
+                  )}
+                  {dueItems.length > visibleDueItems.length && (
+                    <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                      {t('reviewPage.queue.previewLimited', {
+                        count: visibleDueItems.length,
+                        total: dueItems.length,
+                        defaultValue: `Showing first ${visibleDueItems.length} of ${dueItems.length} words`,
+                      })}
+                    </div>
                   )}
                 </div>
               </Card>

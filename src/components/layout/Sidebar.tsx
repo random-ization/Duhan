@@ -62,7 +62,7 @@ const UserProfileHeader = ({
   user: { name?: string; email?: string; avatar?: string } | null;
   collapsed: boolean;
   navigate: (path: string) => void;
-  t: (key: string) => string;
+  t: (key: string, options?: { defaultValue?: string }) => string;
 }) => (
   <HoverTooltip label={t('sidebar.profile')} side={collapsed ? 'right' : 'top'}>
     <Button
@@ -78,13 +78,13 @@ const UserProfileHeader = ({
         {user?.avatar ? (
           <img
             src={user.avatar}
-            alt={`${user?.name || 'User'} avatar`}
+            alt={user?.name || t('guest')}
             className="w-full h-full object-cover"
           />
         ) : (
           <img
             src="/logo.png"
-            alt="Logo"
+            alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
             className="w-full h-full object-contain p-1 dark:brightness-0 dark:invert"
           />
         )}
@@ -108,6 +108,7 @@ const SidebarNav = ({
   pathWithoutLang,
   searchString,
   collapsed,
+  t,
 }: {
   items: Array<{
     path: string;
@@ -120,10 +121,11 @@ const SidebarNav = ({
   pathWithoutLang: string;
   searchString: string;
   collapsed: boolean;
+  t: (key: string, options?: { defaultValue?: string }) => string;
 }) => (
   <nav
     className="flex-1 px-3 space-y-2 py-2 overflow-y-auto scrollbar-hide"
-    aria-label="Sidebar navigation"
+    aria-label={t('sidebar.navigation', { defaultValue: 'Sidebar navigation' })}
   >
     {items.map(item => {
       const fullPath = pathWithoutLang + searchString;
@@ -178,7 +180,7 @@ const SidebarFooter = ({
   toggleEditMode: () => void;
   navigate: (path: string) => void;
   logout: () => void;
-  t: (key: string) => string;
+  t: (key: string, options?: { defaultValue?: string }) => string;
 }) => (
   <div className={`p-4 border-t-2 border-border flex ${collapsed ? 'flex-col' : ''} gap-2`}>
     <HoverTooltip
@@ -296,6 +298,7 @@ export default function Sidebar() {
         pathWithoutLang={pathWithoutLang}
         searchString={location.search}
         collapsed={collapsed}
+        t={t}
       />
 
       <SidebarFooter
@@ -324,7 +327,7 @@ export default function Sidebar() {
           <SheetOverlay
             unstyled
             className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
-            aria-label="Close menu"
+            aria-label={closeMenuLabel}
           />
           <SheetContent
             unstyled
@@ -371,11 +374,18 @@ function useSidebarNavItems(
         ],
       },
       {
-        path: '/dashboard?view=practice',
+        path: '/practice',
         label: t('sidebar.practice', { defaultValue: 'Practice' }),
         icon: Dumbbell,
         activeClass: 'bg-accent text-foreground border-border',
-        activePrefixes: ['/dashboard?view=practice', '/vocab-book', '/notebook', '/typing'],
+        activePrefixes: [
+          '/practice',
+          '/dashboard?view=practice',
+          '/review',
+          '/vocab-book',
+          '/notebook',
+          '/typing',
+        ],
       },
       {
         path: '/topik',

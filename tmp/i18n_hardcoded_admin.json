@@ -1,0 +1,912 @@
+[
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 43,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "AI 成本统计 (30天)"
+  },
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 47,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "暂无 AI 使用记录"
+  },
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 57,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "AI 成本统计 (30天)"
+  },
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 65,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "API 调用"
+  },
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 71,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Token 消耗"
+  },
+  {
+    "file": "src/components/admin/AdminDashboard.tsx",
+    "line": 107,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "每日 API 调用趋势"
+  },
+  {
+    "file": "src/components/admin/GrammarImporter.tsx",
+    "line": 769,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "支持 Excel (.xlsx, .xls) 或 CSV (.csv)"
+  },
+  {
+    "file": "src/components/admin/GrammarImporter.tsx",
+    "line": 784,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "标题, 简介, 简介(EN), 简介(VN), 简介(MN), 解释, 解释(EN), 解释(VN), 解释(MN), 例句(KR), 例句(CH), 例句(EN), 例句(VN), 例句(MN), 单元"
+  },
+  {
+    "file": "src/components/admin/GrammarImporter.tsx",
+    "line": 798,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "粘贴区域：&#10;标题&#9;等级&#9;类型&#9;简介&#9;详细解释&#9;例句&#9;单元&#10;-아/어요&#9;Beginner&#9;ENDING&#9;非格式体终结词尾&#9;详细说明...&#9;가요&#9;1&#10;..."
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 352,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "未找到 &quot;"
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 352,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "&quot; 相关的语法"
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 396,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Markdown 格式"
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 441,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "选择单元后点击&quot;添加语法点&quot;"
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 465,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "每行一个 pattern（也支持逗号分隔）。示例：으시, 시, 었, 았"
+  },
+  {
+    "file": "src/components/admin/GrammarManager.tsx",
+    "line": 475,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "输入 searchPatterns"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 68,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "或点击&quot;新建教材&quot;创建新教材"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 118,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "教材名称(English)"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 123,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "e.g. Seoul National University Korean"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 132,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "教材名称(Tiếng Việt)"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 137,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Ví dụ: Tiếng Hàn Đại học Quốc gia Seoul"
+  },
+  {
+    "file": "src/components/admin/InstituteEditForm.tsx",
+    "line": 216,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "如需新增出版社，请前往&quot;出版社管理&quot;标签页。"
+  },
+  {
+    "file": "src/components/admin/InstituteManager.tsx",
+    "line": 316,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Loading more..."
+  },
+  {
+    "file": "src/components/admin/LegalDocumentEditor.tsx",
+    "line": 71,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "正文 (支持 Markdown)"
+  },
+  {
+    "file": "src/components/admin/ListeningUnitEditor.tsx",
+    "line": 112,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "时间戳文稿 (JSON)"
+  },
+  {
+    "file": "src/components/admin/ListeningUnitEditor.tsx",
+    "line": 119,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "[{ start, end, text }...]"
+  },
+  {
+    "file": "src/components/admin/ListeningUnitEditor.tsx",
+    "line": 120,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "时间戳文稿 (JSON)"
+  },
+  {
+    "file": "src/components/admin/NewsPipelinePanel.tsx",
+    "line": 104,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "新闻数据管线（MVP）"
+  },
+  {
+    "file": "src/components/admin/NewsPipelinePanel.tsx",
+    "line": 139,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "最近 active 新闻"
+  },
+  {
+    "file": "src/components/admin/NewsPipelinePanel.tsx",
+    "line": 159,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "实时状态由 Convex Query 刷新"
+  },
+  {
+    "file": "src/components/admin/NewsPipelinePanel.tsx",
+    "line": 195,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "degraded"
+  },
+  {
+    "file": "src/components/admin/PublishersManager.tsx",
+    "line": 298,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Publisher Name (English)"
+  },
+  {
+    "file": "src/components/admin/PublishersManager.tsx",
+    "line": 305,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "e.g. Yonsei University"
+  },
+  {
+    "file": "src/components/admin/PublishersManager.tsx",
+    "line": 310,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Tên nhà xuất bản (Tiếng Việt)"
+  },
+  {
+    "file": "src/components/admin/PublishersManager.tsx",
+    "line": 317,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Ví dụ: Đại học Yonsei"
+  },
+  {
+    "file": "src/components/admin/PublishersManager.tsx",
+    "line": 353,
+    "kind": "jsx-attr",
+    "key": "alt",
+    "text": "Preview"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 145,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "English Translation"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 152,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Enter English translation..."
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 153,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "English Translation"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 158,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Bản dịch tiếng Việt"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 165,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Nhập bản dịch tiếng Việt..."
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 166,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Bản dịch tiếng Việt"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 195,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "音频URL（可直接输入或上传文件）"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 197,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "音频URL"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 229,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "重新分析 AI"
+  },
+  {
+    "file": "src/components/admin/ReadingEditor.tsx",
+    "line": 236,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "重新分析 AI"
+  },
+  {
+    "file": "src/components/admin/ReadingImporter.tsx",
+    "line": 503,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "支持 Excel (.xlsx, .xls) 或 CSV (.csv)"
+  },
+  {
+    "file": "src/components/admin/ReadingImporter.tsx",
+    "line": 517,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "单元, 文章序号, 标题, 正文, 翻译(中), 翻译(英), 翻译(越), 翻译(蒙), 音频URL"
+  },
+  {
+    "file": "src/components/admin/ReadingImporter.tsx",
+    "line": 534,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "粘贴区域：&#10;单元&#9;文章序号&#9;标题&#9;正文&#9;翻译(中)&#9;翻译(英)&#10;1&#9;1&#9;제목&#9;본문 내용...&#9;中文翻译...&#9;English...&#10;..."
+  },
+  {
+    "file": "src/components/admin/ReadingImporter.tsx",
+    "line": 559,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "文件名格式：1-1.mp3（单元-文章序号）"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 981,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "TOPIK 试卷批量导入"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 983,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "上传 Excel 文件，每个工作表 = 一套试卷"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 989,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "上传 Excel 文件"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1005,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "点击上传 Excel 文件"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1007,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "每个工作表名应包含届数和类型，如 &quot;第93届阅读A&quot;"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1013,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Excel 列格式说明："
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1016,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "题号, 选项1/A, 选项2/B, 选项3/C, 选项4/D, 正确答案"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1020,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "阅读文段, 보기内容, 图片URL, 解析"
+  },
+  {
+    "file": "src/components/admin/TopikImporter.tsx",
+    "line": 1030,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "正确答案支持：A/B/C/D 或 1/2/3/4"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 596,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Loading Exam Content..."
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 603,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Content not available"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 664,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Ready"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 672,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "TOPIK Ⅱ"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 679,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Paper type"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 693,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Exam round number"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 702,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Internal Exam Title"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 703,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Internal Exam Title"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 734,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Section instruction"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 746,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "Enter shared passage here..."
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 747,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Enter shared passage"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 815,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Round"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 853,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Load More"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 857,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Loading more..."
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 884,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "Excel/CSV 更新"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 964,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "JSON 格式说明："
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 964,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "粘贴包含题目的 JSON 数组"
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 987,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "在此粘贴 JSON 数据..."
+  },
+  {
+    "file": "src/components/admin/TopikManager.tsx",
+    "line": 988,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "在此粘贴 JSON 数据"
+  },
+  {
+    "file": "src/components/admin/TopikQuestionRenderer.tsx",
+    "line": 123,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Remove image"
+  },
+  {
+    "file": "src/components/admin/TopikQuestionRenderer.tsx",
+    "line": 136,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "&lt;보 기&gt;"
+  },
+  {
+    "file": "src/components/admin/TopikQuestionRenderer.tsx",
+    "line": 515,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Select as correct answer"
+  },
+  {
+    "file": "src/components/admin/TopikQuestionRenderer.tsx",
+    "line": 530,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "Remove image"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 515,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "TOPIK 写作题目上传"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 541,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "· Round"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 558,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "试卷 ID (legacyId)"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 563,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "writing-exam-64"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 572,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "第64届 TOPIK II 写作"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 599,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "TOPIK II 写作模拟卷（51~54题）"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 617,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "题目编辑（Q51~Q54）"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 709,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "粘贴图片 URL，或直接 Ctrl/Cmd+V 粘贴截图"
+  },
+  {
+    "file": "src/components/admin/TopikWritingImporter.tsx",
+    "line": 754,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "先复制截图，然后点击“读取剪贴板图片”，或在上方输入框按 Ctrl/Cmd+V。"
+  },
+  {
+    "file": "src/components/admin/UserEditModal.tsx",
+    "line": 72,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "普通用户 (Student)"
+  },
+  {
+    "file": "src/components/admin/UserEditModal.tsx",
+    "line": 73,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "管理员 (Admin)"
+  },
+  {
+    "file": "src/components/admin/UserEditModal.tsx",
+    "line": 89,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "免费版 (Free)"
+  },
+  {
+    "file": "src/components/admin/UserEditModal.tsx",
+    "line": 90,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "高级版 (Premium)"
+  },
+  {
+    "file": "src/components/admin/UserEditModal.tsx",
+    "line": 91,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "终身版 (Lifetime)"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 503,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "视频文件 * (MP4)"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 564,
+    "kind": "jsx-attr",
+    "key": "alt",
+    "text": "Thumbnail"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 591,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "字幕数据 (JSON)"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 596,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "导入 SRT"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 644,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "AI 识别字幕"
+  },
+  {
+    "file": "src/components/admin/VideoManager.tsx",
+    "line": 668,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "JSON 格式正确！"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 253,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "来自 Convex 的实时词汇数据概览"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 287,
+    "kind": "jsx-attr",
+    "key": "aria-label",
+    "text": "导出 Excel"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 290,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "导出 Excel"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 335,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(MN)"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 336,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(VN)"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 337,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(EN)"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 338,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(CH)"
+  },
+  {
+    "file": "src/components/admin/VocabDashboard.tsx",
+    "line": 364,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "正在从 Convex 读取数据..."
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 82,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(CH) 中文"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 94,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(EN) English"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 106,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(VN) Tiếng Việt"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 118,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "释义(MN) Монгол"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 147,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "例句翻译(CH)"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 159,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "例句翻译(EN)"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 173,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "例句翻译(VN)"
+  },
+  {
+    "file": "src/components/admin/VocabEditModal.tsx",
+    "line": 187,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "例句翻译(MN)"
+  },
+  {
+    "file": "src/components/admin/VocabImporter.tsx",
+    "line": 527,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "支持 Excel (.xlsx, .xls) 或 CSV (.csv)"
+  },
+  {
+    "file": "src/components/admin/VocabImporter.tsx",
+    "line": 546,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "智能识别 CSV 或 Excel 粘贴格式，自动跳过表头"
+  },
+  {
+    "file": "src/components/admin/VocabImporter.tsx",
+    "line": 555,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "粘贴区域：&#10;1\\t가수\\tNOUN\\tДуучин\\tCa sĩ\\tSinger\\t歌手\\t저는 노래를 잘하는 가수가 되고 싶어요.\\t我想成为唱歌好的歌手...&#10;..."
+  },
+  {
+    "file": "src/features/admin/TypingImporter.tsx",
+    "line": 122,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "单词 (Word)"
+  },
+  {
+    "file": "src/features/admin/TypingImporter.tsx",
+    "line": 123,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "句子 (Sentence)"
+  },
+  {
+    "file": "src/features/admin/TypingImporter.tsx",
+    "line": 124,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "长文 (Article)"
+  },
+  {
+    "file": "src/features/admin/TypingImporter.tsx",
+    "line": 139,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "例如：K-Pop, Proverbs"
+  },
+  {
+    "file": "src/features/admin/TypingImporter.tsx",
+    "line": 227,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "characters"
+  },
+  {
+    "file": "src/features/admin/TypingManager.tsx",
+    "line": 125,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "单词 (Word)"
+  },
+  {
+    "file": "src/features/admin/TypingManager.tsx",
+    "line": 135,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "句子 (Sentence)"
+  },
+  {
+    "file": "src/features/admin/TypingManager.tsx",
+    "line": 145,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "长文 (Article)"
+  },
+  {
+    "file": "src/pages/AdminLoginPage.tsx",
+    "line": 64,
+    "kind": "jsx-text",
+    "key": "",
+    "text": "DuHan 内容管理系统"
+  },
+  {
+    "file": "src/pages/AdminLoginPage.tsx",
+    "line": 89,
+    "kind": "jsx-attr",
+    "key": "placeholder",
+    "text": "admin@example.com"
+  }
+]

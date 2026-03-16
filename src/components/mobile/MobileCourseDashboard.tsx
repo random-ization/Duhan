@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { Zap, BookOpen, Trophy, Flame, BookMarked } from 'lucide-react';
+import { Zap, BookOpen, Trophy, Flame, BookMarked, Headphones } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
 
@@ -30,12 +30,18 @@ export function MobileCourseDashboard({
   const { user } = useAuth();
   const isCurrentCourse = user?.lastInstitute === instituteId;
   const rawLastModule = isCurrentCourse ? user?.lastModule : undefined;
-  const lastUnit = isCurrentCourse && typeof user?.lastUnit === 'number' ? user.lastUnit : undefined;
+  const lastUnit =
+    isCurrentCourse && typeof user?.lastUnit === 'number' ? user.lastUnit : undefined;
 
   const normalizedLastModule = (() => {
     const module = (rawLastModule || '').toUpperCase();
     if (module === 'VOCABULARY') return 'VOCAB';
-    if (module === 'VOCAB' || module === 'READING' || module === 'LISTENING' || module === 'GRAMMAR') {
+    if (
+      module === 'VOCAB' ||
+      module === 'READING' ||
+      module === 'LISTENING' ||
+      module === 'GRAMMAR'
+    ) {
       return module;
     }
     return 'READING';
@@ -63,8 +69,7 @@ export function MobileCourseDashboard({
 
   const resumeUnit = lastUnit ?? currentUnit;
   const resumeUnitLabel = t('dashboard.course.unit', { n: resumeUnit, defaultValue: 'Unit {{n}}' });
-  const recentLine =
-    `${t('courseDashboard.recentUnit', { unit: resumeUnit, defaultValue: 'Recently studied: Unit {{unit}}' })} · ${moduleLabel}`;
+  const recentLine = `${t('courseDashboard.recentUnit', { unit: resumeUnit, defaultValue: 'Recently studied: Unit {{unit}}' })} · ${moduleLabel}`;
 
   return (
     <div className="flex flex-col min-h-screen px-4 pb-32 space-y-4 animate-in fade-in duration-500">
@@ -176,6 +181,36 @@ export function MobileCourseDashboard({
           </div>
           <span className="font-bold text-sm text-muted-foreground">
             {t('dashboard.course.grammar', { defaultValue: 'Grammar' })}
+          </span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="auto"
+          type="button"
+          onClick={() => navigate(`/course/${instituteId}/reading`)}
+          className="aspect-square bg-card rounded-3xl p-4 border border-border shadow-sm dark:shadow-[0_6px_22px_rgba(2,6,23,0.28)] flex flex-col justify-between items-start group active:scale-95 transition-all"
+        >
+          <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-400/12 text-blue-500 dark:text-blue-200 flex items-center justify-center group-hover:bg-blue-500 dark:group-hover:bg-blue-400/65 group-hover:text-white transition-colors">
+            <BookOpen size={24} />
+          </div>
+          <span className="font-bold text-sm text-muted-foreground">
+            {t('courseDashboard.modules.reading', { defaultValue: 'Reading' })}
+          </span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="auto"
+          type="button"
+          onClick={() => navigate(`/course/${instituteId}/listening`)}
+          className="aspect-square bg-card rounded-3xl p-4 border border-border shadow-sm dark:shadow-[0_6px_22px_rgba(2,6,23,0.28)] flex flex-col justify-between items-start group active:scale-95 transition-all"
+        >
+          <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-400/12 text-amber-500 dark:text-amber-200 flex items-center justify-center group-hover:bg-amber-500 dark:group-hover:bg-amber-400/65 group-hover:text-white transition-colors">
+            <Headphones size={24} />
+          </div>
+          <span className="font-bold text-sm text-muted-foreground">
+            {t('courseDashboard.modules.listening', { defaultValue: 'Listening' })}
           </span>
         </Button>
       </div>

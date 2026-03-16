@@ -49,9 +49,7 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError(
-        t('auth.passwordMismatch', { defaultValue: 'The two password fields do not match.' })
-      );
+      setError(t('auth.passwordsNotMatch', { defaultValue: 'Passwords do not match.' }));
       return;
     }
 
@@ -112,7 +110,7 @@ const ResetPasswordPage: React.FC = () => {
               required
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              placeholder={t('auth.newPassword', { defaultValue: 'New password' })}
+              placeholder={t('auth.newPasswordLabel', { defaultValue: 'New Password' })}
               className="h-auto w-full rounded-xl shadow-none border border-border px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-300/70"
             />
             <Input
@@ -120,7 +118,7 @@ const ResetPasswordPage: React.FC = () => {
               required
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              placeholder={t('auth.confirmPassword', { defaultValue: 'Confirm password' })}
+              placeholder={t('auth.confirmPasswordLabel', { defaultValue: 'Confirm Password' })}
               className="h-auto w-full rounded-xl shadow-none border border-border px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-300/70"
             />
             {error && <p className="text-sm text-red-600 dark:text-rose-300">{error}</p>}

@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
 import { Trophy, Keyboard, Layers, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -8,6 +7,7 @@ import { VOCAB, qRef } from '../utils/convexRefs';
 import { useTopikExams } from '../hooks/useTopikExams';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
 
 type PracticeCard = {
   id: 'topik' | 'typing' | 'vocab';
@@ -23,24 +23,14 @@ export default function PracticeHubPage() {
   const isMobile = useIsMobile();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const topikExams = useTopikExams();
-  const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });
+  const reviewSummary = useQuery(VOCAB.getReviewSummary, user ? { savedByUserOnly: true } : 'skip');
   const typingStats = useQuery(
     qRef<Record<string, never>, { highestWpm: number } | null>('typing:getUserStats'),
     {}
   );
-  const [now] = useState(() => Date.now());
-
-  const dueReviews = (vocabBook || []).filter(
-    item =>
-      item.progress.status !== 'MASTERED' &&
-      !!item.progress.nextReviewAt &&
-      item.progress.nextReviewAt <= now
-  ).length;
-
-  if (!isMobile) {
-    return <Navigate to="/topik" replace />;
-  }
+  const dueReviews = reviewSummary?.dueNow ?? 0;
 
   const cards: PracticeCard[] = [
     {
@@ -76,33 +66,51 @@ export default function PracticeHubPage() {
   ];
 
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-4">
-      {cards.map(card => (
-        <Button
-          key={card.id}
-          type="button"
-          onClick={() => navigate(card.path)}
-          variant="ghost"
-          size="auto"
-          className={`w-full rounded-3xl border bg-gradient-to-br p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg ${card.accent} !block !whitespace-normal !shadow-none`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-xl bg-card p-2.5 shadow-sm">{card.icon}</div>
-              <div>
-                <h2 className="text-lg font-black text-foreground">{card.title}</h2>
-                <p className="mt-1 text-sm font-semibold text-muted-foreground">{card.subtitle}</p>
-                {card.badge && (
-                  <span className="mt-3 inline-flex rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold text-muted-foreground">
-                    {card.badge}
-                  </span>
-                )}
+    <section className="mx-auto w-full max-w-5xl space-y-4">
+      {!isMobile && (
+        <header className="mb-2">
+          <h1 className="text-3xl font-black text-foreground">
+            {t('nav.practice', { defaultValue: 'Practice' })}
+          </h1>
+          <p className="text-sm font-semibold text-muted-foreground mt-1">
+            {t('dashboard.practice.subtitle', {
+              defaultValue: 'Choose your drill and keep the streak alive.',
+            })}
+          </p>
+        </header>
+      )}
+      <div
+        className={isMobile ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'}
+      >
+        {cards.map(card => (
+          <Button
+            key={card.id}
+            type="button"
+            onClick={() => navigate(card.path)}
+            variant="ghost"
+            size="auto"
+            className={`w-full rounded-3xl border bg-gradient-to-br p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg ${card.accent} !block !whitespace-normal !shadow-none ${!isMobile ? 'h-full' : ''}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-xl bg-card p-2.5 shadow-sm">{card.icon}</div>
+                <div>
+                  <h2 className="text-lg font-black text-foreground">{card.title}</h2>
+                  <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                    {card.subtitle}
+                  </p>
+                  {card.badge && (
+                    <span className="mt-3 inline-flex rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                      {card.badge}
+                    </span>
+                  )}
+                </div>
               </div>
+              <ChevronRight size={18} className="text-muted-foreground" />
             </div>
-            <ChevronRight size={18} className="text-muted-foreground" />
-          </div>
-        </Button>
-      ))}
+          </Button>
+        ))}
+      </div>
     </section>
   );
 }

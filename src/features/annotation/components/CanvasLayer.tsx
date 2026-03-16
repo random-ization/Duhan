@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import Konva from 'konva';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui';
 
 // \u5de5\u5177\u7c7b\u578b
@@ -326,6 +327,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onSave,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const colors = ['#1e293b', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'];
   const highlightColors = ['#fde047', '#86efac', '#93c5fd', '#fca5a5'];
 
@@ -344,7 +346,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          ✏️ Pen
+          ✏️ {t('annotationMenu.pen', { defaultValue: 'Pen' })}
         </Button>
         <Button
           variant="ghost"
@@ -357,7 +359,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          🖍️ Highlight
+          🖍️ {t('annotationMenu.highlight', { defaultValue: 'Highlight' })}
         </Button>
         <Button
           variant="ghost"
@@ -370,7 +372,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               : 'text-muted-foreground hover:text-muted-foreground'
           }`}
         >
-          🧹 Eraser
+          🧹 {t('annotationMenu.eraser', { defaultValue: 'Eraser' })}
         </Button>
       </div>
 
@@ -405,7 +407,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         disabled={disabled}
         className="px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-md transition-all"
       >
-        ↩️ Undo
+        ↩️ {t('annotationMenu.undo', { defaultValue: 'Undo' })}
       </Button>
       <Button
         variant="ghost"
@@ -414,7 +416,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         disabled={disabled}
         className="px-2 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-all"
       >
-        🗑️ Clear
+        🗑️ {t('annotationMenu.clear', { defaultValue: 'Clear' })}
       </Button>
 
       {onSave && (
@@ -425,7 +427,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           disabled={disabled}
           className="px-3 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all shadow-sm"
         >
-          💾 Save
+          💾 {t('annotationMenu.save', { defaultValue: 'Save' })}
         </Button>
       )}
     </div>

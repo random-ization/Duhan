@@ -8,6 +8,20 @@ type SpeakActionArgs = {
   rate?: string;
   pitch?: string;
   skipCache?: boolean;
+  lowLatency?: boolean;
+  traceId?: string;
+};
+
+type SpeakTiming = {
+  traceId?: string;
+  path?: string;
+  lowLatency?: boolean;
+  totalMs?: number;
+  cacheQueryMs?: number;
+  cacheHeadMs?: number;
+  azureMs?: number;
+  uploadMs?: number;
+  schedulerMs?: number;
 };
 
 type SpeakActionResult = {
@@ -16,6 +30,17 @@ type SpeakActionResult = {
   audio?: string;
   format?: string;
   error?: string;
+  cached?: boolean;
+  source?: string;
+  timing?: SpeakTiming;
+};
+
+type PlaybackTimingMeta = {
+  traceId: string;
+  source: 'url' | 'inline' | 'session_cache';
+  speakInvokedAtMs: number;
+  actionReturnedAtMs: number;
+  backendTiming?: SpeakTiming;
 };
 
 type SpeakActionFn = (args: SpeakActionArgs) => Promise<SpeakActionResult>;
@@ -23,8 +48,38 @@ type RequestIdRef = { current: number };
 
 // Keep a tiny debounce to coalesce rapid duplicate triggers without adding
 // noticeable click-to-sound latency.
-const SPEAK_DEBOUNCE_MS = 40;
+const SPEAK_DEBOUNCE_MS = 12;
+const SESSION_INLINE_CACHE_MAX_SIZE = 60;
 const inFlightSpeakRequests = new Map<string, Promise<SpeakActionResult>>();
+
+function nowMs(): number {
+  if (
+    typeof globalThis.performance !== 'undefined' &&
+    typeof globalThis.performance.now === 'function'
+  ) {
+    return globalThis.performance.now();
+  }
+  return Date.now();
+}
+
+function createTraceId(): string {
+  return `tts_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function shouldLogTtsTiming(): boolean {
+  if (globalThis.window === undefined) return false;
+  if (import.meta.env.DEV) return true;
+  try {
+    return localStorage.getItem('tts:timing') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function logTtsTiming(payload: Record<string, unknown>) {
+  if (!shouldLogTtsTiming()) return;
+  console.info('[TTS timing]', payload);
+}
 
 function buildSpeakRequestDedupeKey(args: SpeakActionArgs): string {
   return `${args.voice || ''}|${args.rate || ''}|${args.pitch || ''}|${args.skipCache ? '1' : '0'}|${args.text}`;
@@ -86,6 +141,7 @@ export const useTTS = () => {
   const cacheReadyRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDebounceResolveRef = useRef<((ok: boolean) => void) | null>(null);
+  const sessionInlineCacheRef = useRef<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const createdUrlsRef = useRef<Set<string>>(new Set());
@@ -106,6 +162,7 @@ export const useTTS = () => {
       audio.onended = null;
       audio.onerror = null;
       audio.onabort = null;
+      audio.onplaying = null;
       audio.pause();
       audio.currentTime = 0;
       audio.removeAttribute('src');
@@ -141,8 +198,17 @@ export const useTTS = () => {
     createdUrlsRef.current.clear();
   }, [revokeObjectUrl]);
 
+  const clearSessionInlineCache = useCallback(() => {
+    sessionInlineCacheRef.current.clear();
+  }, []);
+
   const handleAudioPlayback = useCallback(
-    async (audioUrl: string, shouldRevoke: boolean, myRequestId: number): Promise<boolean> => {
+    async (
+      audioUrl: string,
+      shouldRevoke: boolean,
+      myRequestId: number,
+      timingMeta?: PlaybackTimingMeta
+    ): Promise<boolean> => {
       if (myRequestId !== requestIdRef.current) {
         if (shouldRevoke) revokeObjectUrl(audioUrl);
         return false;
@@ -151,13 +217,39 @@ export const useTTS = () => {
       const audio = new Audio(audioUrl);
       audio.preload = 'auto';
       audioRef.current = audio;
+      const audioCreatedAtMs = nowMs();
 
       return new Promise<boolean>(resolve => {
+        let firstSoundLogged = false;
+        let playAttemptAtMs = audioCreatedAtMs;
+
+        const logFirstSound = (trigger: 'playing' | 'play_resolved' | 'ended_without_playing') => {
+          if (!timingMeta || firstSoundLogged) return;
+          firstSoundLogged = true;
+          const firstSoundAtMs = nowMs();
+          logTtsTiming({
+            traceId: timingMeta.traceId,
+            source: timingMeta.source,
+            trigger,
+            clickToFirstSoundMs: Math.round(firstSoundAtMs - timingMeta.speakInvokedAtMs),
+            requestRoundTripMs: Math.round(
+              timingMeta.actionReturnedAtMs - timingMeta.speakInvokedAtMs
+            ),
+            playCallToFirstSoundMs: Math.round(firstSoundAtMs - playAttemptAtMs),
+            audioCreateToFirstSoundMs: Math.round(firstSoundAtMs - audioCreatedAtMs),
+            backend: timingMeta.backendTiming,
+          });
+        };
+
         const onPlaybackComplete = (ok: boolean) => {
+          if (ok && !firstSoundLogged) {
+            logFirstSound('ended_without_playing');
+          }
           if (shouldRevoke) revokeObjectUrl(audioUrl);
           audio.onended = null;
           audio.onerror = null;
           audio.onabort = null;
+          audio.onplaying = null;
 
           if (myRequestId === requestIdRef.current) {
             if (audioRef.current === audio) {
@@ -171,7 +263,12 @@ export const useTTS = () => {
         audio.onended = () => onPlaybackComplete(true);
         audio.onerror = () => onPlaybackComplete(false);
         audio.onabort = () => onPlaybackComplete(false);
-        audio.play().catch(() => onPlaybackComplete(false));
+        audio.onplaying = () => logFirstSound('playing');
+        playAttemptAtMs = nowMs();
+        audio
+          .play()
+          .then(() => logFirstSound('play_resolved'))
+          .catch(() => onPlaybackComplete(false));
       });
     },
     [revokeObjectUrl]
@@ -182,9 +279,15 @@ export const useTTS = () => {
     cancelPendingDebouncedSpeak(false);
     stopCurrentAudio();
     cleanupCreatedObjectUrls();
+    clearSessionInlineCache();
     setIsLoading(false);
     setError(null);
-  }, [cancelPendingDebouncedSpeak, cleanupCreatedObjectUrls, stopCurrentAudio]);
+  }, [
+    cancelPendingDebouncedSpeak,
+    cleanupCreatedObjectUrls,
+    clearSessionInlineCache,
+    stopCurrentAudio,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -192,8 +295,14 @@ export const useTTS = () => {
       cancelPendingDebouncedSpeak(false);
       stopCurrentAudio();
       cleanupCreatedObjectUrls();
+      clearSessionInlineCache();
     };
-  }, [cancelPendingDebouncedSpeak, cleanupCreatedObjectUrls, stopCurrentAudio]);
+  }, [
+    cancelPendingDebouncedSpeak,
+    cleanupCreatedObjectUrls,
+    clearSessionInlineCache,
+    stopCurrentAudio,
+  ]);
 
   const getCache = useCallback(() => {
     if (!cacheReadyRef.current) {
@@ -211,6 +320,10 @@ export const useTTS = () => {
         voice?: string;
         rate?: string;
         pitch?: string;
+      },
+      requestMeta?: {
+        traceId: string;
+        speakInvokedAtMs: number;
       }
     ) => {
       const myRequestId = (requestIdRef.current += 1);
@@ -219,13 +332,30 @@ export const useTTS = () => {
       setError(null);
 
       try {
+        const traceId = requestMeta?.traceId || createTraceId();
+        const speakInvokedAtMs = requestMeta?.speakInvokedAtMs ?? nowMs();
         const voice = options?.voice || 'ko-KR-SunHiNeural';
         const cacheKey = buildCacheKey(normalizedText, voice, options?.rate, options?.pitch);
+        const cachedInlineUrl = touchCache(sessionInlineCacheRef.current, cacheKey);
+        if (cachedInlineUrl) {
+          return await handleAudioPlayback(cachedInlineUrl, false, myRequestId, {
+            traceId,
+            source: 'session_cache',
+            speakInvokedAtMs,
+            actionReturnedAtMs: nowMs(),
+          });
+        }
+
         const cache = getCache();
         const cachedUrl = touchCache(cache, cacheKey);
 
         if (cachedUrl) {
-          const cachedPlayed = await handleAudioPlayback(cachedUrl, false, myRequestId);
+          const cachedPlayed = await handleAudioPlayback(cachedUrl, false, myRequestId, {
+            traceId,
+            source: 'url',
+            speakInvokedAtMs,
+            actionReturnedAtMs: nowMs(),
+          });
           if (cachedPlayed) {
             persistCache(cache);
             return true;
@@ -242,19 +372,40 @@ export const useTTS = () => {
             rate: options?.rate,
             pitch: options?.pitch,
             skipCache,
+            lowLatency: true,
+            traceId,
           });
 
         const playFromResult = async (result: SpeakActionResult) => {
+          const actionReturnedAtMs = nowMs();
           if (result.url) {
             writeCache(cache, cacheKey, result.url);
             persistCache(cache);
-            return await handleAudioPlayback(result.url, false, myRequestId);
+            return await handleAudioPlayback(result.url, false, myRequestId, {
+              traceId,
+              source: 'url',
+              speakInvokedAtMs,
+              actionReturnedAtMs,
+              backendTiming: result.timing,
+            });
           }
           if (result.audio) {
             const audioBlob = base64ToBlob(result.audio, result.format || 'audio/mp3');
             const audioUrl = URL.createObjectURL(audioBlob);
             createdUrlsRef.current.add(audioUrl);
-            return await handleAudioPlayback(audioUrl, true, myRequestId);
+            writeSessionInlineCache(
+              sessionInlineCacheRef.current,
+              cacheKey,
+              audioUrl,
+              revokeObjectUrl
+            );
+            return await handleAudioPlayback(audioUrl, false, myRequestId, {
+              traceId,
+              source: 'inline',
+              speakInvokedAtMs,
+              actionReturnedAtMs,
+              backendTiming: result.timing,
+            });
           }
           return false;
         };
@@ -264,6 +415,12 @@ export const useTTS = () => {
         if (isStaleRequest(myRequestId, requestIdRef)) return false;
 
         if (!result.success) {
+          logTtsTiming({
+            traceId,
+            status: 'speak_failed',
+            backend: result.timing,
+            error: result.error || 'TTS service unavailable',
+          });
           return failCurrentRequest({
             message: result.error || 'TTS service unavailable',
             myRequestId,
@@ -282,6 +439,12 @@ export const useTTS = () => {
         result = await runSpeakAction(true);
         if (isStaleRequest(myRequestId, requestIdRef)) return false;
         if (!result.success) {
+          logTtsTiming({
+            traceId,
+            status: 'retry_failed',
+            backend: result.timing,
+            error: result.error || 'TTS service unavailable',
+          });
           return failCurrentRequest({
             message: result.error || 'TTS service unavailable',
             myRequestId,
@@ -311,7 +474,7 @@ export const useTTS = () => {
         });
       }
     },
-    [getCache, handleAudioPlayback, speakAction, stopCurrentAudio]
+    [getCache, handleAudioPlayback, revokeObjectUrl, speakAction, stopCurrentAudio]
   );
 
   const speak = useCallback(
@@ -325,6 +488,8 @@ export const useTTS = () => {
     ) => {
       const normalizedText = text?.trim();
       if (!normalizedText) return Promise.resolve(false);
+      const speakInvokedAtMs = nowMs();
+      const traceId = createTraceId();
 
       cancelPendingDebouncedSpeak(false);
 
@@ -333,7 +498,10 @@ export const useTTS = () => {
         debounceTimerRef.current = setTimeout(async () => {
           debounceTimerRef.current = null;
           pendingDebounceResolveRef.current = null;
-          const played = await executeSpeak(normalizedText, options);
+          const played = await executeSpeak(normalizedText, options, {
+            traceId,
+            speakInvokedAtMs,
+          });
           resolve(played);
         }, SPEAK_DEBOUNCE_MS);
       });
@@ -406,6 +574,32 @@ function writeCache(cache: Map<string, string>, key: string, value: string) {
     const oldestKey = cache.keys().next().value;
     if (oldestKey) {
       cache.delete(oldestKey);
+    }
+  }
+}
+
+function writeSessionInlineCache(
+  cache: Map<string, string>,
+  key: string,
+  value: string,
+  revokeUrl: (url: string) => void
+) {
+  const existing = cache.get(key);
+  if (existing && existing !== value) {
+    revokeUrl(existing);
+  }
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, value);
+
+  while (cache.size > SESSION_INLINE_CACHE_MAX_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) break;
+    const oldestUrl = cache.get(oldestKey);
+    cache.delete(oldestKey);
+    if (oldestUrl) {
+      revokeUrl(oldestUrl);
     }
   }
 }

@@ -14,10 +14,10 @@ const tierClassMap = {
   DIAMOND: 'bg-cyan-300',
 } as const;
 
-const categoryLabelMap = {
-  TYPING: 'Typing Legend',
-  VOCAB: 'Vocab Master',
-  STREAK: 'Streak Keeper',
+const categoryLabelKeyMap = {
+  TYPING: 'achievements.categoryLabels.TYPING',
+  VOCAB: 'achievements.categoryLabels.VOCAB',
+  STREAK: 'achievements.categoryLabels.STREAK',
 } as const;
 
 export function AchievementModal() {
@@ -35,9 +35,12 @@ export function AchievementModal() {
 
   const badge = pendingBadges[0];
   const tierClass = tierClassMap[badge.tier as keyof typeof tierClassMap] ?? 'bg-card';
-  const categoryLabel =
-    categoryLabelMap[badge.category as keyof typeof categoryLabelMap] ?? badge.category;
-  const displayName = viewer?.name ?? 'Duhan Learner';
+  const categoryLabelKey = categoryLabelKeyMap[badge.category as keyof typeof categoryLabelKeyMap];
+  const categoryLabel = categoryLabelKey
+    ? t(categoryLabelKey, { defaultValue: badge.category })
+    : badge.category;
+  const displayName =
+    viewer?.name ?? t('achievements.defaultLearner', { defaultValue: 'DuHan Learner' });
   const avatarUrl = viewer?.image ?? viewer?.avatar ?? null;
 
   const handleClose = async () => {
@@ -96,7 +99,7 @@ export function AchievementModal() {
           >
             <Card
               ref={cardRef}
-              className={`relative w-[360px] aspect-[3/4] ${tierClass} border-4 border-brand-dark border-black shadow-[8px_8px_0px_0px_#0F172A] rounded-[2rem] p-6 overflow-hidden`}
+              className={`relative w-[min(360px,calc(100vw-2.5rem))] aspect-[3/4] ${tierClass} border-4 border-brand-dark border-black shadow-[8px_8px_0px_0px_#0F172A] rounded-[2rem] p-6 overflow-hidden`}
             >
               <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full border-4 border-black bg-card/70" />
               <div className="absolute top-20 -left-10 h-20 w-20 rounded-full border-4 border-black bg-card/70" />
@@ -106,7 +109,11 @@ export function AchievementModal() {
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-2xl border-4 border-black bg-white overflow-hidden grid place-items-center">
                       {avatarUrl ? (
-                        <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                        <img
+                          src={avatarUrl}
+                          alt={displayName}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <span className="font-display text-lg font-black text-slate-900">
                           {displayName.slice(0, 1).toUpperCase()}
@@ -115,7 +122,9 @@ export function AchievementModal() {
                     </div>
                     <div>
                       <p className="font-heading text-xs font-black uppercase tracking-[0.15em] text-slate-700">
-                        Achievement Unlocked
+                        {t('achievements.achievementUnlocked', {
+                          defaultValue: 'Achievement Unlocked',
+                        })}
                       </p>
                       <p className="font-display text-xl font-black leading-none text-slate-900">
                         {displayName}
@@ -138,7 +147,8 @@ export function AchievementModal() {
                     {badge.milestoneValue}
                   </p>
                   <p className="font-heading mt-1 text-sm font-bold text-slate-700">
-                    CATEGORY: {badge.category}
+                    {t('achievements.categoryLabel', { defaultValue: 'Category' })}:{' '}
+                    {badge.category}
                   </p>
                 </div>
 
@@ -146,10 +156,12 @@ export function AchievementModal() {
                   <div className="flex items-end justify-between gap-3">
                     <div>
                       <p className="font-heading text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">
-                        Duhan App
+                        {t('achievements.appName', { defaultValue: 'DuHan App' })}
                       </p>
                       <p className="font-display text-sm font-black leading-tight text-slate-900">
-                        {t('achievements.aiTutorTagline', { defaultValue: 'Your personal Korean AI tutor' })}
+                        {t('achievements.aiTutorTagline', {
+                          defaultValue: 'Your personal Korean AI tutor',
+                        })}
                       </p>
                     </div>
                     <div className="h-16 w-16 rounded-lg border-4 border-black bg-white p-1.5">
@@ -168,7 +180,7 @@ export function AchievementModal() {
             </Card>
           </motion.div>
 
-          <div className="mt-5 flex w-[360px] items-center justify-between gap-3">
+          <div className="mt-5 flex w-[min(360px,calc(100vw-2.5rem))] items-center justify-between gap-3">
             <Button
               type="button"
               variant="outline"

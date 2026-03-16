@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Ghost, Clock, Target, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
 import { Button } from '../../../components/ui';
@@ -34,6 +35,7 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
   highestWpm,
   userAvatar,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const isTargetAchieved = wpm >= targetWpm;
@@ -71,7 +73,11 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
               {/* User Avatar / Ghost Icon */}
               <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4 shadow-lg overflow-hidden">
                 {userAvatar ? (
-                  <img src={userAvatar} alt="User" className="w-full h-full object-cover" />
+                  <img
+                    src={userAvatar}
+                    alt={t('typing.resultsModal.userAlt', { defaultValue: 'User' })}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <Ghost className="w-14 h-14 text-white" />
                 )}
@@ -79,7 +85,15 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
 
               {/* Title */}
               <h2 className="text-2xl font-bold text-muted-foreground">
-                {targetWpm}타 {isTargetAchieved ? '달성!' : '미달성'}
+                {isTargetAchieved
+                  ? t('typing.resultsModal.targetAchieved', {
+                      targetWpm,
+                      defaultValue: '{{targetWpm}} WPM achieved!',
+                    })
+                  : t('typing.resultsModal.targetMissed', {
+                      targetWpm,
+                      defaultValue: '{{targetWpm}} WPM not reached',
+                    })}
               </h2>
             </div>
 
@@ -90,9 +104,14 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <Zap className="w-4 h-4" />
-                    타수(타/분)
+                    {t('typing.resultsModal.speedLabel', { defaultValue: 'Speed (WPM)' })}
                   </span>
-                  <span className="text-xs text-muted-foreground">최고 {highestWpm} 타</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('typing.resultsModal.bestSpeed', {
+                      highestWpm,
+                      defaultValue: 'Best {{highestWpm}} WPM',
+                    })}
+                  </span>
                 </div>
                 <div className="relative">
                   <div className="h-3 bg-muted rounded-full overflow-hidden">
@@ -111,7 +130,12 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
                   </div>
                 </div>
                 <div className="text-right mt-1">
-                  <span className="text-2xl font-bold text-cyan-500">{wpm}타</span>
+                  <span className="text-2xl font-bold text-cyan-500">
+                    {t('typing.resultsModal.speedValue', {
+                      wpm,
+                      defaultValue: '{{wpm}} WPM',
+                    })}
+                  </span>
                 </div>
               </div>
 
@@ -120,9 +144,14 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <Target className="w-4 h-4" />
-                    정확도(%)
+                    {t('typing.resultsModal.accuracyLabel', { defaultValue: 'Accuracy (%)' })}
                   </span>
-                  <span className="text-xs text-muted-foreground">오타수 {errorCount} 개</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('typing.resultsModal.errorCount', {
+                      errorCount,
+                      defaultValue: 'Errors {{errorCount}}',
+                    })}
+                  </span>
                 </div>
                 <div className="relative">
                   <div className="h-3 bg-muted rounded-full overflow-hidden">
@@ -141,7 +170,7 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
               <div className="flex justify-between items-center py-3 border-t border-border">
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  소요 시간
+                  {t('typing.resultsModal.durationLabel', { defaultValue: 'Duration' })}
                 </span>
                 <span className="text-lg font-mono font-bold text-muted-foreground flex items-center gap-2">
                   <Clock className="w-5 h-5 text-muted-foreground" />
@@ -158,7 +187,7 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
                 onClick={onClose}
                 className="flex-1 py-3.5 px-6 rounded-2xl text-muted-foreground font-bold hover:bg-muted transition-colors"
               >
-                그만하기
+                {t('typing.resultsModal.stopButton', { defaultValue: 'Stop' })}
               </Button>
               <Button
                 variant="ghost"
@@ -166,7 +195,7 @@ export const TypingResultsModal: React.FC<TypingResultsModalProps> = ({
                 onClick={onRetry}
                 className="flex-[2] py-3.5 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg shadow-blue-500/30 rounded-2xl font-bold transition-all transform active:scale-95"
               >
-                다시 하기
+                {t('typing.resultsModal.retryButton', { defaultValue: 'Try again' })}
               </Button>
             </div>
           </div>

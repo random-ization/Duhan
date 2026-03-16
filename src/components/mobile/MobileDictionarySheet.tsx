@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Volume2, Plus, ArrowRight, Book } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../common/BottomSheet';
 import { useTTS } from '../../hooks/useTTS';
 import { Button } from '../ui';
@@ -34,6 +35,7 @@ export function MobileDictionarySheet({
   onClose,
   onSave,
 }: Readonly<MobileDictionarySheetProps>) {
+  const { t } = useTranslation();
   const { speak } = useTTS();
 
   // Safety check for grammarMatches being undefined
@@ -58,7 +60,10 @@ export function MobileDictionarySheet({
             {lemma && lemma !== word && (
               <div className="text-sm font-bold text-muted-foreground mt-1 flex items-center gap-1">
                 <ArrowRight size={12} />
-                Dictionary form: <span className="text-muted-foreground">{lemma}</span>
+                {t('mobileDictionarySheet.dictionaryForm', {
+                  defaultValue: 'Dictionary form',
+                })}
+                : <span className="text-muted-foreground">{lemma}</span>
               </div>
             )}
           </div>
@@ -79,7 +84,7 @@ export function MobileDictionarySheet({
           <div className="flex items-center gap-2 mb-2">
             <Book size={16} className="text-indigo-500" />
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Definition
+              {t('mobileDictionarySheet.definition', { defaultValue: 'Definition' })}
             </span>
           </div>
           <p className="text-lg font-medium text-muted-foreground leading-relaxed">{meaning}</p>
@@ -89,7 +94,7 @@ export function MobileDictionarySheet({
         {safeGrammarMatches.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider pl-1">
-              Related Grammar
+              {t('mobileDictionarySheet.relatedGrammar', { defaultValue: 'Related Grammar' })}
             </h3>
             <div className="space-y-2">
               {safeGrammarMatches.map(g => (
@@ -117,7 +122,7 @@ export function MobileDictionarySheet({
             className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-[20px] font-bold text-lg shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Plus strokeWidth={3} size={20} />
-            Save to Notebook
+            {t('mobileDictionarySheet.saveToNotebook', { defaultValue: 'Save to Notebook' })}
           </Button>
         </div>
       </div>

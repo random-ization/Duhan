@@ -222,9 +222,12 @@ const GrammarModulePage: React.FC = () => {
             <AppBreadcrumb
               className="mb-0"
               items={[
-                { label: 'Courses', to: '/courses' },
-                { label: instituteName || 'Course', to: `/course/${instituteId}` },
-                { label: 'Grammar' },
+                { label: t('nav.courses', { defaultValue: 'Courses' }), to: '/courses' },
+                {
+                  label: instituteName || t('course.title', { defaultValue: 'Course' }),
+                  to: `/course/${instituteId}`,
+                },
+                { label: t('nav.grammar', { defaultValue: 'Grammar' }) },
               ]}
             />
           </div>

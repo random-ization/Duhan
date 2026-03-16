@@ -251,7 +251,8 @@ export default function MobileVocabView({
           <Suspense
             fallback={
               <div className="rounded-xl border-2 border-border bg-card p-4 text-sm font-bold text-muted-foreground">
-                Loading Match...
+                {labels.vocab?.loadingMatch ||
+                  t('vocab.loadingMatch', { defaultValue: 'Loading match...' })}
               </div>
             }
           >

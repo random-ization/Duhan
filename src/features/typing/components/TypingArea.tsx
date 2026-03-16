@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ValidationStatus } from '../hooks/useKoreanTyping';
 
 interface TypingAreaProps {
@@ -20,6 +21,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
   className,
   focused = true,
 }) => {
+  const { t } = useTranslation();
   const chars = useMemo(() => text.split(''), [text]);
 
   return (
@@ -29,7 +31,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
     >
       {!focused && (
         <div className="absolute inset-0 flex items-center justify-center bg-card/50 z-10 text-lg font-bold text-muted-foreground">
-          Click to focus
+          {t('typing.typingArea.clickToFocus', { defaultValue: 'Click to focus' })}
         </div>
       )}
 

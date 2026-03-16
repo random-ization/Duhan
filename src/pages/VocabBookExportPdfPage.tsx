@@ -301,7 +301,7 @@ const VocabBookExportPdfPage: React.FC = () => {
               <div className="sub">{subtitle}</div>
             </div>
             <div className="header-right">
-              <img className="qr" src={qrDataUrl} alt="qr" />
+              <img className="qr" src={qrDataUrl} alt={labels.domainLabel} />
               <div className="domain">{labels.domainLabel}</div>
               <div className="slogan">{labels.slogan}</div>
             </div>
@@ -348,7 +348,7 @@ const VocabBookExportPdfPage: React.FC = () => {
           </div>
 
           <div className="footer">
-            <img src="/logo.png" alt="logo" />
+            <img src="/logo.png" alt={labels.footerName} />
             <div>
               <p className="name">{labels.footerName}</p>
               <p className="desc">{labels.footerDesc}</p>

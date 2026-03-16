@@ -87,7 +87,8 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Last updated: {new Date(document.updatedAt).toLocaleDateString()}
+                  {labels.lastUpdated || 'Last updated:'}{' '}
+                  {new Date(document.updatedAt).toLocaleDateString()}
                 </span>
               </div>
             )}

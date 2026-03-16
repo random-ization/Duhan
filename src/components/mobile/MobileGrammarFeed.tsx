@@ -1,4 +1,5 @@
 import { Trophy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { GrammarPointData } from '../../types';
 import { Button } from '../ui';
 
@@ -15,6 +16,7 @@ export default function MobileGrammarFeed({
   onToggleStatus,
   isLoading,
 }: MobileGrammarFeedProps) {
+  const { t } = useTranslation();
   if (isLoading) {
     return (
       <div className="p-4 space-y-3">
@@ -28,7 +30,9 @@ export default function MobileGrammarFeed({
   if (grammarPoints.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-        <p className="font-bold">No grammar points found.</p>
+        <p className="font-bold">
+          {t('grammarFeed.empty', { defaultValue: 'No grammar points in this unit' })}
+        </p>
       </div>
     );
   }

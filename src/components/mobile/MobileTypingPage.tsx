@@ -13,6 +13,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import toast from 'react-hot-toast';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogPortal } from '../ui';
 import { Button, Select } from '../ui';
 
@@ -49,6 +50,7 @@ const MobileLobby = ({
   setActiveTab: (m: TypingMode) => void;
 }) => {
   const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
 
   // Word Mode Data Fetching
   const rawCourses = useQuery(api.institutes.getAll);
@@ -85,7 +87,7 @@ const MobileLobby = ({
           <ArrowLeft className="w-6 h-6" />
         </Button>
         <h1 className="text-base sm:text-xl font-black text-muted-foreground tracking-tight truncate">
-          Hangyeol Typing
+          {t('typingLobby.title', { defaultValue: 'Duhan Typing' })}
         </h1>
         <div className="w-8"></div>
       </div>
@@ -113,7 +115,7 @@ const MobileLobby = ({
                 : 'font-medium text-muted-foreground'
             )}
           >
-            Sentence
+            {t('typingLobby.sentence.title', { defaultValue: 'Sentence' })}
           </Button>
           <Button
             variant="ghost"
@@ -126,7 +128,7 @@ const MobileLobby = ({
                 : 'font-medium text-muted-foreground'
             )}
           >
-            Word
+            {t('typingLobby.word.title', { defaultValue: 'Word' })}
           </Button>
           <Button
             variant="ghost"
@@ -139,7 +141,7 @@ const MobileLobby = ({
                 : 'font-medium text-muted-foreground'
             )}
           >
-            Paragraph
+            {t('typingLobby.paragraph.title', { defaultValue: 'Paragraph' })}
           </Button>
         </div>
       </div>
@@ -162,7 +164,10 @@ const MobileLobby = ({
                 </div>
                 <div className="flex justify-between items-start mb-4 relative z-10">
                   <span className="bg-indigo-50 text-indigo-600 dark:bg-indigo-400/14 dark:text-indigo-200 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                    {cat.sentences.length} Sets
+                    {t('typing.mobile.sets', {
+                      count: cat.sentences.length,
+                      defaultValue: `${cat.sentences.length} Sets`,
+                    })}
                   </span>
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 transition-colors">
                     <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300" />
@@ -186,7 +191,7 @@ const MobileLobby = ({
             <div className="bg-card p-6 rounded-[2rem] border border-border shadow-sm space-y-4">
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase ml-1 mb-1.5 block">
-                  Course
+                  {t('typingGame.course', { defaultValue: 'Course' })}
                 </label>
                 <Select
                   value={effectiveCourseName}
@@ -209,7 +214,7 @@ const MobileLobby = ({
               {effectiveCourseName && (
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase ml-1 mb-1.5 block">
-                    Volume / Level
+                    {t('typingGame.volumeLevel', { defaultValue: 'Volume / Level' })}
                   </label>
                   <Select
                     value={effectiveCourseId}
@@ -233,13 +238,15 @@ const MobileLobby = ({
                 className="w-full py-4 bg-indigo-600 dark:bg-indigo-400/80 text-primary-foreground rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:scale-100"
               >
                 <Play className="w-5 h-5 fill-current" />
-                Start Word Practice
+                {t('typing.mobile.startWordPractice', { defaultValue: 'Start Word Practice' })}
               </Button>
             </div>
 
             <div className="px-4 text-center">
               <p className="text-sm text-muted-foreground font-medium">
-                Practice vocabulary from your enrolled courses.
+                {t('typing.mobile.practiceWordHint', {
+                  defaultValue: 'Practice vocabulary from your enrolled courses.',
+                })}
               </p>
             </div>
           </div>
@@ -258,7 +265,7 @@ const MobileLobby = ({
               >
                 <div className="flex justify-between items-start mb-4 relative z-10">
                   <span className="bg-pink-50 text-pink-600 dark:bg-pink-400/14 dark:text-pink-200 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                    Long Text
+                    {t('typing.mobile.longText', { defaultValue: 'Long Text' })}
                   </span>
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-pink-50 dark:group-hover:bg-pink-400/12 transition-colors">
                     <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-pink-600 dark:group-hover:text-pink-300" />
@@ -291,6 +298,7 @@ const MobileSession = ({
   onFinish: (stats: TypingStats) => void;
   onExit: () => void;
 }) => {
+  const { t } = useTranslation();
   const [queueIndex, setQueueIndex] = useState(0);
 
   // Init Setup
@@ -477,7 +485,7 @@ const MobileSession = ({
         {/* Hint Message */}
         {!isKeyboardOpen && (
           <div className="absolute bottom-20 text-muted-foreground text-xs font-bold uppercase tracking-widest animate-pulse">
-            Tap here to start typing
+            {t('typingGame.tapToStartTyping', { defaultValue: 'Tap here to start typing' })}
           </div>
         )}
       </div>
@@ -497,6 +505,7 @@ const MobileResults = ({
   onRetry: () => void;
   onExit: () => void;
 }) => {
+  const { t } = useTranslation();
   const isHighScore = stats.wpm > 200; // Arbitrary target
 
   return (
@@ -517,10 +526,12 @@ const MobileResults = ({
                   <span className="text-4xl">{isHighScore ? '🏆' : '👍'}</span>
                 </div>
                 <h2 className="text-2xl font-black text-primary-foreground mb-1">
-                  {isHighScore ? 'Great Job!' : 'Session Complete'}
+                  {isHighScore
+                    ? t('typing.mobile.greatJob', { defaultValue: 'Great Job!' })
+                    : t('typing.mobile.sessionComplete', { defaultValue: 'Session Complete' })}
                 </h2>
                 <p className="text-primary-foreground/75 font-medium text-sm">
-                  You&apos;re getting faster!
+                  {t('typing.mobile.gettingFaster', { defaultValue: "You're getting faster!" })}
                 </p>
               </div>
             </div>
@@ -529,7 +540,7 @@ const MobileResults = ({
             <div className="p-8 space-y-6">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                  Speed
+                  {t('typing.speed', { defaultValue: 'Speed' })}
                 </span>
                 <div className="text-right">
                   <span className="text-3xl font-black text-muted-foreground mr-1">
@@ -548,7 +559,7 @@ const MobileResults = ({
 
               <div className="flex items-center justify-between pt-2">
                 <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                  Accuracy
+                  {t('typingGame.accuracy', { defaultValue: 'Accuracy' })}
                 </span>
                 <div className="text-right">
                   <span
@@ -585,7 +596,7 @@ const MobileResults = ({
                 onClick={onExit}
                 className="flex-1 py-4 rounded-xl text-muted-foreground font-bold bg-card border border-border shadow-sm active:scale-95 transition-transform"
               >
-                Lobby
+                {t('typing.mobile.lobby', { defaultValue: 'Lobby' })}
               </Button>
               <Button
                 variant="ghost"
@@ -594,7 +605,7 @@ const MobileResults = ({
                 className="flex-1 py-4 rounded-xl text-primary-foreground font-bold bg-indigo-600 dark:bg-indigo-400/80 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                Retry
+                {t('typing.mobile.retry', { defaultValue: 'Retry' })}
               </Button>
             </div>
           </div>
@@ -606,6 +617,7 @@ const MobileResults = ({
 
 // --- MAIN PAGE COMPONENT ---
 export const MobileTypingPage: React.FC = () => {
+  const { t } = useTranslation();
   const [gameState, setGameState] = useState<GameState>('lobby');
   const [activeTab, setActiveTab] = useState<TypingMode>('sentence');
   const [gameMode, setGameMode] = useState<TypingMode>('sentence');
@@ -664,11 +676,14 @@ export const MobileTypingPage: React.FC = () => {
         isTargetAchieved,
       });
       console.log('[MobileTypingPage] Record saved successfully');
-      toast.success('Result saved!');
+      toast.success(t('typing.mobile.resultSaved', { defaultValue: 'Result saved!' }));
     } catch (e: any) {
       console.error('Failed to save record:', e);
-      const msg = e.data?.message || e.message || 'Unknown error';
-      toast.error(`Failed to save: ${msg}`);
+      const msg =
+        e.data?.message ||
+        e.message ||
+        t('typing.mobile.unknownError', { defaultValue: 'Unknown error' });
+      toast.error(t('typing.mobile.failedToSave', { msg, defaultValue: `Failed to save: ${msg}` }));
     }
   };
 

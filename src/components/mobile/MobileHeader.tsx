@@ -65,23 +65,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   }, [t]);
 
   const headerTitle = useMemo(() => {
-    if (routeUiConfig.headerTitle === 'Dashboard') {
-      return t('nav.dashboard', { defaultValue: 'Dashboard' });
-    }
-    if (routeUiConfig.headerTitle === 'Courses') {
-      return t('nav.courses', { defaultValue: 'Courses' });
-    }
-    if (routeUiConfig.headerTitle === 'Practice') {
-      return t('nav.practice', { defaultValue: 'Practice' });
-    }
-    if (routeUiConfig.headerTitle === 'Media') {
-      return t('nav.media', { defaultValue: 'Media' });
-    }
-    if (routeUiConfig.headerTitle === 'Profile') {
-      return t('nav.profile', { defaultValue: 'Profile' });
-    }
-    return routeUiConfig.headerTitle;
-  }, [routeUiConfig.headerTitle, t]);
+    return t(routeUiConfig.headerTitle, {
+      defaultValue: routeUiConfig.headerTitleDefault ?? routeUiConfig.headerTitle,
+    });
+  }, [routeUiConfig.headerTitle, routeUiConfig.headerTitleDefault, t]);
 
   const applyNextFontScale = () => {
     const next = (fontScaleIndex + 1) % FONT_SCALES.length;
@@ -126,8 +113,9 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   };
 
   const handlePrimaryAction = (action: MobileHeaderAction) => {
+    const returnTo = `${pathWithoutLang}${location.search || ''}`;
     if (action === 'search') {
-      navigate('/dictionary/search');
+      navigate(`/dictionary/search?returnTo=${encodeURIComponent(returnTo)}`);
       return;
     }
     if (action === 'filter') {
@@ -156,7 +144,16 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
       if (routeUiConfig.headerAction === 'none') {
         return <div className="h-10 w-10" />;
       }
+      if (routeUiConfig.headerAction === 'filter' && !pathWithoutLang.startsWith('/media')) {
+        return <div className="h-10 w-10" />;
+      }
       const Icon = routeUiConfig.headerAction === 'search' ? Search : SlidersHorizontal;
+      const ariaLabel =
+        routeUiConfig.headerAction === 'search'
+          ? t('common.search', { defaultValue: 'Search' })
+          : pathWithoutLang.startsWith('/media')
+            ? t('common.switchTab', { defaultValue: 'Switch tab' })
+            : t('common.filter', { defaultValue: 'Filter' });
       return (
         <Button
           type="button"
@@ -164,7 +161,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
           size="auto"
           onClick={() => handlePrimaryAction(routeUiConfig.headerAction)}
           className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
-          aria-label={t('common.search', { defaultValue: 'Search' })}
+          aria-label={ariaLabel}
         >
           <Icon size={17} />
         </Button>

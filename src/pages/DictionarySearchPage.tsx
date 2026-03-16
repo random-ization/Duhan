@@ -7,6 +7,7 @@ import { aRef } from '../utils/convexRefs';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import { Button, Input } from '../components/ui';
 
 type DictionaryEntry = {
@@ -43,6 +44,9 @@ export default function DictionarySearchPage() {
   const { t } = useTranslation();
   const { language } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const returnTo = useMemo(() => {
+    return resolveSafeReturnTo(searchParams.get('returnTo'), '/dashboard');
+  }, [searchParams]);
 
   const initialQuery = (searchParams.get('q') || '').trim();
   const [query, setQuery] = useState(initialQuery);
@@ -120,7 +124,12 @@ export default function DictionarySearchPage() {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
-    setSearchParams({ q });
+    const nextParams = new URLSearchParams();
+    nextParams.set('q', q);
+    if (returnTo) {
+      nextParams.set('returnTo', returnTo);
+    }
+    setSearchParams(nextParams);
   };
 
   return (
@@ -129,7 +138,7 @@ export default function DictionarySearchPage() {
         <div className="flex items-center gap-3 mb-3">
           <Button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(returnTo)}
             variant="ghost"
             size="auto"
             className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center"

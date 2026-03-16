@@ -13,6 +13,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { Award, BookOpen, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { Button } from '../ui';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 
@@ -88,8 +89,10 @@ const EvaluatingScreen: React.FC<EvaluatingScreenProps> = ({
 
       {onRetry && (
         <div className="flex flex-col items-center gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onRetry}
             disabled={retrying}
             className="px-4 py-2 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition disabled:opacity-60"
@@ -97,7 +100,7 @@ const EvaluatingScreen: React.FC<EvaluatingScreenProps> = ({
             {retrying
               ? t('topikWriting.report.retriggering', { defaultValue: 'Retrying...' })
               : t('topikWriting.report.retrigger', { defaultValue: 'Retry Evaluation' })}
-          </button>
+          </Button>
           {retryError && (
             <p className="text-xs text-destructive font-medium text-center">{retryError}</p>
           )}
@@ -220,8 +223,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   return (
     <div className="rounded-2xl border-2 border-border bg-card overflow-hidden">
       {/* Card header — always visible */}
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="auto"
         onClick={() => setIsOpen(v => !v)}
         className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition text-left"
       >
@@ -259,7 +264,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
         ) : (
           <ChevronDown size={18} className="text-muted-foreground" />
         )}
-      </button>
+      </Button>
 
       {/* Expanded content */}
       {isOpen && (
@@ -366,13 +371,15 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
           })}
         </p>
         {onBack && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="auto"
             onClick={onBack}
             className="text-sm text-primary font-bold underline"
           >
             {t('topikWriting.report.back', { defaultValue: 'Back' })}
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -431,7 +438,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 font-sans">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-black text-foreground">
             {t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
@@ -443,13 +450,15 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
           </p>
         </div>
         {onBack && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onBack}
             className="px-4 py-2 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
           >
             ← {t('topikWriting.report.back', { defaultValue: 'Back' })}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -475,7 +484,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
         ))}
 
         {/* Elapsed time */}
-        <div className="col-span-2 md:col-span-4 pt-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground font-medium">
+        <div className="col-span-2 md:col-span-4 pt-4 border-t border-border flex flex-col items-start gap-2 text-sm text-muted-foreground font-medium sm:flex-row sm:items-center sm:justify-between">
           <span>
             {t('topikWriting.report.timeElapsed', { defaultValue: 'Time elapsed:' })}{' '}
             <strong className="text-foreground">{elapsedStr}</strong>

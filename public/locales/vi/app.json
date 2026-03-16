@@ -34,6 +34,7 @@
   "days": "ngày",
   "hours": "giờ",
   "joinedDate": "Đã tham gia",
+  "lastUpdated": "Cập nhật lần cuối:",
   "selectInstitute": "Chọn bộ giáo trình",
   "selectLevel": "Chọn cấp độ",
   "backInst": "Quay lại",
@@ -63,6 +64,8 @@
     "exporting": "Đang xuất...",
     "signInToExport": "Vui lòng đăng nhập để xuất",
     "exportFailed": "Xuất thất bại. Vui lòng thử lại.",
+    "expandMeaning": "Mở nghĩa",
+    "collapseMeaning": "Thu gọn nghĩa",
     "markMastered": "Đánh dấu đã thành thạo",
     "unmarkMastered": "Bỏ đánh dấu thành thạo",
     "exportModes": {
@@ -268,11 +271,17 @@
   "quickLinks": "Liên kết nhanh",
   "footerDescription": "Nền tảng học tiếng Hàn toàn diện của bạn",
   "allRightsReserved": "Đã đăng ký bản quyền.",
+  "footer": {
+    "joinDiscord": "Tham gia Discord",
+    "copyright": "© 2026 DuHan Inc. Bảo lưu mọi quyền."
+  },
   "preview": "Xem trước",
   "markdownTip": "Mẹo định dạng: Sử dụng # cho tiêu đề (# H1, ## H2, ### H3), - hoặc * cho danh sách, 1. cho danh sách đánh số, dòng trống cho đoạn văn",
   "enterTitle": "Nhập tiêu đề tài liệu",
   "enterContent": "Nhập nội dung tài liệu...",
   "coursesOverview": {
+    "pageTitle": "Giáo trình",
+    "subtitle": "Duyệt các giáo trình của bạn",
     "backToHome": "Trở về trang chủ",
     "navTitle": "Tính năng & Quyền lợi Premium",
     "activatePremium": "Mở khóa Premium",
@@ -326,12 +335,19 @@
     "levelTag": "Cấp {{level}}",
     "unitsCount": "{{count}} bài",
     "units": "bài",
+    "publishers": {
+      "oer": "Tài nguyên giáo dục mở",
+      "yonsei": "Đại học Yonsei",
+      "seoulNational": "Đại học Quốc gia Seoul",
+      "chungAng": "Đại học Chung-Ang"
+    },
     "otherPublisher": "Khác",
     "viewAll": "Xem tất cả"
   },
   "courseDashboard": {
     "defaultCourseName": "Tiếng Hàn 1A",
     "defaultDisplayLevel": "Quyển 1",
+    "defaultPublisher": "Nhà xuất bản",
     "backToShelf": "Quay lại thư viện",
     "courseMeta": "{{level}} · Bài 1-{{totalUnits}}",
     "recentUnit": "Học gần đây: Bài {{unit}}",
@@ -360,6 +376,7 @@
     }
   },
   "module": {
+    "title": "Mô-đun",
     "unitTitle": "Bài {{unit}}",
     "listeningUnitTitle": "Bài {{unit}} · Nghe"
   },
@@ -466,6 +483,9 @@
       "quote": "Đừng bỏ cuộc! Chỉ 5 phút nữa thôi!",
       "action": "Bắt đầu kiểm tra"
     },
+    "alt": {
+      "tigerCoach": "Hổ huấn luyện"
+    },
     "daily": {
       "label": "Câu nói hàng ngày",
       "quote": "Đầu xuôi đuôi lọt",
@@ -523,6 +543,7 @@
         "nextExamNameFallback": "TOPIK II",
         "typeReadingShort": "ĐỌC",
         "typeListeningShort": "NGHE",
+        "typeWritingShort": "VIẾT",
         "minuteShort": "{{minutes}}p",
         "questionCountShort": "{{count}}C",
         "bestScore": "{{score}}%",
@@ -550,7 +571,17 @@
           "listeningAudio": "Âm thanh phần nghe",
           "audioLoadFailed": "Không thể tải tệp âm thanh",
           "finish": "Kết thúc",
-          "next": "Tiếp theo"
+          "next": "Tiếp theo",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "Kỳ thi năng lực tiếng Hàn lần thứ {{round}}",
+          "scrollDownStart": "[Cuộn xuống để bắt đầu]",
+          "periodReading": "Ca 2",
+          "periodListening": "Ca 1",
+          "sectionReading": "Đọc",
+          "sectionListening": "Nghe",
+          "pageHeader": "TOPIK II vòng {{round}} mã {{paperType}} · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (Câu 1 ~ Câu {{count}})",
+          "endOfSection": "Kết thúc phần thi"
         },
         "review": {
           "mode": "Chế độ xem lại",
@@ -575,6 +606,7 @@
           "aiThinking": "Đang phân tích...",
           "aiTitle": "Phân tích AI",
           "save": "Lưu",
+          "saving": "Đang lưu...",
           "saved": "Đã lưu",
           "translation": "Dịch nghĩa",
           "keyPoint": "Ý chính",
@@ -582,7 +614,16 @@
           "next": "Sau",
           "saveFailed": "Lưu thất bại, vui lòng thử lại.",
           "saveFailedShort": "Lưu thất bại",
-          "savedToast": "Đã lưu vào sổ tay"
+          "savedToast": "Đã lưu vào sổ tay",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "Kỳ thi năng lực tiếng Hàn lần thứ {{round}}",
+          "scrollDownReview": "[Cuộn xuống để xem lại]",
+          "periodReading": "Ca 2",
+          "periodListening": "Ca 1",
+          "sectionReading": "Đọc",
+          "sectionListening": "Nghe",
+          "pageHeader": "TOPIK II vòng {{round}} mã {{paperType}} · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (Câu 1 ~ Câu {{count}})"
         }
       },
       "totalAttempts": "Số lần thi",
@@ -648,6 +689,7 @@
       "preparing": "Nội dung đang được chuẩn bị...",
       "views": "{count} lượt xem",
       "notFound": "Không tìm thấy video",
+      "loadingPlayer": "Đang tải trình phát...",
       "error": "Lỗi tải dữ liệu",
       "back": "Quay lại thư viện",
       "subtitleList": "Danh sách phụ đề",
@@ -866,10 +908,16 @@
     "title": "Luyện Gõ Phím",
     "nextSentence": "Câu tiếp theo",
     "focusInput": "Nhập liệu",
+    "switchImeWarning": "Phát hiện đang nhập tiếng Anh. Vui lòng chuyển sang bộ gõ tiếng Hàn.",
     "wpm": "Tốc độ (WPM)",
     "acc": "Độ chính xác"
   },
   "sidebar": {
+    "expand": "Mở rộng thanh bên",
+    "collapse": "Thu gọn thanh bên",
+    "navigation": "Điều hướng thanh bên",
+    "learn": "Học",
+    "practice": "Luyện tập",
     "dashboard": "Trang chủ",
     "textbooks": "Giáo trình",
     "topik": "Thi thử TOPIK",
@@ -966,14 +1014,25 @@
     }
   },
   "annotationMenu": {
+    "none": "Không",
     "saveToVocab": "Lưu vào sổ từ vựng",
-    "saving": "Đang lưu..."
+    "saving": "Đang lưu...",
+    "pen": "Bút",
+    "highlight": "Đánh dấu",
+    "eraser": "Tẩy",
+    "undo": "Hoàn tác",
+    "clear": "Xóa",
+    "save": "Lưu"
   },
   "audioPlayer": {
     "restart": "Phát lại",
     "changeSpeed": "Đổi tốc độ",
     "mute": "Tắt tiếng",
     "unmute": "Bật tiếng"
+  },
+  "mobileAudioPlayer": {
+    "rewind10": "Tua lại 10 giây",
+    "forward10": "Tua tới 10 giây"
   },
   "grammarCard": {
     "type": {
@@ -986,10 +1045,77 @@
     "allPoints": "Tất cả điểm ngữ pháp",
     "empty": "Bài này chưa có điểm ngữ pháp"
   },
+  "mobileDictionarySheet": {
+    "dictionaryForm": "Dạng từ điển",
+    "definition": "Định nghĩa",
+    "relatedGrammar": "Ngữ pháp liên quan",
+    "saveToNotebook": "Lưu vào sổ tay"
+  },
+  "mobileListeningModule": {
+    "listening": "Nghe",
+    "noTranscript": "Chưa có bản chép lời"
+  },
+  "mobileQuestionNav": {
+    "title": "Điều hướng câu hỏi",
+    "current": "Hiện tại",
+    "answered": "Đã trả lời",
+    "todo": "Cần làm"
+  },
+  "mobileSpeakingModule": {
+    "title": "Luyện nói",
+    "listenToReference": "Nghe bản mẫu",
+    "tapMicToRecord": "Chạm mic để ghi âm",
+    "tapToStop": "Chạm để dừng",
+    "recorded": "Đã ghi âm",
+    "tapToRecord": "Chạm để ghi âm"
+  },
   "grammarModule": {
     "title": "Luyện ngữ pháp",
+    "directoryTitle": "Sổ bài tập ngữ pháp",
+    "selectGrammarHint": "Chọn một điểm ngữ pháp để bắt đầu học",
+    "proficiency": "TIẾN ĐỘ HỌC",
+    "status": "Mức độ thành thạo",
+    "markMastery": "Đánh dấu đã học",
+    "unmarkMastery": "Đã thành thạo",
     "searchPlaceholder": "Tìm điểm ngữ pháp...",
-    "unitLabel": "Bài {{count}}"
+    "unitLabel": "Bài {{count}}",
+    "aiPlaceholder": "Nhập câu của bạn ở đây để AI kiểm tra...",
+    "sentencePracticeWith": "Luyện đặt câu với:",
+    "checkNow": "Kiểm tra ngay",
+    "units": {
+      "unit1": "Suy đoán & suy luận",
+      "unit2": "Tương phản & chuyển hướng",
+      "unit3": "Nguyên nhân & lý do",
+      "unit4": "Mục đích & ý định",
+      "unit5": "Tiến trình & hoàn thành",
+      "unit6": "Trạng thái & tiếp diễn",
+      "unit7": "Mức độ & giới hạn",
+      "unit8": "Giả thuyết & giả định",
+      "unit9": "Nhượng bộ & bao hàm",
+      "unit10": "Cơ hội & thay đổi",
+      "unit11": "Lời nói gián tiếp",
+      "unit12": "Tính cần thiết & trải nghiệm",
+      "unit13": "Liệt kê & trình tự",
+      "unit14": "Tiêu chuẩn & phạm vi",
+      "unit15": "Trợ từ & sắc thái"
+    },
+    "unitsShort": {
+      "unit1": "Suy luận",
+      "unit2": "Tương phản",
+      "unit3": "Lý do",
+      "unit4": "Mục đích",
+      "unit5": "Thể",
+      "unit6": "Trạng thái",
+      "unit7": "Mức độ",
+      "unit8": "Giả định",
+      "unit9": "Nhượng bộ",
+      "unit10": "Cơ hội",
+      "unit11": "Gián tiếp",
+      "unit12": "Cần thiết",
+      "unit13": "Liệt kê",
+      "unit14": "Tiêu chuẩn",
+      "unit15": "Trợ từ"
+    }
   },
   "analysisSheet": {
     "title": "Phân tích câu bằng AI",
@@ -1011,6 +1137,15 @@
     "meTag": "(Tôi)"
   },
   "achievements": {
+    "achievementUnlocked": "Đã mở khóa thành tích",
+    "defaultLearner": "Người học DuHan",
+    "categoryLabel": "Danh mục",
+    "appName": "Ứng dụng DuHan",
+    "categoryLabels": {
+      "TYPING": "Bậc thầy gõ phím",
+      "VOCAB": "Bậc thầy từ vựng",
+      "STREAK": "Người giữ chuỗi ngày học"
+    },
     "aiTutorTagline": "Gia sư AI tiếng Hàn cá nhân của bạn",
     "saveReportImage": "Lưu ảnh thành tích",
     "galleryEmpty": "Hoàn thành luyện gõ hoặc từ vựng để mở khóa huy hiệu đầu tiên!"
@@ -1070,6 +1205,12 @@
     "practicePlaceholder": "Hãy tạo câu với {{title}}...",
     "checking": "Đang kiểm tra...",
     "check": "Kiểm tra",
+    "comparative": "So sánh ngữ pháp tương tự",
+    "commonMistakes": "Lỗi thường gặp",
+    "condition": "Điều kiện",
+    "rule": "Quy tắc",
+    "quizzes": "Bài luyện tập",
+    "customNote": "Ghi chú của giảng viên",
     "feedback": {
       "correct": "✓ Rất tốt!",
       "incorrect": "✗ Cần cải thiện"
@@ -1080,10 +1221,12 @@
     "explanation": "Giải thích chi tiết",
     "markMastered": "Đánh dấu đã thành thạo",
     "rules": "Quy tắc biến đổi",
-    "examples": "Ví dụ sử dụng"
+    "examples": "Ví dụ sử dụng",
+    "answerShort": "Đáp:"
   },
   "podcast": {
     "title": "Podcast",
+    "badge": "Podcast",
     "nowPlaying": "Đang phát",
     "mySubscriptions": "Kênh đã theo dõi",
     "viewAll": "Xem tất cả",
@@ -1107,6 +1250,14 @@
     "minutes": "phút",
     "expand": "Mở rộng",
     "collapse": "Thu gọn",
+    "filterOptions": {
+      "all": "Tất cả",
+      "beginner": "Sơ cấp",
+      "intermediate": "Trung cấp",
+      "daily": "Hằng ngày",
+      "news": "Tin tức",
+      "picks": "Chọn lọc"
+    },
     "msg": {
       "LOADING_TRANSCRIPT": "AI đang tạo phụ đề thông minh...",
       "LOADING_FIRST_TIME": "Lần tạo đầu tiên mất khoảng 1 phút",
@@ -1183,6 +1334,8 @@
     "meaningFront": "Nghĩa mặt trước",
     "sessionComplete": "Hoàn thành buổi học!",
     "wordsUnit": "từ",
+    "reviewed": "đã ôn",
+    "loadingMatch": "Đang tải ghép cặp...",
     "remembered": "Đã nhớ",
     "forgot": "Quên",
     "rating": {
@@ -1439,7 +1592,33 @@
     "title": "Luyện gõ tiếng Hàn",
     "subtitle": "Từ / Câu / Đoạn văn",
     "speed": "Tốc độ",
-    "unit": "WPM"
+    "unit": "WPM",
+    "statsOverlay": {
+      "accuracy": "Độ chính xác",
+      "restartHint": "Nhấn Tab để bắt đầu lại"
+    },
+    "typingArea": {
+      "clickToFocus": "Nhấn để nhập"
+    },
+    "wordPractice": {
+      "noWordsAvailable": "Không có từ để luyện",
+      "wordToType": "Từ cần gõ",
+      "noMeaning": "Chưa có nghĩa",
+      "wordDrillLabel": "Luyện từ"
+    },
+    "resultsModal": {
+      "userAlt": "Người dùng",
+      "targetAchieved": "Đạt {{targetWpm}} WPM!",
+      "targetMissed": "Chưa đạt {{targetWpm}} WPM",
+      "speedLabel": "Tốc độ (WPM)",
+      "bestSpeed": "Cao nhất {{highestWpm}} WPM",
+      "speedValue": "{{wpm}} WPM",
+      "accuracyLabel": "Độ chính xác (%)",
+      "errorCount": "Lỗi {{errorCount}}",
+      "durationLabel": "Thời gian",
+      "stopButton": "Dừng",
+      "retryButton": "Làm lại"
+    }
   },
   "typingLobby": {
     "title": "Duhan Luyện gõ",
@@ -1503,6 +1682,7 @@
       "title": "Văn hóa & lưu trữ",
       "subtitle": "Truyện dân gian Hàn, bài chọn lọc Wikipedia và văn học để đọc sâu",
       "viewAll": "Xem tất cả bài viết",
+      "sourceWikipedia": "Wikipedia",
       "typeEncyclopedia": "Bách khoa",
       "recommended": "Đề xuất đọc kỹ"
     },
@@ -1519,6 +1699,12 @@
       "literatureBookmark": "Cảm thụ văn học"
     },
     "footer": "Dữ liệu từ Convex newsIngestion:getUserFeed (tự động làm mới sau 24h kể từ khi đọc, làm mới thủ công tối đa 3 lần/ngày)"
+  },
+  "practiceHub": {
+    "subtitle": "TOPIK, luyện gõ và luyện từ vựng"
+  },
+  "mediaHub": {
+    "subtitle": "Video, podcast và bài đọc"
   },
   "readingArticle": {
     "difficulty": {

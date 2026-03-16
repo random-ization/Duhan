@@ -616,7 +616,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
             <Suspense
               fallback={
                 <div className="w-full h-full flex items-center justify-center text-white text-sm">
-                  Loading player...
+                  {getLabel(labels, ['dashboard', 'video', 'loadingPlayer']) || 'Loading player...'}
                 </div>
               }
             >

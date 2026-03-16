@@ -18,6 +18,8 @@ type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED' | 'ALL';
 type ImmersiveMode = 'BROWSE' | 'RECALL';
 const SWIPE_DISTANCE_THRESHOLD = 80;
 const SWIPE_VELOCITY_THRESHOLD = 700;
+const PAGE_SIZE = 80;
+const PREFETCH_THRESHOLD = 8;
 
 interface WordCardProps {
   current: VocabBookItemDto;
@@ -443,12 +445,41 @@ const VocabBookImmersivePage: React.FC = () => {
 
   const category = normalizeCategory(categoryParam);
 
-  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+  const [pageCursor, setPageCursor] = useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+
+  const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: q || undefined,
+    savedByUserOnly: true,
+    category,
+    cursor: pageCursor || undefined,
+    limit: PAGE_SIZE,
   });
-  const loading = vocabBookResult === undefined;
-  const items = useMemo<VocabBookItemDto[]>(() => vocabBookResult ?? [], [vocabBookResult]);
+  const loading = vocabBookPage === undefined && loadedItems.length === 0;
+  const loadingMore = vocabBookPage === undefined && loadedItems.length > 0;
+
+  useEffect(() => {
+    setPageCursor(null);
+    setLoadedItems([]);
+    setNextCursor(null);
+    setIndex(0);
+    setRevealed(false);
+  }, [category, q]);
+
+  useEffect(() => {
+    if (!vocabBookPage) return;
+    setNextCursor(vocabBookPage.nextCursor);
+    setLoadedItems(prev => {
+      if (pageCursor === null) return vocabBookPage.items;
+      const existing = new Set(prev.map(item => String(item.id)));
+      const appended = vocabBookPage.items.filter(item => !existing.has(String(item.id)));
+      return [...prev, ...appended];
+    });
+  }, [vocabBookPage, pageCursor]);
+
+  const items = useMemo<VocabBookItemDto[]>(() => loadedItems, [loadedItems]);
   const [optimisticMastery, setOptimisticMastery] = useState<Record<string, boolean>>({});
   const [masteryPending, setMasteryPending] = useState(false);
 
@@ -486,7 +517,6 @@ const VocabBookImmersivePage: React.FC = () => {
   const filtered = useMemo(() => {
     return items.filter(item => {
       if (category === 'ALL') return true;
-
       const p = item.progress;
       const isMastered = isWordMastered(item);
       const isUnlearned = p.state === 0 || p.status === 'NEW';
@@ -510,19 +540,28 @@ const VocabBookImmersivePage: React.FC = () => {
       setIndex(0);
       return;
     }
+    setIndex(prev => Math.min(prev, filtered.length - 1));
+  }, [filtered]);
 
-    if (focusId && !focusConsumed) {
-      const targetIndex = filtered.findIndex(item => String(item.id) === focusId);
-      if (targetIndex >= 0) {
-        setIndex(targetIndex);
-        setFocusConsumed(true);
-        return;
-      }
+  useEffect(() => {
+    if (!focusId || focusConsumed) return;
+
+    const targetIndex = filtered.findIndex(item => String(item.id) === focusId);
+    if (targetIndex >= 0) {
+      setIndex(targetIndex);
       setFocusConsumed(true);
+      return;
     }
 
-    setIndex(prev => Math.min(prev, filtered.length - 1));
-  }, [filtered, focusConsumed, focusId]);
+    if (nextCursor && !loadingMore) {
+      setPageCursor(nextCursor);
+      return;
+    }
+
+    if (!nextCursor && !loadingMore) {
+      setFocusConsumed(true);
+    }
+  }, [focusId, focusConsumed, filtered, nextCursor, loadingMore]);
 
   const total = filtered.length;
   const safeIndex = total === 0 ? 0 : Math.min(index, total - 1);
@@ -541,6 +580,13 @@ const VocabBookImmersivePage: React.FC = () => {
     setIndex(() => (safeIndex + 1) % total);
     setRevealed(false);
   }, [safeIndex, total]);
+
+  useEffect(() => {
+    if (!nextCursor || loadingMore || total === 0) return;
+    if (total - safeIndex <= PREFETCH_THRESHOLD) {
+      setPageCursor(nextCursor);
+    }
+  }, [safeIndex, total, nextCursor, loadingMore]);
 
   const markCurrentMastered = useCallback(async () => {
     if (!current || masteryPending) return;
@@ -653,6 +699,11 @@ const VocabBookImmersivePage: React.FC = () => {
             <p className="text-sm font-black text-muted-foreground">
               {total === 0 ? '0/0' : `${safeIndex + 1}/${total}`}
             </p>
+            {loadingMore && (
+              <p className="text-[10px] font-bold text-muted-foreground">
+                {labels.common?.loading || 'Loading...'}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

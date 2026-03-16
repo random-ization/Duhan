@@ -16,6 +16,7 @@ export const MobilePodcastSearch: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = getLabels(language);
+  const searchErrorText = labels.podcast?.searchError || 'Search failed';
 
   const [searchTerm, setSearchTerm] = useState(query);
   const [results, setResults] = useState<PodcastChannel[]>([]);
@@ -37,12 +38,12 @@ export const MobilePodcastSearch: React.FC = () => {
         setResults(data || []);
       } catch (err) {
         console.error(err);
-        setError('Search failed');
+        setError(searchErrorText);
       } finally {
         setLoading(false);
       }
     },
-    [searchPodcastsAction]
+    [searchPodcastsAction, searchErrorText]
   );
 
   // Debounce or just search on submit? Mobile usually likes immediate or submit.
@@ -106,7 +107,7 @@ export const MobilePodcastSearch: React.FC = () => {
         {loading ? (
           <div className="py-20 flex flex-col items-center text-muted-foreground">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500 dark:text-indigo-300" />
-            <p className="font-bold text-sm">Searching...</p>
+            <p className="font-bold text-sm">{labels.podcast?.searching || 'Searching...'}</p>
           </div>
         ) : error ? (
           <div className="py-20 text-center text-red-500 dark:text-red-300 font-bold">{error}</div>
@@ -143,11 +144,13 @@ export const MobilePodcastSearch: React.FC = () => {
         ) : query ? (
           <div className="py-20 text-center text-muted-foreground">
             <Podcast className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p className="font-bold text-muted-foreground">No podcasts found</p>
+            <p className="font-bold text-muted-foreground">
+              {labels.podcast?.noResults || 'No podcasts found'}
+            </p>
           </div>
         ) : (
           <div className="py-20 text-center text-muted-foreground">
-            <p>Type to search...</p>
+            <p>{labels.podcast?.searchPlaceholder || 'Type to search...'}</p>
           </div>
         )}
       </div>

@@ -97,6 +97,18 @@ type UiCopy = {
   noSubtitleContent: string;
   playlist: string;
   noOtherEpisodes: string;
+  analysisLoading: string;
+  coreVocabulary: string;
+  rootLabel: string;
+  grammarPoints: string;
+  culturalNuance: string;
+  analysisFailed: string;
+  analyzeSentence: string;
+  aiAnalysis: string;
+  back: string;
+  coverAlt: string;
+  saving: string;
+  seek: string;
 };
 
 const UI_COPY: Record<UiLang, UiCopy> = {
@@ -140,6 +152,18 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noSubtitleContent: 'No subtitle content',
     playlist: 'Playlist',
     noOtherEpisodes: 'No other episodes',
+    analysisLoading: 'Analyzing context & grammar...',
+    coreVocabulary: 'Core Vocabulary',
+    rootLabel: 'Root:',
+    grammarPoints: 'Grammar Points',
+    culturalNuance: 'Cultural Nuance',
+    analysisFailed: 'Analysis failed. Please try again.',
+    analyzeSentence: 'Analyze this sentence',
+    aiAnalysis: 'AI Analysis',
+    back: 'Back',
+    coverAlt: 'Cover',
+    saving: 'Saving...',
+    seek: 'Seek',
   },
   zh: {
     mockTranslations: [
@@ -182,6 +206,18 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noSubtitleContent: '\u6682\u65e0\u5b57\u5e55\u5185\u5bb9',
     playlist: '\u64ad\u653e\u5217\u8868',
     noOtherEpisodes: '\u6682\u65e0\u5176\u4ed6\u5267\u96c6',
+    analysisLoading: '\u6b63\u5728\u5206\u6790\u8bed\u5883\u4e0e\u8bed\u6cd5...',
+    coreVocabulary: '\u6838\u5fc3\u8bcd\u6c47',
+    rootLabel: '\u8bcd\u6839:',
+    grammarPoints: '\u8bed\u6cd5\u8981\u70b9',
+    culturalNuance: '\u6587\u5316\u7ec6\u5fae\u5dee\u5f02',
+    analysisFailed: '\u5206\u6790\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5\u3002',
+    analyzeSentence: '\u5206\u6790\u8fd9\u53e5\u8bdd',
+    aiAnalysis: 'AI \u5206\u6790',
+    back: '\u8fd4\u56de',
+    coverAlt: '\u5c01\u9762',
+    saving: '\u4fdd\u5b58\u4e2d...',
+    seek: '\u5feb\u8fdb/\u5feb\u9000',
   },
   vi: {
     mockTranslations: [
@@ -223,6 +259,18 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noSubtitleContent: 'Chua co noi dung phu de',
     playlist: 'Danh sach phat',
     noOtherEpisodes: 'Khong co tap nao khac',
+    analysisLoading: 'Dang phan tich ngu canh va ngu phap...',
+    coreVocabulary: 'Tu vung cot loi',
+    rootLabel: 'Goc tu:',
+    grammarPoints: 'Diem ngu phap',
+    culturalNuance: 'Sac thai van hoa',
+    analysisFailed: 'Phan tich that bai. Vui long thu lai.',
+    analyzeSentence: 'Phan tich cau nay',
+    aiAnalysis: 'Phan tich AI',
+    back: 'Quay lai',
+    coverAlt: 'Anh bia',
+    saving: 'Dang luu...',
+    seek: 'Tua',
   },
   mn: {
     mockTranslations: [
@@ -264,18 +312,31 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noSubtitleContent: 'Хадмалын агуулга алга',
     playlist: 'Тоглуулах жагсаалт',
     noOtherEpisodes: 'Өөр дугаар алга',
+    analysisLoading: 'Өгүүлбэрийн агуулга, дүрмийг шинжилж байна...',
+    coreVocabulary: 'Гол үгс',
+    rootLabel: 'Үг үндэс:',
+    grammarPoints: 'Дүрмийн цэгүүд',
+    culturalNuance: 'Соёлын ялгаа',
+    analysisFailed: 'Шинжилгээ амжилтгүй. Дахин оролдоно уу.',
+    analyzeSentence: 'Энэ өгүүлбэрийг шинжлэх',
+    aiAnalysis: 'AI шинжилгээ',
+    back: 'Буцах',
+    coverAlt: 'Ковер',
+    saving: 'Хадгалж байна...',
+    seek: 'Үсрэх',
   },
 };
 
 const AnalysisContent: React.FC<{
   loading: boolean;
   data: AnalysisData | null;
-}> = ({ loading, data }) => {
+  copy: UiCopy;
+}> = ({ loading, data, copy }) => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground space-y-3">
         <Sparkles className="w-8 h-8 animate-spin text-indigo-400 dark:text-indigo-300" />
-        <p className="text-sm">Analyzing context & grammar...</p>
+        <p className="text-sm">{copy.analysisLoading}</p>
       </div>
     );
   }
@@ -287,7 +348,7 @@ const AnalysisContent: React.FC<{
         <section>
           <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
             <BookOpen className="w-5 h-5 text-indigo-500 dark:text-indigo-300" />
-            Core Vocabulary
+            {copy.coreVocabulary}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.vocabulary.map((v, i) => (
@@ -301,7 +362,9 @@ const AnalysisContent: React.FC<{
                     {v.type}
                   </span>
                 </div>
-                <div className="text-xs text-muted-foreground mb-0.5">Root: {v.root}</div>
+                <div className="text-xs text-muted-foreground mb-0.5">
+                  {copy.rootLabel} {v.root}
+                </div>
                 <div className="text-sm text-muted-foreground">{v.meaning}</div>
               </div>
             ))}
@@ -312,7 +375,7 @@ const AnalysisContent: React.FC<{
         <section>
           <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
             <MessageSquare className="w-5 h-5 text-emerald-500 dark:text-emerald-300" />
-            Grammar Points
+            {copy.grammarPoints}
           </div>
           <div className="space-y-3">
             {data.grammar.map((g, i) => (
@@ -335,21 +398,17 @@ const AnalysisContent: React.FC<{
         <section>
           <div className="flex items-center gap-2 mb-4 text-muted-foreground font-bold border-b border-border pb-2">
             <Lightbulb className="w-5 h-5 text-amber-500 dark:text-amber-300" />
-            Cultural Nuance
+            {copy.culturalNuance}
           </div>
           <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-400/30 text-sm text-amber-900/80 dark:text-amber-100/90 leading-relaxed italic">
-            &quot;{data.nuance}&quot;
+            {`"${data.nuance}"`}
           </div>
         </section>
       </>
     );
   }
 
-  return (
-    <div className="text-center py-12 text-muted-foreground">
-      Analysis failed. Please try again.
-    </div>
-  );
+  return <div className="text-center py-12 text-muted-foreground">{copy.analysisFailed}</div>;
 };
 
 const TranscriptLineRow: React.FC<{
@@ -359,6 +418,7 @@ const TranscriptLineRow: React.FC<{
   currentTime: number;
   showTranslation: boolean;
   noTranslationText: string;
+  analyzeLabel: string;
   onSeek: (time: number) => void;
   onAnalyze: (line: TranscriptLine) => void;
   formatTime: (seconds: number) => string;
@@ -369,6 +429,7 @@ const TranscriptLineRow: React.FC<{
   currentTime,
   showTranslation,
   noTranslationText,
+  analyzeLabel,
   onSeek,
   onAnalyze,
   formatTime,
@@ -470,7 +531,7 @@ const TranscriptLineRow: React.FC<{
                 event.stopPropagation();
                 onAnalyze(line);
               }}
-              aria-label="Analyze this sentence"
+              aria-label={analyzeLabel}
               className={`
                                                 p-2 rounded-full transition-all flex-none
                                                 ${
@@ -485,7 +546,7 @@ const TranscriptLineRow: React.FC<{
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">Analyze this sentence</TooltipContent>
+            <TooltipContent side="top">{analyzeLabel}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
       </div>
@@ -566,6 +627,7 @@ const TranscriptStreamBody: React.FC<{
           currentTime={currentTime}
           showTranslation={showTranslation}
           noTranslationText={copy.noTranslation}
+          analyzeLabel={copy.analyzeSentence}
           onSeek={onSeek}
           onAnalyze={onAnalyze}
           formatTime={formatTime}
@@ -660,8 +722,9 @@ const AnalysisDialog: React.FC<{
   showAnalysis: boolean;
   analysisLoading: boolean;
   analysisData: AnalysisData | null;
+  copy: UiCopy;
   setShowAnalysis: React.Dispatch<React.SetStateAction<boolean>>;
-}> = ({ analyzingLine, showAnalysis, analysisLoading, analysisData, setShowAnalysis }) => {
+}> = ({ analyzingLine, showAnalysis, analysisLoading, analysisData, copy, setShowAnalysis }) => {
   if (!analyzingLine) return null;
   return (
     <Dialog open={showAnalysis} onOpenChange={open => !open && setShowAnalysis(false)}>
@@ -683,7 +746,7 @@ const AnalysisDialog: React.FC<{
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 uppercase tracking-wide">
-                    AI Analysis
+                    {copy.aiAnalysis}
                   </span>
                 </div>
                 <h3 className="text-lg font-bold text-foreground leading-snug">
@@ -701,7 +764,7 @@ const AnalysisDialog: React.FC<{
               </Button>
             </div>
             <div className="overflow-y-auto p-6 space-y-8 bg-card flex-1">
-              <AnalysisContent loading={analysisLoading} data={analysisData} />
+              <AnalysisContent loading={analysisLoading} data={analysisData} copy={copy} />
             </div>
           </div>
         </DialogContent>
@@ -1901,7 +1964,7 @@ const PodcastPlayerPage: React.FC = () => {
                 size="icon"
                 onClick={() => navigate(-1)}
                 className="w-12 h-12 border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
-                aria-label="Back"
+                aria-label={copy.back}
               >
                 <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} />
               </Button>
@@ -1927,7 +1990,7 @@ const PodcastPlayerPage: React.FC = () => {
                   episode.channelArtwork ||
                   'https://placehold.co/400x400'
                 }
-                alt="Cover"
+                alt={copy.coverAlt}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
@@ -2013,7 +2076,7 @@ const PodcastPlayerPage: React.FC = () => {
                   onClick={handleToggleSubscription}
                   disabled={subscriptionPending}
                   loading={subscriptionPending}
-                  loadingText="Saving..."
+                  loadingText={copy.saving}
                   loadingIconClassName="w-4 h-4"
                   className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
                 >
@@ -2094,7 +2157,7 @@ const PodcastPlayerPage: React.FC = () => {
                       seekTo(pct * duration);
                     }}
                   >
-                    <span className="sr-only">Seek</span>
+                    <span className="sr-only">{copy.seek}</span>
                   </Button>
                   <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                     <div
@@ -2191,14 +2254,14 @@ const PodcastPlayerPage: React.FC = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => setShowPlaylist(true)}
-                          aria-label="Playlist"
+                          aria-label={copy.playlist}
                           className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15' : 'text-muted-foreground hover:text-muted-foreground'}`}
                         >
                           <ListMusic className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipPortal>
-                        <TooltipContent side="top">Playlist</TooltipContent>
+                        <TooltipContent side="top">{copy.playlist}</TooltipContent>
                       </TooltipPortal>
                     </Tooltip>
                   </div>
@@ -2280,6 +2343,7 @@ const PodcastPlayerPage: React.FC = () => {
         showAnalysis={showAnalysis}
         analysisLoading={analysisLoading}
         analysisData={analysisData}
+        copy={copy}
         setShowAnalysis={setShowAnalysis}
       />
     </div>

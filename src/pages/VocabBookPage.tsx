@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   BookOpen,
@@ -20,6 +20,7 @@ import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { getLabels } from '../utils/i18n';
 import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
@@ -28,10 +29,16 @@ import { MobileVocabDashboard } from '../components/mobile/MobileVocabDashboard'
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
+import type { VocabBookItemDto } from '../../convex/vocab';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type LabelsBundle = ReturnType<typeof getLabels>;
+const VOCAB_PAGE_SIZE = 80;
+const VIRTUAL_OVERSCAN_ROWS = 8;
+const VIRTUAL_ROW_GAP = 12;
+const VIRTUALIZATION_MIN_ITEMS = 120;
+const DEFAULT_ROW_HEIGHT = 96;
 
 const ACTIVE_EXPORT_MODE_BUTTON_CLASS =
   'border-orange-400 bg-orange-50 shadow-[0_10px_30px_rgba(249,115,22,0.12)] dark:border-orange-300/35 dark:bg-orange-400/12 dark:shadow-[0_10px_30px_rgba(253,186,116,0.15)]';
@@ -210,7 +217,7 @@ const VocabExportModal: React.FC<{
                 size="auto"
                 onClick={onToggleShuffle}
                 className={getShuffleTrackClass(exportShuffle)}
-                aria-label="shuffle"
+                aria-label={copy.shuffleLabel}
               >
                 <span className={getShuffleThumbClass(exportShuffle)} />
               </Button>
@@ -239,6 +246,8 @@ const VocabExportModal: React.FC<{
 const VocabBookPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language, user } = useAuth();
+  const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
   const labels = getLabels(language);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<VocabBookCategory>('DUE');
@@ -249,20 +258,82 @@ const VocabBookPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [masteryPendingId, setMasteryPendingId] = useState<string | null>(null);
   const [optimisticMastery, setOptimisticMastery] = useState<Record<string, boolean>>({});
-  // Use state for 'now' to ensure purity during render
-  const [now] = useState(() => Date.now());
+  const [pageCursor, setPageCursor] = useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof window === 'undefined' ? 900 : window.innerHeight
+  );
+  const [estimatedRowHeight, setEstimatedRowHeight] = useState(DEFAULT_ROW_HEIGHT);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
 
   const setMastery = useMutation(VOCAB.setMastery);
   const exportPdf = useAction(VOCAB_PDF.exportVocabBookPdf);
 
   const trimmedSearch = searchQuery.trim();
-  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+  const reviewSummary = useQuery(VOCAB.getReviewSummary, { savedByUserOnly: true });
+  const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: trimmedSearch || undefined,
     savedByUserOnly: true,
+    category: activeCategory,
+    cursor: pageCursor || undefined,
+    limit: VOCAB_PAGE_SIZE,
   });
-  const loading = vocabBookResult === undefined;
-  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
+
+  useEffect(() => {
+    setPageCursor(null);
+    setLoadedItems([]);
+    setNextCursor(null);
+    setExpandedId(null);
+  }, [activeCategory, trimmedSearch]);
+
+  useEffect(() => {
+    if (!vocabBookPage) return;
+    setNextCursor(vocabBookPage.nextCursor);
+    setLoadedItems(prev => {
+      if (pageCursor === null) {
+        return vocabBookPage.items;
+      }
+      const existing = new Set(prev.map(item => String(item.id)));
+      const appended = vocabBookPage.items.filter(item => !existing.has(String(item.id)));
+      return [...prev, ...appended];
+    });
+  }, [vocabBookPage, pageCursor]);
+
+  const loading = vocabBookPage === undefined && loadedItems.length === 0;
+  const loadingMore = vocabBookPage === undefined && loadedItems.length > 0;
+  const hasMore = Boolean(nextCursor);
+  const items = useMemo(() => loadedItems, [loadedItems]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let frame = 0;
+
+    const updateViewport = () => {
+      frame = 0;
+      setScrollY(window.scrollY || window.pageYOffset || 0);
+      setViewportHeight(window.innerHeight || 900);
+    };
+
+    const scheduleViewportUpdate = () => {
+      if (frame !== 0) return;
+      frame = window.requestAnimationFrame(updateViewport);
+    };
+
+    updateViewport();
+    window.addEventListener('scroll', scheduleViewportUpdate, { passive: true });
+    window.addEventListener('resize', scheduleViewportUpdate);
+
+    return () => {
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+      }
+      window.removeEventListener('scroll', scheduleViewportUpdate);
+      window.removeEventListener('resize', scheduleViewportUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     setOptimisticMastery(current => {
@@ -285,39 +356,81 @@ const VocabBookPage: React.FC = () => {
     });
   }, [items]);
 
-  const categorized = useMemo(() => {
-    return items.map(item => {
-      const progress = item.progress;
-      const optimisticValue = optimisticMastery[String(item.id)];
-      const isMastered =
-        typeof optimisticValue === 'boolean' ? optimisticValue : progress.status === 'MASTERED';
-      const isUnlearned = progress.state === 0 || progress.status === 'NEW';
+  const visibleItems = useMemo(
+    () =>
+      items.map(item => {
+        const optimisticValue = optimisticMastery[String(item.id)];
+        const isMastered =
+          typeof optimisticValue === 'boolean'
+            ? optimisticValue
+            : item.progress.status === 'MASTERED';
+        return { item, isMastered };
+      }),
+    [items, optimisticMastery]
+  );
 
-      let category: VocabBookCategory = 'DUE';
-      if (isMastered) {
-        category = 'MASTERED';
-      } else if (isUnlearned) {
-        category = 'UNLEARNED';
-      }
+  const windowedItems = useMemo(() => {
+    const total = visibleItems.length;
+    const shouldVirtualize = expandedId === null && total >= VIRTUALIZATION_MIN_ITEMS;
 
-      const dueNow = !!progress.nextReviewAt && progress.nextReviewAt <= now && !isMastered;
-      return { item, category, dueNow, isMastered };
+    if (!shouldVirtualize) {
+      return {
+        enabled: false,
+        startIndex: 0,
+        items: visibleItems,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+      };
+    }
+
+    const listRectTop = listContainerRef.current
+      ? listContainerRef.current.getBoundingClientRect().top + scrollY
+      : 0;
+
+    const viewportStart = Math.max(0, scrollY - listRectTop);
+    const viewportEnd = Math.max(0, scrollY + viewportHeight - listRectTop);
+    const startIndex = Math.max(
+      0,
+      Math.floor(viewportStart / estimatedRowHeight) - VIRTUAL_OVERSCAN_ROWS
+    );
+    const endIndex = Math.min(
+      total - 1,
+      Math.ceil(viewportEnd / estimatedRowHeight) + VIRTUAL_OVERSCAN_ROWS
+    );
+    const topSpacerHeight = startIndex * estimatedRowHeight;
+    const bottomSpacerHeight = Math.max(0, (total - endIndex - 1) * estimatedRowHeight);
+
+    return {
+      enabled: true,
+      startIndex,
+      items: visibleItems.slice(startIndex, endIndex + 1),
+      topSpacerHeight,
+      bottomSpacerHeight,
+    };
+  }, [visibleItems, expandedId, scrollY, viewportHeight, estimatedRowHeight]);
+
+  const updateEstimatedRowHeight = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const measured = Math.round(node.getBoundingClientRect().height + VIRTUAL_ROW_GAP);
+    if (!Number.isFinite(measured) || measured <= 0) return;
+
+    setEstimatedRowHeight(current => {
+      if (Math.abs(current - measured) < 2) return current;
+      return Math.round(current * 0.7 + measured * 0.3);
     });
-  }, [items, now, optimisticMastery]);
-
-  const visibleItems = useMemo(() => {
-    return categorized.filter(x => x.category === activeCategory);
-  }, [categorized, activeCategory]);
+  }, []);
 
   // Stats
   const stats = useMemo(() => {
-    const dueNow = categorized.filter(x => x.category === 'DUE' && x.dueNow).length;
-    const unlearned = categorized.filter(x => x.category === 'UNLEARNED').length;
-    const due = categorized.filter(x => x.category === 'DUE').length;
-    const mastered = categorized.filter(x => x.category === 'MASTERED').length;
-    const total = categorized.length;
-    return { dueNow, unlearned, due, mastered, total };
-  }, [categorized]);
+    return {
+      dueNow: reviewSummary?.dueNow ?? 0,
+      unlearned: reviewSummary?.unlearned ?? 0,
+      due: reviewSummary?.dueTotal ?? 0,
+      mastered: reviewSummary?.mastered ?? 0,
+      total: reviewSummary?.total ?? 0,
+      recommendedToday: reviewSummary?.recommendedToday ?? 0,
+    };
+  }, [reviewSummary]);
 
   const filterButtons: Array<{
     key: VocabBookCategory;
@@ -372,6 +485,10 @@ const VocabBookPage: React.FC = () => {
   const langListDesc = useMemo(() => {
     return labels.vocabBook?.exportModes?.langListDesc || 'Write the word';
   }, [labels.vocabBook?.exportModes?.langListDesc]);
+  const isMobileListMode = isMobile && searchParams.get('mobileView') === 'list';
+
+  const expandMeaningLabel = labels.vocabBook?.expandMeaning || 'Expand meaning';
+  const collapseMeaningLabel = labels.vocabBook?.collapseMeaning || 'Collapse meaning';
 
   const downloadFile = async (url: string, filename: string) => {
     try {
@@ -447,11 +564,11 @@ const VocabBookPage: React.FC = () => {
               variant="ghost"
               size="auto"
               onClick={() => {
-                if (isMobile) {
-                  navigate('/practice');
-                } else {
-                  navigate('/dashboard?view=practice');
+                if (isMobileListMode) {
+                  navigate('/vocab-book');
+                  return;
                 }
+                navigate('/practice');
               }}
               className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.18)]"
             >
@@ -625,110 +742,141 @@ const VocabBookPage: React.FC = () => {
     }
 
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-        {visibleItems.map(({ item: word, isMastered }) => {
-          const id = String(word.id);
-          const isExpanded = expandedId === id;
-          const isMasteryPending = masteryPendingId === id;
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div ref={listContainerRef}>
+          {windowedItems.enabled && windowedItems.topSpacerHeight > 0 && (
+            <div aria-hidden style={{ height: windowedItems.topSpacerHeight }} />
+          )}
+          <div className="space-y-3">
+            {windowedItems.items.map(({ item: word, isMastered }, index) => {
+              const id = String(word.id);
+              const isExpanded = expandedId === id;
+              const isMasteryPending = masteryPendingId === id;
 
-          return (
-            <motion.div
-              key={id}
-              layoutId={`vocab-word-card-${id}`}
-              className="bg-card rounded-2xl border-[3px] border-border shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
-            >
-              <div className="flex items-center justify-between gap-3 px-5 py-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => openImmersiveForWord(id)}
-                  className="flex-1 min-w-0 justify-start text-left"
+              return (
+                <motion.div
+                  key={id}
+                  layoutId={`vocab-word-card-${id}`}
+                  ref={index === 0 ? updateEstimatedRowHeight : undefined}
+                  className="bg-card rounded-2xl border-[3px] border-border shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
                 >
-                  <div className="text-xl font-black text-foreground truncate">{word.word}</div>
-                </Button>
+                  <div className="flex items-center justify-between gap-3 px-5 py-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => openImmersiveForWord(id)}
+                      className="flex-1 min-w-0 justify-start text-left"
+                    >
+                      <div className="text-xl font-black text-foreground truncate">{word.word}</div>
+                    </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => toggleExpand(id)}
-                  className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
-                  aria-label={isExpanded ? 'Collapse meaning' : 'Expand meaning'}
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => toggleExpand(id)}
+                      className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                      aria-label={isExpanded ? collapseMeaningLabel : expandMeaningLabel}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={async e => {
-                    if (masteryPendingId !== null) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const previousOverride = optimisticMastery[id];
-                    const nextMastered = !isMastered;
-                    try {
-                      setMasteryPendingId(id);
-                      setOptimisticMastery(current => ({ ...current, [id]: nextMastered }));
-                      await setMastery({ wordId: word.id, mastered: nextMastered });
-                    } catch {
-                      setOptimisticMastery(current => {
-                        const next = { ...current };
-                        if (typeof previousOverride === 'boolean') {
-                          next[id] = previousOverride;
-                        } else {
-                          delete next[id];
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={async e => {
+                        if (masteryPendingId !== null) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const previousOverride = optimisticMastery[id];
+                        const nextMastered = !isMastered;
+                        try {
+                          setMasteryPendingId(id);
+                          setOptimisticMastery(current => ({ ...current, [id]: nextMastered }));
+                          await setMastery({ wordId: word.id, mastered: nextMastered });
+                        } catch {
+                          setOptimisticMastery(current => {
+                            const next = { ...current };
+                            if (typeof previousOverride === 'boolean') {
+                              next[id] = previousOverride;
+                            } else {
+                              delete next[id];
+                            }
+                            return next;
+                          });
+                          notify.error(
+                            labels.vocabBook?.saveFailed ||
+                              'Failed to save word status. Please retry.'
+                          );
+                        } finally {
+                          setMasteryPendingId(current => (current === id ? null : current));
                         }
-                        return next;
-                      });
-                      notify.error(
-                        labels.vocabBook?.saveFailed || 'Failed to save word status. Please retry.'
-                      );
-                    } finally {
-                      setMasteryPendingId(current => (current === id ? null : current));
-                    }
-                  }}
-                  disabled={masteryPendingId !== null}
-                  loading={isMasteryPending}
-                  loadingText={
-                    <span className="sr-only">
-                      {labels.vocabBook?.saving || labels.common?.loading || 'Saving'}
-                    </span>
-                  }
-                  loadingIconClassName="w-5 h-5"
-                  className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
-                  aria-label={
-                    isMastered
-                      ? labels.vocabBook?.unmarkMastered || 'Unmark mastered'
-                      : labels.vocabBook?.markMastered || 'Mark as mastered'
-                  }
-                >
-                  {isMastered ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-
-              {isExpanded && (
-                <div className="px-5 pb-5">
-                  <div className="pt-3 border-t-2 border-dashed border-border">
-                    <div className="text-muted-foreground font-bold leading-relaxed">
-                      {word.meaning}
-                    </div>
+                      }}
+                      disabled={masteryPendingId !== null}
+                      loading={isMasteryPending}
+                      loadingText={
+                        <span className="sr-only">
+                          {labels.vocabBook?.saving || labels.common?.loading || 'Saving'}
+                        </span>
+                      }
+                      loadingIconClassName="w-5 h-5"
+                      className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                      aria-label={
+                        isMastered
+                          ? labels.vocabBook?.unmarkMastered || 'Unmark mastered'
+                          : labels.vocabBook?.markMastered || 'Mark as mastered'
+                      }
+                    >
+                      {isMastered ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </Button>
                   </div>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+
+                  {isExpanded && (
+                    <div className="px-5 pb-5">
+                      <div className="pt-3 border-t-2 border-dashed border-border">
+                        <div className="text-muted-foreground font-bold leading-relaxed">
+                          {word.meaning}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+          {windowedItems.enabled && windowedItems.bottomSpacerHeight > 0 && (
+            <div aria-hidden style={{ height: windowedItems.bottomSpacerHeight }} />
+          )}
+        </div>
+        {(hasMore || loadingMore) && (
+          <div className="flex justify-center pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => {
+                if (!nextCursor || loadingMore) return;
+                setPageCursor(nextCursor);
+              }}
+              disabled={!nextCursor || loadingMore}
+              loading={loadingMore}
+              loadingText={labels.common?.loading || 'Loading...'}
+              className="px-5 py-2.5 rounded-xl border-2 border-border bg-card text-sm font-bold text-muted-foreground disabled:opacity-50"
+            >
+              {labels.common?.loadMore || 'Load more'}
+            </Button>
+          </div>
+        )}
       </motion.div>
     );
   };
@@ -838,18 +986,18 @@ const VocabBookPage: React.FC = () => {
     </div>
   );
 
-  const isMobile = useIsMobile();
-  if (isMobile) {
+  if (isMobile && !isMobileListMode) {
     return (
       <MobileVocabDashboard
         unitId="ALL"
         instituteName={labels.dashboard?.vocab?.title || 'Vocab Book'}
         words={items}
+        totalWords={stats.total}
         masteredCount={stats.mastered}
         language={language}
         onStartLearn={() => startLearning('immerse')}
         onStartTest={() => startLearning('dictation')}
-        onManageList={() => {}} // Placeholder or navigate to list view if exists
+        onManageList={() => navigate('/vocab-book?mobileView=list')}
       />
     );
   }

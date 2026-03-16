@@ -10,60 +10,48 @@ import MobileCoursesOverview from '../components/mobile/MobileCoursesOverview';
 import { getCourseCoverTransitionName } from '../utils/viewTransitions';
 import { Button, Input } from '../components/ui';
 
-const PUBLISHER_THEMES: Record<
-  string,
-  { bg: string; text: string; accent: string; border: string; light: string }
-> = {
-  OER: {
+type PublisherTheme = { bg: string; text: string; accent: string; border: string; light: string };
+type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'default';
+type KnownPublisherKey = Exclude<PublisherKey, 'default'>;
+
+interface PublisherLabelSource {
+  nameKo?: string;
+  nameZh?: string;
+  nameEn?: string;
+  nameVi?: string;
+  nameMn?: string;
+}
+
+const PUBLISHER_THEMES: Record<PublisherKey, PublisherTheme> = {
+  oer: {
     bg: 'bg-amber-100 dark:bg-amber-400/16',
     text: 'text-amber-700 dark:text-amber-200',
     accent: 'bg-amber-500 dark:bg-amber-400/70',
     border: 'border-amber-900 dark:border-amber-300/50',
     light: 'bg-amber-50 dark:bg-amber-400/10',
   },
-  延世大学: {
+  yonsei: {
     bg: 'bg-indigo-100 dark:bg-indigo-400/16',
     text: 'text-indigo-600 dark:text-indigo-300',
     accent: 'bg-indigo-500 dark:bg-indigo-400/70',
     border: 'border-indigo-900 dark:border-indigo-300/50',
     light: 'bg-indigo-50 dark:bg-indigo-400/10',
   },
-  연세대학교: {
-    bg: 'bg-indigo-100 dark:bg-indigo-400/16',
-    text: 'text-indigo-600 dark:text-indigo-300',
-    accent: 'bg-indigo-500 dark:bg-indigo-400/70',
-    border: 'border-indigo-900 dark:border-indigo-300/50',
-    light: 'bg-indigo-50 dark:bg-indigo-400/10',
-  },
-  首尔大学: {
+  seoulNational: {
     bg: 'bg-rose-100 dark:bg-rose-400/16',
     text: 'text-rose-600 dark:text-rose-300',
     accent: 'bg-rose-500 dark:bg-rose-400/70',
     border: 'border-rose-900 dark:border-rose-300/50',
     light: 'bg-rose-50 dark:bg-rose-400/10',
   },
-  서울대학교: {
-    bg: 'bg-rose-100 dark:bg-rose-400/16',
-    text: 'text-rose-600 dark:text-rose-300',
-    accent: 'bg-rose-500 dark:bg-rose-400/70',
-    border: 'border-rose-900 dark:border-rose-300/50',
-    light: 'bg-rose-50 dark:bg-rose-400/10',
-  },
-  中央大学: {
+  chungAng: {
     bg: 'bg-emerald-100 dark:bg-emerald-400/16',
     text: 'text-emerald-600 dark:text-emerald-300',
     accent: 'bg-emerald-500 dark:bg-emerald-400/70',
     border: 'border-emerald-900 dark:border-emerald-300/50',
     light: 'bg-emerald-50 dark:bg-emerald-400/10',
   },
-  중앙대학교: {
-    bg: 'bg-emerald-100 dark:bg-emerald-400/16',
-    text: 'text-emerald-600 dark:text-emerald-300',
-    accent: 'bg-emerald-500 dark:bg-emerald-400/70',
-    border: 'border-emerald-900 dark:border-emerald-300/50',
-    light: 'bg-emerald-50 dark:bg-emerald-400/10',
-  },
-  默认: {
+  default: {
     bg: 'bg-muted',
     text: 'text-muted-foreground',
     accent: 'bg-primary',
@@ -72,60 +60,69 @@ const PUBLISHER_THEMES: Record<
   },
 };
 
-const PUBLISHER_TRANSLATIONS: Record<
-  string,
-  { ko: string; zh: string; en: string; vi: string; mn: string }
-> = {
-  OER: {
-    ko: '오픈 교재',
-    zh: '开放教育资源',
-    en: 'Open Educational Resources',
-    vi: 'Tài nguyên giáo dục mở',
-    mn: 'Нээлттэй боловсролын эх сурвалж',
-  },
-  延世大学: {
-    ko: '연세대학교',
-    zh: '\u5ef6\u4e16\u5927\u5b66',
-    en: 'Yonsei University',
-    vi: 'Đại học Yonsei',
-    mn: 'Ёнсэ их сургууль',
-  },
-  연세대학교: {
-    ko: '연세대학교',
-    zh: '\u5ef6\u4e16\u5927\u5b66',
-    en: 'Yonsei University',
-    vi: 'Đại học Yonsei',
-    mn: 'Ёнсэ их сургууль',
-  },
-  首尔大学: {
-    ko: '서울대학교',
-    zh: '\u9996\u5c14\u5927\u5b66',
-    en: 'Seoul National University',
-    vi: 'Đại học Quốc gia Seoul',
-    mn: 'Сөүлийн үндэсний их сургууль',
-  },
-  서울대학교: {
-    ko: '서울대학교',
-    zh: '\u9996\u5c14\u5927\u5b66',
-    en: 'Seoul National University',
-    vi: 'Đại học Quốc gia Seoul',
-    mn: 'Сөүлийн үндэсний их сургууль',
-  },
-  中央大学: {
-    ko: '중앙대학교',
-    zh: '\u4e2d\u592e\u5927\u5b66',
-    en: 'Chung-Ang University',
-    vi: 'Đại học Chung-Ang',
-    mn: 'Чүнган их сургууль',
-  },
-  중앙대학교: {
-    ko: '중앙대학교',
-    zh: '\u4e2d\u592e\u5927\u5b66',
-    en: 'Chung-Ang University',
-    vi: 'Đại học Chung-Ang',
-    mn: 'Чүнган их сургууль',
-  },
+const PUBLISHER_TRANSLATION_KEYS: Record<KnownPublisherKey, string> = {
+  oer: 'coursesLibrary.publishers.oer',
+  yonsei: 'coursesLibrary.publishers.yonsei',
+  seoulNational: 'coursesLibrary.publishers.seoulNational',
+  chungAng: 'coursesLibrary.publishers.chungAng',
 };
+
+const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
+  oer: '오픈 교재',
+  yonsei: '연세대학교',
+  seoulNational: '서울대학교',
+  chungAng: '중앙대학교',
+};
+
+const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
+  oer: 'Open Educational Resources',
+  yonsei: 'Yonsei University',
+  seoulNational: 'Seoul National University',
+  chungAng: 'Chung-Ang University',
+};
+
+const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
+  { key: 'oer', pattern: /\b(oer|open educational resources?)\b/i },
+  { key: 'yonsei', pattern: /(yonsei|연세대학교|\u5ef6\u4e16\u5927\u5b66)/i },
+  { key: 'seoulNational', pattern: /(seoul national|snu|서울대학교|\u9996\u5c14\u5927\u5b66)/i },
+  { key: 'chungAng', pattern: /(chung-?ang|중앙대학교|\u4e2d\u592e\u5927\u5b66)/i },
+];
+
+const SEARCH_LANGUAGES: Array<'en' | 'zh' | 'vi' | 'mn'> = ['en', 'zh', 'vi', 'mn'];
+
+function resolvePublisherKey(publisher: string): KnownPublisherKey | undefined {
+  const normalizedPublisher = publisher.trim();
+  if (!normalizedPublisher) return undefined;
+  for (const matcher of PUBLISHER_MATCHERS) {
+    if (matcher.pattern.test(normalizedPublisher)) return matcher.key;
+  }
+  return undefined;
+}
+
+function normalizeLanguageTag(language: string): string {
+  return (language || 'en').split('-')[0];
+}
+
+function getPublisherDataLabel(publisher: PublisherLabelSource | undefined, language: string) {
+  switch (language) {
+    case 'zh':
+      return publisher?.nameZh;
+    case 'ko':
+      return publisher?.nameKo;
+    case 'vi':
+      return publisher?.nameVi;
+    case 'mn':
+      return publisher?.nameMn;
+    default:
+      return publisher?.nameEn;
+  }
+}
+
+function getPublisherTheme(publisher: string): PublisherTheme {
+  const publisherKey = resolvePublisherKey(publisher);
+  if (!publisherKey) return PUBLISHER_THEMES.default;
+  return PUBLISHER_THEMES[publisherKey];
+}
 
 const CoursesOverview: React.FC = () => {
   const navigate = useLocalizedNavigate();
@@ -169,28 +166,46 @@ const CoursesOverview: React.FC = () => {
   const getPublisherNames = useCallback(
     (publisher: string) => {
       const data = publishersByName.get(publisher);
-      const fallback = PUBLISHER_TRANSLATIONS[publisher];
-      const primary = data?.nameKo ?? fallback?.ko ?? publisher;
-      const localizedByLang: Record<string, string | undefined> = {
-        zh: data?.nameZh ?? fallback?.zh,
-        en: data?.nameEn ?? fallback?.en,
-        vi: data?.nameVi ?? fallback?.vi,
-        mn: data?.nameMn ?? fallback?.mn,
-      };
-      const localized = localizedByLang[currentLang];
+      const normalizedLang = normalizeLanguageTag(currentLang);
+      const publisherKey = resolvePublisherKey(publisher);
+      const primary =
+        data?.nameKo ??
+        (publisherKey ? PUBLISHER_KO_FALLBACK[publisherKey] : undefined) ??
+        publisher;
+      const localizedFromData = getPublisherDataLabel(data, normalizedLang);
+      const localizedFromI18n = publisherKey
+        ? String(
+            i18n.t(PUBLISHER_TRANSLATION_KEYS[publisherKey], {
+              lng: normalizedLang === 'ko' ? 'en' : normalizedLang,
+              defaultValue: PUBLISHER_EN_FALLBACK[publisherKey],
+            })
+          )
+        : undefined;
+      const localized =
+        normalizedLang === 'ko' ? undefined : (localizedFromData ?? localizedFromI18n);
       const displayLocalized = localized === primary ? undefined : localized;
       return {
         primary,
         localized: displayLocalized,
       };
     },
-    [currentLang, publishersByName]
+    [currentLang, i18n, publishersByName]
   );
 
   const getPublisherSearchValues = useCallback(
     (publisher: string) => {
       const data = publishersByName.get(publisher);
-      const fallback = PUBLISHER_TRANSLATIONS[publisher];
+      const publisherKey = resolvePublisherKey(publisher);
+      const localizedFallbacks = publisherKey
+        ? SEARCH_LANGUAGES.map(language =>
+            String(
+              i18n.t(PUBLISHER_TRANSLATION_KEYS[publisherKey], {
+                lng: language,
+                defaultValue: PUBLISHER_EN_FALLBACK[publisherKey],
+              })
+            )
+          )
+        : [];
       return [
         publisher,
         data?.nameKo,
@@ -198,14 +213,11 @@ const CoursesOverview: React.FC = () => {
         data?.nameEn,
         data?.nameVi,
         data?.nameMn,
-        fallback?.ko,
-        fallback?.zh,
-        fallback?.en,
-        fallback?.vi,
-        fallback?.mn,
+        publisherKey ? PUBLISHER_KO_FALLBACK[publisherKey] : undefined,
+        ...localizedFallbacks,
       ].filter(Boolean) as string[];
     },
-    [publishersByName]
+    [i18n, publishersByName]
   );
 
   // 2. Group Data by Publisher
@@ -268,12 +280,7 @@ const CoursesOverview: React.FC = () => {
     }
   };
 
-  const getTheme = (publisher: string) => {
-    for (const key in PUBLISHER_THEMES) {
-      if (publisher.includes(key)) return PUBLISHER_THEMES[key];
-    }
-    return PUBLISHER_THEMES['\u9ed8\u8ba4'];
-  };
+  const getTheme = useCallback((publisher: string) => getPublisherTheme(publisher), []);
 
   const getCourseUiMeta = useCallback((course: Course) => {
     if (course.id === 'ysk-1') {

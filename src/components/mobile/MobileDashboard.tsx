@@ -117,7 +117,9 @@ const MobileDashboardLayout = ({
     e.preventDefault();
     const query = searchQuery.trim();
     if (!query) return;
-    navigate(`/dictionary/search?q=${encodeURIComponent(query)}`);
+    navigate(
+      `/dictionary/search?returnTo=${encodeURIComponent('/dashboard')}&q=${encodeURIComponent(query)}`
+    );
   };
 
   return (
@@ -129,7 +131,7 @@ const MobileDashboardLayout = ({
               {user?.avatar ? (
                 <img
                   src={user.avatar}
-                  alt="Avatar"
+                  alt={t('profile.title', { defaultValue: 'Profile' })}
                   className="w-9 h-9 rounded-full border border-border"
                 />
               ) : (
@@ -142,7 +144,7 @@ const MobileDashboardLayout = ({
             <div>
               <h1 className="text-sm font-extrabold text-foreground leading-none">{greeting},</h1>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                {user?.name?.split(' ')[0] || 'Learner'}
+                {user?.name?.split(' ')[0] || t('guest', { defaultValue: 'Learner' })}
               </p>
             </div>
           </div>
@@ -192,7 +194,7 @@ const MobileDashboardLayout = ({
           <div className="mb-4 relative z-10">
             <div className="flex justify-between text-xs font-semibold text-indigo-100 dark:text-indigo-200/80 mb-1.5">
               <span>
-                {stats.dailyMinutes} / {stats.dailyGoal} mins
+                {stats.dailyMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
               </span>
               <span>
                 {t('dashboard.mobile.leftMinutes', {
@@ -277,7 +279,7 @@ const MobileDashboardLayout = ({
           <img
             src={ASSETS.book}
             className="absolute -right-6 -bottom-6 w-32 h-32 opacity-80 rotate-12"
-            alt="book"
+            alt=""
           />
         </Button>
 
@@ -302,7 +304,7 @@ const MobileDashboardLayout = ({
             <img
               src={ASSETS.vocabBook}
               className="absolute -right-3 -bottom-3 w-16 h-16 rotate-12"
-              alt="vocab"
+              alt=""
             />
           </Button>
 
@@ -328,7 +330,7 @@ const MobileDashboardLayout = ({
             <img
               src={ASSETS.memo}
               className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-6"
-              alt="memo"
+              alt=""
             />
           </Button>
 
@@ -352,7 +354,7 @@ const MobileDashboardLayout = ({
             <img
               src={ASSETS.typing}
               className="absolute -right-3 -bottom-3 w-16 h-16 rotate-6"
-              alt="typing"
+              alt=""
             />
           </Button>
 
@@ -377,7 +379,7 @@ const MobileDashboardLayout = ({
             <img
               src={ASSETS.trophy}
               className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-12"
-              alt="trophy"
+              alt=""
             />
           </Button>
         </div>

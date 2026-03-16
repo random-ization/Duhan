@@ -186,7 +186,7 @@ const AnalysisSheet: React.FC<AnalysisSheetProps> = ({
                     variant="ghost"
                     size="auto"
                     className="p-2 hover:bg-muted rounded-full transition-colors -mr-2"
-                    aria-label="Close"
+                    aria-label={t('common.close', { defaultValue: 'Close' })}
                   >
                     <X className="w-5 h-5 text-muted-foreground" />
                   </Button>

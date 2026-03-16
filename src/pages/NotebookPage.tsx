@@ -129,7 +129,7 @@ const DesktopNotebookPage: React.FC = () => {
               </p>
             </div>
             <Button
-              onClick={() => navigate('/dashboard?view=practice')}
+              onClick={() => navigate('/practice')}
               variant="ghost"
               size="auto"
               className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"

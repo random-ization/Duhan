@@ -34,6 +34,7 @@
   "days": "天",
   "hours": "小时",
   "joinedDate": "加入时间",
+  "lastUpdated": "最后更新：",
   "selectInstitute": "选择教材系列",
   "selectLevel": "选择课本 / 等级",
   "backInst": "返回系列选择",
@@ -63,6 +64,8 @@
     "exporting": "正在导出...",
     "signInToExport": "请先登录后再导出",
     "exportFailed": "导出失败，请稍后重试",
+    "expandMeaning": "展开释义",
+    "collapseMeaning": "收起释义",
     "markMastered": "标记已掌握",
     "unmarkMastered": "取消已掌握",
     "exportModes": {
@@ -297,11 +300,17 @@
   "quickLinks": "快速链接",
   "footerDescription": "您全面的韩语学习平台",
   "allRightsReserved": "版权所有。",
+  "footer": {
+    "joinDiscord": "加入我们的 Discord",
+    "copyright": "© 2026 DuHan Inc. 保留所有权利。"
+  },
   "preview": "预览",
   "markdownTip": "格式提示：使用 # 表示标题（# H1，## H2，### H3），- 或 * 表示列表，1. 表示编号列表，空行表示段落",
   "enterTitle": "输入文档标题",
   "enterContent": "输入文档内容...",
   "coursesOverview": {
+    "pageTitle": "课程",
+    "subtitle": "浏览你的教材",
     "backToHome": "返回首页",
     "navTitle": "会员权益与功能详解",
     "activatePremium": "开启高级会员",
@@ -355,12 +364,19 @@
     "levelTag": "{{level}}级",
     "unitsCount": "{{count}} 单元",
     "units": "单元",
+    "publishers": {
+      "oer": "开放教育资源",
+      "yonsei": "延世大学",
+      "seoulNational": "首尔大学",
+      "chungAng": "中央大学"
+    },
     "otherPublisher": "其他",
     "viewAll": "查看全部"
   },
   "courseDashboard": {
     "defaultCourseName": "首尔大学韩国语 1A",
     "defaultDisplayLevel": "第一册",
+    "defaultPublisher": "出版社",
     "backToShelf": "返回书架",
     "courseMeta": "{{level}} · 第 1-{{totalUnits}} 课",
     "recentUnit": "最近学习：第 {{unit}} 单元",
@@ -389,6 +405,7 @@
     }
   },
   "module": {
+    "title": "模块",
     "unitTitle": "第{{unit}}单元",
     "listeningUnitTitle": "第{{unit}}单元 · 听力"
   },
@@ -492,6 +509,9 @@
       "quote": "别放弃！再坚持5分钟！",
       "action": "开始测验"
     },
+    "alt": {
+      "tigerCoach": "老虎教练"
+    },
     "daily": {
       "label": "每日一句",
       "quote": "好的开始是成功的一半",
@@ -547,6 +567,7 @@
         "nextExamNameFallback": "TOPIK II",
         "typeReadingShort": "阅读",
         "typeListeningShort": "听力",
+        "typeWritingShort": "写作",
         "minuteShort": "{{minutes}}分",
         "questionCountShort": "{{count}}题",
         "bestScore": "{{score}}%",
@@ -574,7 +595,17 @@
           "listeningAudio": "听力音频",
           "audioLoadFailed": "音频加载失败",
           "finish": "完成",
-          "next": "下一题"
+          "next": "下一题",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "第 {{round}} 届韩国语能力考试",
+          "scrollDownStart": "[向下滚动开始答题]",
+          "periodReading": "第2节",
+          "periodListening": "第1节",
+          "sectionReading": "阅读",
+          "sectionListening": "听力",
+          "pageHeader": "第 {{round}} 届 TOPIK II {{paperType}} 卷 · {{period}}（{{section}}）",
+          "range": "TOPIK II {{section}}（第1题 ~ 第{{count}}题）",
+          "endOfSection": "本节结束"
         },
         "review": {
           "mode": "复习模式",
@@ -599,6 +630,7 @@
           "aiThinking": "思考中...",
           "aiTitle": "AI 解析",
           "save": "保存",
+          "saving": "保存中...",
           "saved": "已保存",
           "translation": "翻译",
           "keyPoint": "关键点",
@@ -606,7 +638,16 @@
           "next": "下一题",
           "saveFailed": "保存失败，请重试。",
           "saveFailedShort": "保存失败",
-          "savedToast": "已保存到错题本"
+          "savedToast": "已保存到错题本",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "第 {{round}} 届韩国语能力考试",
+          "scrollDownReview": "[向下滚动查看解析]",
+          "periodReading": "第2节",
+          "periodListening": "第1节",
+          "sectionReading": "阅读",
+          "sectionListening": "听力",
+          "pageHeader": "第 {{round}} 届 TOPIK II {{paperType}} 卷 · {{period}}（{{section}}）",
+          "range": "TOPIK II {{section}}（第1题 ~ 第{{count}}题）"
         }
       },
       "totalAttempts": "作答次数",
@@ -672,6 +713,7 @@
       "preparing": "视频内容正在准备中...",
       "views": "{count} 次观看",
       "notFound": "视频不存在",
+      "loadingPlayer": "播放器加载中...",
       "error": "加载失败",
       "back": "返回视频库",
       "subtitleList": "字幕列表",
@@ -900,10 +942,16 @@
     "title": "打字练习",
     "nextSentence": "下一句",
     "focusInput": "聚焦输入框",
+    "switchImeWarning": "检测到英文输入，请切换到韩语输入法。",
     "wpm": "速度 (WPM)",
     "acc": "准确率"
   },
   "sidebar": {
+    "expand": "展开侧边栏",
+    "collapse": "收起侧边栏",
+    "navigation": "侧边栏导航",
+    "learn": "学习",
+    "practice": "练习",
     "dashboard": "学习主页",
     "textbooks": "教材学习",
     "topik": "模拟考试",
@@ -971,14 +1019,25 @@
     }
   },
   "annotationMenu": {
+    "none": "无",
     "saveToVocab": "存入生词本",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "pen": "画笔",
+    "highlight": "高亮",
+    "eraser": "橡皮",
+    "undo": "撤销",
+    "clear": "清空",
+    "save": "保存"
   },
   "audioPlayer": {
     "restart": "重新播放",
     "changeSpeed": "切换播放速度",
     "mute": "静音",
     "unmute": "取消静音"
+  },
+  "mobileAudioPlayer": {
+    "rewind10": "后退 10 秒",
+    "forward10": "前进 10 秒"
   },
   "grammarCard": {
     "type": {
@@ -991,10 +1050,77 @@
     "allPoints": "全部语法点",
     "empty": "此单元暂无语法点"
   },
+  "mobileDictionarySheet": {
+    "dictionaryForm": "词典原形",
+    "definition": "释义",
+    "relatedGrammar": "相关语法",
+    "saveToNotebook": "保存到笔记本"
+  },
+  "mobileListeningModule": {
+    "listening": "听力",
+    "noTranscript": "暂无字幕"
+  },
+  "mobileQuestionNav": {
+    "title": "题目导航",
+    "current": "当前",
+    "answered": "已答",
+    "todo": "待做"
+  },
+  "mobileSpeakingModule": {
+    "title": "口语练习",
+    "listenToReference": "收听参考音频",
+    "tapMicToRecord": "点击麦克风开始录音",
+    "tapToStop": "点击停止",
+    "recorded": "已录制",
+    "tapToRecord": "点击录音"
+  },
   "grammarModule": {
     "title": "语法专项训练",
+    "directoryTitle": "语法练习册",
+    "selectGrammarHint": "选择一个语法点开始学习",
+    "proficiency": "学习进度",
+    "status": "熟练度",
+    "markMastery": "标记已学会",
+    "unmarkMastery": "已掌握",
     "searchPlaceholder": "搜索语法点...",
-    "unitLabel": "第{{count}}课"
+    "unitLabel": "第{{count}}课",
+    "aiPlaceholder": "在这里输入句子，让 AI 帮你检查...",
+    "sentencePracticeWith": "使用该语法造句：",
+    "checkNow": "立即检查",
+    "units": {
+      "unit1": "推测与推断",
+      "unit2": "对比与转折",
+      "unit3": "原因与理由",
+      "unit4": "目的与意图",
+      "unit5": "进展与完成",
+      "unit6": "状态与持续",
+      "unit7": "程度与限制",
+      "unit8": "假设与前提",
+      "unit9": "让步与包含",
+      "unit10": "机会与变化",
+      "unit11": "间接引语",
+      "unit12": "必要与经验",
+      "unit13": "列举与顺序",
+      "unit14": "标准与范围",
+      "unit15": "助词与语气"
+    },
+    "unitsShort": {
+      "unit1": "推断",
+      "unit2": "对比",
+      "unit3": "原因",
+      "unit4": "目的",
+      "unit5": "体貌",
+      "unit6": "状态",
+      "unit7": "程度",
+      "unit8": "假设",
+      "unit9": "让步",
+      "unit10": "机会",
+      "unit11": "间接",
+      "unit12": "必要",
+      "unit13": "列举",
+      "unit14": "标准",
+      "unit15": "助词"
+    }
   },
   "analysisSheet": {
     "title": "AI 句子分析",
@@ -1016,6 +1142,15 @@
     "meTag": "(我)"
   },
   "achievements": {
+    "achievementUnlocked": "成就解锁",
+    "defaultLearner": "DuHan 学习者",
+    "categoryLabel": "类别",
+    "appName": "DuHan 应用",
+    "categoryLabels": {
+      "TYPING": "打字达人",
+      "VOCAB": "词汇大师",
+      "STREAK": "连续打卡达人"
+    },
     "aiTutorTagline": "专属韩语 AI 私教",
     "saveReportImage": "保存战报图片",
     "galleryEmpty": "完成一次打字或背单词，解锁你的第一枚徽章吧！"
@@ -1075,6 +1210,12 @@
     "practicePlaceholder": "用 {{title}} 造个句子...",
     "checking": "检查中...",
     "check": "检查",
+    "comparative": "相似语法对比",
+    "commonMistakes": "常见错误",
+    "condition": "条件",
+    "rule": "规则",
+    "quizzes": "练习测验",
+    "customNote": "讲师备注",
     "feedback": {
       "correct": "✓ 太棒了!",
       "incorrect": "✗ 需要改进"
@@ -1085,10 +1226,12 @@
     "explanation": "详细解释",
     "markMastered": "标记为已掌握",
     "rules": "接续规则",
-    "examples": "场景例句"
+    "examples": "场景例句",
+    "answerShort": "答："
   },
   "podcast": {
     "title": "播客",
+    "badge": "播客",
     "nowPlaying": "正在播放",
     "mySubscriptions": "我的订阅",
     "viewAll": "查看全部",
@@ -1112,6 +1255,14 @@
     "minutes": "分钟",
     "expand": "展开",
     "collapse": "收起",
+    "filterOptions": {
+      "all": "全部",
+      "beginner": "初级",
+      "intermediate": "中级",
+      "daily": "日常",
+      "news": "新闻",
+      "picks": "精选"
+    },
     "msg": {
       "LOADING_TRANSCRIPT": "AI 正在生成智能字幕...",
       "LOADING_FIRST_TIME": "首次生成约需 1 分钟",
@@ -1170,7 +1321,33 @@
     "title": "韩语打字",
     "subtitle": "单词/句子/长文",
     "speed": "词/分",
-    "unit": "WPM"
+    "unit": "WPM",
+    "statsOverlay": {
+      "accuracy": "准确率",
+      "restartHint": "按 Tab 重新开始"
+    },
+    "typingArea": {
+      "clickToFocus": "点击开始输入"
+    },
+    "wordPractice": {
+      "noWordsAvailable": "暂无可练习单词",
+      "wordToType": "待输入单词",
+      "noMeaning": "暂无释义",
+      "wordDrillLabel": "词语练习"
+    },
+    "resultsModal": {
+      "userAlt": "用户",
+      "targetAchieved": "达到 {{targetWpm}} WPM！",
+      "targetMissed": "未达到 {{targetWpm}} WPM",
+      "speedLabel": "速度（WPM）",
+      "bestSpeed": "最高 {{highestWpm}} WPM",
+      "speedValue": "{{wpm}} WPM",
+      "accuracyLabel": "准确率（%）",
+      "errorCount": "错误 {{errorCount}} 次",
+      "durationLabel": "用时",
+      "stopButton": "结束",
+      "retryButton": "再试一次"
+    }
   },
   "vocabLabel": "词汇学习",
   "vocab": {
@@ -1195,6 +1372,8 @@
     "meaningFront": "含义显示在正面",
     "sessionComplete": "本次学习完成！",
     "wordsUnit": "个单词",
+    "reviewed": "已复习",
+    "loadingMatch": "配对加载中...",
     "remembered": "认识",
     "forgot": "没记住",
     "rating": {
@@ -1508,6 +1687,7 @@
       "title": "文化与典藏",
       "subtitle": "韩国传统故事、维基百科与文学作品，适合精读解析",
       "viewAll": "查看全部文章",
+      "sourceWikipedia": "维基百科",
       "typeEncyclopedia": "百科条目",
       "recommended": "推荐精读"
     },
@@ -1524,6 +1704,12 @@
       "literatureBookmark": "文学赏析"
     },
     "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）"
+  },
+  "practiceHub": {
+    "subtitle": "TOPIK、打字与词汇练习"
+  },
+  "mediaHub": {
+    "subtitle": "视频、播客与阅读"
   },
   "readingArticle": {
     "difficulty": {

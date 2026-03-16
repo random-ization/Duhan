@@ -62,6 +62,8 @@ export function MobileBottomNav() {
     if (tab.key === 'practice') {
       return (
         pathWithoutLang.startsWith('/practice') ||
+        pathWithoutLang.startsWith('/review') ||
+        pathWithoutLang.startsWith('/notebook') ||
         pathWithoutLang.startsWith('/topik') ||
         pathWithoutLang.startsWith('/typing') ||
         pathWithoutLang.startsWith('/vocab-book') ||

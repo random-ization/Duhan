@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MobileAudioPlayer } from './MobileAudioPlayer';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
@@ -26,6 +27,7 @@ export function MobileListeningModule({
   onBack,
   onWordClick: _onWordClick,
 }: MobileListeningModuleProps) {
+  const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const activeSegmentRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,7 @@ export function MobileListeningModule({
 
         <div className="flex flex-col items-center">
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            Listening
+            {t('mobileListeningModule.listening', { defaultValue: 'Listening' })}
           </span>
           <h1 className="text-sm font-black text-foreground truncate max-w-[200px]">{unitTitle}</h1>
         </div>
@@ -82,7 +84,9 @@ export function MobileListeningModule({
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 pb-48 space-y-6">
         {transcriptData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p className="font-bold">No transcript available</p>
+            <p className="font-bold">
+              {t('mobileListeningModule.noTranscript', { defaultValue: 'No transcript available' })}
+            </p>
           </div>
         ) : (
           transcriptData.map((segment, index) => {

@@ -66,7 +66,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
           <div className="flex-1 text-center pr-10">
             <img
               src="/logo_BnW.svg"
-              alt="Logo"
+              alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
               className="h-8 mx-auto opacity-80 invert brightness-0"
             />
             {/* Assuming a logo exists, or just use text if not */}

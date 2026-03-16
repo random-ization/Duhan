@@ -1,5 +1,6 @@
 import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import type { TopikExam, Language, Annotation } from '../../types';
+import { getLabels } from '../../utils/i18n';
 
 import { QuestionRenderer } from './QuestionRenderer';
 const LazyExamController = React.lazy(() =>
@@ -207,8 +208,57 @@ const TOPIK_LISTENING_STRUCTURE: {
   },
 ];
 
+interface ExamSessionCopy {
+  titleKor: string;
+  titleEn: string;
+  scrollDownStart: string;
+  periodReading: string;
+  periodListening: string;
+  sectionReading: string;
+  sectionListening: string;
+  pageHeader: string;
+  range: string;
+  endOfSection: string;
+}
+
+const EXAM_SESSION_DEFAULTS: ExamSessionCopy = {
+  titleKor: '한 국 어 능 력 시 험',
+  titleEn: 'The {{round}}th Test of Proficiency in Korean',
+  scrollDownStart: '[Scroll down to start]',
+  periodReading: '2nd Session',
+  periodListening: '1st Session',
+  sectionReading: 'Reading',
+  sectionListening: 'Listening',
+  pageHeader: 'Round {{round}} TOPIK II {{paperType}} · {{period}} ({{section}})',
+  range: 'TOPIK II {{section}} (Q1 ~ Q{{count}})',
+  endOfSection: 'End of Section',
+};
+
+const getExamSessionCopy = (labels: ReturnType<typeof getLabels>): ExamSessionCopy => {
+  const session = labels.dashboard?.topik?.mobile?.session ?? {};
+  return {
+    titleKor: session.titleKor || EXAM_SESSION_DEFAULTS.titleKor,
+    titleEn: session.titleEn || EXAM_SESSION_DEFAULTS.titleEn,
+    scrollDownStart: session.scrollDownStart || EXAM_SESSION_DEFAULTS.scrollDownStart,
+    periodReading: session.periodReading || EXAM_SESSION_DEFAULTS.periodReading,
+    periodListening: session.periodListening || EXAM_SESSION_DEFAULTS.periodListening,
+    sectionReading:
+      session.sectionReading || labels.reading || EXAM_SESSION_DEFAULTS.sectionReading,
+    sectionListening:
+      session.sectionListening || labels.listening || EXAM_SESSION_DEFAULTS.sectionListening,
+    pageHeader: session.pageHeader || EXAM_SESSION_DEFAULTS.pageHeader,
+    range: session.range || EXAM_SESSION_DEFAULTS.range,
+    endOfSection:
+      session.endOfSection ||
+      labels.dashboard?.topik?.review?.endOfSection ||
+      EXAM_SESSION_DEFAULTS.endOfSection,
+  };
+};
+
 export const ExamSession: React.FC<ExamSessionProps> = React.memo(
   ({ exam, language, userAnswers, timeLeft, onAnswerChange, onSubmit, onExit }) => {
+    const labels = useMemo(() => getLabels(language), [language]);
+    const sessionCopy = useMemo(() => getExamSessionCopy(labels), [labels]);
     const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
@@ -303,11 +353,11 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                 <div className="flex items-baseline justify-center gap-4 mb-2">
                   <span className="text-xl md:text-2xl font-bold">제{exam.round}회</span>
                   <span className="text-3xl md:text-5xl font-bold tracking-wider">
-                    한 국 어 능 력 시 험
+                    {sessionCopy.titleKor}
                   </span>
                 </div>
                 <div className="text-center text-sm md:text-lg italic opacity-80">
-                  The {exam.round}th Test of Proficiency in Korean
+                  {sessionCopy.titleEn.replace('{{round}}', String(exam.round))}
                 </div>
               </div>
 
@@ -331,17 +381,21 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
                 <div className="border-2 border-foreground w-80 md:w-96">
                   <div className="flex">
                     <div className="w-1/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl border-r-2 border-foreground">
-                      {exam.type === 'READING' ? '2교시' : '1교시'}
+                      {exam.type === 'READING'
+                        ? sessionCopy.periodReading
+                        : sessionCopy.periodListening}
                     </div>
                     <div className="w-2/3 bg-muted py-4 text-center font-bold text-2xl md:text-3xl">
-                      {exam.type === 'READING' ? '읽기' : '듣기'}
+                      {exam.type === 'READING'
+                        ? sessionCopy.sectionReading
+                        : sessionCopy.sectionListening}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="text-center text-sm text-muted-foreground mb-8 font-sans">
-                [Scroll down to start]
+                {sessionCopy.scrollDownStart}
               </div>
             </div>
 
@@ -349,12 +403,31 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
             <div className="bg-card border-b border-foreground mx-8 md:mx-12 mb-8 pb-1">
               <div className="flex justify-between items-end">
                 <div className="font-bold text-sm text-muted-foreground">
-                  제{exam.round}회 한국어능력시험 II {exam.paperType || 'B'}형{' '}
-                  {exam.type === 'READING' ? '2교시 (읽기)' : '1교시 (듣기)'}
+                  {sessionCopy.pageHeader
+                    .replace('{{round}}', String(exam.round))
+                    .replace('{{paperType}}', exam.paperType || 'B')
+                    .replace(
+                      '{{period}}',
+                      exam.type === 'READING'
+                        ? sessionCopy.periodReading
+                        : sessionCopy.periodListening
+                    )
+                    .replace(
+                      '{{section}}',
+                      exam.type === 'READING'
+                        ? sessionCopy.sectionReading
+                        : sessionCopy.sectionListening
+                    )}
                 </div>
                 <div className="font-bold bg-muted px-4 py-1 rounded-full text-sm">
-                  TOPIK Ⅱ {exam.type === 'READING' ? '읽기' : '듣기'} (1번 ~ {exam.questions.length}
-                  번)
+                  {sessionCopy.range
+                    .replace(
+                      '{{section}}',
+                      exam.type === 'READING'
+                        ? sessionCopy.sectionReading
+                        : sessionCopy.sectionListening
+                    )
+                    .replace('{{count}}', String(exam.questions.length))}
                 </div>
               </div>
             </div>
@@ -401,7 +474,7 @@ export const ExamSession: React.FC<ExamSessionProps> = React.memo(
             {/* \u8bd5\u5377\u9875\u811a */}
             <div className="flex justify-center py-12">
               <div className="bg-muted rounded-full px-4 py-1 font-bold text-muted-foreground">
-                End of Section
+                {sessionCopy.endOfSection}
               </div>
             </div>
           </div>

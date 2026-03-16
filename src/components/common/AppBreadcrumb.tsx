@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LocalizedLink } from '../LocalizedLink';
 import { cn } from '../../lib/utils';
 import {
@@ -20,10 +21,14 @@ type AppBreadcrumbProps = Readonly<{
 }>;
 
 export function AppBreadcrumb({ items, className }: AppBreadcrumbProps) {
+  const { t } = useTranslation();
   if (!items || items.length === 0) return null;
 
   return (
-    <Breadcrumb className={cn('text-xs', className)} aria-label="Breadcrumb">
+    <Breadcrumb
+      className={cn('text-xs', className)}
+      aria-label={t('common.breadcrumb', { defaultValue: 'Breadcrumb' })}
+    >
       <BreadcrumbList className="flex items-center gap-1.5 text-muted-foreground">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

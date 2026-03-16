@@ -7,7 +7,7 @@ import { Button } from '../ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 
 export const LanguageSwitcher = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +33,7 @@ export const LanguageSwitcher = () => {
             type="button"
             variant="outline"
             size="auto"
-            aria-label="Language"
+            aria-label={t('profile.displayLanguage', { defaultValue: 'Language' })}
             aria-haspopup="menu"
             aria-expanded={isOpen}
             aria-controls={menuId}

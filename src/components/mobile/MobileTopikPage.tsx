@@ -4,6 +4,7 @@ import {
   History,
   BookOpen,
   Headphones,
+  PenLine,
   Clock,
   HelpCircle,
   PlayCircle,
@@ -28,7 +29,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   const { user } = useAuth();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
-  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING' | 'WRITING'>('ALL');
 
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -166,6 +167,19 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
         >
           <Headphones className="w-3 h-3" /> {t('dashboard.topik.listening')}
         </Button>
+        <Button
+          variant="ghost"
+          size="auto"
+          onClick={() => setFilterType('WRITING')}
+          className={clsx(
+            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
+            filterType === 'WRITING'
+              ? 'bg-rose-600 text-white dark:bg-rose-400/30 dark:text-rose-100'
+              : 'bg-muted text-muted-foreground'
+          )}
+        >
+          <PenLine className="w-3 h-3" /> {t('dashboard.topik.writing')}
+        </Button>
       </div>
 
       {/* Stats Row */}
@@ -208,6 +222,8 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
         {filteredExams.map(exam => {
           const bestScore = getBestScore(exam.id);
           const isReading = exam.type === 'READING';
+          const isWriting = exam.type === 'WRITING';
+          const isListening = exam.type === 'LISTENING';
 
           return (
             <Button
@@ -223,7 +239,9 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
                   'w-10 h-10 rounded-lg flex items-center justify-center font-extrabold text-sm',
                   isReading
                     ? 'bg-blue-100 text-blue-600 dark:bg-blue-400/14 dark:text-blue-200'
-                    : 'bg-violet-100 text-violet-600 dark:bg-violet-400/14 dark:text-violet-200'
+                    : isWriting
+                      ? 'bg-rose-100 text-rose-600 dark:bg-rose-400/14 dark:text-rose-200'
+                      : 'bg-violet-100 text-violet-600 dark:bg-violet-400/14 dark:text-violet-200'
                 )}
               >
                 {exam.round}
@@ -238,12 +256,16 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
                       'text-[9px] font-bold px-1 py-0.5 rounded',
                       isReading
                         ? 'bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200'
-                        : 'bg-violet-50 text-violet-600 dark:bg-violet-400/12 dark:text-violet-200'
+                        : isWriting
+                          ? 'bg-rose-50 text-rose-600 dark:bg-rose-400/12 dark:text-rose-200'
+                          : 'bg-violet-50 text-violet-600 dark:bg-violet-400/12 dark:text-violet-200'
                     )}
                   >
                     {isReading
                       ? t('dashboard.topik.mobile.typeReadingShort', { defaultValue: 'READ' })
-                      : t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })}
+                      : isListening
+                        ? t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })
+                        : t('dashboard.topik.mobile.typeWritingShort', { defaultValue: 'WRITE' })}
                   </span>
                 </div>
                 <div className="text-[10px] text-muted-foreground font-medium mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">

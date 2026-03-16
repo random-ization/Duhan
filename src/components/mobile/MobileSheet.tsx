@@ -1,4 +1,5 @@
 import { ReactNode, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Button } from '../ui';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal, SheetTitle } from '../ui';
@@ -18,6 +19,7 @@ export function MobileSheet({
   children: ReactNode;
   height?: MobileSheetHeight;
 }) {
+  const { t } = useTranslation();
   const titleId = useId();
 
   const heightClass =
@@ -38,7 +40,7 @@ export function MobileSheet({
         <SheetContent
           unstyled
           forceMount
-          aria-label={title ? undefined : 'Sheet'}
+          aria-label={title ? undefined : t('common.menu', { defaultValue: 'Sheet' })}
           aria-labelledby={title ? titleId : undefined}
           className={`md:hidden fixed inset-x-0 bottom-0 z-[90] px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] transition-transform duration-300 ease-out data-[state=open]:translate-y-0 data-[state=closed]:translate-y-[105%]`}
         >
@@ -59,7 +61,7 @@ export function MobileSheet({
                     variant="outline"
                     size="auto"
                     className="w-11 h-11 rounded-[14px] border-2 border-foreground bg-card shadow-pop-sm grid place-items-center select-none active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition"
-                    aria-label="Close"
+                    aria-label={t('common.close', { defaultValue: 'Close' })}
                   >
                     <X size={18} />
                   </Button>

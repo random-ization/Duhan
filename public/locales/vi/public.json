@@ -80,11 +80,19 @@
   "button": {
     "upgrade": "Nâng cấp ngay"
   },
+  "learnHub": {
+    "badge": "Trung tâm học tập DuHan",
+    "englishContent": "Nội dung tiếng Anh",
+    "readGuide": "Đọc hướng dẫn",
+    "roadmap": "Xây dựng lộ trình học của bạn với luyện TOPIK, ôn từ vựng và luyện ngữ pháp.",
+    "collectionName": "Hướng dẫn học tiếng Hàn"
+  },
   "landing": {
     "seo": {
       "title": "DuHan - Học tiếng Hàn trực tuyến | Nền tảng học tương tác",
       "description": "Học tiếng Hàn hiệu quả với DuHan. Luyện từ vựng, ngữ pháp, luyện thi TOPIK, podcast và video trong một nền tảng học tập tương tác.",
-      "keywords": "học tiếng Hàn, học tiếng Hàn online, TOPIK, từ vựng tiếng Hàn, ngữ pháp tiếng Hàn, khóa học tiếng Hàn"
+      "keywords": "học tiếng Hàn, học tiếng Hàn online, TOPIK, từ vựng tiếng Hàn, ngữ pháp tiếng Hàn, khóa học tiếng Hàn",
+      "featuredGuidesListName": "Hướng dẫn học tiếng Hàn nổi bật"
     },
     "nav": {
       "topik": "TOPIK",
@@ -266,8 +274,26 @@
       "q3": "Có hoàn tiền không?",
       "a3": "Có bảo đảm hoàn tiền trong 30 ngày. Email hỗ trợ để được hoàn tiền."
     },
+    "guides": {
+      "title": "Bắt đầu với các hướng dẫn học tiếng Hàn thực tế",
+      "subtitle": "Xây dựng lộ trình với các trang hướng dẫn tối ưu SEO cho TOPIK, từ vựng, ngữ pháp và viết.",
+      "topik": {
+        "title": "Hướng dẫn luyện thi TOPIK",
+        "description": "Hiểu cấu trúc đề thi, cách chấm điểm và quy trình ôn tập hằng tuần."
+      },
+      "vocab": {
+        "title": "Hệ thống từ vựng tiếng Hàn",
+        "description": "Ghi nhớ từ lâu dài với SRS, nghe chép chính tả và ôn theo ngữ cảnh."
+      },
+      "writing": {
+        "title": "Chiến lược viết TOPIK",
+        "description": "Dùng mẫu rõ ràng và checklist sửa bài theo thời gian để đạt điểm cao hơn."
+      },
+      "readMore": "Đọc hướng dẫn"
+    },
     "footer": {
       "about": "Giới thiệu",
+      "learnGuides": "Hướng dẫn học",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     },
     "typing": {
@@ -534,6 +560,7 @@
     "placeholderEmail": "Địa chỉ Email",
     "placeholderPassword": "Mật khẩu",
     "forgotPassword": "Quên mật khẩu?",
+    "forgotPasswordDescription": "Nhập email của bạn và chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
     "loginButton": "Bắt đầu (ĐĂNG NHẬP)",
     "signupButton": "Đăng ký",
     "orContinue": "Hoặc tiếp tục với",
@@ -544,6 +571,8 @@
     "resendSuccess": "Liên kết đặt lại đã được gửi! Vui lòng kiểm tra hộp thư của bạn.",
     "resendError": "Không thể đặt lại mật khẩu, vui lòng kiểm tra xem địa chỉ email có chính xác không.",
     "backToLogin": "Quay lại đăng nhập",
+    "resetPassword": "Đặt lại mật khẩu",
+    "resetPasswordDescription": "Đặt mật khẩu mới cho tài khoản của bạn.",
     "recoverPassword": "Khôi phục mật khẩu",
     "recoveryDesc": "Nhập email đã đăng ký, chúng tôi sẽ gửi tín hiệu khôi phục.",
     "verifyingEmail": "Đang xác minh email...",
@@ -564,6 +593,7 @@
     "resetSuccessDesc": "Bạn đã được đăng xuất. Vui lòng đăng nhập lại bằng mật khẩu mới.",
     "invalidLink": "Liên kết không hợp lệ",
     "invalidLinkDesc": "Mã xác nhận thiếu hoặc đã hết hạn. Vui lòng yêu cầu lại.",
+    "invalidResetToken": "Mã đặt lại không hợp lệ hoặc bị thiếu.",
     "requestAgain": "Yêu cầu lại",
     "alt": {
       "rocket": "Tên lửa"
@@ -574,6 +604,16 @@
     },
     "newPasswordLabel": "Mật khẩu mới",
     "resetFailed": "Đặt lại mật khẩu thất bại. Vui lòng thử lại.",
+    "passwordResetEmailSent": "Nếu email này tồn tại, liên kết đặt lại đã được gửi. Vui lòng kiểm tra hộp thư.",
+    "passwordResetSuccess": "Mật khẩu của bạn đã được đặt lại thành công.",
+    "sendVerificationEmail": "Gửi email xác minh",
+    "verifyEmail": "Xác minh email",
+    "verifyEmailSuccess": "Email của bạn đã được xác minh thành công.",
+    "verifyEmailSent": "Đã gửi email xác minh. Vui lòng kiểm tra hộp thư.",
+    "verifyEmailAlreadyVerified": "Email của bạn đã được xác minh.",
+    "verifyEmailInvalidToken": "Liên kết xác minh không hợp lệ hoặc đã hết hạn.",
+    "verifyEmailDescription": "Nhấn nút bên dưới để gửi email xác minh.",
+    "loginRequired": "Vui lòng đăng nhập trước.",
     "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối và thử lại."
   },
   "common": {
@@ -608,7 +648,11 @@
     "off": "Tắt",
     "on": "Bật",
     "page": "Trang",
-    "search": "Tìm kiếm"
+    "breadcrumb": "Điều hướng breadcrumb",
+    "search": "Tìm kiếm",
+    "loading": "Đang tải...",
+    "error": "Đã xảy ra lỗi.",
+    "allRightsReserved": "Bảo lưu mọi quyền."
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "Lỗi tạo kênh podcast.",

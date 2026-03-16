@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { ArrowLeft, Mic, Square, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
@@ -21,6 +22,7 @@ export function MobileSpeakingModule({
   onBack,
   onComplete: _onComplete,
 }: MobileSpeakingModuleProps) {
+  const { t } = useTranslation();
   const {
     isRecording,
     recordingTime,
@@ -95,7 +97,7 @@ export function MobileSpeakingModule({
           <ArrowLeft size={20} className="text-muted-foreground" />
         </Button>
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-          Speaking Practice
+          {t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' })}
         </span>
         <div className="w-10" /> {/* Spacer */}
       </div>
@@ -123,7 +125,11 @@ export function MobileSpeakingModule({
               ) : (
                 <Volume2 size={16} />
               )}
-              <span>Listen to Reference</span>
+              <span>
+                {t('mobileSpeakingModule.listenToReference', {
+                  defaultValue: 'Listen to Reference',
+                })}
+              </span>
               <audio ref={referenceAudioRef} src={referenceAudioUrl} />
             </Button>
           )}
@@ -175,7 +181,9 @@ export function MobileSpeakingModule({
               </Button>
             </div>
           ) : (
-            <p className="text-muted-foreground font-medium text-sm">Tap mic to record</p>
+            <p className="text-muted-foreground font-medium text-sm">
+              {t('mobileSpeakingModule.tapMicToRecord', { defaultValue: 'Tap mic to record' })}
+            </p>
           )}
         </div>
       </div>
@@ -206,7 +214,11 @@ export function MobileSpeakingModule({
           )}
         </Button>
         <p className="mt-4 text-muted-foreground text-xs font-bold uppercase tracking-wider">
-          {isRecording ? 'Tap to Stop' : audioUrl ? 'Recorded' : 'Tap to Record'}
+          {isRecording
+            ? t('mobileSpeakingModule.tapToStop', { defaultValue: 'Tap to Stop' })
+            : audioUrl
+              ? t('mobileSpeakingModule.recorded', { defaultValue: 'Recorded' })
+              : t('mobileSpeakingModule.tapToRecord', { defaultValue: 'Tap to Record' })}
         </p>
       </div>
     </div>

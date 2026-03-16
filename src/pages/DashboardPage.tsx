@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GripVertical, FileText } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -141,13 +141,6 @@ type DashboardProgressStats = {
   progressPercent: number;
 };
 
-type DashboardVocabBookEntry = {
-  progress: {
-    status: string;
-    nextReviewAt?: number | null;
-  };
-};
-
 function getGreetingMessage(t: DashboardTranslateFn) {
   const hour = new Date().getHours();
   if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
@@ -181,18 +174,6 @@ function getFilteredCardOrder(
 function getVocabBookCountArgs(user: DashboardUserLite) {
   if (!user) return 'skip' as const;
   return { includeMastered: true, savedByUserOnly: true };
-}
-
-function isDueReview(item: DashboardVocabBookEntry, now: number) {
-  const nextReviewAt = item.progress.nextReviewAt;
-  return (
-    item.progress.status !== 'MASTERED' && typeof nextReviewAt === 'number' && nextReviewAt <= now
-  );
-}
-
-function getDueReviewCount(vocabBook: DashboardVocabBookEntry[] | undefined, now: number) {
-  if (!vocabBook) return 0;
-  return vocabBook.filter(item => isDueReview(item, now)).length;
 }
 
 function getCourseProgressArgs(user: DashboardUserLite, selectedInstitute: string | null) {
@@ -250,10 +231,11 @@ function getDashboardGridClassName(isEditing: boolean) {
 }
 
 const TigerCard: React.FC<{
+  t: (key: string, options?: Record<string, unknown>) => string;
   isSpeaking: boolean;
   dailyPhrase: DailyPhraseData | null | undefined;
   onSpeakDailyPhrase: () => void;
-}> = ({ isSpeaking, dailyPhrase, onSpeakDailyPhrase }) => (
+}> = ({ t, isSpeaking, dailyPhrase, onSpeakDailyPhrase }) => (
   <BentoCard
     className="flex flex-col items-center justify-center text-center h-full"
     bgClass="bg-[#FFE066] dark:bg-amber-400/12"
@@ -278,7 +260,7 @@ const TigerCard: React.FC<{
       <img
         src={ASSETS.tiger}
         className="w-full h-full object-contain pointer-events-none"
-        alt="tiger coach"
+        alt={t('dashboard.alt.tigerCoach', { defaultValue: 'Tiger coach' })}
       />
     </button>
     <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition min-w-[200px]">
@@ -367,7 +349,7 @@ const TextbookCard: React.FC<
     <img
       src={ASSETS.book}
       className="absolute -right-4 -bottom-4 w-28 h-28 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-      alt="books"
+      alt=""
     />
   </BentoCard>
 );
@@ -389,6 +371,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
     case 'tiger':
       return (
         <TigerCard
+          t={t}
           isSpeaking={isSpeaking}
           dailyPhrase={dailyPhrase}
           onSpeakDailyPhrase={onSpeakDailyPhrase}
@@ -439,7 +422,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.books}
             className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-            alt="reading"
+            alt=""
           />
         </BentoCard>
       );
@@ -462,7 +445,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.tv}
             className="absolute -right-4 -bottom-4 w-28 h-28 group-hover:scale-110 group-hover:rotate-3 transition duration-300"
-            alt="tv"
+            alt=""
           />
         </BentoCard>
       );
@@ -499,7 +482,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.headphone}
             className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
-            alt="podcast"
+            alt=""
           />
         </BentoCard>
       );
@@ -533,7 +516,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.vocabBook}
             className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-12 transition duration-300"
-            alt="vocab"
+            alt=""
           />
         </BentoCard>
       );
@@ -572,7 +555,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.memo}
             className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:rotate-6 transition duration-300"
-            alt="notebook"
+            alt=""
           />
         </BentoCard>
       );
@@ -605,7 +588,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
           <img
             src={ASSETS.typing}
             className="absolute -right-2 -bottom-2 w-24 h-24 group-hover:scale-110 group-hover:-rotate-12 transition duration-300"
-            alt="typing"
+            alt=""
           />
         </BentoCard>
       );
@@ -633,6 +616,11 @@ export default function DashboardPage() {
   const [searchParams] = useSearchParams();
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
 
+  useEffect(() => {
+    if (dashboardView !== 'practice') return;
+    navigate('/practice', { replace: true });
+  }, [dashboardView, navigate]);
+
   // Card groups
   const PRACTICE_CARDS = useMemo(() => new Set(['vocab', 'notes', 'typing']), []);
   const filteredCardOrder = useMemo(
@@ -645,14 +633,8 @@ export default function DashboardPage() {
     ),
     getVocabBookCountArgs(user)
   );
-
-  const vocabBook = useQuery(VOCAB.getVocabBook, { includeMastered: true, limit: 300 });
-  const [now] = React.useState(() => Date.now());
-
-  const dueReviews = useMemo(
-    () => getDueReviewCount(vocabBook as DashboardVocabBookEntry[] | undefined, now),
-    [vocabBook, now]
-  );
+  const reviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
+  const dueReviews = reviewSummary?.dueNow ?? 0;
   const courseProgress = useQuery(
     qRef<
       { courseId: string },
@@ -736,7 +718,7 @@ export default function DashboardPage() {
           <img
             src={ASSETS.wave}
             className="absolute -top-6 -left-4 md:-left-10 w-10 h-10 md:w-14 md:h-14 animate-float"
-            alt="waving hand"
+            alt=""
           />
           {/* SVG Underline Header */}
           <h1 className="text-3xl md:text-4xl md:text-5xl font-black font-display text-foreground tracking-tight mb-2">
@@ -784,7 +766,10 @@ export default function DashboardPage() {
       {/* Review Card (Practice View) */}
       {dashboardView === 'practice' && (
         <div className="mb-6">
-          <ReviewWordsCard dueCount={dueReviews} />
+          <ReviewWordsCard
+            dueCount={dueReviews}
+            recommendedCount={reviewSummary?.recommendedToday ?? dueReviews}
+          />
         </div>
       )}
 

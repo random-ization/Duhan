@@ -9,8 +9,10 @@ import { VOCAB } from '../utils/convexRefs';
 import VocabQuiz from '../features/vocab/components/VocabQuiz';
 import { VocabBookSpellingSkeleton } from '../components/common';
 import { Button } from '../components/ui';
+import type { VocabBookItemDto } from '../../convex/vocab';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
+const PAGE_SIZE = 120;
 
 const VocabBookSpellingPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
@@ -25,13 +27,41 @@ const VocabBookSpellingPage: React.FC = () => {
       ? (categoryParam as VocabBookCategory)
       : 'DUE';
 
-  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+  const [pageCursor, setPageCursor] = React.useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = React.useState<VocabBookItemDto[]>([]);
+  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+
+  const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: q || undefined,
     savedByUserOnly: true,
+    category,
+    cursor: pageCursor || undefined,
+    limit: PAGE_SIZE,
   });
-  const loading = vocabBookResult === undefined;
-  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
+
+  React.useEffect(() => {
+    setPageCursor(null);
+    setLoadedItems([]);
+    setNextCursor(null);
+  }, [category, q]);
+
+  React.useEffect(() => {
+    if (!vocabBookPage) return;
+    setNextCursor(vocabBookPage.nextCursor);
+    setLoadedItems(prev => {
+      if (pageCursor === null) return vocabBookPage.items;
+      const existing = new Set(prev.map(item => String(item.id)));
+      const appended = vocabBookPage.items.filter(item => !existing.has(String(item.id)));
+      return [...prev, ...appended];
+    });
+    if (vocabBookPage.nextCursor) {
+      setPageCursor(vocabBookPage.nextCursor);
+    }
+  }, [vocabBookPage, pageCursor]);
+
+  const loading = vocabBookPage === undefined || nextCursor !== null;
+  const items = useMemo(() => loadedItems, [loadedItems]);
 
   const words = useMemo(() => {
     const filtered = items.filter(item => {
@@ -76,6 +106,9 @@ const VocabBookSpellingPage: React.FC = () => {
                 {t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
               </p>
               <p className="text-sm font-black text-muted-foreground" />
+              <p className="text-[10px] font-bold text-muted-foreground mt-1">
+                {t('common.loading', { defaultValue: 'Loading...' })}
+              </p>
             </div>
             <div className="w-12" />
           </div>
@@ -103,7 +136,12 @@ const VocabBookSpellingPage: React.FC = () => {
               {t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
             </p>
             <p className="text-sm font-black text-muted-foreground">
-              {loading ? '' : t('dashboard.vocab.count', { count: words.length, defaultValue: '{{count}} words' })}
+              {loading
+                ? ''
+                : t('dashboard.vocab.count', {
+                    count: words.length,
+                    defaultValue: '{{count}} words',
+                  })}
             </p>
           </div>
           <div className="w-12" />

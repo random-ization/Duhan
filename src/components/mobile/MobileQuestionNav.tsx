@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../common/BottomSheet';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
@@ -20,6 +21,7 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
   isOpen,
   onOpenChange,
 }) => {
+  const { t } = useTranslation();
   // Generate question indices
   const questions = Array.from({ length: totalQuestions }, (_, i) => i);
 
@@ -28,7 +30,12 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
   const handleClose = () => onOpenChange(false);
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={handleClose} height="half" title="Question Navigator">
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={handleClose}
+      height="half"
+      title={t('mobileQuestionNav.title', { defaultValue: 'Question Navigator' })}
+    >
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto pb-4">
           <div className="grid grid-cols-5 gap-3">
@@ -73,15 +80,15 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
           <div className="flex items-center justify-between text-xs text-muted-foreground font-medium px-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-primary" />
-              <span>Current</span>
+              <span>{t('mobileQuestionNav.current', { defaultValue: 'Current' })}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-indigo-100 border border-indigo-300" />
-              <span>Answered</span>
+              <span>{t('mobileQuestionNav.answered', { defaultValue: 'Answered' })}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-muted border border-border" />
-              <span>To do</span>
+              <span>{t('mobileQuestionNav.todo', { defaultValue: 'To do' })}</span>
             </div>
           </div>
         </div>

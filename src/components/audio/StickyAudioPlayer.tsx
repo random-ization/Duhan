@@ -156,9 +156,7 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] z-50">
-      <audio ref={audioRef} src={audioUrl} preload="metadata">
-        <track kind="captions" src="" label="English" />
-      </audio>
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       {/* Progress Bar */}
       <div className="h-1 bg-muted relative cursor-pointer group">

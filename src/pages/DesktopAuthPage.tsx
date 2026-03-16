@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
 import { qRef } from '../utils/convexRefs';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
@@ -33,14 +34,7 @@ export default function DesktopAuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const safeRedirectPath = (() => {
-    const raw = searchParams.get('redirect');
-    if (!raw) return null;
-    if (!raw.startsWith('/')) return null;
-    if (raw.startsWith('//')) return null;
-    if (raw.includes('://')) return null;
-    return raw;
-  })();
+  const redirectPath = resolveSafeReturnTo(searchParams.get('redirect'), '/dashboard');
 
   // Determine which page we're on for SEO
   const meta = getRouteMeta(location.pathname);
@@ -48,9 +42,9 @@ export default function DesktopAuthPage() {
   // Auto-redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      navigate(safeRedirectPath || '/dashboard');
+      navigate(redirectPath);
     }
-  }, [user, authLoading, navigate, safeRedirectPath]);
+  }, [user, authLoading, navigate, redirectPath]);
 
   /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
   // Handle Google OAuth callback
@@ -67,7 +61,7 @@ export default function DesktopAuthPage() {
     qRef<{ key: string }, { value?: { url?: string } } | null>('settings:getSetting'),
     { key: 'logo' }
   );
-  const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
+  const postAuthRedirectPath = getLocalizedPath(redirectPath, currentLanguage);
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {

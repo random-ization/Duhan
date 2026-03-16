@@ -175,6 +175,8 @@ import {
   VocabReviewDeckDto,
   DailyPhraseDto,
   VocabBookItemDto,
+  VocabBookPageDto,
+  VocabReviewSummaryDto,
 } from '../../convex/vocab';
 
 export const VOCAB = {
@@ -191,6 +193,20 @@ export const VOCAB = {
     { search?: string; includeMastered?: boolean; limit?: number; savedByUserOnly?: boolean },
     VocabBookItemDto[]
   >('vocab:getVocabBook'),
+  getVocabBookPage: qRef<
+    {
+      search?: string;
+      includeMastered?: boolean;
+      limit?: number;
+      savedByUserOnly?: boolean;
+      category?: 'ALL' | 'UNLEARNED' | 'DUE' | 'MASTERED';
+      cursor?: string;
+    },
+    VocabBookPageDto
+  >('vocab:getVocabBookPage'),
+  getReviewSummary: qRef<{ savedByUserOnly?: boolean }, VocabReviewSummaryDto>(
+    'vocab:getReviewSummary'
+  ),
   // Mutations
   updateProgress: mRef<
     { wordId: string; quality: number },

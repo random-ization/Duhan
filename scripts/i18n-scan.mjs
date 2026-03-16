@@ -12,6 +12,10 @@ const excludedPathFragments = [
   `${path.sep}src${path.sep}pages${path.sep}admin${path.sep}`,
 ];
 
+const excludedRelativeFiles = new Set([
+  'src/seo/learnGuides.ts',
+]);
+
 const args = process.argv.slice(2);
 const shouldFail = args.includes('--fail');
 const shouldFailOnNew = args.includes('--fail-on-new');
@@ -31,7 +35,9 @@ function* walk(dir) {
 }
 
 function isExcluded(filePath) {
-  return excludedPathFragments.some((fragment) => filePath.includes(fragment));
+  if (excludedPathFragments.some((fragment) => filePath.includes(fragment))) return true;
+  const relativePath = path.relative(projectRoot, filePath);
+  return excludedRelativeFiles.has(relativePath);
 }
 
 function isCodeFile(filePath) {

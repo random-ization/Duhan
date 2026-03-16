@@ -57,7 +57,7 @@ export default function VocabLearnOverlay({
         <DialogOverlay
           unstyled
           className="fixed inset-0 z-[90] bg-muted/70 backdrop-blur-sm"
-          aria-label="Close overlay"
+          aria-label={labels.common?.close || 'Close'}
         />
         <DialogContent
           unstyled

@@ -1,0 +1,14 @@
+[
+  {
+    "file": "src/components/common/GlobalCommandPalette.tsx",
+    "line": 266,
+    "kind": "jsx-text",
+    "text": "Cmd+K / Ctrl+K"
+  },
+  {
+    "file": "src/pages/Landing.tsx",
+    "line": 1375,
+    "kind": "jsx-text",
+    "text": "ㄹ (F)"
+  }
+]

@@ -7,6 +7,7 @@ interface MobileVocabDashboardProps {
   readonly unitId: string;
   readonly instituteName: string;
   readonly words: readonly unknown[];
+  readonly totalWords?: number;
   readonly masteredCount: number;
   readonly language: string;
   readonly onStartLearn: () => void;
@@ -18,6 +19,7 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
   unitId,
   instituteName,
   words,
+  totalWords,
   masteredCount,
   language: _language,
   onStartLearn,
@@ -25,7 +27,7 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
   onManageList,
 }) => {
   const { t } = useTranslation();
-  const total = words.length;
+  const total = typeof totalWords === 'number' ? totalWords : words.length;
   const progress = total > 0 ? (masteredCount / total) * 100 : 0;
 
   return (

@@ -161,7 +161,25 @@ export type VocabReviewItemDto = {
     streak: number;
     nextReviewAt: number | null;
     lastReviewedAt: number | null;
+    difficulty?: number;
+    lapses?: number;
   };
+};
+
+export type VocabReviewSummaryDto = {
+  total: number;
+  dueTotal: number;
+  dueNow: number;
+  unlearned: number;
+  mastered: number;
+  learning: number;
+  recommendedToday: number;
+};
+
+export type VocabBookPageDto = {
+  items: VocabBookItemDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
 };
 
 export type VocabBookItemDto = {
@@ -201,6 +219,44 @@ export type VocabBookItemDto = {
 };
 
 const SCAN_PAGE_SIZE = 500;
+
+type VocabBookCategory = 'ALL' | 'UNLEARNED' | 'DUE' | 'MASTERED';
+
+const encodeVocabBookCursor = (value: { dbCursor: string | null; offset: number }): string => {
+  return JSON.stringify(value);
+};
+
+const decodeVocabBookCursor = (
+  encoded: string | undefined
+): { dbCursor: string | null; offset: number } => {
+  if (!encoded) return { dbCursor: null, offset: 0 };
+  try {
+    const parsed = JSON.parse(encoded) as {
+      dbCursor?: unknown;
+      offset?: unknown;
+    };
+    const dbCursor = typeof parsed.dbCursor === 'string' ? parsed.dbCursor : null;
+    const offset =
+      typeof parsed.offset === 'number' && Number.isInteger(parsed.offset) && parsed.offset >= 0
+        ? parsed.offset
+        : 0;
+    return { dbCursor, offset };
+  } catch {
+    return { dbCursor: null, offset: 0 };
+  }
+};
+
+const matchVocabBookCategory = (
+  progress: Doc<'user_vocab_progress'>,
+  category: VocabBookCategory
+) => {
+  if (category === 'ALL') return true;
+  if (category === 'MASTERED') return progress.status === 'MASTERED';
+  if (category === 'UNLEARNED') return progress.status === 'NEW' || progress.state === 0;
+  const isMastered = progress.status === 'MASTERED';
+  const isUnlearned = progress.status === 'NEW' || progress.state === 0;
+  return !isMastered && !isUnlearned;
+};
 
 // Get Vocabulary Stats (Dashboard)
 // Get Vocabulary Stats (Dashboard)
@@ -1366,6 +1422,8 @@ export const getDueForReview = query({
           streak: progress.streak ?? 0,
           nextReviewAt: progress.nextReviewAt ?? null,
           lastReviewedAt: progress.lastReviewedAt ?? null,
+          difficulty: progress.difficulty,
+          lapses: progress.lapses,
         },
       };
     });
@@ -1373,6 +1431,163 @@ export const getDueForReview = query({
     return wordsWithProgress.filter((w): w is VocabReviewItemDto => w !== null);
   },
 });
+
+export const getReviewSummary = query({
+  args: {
+    savedByUserOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<VocabReviewSummaryDto> => {
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
+      if (!userId) {
+        return {
+          total: 0,
+          dueTotal: 0,
+          dueNow: 0,
+          unlearned: 0,
+          mastered: 0,
+          learning: 0,
+          recommendedToday: 0,
+        };
+      }
+
+      const now = Date.now();
+      let total = 0;
+      let mastered = 0;
+      let unlearned = 0;
+      let dueTotal = 0;
+      let dueNow = 0;
+      let cursor: string | null = null;
+
+      do {
+        const page = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .order('desc')
+          .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
+
+        for (const progress of page.page) {
+          if (args.savedByUserOnly && progress.savedByUser !== true) continue;
+
+          total += 1;
+          const isMastered = progress.status === 'MASTERED';
+          const isUnlearned = progress.status === 'NEW' || progress.state === 0;
+          const nextReviewAt = progress.nextReviewAt ?? progress.due ?? null;
+
+          if (isMastered) {
+            mastered += 1;
+            continue;
+          }
+
+          if (isUnlearned) {
+            unlearned += 1;
+          }
+
+          dueTotal += 1;
+          if (typeof nextReviewAt === 'number' && nextReviewAt <= now) {
+            dueNow += 1;
+          }
+        }
+
+        cursor = page.isDone ? null : page.continueCursor;
+      } while (cursor);
+
+      const recommendedToday =
+        total === 0
+          ? 0
+          : Math.max(
+              10,
+              Math.min(60, dueNow > 0 ? dueNow : Math.min(dueTotal > 0 ? dueTotal : total, 30))
+            );
+
+      return {
+        total,
+        dueTotal,
+        dueNow,
+        unlearned,
+        mastered,
+        learning: Math.max(0, dueTotal - unlearned),
+        recommendedToday,
+      };
+    } catch (err) {
+      console.error(`[vocab:getReviewSummary] failed: ${toErrorMessage(err)}`);
+      return {
+        total: 0,
+        dueTotal: 0,
+        dueNow: 0,
+        unlearned: 0,
+        mastered: 0,
+        learning: 0,
+        recommendedToday: 0,
+      };
+    }
+  },
+});
+
+const buildVocabBookItems = async (
+  ctx: QueryCtx,
+  selected: Array<{ progress: Doc<'user_vocab_progress'>; word: Doc<'words'> }>
+): Promise<VocabBookItemDto[]> => {
+  if (selected.length === 0) return [];
+
+  const MAX_APPEARANCE_LOOKUPS = 200;
+  const appearanceLookups = await Promise.all(
+    selected.slice(0, MAX_APPEARANCE_LOOKUPS).map(async ({ word }) => {
+      const app = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_word_createdAt', q => q.eq('wordId', word._id))
+        .order('desc')
+        .first();
+      return [word._id.toString(), app] as const;
+    })
+  );
+  const appearanceMap = new Map<string, Doc<'vocabulary_appearances'> | null>();
+  for (const [id, app] of appearanceLookups) appearanceMap.set(id, app ?? null);
+
+  return selected.map(({ progress, word }) => {
+    const app = appearanceMap.get(word._id.toString()) ?? null;
+    const meaning = app?.meaning || word.meaning;
+    const meaningEn = app?.meaningEn || word.meaningEn;
+    const meaningVi = app?.meaningVi || word.meaningVi;
+    const meaningMn = app?.meaningMn || word.meaningMn;
+
+    return {
+      id: word._id,
+      word: word.word,
+      meaning,
+      meaningEn,
+      meaningVi,
+      meaningMn,
+      partOfSpeech: word.partOfSpeech,
+      hanja: word.hanja,
+      pronunciation: word.pronunciation,
+      audioUrl: word.audioUrl,
+      exampleSentence: app?.exampleSentence,
+      exampleMeaning: app?.exampleMeaning,
+      exampleMeaningEn: app?.exampleMeaningEn,
+      exampleMeaningVi: app?.exampleMeaningVi,
+      exampleMeaningMn: app?.exampleMeaningMn,
+      progress: {
+        id: progress._id,
+        status: progress.status ?? 'LEARNING',
+        interval: progress.interval ?? progress.scheduled_days ?? 1,
+        streak: progress.streak ?? progress.reps ?? 0,
+        nextReviewAt: progress.nextReviewAt ?? progress.due ?? null,
+        lastReviewedAt: progress.lastReviewedAt ?? progress.last_review ?? null,
+        state: progress.state,
+        due: progress.due,
+        stability: progress.stability,
+        difficulty: progress.difficulty,
+        elapsed_days: progress.elapsed_days,
+        scheduled_days: progress.scheduled_days,
+        learning_steps: progress.learning_steps,
+        reps: progress.reps,
+        lapses: progress.lapses,
+        last_review: progress.last_review ?? null,
+      },
+    };
+  });
+};
 
 export const getVocabBook = query({
   args: {
@@ -1513,6 +1728,106 @@ export const getVocabBook = query({
     } catch (err) {
       console.error(`[vocab:getVocabBook] failed: ${toErrorMessage(err)}`);
       return [];
+    }
+  },
+});
+
+export const getVocabBookPage = query({
+  args: {
+    search: v.optional(v.string()),
+    includeMastered: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+    savedByUserOnly: v.optional(v.boolean()),
+    category: v.optional(
+      v.union(v.literal('ALL'), v.literal('UNLEARNED'), v.literal('DUE'), v.literal('MASTERED'))
+    ),
+    cursor: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<VocabBookPageDto> => {
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
+      if (!userId) {
+        return { items: [], nextCursor: null, hasMore: false };
+      }
+
+      const includeMastered = args.includeMastered ?? false;
+      const category: VocabBookCategory = args.category ?? 'ALL';
+      const searchQuery = args.search?.trim().toLowerCase() || '';
+      const hardCap = 120;
+      const pageSize =
+        args.limit && args.limit > 0 ? Math.min(args.limit, hardCap) : Math.min(60, hardCap);
+      const start = decodeVocabBookCursor(args.cursor);
+
+      let dbCursor = start.dbCursor;
+      let offset = start.offset;
+      let scanned = 0;
+      const MAX_PROGRESS_SCAN = 14000;
+      const selected: Array<{ progress: Doc<'user_vocab_progress'>; word: Doc<'words'> }> = [];
+
+      while (selected.length < pageSize && scanned < MAX_PROGRESS_SCAN) {
+        const currentDbCursor = dbCursor;
+        const page = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .order('desc')
+          .paginate({ numItems: SCAN_PAGE_SIZE, cursor: currentDbCursor });
+
+        scanned += page.page.length;
+        const pageSlice = offset > 0 ? page.page.slice(offset) : page.page;
+        offset = 0;
+
+        const progressPage = pageSlice.filter(progress => {
+          if (args.savedByUserOnly && progress.savedByUser !== true) return false;
+          if (!includeMastered && progress.status === 'MASTERED') return false;
+          return matchVocabBookCategory(progress, category);
+        });
+
+        if (progressPage.length > 0) {
+          const words = await Promise.all(
+            progressPage.map(progress => ctx.db.get(progress.wordId))
+          );
+          for (let index = 0; index < progressPage.length; index += 1) {
+            const progress = progressPage[index];
+            const word = words[index];
+            if (!word) continue;
+
+            if (searchQuery) {
+              const loweredWord = word.word.toLowerCase();
+              const loweredMeaning = (word.meaning || '').toLowerCase();
+              if (!loweredWord.includes(searchQuery) && !loweredMeaning.includes(searchQuery)) {
+                continue;
+              }
+            }
+
+            selected.push({ progress, word });
+
+            if (selected.length >= pageSize) {
+              const consumedOffset = page.page.indexOf(progress) + 1;
+              const nextCursor =
+                consumedOffset < page.page.length
+                  ? encodeVocabBookCursor({ dbCursor: currentDbCursor, offset: consumedOffset })
+                  : page.isDone
+                    ? null
+                    : encodeVocabBookCursor({ dbCursor: page.continueCursor, offset: 0 });
+              const items = await buildVocabBookItems(ctx, selected);
+              return { items, nextCursor, hasMore: Boolean(nextCursor) };
+            }
+          }
+        }
+
+        if (page.isDone) {
+          const items = await buildVocabBookItems(ctx, selected);
+          return { items, nextCursor: null, hasMore: false };
+        }
+
+        dbCursor = page.continueCursor;
+      }
+
+      const items = await buildVocabBookItems(ctx, selected);
+      return { items, nextCursor: null, hasMore: false };
+    } catch (err) {
+      console.error(`[vocab:getVocabBookPage] failed: ${toErrorMessage(err)}`);
+      return { items: [], nextCursor: null, hasMore: false };
     }
   },
 });
@@ -1787,7 +2102,9 @@ const normalizeMeaningValue = (raw: string, word?: string): string | null => {
         !looksLikeGrammarGloss(candidate) &&
         candidate.split(/\s+/).length >= 2
     ) ||
-    englishCandidates.find(candidate => !isGenericMeaning(candidate) && !looksLikeGrammarGloss(candidate)) ||
+    englishCandidates.find(
+      candidate => !isGenericMeaning(candidate) && !looksLikeGrammarGloss(candidate)
+    ) ||
     englishCandidates.find(candidate => !isGenericMeaning(candidate)) ||
     englishCandidates[0];
 
@@ -1811,7 +2128,10 @@ const normalizeMeaningValue = (raw: string, word?: string): string | null => {
     }
   }
 
-  if (normalizedCandidates.length > 1 && normalizedCandidates.every(candidate => !isEnglishGlossCandidate(candidate))) {
+  if (
+    normalizedCandidates.length > 1 &&
+    normalizedCandidates.every(candidate => !isEnglishGlossCandidate(candidate))
+  ) {
     // Multiple non-English candidates are usually extraction artifacts; skip these ambiguous rows.
     return null;
   }

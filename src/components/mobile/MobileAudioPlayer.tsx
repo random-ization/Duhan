@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { Slider } from '../ui';
 
@@ -16,6 +17,7 @@ export function MobileAudioPlayer({
   initialTime = 0,
   onPlaybackComplete,
 }: MobileAudioPlayerProps) {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(initialTime);
@@ -146,7 +148,9 @@ export function MobileAudioPlayer({
           className="w-12 h-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center active:bg-muted active:scale-95 transition-all"
         >
           <RotateCcw size={20} />
-          <span className="sr-only">Rewind 10s</span>
+          <span className="sr-only">
+            {t('mobileAudioPlayer.rewind10', { defaultValue: 'Rewind 10s' })}
+          </span>
         </Button>
 
         <Button
@@ -172,7 +176,9 @@ export function MobileAudioPlayer({
         >
           {/* Rotate icon flipped or just Forward icon */}
           <RotateCcw size={20} className="-scale-x-100" />
-          <span className="sr-only">Forward 10s</span>
+          <span className="sr-only">
+            {t('mobileAudioPlayer.forward10', { defaultValue: 'Forward 10s' })}
+          </span>
         </Button>
       </div>
     </div>

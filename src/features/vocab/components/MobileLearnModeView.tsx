@@ -130,6 +130,7 @@ const MobileInteractionArea: React.FC<{
   setSelectedAnswer: (value: string) => void;
   userInput: string;
   setUserInput: (value: string) => void;
+  labels: ReturnType<typeof getLabels>;
 }> = ({
   currentQuestionType,
   choices,
@@ -139,6 +140,7 @@ const MobileInteractionArea: React.FC<{
   setSelectedAnswer,
   userInput,
   setUserInput,
+  labels,
 }) => {
   if (isChoiceQuestionType(currentQuestionType)) {
     return (
@@ -178,7 +180,7 @@ const MobileInteractionArea: React.FC<{
         value={userInput}
         onChange={e => setUserInput(e.target.value)}
         className="h-16 text-xl rounded-xl border-2 border-border bg-card focus:border-indigo-500 font-bold text-center"
-        placeholder="Type answer..."
+        placeholder={labels.typeAnswer || 'Type your answer...'}
         disabled={showFeedback}
       />
     </div>
@@ -395,6 +397,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
             setSelectedAnswer={setSelectedAnswer}
             userInput={userInput}
             setUserInput={setUserInput}
+            labels={labels}
           />
         </div>
       </div>
@@ -425,7 +428,7 @@ export const MobileLearnModeView: React.FC<MobileLearnModeViewProps> = ({
         <div className="pb-8">
           <div className="p-4 rounded-xl bg-red-50 border border-red-100 mb-4">
             <p className="text-sm font-bold text-red-400 uppercase tracking-wider mb-1">
-              Correct Answer
+              {labels.correctAnswer || 'Correct Answer'}
             </p>
             <p className="text-xl font-black text-red-700">{correctAnswer}</p>
           </div>

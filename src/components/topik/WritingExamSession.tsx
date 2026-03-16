@@ -19,6 +19,7 @@ import { AlertTriangle, CheckCircle2, Clock, LogOut, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import WongojiEditor from './WongojiEditor';
+import { Button, Input, Textarea } from '../ui';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 
@@ -147,8 +148,10 @@ interface QuestionTabProps {
 }
 
 const QuestionTab: React.FC<QuestionTabProps> = ({ number, isActive, hasContent, onClick }) => (
-  <button
+  <Button
     type="button"
+    variant="ghost"
+    size="auto"
     onClick={onClick}
     className={cn(
       'relative flex items-center justify-center w-12 h-12 rounded-xl font-black text-sm border-2 transition-all',
@@ -166,7 +169,7 @@ const QuestionTab: React.FC<QuestionTabProps> = ({ number, isActive, hasContent,
         className="absolute -top-1 -right-1 text-emerald-500 fill-emerald-500"
       />
     )}
-  </button>
+  </Button>
 );
 
 // ─── FillBlankTextarea ────────────────────────────────────────────────────────
@@ -182,7 +185,7 @@ const FillBlankTextarea: React.FC<FillBlankProps> = ({ value, onChange, maxLengt
   const remaining = maxLength - value.length;
   return (
     <div className="flex flex-col gap-2 h-full">
-      <textarea
+      <Textarea
         value={value}
         onChange={e => onChange(e.target.value.slice(0, maxLength))}
         className={cn(
@@ -252,7 +255,7 @@ const DualFillBlankInputs: React.FC<DualFillBlankProps> = ({ value, onChange, ma
             <span className="inline-flex items-center justify-center h-9 min-w-9 px-2 rounded-full border-2 border-zinc-900 text-sm font-black text-zinc-900 bg-white">
               ㉠
             </span>
-            <input
+            <Input
               value={parsed.slotA}
               onChange={e =>
                 onChange(
@@ -279,7 +282,7 @@ const DualFillBlankInputs: React.FC<DualFillBlankProps> = ({ value, onChange, ma
             <span className="inline-flex items-center justify-center h-9 min-w-9 px-2 rounded-full border-2 border-zinc-900 text-sm font-black text-zinc-900 bg-white">
               ㉡
             </span>
-            <input
+            <Input
               value={parsed.slotB}
               onChange={e =>
                 onChange(
@@ -388,7 +391,7 @@ const QuestionPrompt: React.FC<QuestionPromptProps> = ({
         <div className="rounded-2xl border-2 border-border bg-card p-3 shadow-sm">
           <img
             src={question.image}
-            alt={`Question ${question.number}`}
+            alt={String(question.number)}
             className="w-full rounded-xl border border-border object-contain max-h-[460px] bg-background"
           />
         </div>
@@ -448,65 +451,127 @@ const SessionHeader: React.FC<{
   onRequestExit,
   onRequestSubmit,
 }) => (
-  <header className="flex items-center justify-between px-6 py-3 border-b-2 border-border bg-card shrink-0 gap-4">
-    <div className="flex items-center gap-3">
-      <div className="font-black text-foreground text-base">
-        {t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+  <header className="border-b-2 border-border bg-card shrink-0">
+    <div className="hidden md:flex items-center justify-between px-6 py-3 gap-4">
+      <div className="flex items-center gap-3">
+        <div className="font-black text-foreground text-base">
+          {t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+        </div>
+        <div className="text-xs text-muted-foreground font-bold bg-muted px-2 py-1 rounded-md">
+          {answeredCount}/{questions.length} · {totalScore}{' '}
+          {t('topikWriting.session.points', { defaultValue: 'pts' })}
+        </div>
       </div>
-      <div className="text-xs text-muted-foreground font-bold bg-muted px-2 py-1 rounded-md">
-        {answeredCount}/{questions.length} · {totalScore}{' '}
-        {t('topikWriting.session.points', { defaultValue: 'pts' })}
+
+      <div className="flex items-center gap-2">
+        {questions.map(question => (
+          <QuestionTab
+            key={question.number}
+            number={question.number}
+            isActive={question.number === activeQuestion}
+            hasContent={hasMeaningfulContent(question.number, localAnswers[question.number] ?? '')}
+            onClick={() => onSelectQuestion(question.number)}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className={cn('text-[11px] font-bold transition-all', getSaveStatusClass(saveStatus))}>
+          {getSaveStatusText(saveStatus, t)}
+        </div>
+
+        <Timer remainingMs={remainingMs} />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onRequestExit}
+          disabled={isSubmitting || isExiting}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
+            'bg-card text-muted-foreground border-border',
+            'hover:bg-muted active:scale-95',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          <LogOut size={14} />
+          {t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onRequestSubmit}
+          disabled={isSubmitting || isExiting}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
+            'bg-primary text-primary-foreground border-primary',
+            'hover:opacity-90 active:scale-95',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          <Send size={14} />
+          {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
+        </Button>
       </div>
     </div>
 
-    <div className="flex items-center gap-2">
-      {questions.map(question => (
-        <QuestionTab
-          key={question.number}
-          number={question.number}
-          isActive={question.number === activeQuestion}
-          hasContent={hasMeaningfulContent(question.number, localAnswers[question.number] ?? '')}
-          onClick={() => onSelectQuestion(question.number)}
-        />
-      ))}
-    </div>
+    <div className="md:hidden px-4 py-3 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-black text-foreground text-sm truncate">
+            {t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+          </div>
+          <div className="text-[11px] text-muted-foreground font-bold">
+            {answeredCount}/{questions.length} · {totalScore}{' '}
+            {t('topikWriting.session.points', { defaultValue: 'pts' })}
+          </div>
+        </div>
+        <Timer remainingMs={remainingMs} />
+      </div>
 
-    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {questions.map(question => (
+          <QuestionTab
+            key={question.number}
+            number={question.number}
+            isActive={question.number === activeQuestion}
+            hasContent={hasMeaningfulContent(question.number, localAnswers[question.number] ?? '')}
+            onClick={() => onSelectQuestion(question.number)}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onRequestExit}
+          disabled={isSubmitting || isExiting}
+          className="flex-1 h-10 rounded-xl border-2 border-border text-sm font-black text-muted-foreground"
+        >
+          <LogOut size={14} className="mr-1" />
+          {t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={onRequestSubmit}
+          disabled={isSubmitting || isExiting}
+          className="flex-1 h-10 rounded-xl border-2 border-primary bg-primary text-primary-foreground text-sm font-black"
+        >
+          <Send size={14} className="mr-1" />
+          {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
+        </Button>
+      </div>
+
       <div className={cn('text-[11px] font-bold transition-all', getSaveStatusClass(saveStatus))}>
         {getSaveStatusText(saveStatus, t)}
       </div>
-
-      <Timer remainingMs={remainingMs} />
-
-      <button
-        type="button"
-        onClick={onRequestExit}
-        disabled={isSubmitting || isExiting}
-        className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
-          'bg-card text-muted-foreground border-border',
-          'hover:bg-muted active:scale-95',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
-      >
-        <LogOut size={14} />
-        {t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
-      </button>
-
-      <button
-        type="button"
-        onClick={onRequestSubmit}
-        disabled={isSubmitting || isExiting}
-        className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm border-2 transition-all',
-          'bg-primary text-primary-foreground border-primary',
-          'hover:opacity-90 active:scale-95',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
-      >
-        <Send size={14} />
-        {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
-      </button>
     </div>
   </header>
 );
@@ -541,15 +606,19 @@ const SubmitConfirmDialog: React.FC<{
           </div>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
           >
             {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onConfirm}
             disabled={isSubmitting || isExiting}
             className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-sm hover:opacity-90 transition disabled:opacity-50"
@@ -557,7 +626,7 @@ const SubmitConfirmDialog: React.FC<{
             {isSubmitting
               ? t('topikWriting.session.submitting', { defaultValue: 'Submitting...' })
               : t('topikWriting.session.confirmSubmit', { defaultValue: 'Confirm Submit' })}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -591,15 +660,19 @@ const ExitConfirmDialog: React.FC<{
           </div>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
           >
             {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="auto"
             onClick={onConfirm}
             disabled={isSubmitting || isExiting}
             className="flex-1 py-2.5 rounded-xl bg-card border-2 border-border text-foreground font-black text-sm hover:bg-muted transition disabled:opacity-50"
@@ -607,7 +680,7 @@ const ExitConfirmDialog: React.FC<{
             {isExiting
               ? t('topikWriting.session.exiting', { defaultValue: 'Exiting...' })
               : t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -894,7 +967,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background font-sans">
+    <div className="flex flex-col h-screen h-[100dvh] bg-background font-sans">
       <SessionHeader
         t={t}
         questions={questions}

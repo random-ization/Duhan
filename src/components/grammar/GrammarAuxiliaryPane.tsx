@@ -106,7 +106,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
         <div className="p-5 flex-1 flex flex-col gap-4">
           <div>
             <p className="text-[10px] font-black text-indigo-100 uppercase mb-2">
-              Sentence Practice with:
+              {t('grammarModule.sentencePracticeWith', 'Sentence practice with:')}
             </p>
             <div className="bg-slate-900/40 text-white px-3 py-2 rounded-lg font-bold border border-white/20 inline-block text-sm">
               {grammar.title}

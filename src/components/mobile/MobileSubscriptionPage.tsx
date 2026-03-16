@@ -8,6 +8,7 @@ import { runConvexActionWithRetry } from '../../utils/convexActionRetry';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
+import { buildPricingDetailsPath } from '../../utils/subscriptionPlan';
 import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { Button } from '../ui';
 
@@ -85,7 +86,7 @@ export const MobileSubscriptionPage: React.FC = () => {
 
   const handleSubscribe = async () => {
     if (!user) {
-      navigate('/auth?redirect=%2Fsubscription');
+      navigate(`/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(billingInterval))}`);
       return;
     }
 
@@ -97,6 +98,7 @@ export const MobileSubscriptionPage: React.FC = () => {
           plan: billingInterval,
           userId: user.id?.toString() || '',
           userEmail: user.email || '',
+          userName: user.name || '',
           region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
         },
         { retries: 1, initialDelayMs: 250 }
@@ -138,9 +140,11 @@ export const MobileSubscriptionPage: React.FC = () => {
             {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
           </span>
           <h1 className="text-3xl font-black text-foreground leading-tight mb-2">
-            <Trans i18nKey="coursesOverview.unlockTitle">
-              Unlock <span className="text-indigo-600">DuHan Premium</span>
-            </Trans>
+            <Trans
+              i18nKey="coursesOverview.unlockTitle"
+              defaults="Unlock <premium>DuHan Premium</premium>"
+              components={{ premium: <span className="text-indigo-600" /> }}
+            />
           </h1>
           <p className="text-muted-foreground font-medium text-sm leading-relaxed max-w-xs mx-auto">
             {t('coursesOverview.achieveGoal')}
@@ -289,7 +293,7 @@ export const MobileSubscriptionPage: React.FC = () => {
       </main>
 
       {/* 3. Sticky Pricing */}
-      <div className="fixed bottom-0 w-full bg-card border-t border-border p-4 pb-8 z-50 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+      <div className="fixed bottom-0 w-full bg-card border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] z-50 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
         <div className="flex bg-muted p-1 rounded-xl mb-4">
           <Button
             variant="ghost"

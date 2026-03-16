@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { disassemble } from 'es-hangul';
+import { useTranslation } from 'react-i18next';
 import { KeyboardHints } from './KeyboardHints';
 import { HiddenInput } from './HiddenInput';
 import { Button } from '../../../components/ui';
@@ -34,6 +35,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
   onStatsUpdate,
   onBack,
 }) => {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null!);
 
   // Current word index
@@ -301,7 +303,11 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
   }, []);
 
   if (!currentWord) {
-    return <div className="text-muted-foreground">No words available</div>;
+    return (
+      <div className="text-muted-foreground">
+        {t('typing.wordPractice.noWordsAvailable', { defaultValue: 'No words available' })}
+      </div>
+    );
   }
 
   return (
@@ -315,7 +321,7 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
         {/* 1. The Prompt Card (Compact & Blue) */}
         <div className="flex flex-col items-center relative z-20 mb-12">
           <div className="text-[10px] font-bold text-blue-500 tracking-[0.25em] mb-4 uppercase">
-            Word to Type
+            {t('typing.wordPractice.wordToType', { defaultValue: 'Word to Type' })}
           </div>
 
           <div className="word-prompt-card px-16 py-8 rounded-[2rem] flex flex-col items-center justify-center text-muted-foreground relative min-w-[300px]">
@@ -325,7 +331,10 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
             </div>
             {/* Meaning */}
             <div className="text-muted-foreground font-bold text-sm">
-              {currentWord.meaning || '...'}
+              {currentWord.meaning ||
+                t('typing.wordPractice.noMeaning', {
+                  defaultValue: 'No meaning',
+                })}
             </div>
           </div>
         </div>
@@ -432,7 +441,10 @@ export const WordPractice: React.FC<WordPracticeProps> = ({
                 onClick={onBack}
                 className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors"
               >
-                ← <span className="flex items-center gap-1.5">📝 낱말연습</span>
+                ←{' '}
+                <span className="flex items-center gap-1.5">
+                  📝 {t('typing.wordPractice.wordDrillLabel', { defaultValue: 'Word practice' })}
+                </span>
               </Button>
             </div>
             <div className="flex gap-1.5">

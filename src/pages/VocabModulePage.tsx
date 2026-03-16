@@ -880,7 +880,8 @@ export default function VocabModulePage() {
           {labels.sessionComplete || 'Session Complete!'}
         </h2>
         <p className="text-muted-foreground mb-2">
-          {filteredWords.length} {labels.wordsUnit || 'words'} reviewed
+          {filteredWords.length} {labels.wordsUnit || 'words'}{' '}
+          {labels.vocab?.reviewed || 'reviewed'}
         </p>
         <div className="flex gap-2 mb-8">
           <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-400/14 dark:text-green-200 rounded-full text-sm font-bold">

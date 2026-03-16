@@ -120,7 +120,7 @@ const EmptyGrammarState: React.FC<{ t: TranslateFn }> = ({ t }) => (
     <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-slate-900 dark:border-border shadow-[8px_8px_0px_0px_#0f172a] dark:shadow-[8px_8px_0px_0px_rgba(148,163,184,0.26)] p-10 mt-2 mb-10 flex flex-col items-center justify-center min-h-[50vh] opacity-50">
       <Sparkles className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
       <h2 className="text-xl font-bold text-muted-foreground">
-        {t('grammarModule.selectPrompt', 'Select a grammar point to view details')}
+        {t('grammarDetail.selectPrompt', 'Select a grammar point to view details')}
       </h2>
     </div>
   </main>
@@ -314,7 +314,7 @@ const GrammarQuizSection: React.FC<{
               {answer ? (
                 <div className="flex items-start gap-3 pl-2 border-l-4 border-emerald-400 dark:border-emerald-600 ml-4 pt-2">
                   <span className="font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded text-xs select-none">
-                    Ans.
+                    {t('grammarDetail.answerShort', 'Ans.')}
                   </span>
                   <div className="flex-1 text-emerald-800 dark:text-emerald-300 font-medium text-sm">
                     <MarkdownRenderer content={answer} />

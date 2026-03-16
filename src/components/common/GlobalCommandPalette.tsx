@@ -222,7 +222,7 @@ export function GlobalCommandPalette() {
             <div className="max-h-[420px] overflow-y-auto p-2">
               {filteredItems.length === 0 ? (
                 <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-                  {t('common.noResults', { defaultValue: 'No matches' })}
+                  {t('common.noMatches', { defaultValue: 'No matches' })}
                 </div>
               ) : (
                 filteredItems.map(item => {

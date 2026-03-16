@@ -42,12 +42,6 @@ type LandingFaqItem = { question: string; answer: string };
 type LandingSeoLanguage = 'en' | 'zh' | 'vi' | 'mn';
 
 const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
-const LANDING_LIST_NAMES: Record<LandingSeoLanguage, string> = {
-  en: 'Featured Korean Learning Guides',
-  zh: '精选韩语学习指南',
-  vi: 'Hướng dẫn học tiếng Hàn nổi bật',
-  mn: 'Онцлох солонгос сурах гарын авлага',
-};
 
 function normalizeLandingSeoLanguage(language: string): LandingSeoLanguage {
   return LANDING_SEO_LANGUAGES.has(language as LandingSeoLanguage)
@@ -129,12 +123,14 @@ const LandingJsonLd = ({
   faqItems,
   language,
   canonicalUrl,
+  featuredGuidesListName,
 }: {
   description: string;
   prices: VariantPrices | null;
   faqItems: LandingFaqItem[];
   language: LandingSeoLanguage;
   canonicalUrl: string;
+  featuredGuidesListName: string;
 }) => {
   const featuredGuides = getFeaturedGuidesForJsonLd(language);
 
@@ -221,7 +217,7 @@ const LandingJsonLd = ({
             },
             {
               '@type': 'ItemList',
-              name: LANDING_LIST_NAMES[language],
+              name: featuredGuidesListName,
               itemListElement: featuredGuides.map((guide, index) => ({
                 '@type': 'ListItem',
                 position: index + 1,
@@ -1892,6 +1888,9 @@ export default function Landing() {
   const localizedSeoTitle = t('landing.seo.title', { defaultValue: meta.title });
   const localizedSeoDescription = t('landing.seo.description', { defaultValue: meta.description });
   const localizedSeoKeywords = t('landing.seo.keywords', { defaultValue: meta.keywords || '' });
+  const featuredGuidesListName = t('landing.seo.featuredGuidesListName', {
+    defaultValue: 'Featured Korean Learning Guides',
+  });
   const normalizedLanguage = normalizeLandingSeoLanguage(
     ((i18n.language || 'en').split('-')[0] || 'en').toLowerCase()
   );
@@ -1925,6 +1924,7 @@ export default function Landing() {
         faqItems={faqItems}
         language={normalizedLanguage}
         canonicalUrl={canonicalUrl}
+        featuredGuidesListName={featuredGuidesListName}
       />
       <LandingNav
         isScrolled={isScrolled}

@@ -160,7 +160,7 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                       if (onHighlight) onHighlight(null);
                       setShowColorPicker(false);
                     }}
-                    aria-label="None"
+                    aria-label={t('annotationMenu.none', { defaultValue: 'None' })}
                     className={`w-6 h-6 rounded-full border border-border bg-card transition-all ${
                       selectedColor === null
                         ? 'ring-2 ring-slate-400 ring-offset-1'
@@ -169,7 +169,9 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
                   />
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent side="top">None</TooltipContent>
+                  <TooltipContent side="top">
+                    {t('annotationMenu.none', { defaultValue: 'None' })}
+                  </TooltipContent>
                 </TooltipPortal>
               </Tooltip>
               {COLORS.map(color => (
@@ -212,7 +214,9 @@ const AnnotationMenu: React.FC<AnnotationMenuProps> = ({
               onClick={handleSaveToVocab}
               disabled={vocabSaving || vocabSaved}
               loading={vocabSaving}
-              loadingText={labels.saving || t('annotationMenu.saving', { defaultValue: 'Saving...' })}
+              loadingText={
+                labels.saving || t('annotationMenu.saving', { defaultValue: 'Saving...' })
+              }
               className={getSaveBtnClass()}
             >
               {getSaveBtnContent()}

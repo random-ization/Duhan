@@ -125,6 +125,10 @@
 }
 
 @layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
   .dark .shadow-pop {
     box-shadow: 4px 4px 0px 0px hsl(var(--border));
   }
@@ -149,7 +153,7 @@
 
   /* Neobrutalism Dotted Background */
   .dotted-bg {
-    background-image: radial-gradient(#CBD5E1 1.5px, transparent 1.5px);
+    background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
     background-size: 24px 24px;
   }
   .dark .dotted-bg {

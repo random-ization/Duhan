@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileCourseDashboard } from '../components/mobile/MobileCourseDashboard';
@@ -8,6 +8,7 @@ import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
+import { useLearningSelection } from '../contexts/LearningContext';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { logger } from '../utils/logger';
 import { getCourseCoverTransitionName } from '../utils/viewTransitions';
@@ -484,8 +485,11 @@ export default function CourseDashboard() {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const { user, language } = useAuth();
+  const { selectedInstitute } = useLearningSelection();
   const { resolvedTheme } = useTheme();
   const convex = useConvex();
+
+  const activeCourseId = instituteId || selectedInstitute || user?.lastInstitute || null;
 
   const institutes = useQuery(qRef<NoArgs, Institute[]>('institutes:getAll'));
 
@@ -565,6 +569,13 @@ export default function CourseDashboard() {
     courseProgress: courseProgress ?? null,
     totalUnits,
   });
+
+  if (!instituteId) {
+    if (activeCourseId) {
+      return <Navigate to={`/course/${activeCourseId}`} replace />;
+    }
+    return <Navigate to="/courses" replace />;
+  }
 
   if (isMobile && instituteId) {
     return (

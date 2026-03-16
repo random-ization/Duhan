@@ -12,6 +12,7 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
+import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
 
 const DesktopSubscriptionPage: React.FC = () => {
   const { user } = useAuth();
@@ -60,9 +61,13 @@ const DesktopSubscriptionPage: React.FC = () => {
             {t('coursesOverview.navTitle')}
           </span>
           <h2 className="text-4xl md:text-5xl font-extrabold text-foreground dark:text-white tracking-tight mb-6">
-            <Trans i18nKey="coursesOverview.unlockTitle">
-              Unlock <span className="text-indigo-600 dark:text-indigo-300">DuHan Premium</span>
-            </Trans>
+            <Trans
+              i18nKey="coursesOverview.unlockTitle"
+              defaults="Unlock <premium>DuHan Premium</premium>"
+              components={{
+                premium: <span className="text-indigo-600 dark:text-indigo-300" />,
+              }}
+            />
           </h2>
           <p className="text-xl text-muted-foreground dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {t('coursesOverview.achieveGoal')}
@@ -87,12 +92,13 @@ const DesktopSubscriptionPage: React.FC = () => {
               {t('coursesOverview.feature1Title')}
             </h3>
             <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-              <Trans i18nKey="coursesOverview.feature1Desc">
-                <span className="font-bold text-indigo-600 dark:text-indigo-300">
-                  Premium Members
-                </span>{' '}
-                unlock full digital textbooks...
-              </Trans>
+              <Trans
+                i18nKey="coursesOverview.feature1Desc"
+                defaults="<strong>Premium Members</strong> unlock full digital textbooks..."
+                components={{
+                  strong: <span className="font-bold text-indigo-600 dark:text-indigo-300" />,
+                }}
+              />
             </p>
             <ul className="space-y-3">
               {[
@@ -185,9 +191,11 @@ const DesktopSubscriptionPage: React.FC = () => {
               {t('coursesOverview.feature3Title')}
             </h3>
             <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-              <Trans i18nKey="coursesOverview.feature3Desc">
-                Stuck on a sentence? <span className="font-bold">AI Analysis</span>...
-              </Trans>
+              <Trans
+                i18nKey="coursesOverview.feature3Desc"
+                defaults="Stuck on a sentence? <strong>AI Analysis</strong>..."
+                components={{ strong: <span className="font-bold" /> }}
+              />
             </p>
             <div className="bg-muted dark:bg-muted/50 p-4 rounded-xl border border-border dark:border-border">
               <div className="flex justify-between items-center mb-2">
@@ -224,7 +232,7 @@ const DesktopSubscriptionPage: React.FC = () => {
                     {t('free')}
                   </th>
                   <th className="p-4 text-center text-indigo-600 dark:text-indigo-300 font-bold w-1/3 bg-indigo-50/30 dark:bg-indigo-900/10">
-                    Premium
+                    {t('dashboard.premiumBadge', { defaultValue: 'Premium' })}
                   </th>
                 </tr>
               </thead>
@@ -277,11 +285,19 @@ const DesktopSubscriptionPage: React.FC = () => {
         {/* --- 3. Pricing Section --- */}
         <PricingSection
           onSubscribe={async plan => {
+            const checkoutPlan = plan as CheckoutPlan;
+            if (!user) {
+              navigate(
+                `/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(checkoutPlan))}`
+              );
+              return;
+            }
             try {
               const { checkoutUrl } = await createCheckoutSession({
-                plan: plan as 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME',
-                userId: user?.id?.toString() || '',
-                userEmail: user?.email || '',
+                plan: checkoutPlan,
+                userId: user.id?.toString() || '',
+                userEmail: user.email || '',
+                userName: user.name || '',
                 region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
               });
               globalThis.location.href = checkoutUrl;

@@ -602,7 +602,9 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
           <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
           {grammarMatches && grammarMatches.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-bold text-foreground mb-1">Grammar</div>
+              <div className="text-xs font-bold text-foreground mb-1">
+                {labels.grammar || 'Grammar'}
+              </div>
               <div className="space-y-1">
                 {grammarMatches.slice(0, 5).map(g => (
                   <div key={g.id} className="text-xs text-muted-foreground">

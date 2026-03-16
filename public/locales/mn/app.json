@@ -34,6 +34,7 @@
   "days": "өдөр",
   "hours": "цаг",
   "joinedDate": "Нэгдсэн",
+  "lastUpdated": "Сүүлд шинэчилсэн:",
   "selectInstitute": "Сурах бичиг сонгох",
   "selectLevel": "Түвшин сонгох",
   "backInst": "Буцах",
@@ -63,6 +64,8 @@
     "exporting": "Экспортолж байна...",
     "signInToExport": "Экспорт хийхийн тулд нэвтэрнэ үү",
     "exportFailed": "Экспорт амжилтгүй. Дахин оролдоно уу.",
+    "expandMeaning": "Утга дэлгэх",
+    "collapseMeaning": "Утга хураах",
     "markMastered": "Эзэмшсэнээр тэмдэглэх",
     "unmarkMastered": "Эзэмшсэнийг цуцлах",
     "exportModes": {
@@ -268,11 +271,17 @@
   "quickLinks": "Шуурхай холбоосууд",
   "footerDescription": "Таны иж бүрэн Солонгос хэлний сургалтын платформ",
   "allRightsReserved": "Бүх эрх хуулиар хамгаалагдсан.",
+  "footer": {
+    "joinDiscord": "Discord-д нэгдэх",
+    "copyright": "© 2026 DuHan Inc. Бүх эрх хуулиар хамгаалагдсан."
+  },
   "preview": "Урьдчилан харах",
   "markdownTip": "Форматын зөвлөмж: # гарчигт (# H1, ## H2, ### H3), - эсвэл * жагсаалтад, 1. дугаарлагдсан жагсаалтад, хоосон мөр догол мөрт",
   "enterTitle": "Баримтын гарчиг оруулах",
   "enterContent": "Баримтын агуулга оруулах...",
   "coursesOverview": {
+    "pageTitle": "Сурах бичиг",
+    "subtitle": "Сурах бичгүүдээ үзэх",
     "backToHome": "Нүүр хуудас руу буцах",
     "navTitle": "Premium эрх & боломжууд",
     "activatePremium": "Premium эрх нээх",
@@ -326,12 +335,19 @@
     "levelTag": "{{level}}-р түвшин",
     "unitsCount": "{{count}} нэгж",
     "units": "нэгж",
+    "publishers": {
+      "oer": "Нээлттэй боловсролын эх сурвалж",
+      "yonsei": "Ёнсэ их сургууль",
+      "seoulNational": "Сөүлийн үндэсний их сургууль",
+      "chungAng": "Чүнган их сургууль"
+    },
     "otherPublisher": "Бусад",
     "viewAll": "Бүгдийг үзэх"
   },
   "courseDashboard": {
     "defaultCourseName": "Солонгос хэл 1A",
     "defaultDisplayLevel": "Ном 1",
+    "defaultPublisher": "Хэвлэн нийтлэгч",
     "backToShelf": "Номын сан руу буцах",
     "courseMeta": "{{level}} · 1-{{totalUnits}}-р хичээл",
     "recentUnit": "Сүүлд үзсэн: {{unit}}-р нэгж",
@@ -360,6 +376,7 @@
     }
   },
   "module": {
+    "title": "Модуль",
     "unitTitle": "{{unit}}-р нэгж",
     "listeningUnitTitle": "{{unit}}-р нэгж · Сонсох"
   },
@@ -466,6 +483,9 @@
       "quote": "Бүү бууж өг! Дахиад 5 минут!",
       "action": "Шалгалт эхлэх"
     },
+    "alt": {
+      "tigerCoach": "Бар багш"
+    },
     "daily": {
       "label": "Өдрийн хэллэг",
       "quote": "Сайн эхлэл бол ажлын хагас",
@@ -523,6 +543,7 @@
         "nextExamNameFallback": "TOPIK II",
         "typeReadingShort": "УНШ",
         "typeListeningShort": "СОНС",
+        "typeWritingShort": "БИЧ",
         "minuteShort": "{{minutes}}м",
         "questionCountShort": "{{count}}А",
         "bestScore": "{{score}}%",
@@ -550,7 +571,17 @@
           "listeningAudio": "Сонсголын аудио",
           "audioLoadFailed": "Аудио файл ачаалж чадсангүй",
           "finish": "Дуусгах",
-          "next": "Дараах"
+          "next": "Дараах",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "{{round}}-р удаагийн Солонгос хэлний түвшин тогтоох шалгалт",
+          "scrollDownStart": "[Доош гүйлгээд эхлүүлнэ үү]",
+          "periodReading": "2-р цаг",
+          "periodListening": "1-р цаг",
+          "sectionReading": "Унших",
+          "sectionListening": "Сонсох",
+          "pageHeader": "TOPIK II {{round}}-р шалгалт {{paperType}} хувилбар · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (1-р асуулт ~ {{count}}-р асуулт)",
+          "endOfSection": "Хэсэг дууслаа"
         },
         "review": {
           "mode": "Давтлагын горим",
@@ -575,6 +606,7 @@
           "aiThinking": "Бодож байна...",
           "aiTitle": "AI шинжилгээ",
           "save": "Хадгалах",
+          "saving": "Хадгалж байна...",
           "saved": "Хадгалсан",
           "translation": "Орчуулга",
           "keyPoint": "Гол санаа",
@@ -582,7 +614,16 @@
           "next": "Дараах",
           "saveFailed": "Хадгалж чадсангүй, дахин оролдоно уу.",
           "saveFailedShort": "Хадгалж чадсангүй",
-          "savedToast": "Тэмдэглэлд хадгаллаа"
+          "savedToast": "Тэмдэглэлд хадгаллаа",
+          "titleKor": "한 국 어 능 력 시 험",
+          "titleEn": "{{round}}-р удаагийн Солонгос хэлний түвшин тогтоох шалгалт",
+          "scrollDownReview": "[Доош гүйлгээд тайлбар үзнэ үү]",
+          "periodReading": "2-р цаг",
+          "periodListening": "1-р цаг",
+          "sectionReading": "Унших",
+          "sectionListening": "Сонсох",
+          "pageHeader": "TOPIK II {{round}}-р шалгалт {{paperType}} хувилбар · {{period}} ({{section}})",
+          "range": "TOPIK II {{section}} (1-р асуулт ~ {{count}}-р асуулт)"
         }
       },
       "totalAttempts": "Оролдлогууд",
@@ -648,6 +689,7 @@
       "preparing": "Агуулга бэлтгэгдэж байна...",
       "views": "{count} үзсэн",
       "notFound": "Видео олдсонгүй",
+      "loadingPlayer": "Тоглуулагч ачаалж байна...",
       "error": "Алдаа гарлаа",
       "back": "Буцах",
       "subtitleList": "Хадмал жагсаалт",
@@ -866,10 +908,16 @@
     "title": "Бичих Дасгал",
     "nextSentence": "Дараагийн өгүүлбэр",
     "focusInput": "Бичих хэсэг",
+    "switchImeWarning": "Англи оролт илэрлээ. Солонгос IME руу шилжинэ үү.",
     "wpm": "Хурд (WPM)",
     "acc": "Нарийвчлал"
   },
   "sidebar": {
+    "expand": "Хажуу цэсийг дэлгэх",
+    "collapse": "Хажуу цэсийг хураах",
+    "navigation": "Хажуу цэсний навигаци",
+    "learn": "Сурах",
+    "practice": "Дасгал",
     "dashboard": "Нүүр хуудас",
     "textbooks": "Сурах бичиг",
     "topik": "TOPIK шалгалт",
@@ -966,14 +1014,25 @@
     }
   },
   "annotationMenu": {
+    "none": "Байхгүй",
     "saveToVocab": "Үгийн санд хадгалах",
-    "saving": "Хадгалж байна..."
+    "saving": "Хадгалж байна...",
+    "pen": "Үзэг",
+    "highlight": "Тодруулагч",
+    "eraser": "Арилгагч",
+    "undo": "Буцаах",
+    "clear": "Цэвэрлэх",
+    "save": "Хадгалах"
   },
   "audioPlayer": {
     "restart": "Дахин тоглуулах",
     "changeSpeed": "Хурд өөрчлөх",
     "mute": "Дуугүй",
     "unmute": "Дууг нээх"
+  },
+  "mobileAudioPlayer": {
+    "rewind10": "10 секунд ухраах",
+    "forward10": "10 секунд урагшлуулах"
   },
   "grammarCard": {
     "type": {
@@ -986,10 +1045,77 @@
     "allPoints": "Бүх дүрмийн цэг",
     "empty": "Энэ нэгжид дүрмийн цэг алга"
   },
+  "mobileDictionarySheet": {
+    "dictionaryForm": "Толь бичгийн үндсэн хэлбэр",
+    "definition": "Тайлбар",
+    "relatedGrammar": "Холбоотой дүрэм",
+    "saveToNotebook": "Тэмдэглэлд хадгалах"
+  },
+  "mobileListeningModule": {
+    "listening": "Сонсгол",
+    "noTranscript": "Хадмал байхгүй"
+  },
+  "mobileQuestionNav": {
+    "title": "Асуултын навигац",
+    "current": "Одоогийн",
+    "answered": "Хариулсан",
+    "todo": "Хийх"
+  },
+  "mobileSpeakingModule": {
+    "title": "Ярих дасгал",
+    "listenToReference": "Жишээ аудио сонсох",
+    "tapMicToRecord": "Микрофон дарж бичнэ үү",
+    "tapToStop": "Зогсоохын тулд дарна уу",
+    "recorded": "Бичлэг хийгдсэн",
+    "tapToRecord": "Бичихийн тулд дарна уу"
+  },
   "grammarModule": {
     "title": "Дүрмийн дасгал",
+    "directoryTitle": "Дүрмийн дасгалын дэвтэр",
+    "selectGrammarHint": "Эхлэхийн тулд дүрмийн нэг цэг сонгоно уу",
+    "proficiency": "СУРАЛЦАХ ЯВЦ",
+    "status": "Чадвар",
+    "markMastery": "Сурснаар тэмдэглэх",
+    "unmarkMastery": "Эзэмшсэн",
     "searchPlaceholder": "Дүрмийн цэг хайх...",
-    "unitLabel": "{{count}}-р нэгж"
+    "unitLabel": "{{count}}-р нэгж",
+    "aiPlaceholder": "Энд өгүүлбэрээ бичээд AI-аар шалгуулаарай...",
+    "sentencePracticeWith": "Дараах дүрмээр өгүүлбэр зохио:",
+    "checkNow": "Одоо шалгах",
+    "units": {
+      "unit1": "Таамаглал ба дүгнэлт",
+      "unit2": "Харьцуулалт ба шилжилт",
+      "unit3": "Шалтгаан ба учир",
+      "unit4": "Зорилго ба санаа",
+      "unit5": "Явц ба дуусгалт",
+      "unit6": "Төлөв ба үргэлжлэл",
+      "unit7": "Хэмжээ ба хязгаар",
+      "unit8": "Таамаг ба таамнал",
+      "unit9": "Буулт ба багтаалт",
+      "unit10": "Боломж ба өөрчлөлт",
+      "unit11": "Дам яриа",
+      "unit12": "Шаардлага ба туршлага",
+      "unit13": "Жагсаалт ба дараалал",
+      "unit14": "Стандарт ба хүрээ",
+      "unit15": "Туслах үг ба өнгө аяс"
+    },
+    "unitsShort": {
+      "unit1": "Дүгнэлт",
+      "unit2": "Харьцуулалт",
+      "unit3": "Учир",
+      "unit4": "Зорилго",
+      "unit5": "Явц",
+      "unit6": "Төлөв",
+      "unit7": "Хэмжээ",
+      "unit8": "Таамаг",
+      "unit9": "Буулт",
+      "unit10": "Боломж",
+      "unit11": "Дам",
+      "unit12": "Шаардлага",
+      "unit13": "Жагсаалт",
+      "unit14": "Стандарт",
+      "unit15": "Туслах"
+    }
   },
   "analysisSheet": {
     "title": "AI өгүүлбэрийн шинжилгээ",
@@ -1011,6 +1137,15 @@
     "meTag": "(Би)"
   },
   "achievements": {
+    "achievementUnlocked": "Амжилт нээгдлээ",
+    "defaultLearner": "DuHan суралцагч",
+    "categoryLabel": "Төрөл",
+    "appName": "DuHan апп",
+    "categoryLabels": {
+      "TYPING": "Бичгийн аварга",
+      "VOCAB": "Үгийн сангийн мастер",
+      "STREAK": "Цуваа хадгалагч"
+    },
     "aiTutorTagline": "Таны хувийн солонгос хэлний AI багш",
     "saveReportImage": "Тайлангийн зураг хадгалах",
     "galleryEmpty": "Бичих эсвэл үгийн сангийн дасгал хийж анхны тэмдгээ нээгээрэй!"
@@ -1070,6 +1205,12 @@
     "practicePlaceholder": "{{title}} ашиглан өгүүлбэр зохио...",
     "checking": "Шалгаж байна...",
     "check": "Шалгах",
+    "comparative": "Төстэй дүрмийн харьцуулалт",
+    "commonMistakes": "Түгээмэл алдаа",
+    "condition": "Нөхцөл",
+    "rule": "Дүрэм",
+    "quizzes": "Дасгалын тестүүд",
+    "customNote": "Багшийн тэмдэглэл",
     "feedback": {
       "correct": "✓ Маш сайн!",
       "incorrect": "✗ Сайжруулах хэрэгтэй"
@@ -1080,10 +1221,12 @@
     "explanation": "Дэлгэрэнгүй тайлбар",
     "markMastered": "Эзэмшсэн гэж тэмдэглэх",
     "rules": "Хувирлын дүрэм",
-    "examples": "Хэрэглээний жишээ"
+    "examples": "Хэрэглээний жишээ",
+    "answerShort": "Хариу:"
   },
   "podcast": {
     "title": "Подкаст",
+    "badge": "Подкаст",
     "nowPlaying": "Одоо тоглож байна",
     "mySubscriptions": "Миний дагасан сувгууд",
     "viewAll": "Бүгдийг үзэх",
@@ -1107,6 +1250,14 @@
     "minutes": "минут",
     "expand": "Дэлгэх",
     "collapse": "Хураах",
+    "filterOptions": {
+      "all": "Бүгд",
+      "beginner": "Анхан",
+      "intermediate": "Дунд",
+      "daily": "Өдөр тутмын",
+      "news": "Мэдээ",
+      "picks": "Сонголт"
+    },
     "msg": {
       "LOADING_TRANSCRIPT": "AI ухаалаг хадмал үүсгэж байна...",
       "LOADING_FIRST_TIME": "Анхны үүсгэлт ойролцоогоор 1 минут үргэлжилнэ",
@@ -1183,6 +1334,8 @@
     "meaningFront": "Утга нүүрэн талд",
     "sessionComplete": "Сургалт дууслаа!",
     "wordsUnit": "үг",
+    "reviewed": "давтсан",
+    "loadingMatch": "Хослол ачаалж байна...",
     "remembered": "Мэднэ",
     "forgot": "Мэдэхгүй",
     "rating": {
@@ -1439,7 +1592,33 @@
     "title": "Солонгос бичих дасгал",
     "subtitle": "Үг / Өгүүлбэр / Нийтлэл",
     "speed": "Хурд",
-    "unit": "WPM"
+    "unit": "WPM",
+    "statsOverlay": {
+      "accuracy": "Нарийвчлал",
+      "restartHint": "Tab дарж дахин эхлүүлнэ"
+    },
+    "typingArea": {
+      "clickToFocus": "Оруулахын тулд дарна уу"
+    },
+    "wordPractice": {
+      "noWordsAvailable": "Дасгал хийх үг алга",
+      "wordToType": "Бичих үг",
+      "noMeaning": "Утга алга",
+      "wordDrillLabel": "Үг дасгал"
+    },
+    "resultsModal": {
+      "userAlt": "Хэрэглэгч",
+      "targetAchieved": "{{targetWpm}} WPM хүрлээ!",
+      "targetMissed": "{{targetWpm}} WPM хүрсэнгүй",
+      "speedLabel": "Хурд (WPM)",
+      "bestSpeed": "Хамгийн өндөр {{highestWpm}} WPM",
+      "speedValue": "{{wpm}} WPM",
+      "accuracyLabel": "Нарийвчлал (%)",
+      "errorCount": "Алдаа {{errorCount}}",
+      "durationLabel": "Хугацаа",
+      "stopButton": "Зогсох",
+      "retryButton": "Дахин оролдох"
+    }
   },
   "typingLobby": {
     "title": "Duhan бичих дасгал",
@@ -1503,6 +1682,7 @@
       "title": "Соёл ба архив",
       "subtitle": "Солонгос ардын үлгэр, Википедиагийн онцлох өгүүлэл, уран зохиолын нягт уншлага",
       "viewAll": "Бүх нийтлэлийг харах",
+      "sourceWikipedia": "Википедиа",
       "typeEncyclopedia": "Нэвтэрхий толь",
       "recommended": "Санал болгосон"
     },
@@ -1519,6 +1699,12 @@
       "literatureBookmark": "Уран зохиолын тэмдэглэл"
     },
     "footer": "Convex newsIngestion:getUserFeed-ээс өгөгдөл авна (уншсанаас 24 цагийн дараа автоматаар шинэчилнэ, гараар өдөрт 3 хүртэл)"
+  },
+  "practiceHub": {
+    "subtitle": "TOPIK, бичих дасгал ба үгсийн сангийн дасгал"
+  },
+  "mediaHub": {
+    "subtitle": "Видео, подкаст ба уншлага"
   },
   "readingArticle": {
     "difficulty": {

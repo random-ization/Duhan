@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useConvexAuth } from 'convex/react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Loading } from './common/Loading';
 import { ensureLocaleNamespaces } from '../utils/i18nNamespaceLoader';
@@ -15,6 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   redirectTo,
 }) => {
+  const { t } = useTranslation();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const { user, loading: userDataLoading, language } = useAuth();
   const { isPending: appLocaleLoading } = useQuery({
@@ -34,7 +36,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Step 1: ANY loading state = show loading, DO NOT redirect
   // This is CRITICAL to avoid the race condition
   if (isLoading || userDataLoading || appLocaleLoading) {
-    return <Loading fullScreen size="lg" text="Loading..." />;
+    return (
+      <Loading fullScreen size="lg" text={t('common.loading', { defaultValue: 'Loading...' })} />
+    );
   }
 
   // Step 2: Only after ALL loading is complete, check authentication

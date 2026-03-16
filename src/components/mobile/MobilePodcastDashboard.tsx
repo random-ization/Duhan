@@ -4,7 +4,9 @@ import { Disc, Search, ArrowLeft, Pause, PlayCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { NoArgs, qRef } from '../../utils/convexRefs';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { resolveSafeReturnTo } from '../../utils/navigation';
 import { Button, Input } from '../ui';
 
 interface PodcastChannel {
@@ -34,20 +36,24 @@ interface HistoryItem {
 }
 
 const FILTER_OPTIONS = [
-  { key: 'all', label: 'All' },
-  { key: 'beginner', label: 'Beginner' },
-  { key: 'intermediate', label: 'Intermediate' },
-  { key: 'daily', label: 'Daily' },
-  { key: 'news', label: 'News' },
+  { key: 'all', labelKey: 'podcast.filterOptions.all' },
+  { key: 'beginner', labelKey: 'podcast.filterOptions.beginner' },
+  { key: 'intermediate', labelKey: 'podcast.filterOptions.intermediate' },
+  { key: 'daily', labelKey: 'podcast.filterOptions.daily' },
+  { key: 'news', labelKey: 'podcast.filterOptions.news' },
 ];
 
 export const MobilePodcastDashboard: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [trendingTab, setTrendingTab] = useState<'all' | 'picks'>('all');
+  const backPath = useMemo(() => {
+    return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=podcasts');
+  }, [searchParams]);
 
   // Data Fetching
   type TrendingResult = {
@@ -109,8 +115,9 @@ export const MobilePodcastDashboard: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/media')}
+            onClick={() => navigate(backPath)}
             className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={t('common.back', { defaultValue: 'Back' })}
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </Button>
@@ -142,12 +149,13 @@ export const MobilePodcastDashboard: React.FC = () => {
             size="auto"
             key={opt.key}
             onClick={() => setFilter(opt.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${filter === opt.key
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
+              filter === opt.key
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground'
-              }`}
+            }`}
           >
-            {opt.label}
+            {t(opt.labelKey, { defaultValue: opt.key })}
           </Button>
         ))}
       </div>
@@ -232,23 +240,25 @@ export const MobilePodcastDashboard: React.FC = () => {
               variant="ghost"
               size="auto"
               onClick={() => setTrendingTab('all')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${trendingTab === 'all'
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                trendingTab === 'all'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground'
-                }`}
+              }`}
             >
-              All
+              {t('podcast.filterOptions.all', { defaultValue: 'All' })}
             </Button>
             <Button
               variant="ghost"
               size="auto"
               onClick={() => setTrendingTab('picks')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${trendingTab === 'picks'
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                trendingTab === 'picks'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground'
-                }`}
+              }`}
             >
-              Picks
+              {t('podcast.filterOptions.picks', { defaultValue: 'Picks' })}
             </Button>
           </div>
         </div>

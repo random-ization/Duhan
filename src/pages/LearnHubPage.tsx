@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BookOpen, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
@@ -16,6 +17,7 @@ import { useCurrentLanguage } from '../hooks/useLocalizedNavigate';
 const SITE_URL = 'https://koreanstudy.me';
 
 const LearnHubPage: React.FC = () => {
+  const { t } = useTranslation();
   const language = useCurrentLanguage();
   const location = useLocation();
   const meta = getRouteMeta(location.pathname);
@@ -52,7 +54,7 @@ const LearnHubPage: React.FC = () => {
             {
               '@type': 'ListItem',
               position: 1,
-              name: 'Home',
+              name: t('home', { defaultValue: 'Home' }),
               item: `${SITE_URL}/${language}`,
             },
             {
@@ -65,7 +67,7 @@ const LearnHubPage: React.FC = () => {
         },
         {
           '@type': 'ItemList',
-          name: 'Korean Learning Guides',
+          name: t('learnHub.collectionName', { defaultValue: 'Korean Learning Guides' }),
           itemListElement: guides.map((guide, index) => ({
             '@type': 'ListItem',
             position: index + 1,
@@ -75,7 +77,7 @@ const LearnHubPage: React.FC = () => {
         },
       ],
     }),
-    [guides, language, location.pathname, meta.description, meta.title]
+    [guides, language, location.pathname, meta.description, meta.title, t]
   );
 
   return (
@@ -95,7 +97,7 @@ const LearnHubPage: React.FC = () => {
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
             <BookOpen className="h-3.5 w-3.5" />
-            DuHan Learn Hub
+            {t('learnHub.badge', { defaultValue: 'DuHan Learn Hub' })}
           </div>
           <h1 className="mt-4 text-3xl font-black leading-tight md:text-5xl">{hub.title}</h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
@@ -115,7 +117,7 @@ const LearnHubPage: React.FC = () => {
               <h2 className="mt-2 text-xl font-extrabold leading-snug">{guide.content.title}</h2>
               {!guide.isLocalized ? (
                 <div className="mt-2 inline-flex rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-                  English content
+                  {t('learnHub.englishContent', { defaultValue: 'English content' })}
                 </div>
               ) : null}
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -128,7 +130,7 @@ const LearnHubPage: React.FC = () => {
                 className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
               >
                 <a href={`/${guide.linkLanguage}${guide.path}`}>
-                  Read guide
+                  {t('learnHub.readGuide', { defaultValue: 'Read guide' })}
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
@@ -138,7 +140,10 @@ const LearnHubPage: React.FC = () => {
 
         <div className="mt-12 rounded-2xl border border-border bg-muted p-6 md:flex md:items-center md:justify-between">
           <p className="text-sm font-medium text-muted-foreground md:text-base">
-            Build your own study roadmap with TOPIK practice, vocab review, and grammar drills.
+            {t('learnHub.roadmap', {
+              defaultValue:
+                'Build your own study roadmap with TOPIK practice, vocab review, and grammar drills.',
+            })}
           </p>
           <Button
             asChild

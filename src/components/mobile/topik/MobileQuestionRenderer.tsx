@@ -52,7 +52,7 @@ export const MobileQuestionRenderer: React.FC<
           <div className="mt-4 bg-muted rounded-xl overflow-hidden border border-border relative aspect-[4/3] flex items-center justify-center group">
             <img
               src={questionImage}
-              alt="Question Visual"
+              alt={question.number ? String(question.number) : ''}
               className="w-full h-full object-contain"
             />
           </div>
@@ -99,7 +99,7 @@ export const MobileQuestionRenderer: React.FC<
                 >
                   <img
                     src={imgUrl}
-                    alt={`Option ${idx + 1}`}
+                    alt={String(idx + 1)}
                     className="w-full h-full object-contain bg-card"
                   />
                   <div

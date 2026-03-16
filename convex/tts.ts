@@ -1,5 +1,5 @@
 'use node';
-import { action } from './_generated/server';
+import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import crypto from 'node:crypto';
 import { makeFunctionReference } from 'convex/server';
@@ -40,6 +40,30 @@ const upsertCacheMutation = makeFunctionReference<
   'internal',
   { key: string; url: string },
   { success: boolean }
+>;
+
+type DeferredUploadAndCacheArgs = {
+  key: string;
+  audioBase64: string;
+  traceId?: string;
+};
+
+type DeferredUploadAndCacheResult = {
+  success: boolean;
+  url?: string;
+  uploadMs?: number;
+  error?: string;
+};
+
+const deferredUploadAndCacheAction = makeFunctionReference<
+  'action',
+  DeferredUploadAndCacheArgs,
+  DeferredUploadAndCacheResult
+>('tts:deferredUploadAndCache') as unknown as FunctionReference<
+  'action',
+  'internal',
+  DeferredUploadAndCacheArgs,
+  DeferredUploadAndCacheResult
 >;
 
 /**
@@ -201,6 +225,44 @@ function normalizePublicAudioUrl(inputUrl: string): string {
   }
 }
 
+export const deferredUploadAndCache = internalAction({
+  args: {
+    key: v.string(),
+    audioBase64: v.string(),
+    traceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const uploadStartedAt = Date.now();
+    try {
+      const audioBuffer = Buffer.from(args.audioBase64, 'base64');
+      const cdnUrl = await uploadToSpaces(audioBuffer, args.key);
+      await ctx.runMutation(upsertCacheMutation, { key: args.key, url: cdnUrl });
+      const uploadMs = Date.now() - uploadStartedAt;
+      console.log(
+        'TTS deferred cache write completed:',
+        args.key,
+        `trace=${args.traceId || 'n/a'}`
+      );
+      return {
+        success: true,
+        url: cdnUrl,
+        uploadMs,
+      };
+    } catch (error) {
+      console.warn(
+        'Deferred TTS upload/cache failed:',
+        error,
+        `trace=${args.traceId || 'n/a'}`,
+        `key=${args.key}`
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+});
+
 export const speak = action({
   args: {
     text: v.string(),
@@ -208,10 +270,33 @@ export const speak = action({
     rate: v.optional(v.string()),
     pitch: v.optional(v.string()),
     skipCache: v.optional(v.boolean()),
+    lowLatency: v.optional(v.boolean()),
+    traceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env.AZURE_SPEECH_KEY;
     const region = process.env.AZURE_SPEECH_REGION;
+    const requestStartedAt = Date.now();
+    const traceId =
+      args.traceId || `tts_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const lowLatency = args.lowLatency !== false;
+    let cacheQueryMs: number | undefined;
+    let cacheHeadMs: number | undefined;
+    let azureMs: number | undefined;
+    let uploadMs: number | undefined;
+    let schedulerMs: number | undefined;
+
+    const buildTiming = (path: string) => ({
+      traceId,
+      path,
+      lowLatency,
+      totalMs: Date.now() - requestStartedAt,
+      cacheQueryMs,
+      cacheHeadMs,
+      azureMs,
+      uploadMs,
+      schedulerMs,
+    });
 
     if (!apiKey || !region) {
       console.error('Azure Speech credentials not configured');
@@ -220,6 +305,7 @@ export const speak = action({
         audio: null,
         url: null,
         error: 'Azure Speech credentials not configured',
+        timing: buildTiming('config_error'),
       };
     }
 
@@ -232,7 +318,9 @@ export const speak = action({
 
       // Check S3 cache first (unless skipCache is true)
       if (!args.skipCache) {
+        const queryStartedAt = Date.now();
         const cacheEntry = await ctx.runQuery(getCacheQuery, { key: cacheKey });
+        cacheQueryMs = Date.now() - queryStartedAt;
         if (cacheEntry?.url) {
           const normalizedUrl = normalizePublicAudioUrl(cacheEntry.url);
           if (normalizedUrl !== cacheEntry.url) {
@@ -248,24 +336,33 @@ export const speak = action({
             url: normalizedUrl,
             format: 'audio/mp3',
             cached: true,
+            source: 'db_cache',
+            timing: buildTiming('db_cache_hit'),
           };
         }
 
-        const cachedUrl = await checkS3Cache(cacheKey);
-        if (cachedUrl) {
-          void ctx
-            .runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl })
-            .catch(error => {
-              console.warn('Failed to upsert TTS cache after S3 hit:', error);
-            });
-          console.log('TTS cache hit:', args.text.substring(0, 20));
-          return {
-            success: true,
-            audio: null, // Don't return base64 if URL is available
-            url: cachedUrl,
-            format: 'audio/mp3',
-            cached: true,
-          };
+        // Low-latency mode skips an extra HEAD RTT on cache miss.
+        if (!lowLatency) {
+          const headStartedAt = Date.now();
+          const cachedUrl = await checkS3Cache(cacheKey);
+          cacheHeadMs = Date.now() - headStartedAt;
+          if (cachedUrl) {
+            void ctx
+              .runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl })
+              .catch(error => {
+                console.warn('Failed to upsert TTS cache after S3 hit:', error);
+              });
+            console.log('TTS cache hit:', args.text.substring(0, 20));
+            return {
+              success: true,
+              audio: null, // Don't return base64 if URL is available
+              url: cachedUrl,
+              format: 'audio/mp3',
+              cached: true,
+              source: 's3_cache',
+              timing: buildTiming('s3_cache_hit'),
+            };
+          }
         }
       }
 
@@ -274,6 +371,7 @@ export const speak = action({
       const ssml = createSSML(args.text, voice, rate, pitch);
       const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
+      const azureStartedAt = Date.now();
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -284,6 +382,7 @@ export const speak = action({
         },
         body: ssml,
       });
+      azureMs = Date.now() - azureStartedAt;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -293,15 +392,48 @@ export const speak = action({
           audio: null,
           url: null,
           error: `Azure TTS error: ${response.status}`,
+          timing: buildTiming('azure_error'),
         };
       }
 
       const audioBuffer = Buffer.from(await response.arrayBuffer());
+      const inlineAudio = audioBuffer.toString('base64');
+
+      if (lowLatency) {
+        const scheduleStartedAt = Date.now();
+        // Schedule durable background cache write so upload persists even after request returns.
+        try {
+          await ctx.scheduler.runAfter(0, deferredUploadAndCacheAction, {
+            key: cacheKey,
+            audioBase64: inlineAudio,
+            traceId,
+          });
+        } catch (scheduleError) {
+          console.warn(
+            'Failed to schedule deferred TTS upload:',
+            scheduleError,
+            `trace=${traceId}`
+          );
+        }
+        schedulerMs = Date.now() - scheduleStartedAt;
+
+        return {
+          success: true,
+          audio: inlineAudio,
+          url: null,
+          format: 'audio/mp3',
+          cached: false,
+          source: 'inline',
+          timing: buildTiming('generated_inline_deferred_upload'),
+        };
+      }
 
       // Upload to S3 cache
       let cdnUrl: string | null = null;
       try {
+        const uploadStartedAt = Date.now();
         cdnUrl = await uploadToSpaces(audioBuffer, cacheKey);
+        uploadMs = Date.now() - uploadStartedAt;
         console.log('TTS cached to S3:', cacheKey);
       } catch (uploadError) {
         console.warn('S3 upload failed, returning base64:', uploadError);
@@ -318,6 +450,8 @@ export const speak = action({
           url: cdnUrl,
           format: 'audio/mp3',
           cached: false,
+          source: 'url',
+          timing: buildTiming('generated_url'),
         };
       } else {
         console.warn('TTS upload unavailable, returning inline audio');
@@ -325,10 +459,12 @@ export const speak = action({
 
       return {
         success: true,
-        audio: audioBuffer.toString('base64'),
+        audio: inlineAudio,
         url: null,
         format: 'audio/mp3',
         cached: false,
+        source: 'inline',
+        timing: buildTiming('generated_inline_upload_failed'),
       };
     } catch (error) {
       console.error('TTS generation failed:', error);
@@ -337,6 +473,7 @@ export const speak = action({
         audio: null,
         url: null,
         error: error instanceof Error ? error.message : 'Unknown error',
+        timing: buildTiming('exception'),
       };
     }
   },

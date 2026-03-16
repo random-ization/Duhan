@@ -22,6 +22,7 @@ import { VocabBookDictationSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import type { VocabBookItemDto } from '../../convex/vocab';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
@@ -31,6 +32,8 @@ const ZH_VOICE = 'zh-CN-XiaoxiaoNeural';
 
 const PLAY_COUNT_OPTIONS = [1, 2, 3] as const;
 const GAP_SECOND_OPTIONS = [2, 4, 6, 8] as const;
+const PAGE_SIZE = 80;
+const PREFETCH_THRESHOLD = 10;
 
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
@@ -515,12 +518,33 @@ const VocabBookDictationPage: React.FC = () => {
       ? (categoryParam as VocabBookCategory)
       : 'DUE';
 
-  const vocabBookResult = useQuery(VOCAB.getVocabBook, {
+  const [pageCursor, setPageCursor] = useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+
+  const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: q || undefined,
+    savedByUserOnly: true,
+    category,
+    cursor: pageCursor || undefined,
+    limit: PAGE_SIZE,
   });
-  const loading = vocabBookResult === undefined;
-  const items = useMemo(() => vocabBookResult ?? [], [vocabBookResult]);
+  const loading = vocabBookPage === undefined && loadedItems.length === 0;
+  const loadingMore = vocabBookPage === undefined && loadedItems.length > 0;
+
+  useEffect(() => {
+    if (!vocabBookPage) return;
+    setNextCursor(vocabBookPage.nextCursor);
+    setLoadedItems(prev => {
+      if (pageCursor === null) return vocabBookPage.items;
+      const existing = new Set(prev.map(item => String(item.id)));
+      const appended = vocabBookPage.items.filter(item => !existing.has(String(item.id)));
+      return [...prev, ...appended];
+    });
+  }, [vocabBookPage, pageCursor]);
+
+  const items = useMemo(() => loadedItems, [loadedItems]);
 
   const filtered = useMemo(() => {
     return items.filter(item => {
@@ -543,11 +567,32 @@ const VocabBookDictationPage: React.FC = () => {
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const indexRef = useRef(0);
+  const totalRef = useRef(0);
+
+  useEffect(() => {
+    setPageCursor(null);
+    setLoadedItems([]);
+    setNextCursor(null);
+    setIndex(0);
+    setStarted(false);
+  }, [category, q]);
+
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
 
   const total = filtered.length;
+  useEffect(() => {
+    totalRef.current = total;
+    setIndex(prev => Math.min(prev, Math.max(0, total - 1)));
+  }, [total]);
+
+  useEffect(() => {
+    if (!nextCursor || loadingMore || total === 0) return;
+    if (total - index <= PREFETCH_THRESHOLD) {
+      setPageCursor(nextCursor);
+    }
+  }, [index, total, nextCursor, loadingMore]);
 
   const runIdRef = useRef(0);
   const [playing, setPlaying] = useState(false);
@@ -597,8 +642,8 @@ const VocabBookDictationPage: React.FC = () => {
         await playOne(myRunId);
         if (myRunId !== runIdRef.current) return;
         if (!autoNext) return;
-        if (indexRef.current >= total - 1) return;
-        setIndex(i => Math.min(total - 1, i + 1));
+        if (indexRef.current >= totalRef.current - 1) return;
+        setIndex(i => Math.min(Math.max(0, totalRef.current - 1), i + 1));
         await wait(50);
       }
     } finally {

@@ -163,6 +163,7 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="topik/:examId/:view" element={<TopikPage />} />
             <Route path="notebook" element={<NotebookPage />} />
             <Route path="vocab-book" element={<VocabBookPage />} />
+            <Route path="vocabbook" element={<Navigate to={`/${language}/vocab-book`} replace />} />
             <Route path="vocab-book/immerse" element={<VocabBookImmersivePage />} />
             <Route path="vocab-book/listen" element={<VocabBookListenPage />} />
             <Route path="vocab-book/dictation" element={<VocabBookDictationPage />} />

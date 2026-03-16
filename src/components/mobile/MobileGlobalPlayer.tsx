@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
 import { Play, Pause, ChevronDown, ListMusic, SkipBack, SkipForward, X } from 'lucide-react';
 import { Button } from '../ui';
@@ -14,6 +15,7 @@ function formatClock(seconds: number) {
 }
 
 export const MobileGlobalPlayer: React.FC = () => {
+  const { t } = useTranslation();
   const {
     activeEpisode,
     isPlaying,
@@ -88,7 +90,7 @@ export const MobileGlobalPlayer: React.FC = () => {
             <img
               src={artworkSrc}
               className="w-10 h-10 rounded-lg bg-muted object-cover shrink-0"
-              alt="Art"
+              alt={t('mobilePlayer.artAlt', { defaultValue: 'Art' })}
               loading="lazy"
             />
             <div className="flex-1 min-w-0 mx-3">
@@ -105,7 +107,11 @@ export const MobileGlobalPlayer: React.FC = () => {
                   e.stopPropagation();
                   togglePlay();
                 }}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
+                aria-label={
+                  isPlaying
+                    ? t('common.pause', { defaultValue: 'Pause' })
+                    : t('common.play', { defaultValue: 'Play' })
+                }
               >
                 {isPlaying ? (
                   <Pause className="w-6 h-6 fill-current" />
@@ -134,12 +140,12 @@ export const MobileGlobalPlayer: React.FC = () => {
                 type="button"
                 onClick={() => setMinimized(true)}
                 className="p-2 -ml-2 text-muted-foreground"
-                aria-label="Minimize"
+                aria-label={t('mobilePlayer.minimize', { defaultValue: 'Minimize' })}
               >
                 <ChevronDown className="w-8 h-8" />
               </Button>
               <span className="font-bold text-muted-foreground text-xs tracking-widest uppercase">
-                Now Playing
+                {t('podcast.nowPlaying', { defaultValue: 'Now Playing' })}
               </span>
               <Button
                 variant="ghost"
@@ -147,7 +153,7 @@ export const MobileGlobalPlayer: React.FC = () => {
                 type="button"
                 onClick={() => closePlayer()}
                 className="p-2 -mr-2 text-muted-foreground"
-                aria-label="Close"
+                aria-label={t('common.close', { defaultValue: 'Close' })}
               >
                 <X className="w-6 h-6" />
               </Button>
@@ -155,7 +161,11 @@ export const MobileGlobalPlayer: React.FC = () => {
 
             <div className="flex-1 px-8 flex flex-col justify-center pb-12 overflow-y-auto">
               <div className="w-full aspect-square rounded-[2rem] bg-muted shadow-2xl mb-12 relative overflow-hidden">
-                <img src={artworkSrc} className="w-full h-full object-cover" alt="Artwork" />
+                <img
+                  src={artworkSrc}
+                  className="w-full h-full object-cover"
+                  alt={t('mobilePlayer.artworkAlt', { defaultValue: 'Artwork' })}
+                />
               </div>
 
               <div className="mb-8">
@@ -196,7 +206,9 @@ export const MobileGlobalPlayer: React.FC = () => {
                     type="button"
                     className="text-foreground p-2 active:scale-90 transition-transform"
                     onClick={() => skip(-15)}
-                    aria-label="Skip back 15 seconds"
+                    aria-label={t('mobilePlayer.skipBack15', {
+                      defaultValue: 'Skip back 15 seconds',
+                    })}
                   >
                     <SkipBack className="w-8 h-8 fill-slate-900" />
                   </Button>
@@ -207,7 +219,11 @@ export const MobileGlobalPlayer: React.FC = () => {
                     type="button"
                     className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 hover:scale-105 active:scale-95 transition-all"
                     onClick={togglePlay}
-                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                    aria-label={
+                      isPlaying
+                        ? t('common.pause', { defaultValue: 'Pause' })
+                        : t('common.play', { defaultValue: 'Play' })
+                    }
                   >
                     {isPlaying ? (
                       <Pause className="w-8 h-8 fill-current" />
@@ -222,7 +238,9 @@ export const MobileGlobalPlayer: React.FC = () => {
                     type="button"
                     className="text-foreground p-2 active:scale-90 transition-transform"
                     onClick={() => skip(15)}
-                    aria-label="Skip forward 15 seconds"
+                    aria-label={t('mobilePlayer.skipForward15', {
+                      defaultValue: 'Skip forward 15 seconds',
+                    })}
                   >
                     <SkipForward className="w-8 h-8 fill-slate-900" />
                   </Button>

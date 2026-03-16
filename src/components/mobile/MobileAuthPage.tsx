@@ -10,6 +10,7 @@ import {
   useLocalizedNavigate,
 } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
+import { resolveSafeReturnTo } from '../../utils/navigation';
 import { Button } from '../ui';
 import { Input } from '../ui';
 
@@ -32,24 +33,17 @@ export const MobileAuthPage: React.FC = () => {
     password: '',
   });
 
-  const safeRedirectPath = (() => {
-    const raw = searchParams.get('redirect');
-    if (!raw) return null;
-    if (!raw.startsWith('/')) return null;
-    if (raw.startsWith('//')) return null;
-    if (raw.includes('://')) return null;
-    return raw;
-  })();
+  const redirectPath = resolveSafeReturnTo(searchParams.get('redirect'), '/dashboard');
 
-  const postAuthRedirectPath = getLocalizedPath(safeRedirectPath || '/dashboard', currentLanguage);
+  const postAuthRedirectPath = getLocalizedPath(redirectPath, currentLanguage);
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   useEffect(() => {
     if (!authLoading && user) {
       setLoading(false);
-      navigate(safeRedirectPath || '/dashboard', { replace: true });
+      navigate(redirectPath, { replace: true });
     }
-  }, [authLoading, user, navigate, safeRedirectPath]);
+  }, [authLoading, user, navigate, redirectPath]);
 
   const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number) => {
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
@@ -162,7 +156,7 @@ export const MobileAuthPage: React.FC = () => {
               {/* <span className="font-black text-2xl text-foreground">HG</span> */}
               <img
                 src="/logo.png"
-                alt="Logo"
+                alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
                 className="w-10 h-10 object-contain dark:brightness-0 dark:invert"
               />
             </div>
@@ -284,7 +278,7 @@ export const MobileAuthPage: React.FC = () => {
               <img
                 src="https://www.svgrepo.com/show/475656/google-color.svg"
                 className="w-5 h-5"
-                alt="Google"
+                alt={t('auth.social.google', { defaultValue: 'Google' })}
               />
               <span className="text-sm">{t('auth.social.google')}</span>
             </Button>
@@ -323,7 +317,8 @@ export const MobileAuthPage: React.FC = () => {
       </div>
 
       <p className="text-center text-muted-foreground text-xs font-bold mt-8">
-        &copy; {new Date().getFullYear()} {t('auth.brand')} All rights reserved.
+        &copy; {new Date().getFullYear()} {t('auth.brand')}{' '}
+        {t('common.allRightsReserved', { defaultValue: 'All rights reserved.' })}
       </p>
     </div>
   );

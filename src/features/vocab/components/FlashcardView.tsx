@@ -358,7 +358,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
         onSpeak(text);
       }}
       onMouseDown={e => e.stopPropagation()}
-      aria-label="Speak"
+      aria-label={labels.speak || labels.vocabProgress?.speak || 'Speak'}
     >
       <Volume2 className="w-5 h-5" />
     </Button>
@@ -470,6 +470,10 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
   onShowSettings,
   isFullscreen,
 }) => {
+  const forgotLabel = labels.vocab?.forgot || 'Forgot';
+  const rememberedLabel = labels.vocab?.remembered || 'Remembered';
+  const forgotShortcut = `${forgotLabel} (←)`;
+  const rememberedShortcut = `${rememberedLabel} (→)`;
   const containerClass = isFullscreen
     ? 'flex items-center justify-between max-w-4xl mx-auto'
     : 'w-full max-w-4xl bg-card rounded-2xl border border-border px-4 py-3 flex items-center justify-between gap-4';
@@ -483,14 +487,14 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={() => onRate(false)}
-              aria-label="Forgot (Left Arrow)"
+              aria-label={forgotShortcut}
               className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 transition-colors"
             >
               <XCircle className="w-6 h-6" />
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">Forgot (Left Arrow)</TooltipContent>
+            <TooltipContent side="top">{forgotShortcut}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
         <span className="px-4 py-2 text-muted-foreground font-medium">
@@ -502,14 +506,14 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
               variant="ghost"
               size="auto"
               onClick={() => onRate(true)}
-              aria-label="Remembered (Right Arrow)"
+              aria-label={rememberedShortcut}
               className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-green-200 text-green-500 hover:bg-green-50 transition-colors"
             >
               <CheckCircle className="w-6 h-6" />
             </Button>
           </TooltipTrigger>
           <TooltipPortal>
-            <TooltipContent side="top">Remembered (Right Arrow)</TooltipContent>
+            <TooltipContent side="top">{rememberedShortcut}</TooltipContent>
           </TooltipPortal>
         </Tooltip>
       </>
@@ -520,10 +524,10 @@ const FlashcardToolbar: React.FC<FlashcardToolbarProps> = ({
         </span>
         {(
           [
-            { val: 1, label: 'Again', color: 'red' },
-            { val: 2, label: 'Hard', color: 'orange' },
-            { val: 3, label: 'Good', color: 'blue' },
-            { val: 4, label: 'Easy', color: 'green' },
+            { val: 1, label: labels.vocab?.rating?.again || 'Again', color: 'red' },
+            { val: 2, label: labels.vocab?.rating?.hard || 'Hard', color: 'orange' },
+            { val: 3, label: labels.vocab?.rating?.good || 'Good', color: 'blue' },
+            { val: 4, label: labels.vocab?.rating?.easy || 'Easy', color: 'green' },
           ] as const
         ).map(b => (
           <Button

@@ -1,75 +1,185 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAction } from 'convex/react';
-import { useAuth } from '../contexts/AuthContext';
-import { aRef } from '../utils/convexRefs';
+import { useTranslation } from 'react-i18next';
+import { aRef, NoArgs } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Button } from '../components/ui';
 
+const ACTIVATION_POLL_INTERVAL_MS = 2500;
+const ACTIVATION_POLL_MAX_ATTEMPTS = 12;
+
 const PaymentSuccessPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const provider = searchParams.get('provider');
+  const sessionId = searchParams.get('session_id');
   const navigate = useLocalizedNavigate();
-  const { refreshUser } = useAuth();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Verifying payment...');
+  const [status, setStatus] = useState<'loading' | 'pending' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState(
+    t('payment.verifying', { defaultValue: 'Verifying payment...' })
+  );
+  const [retryVersion, setRetryVersion] = useState(0);
+  const redirectTimerRef = useRef<number | null>(null);
 
   const verifyPaymentSession = useAction(
-    aRef<{ sessionId: string }, unknown>('payments:verifyPaymentSession')
+    aRef<{ sessionId: string }, { success?: boolean; status?: string; error?: string }>(
+      'payments:verifyPaymentSession'
+    )
+  );
+  const getSubscriptionActivationStatus = useAction(
+    aRef<
+      NoArgs,
+      {
+        isActive: boolean;
+        status: 'ACTIVE' | 'PENDING' | 'UNAUTHENTICATED';
+        tier: string | null;
+        subscriptionType: string | null;
+      }
+    >('payments:getSubscriptionActivationStatus')
   );
 
   useEffect(() => {
+    let cancelled = false;
+
+    const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const scheduleRedirect = () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+      redirectTimerRef.current = window.setTimeout(() => {
+        navigate('/dashboard');
+      }, 2500);
+    };
+
+    const pollUntilActivated = async () => {
+      for (let attempt = 1; attempt <= ACTIVATION_POLL_MAX_ATTEMPTS; attempt += 1) {
+        const activation = await getSubscriptionActivationStatus({});
+        if (cancelled) return false;
+        if (activation.isActive) return true;
+
+        setStatus('pending');
+        setMessage(
+          t('payment.activationPending', {
+            defaultValue: 'Payment confirmed. Waiting for subscription activation...',
+          })
+        );
+
+        if (attempt < ACTIVATION_POLL_MAX_ATTEMPTS) {
+          await wait(ACTIVATION_POLL_INTERVAL_MS);
+        }
+      }
+      return false;
+    };
+
     const verifyPayment = async () => {
-      const provider = searchParams.get('provider');
-      const sessionId = searchParams.get('session_id');
+      setStatus('loading');
+      setMessage(t('payment.verifying', { defaultValue: 'Verifying payment...' }));
 
-      // Lemon Squeezy doesn't pass a session_id, it uses webhooks instead
-      // We just show success and rely on webhook to update user status
       if (provider === 'lemonsqueezy') {
-        setStatus('success');
-        setMessage('Payment completed! Your subscription will be activated shortly.');
-
-        // Refresh user profile (webhook may have already updated it)
-        try {
-          await refreshUser();
-        } catch {
-          console.log('User refresh pending, webhook may still be processing');
+        const activated = await pollUntilActivated();
+        if (cancelled) return;
+        if (!activated) {
+          setStatus('pending');
+          setMessage(
+            t('payment.activationDelayed', {
+              defaultValue:
+                'Your payment is complete, but activation is taking longer than expected.',
+            })
+          );
+          return;
         }
 
-        // Redirect after delay
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 3000);
+        setStatus('success');
+        setMessage(
+          t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
+        );
+        scheduleRedirect();
         return;
       }
 
-      // Creem flow - requires session_id verification
       if (!sessionId) {
-        setStatus('error');
-        setMessage('No session ID found.');
+        const activated = await pollUntilActivated();
+        if (cancelled) return;
+        if (!activated) {
+          setStatus('pending');
+          setMessage(
+            t('payment.activationPendingNoSession', {
+              defaultValue:
+                'We are confirming your subscription status. If you just paid, activation may take a moment.',
+            })
+          );
+          return;
+        }
+
+        setStatus('success');
+        setMessage(
+          t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
+        );
+        scheduleRedirect();
         return;
       }
 
       try {
-        // Call backend to verify the session
-        await verifyPaymentSession({ sessionId });
-        setStatus('success');
-        // Refresh user profile to get new subscription status
-        await refreshUser();
+        const verifyResult = await verifyPaymentSession({ sessionId });
+        if (verifyResult.success === false) {
+          const statusLabel = verifyResult.status ? ` (${verifyResult.status})` : '';
+          throw new Error(
+            verifyResult.error ||
+              t('payment.verificationFailed', { defaultValue: 'Payment verification failed.' }) +
+                statusLabel
+          );
+        }
 
-        // Redirect after delay
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 3000);
+        const activated = await pollUntilActivated();
+        if (cancelled) return;
+        if (!activated) {
+          setStatus('pending');
+          setMessage(
+            t('payment.activationDelayed', {
+              defaultValue:
+                'Your payment is complete, but activation is taking longer than expected.',
+            })
+          );
+          return;
+        }
+
+        setStatus('success');
+        setMessage(
+          t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
+        );
+        scheduleRedirect();
       } catch (error: unknown) {
         console.error('Verification failed:', error);
         setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'Payment verification failed.');
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : t('payment.verificationFailed', { defaultValue: 'Payment verification failed.' })
+        );
       }
     };
 
-    verifyPayment();
-  }, [searchParams, navigate, refreshUser, verifyPaymentSession]);
+    void verifyPayment();
+
+    return () => {
+      cancelled = true;
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
+      }
+    };
+  }, [
+    provider,
+    sessionId,
+    navigate,
+    verifyPaymentSession,
+    getSubscriptionActivationStatus,
+    t,
+    retryVersion,
+  ]);
 
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
@@ -77,7 +187,9 @@ const PaymentSuccessPage: React.FC = () => {
         {status === 'loading' && (
           <div className="flex flex-col items-center">
             <Loader2 className="w-16 h-16 text-indigo-600 dark:text-indigo-300 animate-spin mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Processing...</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {t('payment.processing', { defaultValue: 'Processing...' })}
+            </h2>
             <p className="text-muted-foreground">{message}</p>
           </div>
         )}
@@ -85,16 +197,50 @@ const PaymentSuccessPage: React.FC = () => {
         {status === 'success' && (
           <div className="flex flex-col items-center">
             <CheckCircle className="w-16 h-16 text-green-500 dark:text-emerald-300 mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h2>
-            <p className="text-muted-foreground mb-6">Your subscription has been activated.</p>
-            <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {t('payment.successTitle', { defaultValue: 'Payment Successful!' })}
+            </h2>
+            <p className="text-muted-foreground mb-6">{message}</p>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.redirecting', { defaultValue: 'Redirecting to dashboard...' })}
+            </p>
+          </div>
+        )}
+
+        {status === 'pending' && (
+          <div className="flex flex-col items-center">
+            <Loader2 className="w-16 h-16 text-amber-500 dark:text-amber-300 animate-spin mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {t('payment.pendingTitle', { defaultValue: 'Payment Received' })}
+            </h2>
+            <p className="text-muted-foreground mb-6">{message}</p>
+            <div className="flex w-full gap-2">
+              <Button
+                onClick={() => setRetryVersion(v => v + 1)}
+                variant="outline"
+                size="auto"
+                className="flex-1"
+              >
+                {t('payment.checkAgain', { defaultValue: 'Check Again' })}
+              </Button>
+              <Button
+                onClick={() => navigate('/dashboard')}
+                variant="ghost"
+                size="auto"
+                className="flex-1 bg-primary text-white rounded-lg hover:bg-muted transition-colors"
+              >
+                {t('payment.goDashboard', { defaultValue: 'Go to Dashboard' })}
+              </Button>
+            </div>
           </div>
         )}
 
         {status === 'error' && (
           <div className="flex flex-col items-center">
             <AlertCircle className="w-16 h-16 text-red-500 dark:text-rose-300 mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Something went wrong</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {t('payment.errorTitle', { defaultValue: 'Something went wrong' })}
+            </h2>
             <p className="text-muted-foreground mb-6">{message}</p>
             <Button
               onClick={() => navigate('/pricing/details')}
@@ -102,7 +248,7 @@ const PaymentSuccessPage: React.FC = () => {
               size="auto"
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-muted transition-colors"
             >
-              Back to Pricing
+              {t('payment.backToPricing', { defaultValue: 'Back to Pricing' })}
             </Button>
           </div>
         )}

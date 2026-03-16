@@ -113,13 +113,25 @@
     "off": "Off",
     "on": "On",
     "page": "Page",
-    "search": "Search"
+    "breadcrumb": "Breadcrumb",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Something went wrong.",
+    "allRightsReserved": "All rights reserved."
+  },
+  "learnHub": {
+    "badge": "DuHan Learn Hub",
+    "englishContent": "English content",
+    "readGuide": "Read guide",
+    "roadmap": "Build your own study roadmap with TOPIK practice, vocab review, and grammar drills.",
+    "collectionName": "Korean Learning Guides"
   },
   "landing": {
     "seo": {
       "title": "DuHan - Learn Korean Online | Interactive Korean Study Platform",
       "description": "Master Korean with DuHan's interactive Korean study platform. Study vocabulary, grammar, TOPIK preparation, podcasts, and videos with AI support.",
-      "keywords": "Korean learning, Korean study, study Korean, learn Korean, Korean language, TOPIK, Korean vocabulary, Korean grammar, Korean courses"
+      "keywords": "Korean learning, Korean study, study Korean, learn Korean, Korean language, TOPIK, Korean vocabulary, Korean grammar, Korean courses",
+      "featuredGuidesListName": "Featured Korean Learning Guides"
     },
     "nav": {
       "topik": "TOPIK",
@@ -330,8 +342,26 @@
       "q3": "Can I get a refund?",
       "a3": "We offer a 30-day refund guarantee. Email support and we’ll refund you."
     },
+    "guides": {
+      "title": "Start with practical Korean study guides",
+      "subtitle": "Build your roadmap with SEO-optimized guide pages for TOPIK, vocabulary, grammar, and writing.",
+      "topik": {
+        "title": "TOPIK Preparation Guide",
+        "description": "Understand exam structure, scoring, and weekly prep loops."
+      },
+      "vocab": {
+        "title": "Korean Vocabulary System",
+        "description": "Retain words long term with SRS, dictation, and context review."
+      },
+      "writing": {
+        "title": "TOPIK Writing Strategy",
+        "description": "Use clear templates and timed revision checklists for higher scores."
+      },
+      "readMore": "Read guide"
+    },
     "footer": {
       "about": "About",
+      "learnGuides": "Learn Guides",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
     }
   },
@@ -600,6 +630,7 @@
     "placeholderEmail": "Email Address",
     "placeholderPassword": "Password",
     "forgotPassword": "Forgot Password?",
+    "forgotPasswordDescription": "Enter your email and we will send you a password reset link.",
     "loginButton": "Start Game (LOGIN)",
     "signupButton": "Sign Up",
     "orContinue": "Or continue with",
@@ -610,6 +641,8 @@
     "resendSuccess": "Reset link sent! Please check your inbox.",
     "resendError": "Failed to reset password. Please check if the email address is correct.",
     "backToLogin": "Back to Login",
+    "resetPassword": "Reset password",
+    "resetPasswordDescription": "Set a new password for your account.",
     "recoverPassword": "Recover Password",
     "recoveryDesc": "Enter your registered email, and we will send a recovery signal.",
     "verifyingEmail": "Verifying your email...",
@@ -630,7 +663,11 @@
     "resetSuccessDesc": "You have been logged out. Please log in with your new password.",
     "invalidLink": "Invalid Link",
     "invalidLinkDesc": "Reset token is missing or expired. Please request a new one.",
+    "invalidResetToken": "Invalid or missing reset token.",
     "requestAgain": "Request Again",
+    "passwordMismatch": "The two password fields do not match.",
+    "passwordResetEmailSent": "If this email exists, a reset link has been sent. Please check your inbox.",
+    "passwordResetSuccess": "Your password has been reset successfully.",
     "alt": {
       "rocket": "Rocket"
     },
@@ -640,6 +677,14 @@
     },
     "newPasswordLabel": "New Password",
     "resetFailed": "Failed to reset password. Please try again.",
+    "sendVerificationEmail": "Send verification email",
+    "verifyEmail": "Verify email",
+    "verifyEmailSuccess": "Your email has been verified successfully.",
+    "verifyEmailSent": "Verification email sent. Please check your inbox.",
+    "verifyEmailAlreadyVerified": "Your email is already verified.",
+    "verifyEmailInvalidToken": "This verification link is invalid or expired.",
+    "verifyEmailDescription": "Click the button below to send a verification email.",
+    "loginRequired": "Please log in first.",
     "networkError": "Network error. Please check your connection and try again."
   },
   "loading": "Loading...",

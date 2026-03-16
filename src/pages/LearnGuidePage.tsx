@@ -17,6 +17,69 @@ import { useCurrentLanguage } from '../hooks/useLocalizedNavigate';
 
 const SITE_URL = 'https://koreanstudy.me';
 
+const PAGE_COPY = {
+  en: {
+    guideNotFoundTitle: 'Guide Not Found | DuHan',
+    guideNotFoundDesc: 'The requested guide does not exist.',
+    guideNotFoundHeading: 'Guide Not Found',
+    guideNotFoundBody: 'This guide URL is invalid or has been moved.',
+    backToLearnHub: 'Back to Learn Hub',
+    publishedPrefix: 'Published',
+    updatedPrefix: 'Updated',
+    faqTitle: 'FAQ',
+    relatedTitle: 'Related Guides',
+    readRelated: 'Read related guide',
+    readyTitle: 'Ready to apply this guide?',
+    readyBody: 'Open the corresponding module and start with a timed practice block.',
+    relatedListName: 'Related Korean Learning Guides',
+  },
+  zh: {
+    guideNotFoundTitle: 'Guide Not Found | DuHan',
+    guideNotFoundDesc: 'The requested guide does not exist.',
+    guideNotFoundHeading: 'Guide Not Found',
+    guideNotFoundBody: 'This guide URL is invalid or has been moved.',
+    backToLearnHub: 'Back to Learn Hub',
+    publishedPrefix: 'Published',
+    updatedPrefix: 'Updated',
+    faqTitle: 'FAQ',
+    relatedTitle: 'Related Guides',
+    readRelated: 'Read related guide',
+    readyTitle: 'Ready to apply this guide?',
+    readyBody: 'Open the corresponding module and start with a timed practice block.',
+    relatedListName: 'Related Korean Learning Guides',
+  },
+  vi: {
+    guideNotFoundTitle: 'Khong tim thay huong dan | DuHan',
+    guideNotFoundDesc: 'Khong ton tai bai huong dan ban yeu cau.',
+    guideNotFoundHeading: 'Khong tim thay huong dan',
+    guideNotFoundBody: 'Lien ket huong dan nay khong hop le hoac da duoc di chuyen.',
+    backToLearnHub: 'Quay lai trung tam huong dan',
+    publishedPrefix: 'Dang',
+    updatedPrefix: 'Cap nhat',
+    faqTitle: 'FAQ',
+    relatedTitle: 'Huong dan lien quan',
+    readRelated: 'Doc huong dan lien quan',
+    readyTitle: 'San sang ap dung huong dan nay?',
+    readyBody: 'Mo module tuong ung va bat dau voi mot buoi luyen tap tinh gio.',
+    relatedListName: 'Huong dan hoc tieng Han lien quan',
+  },
+  mn: {
+    guideNotFoundTitle: 'Гарын авлага олдсонгүй | DuHan',
+    guideNotFoundDesc: 'Хүссэн гарын авлага байхгүй байна.',
+    guideNotFoundHeading: 'Гарын авлага олдсонгүй',
+    guideNotFoundBody: 'Энэ гарын авлагын холбоос хүчингүй эсвэл шилжсэн байна.',
+    backToLearnHub: 'Сургалтын төв рүү буцах',
+    publishedPrefix: 'Нийтэлсэн',
+    updatedPrefix: 'Шинэчилсэн',
+    faqTitle: 'FAQ',
+    relatedTitle: 'Холбоотой гарын авлага',
+    readRelated: 'Холбоотой гарын авлага унших',
+    readyTitle: 'Энэ гарын авлагыг хэрэгжүүлэхэд бэлэн үү?',
+    readyBody: 'Тохирох модулийг нээгээд хугацаатай дасгалаас эхлээрэй.',
+    relatedListName: 'Холбоотой солонгос хэлний гарын авлага',
+  },
+} as const;
+
 function formatIsoDate(isoDate: string | undefined): string | null {
   if (!isoDate) return null;
   const date = new Date(`${isoDate}T00:00:00Z`);
@@ -33,26 +96,27 @@ const LearnGuidePage: React.FC = () => {
   const location = useLocation();
   const { guideSlug } = useParams<{ guideSlug: string }>();
   const language = useCurrentLanguage();
+  const pageCopy = PAGE_COPY[language as keyof typeof PAGE_COPY] ?? PAGE_COPY.en;
   const guideKey = getLearnGuideKeyBySlug(guideSlug);
 
   if (!guideKey) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Seo
-          title="Guide Not Found | DuHan"
-          description="The requested guide does not exist."
+          title={pageCopy.guideNotFoundTitle}
+          description={pageCopy.guideNotFoundDesc}
           noIndex={true}
         />
         <div className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 text-center">
-          <h1 className="text-3xl font-black">Guide Not Found</h1>
-          <p className="mt-3 text-muted-foreground">This guide URL is invalid or has been moved.</p>
+          <h1 className="text-3xl font-black">{pageCopy.guideNotFoundHeading}</h1>
+          <p className="mt-3 text-muted-foreground">{pageCopy.guideNotFoundBody}</p>
           <Button
             asChild
             variant="ghost"
             size="auto"
             className="mt-6 rounded-xl border border-border px-4 py-2"
           >
-            <LocalizedLink to="/learn">Back to Learn Hub</LocalizedLink>
+            <LocalizedLink to="/learn">{pageCopy.backToLearnHub}</LocalizedLink>
           </Button>
         </div>
       </div>
@@ -170,7 +234,7 @@ const LearnGuidePage: React.FC = () => {
       },
       {
         '@type': 'ItemList',
-        name: 'Related Korean Learning Guides',
+        name: pageCopy.relatedListName,
         itemListElement: relatedGuides.map((related, index) => ({
           '@type': 'ListItem',
           position: index + 1,
@@ -211,9 +275,9 @@ const LearnGuidePage: React.FC = () => {
           <h1 className="text-3xl font-black leading-tight md:text-5xl">{guide.title}</h1>
           {publishedDateLabel || updatedDateLabel ? (
             <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {publishedDateLabel ? `Published ${publishedDateLabel}` : ''}
+              {publishedDateLabel ? `${pageCopy.publishedPrefix} ${publishedDateLabel}` : ''}
               {publishedDateLabel && updatedDateLabel ? ' · ' : ''}
-              {updatedDateLabel ? `Updated ${updatedDateLabel}` : ''}
+              {updatedDateLabel ? `${pageCopy.updatedPrefix} ${updatedDateLabel}` : ''}
             </p>
           ) : null}
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
@@ -251,7 +315,7 @@ const LearnGuidePage: React.FC = () => {
         </div>
 
         <section className="mt-10 rounded-2xl border border-border bg-muted p-6">
-          <h2 className="text-2xl font-black">FAQ</h2>
+          <h2 className="text-2xl font-black">{pageCopy.faqTitle}</h2>
           <div className="mt-4 space-y-4">
             {guide.faqs.map(faq => (
               <details key={faq.question} className="rounded-xl border border-border bg-card p-4">
@@ -268,7 +332,7 @@ const LearnGuidePage: React.FC = () => {
 
         {relatedGuides.length > 0 ? (
           <section className="mt-10 rounded-2xl border border-border bg-card p-6">
-            <h2 className="text-2xl font-black">Related Guides</h2>
+            <h2 className="text-2xl font-black">{pageCopy.relatedTitle}</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {relatedGuides.map(related => (
                 <a
@@ -281,7 +345,7 @@ const LearnGuidePage: React.FC = () => {
                     {related.content.description}
                   </p>
                   <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-indigo-600 group-hover:text-indigo-700">
-                    Read related guide
+                    {pageCopy.readRelated}
                     <ArrowRight className="h-4 w-4" />
                   </span>
                 </a>
@@ -292,10 +356,8 @@ const LearnGuidePage: React.FC = () => {
 
         <section className="mt-10 rounded-2xl border border-border bg-card p-6 md:flex md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl font-black">Ready to apply this guide?</h2>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">
-              Open the corresponding module and start with a timed practice block.
-            </p>
+            <h2 className="text-xl font-black">{pageCopy.readyTitle}</h2>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">{pageCopy.readyBody}</p>
           </div>
           <Button
             asChild

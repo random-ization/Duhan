@@ -3,6 +3,8 @@ import { Play, Library, Search, Disc, History as HistoryIcon, ArrowLeft } from '
 import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
+import { useSearchParams } from 'react-router-dom';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 import { Badge } from '../components/ui';
@@ -231,7 +233,7 @@ const FeaturedHeroSection = ({
           <img
             src={lastPlayed.channelImage || 'https://placehold.co/400x400/indigo/white?text=Pod'}
             className="w-full h-full object-cover"
-            alt="album art"
+            alt={resolveLabel(labels, [['podcast', 'coverAlt']], 'album-art')}
           />
         </div>
         <div className="z-10 flex-1 text-center md:text-left">
@@ -279,7 +281,7 @@ const FeaturedHeroSection = ({
               'https://placehold.co/400x400/indigo/white?text=Pod'
             )}
             className="w-full h-full object-cover"
-            alt="album art"
+            alt={resolveLabel(labels, [['podcast', 'coverAlt']], 'album-art')}
           />
         </div>
         <div className="z-10 flex-1 text-center md:text-left">
@@ -306,11 +308,13 @@ const HorizontalScrollButtons = ({
   canRight,
   onLeft,
   onRight,
+  labels,
 }: {
   canLeft: boolean;
   canRight: boolean;
   onLeft: () => void;
   onRight: () => void;
+  labels: Labels;
 }) => (
   <>
     {canLeft && (
@@ -320,7 +324,7 @@ const HorizontalScrollButtons = ({
         variant="outline"
         onClick={onLeft}
         className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
-        aria-label="Scroll left"
+        aria-label={resolveLabel(labels, [['common', 'scrollLeft']], 'scroll-left')}
       >
         ‹
       </Button>
@@ -332,7 +336,7 @@ const HorizontalScrollButtons = ({
         variant="outline"
         onClick={onRight}
         className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-pop hover:scale-105 transition"
-        aria-label="Scroll right"
+        aria-label={resolveLabel(labels, [['common', 'scrollRight']], 'scroll-right')}
       >
         ›
       </Button>
@@ -458,6 +462,7 @@ const SubscriptionsBody = ({
         canRight={subscriptionsCanRight}
         onLeft={() => scrollSubscriptions('left')}
         onRight={() => scrollSubscriptions('right')}
+        labels={labels}
       />
     </div>
   );
@@ -641,6 +646,7 @@ const TrendingSection = ({
         canRight={trendingCanRight}
         onLeft={() => scrollTrending('left')}
         onRight={() => scrollTrending('right')}
+        labels={labels}
       />
     </div>
 
@@ -660,6 +666,7 @@ const HistorySection = ({
   scrollHistory,
   podcastMsgs,
   language,
+  labels,
   navigate,
 }: {
   history: HistoryItem[];
@@ -669,6 +676,7 @@ const HistorySection = ({
   scrollHistory: (direction: 'left' | 'right') => void;
   podcastMsgs: ReturnType<typeof getPodcastMessages>;
   language: Language;
+  labels: Labels;
   navigate: ReturnType<typeof useLocalizedNavigate>;
 }) => {
   if (history.length === 0) return null;
@@ -710,7 +718,7 @@ const HistorySection = ({
                 <img
                   src={record.channelImage || 'https://placehold.co/100x100'}
                   className="w-full h-full rounded-xl border border-border object-cover"
-                  alt="cover"
+                  alt={resolveLabel(labels, [['podcast', 'coverAlt']], 'cover')}
                 />
                 <div className="absolute inset-0 bg-black/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                   <Play size={16} className="text-white fill-white" />
@@ -734,6 +742,7 @@ const HistorySection = ({
           canRight={historyCanRight}
           onLeft={() => scrollHistory('left')}
           onRight={() => scrollHistory('right')}
+          labels={labels}
         />
       </div>
     </section>
@@ -755,10 +764,12 @@ const pickFeaturedChannel = ({
 
 const DashboardHeader = ({
   navigate,
+  backPath,
   labels,
   podcastMsgs,
 }: {
   navigate: NavigateFn;
+  backPath: string;
   labels: Labels;
   podcastMsgs: ReturnType<typeof getPodcastMessages>;
 }) => (
@@ -767,7 +778,7 @@ const DashboardHeader = ({
       type="button"
       variant="outline"
       size="icon"
-      onClick={() => navigate('/dashboard')}
+      onClick={() => navigate(backPath)}
       className="w-12 h-12 border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
       aria-label={resolveLabel(labels, [['errors', 'backToHome']], 'Back')}
     >
@@ -781,7 +792,11 @@ const DashboardHeader = ({
         {resolveLabel(labels, [['dashboard', 'podcast', 'headerSubtitle']], 'Listening Skills')}
       </p>
     </div>
-    <img src="/emojis/Headphone.png" className="w-14 h-14 animate-bounce-slow" alt="headphone" />
+    <img
+      src="/emojis/Headphone.png"
+      className="w-14 h-14 animate-bounce-slow"
+      alt={resolveLabel(labels, [['podcast', 'headphoneAlt']], 'headphone')}
+    />
   </div>
 );
 
@@ -878,6 +893,7 @@ const FeaturedSection = ({
 
 const DesktopPodcastDashboard = ({
   navigate,
+  backPath,
   labels,
   podcastMsgs,
   searchTerm,
@@ -908,6 +924,7 @@ const DesktopPodcastDashboard = ({
   language,
 }: {
   navigate: NavigateFn;
+  backPath: string;
   labels: Labels;
   podcastMsgs: ReturnType<typeof getPodcastMessages>;
   searchTerm: string;
@@ -945,7 +962,12 @@ const DesktopPodcastDashboard = ({
     }}
   >
     <div className="max-w-7xl mx-auto space-y-12">
-      <DashboardHeader navigate={navigate} labels={labels} podcastMsgs={podcastMsgs} />
+      <DashboardHeader
+        navigate={navigate}
+        backPath={backPath}
+        labels={labels}
+        podcastMsgs={podcastMsgs}
+      />
 
       <SearchAndFilterBar
         searchTerm={searchTerm}
@@ -998,6 +1020,7 @@ const DesktopPodcastDashboard = ({
           scrollHistory={scrollHistory}
           podcastMsgs={podcastMsgs}
           language={language}
+          labels={labels}
           navigate={navigate}
         />
       </div>
@@ -1008,9 +1031,13 @@ const DesktopPodcastDashboard = ({
 export default function PodcastDashboard() {
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
   const podcastMsgs = getPodcastMessages(labels);
+  const backPath = React.useMemo(() => {
+    return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=podcasts');
+  }, [searchParams]);
 
   // State
   const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
@@ -1109,6 +1136,7 @@ export default function PodcastDashboard() {
   return (
     <DesktopPodcastDashboard
       navigate={navigate}
+      backPath={backPath}
       labels={labels}
       podcastMsgs={podcastMsgs}
       searchTerm={searchTerm}

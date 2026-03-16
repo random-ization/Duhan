@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { Video, Play, Eye, Clock } from 'lucide-react';
+import { Video, Play, Eye, Clock, ArrowLeft } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { getLabels } from '../utils/i18n';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import { VideoLibrarySkeleton } from '../components/common';
 import { qRef } from '../utils/convexRefs';
 import { Button } from '../components/ui';
@@ -29,8 +31,12 @@ const LEVELS_KEYS = [
 const VideoLibraryPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
+  const [searchParams] = useSearchParams();
   const labels = getLabels(language);
   const [activeLevel, setActiveLevel] = useState('');
+  const returnTo = React.useMemo(() => {
+    return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=videos');
+  }, [searchParams]);
 
   // Convex Integration
   const convexVideos = useQuery(
@@ -194,16 +200,30 @@ const VideoLibraryPage: React.FC = () => {
       {/* Header */}
       <div className="bg-[#FDFBF7] dark:bg-card/95 border-b-2 border-foreground dark:border-border px-6 py-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-black text-foreground flex items-center gap-3">
-            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-400/15 rounded-2xl flex items-center justify-center border-2 border-foreground dark:border-border">
-              <Video className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
+          <div className="flex items-start gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="auto"
+              onClick={() => navigate(returnTo)}
+              className="w-11 h-11 rounded-xl border-2 border-foreground dark:border-border bg-card mt-0.5"
+              aria-label={labels.common?.back || 'Back'}
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-black text-foreground flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-400/15 rounded-2xl flex items-center justify-center border-2 border-foreground dark:border-border">
+                  <Video className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                {labels.dashboard?.video?.title || 'Video Center'}
+              </h1>
+              <p className="text-muted-foreground mt-2 ml-15">
+                {labels.dashboard?.video?.subtitle ||
+                  'Immersive Korean video learning with subtitles and lookup.'}
+              </p>
             </div>
-            {labels.dashboard?.video?.title || 'Video Center'}
-          </h1>
-          <p className="text-muted-foreground mt-2 ml-15">
-            {labels.dashboard?.video?.subtitle ||
-              'Immersive Korean video learning with subtitles and lookup.'}
-          </p>
+          </div>
         </div>
       </div>
 

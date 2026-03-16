@@ -64,7 +64,7 @@ export default function MobileGrammarDetailSheet({
   onClose,
   onProficiencyUpdate,
 }: MobileGrammarDetailSheetProps) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [practiceSentence, setPracticeSentence] = useState('');
   const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -238,7 +238,7 @@ export default function MobileGrammarDetailSheet({
             {/* Explanation */}
             <div>
               <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
-                Explanation
+                {t('grammarDetail.explanation')}
               </h3>
               <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {grammar.explanation}
@@ -249,7 +249,7 @@ export default function MobileGrammarDetailSheet({
             {Object.keys(rulesObject).length > 0 && (
               <div>
                 <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
-                  Construction
+                  {t('grammarDetail.rules')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(rulesObject).map(([key, val]) => (
@@ -269,7 +269,7 @@ export default function MobileGrammarDetailSheet({
             {/* Examples */}
             <div>
               <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
-                Examples
+                {t('grammarDetail.examples')}
               </h3>
               <div className="space-y-3">
                 {examples.map((ex, i) => (
@@ -305,7 +305,7 @@ export default function MobileGrammarDetailSheet({
               <Input
                 value={practiceSentence}
                 onChange={e => setPracticeSentence(e.target.value)}
-                placeholder="Write a sentence..."
+                placeholder={t('grammarDetail.practicePlaceholder')}
                 className="flex-1 bg-muted border-border font-bold"
                 onKeyDown={e => e.key === 'Enter' && handleCheck()}
               />
@@ -313,11 +313,11 @@ export default function MobileGrammarDetailSheet({
                 onClick={handleCheck}
                 disabled={isCheckDisabled}
                 loading={isChecking}
-                loadingText="Checking..."
+                loadingText={t('grammarDetail.checking')}
                 loadingIconClassName="w-3 h-3"
                 className="bg-primary text-white font-black"
               >
-                Check
+                {t('grammarDetail.check')}
               </Button>
             </div>
           </div>
