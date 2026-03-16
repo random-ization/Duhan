@@ -17,7 +17,7 @@ const ignoreExact = new Set([
 ]);
 const ignoreRe = [
   /^\d+[smhd]$/, /^\d+\s?(mins?|days?)$/i, /^\d+\s+Due$/i, /^\d+\s+Days$/i,
-  /^[()+\-–—:•.\/\s\d]+$/, /^[A-Z][A-Z\s:+\/\-&.0-9]+$/, /^[\uac00-\ud7a3]+$/,
+  /^[()+\-–—:•./\s\d]+$/, /^[A-Z][A-Z\s:+/\-&.0-9]+$/, /^[\uac00-\ud7a3]+$/,
   /^\(Level\s*\d+[A-Z]?\)$/i
 ];
 
