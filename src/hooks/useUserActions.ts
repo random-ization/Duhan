@@ -5,7 +5,7 @@ import { VocabularyItem, Mistake, Annotation, ExamAttempt } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
 import { toErrorMessage } from '../utils/errors';
-import { mRef } from '../utils/convexRefs';
+import { mRef, NOTE_PAGES } from '../utils/convexRefs';
 
 const normalizeExamAnswers = (answers: Record<number, number> | undefined) => {
   if (!answers) return answers;
@@ -27,6 +27,13 @@ const normalizeExamAnswers = (answers: Record<number, number> | undefined) => {
     normalized[n + 1] = v;
   }
   return normalized;
+};
+
+const resolveAnnotationSourceModule = (annotation: Annotation): string => {
+  if (annotation.scopeType) return annotation.scopeType;
+  if (annotation.contextKey.startsWith('READING:')) return 'READING_ARTICLE';
+  if (annotation.contextKey.startsWith('TOPIK-')) return 'TOPIK_REVIEW';
+  return 'TEXTBOOK';
 };
 
 export const useUserActions = () => {
@@ -57,9 +64,34 @@ export const useUserActions = () => {
         color?: string;
         startOffset?: number;
         endOffset?: number;
+        scopeType?: string;
+        scopeId?: string;
+        blockId?: string;
+        quote?: string;
+        contextBefore?: string;
+        contextAfter?: string;
       },
-      { id: Id<'annotations'>; success: boolean }
+      { id: Id<'annotations'>; success: boolean; upserted?: boolean }
     >('annotations:save')
+  );
+  const upsertAnnotationByAnchorMutation = useMutation(
+    mRef<
+      {
+        scopeType: string;
+        scopeId: string;
+        blockId: string;
+        start: number;
+        end: number;
+        quote: string;
+        contextBefore?: string;
+        contextAfter?: string;
+        note?: string;
+        color?: string;
+        targetType?: string;
+        contextKey?: string;
+      },
+      { id: Id<'annotations'>; success: boolean; upserted: boolean }
+    >('annotations:upsertByAnchor')
   );
   const saveExamAttemptMutation = useMutation(
     mRef<
@@ -85,6 +117,8 @@ export const useUserActions = () => {
       { success: boolean }
     >('user:updateLearningProgress')
   );
+  const ingestNotePageFromSourceMutation = useMutation(NOTE_PAGES.ingestFromSource);
+  const deleteNotePageBySourceRefMutation = useMutation(NOTE_PAGES.deleteBySourceRef);
 
   const saveWord = useCallback(
     async (vocabItem: VocabularyItem | string, meaning?: string) => {
@@ -167,19 +201,112 @@ export const useUserActions = () => {
       if (!user) return;
 
       try {
-        await saveAnnotationMutation({
-          contextKey: annotation.contextKey,
-          text: annotation.text,
-          note: annotation.note,
-          color: annotation.color || undefined, // undefined to delete color field if needed?
-          startOffset: annotation.startOffset,
-          endOffset: annotation.endOffset,
-        });
+        let persistedId: Id<'annotations'> | null = null;
+        const hasAnchorScope =
+          typeof annotation.startOffset === 'number' &&
+          typeof annotation.endOffset === 'number' &&
+          typeof annotation.scopeType === 'string' &&
+          typeof annotation.scopeId === 'string' &&
+          typeof annotation.blockId === 'string' &&
+          (annotation.quote || annotation.text).trim().length > 0;
+
+        if (hasAnchorScope) {
+          const result = await upsertAnnotationByAnchorMutation({
+            scopeType: annotation.scopeType!,
+            scopeId: annotation.scopeId!,
+            blockId: annotation.blockId!,
+            start: annotation.startOffset!,
+            end: annotation.endOffset!,
+            quote: annotation.quote || annotation.text,
+            contextBefore: annotation.contextBefore,
+            contextAfter: annotation.contextAfter,
+            note: annotation.note,
+            color: annotation.color === null ? '__none__' : annotation.color || undefined,
+            targetType: annotation.targetType,
+            contextKey: annotation.contextKey,
+          });
+          persistedId = result.id;
+        } else {
+          const result = await saveAnnotationMutation({
+            contextKey: annotation.contextKey,
+            text: annotation.text,
+            note: annotation.note,
+            color: annotation.color === null ? '__none__' : annotation.color || undefined,
+            startOffset: annotation.startOffset,
+            endOffset: annotation.endOffset,
+            scopeType: annotation.scopeType,
+            scopeId: annotation.scopeId,
+            blockId: annotation.blockId,
+            quote: annotation.quote,
+            contextBefore: annotation.contextBefore,
+            contextAfter: annotation.contextAfter,
+          });
+          persistedId = result.id;
+        }
+
+        if (
+          persistedId &&
+          typeof annotation.startOffset === 'number' &&
+          typeof annotation.endOffset === 'number' &&
+          (annotation.quote || annotation.text).trim() &&
+          annotation.blockId
+        ) {
+          const resolvedScopeType = annotation.scopeType || resolveAnnotationSourceModule(annotation);
+          const resolvedScopeId = annotation.scopeId || annotation.contextKey;
+          const resolvedSourceModule = resolveAnnotationSourceModule(annotation).trim().toUpperCase();
+          const normalizedNote = annotation.note?.trim() || '';
+          const clearHighlightExplicit = annotation.color === null;
+          const quoteText = (annotation.quote || annotation.text).trim();
+          const sourceRef = {
+            module: resolvedSourceModule,
+            scopeType: resolvedScopeType,
+            scopeId: resolvedScopeId,
+            blockId: annotation.blockId,
+            start: annotation.startOffset,
+            end: annotation.endOffset,
+            quote: quoteText,
+            contextKey: annotation.contextKey,
+            annotationId: String(persistedId),
+          };
+
+          if (clearHighlightExplicit && !normalizedNote) {
+            await deleteNotePageBySourceRefMutation({ sourceRef });
+          } else {
+            await ingestNotePageFromSourceMutation({
+              sourceModule: resolvedSourceModule,
+              sourceRef,
+              noteType: 'manual',
+              title: annotation.contextKey || quoteText,
+              quote: quoteText,
+              note: normalizedNote || undefined,
+              color: clearHighlightExplicit ? '__none__' : annotation.color || undefined,
+              tags: ['annotation', resolvedSourceModule.toLowerCase()],
+              status: 'Inbox',
+              scopeType: resolvedScopeType,
+              scopeId: resolvedScopeId,
+              blockId: annotation.blockId,
+              start: annotation.startOffset,
+              end: annotation.endOffset,
+              contextBefore: annotation.contextBefore,
+              contextAfter: annotation.contextAfter,
+              contextKey: annotation.contextKey,
+              contentId: annotation.scopeId || annotation.contextKey,
+              contentTitle: annotation.contextKey,
+              annotationId: String(persistedId),
+            });
+          }
+        }
       } catch (apiError) {
         console.error('Failed to save annotation to server:', apiError);
       }
     },
-    [user, saveAnnotationMutation]
+    [
+      user,
+      saveAnnotationMutation,
+      upsertAnnotationByAnchorMutation,
+      ingestNotePageFromSourceMutation,
+      deleteNotePageBySourceRefMutation,
+    ]
   );
 
   const saveExamAttempt = useCallback(

@@ -1011,6 +1011,119 @@
       "keyPoint": "Trọng tâm",
       "correctAnalysis": "Phân tích đáp án đúng",
       "distractorAnalysis": "Phân tích đáp án nhiễu"
+    },
+    "newPage": "Trang mới",
+    "newSubPage": "Trang con mới",
+    "titlePlaceholder": "Chưa đặt tên",
+    "v2": {
+      "views": {
+        "home": "Trang chủ",
+        "editor": "Trình soạn",
+        "review": "Ôn tập"
+      },
+      "sidebar": {
+        "search": "Tìm kiếm",
+        "searchPlaceholder": "Tìm theo tiêu đề, nội dung, thẻ...",
+        "allStatus": "Mọi trạng thái",
+        "allSources": "Mọi nguồn",
+        "allTypes": "Mọi loại",
+        "allAssets": "Mọi tài nguyên",
+        "noteOnly": "Chỉ ghi chú",
+        "highlightOnly": "Chỉ tô sáng",
+        "pinnedOnly": "Chỉ ghim",
+        "pages": "Trang"
+      },
+      "sections": {
+        "sourceHub": "Tổng quan nguồn",
+        "inbox": "Hộp thư",
+        "recent": "Gần đây",
+        "pinned": "Đã ghim",
+        "collections": "Bộ sưu tập",
+        "reviewQueue": "Hàng đợi ôn tập",
+        "backlinks": "Liên kết ngược",
+        "linkThisPageTo": "Liên kết trang này tới..."
+      },
+      "empty": {
+        "sources": "Chưa có tài nguyên theo nguồn. Hãy lưu tô sáng hoặc ghi chú từ các trang học.",
+        "inbox": "Chưa có ghi chú nào trong hộp thư.",
+        "pinned": "Hãy ghim ghi chú quan trọng để xem nhanh tại đây.",
+        "reviewQueue": "Hàng đợi đang trống. Hãy thêm ghi chú từ thẻ Trang chủ bằng “Thêm vào hôm nay”.",
+        "editor": "Chọn một trang để bắt đầu chỉnh sửa.",
+        "backlinks": "Chưa có liên kết ngược."
+      },
+      "actions": {
+        "addToToday": "Thêm vào hôm nay",
+        "openSource": "Mở nguồn",
+        "openNote": "Mở ghi chú",
+        "markReviewed": "Đánh dấu đã ôn",
+        "delete": "Xóa",
+        "childPage": "Trang con",
+        "savePage": "Lưu trang",
+        "pin": "Ghim",
+        "unpin": "Bỏ ghim",
+        "apply": "Áp dụng",
+        "saveAsTemplate": "Lưu làm mẫu"
+      },
+      "confirm": {
+        "deletePage": "Xóa ghi chú này? Ghi chú sẽ bị loại khỏi danh sách đang dùng."
+      },
+      "labels": {
+        "updated": "Cập nhật",
+        "scheduled": "Lên lịch",
+        "total": "Tổng",
+        "unreviewed": "Chưa ôn",
+        "today": "Hôm nay"
+      },
+      "metrics": {
+        "total": "Tổng tài nguyên",
+        "withNote": "Có ghi chú",
+        "withHighlight": "Có tô sáng",
+        "today": "Thêm hôm nay"
+      },
+      "badges": {
+        "note": "Ghi chú",
+        "highlight": "Tô sáng"
+      },
+      "noteType": {
+        "manual": "Thủ công",
+        "aiMistake": "Lỗi AI",
+        "vocab": "Từ vựng",
+        "grammar": "Ngữ pháp"
+      },
+      "templates": {
+        "title": "Mẫu",
+        "select": "Chọn mẫu",
+        "namePlaceholder": "Tên mẫu",
+        "defaultName": "Mẫu {{title}}"
+      },
+      "status": {
+        "inbox": "Hộp thư",
+        "recent": "Gần đây",
+        "collections": "Bộ sưu tập",
+        "queued": "Đang chờ",
+        "reviewed": "Đã ôn"
+      },
+      "source": {
+        "topik": "TOPIK",
+        "reading": "Đọc",
+        "textbook": "Giáo trình",
+        "dictionary": "Từ điển",
+        "practice": "Luyện tập"
+      },
+      "editor": {
+        "loading": "Đang tải trình soạn thảo...",
+        "fallbackPlaceholder": "Đang dùng chế độ dự phòng. Cài @tiptap/core và @tiptap/starter-kit để có trải nghiệm đầy đủ.",
+        "h1": "H1",
+        "h2": "H2",
+        "quote": "Trích dẫn",
+        "bulleted": "Danh sách chấm",
+        "numbered": "Danh sách số",
+        "code": "Mã",
+        "undo": "Hoàn tác",
+        "redo": "Làm lại",
+        "slashTip": "Mẹo: gõ `/` để chèn khối nhanh.",
+        "toggleSummary": "Thu gọn"
+      }
     }
   },
   "annotationMenu": {

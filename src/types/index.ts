@@ -45,6 +45,13 @@ export interface Annotation {
   note: string;
   timestamp: number;
   createdAt?: number; // Alias for timestamp
+  updatedAt?: number;
+  scopeType?: string;
+  scopeId?: string;
+  blockId?: string;
+  quote?: string;
+  contextBefore?: string;
+  contextAfter?: string;
 
   // Canvas annotation fields (TOPIK drawing)
   targetType?: 'TEXTBOOK' | 'EXAM';

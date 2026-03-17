@@ -1016,6 +1016,119 @@
       "keyPoint": "核心考点",
       "correctAnalysis": "正解分析",
       "distractorAnalysis": "干扰项分析"
+    },
+    "newPage": "新建页面",
+    "newSubPage": "新建子页面",
+    "titlePlaceholder": "未命名",
+    "v2": {
+      "views": {
+        "home": "主页",
+        "editor": "编辑",
+        "review": "复习"
+      },
+      "sidebar": {
+        "search": "搜索",
+        "searchPlaceholder": "搜索标题、内容、标签...",
+        "allStatus": "全部状态",
+        "allSources": "全部来源",
+        "allTypes": "全部类型",
+        "allAssets": "全部资产",
+        "noteOnly": "仅笔记",
+        "highlightOnly": "仅高亮",
+        "pinnedOnly": "仅看置顶",
+        "pages": "页面"
+      },
+      "sections": {
+        "sourceHub": "来源总览",
+        "inbox": "收件箱",
+        "recent": "最近",
+        "pinned": "置顶",
+        "collections": "合集",
+        "reviewQueue": "复习队列",
+        "backlinks": "反向链接",
+        "linkThisPageTo": "将此页链接到..."
+      },
+      "empty": {
+        "sources": "还没有来源资产。请先在学习页面保存高亮或笔记。",
+        "inbox": "收件箱里还没有笔记。",
+        "pinned": "把重要笔记置顶，方便集中查看。",
+        "reviewQueue": "队列为空。可在主页卡片中点击“加入今日复习”。",
+        "editor": "选择一个页面开始编辑。",
+        "backlinks": "暂无反向链接。"
+      },
+      "actions": {
+        "addToToday": "加入今日复习",
+        "openSource": "查看原文",
+        "openNote": "打开笔记",
+        "markReviewed": "标记已复习",
+        "delete": "删除",
+        "childPage": "创建子页面",
+        "savePage": "保存页面",
+        "pin": "置顶",
+        "unpin": "取消置顶",
+        "apply": "应用",
+        "saveAsTemplate": "保存为模板"
+      },
+      "confirm": {
+        "deletePage": "确认删除这条笔记吗？删除后将从当前笔记列表中移除。"
+      },
+      "labels": {
+        "updated": "更新于",
+        "scheduled": "计划时间",
+        "total": "总数",
+        "unreviewed": "未复习",
+        "today": "今日新增"
+      },
+      "metrics": {
+        "total": "总资产",
+        "withNote": "含笔记",
+        "withHighlight": "含高亮",
+        "today": "今日新增"
+      },
+      "badges": {
+        "note": "笔记",
+        "highlight": "高亮"
+      },
+      "noteType": {
+        "manual": "手动笔记",
+        "aiMistake": "AI 错题",
+        "vocab": "词汇",
+        "grammar": "语法"
+      },
+      "templates": {
+        "title": "模板",
+        "select": "选择模板",
+        "namePlaceholder": "模板名称",
+        "defaultName": "{{title}} 模板"
+      },
+      "status": {
+        "inbox": "收件箱",
+        "recent": "最近",
+        "collections": "合集",
+        "queued": "待复习",
+        "reviewed": "已复习"
+      },
+      "source": {
+        "topik": "TOPIK",
+        "reading": "阅读",
+        "textbook": "教材",
+        "dictionary": "词典",
+        "practice": "练习"
+      },
+      "editor": {
+        "loading": "正在加载编辑器...",
+        "fallbackPlaceholder": "编辑器已切换为兼容模式。安装 @tiptap/core 和 @tiptap/starter-kit 可获得完整体验。",
+        "h1": "标题 1",
+        "h2": "标题 2",
+        "quote": "引用",
+        "bulleted": "无序列表",
+        "numbered": "有序列表",
+        "code": "代码",
+        "undo": "撤销",
+        "redo": "重做",
+        "slashTip": "提示：输入 `/` 可快速插入块。",
+        "toggleSummary": "折叠"
+      }
     }
   },
   "annotationMenu": {

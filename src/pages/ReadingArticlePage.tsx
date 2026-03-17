@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams } from 'react-router-dom';
 import { BookOpen, Check, ChevronLeft, Languages, Star, Volume2, VolumeX } from 'lucide-react';
-import { AI, DICTIONARY, NEWS, VOCAB, mRef } from '../utils/convexRefs';
+import { AI, DICTIONARY, NEWS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,8 @@ import { Button } from '../components/ui';
 import { Textarea } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
+import AnnotationToolbar from '../features/annotation-kit/components/AnnotationToolbar';
+import { useScopedAnnotations } from '../features/annotation-kit/hooks/useScopedAnnotations';
 
 type NewsArticle = {
   _id: string;
@@ -80,7 +82,7 @@ type DictionaryFallbackResult = {
   note: string;
 };
 
-type NoteColor = 'yellow' | 'green' | 'pink';
+type NoteColor = 'yellow' | 'green' | 'blue' | 'pink';
 
 type ReaderNote = {
   id: string;
@@ -408,7 +410,13 @@ function noteUnderlineClass(_color: NoteColor, state: NoteVisualState) {
 function noteColorDotClass(color: NoteColor) {
   if (color === 'yellow') return 'bg-yellow-300 dark:bg-yellow-400/85';
   if (color === 'green') return 'bg-green-300 dark:bg-green-400/85';
+  if (color === 'blue') return 'bg-blue-300 dark:bg-blue-400/85';
   return 'bg-pink-300 dark:bg-pink-400/85';
+}
+
+function normalizeAnnotationNoteColor(color?: string): NoteColor {
+  if (color === 'green' || color === 'blue' || color === 'pink') return color;
+  return 'yellow';
 }
 
 function translationLanguageLabel(language?: string) {
@@ -1074,7 +1082,7 @@ const ReadingNotesSection: React.FC<{
           <span className={`h-3 w-3 rounded-full ${noteColorDotClass(draftNote.color)}`} />
         </div>
         <blockquote
-          className={`rounded bg-muted p-3 text-sm text-muted-foreground ${noteUnderlineClass(draftNote.color, getNoteVisualState('draft'))}`}
+          className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded bg-muted p-3 text-sm text-muted-foreground ${noteUnderlineClass(draftNote.color, getNoteVisualState('draft'))}`}
         >
           “{draftNote.quote}”
         </blockquote>
@@ -1127,7 +1135,7 @@ const ReadingNotesSection: React.FC<{
             onClick={() => focusNote(note.id)}
             onMouseEnter={() => setHoveredNoteId(note.id)}
             onMouseLeave={() => setHoveredNoteId(prev => (prev === note.id ? null : prev))}
-            className={`!block w-full rounded-lg border bg-card px-3 py-3 text-left text-sm text-muted-foreground shadow-sm transition ${
+            className={`!block w-full !whitespace-normal rounded-lg border bg-card px-3 py-3 text-left text-sm text-muted-foreground shadow-sm transition ${
               getNoteVisualState(note.id) === 'hovered'
                 ? 'border-yellow-400 shadow-yellow-200 dark:border-yellow-500/70 dark:shadow-yellow-950/40'
                 : getNoteVisualState(note.id) === 'selected'
@@ -1136,7 +1144,7 @@ const ReadingNotesSection: React.FC<{
             }`}
           >
             <p
-              className={`font-semibold ${noteUnderlineClass(note.color, getNoteVisualState(note.id))}`}
+              className={`whitespace-normal break-words [overflow-wrap:anywhere] font-semibold ${noteUnderlineClass(note.color, getNoteVisualState(note.id))}`}
             >
               “{note.quote}”
             </p>
@@ -1501,6 +1509,7 @@ const ReadingSelectionToolbar: React.FC<{
   setNoteColor: React.Dispatch<React.SetStateAction<NoteColor>>;
   onLookupSelection: () => void;
   startNoteFromSelection: () => void;
+  onClose: () => void;
 }> = ({
   t,
   selectionToolbar,
@@ -1508,71 +1517,34 @@ const ReadingSelectionToolbar: React.FC<{
   setNoteColor,
   onLookupSelection,
   startNoteFromSelection,
+  onClose,
 }) => {
   if (!selectionToolbar.visible) return null;
 
   return (
-    <div
-      data-reading-selection-toolbar
-      className="fixed z-50 flex -translate-x-1/2 items-center rounded-lg border border-border bg-card/95 p-1 text-foreground shadow-pop backdrop-blur"
-      style={{ left: selectionToolbar.x, top: selectionToolbar.y }}
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={onLookupSelection}
-        className="rounded px-3 py-1.5 text-sm hover:bg-muted"
-      >
-        🔍 {t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' })}
-      </Button>
-      <div className="mx-1 h-4 w-px bg-muted" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={() => setNoteColor('yellow')}
-        className="rounded p-1.5 hover:bg-muted"
-      >
-        <span
-          className={`block h-4 w-4 rounded-full bg-yellow-300 dark:bg-yellow-400/85 ${noteColor === 'yellow' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-        />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={() => setNoteColor('green')}
-        className="rounded p-1.5 hover:bg-muted"
-      >
-        <span
-          className={`block h-4 w-4 rounded-full bg-green-300 dark:bg-green-400/85 ${noteColor === 'green' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-        />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={() => setNoteColor('pink')}
-        className="rounded p-1.5 hover:bg-muted"
-      >
-        <span
-          className={`block h-4 w-4 rounded-full bg-pink-300 dark:bg-pink-400/85 ${noteColor === 'pink' ? 'ring-2 ring-foreground/70 ring-offset-1 ring-offset-card' : ''}`}
-        />
-      </Button>
-      <div className="mx-1 h-4 w-px bg-muted" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={startNoteFromSelection}
-        className={`rounded px-3 py-1.5 text-sm hover:bg-muted ${
-          selectionToolbar.anchor ? '' : 'cursor-not-allowed opacity-50'
-        }`}
-        disabled={!selectionToolbar.anchor}
-      >
-        📝 {t('readingArticle.toolbar.note', { defaultValue: 'Note' })}
-      </Button>
+    <div data-reading-selection-toolbar>
+      <AnnotationToolbar
+        visible={selectionToolbar.visible}
+        position={{ left: selectionToolbar.x, top: selectionToolbar.y }}
+        selectedColor={noteColor}
+        selectionText={selectionToolbar.text}
+        labels={{
+          addNote: t('readingArticle.toolbar.note', { defaultValue: 'Note' }),
+          lookup: t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' }),
+          close: t('dashboard.common.close', { defaultValue: 'Close' }),
+        }}
+        onAddNote={startNoteFromSelection}
+        onLookup={onLookupSelection}
+        onHighlight={color => {
+          if (!color) return;
+          setNoteColor(color as NoteColor);
+        }}
+        onColorChange={color => {
+          if (!color) return;
+          setNoteColor(color as NoteColor);
+        }}
+        onClose={onClose}
+      />
     </div>
   );
 };
@@ -1695,7 +1667,10 @@ function getNextReadingFontSize(current: number) {
   return current >= 22 ? 16 : current + 2;
 }
 
-const SELECTION_TOOLBAR_DISMISS_SELECTORS = ['[data-reading-selection-toolbar]'] as const;
+const SELECTION_TOOLBAR_DISMISS_SELECTORS = [
+  '[data-reading-selection-toolbar]',
+  '[data-annotation-toolbar]',
+] as const;
 
 export default function ReadingArticlePage() {
   const { articleId = '' } = useParams<{ articleId: string }>();
@@ -1746,17 +1721,6 @@ export default function ReadingArticlePage() {
   const searchDictionary = useAction(DICTIONARY.searchDictionary);
   const addToReview = useMutation(VOCAB.addToReview);
   const markArticleRead = useMutation(NEWS.markArticleRead);
-  const saveNotebook = useMutation(
-    mRef<
-      {
-        type: string;
-        title: string;
-        content: unknown;
-        tags?: string[];
-      },
-      { success: boolean }
-    >('notebooks:save')
-  );
   const { speak, stop, isLoading: speakingLoading, error: ttsError } = useTTS();
 
   const translationLang = useMemo(() => resolveReadingTranslationLanguage(language), [language]);
@@ -1820,14 +1784,59 @@ export default function ReadingArticlePage() {
     [cleanedBodyText]
   );
   const articleConvexId = article?._id ?? '';
+  const annotationScopeId = articleConvexId || articleId || 'reading-pending';
   const articleTitle = article?.title ?? '';
   const articleSummary = article?.summary;
+  const { annotations: scopedAnnotations, upsert: upsertScopedAnnotation } = useScopedAnnotations({
+    scopeType: 'READING_ARTICLE',
+    scopeId: annotationScopeId,
+    targetType: 'TEXTBOOK',
+    sourceModule: 'READING_ARTICLE',
+    contentTitle: articleTitle,
+    extraTags: ['reading', 'news'],
+  });
+
+  useEffect(() => {
+    if (!scopedAnnotations || scopedAnnotations.length === 0) {
+      setNotes([]);
+      return;
+    }
+
+    const nextNotes: ReaderNote[] = scopedAnnotations
+      .filter(
+        item =>
+          typeof item.note === 'string' &&
+          item.note.trim().length > 0 &&
+          typeof item.startOffset === 'number' &&
+          typeof item.endOffset === 'number'
+      )
+      .map(item => {
+        const blockId = item.blockId || 'P0';
+        const parsedParagraphIndex = Number.parseInt(blockId.replace(/^P/i, ''), 10);
+        return {
+          id: String(item.id),
+          quote: item.quote || item.text,
+          comment: item.note || '',
+          color: normalizeAnnotationNoteColor(item.color),
+          createdAt: item.updatedAt || item.createdAt || Date.now(),
+          anchor: {
+            paragraphIndex: Number.isFinite(parsedParagraphIndex) ? parsedParagraphIndex : 0,
+            start: item.startOffset || 0,
+            end: item.endOffset || (item.quote || item.text || '').length,
+          },
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    setNotes(nextNotes);
+  }, [scopedAnnotations]);
 
   useEffect(() => {
     setTranslations([]);
     setTranslationEnabled(false);
     setTranslationError(null);
     setSavedWords({});
+    setNotes([]);
     setNoteSyncError(null);
     setSpeaking(false);
     stop();
@@ -2229,9 +2238,10 @@ export default function ReadingArticlePage() {
 
   const onSaveDraftNote = async () => {
     if (!draftNote) return;
+    const quote = normalizeInlineWhitespace(draftNote.quote);
     const nextNote: ReaderNote = {
       id: createNoteId(),
-      quote: normalizeInlineWhitespace(draftNote.quote),
+      quote,
       color: draftNote.color,
       comment: draftNote.comment.trim(),
       createdAt: Date.now(),
@@ -2241,22 +2251,19 @@ export default function ReadingArticlePage() {
     setDraftNote(null);
     setNoteSyncError(null);
     try {
-      await saveNotebook({
-        type: 'GENERAL',
-        title: `${t('readingArticle.noteTitlePrefix', { defaultValue: 'Reading Note' })}｜${
-          articleTitle || t('readingArticle.untitled', { defaultValue: 'Untitled Article' })
-        }`,
-        content: {
-          text: nextNote.quote,
-          notes: nextNote.comment,
-          source: 'READING',
-          articleId: articleConvexId || articleId,
-          articleTitle: articleTitle || '',
-          articleSource: article ? sourceLabel(article.sourceKey) : '',
-          color: nextNote.color,
-          createdAt: nextNote.createdAt,
+      const paragraphText = normalizeInlineWhitespace(paragraphs[nextNote.anchor.paragraphIndex] || '');
+      await upsertScopedAnnotation({
+        anchor: {
+          blockId: `P${nextNote.anchor.paragraphIndex}`,
+          start: nextNote.anchor.start,
+          end: nextNote.anchor.end,
+          quote: nextNote.quote,
+          contextBefore: paragraphText.slice(Math.max(0, nextNote.anchor.start - 36), nextNote.anchor.start),
+          contextAfter: paragraphText.slice(nextNote.anchor.end, nextNote.anchor.end + 36),
         },
-        tags: ['reading', article ? sourceLabel(article.sourceKey) : 'news'],
+        note: nextNote.comment,
+        color: nextNote.color,
+        contextKey: `READING:${annotationScopeId}:P${nextNote.anchor.paragraphIndex}`,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2428,6 +2435,7 @@ export default function ReadingArticlePage() {
           setNoteColor={setNoteColor}
           onLookupSelection={onLookupSelection}
           startNoteFromSelection={startNoteFromSelection}
+          onClose={() => setSelectionToolbar(prev => ({ ...prev, visible: false }))}
         />
       </main>
 

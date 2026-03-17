@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Keyboard, Layers, ChevronRight } from 'lucide-react';
+import { Trophy, Keyboard, Layers, ChevronRight, BookMarked } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
@@ -10,7 +10,7 @@ import { Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 
 type PracticeCard = {
-  id: 'topik' | 'typing' | 'vocab';
+  id: 'topik' | 'typing' | 'vocab' | 'notebook';
   title: string;
   subtitle: string;
   path: string;
@@ -62,6 +62,15 @@ export default function PracticeHubPage() {
       badge: `${dueReviews} ${t('vocab.due', { defaultValue: 'Due' })}`,
       accent:
         'from-emerald-50 to-teal-100 border-emerald-200 dark:from-emerald-400/12 dark:to-teal-400/12 dark:border-emerald-300/20',
+    },
+    {
+      id: 'notebook',
+      title: t('dashboard.notes.label', { defaultValue: 'Notebook' }),
+      subtitle: t('dashboard.notes.subtitle', { defaultValue: 'Mistakes and memos' }),
+      path: '/notebook',
+      icon: <BookMarked size={20} className="text-cyan-600 dark:text-cyan-300" />,
+      accent:
+        'from-cyan-50 to-sky-100 border-cyan-200 dark:from-cyan-400/12 dark:to-sky-400/12 dark:border-cyan-300/20',
     },
   ];
 

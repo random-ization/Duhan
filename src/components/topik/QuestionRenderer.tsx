@@ -4,7 +4,7 @@ import { TopikQuestion, Language, Annotation } from '../../types';
 import { Check, X, Sparkles, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
-import { aRef, mRef } from '../../utils/convexRefs';
+import { aRef, NOTE_PAGES } from '../../utils/convexRefs';
 import { Button } from '../ui';
 
 interface QuestionRendererProps {
@@ -16,6 +16,7 @@ interface QuestionRendererProps {
   showCorrect: boolean;
   onAnswerChange?: (optionIndex: number) => void;
   onTextSelect?: (e: React.MouseEvent) => void;
+  onAnnotationClick?: (annotationId: string, e: React.MouseEvent) => void;
   annotations?: Annotation[];
   activeAnnotationId?: string | null;
   contextPrefix?: string;
@@ -99,22 +100,25 @@ const getNotebookTitle = (questionText: string, questionIndex: number): string =
     ? questionText.substring(0, 30) + '...'
     : questionText || `TOPIK Q${questionIndex + 1}`;
 
-const buildNotebookContent = (
-  question: TopikQuestion,
-  aiAnalysis: AIAnalysis,
-  correctAnswer: number
-) => ({
-  questionText: getQuestionText(question),
-  options: question.options,
-  correctAnswer,
-  imageUrl: question.imageUrl || question.image,
-  aiAnalysis: {
-    translation: aiAnalysis.translation,
-    keyPoint: aiAnalysis.keyPoint,
-    analysis: aiAnalysis.analysis,
-    wrongOptions: aiAnalysis.wrongOptions,
-  },
-});
+const buildTopikAnalysisNoteText = (aiAnalysis: AIAnalysis, optionLabel: string) => {
+  const sections: string[] = [];
+  if (aiAnalysis.translation?.trim()) {
+    sections.push(`Translation\n${aiAnalysis.translation.trim()}`);
+  }
+  if (aiAnalysis.keyPoint?.trim()) {
+    sections.push(`Key Point\n${aiAnalysis.keyPoint.trim()}`);
+  }
+  if (aiAnalysis.analysis?.trim()) {
+    sections.push(`Analysis\n${aiAnalysis.analysis.trim()}`);
+  }
+  const wrongOptions = Object.entries(aiAnalysis.wrongOptions || {})
+    .map(([key, value]) => `${optionLabel} ${key}: ${value}`)
+    .filter(line => line.trim().length > 0);
+  if (wrongOptions.length > 0) {
+    sections.push(`Wrong Options\n${wrongOptions.join('\n')}`);
+  }
+  return sections.join('\n\n');
+};
 
 const stringifyUnknown = (val: unknown): string => {
   try {
@@ -572,6 +576,7 @@ const QuestionMainContent = ({
   showCorrect,
   onAnswerChange,
   onTextSelect,
+  onAnnotationClick,
   hidePassage,
   isInline,
   highlightText,
@@ -592,6 +597,7 @@ const QuestionMainContent = ({
   showCorrect: boolean;
   onAnswerChange?: (optionIndex: number) => void;
   onTextSelect?: (e: React.MouseEvent) => void;
+  onAnnotationClick?: (annotationId: string, e: React.MouseEvent) => void;
   hidePassage: boolean;
   isInline: boolean;
   highlightText: (t: string) => string;
@@ -607,8 +613,21 @@ const QuestionMainContent = ({
   reviewCopy: ReviewCopy;
 }) => {
   const questionImage = question.imageUrl || question.image;
+  const handleMarkedClick = (e: React.MouseEvent) => {
+    if (!onAnnotationClick) return;
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const mark = target.closest('mark[data-annotation-id]');
+    if (!(mark instanceof HTMLElement)) return;
+    const annotationId = mark.dataset.annotationId;
+    if (!annotationId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onAnnotationClick(annotationId, e);
+  };
+
   return (
-    <div className={isInline ? undefined : 'flex items-start'}>
+    <div className={isInline ? undefined : 'flex items-start'} onClickCapture={handleMarkedClick}>
       {!isInline && (
         <span className={`text-lg font-bold mr-3 min-w-[32px] ${FONT_SERIF}`}>
           {questionIndex + 1}.
@@ -699,12 +718,38 @@ const buildHighlightedText = (
   if (questionAnnotations.length === 0) return text;
 
   let result = text;
-  questionAnnotations.forEach(annotation => {
+  const sorted = questionAnnotations
+    .slice()
+    .sort((a, b) => (b.updatedAt || b.timestamp || 0) - (a.updatedAt || a.timestamp || 0));
+
+  // Deduplicate by selected quote to avoid stacking <mark> tags after repeated saves.
+  const dedupedByText = new Map<string, Annotation>();
+  sorted.forEach(annotation => {
+    const annotatedText = annotation.text || annotation.selectedText;
+    if (!annotatedText) return;
+    const key = annotatedText.trim().toLowerCase();
+    if (!key) return;
+    const existing = dedupedByText.get(key);
+    if (!existing) {
+      dedupedByText.set(key, annotation);
+      return;
+    }
+
+    const incomingIsActive = activeAnnotationId === annotation.id;
+    const existingIsActive = activeAnnotationId === existing.id;
+    if (incomingIsActive && !existingIsActive) {
+      dedupedByText.set(key, annotation);
+    }
+  });
+
+  dedupedByText.forEach(annotation => {
     const annotatedText = annotation.text || annotation.selectedText;
     if (!annotatedText) return;
     const isActive =
       activeAnnotationId === annotation.id || (annotation.id === 'temp' && !activeAnnotationId);
     const hasNote = Boolean(annotation.note?.trim());
+    // If a record has neither color nor note, it is treated as deleted and should not render.
+    if (!annotation.color && !hasNote) return;
     const className = getHighlightClass(isActive, hasNote, annotation.color || 'yellow');
     const annotatedRegExpSource = annotatedText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
     const regex = new RegExp(`(${annotatedRegExpSource})`, 'gi');
@@ -722,12 +767,16 @@ const useQuestionReviewActions = ({
   question,
   questionIndex,
   correctAnswer,
+  contextPrefix,
+  optionLabel,
   aiErrorMessage,
   saveFailedMessage,
 }: {
   question: TopikQuestion;
   questionIndex: number;
   correctAnswer?: number;
+  contextPrefix: string;
+  optionLabel: string;
   aiErrorMessage: string;
   saveFailedMessage: string;
 }) => {
@@ -746,12 +795,7 @@ const useQuestionReviewActions = ({
     >('ai:analyzeQuestion')
   );
 
-  const saveNotebook = useMutation(
-    mRef<
-      { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
-      unknown
-    >('notebooks:save')
-  );
+  const ingestFromSource = useMutation(NOTE_PAGES.ingestFromSource);
 
   const triggerSaveToast = useCallback((error: string | null = null) => {
     setSaveError(error);
@@ -797,14 +841,32 @@ const useQuestionReviewActions = ({
     try {
       const questionText = getQuestionText(question);
       const title = getNotebookTitle(questionText, questionIndex);
+      const examId = contextPrefix.startsWith('TOPIK-') ? contextPrefix.slice(6) : contextPrefix;
+      const contentId = examId || 'topik-review';
+      const noteText = buildTopikAnalysisNoteText(aiAnalysis, optionLabel);
+      const questionNumber =
+        typeof question.number === 'number' ? question.number : questionIndex + 1;
 
-      console.log('[Save to Notebook] Saving...', { title, type: 'MISTAKE' });
+      console.log('[Save to Notebook] Saving...', { title, source: 'TOPIK_ANALYSIS' });
 
-      const result = await saveNotebook({
-        type: 'MISTAKE',
+      const result = await ingestFromSource({
+        sourceModule: 'TOPIK_ANALYSIS',
+        sourceRef: {
+          module: 'TOPIK_ANALYSIS',
+          contentId,
+          questionIndex,
+          questionNumber,
+          contextKey: `${contextPrefix}-Q${questionIndex}`,
+        },
+        noteType: 'ai_mistake',
         title,
-        content: buildNotebookContent(question, aiAnalysis, correctAnswer ?? 0),
-        tags: ['TOPIK', 'AI-Analysis', 'Review'],
+        quote: questionText,
+        note: noteText || undefined,
+        tags: ['topik', 'ai-analysis', 'review'],
+        status: 'Inbox',
+        dedupeKey: `topik-analysis|${contentId}|q${questionIndex}`,
+        contentId,
+        contentTitle: `TOPIK ${contentId}`,
       });
 
       console.log('[Save to Notebook] Result:', result);
@@ -825,7 +887,9 @@ const useQuestionReviewActions = ({
     question,
     questionIndex,
     correctAnswer,
-    saveNotebook,
+    contextPrefix,
+    optionLabel,
+    ingestFromSource,
     triggerSaveToast,
     saveFailedMessage,
   ]);
@@ -982,6 +1046,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
     showCorrect,
     onAnswerChange,
     onTextSelect,
+    onAnnotationClick,
     annotations = [],
     contextPrefix = '',
     activeAnnotationId,
@@ -1010,6 +1075,8 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       question,
       questionIndex,
       correctAnswer,
+      contextPrefix,
+      optionLabel: reviewCopy.optionLabel,
       aiErrorMessage: reviewCopy.aiErrorMessage,
       saveFailedMessage: reviewCopy.saveFailedMessage,
     });
@@ -1032,6 +1099,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           showCorrect={showCorrect}
           onAnswerChange={onAnswerChange}
           onTextSelect={onTextSelect}
+          onAnnotationClick={onAnnotationClick}
           hidePassage={hidePassage}
           isInline={showInlineNumber}
           highlightText={highlightText}

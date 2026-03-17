@@ -1007,6 +1007,119 @@
       "keyPoint": "Key point",
       "correctAnalysis": "Correct answer analysis",
       "distractorAnalysis": "Distractor analysis"
+    },
+    "newPage": "New Page",
+    "newSubPage": "New Subpage",
+    "titlePlaceholder": "Untitled",
+    "v2": {
+      "views": {
+        "home": "Home",
+        "editor": "Editor",
+        "review": "Review"
+      },
+      "sidebar": {
+        "search": "Search",
+        "searchPlaceholder": "Search title, content, tag...",
+        "allStatus": "All status",
+        "allSources": "All sources",
+        "allTypes": "All types",
+        "allAssets": "All assets",
+        "noteOnly": "Note only",
+        "highlightOnly": "Highlight only",
+        "pinnedOnly": "Pinned only",
+        "pages": "Pages"
+      },
+      "sections": {
+        "sourceHub": "Source Hub",
+        "inbox": "Inbox",
+        "recent": "Recent",
+        "pinned": "Pinned",
+        "collections": "Collections",
+        "reviewQueue": "Review Queue",
+        "backlinks": "Backlinks",
+        "linkThisPageTo": "Link This Page To..."
+      },
+      "empty": {
+        "sources": "No source assets yet. Save highlights or notes from learning pages.",
+        "inbox": "No inbox notes yet.",
+        "pinned": "Pin important notes to keep them here.",
+        "reviewQueue": "Queue is empty. Add notes from Home cards with “Add to Today”.",
+        "editor": "Select a page to start editing.",
+        "backlinks": "No backlinks yet."
+      },
+      "actions": {
+        "addToToday": "Add to Today",
+        "openSource": "Open Source",
+        "openNote": "Open note",
+        "markReviewed": "Mark Reviewed",
+        "delete": "Delete",
+        "childPage": "Child Page",
+        "savePage": "Save Page",
+        "pin": "Pin",
+        "unpin": "Unpin",
+        "apply": "Apply",
+        "saveAsTemplate": "Save as Template"
+      },
+      "confirm": {
+        "deletePage": "Delete this note? It will be moved out of your active notebook."
+      },
+      "labels": {
+        "updated": "Updated",
+        "scheduled": "Scheduled",
+        "total": "Total",
+        "unreviewed": "Unreviewed",
+        "today": "Today"
+      },
+      "metrics": {
+        "total": "Total Assets",
+        "withNote": "With Notes",
+        "withHighlight": "With Highlights",
+        "today": "Added Today"
+      },
+      "badges": {
+        "note": "Note",
+        "highlight": "Highlight"
+      },
+      "noteType": {
+        "manual": "Manual",
+        "aiMistake": "AI Mistake",
+        "vocab": "Vocab",
+        "grammar": "Grammar"
+      },
+      "templates": {
+        "title": "Templates",
+        "select": "Select template",
+        "namePlaceholder": "Template name",
+        "defaultName": "{{title}} Template"
+      },
+      "status": {
+        "inbox": "Inbox",
+        "recent": "Recent",
+        "collections": "Collections",
+        "queued": "Queued",
+        "reviewed": "Reviewed"
+      },
+      "source": {
+        "topik": "TOPIK",
+        "reading": "Reading",
+        "textbook": "Textbook",
+        "dictionary": "Dictionary",
+        "practice": "Practice"
+      },
+      "editor": {
+        "loading": "Loading editor...",
+        "fallbackPlaceholder": "Editor fallback mode. Install @tiptap/core + @tiptap/starter-kit for full experience.",
+        "h1": "H1",
+        "h2": "H2",
+        "quote": "Quote",
+        "bulleted": "Bulleted",
+        "numbered": "Numbered",
+        "code": "Code",
+        "undo": "Undo",
+        "redo": "Redo",
+        "slashTip": "Slash command tip: type `/` to quickly insert blocks.",
+        "toggleSummary": "Toggle"
+      }
     }
   },
   "annotationMenu": {

@@ -22,6 +22,8 @@ import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAn
 import { useMutation, useAction } from 'convex/react';
 import toast from 'react-hot-toast';
 import { DICTIONARY, VOCAB } from '../../utils/convexRefs';
+import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
+import { buildAnchorFromRange } from '../../features/annotation-kit/utils/selection';
 import { Button } from '../ui';
 import { Textarea } from '../ui';
 
@@ -121,11 +123,17 @@ const isSectionStartIndex = (structure: SectionStructureItem[], qIndex: number):
 const findMatchingAnnotation = (
   annotations: Annotation[],
   contextKey: string,
-  selectedText: string
+  selectedText: string,
+  anchor?: { start: number; end: number; blockId?: string }
 ): Annotation | undefined =>
   annotations.find(
     annotation =>
       annotation.contextKey === contextKey &&
+      (anchor && typeof annotation.startOffset === 'number' && typeof annotation.endOffset === 'number'
+        ? annotation.startOffset === anchor.start &&
+          annotation.endOffset === anchor.end &&
+          (!anchor.blockId || annotation.blockId === anchor.blockId)
+        : true) &&
       (annotation.text === selectedText || annotation.selectedText === selectedText)
   );
 
@@ -770,16 +778,16 @@ const AnnotationSidebar = ({
                   type="button"
                   variant="ghost"
                   size="auto"
-                  className={`p-3 rounded-lg border transition-all cursor-pointer w-full text-left outline-none focus:ring-2 focus:ring-indigo-500/50
+                  className={`p-3 rounded-lg border transition-all cursor-pointer w-full text-left !whitespace-normal outline-none focus:ring-2 focus:ring-indigo-500/50
                         ${
                           isActive
                             ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-300 dark:border-indigo-400/40 shadow-md'
                             : 'bg-muted border-border hover:border-indigo-200 dark:hover:border-indigo-400/40 hover:shadow-sm'
                         }`}
                   onClick={() => onBeginEdit(annotation)}
-                >
-                  <div
-                    className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${
+                  >
+                    <div
+                      className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${
                       ANNOTATION_COLOR_BADGE_CLASS[annotation.color || 'yellow'] ||
                       ANNOTATION_COLOR_BADGE_CLASS.yellow
                     }`}
@@ -787,7 +795,9 @@ const AnnotationSidebar = ({
                     {annotation.text.substring(0, 20)}...
                   </div>
                   {annotation.note ? (
-                    <p className="text-sm text-muted-foreground">{annotation.note}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                      {annotation.note}
+                    </p>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">
                       {labels.clickToAddNote || 'Click to add note...'}
@@ -1051,6 +1061,7 @@ const ReviewQuestionList = ({
   annotations,
   tempAnnotation,
   onTextSelect,
+  onAnnotationClick,
   activeAnnotationId,
 }: {
   exam: TopikExam;
@@ -1062,6 +1073,7 @@ const ReviewQuestionList = ({
   annotations: Annotation[];
   tempAnnotation: Annotation | null;
   onTextSelect: (questionIndex: number, e?: React.MouseEvent) => void;
+  onAnnotationClick: (questionIndex: number, annotationId: string, e: React.MouseEvent) => void;
   activeAnnotationId: string | null;
 }) => (
   <div className="px-8 md:px-12">
@@ -1071,6 +1083,8 @@ const ReviewQuestionList = ({
         ref={el => {
           questionRefs.current[idx] = el;
         }}
+        data-question-index={idx}
+        id={`topik-review-question-${idx}`}
         aria-label={`Question ${idx + 1}`}
       >
         {shouldShowInstruction(idx) && (
@@ -1094,6 +1108,7 @@ const ReviewQuestionList = ({
             }
             contextPrefix={`TOPIK-${exam.id}`}
             onTextSelect={e => onTextSelect(idx, e)}
+            onAnnotationClick={(annotationId, e) => onAnnotationClick(idx, annotationId, e)}
             activeAnnotationId={activeAnnotationId}
           />
         </div>
@@ -1124,6 +1139,7 @@ const ReviewPaper = ({
   annotations,
   tempAnnotation,
   onTextSelect,
+  onAnnotationClick,
   activeAnnotationId,
   reviewCopy,
 }: {
@@ -1148,6 +1164,7 @@ const ReviewPaper = ({
   annotations: Annotation[];
   tempAnnotation: Annotation | null;
   onTextSelect: (questionIndex: number, e?: React.MouseEvent) => void;
+  onAnnotationClick: (questionIndex: number, annotationId: string, e: React.MouseEvent) => void;
   activeAnnotationId: string | null;
   reviewCopy: ExamReviewUiCopy;
 }) => (
@@ -1250,6 +1267,7 @@ const ReviewPaper = ({
       annotations={annotations}
       tempAnnotation={tempAnnotation}
       onTextSelect={onTextSelect}
+      onAnnotationClick={onAnnotationClick}
       activeAnnotationId={activeAnnotationId}
     />
 
@@ -1291,6 +1309,7 @@ const ExamReviewLayout = ({
   annotations,
   tempAnnotation,
   onTextSelect,
+  onAnnotationClick,
   activeAnnotationId,
   sidebarAnnotations,
   editingAnnotationId,
@@ -1339,6 +1358,7 @@ const ExamReviewLayout = ({
   annotations: Annotation[];
   tempAnnotation: Annotation | null;
   onTextSelect: (questionIndex: number, e?: React.MouseEvent) => void;
+  onAnnotationClick: (questionIndex: number, annotationId: string, e: React.MouseEvent) => void;
   activeAnnotationId: string | null;
   sidebarAnnotations: Annotation[];
   editingAnnotationId: string | null;
@@ -1353,7 +1373,7 @@ const ExamReviewLayout = ({
   selectionText: string;
   onAddNote: () => void;
   onHighlight: (color: AnnotationColor | null) => void;
-  selectedColor: AnnotationColor;
+  selectedColor: AnnotationColor | null;
   setSelectedColor: (val: AnnotationColor | null) => void;
   onCloseAnnotationMenu: () => void;
   onSaveToVocab: (text: string) => Promise<void>;
@@ -1395,6 +1415,7 @@ const ExamReviewLayout = ({
         annotations={annotations}
         tempAnnotation={tempAnnotation}
         onTextSelect={onTextSelect}
+        onAnnotationClick={onAnnotationClick}
         activeAnnotationId={activeAnnotationId}
         reviewCopy={reviewCopy}
       />
@@ -1489,7 +1510,15 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [selectionText, setSelectionText] = useState('');
     const [selectionContextKey, setSelectionContextKey] = useState('');
-    const [selectedColor, setSelectedColor] = useState<AnnotationColor>('yellow');
+    const [selectionAnchor, setSelectionAnchor] = useState<{
+      blockId: string;
+      start: number;
+      end: number;
+      quote: string;
+      contextBefore: string;
+      contextAfter: string;
+    } | null>(null);
+    const [selectedColor, setSelectedColor] = useState<AnnotationColor | null>('yellow');
     const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
     const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
     const [editNoteInput, setEditNoteInput] = useState('');
@@ -1562,6 +1591,18 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       [currentAnnotations, editingAnnotationId]
     );
 
+    const handleCloseAnnotationMenu = useCallback(() => {
+      setShowAnnotationMenu(false);
+      setSelectionAnchor(null);
+      globalThis.window.getSelection()?.removeAllRanges();
+    }, []);
+
+    useOutsideDismiss({
+      enabled: showAnnotationMenu,
+      onDismiss: handleCloseAnnotationMenu,
+      ignoreSelectors: ['[data-annotation-toolbar]'],
+    });
+
     // Handle text selection for annotation
     const handleTextSelect = (questionIndex: number, e?: React.MouseEvent) => {
       const selection = globalThis.window.getSelection();
@@ -1571,6 +1612,12 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       const rect = range.getBoundingClientRect();
       const selectedText = selection.toString().trim();
       const contextKey = `${examContextPrefix}-Q${questionIndex}`;
+      const blockId = `Q${questionIndex}`;
+      const questionContainer = questionRefs.current[questionIndex];
+      const anchor =
+        questionContainer instanceof HTMLElement
+          ? buildAnchorFromRange(range, questionContainer, blockId)
+          : null;
 
       if ((rect.top === 0 && rect.bottom === 0) || (rect.width === 0 && rect.height === 0)) {
         if (e) {
@@ -1587,36 +1634,103 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
 
       setSelectionText(selectedText);
       setSelectionContextKey(contextKey);
+      setSelectionAnchor(
+        anchor || {
+          blockId,
+          start: 0,
+          end: selectedText.length,
+          quote: selectedText,
+          contextBefore: '',
+          contextAfter: '',
+        }
+      );
       setShowAnnotationMenu(true);
 
-      const existing = findMatchingAnnotation(annotations, contextKey, selectedText);
+      const existing = anchor
+        ? findMatchingAnnotation(annotations, contextKey, selectedText, {
+            start: anchor.start,
+            end: anchor.end,
+            blockId: anchor.blockId,
+          })
+        : findMatchingAnnotation(annotations, contextKey, selectedText);
 
       if (existing) {
-        if (existing.color) setSelectedColor(existing.color);
+        setSelectedColor(existing.color || null);
         setActiveAnnotationId(existing.id);
       } else {
+        setSelectedColor('yellow');
         setActiveAnnotationId(null);
       }
     };
 
-    // Save annotation
-    const saveAnnotationQuick = (colorOverride?: string) => {
-      if (!selectionText || !selectionContextKey) return null;
+    const handleAnnotationClick = useCallback(
+      (questionIndex: number, annotationId: string, e: React.MouseEvent) => {
+        const clickedAnnotation = currentAnnotations.find(a => a.id === annotationId);
+        if (!clickedAnnotation) return;
 
-      const existing = findMatchingAnnotation(annotations, selectionContextKey, selectionText);
+        const annotationText =
+          clickedAnnotation.text || clickedAnnotation.selectedText || clickedAnnotation.quote || '';
+        const contextKey = clickedAnnotation.contextKey || `${examContextPrefix}-Q${questionIndex}`;
+        const fallbackBlockId = `Q${questionIndex}`;
+
+        const targetEl = e.target instanceof Element ? e.target.closest('mark') : null;
+        if (targetEl instanceof HTMLElement) {
+          const rect = targetEl.getBoundingClientRect();
+          setMenuPosition({ top: rect.bottom + 10, left: rect.left + rect.width / 2 });
+        } else {
+          setMenuPosition({ top: e.clientY + 10, left: e.clientX });
+        }
+
+        setSelectionText(annotationText);
+        setSelectionContextKey(contextKey);
+        setSelectionAnchor({
+          blockId: clickedAnnotation.blockId || fallbackBlockId,
+          start: clickedAnnotation.startOffset ?? 0,
+          end: clickedAnnotation.endOffset ?? annotationText.length,
+          quote: clickedAnnotation.quote || annotationText,
+          contextBefore: clickedAnnotation.contextBefore || '',
+          contextAfter: clickedAnnotation.contextAfter || '',
+        });
+        setSelectedColor(clickedAnnotation.color || null);
+        setActiveAnnotationId(clickedAnnotation.id);
+        setShowAnnotationMenu(true);
+        globalThis.window.getSelection()?.removeAllRanges();
+      },
+      [currentAnnotations, examContextPrefix]
+    );
+
+    // Save annotation
+    const saveAnnotationQuick = (colorOverride?: AnnotationColor | null) => {
+      if (!selectionText || !selectionContextKey || !selectionAnchor) return null;
+
+      const existing = selectionAnchor
+        ? findMatchingAnnotation(annotations, selectionContextKey, selectionText, {
+            start: selectionAnchor.start,
+            end: selectionAnchor.end,
+            blockId: selectionAnchor.blockId,
+          })
+        : findMatchingAnnotation(annotations, selectionContextKey, selectionText);
+      const resolvedColor = colorOverride !== undefined ? colorOverride : selectedColor;
 
       const annotation: Annotation = {
         id: existing ? existing.id : Date.now().toString(),
         contextKey: selectionContextKey,
         text: selectionText,
         note: existing?.note || '',
-        color: (colorOverride || selectedColor) as 'yellow' | 'green' | 'blue' | 'pink',
+        color: resolvedColor,
+        scopeType: 'TOPIK_REVIEW',
+        scopeId: exam.id,
+        blockId: selectionAnchor.blockId,
+        quote: selectionAnchor.quote,
+        contextBefore: selectionAnchor.contextBefore,
+        contextAfter: selectionAnchor.contextAfter,
+        startOffset: selectionAnchor.start,
+        endOffset: selectionAnchor.end,
         timestamp: existing ? existing.timestamp : Date.now(),
       };
 
       onSaveAnnotation(annotation);
-      setShowAnnotationMenu(false);
-      globalThis.window.getSelection()?.removeAllRanges();
+      handleCloseAnnotationMenu();
 
       return annotation.id;
     };
@@ -1681,13 +1795,21 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     );
 
     const tempAnnotation: Annotation | null =
-      showAnnotationMenu && selectionText && selectionContextKey
+      showAnnotationMenu && selectionText && selectionContextKey && selectionAnchor
         ? {
             id: 'temp',
             contextKey: selectionContextKey,
             text: selectionText,
             note: '',
             color: selectedColor,
+            scopeType: 'TOPIK_REVIEW',
+            scopeId: exam.id,
+            blockId: selectionAnchor.blockId,
+            quote: selectionAnchor.quote,
+            contextBefore: selectionAnchor.contextBefore,
+            contextAfter: selectionAnchor.contextAfter,
+            startOffset: selectionAnchor.start,
+            endOffset: selectionAnchor.end,
             timestamp: Date.now(),
           }
         : null;
@@ -1709,16 +1831,11 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     };
 
     const handleHighlight = (color: AnnotationColor | null) => {
-      saveAnnotationQuick(color || undefined);
+      saveAnnotationQuick(color);
     };
 
     const handleSelectedColor = (val: AnnotationColor | null) => {
-      if (val) setSelectedColor(val);
-    };
-
-    const handleCloseAnnotationMenu = () => {
-      setShowAnnotationMenu(false);
-      globalThis.window.getSelection()?.removeAllRanges();
+      setSelectedColor(val);
     };
 
     return (
@@ -1752,6 +1869,7 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         annotations={annotations}
         tempAnnotation={tempAnnotation}
         onTextSelect={handleTextSelect}
+        onAnnotationClick={handleAnnotationClick}
         activeAnnotationId={activeAnnotationId}
         sidebarAnnotations={sidebarAnnotations}
         editingAnnotationId={editingAnnotationId}

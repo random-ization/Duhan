@@ -98,6 +98,18 @@ export interface SearchResult {
   entries: DictionaryEntry[];
 }
 
+function emptySearchResult(start?: number, num?: number): SearchResult {
+  const safeStart = Number.isFinite(start) && (start ?? 0) > 0 ? Math.floor(start as number) : 1;
+  const requestedNum = Number.isFinite(num) ? (num as number) : 10;
+  const safeNum = Math.max(10, Math.min(Math.floor(requestedNum), 100));
+  return {
+    total: 0,
+    start: safeStart,
+    num: safeNum,
+    entries: [],
+  };
+}
+
 /**
  * Parse XML response from KRDICT API
  */
@@ -421,14 +433,20 @@ export const searchDictionary = action({
     sort: v.optional(v.string()), // dict (dictionary order), popular (by popularity)
   },
   handler: async (_ctx, args) => {
+    const query = args.query.trim();
+    if (!query) {
+      return emptySearchResult(args.start, args.num);
+    }
+
     const apiKey = process.env.KRDICT_API_KEY;
     if (!apiKey) {
-      throw new Error('Missing KRDICT_API_KEY environment variable');
+      console.warn('[KRDICT] Missing KRDICT_API_KEY environment variable');
+      return emptySearchResult(args.start, args.num);
     }
 
     const params = new URLSearchParams({
       key: apiKey,
-      q: args.query,
+      q: query,
       start: String(args.start || 1),
       num: String(Math.max(10, Math.min(args.num || 10, 100))),
     });
@@ -451,12 +469,13 @@ export const searchDictionary = action({
     }
 
     const url = `${KRDICT_API_URL}?${params.toString()}`;
-    console.log('[KRDICT] Searching:', args.query);
+    console.log('[KRDICT] Searching:', query);
 
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`KRDICT API error: ${response.status}`);
+        console.error(`[KRDICT] API error status: ${response.status}`);
+        return emptySearchResult(args.start, args.num);
       }
 
       const xmlText = await response.text();
@@ -465,16 +484,17 @@ export const searchDictionary = action({
       if (xmlText.includes('<error>')) {
         const errorCode = /<error_code>(\d+)<\/error_code>/.exec(xmlText)?.[1];
         const errorMsg = /<message>([^<]+)<\/message>/.exec(xmlText)?.[1];
-        throw new Error(`KRDICT Error ${errorCode}: ${errorMsg}`);
+        console.error(`[KRDICT] Error ${errorCode}: ${errorMsg ?? 'Unknown error'}`);
+        return emptySearchResult(args.start, args.num);
       }
 
       const result = parseSearchXML(xmlText);
-      console.log(`[KRDICT] Found ${result.total} results for "${args.query}"`);
+      console.log(`[KRDICT] Found ${result.total} results for "${query}"`);
 
       return result;
     } catch (error: unknown) {
       console.error('[KRDICT] Error:', toErrorMessage(error));
-      throw error;
+      return emptySearchResult(args.start, args.num);
     }
   },
 });

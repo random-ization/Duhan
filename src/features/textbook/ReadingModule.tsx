@@ -27,6 +27,7 @@ import { notify } from '../../utils/notify';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 import { useUserActions } from '../../hooks/useUserActions';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { buildAnchorFromRange } from '../annotation-kit/utils/selection';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../components/ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
@@ -44,7 +45,7 @@ interface SavedWord {
   timestamp: number;
 }
 
-type HighlightColor = 'yellow' | 'green' | 'pink';
+type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
 
 interface Note {
   id: string;
@@ -284,12 +285,14 @@ function resolveReadingModuleText(labels: ReturnType<typeof getLabels>) {
 const HIGHLIGHT_COLORS: Record<HighlightColor, string> = {
   yellow: '#FEF08A',
   green: '#BBF7D0',
+  blue: '#BFDBFE',
   pink: '#FBCFE8',
 };
 
 const HIGHLIGHT_CLASSES: Record<HighlightColor, string> = {
   yellow: 'bg-yellow-200',
   green: 'bg-green-200',
+  blue: 'bg-blue-200',
   pink: 'bg-pink-200',
 };
 
@@ -539,6 +542,16 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
               size="auto"
               type="button"
               onClick={() => {
+                onHighlight('blue');
+                setShowColors(false);
+              }}
+              className="w-5 h-5 bg-blue-300 rounded-full border-2 border-white hover:scale-110 transition-transform"
+            />
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              onClick={() => {
                 onHighlight('pink');
                 setShowColors(false);
               }}
@@ -603,7 +616,7 @@ const NoteInputModal: React.FC<NoteInputModalProps> = ({
                 {labels.dashboard?.reading?.color || 'Color:'}
               </span>
               <div className="flex gap-2">
-                {(['yellow', 'green', 'pink'] as HighlightColor[]).map(c => (
+                {(['yellow', 'green', 'blue', 'pink'] as HighlightColor[]).map(c => (
                   <Button
                     variant="ghost"
                     size="auto"
@@ -1176,6 +1189,8 @@ const ReadingDesktopStudyHub: React.FC<ReadingDesktopStudyHubProps> = ({
 );
 
 interface ReadingPopoversProps {
+  readerRef: React.RefObject<HTMLDivElement | null>;
+  activeArticleIndex: number;
   selectedWord: SelectedWordState | null;
   setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
   saveWordToVocab: (word: string, meaning: string) => void;
@@ -1190,6 +1205,8 @@ interface ReadingPopoversProps {
 }
 
 const ReadingPopovers: React.FC<ReadingPopoversProps> = ({
+  readerRef,
+  activeArticleIndex,
   selectedWord,
   setSelectedWord,
   saveWordToVocab,
@@ -1231,10 +1248,18 @@ const ReadingPopovers: React.FC<ReadingPopoversProps> = ({
             setSelectionToolbar(null);
           }}
           onNote={() => {
+            const anchor =
+              readerRef.current && selectionToolbar.range
+                ? buildAnchorFromRange(
+                    selectionToolbar.range,
+                    readerRef.current,
+                    `A${activeArticleIndex}`
+                  )
+                : null;
             setNoteModal({
-              text: selectionToolbar.text,
-              startOffset: 0,
-              endOffset: 0,
+              text: anchor?.quote || selectionToolbar.text,
+              startOffset: anchor?.start || 0,
+              endOffset: anchor?.end || (anchor?.quote || selectionToolbar.text).length,
             });
             setSelectionToolbar(null);
           }}
@@ -1489,6 +1514,8 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
     </div>
 
     <ReadingPopovers
+      readerRef={readerRef}
+      activeArticleIndex={activeArticleIndex}
       selectedWord={selectedWord}
       setSelectedWord={setSelectedWord}
       saveWordToVocab={saveWordToVocab}
@@ -1535,7 +1562,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const labels = getLabels(language);
   const moduleText = useMemo(() => resolveReadingModuleText(labels), [labels]);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
-  const { saveWord } = useUserActions();
+  const { saveWord, saveAnnotation } = useUserActions();
   const { logActivity } = useActivityLogger();
 
   useEffect(() => stopTTS, [stopTTS]);
@@ -1722,6 +1749,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const vocabList = useMemo(() => unitDetails?.vocabList || [], [unitDetails?.vocabList]);
   const grammarList = useMemo(() => unitDetails?.grammarList || [], [unitDetails?.grammarList]);
   const apiAnnotations = useMemo(() => unitDetails?.annotations || [], [unitDetails?.annotations]);
+  const annotationContextKey = `${courseId}_${selectedUnitIndex}`;
+  const annotationScopeId = `${courseId}:${selectedUnitIndex}`;
 
   // Process annotations from API
   const { notes: notesFromApi, highlights: highlightsFromApi } = useMemo(() => {
@@ -2142,30 +2171,56 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   };
 
   // Add highlight
-  const addHighlight = (color: 'yellow' | 'green' | 'pink') => {
+  const addHighlight = (color: HighlightColor) => {
     if (selectionToolbar) {
+      const anchor =
+        readerRef.current && selectionToolbar.range
+          ? buildAnchorFromRange(selectionToolbar.range, readerRef.current, `A${activeArticleIndex}`)
+          : null;
+      const selectedText = anchor?.quote || selectionToolbar.text;
+      const nextId = Date.now().toString();
+
       setHighlightsOverride(prev => [
         ...(prev ?? highlightsFromApi),
         {
-          id: Date.now().toString(),
-          text: selectionToolbar.text,
+          id: nextId,
+          text: selectedText,
           color,
-          startOffset: 0,
-          endOffset: 0,
+          startOffset: anchor?.start || 0,
+          endOffset: anchor?.end || selectedText.length,
         },
       ]);
+
+      void saveAnnotation({
+        id: nextId,
+        contextKey: annotationContextKey,
+        text: selectedText,
+        note: '',
+        color,
+        startOffset: anchor?.start,
+        endOffset: anchor?.end,
+        scopeType: 'TEXTBOOK_READING',
+        scopeId: annotationScopeId,
+        blockId: anchor?.blockId || `A${activeArticleIndex}`,
+        quote: anchor?.quote || selectedText,
+        contextBefore: anchor?.contextBefore || '',
+        contextAfter: anchor?.contextAfter || '',
+        timestamp: Date.now(),
+      });
+
       setSelectionToolbar(null);
       globalThis.getSelection()?.removeAllRanges();
     }
   };
 
   // Save note
-  const saveNote = (comment: string, color: 'yellow' | 'green' | 'pink') => {
+  const saveNote = (comment: string, color: HighlightColor) => {
     if (noteModal) {
+      const nextId = Date.now().toString();
       setNotesOverride(prev => [
         ...(prev ?? notesFromApi),
         {
-          id: Date.now().toString(),
+          id: nextId,
           text: noteModal.text,
           comment,
           color,
@@ -2174,6 +2229,24 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           timestamp: Date.now(),
         },
       ]);
+
+      void saveAnnotation({
+        id: nextId,
+        contextKey: annotationContextKey,
+        text: noteModal.text,
+        note: comment,
+        color,
+        startOffset: noteModal.startOffset,
+        endOffset: noteModal.endOffset,
+        scopeType: 'TEXTBOOK_READING',
+        scopeId: annotationScopeId,
+        blockId: `A${activeArticleIndex}`,
+        quote: noteModal.text,
+        contextBefore: '',
+        contextAfter: '',
+        timestamp: Date.now(),
+      });
+
       setNoteModal(null);
     }
   };

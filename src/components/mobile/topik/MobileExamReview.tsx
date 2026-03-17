@@ -16,7 +16,7 @@ import {
   BookmarkCheck,
 } from 'lucide-react';
 import { useAction, useMutation } from 'convex/react';
-import { aRef, mRef } from '../../../utils/convexRefs';
+import { aRef, NOTE_PAGES } from '../../../utils/convexRefs';
 import { Button } from '../../ui';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 
@@ -37,6 +37,36 @@ interface AIAnalysis {
 
 type ViewMode = 'OVERVIEW' | 'DETAIL';
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const buildTopikAnalysisNoteText = (aiAnalysis: AIAnalysis, t: TranslateFn) => {
+  const sections: string[] = [];
+  const translationTitle = t('dashboard.topik.mobile.review.translation', {
+    defaultValue: 'Translation',
+  });
+  const keyPointTitle = t('dashboard.topik.mobile.review.keyPoint', { defaultValue: 'Key Point' });
+  const analysisTitle = t('dashboard.topik.mobile.review.analysis', { defaultValue: 'Analysis' });
+  const wrongOptionsTitle = t('dashboard.topik.mobile.review.wrongOptions', {
+    defaultValue: 'Wrong Options',
+  });
+  const optionLabel = t('common.option', { defaultValue: 'Option' });
+
+  if (aiAnalysis.translation?.trim()) {
+    sections.push(`${translationTitle}\n${aiAnalysis.translation.trim()}`);
+  }
+  if (aiAnalysis.keyPoint?.trim()) {
+    sections.push(`${keyPointTitle}\n${aiAnalysis.keyPoint.trim()}`);
+  }
+  if (aiAnalysis.analysis?.trim()) {
+    sections.push(`${analysisTitle}\n${aiAnalysis.analysis.trim()}`);
+  }
+  const wrongOptions = Object.entries(aiAnalysis.wrongOptions || {})
+    .map(([key, value]) => `${optionLabel} ${key}: ${value}`)
+    .filter(line => line.trim().length > 0);
+  if (wrongOptions.length > 0) {
+    sections.push(`${wrongOptionsTitle}\n${wrongOptions.join('\n')}`);
+  }
+  return sections.join('\n\n');
+};
 
 const ReviewResultBanner: React.FC<{ isCorrect: boolean; t: TranslateFn }> = ({ isCorrect, t }) => (
   <div
@@ -148,12 +178,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     >('ai:analyzeQuestion')
   );
 
-  const saveNotebook = useMutation(
-    mRef<
-      { type: string; title: string; content: Record<string, unknown>; tags?: string[] },
-      unknown
-    >('notebooks:save')
-  );
+  const ingestFromSource = useMutation(NOTE_PAGES.ingestFromSource);
 
   // Reset AI state when question is changed
   React.useEffect(() => {
@@ -217,23 +242,29 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               number: question.number || currentQuestionIndex + 1,
               defaultValue: 'TOPIK Q{{number}}',
             });
+      const contentId = exam.id || 'topik-review';
+      const noteText = buildTopikAnalysisNoteText(aiAnalysis, t);
+      const questionNumber =
+        typeof question.number === 'number' ? question.number : currentQuestionIndex + 1;
 
-      const result = await saveNotebook({
-        type: 'MISTAKE',
-        title,
-        content: {
-          questionText,
-          options: question.options,
-          correctAnswer: question.correctAnswer ?? 0,
-          imageUrl: question.imageUrl || question.image,
-          aiAnalysis: {
-            translation: aiAnalysis.translation,
-            keyPoint: aiAnalysis.keyPoint,
-            analysis: aiAnalysis.analysis,
-            wrongOptions: aiAnalysis.wrongOptions,
-          },
+      const result = await ingestFromSource({
+        sourceModule: 'TOPIK_ANALYSIS',
+        sourceRef: {
+          module: 'TOPIK_ANALYSIS',
+          contentId,
+          questionIndex: currentQuestionIndex,
+          questionNumber,
+          contextKey: `TOPIK-${contentId}-Q${currentQuestionIndex}`,
         },
-        tags: ['TOPIK', 'AI-Analysis', 'Review', 'Mobile'],
+        noteType: 'ai_mistake',
+        title,
+        quote: questionText,
+        note: noteText || undefined,
+        tags: ['topik', 'ai-analysis', 'review', 'mobile'],
+        status: 'Inbox',
+        dedupeKey: `topik-analysis|${contentId}|q${currentQuestionIndex}`,
+        contentId,
+        contentTitle: `TOPIK ${contentId}`,
       });
 
       if (result) {
