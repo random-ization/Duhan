@@ -646,3 +646,305 @@ export const NEWS = {
     { courseId: string; recentActiveCount: number; projectedCount: number; pendingCount: number }
   >('newsProjection:getProjectionStats'),
 };
+
+export const ANNOTATIONS = {
+  getByContext: qRef<{ contextKey: string }, unknown[]>('annotations:getByContext'),
+  getByPrefix: qRef<{ prefix: string; limit?: number }, unknown[]>('annotations:getByPrefix'),
+  listByScope: qRef<
+    { scopeType: string; scopeId: string; blockId?: string; limit?: number },
+    unknown[]
+  >('annotations:listByScope'),
+  save: mRef<
+    {
+      contextKey: string;
+      text: string;
+      note?: string;
+      color?: string;
+      startOffset?: number;
+      endOffset?: number;
+      scopeType?: string;
+      scopeId?: string;
+      blockId?: string;
+      quote?: string;
+      contextBefore?: string;
+      contextAfter?: string;
+    },
+    { id: string; success: boolean; upserted?: boolean }
+  >('annotations:save'),
+  upsertByAnchor: mRef<
+    {
+      scopeType: string;
+      scopeId: string;
+      blockId: string;
+      start: number;
+      end: number;
+      quote: string;
+      contextBefore?: string;
+      contextAfter?: string;
+      note?: string;
+      color?: string;
+      targetType?: string;
+      contextKey?: string;
+    },
+    { id: string; success: boolean; upserted: boolean }
+  >('annotations:upsertByAnchor'),
+  deleteById: mRef<{ annotationId: Id<'annotations'> }, { success: boolean; error?: string }>(
+    'annotations:deleteById'
+  ),
+  updateNote: mRef<{ annotationId: Id<'annotations'>; note: string }, { success: boolean }>(
+    'annotations:updateNote'
+  ),
+};
+
+export const NOTE_PAGES = {
+  listPages: qRef<
+    { parentPageId?: Id<'note_pages'>; includeArchived?: boolean; limit?: number },
+    unknown[]
+  >('notePages:listPages'),
+  search: qRef<
+    {
+      query?: string;
+      tag?: string;
+      tags?: string[];
+      status?: string;
+      statuses?: string[];
+      sourceModule?: string;
+      sourceModules?: string[];
+      noteType?: string;
+      noteTypes?: string[];
+      pinned?: boolean;
+      reviewed?: boolean;
+      hasNote?: boolean;
+      hasHighlight?: boolean;
+      updatedAfter?: number;
+      updatedBefore?: number;
+      limit?: number;
+    },
+    { items: unknown[]; nextCursor: number | null }
+  >('notePages:search'),
+  listFacets: qRef<
+    {
+      query?: string;
+      sourceModules?: string[];
+      noteTypes?: string[];
+      statuses?: string[];
+      hasNote?: boolean;
+      hasHighlight?: boolean;
+      updatedAfter?: number;
+      updatedBefore?: number;
+    },
+    {
+      total: number;
+      todayAdded: number;
+      withNote: number;
+      withHighlight: number;
+      sources: Array<{ key: string; count: number; unreviewed: number; todayAdded: number }>;
+      noteTypes: Array<{ key: string; count: number }>;
+      statuses: Array<{ key: string; count: number }>;
+    }
+  >('notePages:listFacets'),
+  getPage: qRef<{ pageId: Id<'note_pages'> }, unknown>('notePages:getPage'),
+  listReviewQueue: qRef<{ status?: string; limit?: number }, unknown[]>('notePages:listReviewQueue'),
+  listTemplates: qRef<NoArgs, unknown[]>('notePages:listTemplates'),
+  createPage: mRef<
+    {
+      parentPageId?: Id<'note_pages'>;
+      title: string;
+      icon?: string;
+      cover?: string;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+      isTemplate?: boolean;
+      sortOrder?: number;
+    },
+    { success: boolean; id: Id<'note_pages'> }
+  >('notePages:createPage'),
+  updatePage: mRef<
+    {
+      pageId: Id<'note_pages'>;
+      title?: string;
+      icon?: string;
+      cover?: string;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+      sortOrder?: number;
+    },
+    { success: boolean; error?: string }
+  >('notePages:updatePage'),
+  movePage: mRef<
+    {
+      pageId: Id<'note_pages'>;
+      parentPageId?: Id<'note_pages'>;
+      sortOrder?: number;
+    },
+    { success: boolean; error?: string }
+  >('notePages:movePage'),
+  archivePage: mRef<
+    { pageId: Id<'note_pages'>; archived: boolean },
+    { success: boolean; error?: string }
+  >('notePages:archivePage'),
+  togglePin: mRef<{ pageId: Id<'note_pages'>; pinned: boolean }, { success: boolean; error?: string }>(
+    'notePages:togglePin'
+  ),
+  markReviewed: mRef<
+    { pageId: Id<'note_pages'>; reviewedAt?: number; queueStatus?: string },
+    { success: boolean; reviewedAt?: number; error?: string }
+  >('notePages:markReviewed'),
+  enqueueReview: mRef<
+    { pageId: Id<'note_pages'>; scheduledFor?: number },
+    { success: boolean; scheduledFor?: number; error?: string }
+  >('notePages:enqueueReview'),
+  saveBlocks: mRef<
+    {
+      pageId: Id<'note_pages'>;
+      blocks?: Array<{
+        blockKey?: string;
+        blockType: string;
+        content: unknown;
+        props?: Record<string, unknown>;
+        sortOrder: number;
+      }>;
+      upsertBlocks?: Array<{
+        blockKey?: string;
+        blockType: string;
+        content: unknown;
+        props?: Record<string, unknown>;
+        sortOrder: number;
+      }>;
+      deleteBlockKeys?: string[];
+      reorderBlockKeys?: string[];
+    },
+    { success: boolean; count?: number; mode?: string; error?: string }
+  >('notePages:saveBlocks'),
+  saveEditorDoc: mRef<
+    {
+      pageId: Id<'note_pages'>;
+      doc: Record<string, unknown>;
+    },
+    { success: boolean; error?: string }
+  >('notePages:saveEditorDoc'),
+  upsertFromAnnotation: mRef<
+    {
+      scopeType: string;
+      scopeId: string;
+      blockId: string;
+      start: number;
+      end: number;
+      quote: string;
+      contextBefore?: string;
+      contextAfter?: string;
+      note?: string;
+      color?: string;
+      contextKey?: string;
+      sourceModule?: string;
+      contentId?: string;
+      contentTitle?: string;
+      annotationId?: Id<'annotations'>;
+      tags?: string[];
+    },
+    { success: boolean; pageId: Id<'note_pages'>; created: boolean; anchorKey: string }
+  >('notePages:upsertFromAnnotation'),
+  ingestFromSource: mRef<
+    {
+      sourceModule: string;
+      sourceRef?: Record<string, unknown>;
+      noteType?: string;
+      title?: string;
+      quote?: string;
+      note?: string;
+      color?: string;
+      tags?: string[];
+      status?: string;
+      pinned?: boolean;
+      dedupeKey?: string;
+      blocks?: Array<{
+        blockKey?: string;
+        blockType: string;
+        content: unknown;
+        props?: Record<string, unknown>;
+        sortOrder: number;
+      }>;
+      createReviewQueue?: boolean;
+      scheduledFor?: number;
+      scopeType?: string;
+      scopeId?: string;
+      blockId?: string;
+      start?: number;
+      end?: number;
+      contextBefore?: string;
+      contextAfter?: string;
+      contextKey?: string;
+      contentId?: string;
+      contentTitle?: string;
+      annotationId?: string;
+    },
+    {
+      success: boolean;
+      pageId: Id<'note_pages'>;
+      created: boolean;
+      dedupeKey: string;
+      sourceRef: Record<string, unknown>;
+      hasNote: boolean;
+      hasHighlight: boolean;
+    }
+  >('notePages:ingestFromSource'),
+  deleteBySourceRef: mRef<
+    {
+      pageId?: Id<'note_pages'>;
+      dedupeKey?: string;
+      sourceRef?: Record<string, unknown>;
+      softDelete?: boolean;
+    },
+    { success: boolean; archived?: boolean; error?: string }
+  >('notePages:deleteBySourceRef'),
+  createLink: mRef<
+    { sourcePageId: Id<'note_pages'>; targetPageId: Id<'note_pages'> },
+    { success: boolean; id?: Id<'note_links'>; duplicated?: boolean; error?: string }
+  >('notePages:createLink'),
+  removeLink: mRef<
+    { sourcePageId: Id<'note_pages'>; targetPageId: Id<'note_pages'> },
+    { success: boolean; removed: number }
+  >('notePages:removeLink'),
+  createTemplate: mRef<
+    {
+      name: string;
+      description?: string;
+      icon?: string;
+      blocks: Array<{
+        blockKey?: string;
+        blockType: string;
+        content: unknown;
+        props?: Record<string, unknown>;
+        sortOrder: number;
+      }>;
+    },
+    { success: boolean; id: Id<'note_templates'> }
+  >('notePages:createTemplate'),
+  applyTemplate: mRef<
+    { pageId: Id<'note_pages'>; templateId: Id<'note_templates'> },
+    { success: boolean; count?: number; error?: string }
+  >('notePages:applyTemplate'),
+  migrateLegacyAnnotationsWithNotes: mRef<
+    { dryRun?: boolean; limit?: number },
+    {
+      success: boolean;
+      dryRun: boolean;
+      found: number;
+      noteRows: number;
+      deduped: number;
+      createdPages?: number;
+      rootPageId?: Id<'note_pages'>;
+    }
+  >('notePages:migrateLegacyAnnotationsWithNotes'),
+  migrateLegacyAllNotes: mRef<
+    { dryRun?: boolean; limit?: number },
+    {
+      success: boolean;
+      dryRun: boolean;
+      createdPages?: number;
+      rootPageId?: Id<'note_pages'>;
+      createdNotebookPages?: number;
+      createdAnnotationPages?: number;
+    }
+  >('notePages:migrateLegacyAllNotes'),
+};

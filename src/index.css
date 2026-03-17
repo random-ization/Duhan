@@ -262,3 +262,102 @@
   transform: translateY(2px) !important;
   box-shadow: 0 0 10px rgba(236, 201, 75, 0.5) !important;
 }
+
+/* Notebook editor: free Notion-like style for Tiptap */
+.notion-editor-shell .ProseMirror {
+  line-height: 1.7;
+}
+
+.notion-editor-shell .ProseMirror > * + * {
+  margin-top: 0.65rem;
+}
+
+.notion-editor-shell .ProseMirror p {
+  color: hsl(var(--foreground));
+}
+
+.notion-editor-shell .ProseMirror h1 {
+  font-size: 2rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 1.35rem;
+}
+
+.notion-editor-shell .ProseMirror h2 {
+  font-size: 1.45rem;
+  line-height: 1.3;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  margin-top: 1.2rem;
+}
+
+.notion-editor-shell .ProseMirror h3 {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  font-weight: 700;
+  margin-top: 1rem;
+}
+
+.notion-editor-shell .ProseMirror ul,
+.notion-editor-shell .ProseMirror ol {
+  padding-left: 1.2rem;
+}
+
+.notion-editor-shell .ProseMirror li {
+  margin: 0.2rem 0;
+}
+
+.notion-editor-shell .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.8rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.notion-editor-shell .ProseMirror code {
+  border-radius: 0.35rem;
+  background: hsl(var(--muted));
+  padding: 0.15rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.88em;
+}
+
+.notion-editor-shell .ProseMirror pre {
+  border-radius: 0.7rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  padding: 0.8rem 0.95rem;
+  overflow-x: auto;
+}
+
+.notion-editor-shell .ProseMirror hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.2rem 0;
+}
+
+.notion-editor-shell .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8rem 0;
+}
+
+.notion-editor-shell .ProseMirror table th,
+.notion-editor-shell .ProseMirror table td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.45rem 0.5rem;
+  vertical-align: top;
+}
+
+.notion-editor-shell .ProseMirror table th {
+  background: hsl(var(--muted));
+  font-weight: 700;
+}
+
+.notion-editor-shell .ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: hsl(var(--muted-foreground));
+}

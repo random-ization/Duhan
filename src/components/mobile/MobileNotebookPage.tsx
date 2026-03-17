@@ -30,6 +30,12 @@ interface Note {
 export const MobileNotebookPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const getTypeLabel = (type: string) => {
+    if (type === 'VOCAB') return t('notes.type.vocab', { defaultValue: 'Vocab' });
+    if (type === 'GRAMMAR') return t('notes.type.grammar', { defaultValue: 'Grammar' });
+    if (type === 'MISTAKE') return t('notes.type.mistake', { defaultValue: 'Mistake' });
+    return t('notes.type.general', { defaultValue: 'Note' });
+  };
 
   const tabs = useMemo(
     () => [
@@ -156,16 +162,18 @@ export const MobileNotebookPage: React.FC = () => {
                 size="auto"
                 key={note.id}
                 onClick={() => setSelectedNoteId(note.id)}
-                className="bg-card p-4 rounded-2xl border-2 border-border shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-all text-left"
+                className="bg-card p-4 rounded-2xl border-2 border-border shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-all text-left !whitespace-normal"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-foreground line-clamp-1 text-lg">{note.title}</h3>
+                  <h3 className="font-bold text-foreground text-lg whitespace-normal break-words [overflow-wrap:anywhere]">
+                    {note.title}
+                  </h3>
                   <span className="text-[10px] font-bold px-2 py-1 bg-muted text-muted-foreground rounded-md shrink-0">
-                    {note.type}
+                    {getTypeLabel(note.type)}
                   </span>
                 </div>
                 {note.preview && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] mb-3 leading-relaxed">
                     {note.preview}
                   </p>
                 )}

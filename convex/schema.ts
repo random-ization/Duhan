@@ -436,6 +436,12 @@ export default defineSchema({
     // Context
     contextKey: v.string(), // "courseId_unitId"
     targetType: v.string(), // "TEXTBOOK"
+    scopeType: v.optional(v.string()), // "TOPIK_REVIEW" | "READING_ARTICLE" | ...
+    scopeId: v.optional(v.string()), // examId/articleId/courseId_unit
+    blockId: v.optional(v.string()), // per-question / paragraph / block
+    quote: v.optional(v.string()),
+    contextBefore: v.optional(v.string()),
+    contextAfter: v.optional(v.string()),
 
     // Data
     text: v.string(),
@@ -447,8 +453,19 @@ export default defineSchema({
     sentenceIndex: v.optional(v.number()),
 
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
   })
     .index('by_user_context', ['userId', 'contextKey'])
+    .index('by_user_scope', ['userId', 'scopeType', 'scopeId'])
+    .index('by_user_scope_block', ['userId', 'scopeType', 'scopeId', 'blockId'])
+    .index('by_user_scope_anchor', [
+      'userId',
+      'scopeType',
+      'scopeId',
+      'blockId',
+      'startOffset',
+      'endOffset',
+    ])
     .index('by_user', ['userId']),
 
   // Videos
@@ -624,6 +641,100 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_type', ['userId', 'type']),
+
+  // Notebook v2 - page tree metadata
+  note_pages: defineTable({
+    userId: v.id('users'),
+    parentPageId: v.optional(v.id('note_pages')),
+    title: v.string(),
+    icon: v.optional(v.string()),
+    cover: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    sourceModule: v.optional(v.string()),
+    noteType: v.optional(v.string()),
+    dedupeKey: v.optional(v.string()),
+    previewText: v.optional(v.string()),
+    searchText: v.optional(v.string()),
+    hasNote: v.optional(v.boolean()),
+    hasHighlight: v.optional(v.boolean()),
+    status: v.optional(v.string()),
+    pinned: v.optional(v.boolean()),
+    lastReviewedAt: v.optional(v.number()),
+    isArchived: v.optional(v.boolean()),
+    isTemplate: v.optional(v.boolean()),
+    sortOrder: v.optional(v.number()),
+    metadata: v.optional(v.record(v.string(), v.any())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_parent', ['userId', 'parentPageId'])
+    .index('by_user_archived', ['userId', 'isArchived'])
+    .index('by_user_template', ['userId', 'isTemplate'])
+    .index('by_user_source', ['userId', 'sourceModule'])
+    .index('by_user_status', ['userId', 'status'])
+    .index('by_user_updatedAt', ['userId', 'updatedAt'])
+    .index('by_user_dedupeKey', ['userId', 'dedupeKey'])
+    .index('by_user_noteType', ['userId', 'noteType']),
+
+  // Notebook v2 - block editor content
+  note_blocks: defineTable({
+    userId: v.id('users'),
+    pageId: v.id('note_pages'),
+    blockKey: v.optional(v.string()),
+    blockType: v.string(), // paragraph/heading/todo/callout/code/toggle/quote/list...
+    content: v.any(),
+    props: v.optional(v.record(v.string(), v.any())),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_page', ['pageId'])
+    .index('by_user_page', ['userId', 'pageId']),
+
+  // Notebook v2 - backlinks
+  note_links: defineTable({
+    userId: v.id('users'),
+    sourcePageId: v.id('note_pages'),
+    targetPageId: v.id('note_pages'),
+    createdAt: v.number(),
+  })
+    .index('by_user_source', ['userId', 'sourcePageId'])
+    .index('by_user_target', ['userId', 'targetPageId']),
+
+  // Notebook v2 - reusable templates
+  note_templates: defineTable({
+    userId: v.id('users'),
+    name: v.string(),
+    description: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    blocks: v.array(
+      v.object({
+        blockType: v.string(),
+        content: v.any(),
+        props: v.optional(v.record(v.string(), v.any())),
+        sortOrder: v.number(),
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_user', ['userId']),
+
+  // Notebook v2 - lightweight daily review queue
+  note_review_queue: defineTable({
+    userId: v.id('users'),
+    pageId: v.id('note_pages'),
+    status: v.string(), // queued | done
+    scheduledFor: v.optional(v.number()),
+    reviewedAt: v.optional(v.number()),
+    sourceRef: v.optional(v.record(v.string(), v.any())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_status', ['userId', 'status'])
+    .index('by_user_page', ['userId', 'pageId'])
+    .index('by_user_scheduled', ['userId', 'scheduledFor']),
 
   // TOPIK Exams (Metadata)
   topik_exams: defineTable({
