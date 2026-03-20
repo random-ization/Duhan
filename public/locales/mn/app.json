@@ -623,7 +623,11 @@
           "sectionReading": "Унших",
           "sectionListening": "Сонсох",
           "pageHeader": "TOPIK II {{round}}-р шалгалт {{paperType}} хувилбар · {{period}} ({{section}})",
-          "range": "TOPIK II {{section}} (1-р асуулт ~ {{count}}-р асуулт)"
+          "range": "TOPIK II {{section}} (1-р асуулт ~ {{count}}-р асуулт)",
+          "saveToNotebookTitle": "AI тайлбар хадгалах",
+          "saveToNotebookDescription": "Хадгалахаас өмнө дэвтэр сонгох эсвэл шинээр үүсгэнэ үү.",
+          "saveToNotebookConfirm": "Тэмдэглэлд хадгалах",
+          "saveToNotebookCancel": "Цуцлах"
         }
       },
       "totalAttempts": "Оролдлогууд",
@@ -1108,7 +1112,10 @@
         "reading": "Уншлага",
         "textbook": "Сурах бичиг",
         "dictionary": "Толь бичиг",
-        "practice": "Дасгал"
+        "practice": "Дасгал",
+        "manual": "Гараар",
+        "vocab": "Үгсийн сан",
+        "grammar": "Дүрэм"
       },
       "editor": {
         "loading": "Засварлагчийг ачаалж байна...",
@@ -1122,7 +1129,198 @@
         "undo": "Буцаах",
         "redo": "Дахин хийх",
         "slashTip": "Зөвлөгөө: `/` бичээд блокийг хурдан оруулна.",
-        "toggleSummary": "Нээх/хаах"
+        "toggleSummary": "Нээх/хаах",
+        "commandPlaceholder": "/ гэж бичээд команд харна уу",
+        "linkPrompt": "Холбоосын URL оруулна уу",
+        "slash": {
+          "title": "Slash команд",
+          "text": {
+            "label": "Text",
+            "hint": "Plain paragraph text"
+          },
+          "h1": {
+            "label": "Heading 1",
+            "hint": "Large section title"
+          },
+          "h2": {
+            "label": "Heading 2",
+            "hint": "Medium section heading"
+          },
+          "bullet": {
+            "label": "Bullet List",
+            "hint": "Simple bullet points"
+          },
+          "ordered": {
+            "label": "Numbered List",
+            "hint": "Ordered items"
+          },
+          "todo": {
+            "label": "To-do List",
+            "hint": "Track tasks with checkboxes"
+          },
+          "quote": {
+            "label": "Quote",
+            "hint": "Emphasized quotation block"
+          },
+          "code": {
+            "label": "Code Block",
+            "hint": "Formatted code snippet"
+          },
+          "divider": {
+            "label": "Divider",
+            "hint": "Horizontal separator line"
+          },
+          "table": {
+            "label": "Table",
+            "hint": "Insert a 3x3 table"
+          }
+        },
+        "colors": {
+          "recent": "Сүүлд ашигласан",
+          "textTitle": "Текстийн өнгө",
+          "highlightTitle": "Тодруулгын өнгө",
+          "text": {
+            "default": "Default",
+            "gray": "Gray",
+            "brown": "Brown",
+            "orange": "Orange",
+            "yellow": "Yellow",
+            "green": "Green",
+            "blue": "Blue",
+            "purple": "Purple",
+            "pink": "Pink",
+            "red": "Red"
+          },
+          "highlight": {
+            "default": "Default",
+            "grayBg": "Gray BG",
+            "brownBg": "Brown BG",
+            "orangeBg": "Orange BG",
+            "yellowBg": "Yellow BG",
+            "greenBg": "Green BG",
+            "blueBg": "Blue BG",
+            "purpleBg": "Purple BG",
+            "pinkBg": "Pink BG",
+            "redBg": "Red BG"
+          }
+        },
+        "actions": {
+          "bulletList": "Bullet List",
+          "numberedList": "Numbered List",
+          "taskList": "Task List",
+          "quote": "Quote",
+          "bold": "Bold",
+          "italic": "Italic",
+          "underline": "Underline",
+          "strike": "Strike",
+          "link": "Link",
+          "textAndHighlightColors": "Text and Highlight colors",
+          "moreTools": "Нэмэлт хэрэгсэл",
+          "h1": "Heading 1",
+          "h2": "Heading 2",
+          "h3": "Heading 3",
+          "codeBlock": "Code Block",
+          "table": "Table",
+          "divider": "Divider",
+          "undo": "Undo",
+          "redo": "Redo"
+        },
+        "study": {
+          "keyWord": "Гол үг",
+          "grammarTemplate": "Дүрмийн загвар",
+          "grammarPointShort": "Дүрэм",
+          "mistakeTemplate": "Алдааны загвар",
+          "mistakeShort": "Алдаа",
+          "exampleTemplate": "Жишээний загвар",
+          "exampleShort": "Жишээ",
+          "clozeTemplate": "Нөхөх загвар",
+          "clozeShort": "Нөхөх",
+          "grammarPoint": "Дүрмийн цэг:",
+          "commonMistake": "Түгээмэл алдаа:",
+          "correctExpression": "Зөв илэрхийлэл:",
+          "reason": "Шалтгаан:",
+          "exampleSentence": "Жишээ өгүүлбэр:",
+          "translation": "Орчуулга:",
+          "clozeFormat": "____ ({{text}})"
+        }
+      },
+      "cardType": {
+        "vocab": "Үгсийн сан",
+        "grammar": "Дүрэм",
+        "mistake": "Алдаа",
+        "quoteCard": "Ишлэлийн тэмдэглэл",
+        "note": "Тэмдэглэл"
+      },
+      "page": {
+        "newNoteTitle": "Шинэ тэмдэглэл",
+        "titleAllNotes": "Бүх тэмдэглэл",
+        "subtitleAllNotes": "Суралцах бүх тэмдэглэлээ удирдаж, ухаалаг давтлагыг эхлүүлээрэй.",
+        "todayReviewTitle": "Өнөөдрийн давтлагын даалгавар",
+        "todayReviewSummary": "Өнөөдөр давтах {{count}} зүйл байна.",
+        "viewGallery": "Карт харагдац",
+        "viewList": "Жагсаалт харагдац",
+        "viewTable": "Хүснэгт харагдац",
+        "searchPlaceholder": "Ишлэл эсвэл тэмдэглэл хайх...",
+        "sourceOption": "{{label}} ({{count}})",
+        "newNoteButton": "Шинэ тэмдэглэл",
+        "emptyNotes": "Тэмдэглэл алга. “Шинэ тэмдэглэл” дээр дарж эхлээрэй.",
+        "clickToViewAndEdit": "Дарж үзээд засварлана уу",
+        "table": {
+          "title": "Гарчиг",
+          "quote": "Ишлэл",
+          "source": "Эх сурвалж",
+          "status": "Төлөв",
+          "updatedAt": "Шинэчлэгдсэн",
+          "emptyQuote": "—"
+        },
+        "editNote": "Тэмдэглэл засах",
+        "restore": "Буцаах",
+        "expand": "Томруулах",
+        "saveState": {
+          "saving": "Хадгалж байна...",
+          "dirty": "Хадгалаагүй",
+          "saved": "Хадгалагдсан",
+          "error": "Хадгалалт амжилтгүй"
+        },
+        "retrySave": "Дахин хадгалах",
+        "quoteSectionTitle": "Эх ишлэл",
+        "quoteSectionHint": "Эхийн онцолсон хэв маягийг хадгална",
+        "quoteMissing": "Эх ишлэл олдсонгүй",
+        "myNote": "Миний тэмдэглэл",
+        "quoteEditorPlaceholder": "Энэ өгүүлбэрийн ойлголт, асуулт, орчуулгаа бичнэ үү.",
+        "editorPlaceholder": "Эндээс бодлоо бичиж эхлээрэй..."
+      },
+      "context": {
+        "smartNotebook": "Ухаалаг тэмдэглэл",
+        "smartNotebookSubtitle": "Тэмдэглэлийн хурдан харагдац",
+        "allNotes": "Бүх тэмдэглэл",
+        "reviewPlan": "Давтлагын төлөвлөгөө",
+        "reviewPlanHint": "Өнөөдрийн давтлагын жагсаалт руу орох",
+        "pendingReview": "Давтаагүй зүйлс",
+        "startSmartReview": "Ухаалаг давтлага эхлүүлэх",
+        "noNotebooks": "Тэмдэглэлийн дэвтэр алга",
+        "noNotebooksHint": "Эхний тэмдэглэлээ үүсгэвэл автоматаар дэвтэр бий болно."
+      }
+    },
+    "picker": {
+      "defaultTitle": "Тэмдэглэлд хадгалах",
+      "defaultDescription": "Хадгалахаас өмнө тэмдэглэлийн дэвтэр сонгох эсвэл шинээр үүсгэнэ үү.",
+      "defaultConfirm": "Тэмдэглэлд хадгалах",
+      "defaultCancel": "Цуцлах",
+      "meta": "{{noteCount}} тэмдэглэл · {{reviewCount}} давтаагүй",
+      "empty": "Одоогоор тэмдэглэлийн дэвтэр алга. Шинээр үүсгэнэ үү.",
+      "newNotebook": "Шинэ дэвтэр үүсгэх",
+      "newNotebookPlaceholder": "Жишээ: TOPIK давтлага",
+      "creating": "Үүсгэж байна...",
+      "create": "Үүсгэх",
+      "myNotebooks": "Миний дэвтрүүд",
+      "annotation": {
+        "title": "Ишлэлийн тэмдэглэл хадгалах",
+        "descriptionUpsert": "Энэ тэмдэглэлд дэвтэр сонгоно уу. Цуцлавал зөвхөн тэмдэглэгээ үлдэнэ.",
+        "descriptionSaveNote": "Энэ тэмдэглэлд дэвтэр сонгоно уу. Цуцлавал дэвтэр рүү бичихгүй.",
+        "descriptionUserActions": "Дэвтэр сонгоно уу. Цуцлавал зөвхөн highlight/annotation үлдэнэ.",
+        "confirm": "Тэмдэглэлд хадгалах",
+        "cancel": "Цуцлах"
       }
     }
   },

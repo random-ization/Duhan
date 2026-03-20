@@ -176,34 +176,39 @@ const FeaturedNewsCard: React.FC<{
   onOpen: (id: string) => void;
 }> = ({ featuredNews, language, t, onOpen }) => {
   const chip = getDifficultyChip(featuredNews.difficultyLevel, t);
+  const preview = (featuredNews.summary || featuredNews.bodyText || '').trim().slice(0, 150);
   return (
     <Button
       type="button"
       variant="ghost"
       size="auto"
       onClick={() => onOpen(featuredNews._id)}
-      className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl bg-primary p-6 text-left transition hover:-translate-y-1 hover:shadow-2xl"
+      className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl border-2 border-border bg-gradient-to-br from-card via-card to-accent/35 p-7 text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-foreground/20 to-transparent" />
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="mb-16 flex items-start justify-between gap-2">
-          <span className="rounded-lg border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-bold text-primary-foreground">
+      <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-primary/10 blur-2xl" />
+      <div className="absolute bottom-0 right-0 h-28 w-28 rounded-tl-[2.5rem] bg-accent/35" />
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
             {getSourceLabel(featuredNews.sourceKey)}
           </span>
-          <span className="text-xs font-medium text-primary-foreground/80">
+          <span className="text-xs font-semibold text-muted-foreground">
             {formatRelativeTime(featuredNews.publishedAt, language)}
           </span>
         </div>
-        <div>
-          <span
-            className={`mb-3 inline-block rounded border px-2 py-1 text-[10px] font-bold ${chip.className}`}
-          >
-            {chip.text}
-          </span>
-          <h3 className="mb-3 text-2xl font-black leading-snug text-primary-foreground transition group-hover:text-primary-foreground/85">
-            {featuredNews.title}
-          </h3>
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground/75">
+        <span
+          className={`mb-4 inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-bold ${chip.className}`}
+        >
+          {chip.text}
+        </span>
+        <h3 className="mb-3 text-3xl font-black leading-tight text-foreground">
+          {featuredNews.title}
+        </h3>
+        <p className="mb-8 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+          {preview || featuredNews.title}
+        </p>
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <span>
               {t('readingDiscovery.news.aiExtracted', {
                 defaultValue: 'AI extracted {{count}} words',
@@ -218,6 +223,10 @@ const FeaturedNewsCard: React.FC<{
               })}
             </span>
           </div>
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-xs font-bold text-foreground">
+            {t('readingDiscovery.articles.readNow', { defaultValue: 'Read now' })}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
         </div>
       </div>
     </Button>
@@ -231,6 +240,7 @@ const SecondaryNewsCard: React.FC<{
   onOpen: (id: string) => void;
 }> = ({ item, language, t, onOpen }) => {
   const chip = getDifficultyChip(item.difficultyLevel, t);
+  const preview = (item.summary || item.bodyText || '').trim().slice(0, 100);
   return (
     <Button
       key={item._id}
@@ -238,23 +248,27 @@ const SecondaryNewsCard: React.FC<{
       variant="ghost"
       size="auto"
       onClick={() => onOpen(item._id)}
-      className="group !flex !items-stretch !justify-between flex-col rounded-3xl border border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:shadow-xl"
+      className="group !flex !items-stretch !justify-between relative flex-col rounded-3xl border-2 border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop-sm"
     >
-      <div className="mb-6 flex items-start justify-between">
-        <span className="rounded-lg border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+      <div className="absolute right-4 top-4 rounded-full border border-border bg-muted p-1.5 text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-foreground">
+        <ChevronRight className="h-3.5 w-3.5" />
+      </div>
+      <div className="mb-5 flex items-start justify-between gap-2 pr-7">
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
           {getSourceLabel(item.sourceKey)}
         </span>
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-semibold text-muted-foreground">
           {formatRelativeTime(item.publishedAt, language)}
         </span>
       </div>
       <div>
-        <span className="mb-3 inline-block rounded border border-border bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+        <span className="mb-3 inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
           {chip.text}
         </span>
-        <h3 className="mb-3 text-lg font-black leading-snug text-foreground transition group-hover:text-primary">
-          {item.title}
-        </h3>
+        <h3 className="mb-3 text-xl font-black leading-snug text-foreground">{item.title}</h3>
+        <p className="mb-6 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          {preview || item.title}
+        </p>
         <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
           <span>
             {t('readingDiscovery.news.aiExtracted', {
@@ -322,15 +336,15 @@ type CardTone = 'default' | 'warm' | 'dark';
 function getCardToneStyles(tone: CardTone) {
   if (tone === 'dark') {
     return {
-      baseClass: 'border-border bg-primary text-primary-foreground',
-      titleClass: 'text-primary-foreground group-hover:text-primary-foreground/85',
-      textClass: 'text-primary-foreground/75',
-      badgeClass: 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground',
-      sourceTypeClass: 'text-primary-foreground/80',
-      sourceClass: 'text-primary-foreground/75',
-      iconClass: 'border border-primary-foreground/25 bg-primary-foreground/10',
-      borderClass: 'border-border/60',
-      bookmarkClass: 'text-primary-foreground/80',
+      baseClass: 'border-border bg-gradient-to-br from-foreground to-foreground/90 text-background',
+      titleClass: 'text-background',
+      textClass: 'text-background/80',
+      badgeClass: 'border-background/25 bg-background/10 text-background',
+      sourceTypeClass: 'text-background/85',
+      sourceClass: 'text-background/75',
+      iconClass: 'border border-background/30 bg-background/10',
+      borderClass: 'border-background/20',
+      bookmarkClass: 'text-background/80',
     };
   }
   if (tone === 'warm') {
@@ -384,7 +398,7 @@ const ArticleNewsCard: React.FC<{
       variant="ghost"
       size="auto"
       onClick={() => onOpen(item._id)}
-      className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
+      className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border-2 p-6 text-left transition hover:-translate-y-1 hover:shadow-pop-sm ${styles.baseClass}`}
     >
       <div className="mb-4 flex items-center gap-3">
         <div

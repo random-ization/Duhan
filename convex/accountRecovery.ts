@@ -9,6 +9,9 @@ import { hashSync } from 'bcryptjs';
 import { Resend } from 'resend';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
+import { assertProductionRuntimeEnv } from './env';
+
+assertProductionRuntimeEnv();
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;

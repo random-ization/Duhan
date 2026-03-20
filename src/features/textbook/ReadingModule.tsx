@@ -101,19 +101,35 @@ interface VocabItem {
   id: string;
   korean: string;
   meaning: string;
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
   pronunciation?: string;
   hanja?: string;
   pos?: string;
   exampleSentence?: string;
   exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
 }
 
 interface GrammarItem {
   id: string;
   title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
   type: string;
   summary: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
   explanation: string;
+  explanationEn?: string;
+  explanationVi?: string;
+  explanationMn?: string;
 }
 
 interface GrammarMatch {
@@ -209,6 +225,22 @@ function resolveReadingTranslationLanguage(
     return language;
   }
   return undefined;
+}
+
+function getLocalizedGrammarTitle(grammar: GrammarItem, language: Language): string {
+  return getLocalizedContent(grammar as never, 'title', language) || grammar.title;
+}
+
+function getLocalizedGrammarSummary(grammar: GrammarItem, language: Language): string {
+  return getLocalizedContent(grammar as never, 'summary', language) || grammar.summary;
+}
+
+function getLocalizedGrammarExplanation(grammar: GrammarItem, language: Language): string {
+  return getLocalizedContent(grammar as never, 'explanation', language) || grammar.explanation;
+}
+
+function getLocalizedVocabMeaning(vocab: VocabItem, language: Language): string {
+  return getLocalizedContent(vocab as never, 'meaning', language) || vocab.meaning;
 }
 
 function resolveUniqueUnitIndices(availableUnits: { unitIndex: number }[] | undefined): number[] {
@@ -365,9 +397,14 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               <div className="space-y-1">
                 {grammarMatches.slice(0, 5).map(g => (
                   <div key={g.id} className="text-xs text-muted-foreground">
-                    <span className="font-bold">{g.title}</span>
-                    {g.summary ? (
-                      <span className="text-muted-foreground"> · {g.summary}</span>
+                    <span className="font-bold">
+                      {getLocalizedContent(g as never, 'title', language) || g.title}
+                    </span>
+                    {getLocalizedContent(g as never, 'summary', language) || g.summary ? (
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {getLocalizedContent(g as never, 'summary', language) || g.summary}
+                      </span>
                     ) : null}
                   </div>
                 ))}
@@ -1021,9 +1058,10 @@ const DesktopNotesTab: React.FC<DesktopNotesTabProps> = ({ notes, labels }) => (
 interface DesktopGrammarTabProps {
   grammarList: GrammarItem[];
   labels: ReadingLabels;
+  language: Language;
 }
 
-const DesktopGrammarTab: React.FC<DesktopGrammarTabProps> = ({ grammarList, labels }) => (
+const DesktopGrammarTab: React.FC<DesktopGrammarTabProps> = ({ grammarList, labels, language }) => (
   <div className="space-y-3">
     {grammarList.length === 0 ? (
       <div className="text-center text-muted-foreground py-8">
@@ -1045,16 +1083,20 @@ const DesktopGrammarTab: React.FC<DesktopGrammarTabProps> = ({ grammarList, labe
             <span className="px-2 py-0.5 bg-violet-200 text-violet-800 rounded text-xs font-bold">
               {grammar.type || 'Grammar'}
             </span>
-            <h4 className="font-bold text-foreground">{grammar.title}</h4>
+            <h4 className="font-bold text-foreground">
+              {getLocalizedGrammarTitle(grammar, language)}
+            </h4>
           </div>
-          <p className="text-sm text-muted-foreground">{grammar.summary}</p>
-          {grammar.explanation && (
+          <p className="text-sm text-muted-foreground">
+            {getLocalizedGrammarSummary(grammar, language)}
+          </p>
+          {getLocalizedGrammarExplanation(grammar, language) && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-muted-foreground hover:text-muted-foreground">
                 {labels.dashboard?.reading?.viewExplanation || 'View detailed explanation'}
               </summary>
               <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
-                {grammar.explanation}
+                {getLocalizedGrammarExplanation(grammar, language)}
               </p>
             </details>
           )}
@@ -1117,6 +1159,7 @@ const DesktopAiTab: React.FC<DesktopAiTabProps> = ({
 
 interface ReadingDesktopStudyHubProps {
   labels: ReadingLabels;
+  language: Language;
   activeTab: ReadingModuleTab;
   setActiveTab: React.Dispatch<React.SetStateAction<ReadingModuleTab>>;
   notes: Note[];
@@ -1129,6 +1172,7 @@ interface ReadingDesktopStudyHubProps {
 
 const ReadingDesktopStudyHub: React.FC<ReadingDesktopStudyHubProps> = ({
   labels,
+  language,
   activeTab,
   setActiveTab,
   notes,
@@ -1174,7 +1218,9 @@ const ReadingDesktopStudyHub: React.FC<ReadingDesktopStudyHubProps> = ({
 
     <div className="flex-1 overflow-y-auto p-4">
       {activeTab === 'notes' && <DesktopNotesTab notes={notes} labels={labels} />}
-      {activeTab === 'grammar' && <DesktopGrammarTab grammarList={grammarList} labels={labels} />}
+      {activeTab === 'grammar' && (
+        <DesktopGrammarTab grammarList={grammarList} labels={labels} language={language} />
+      )}
       {activeTab === 'ai' && (
         <DesktopAiTab
           aiMessages={aiMessages}
@@ -1282,6 +1328,7 @@ const ReadingPopovers: React.FC<ReadingPopoversProps> = ({
 
 interface ReadingMobileStudyHubProps {
   labels: ReadingLabels;
+  language: Language;
   activeTab: ReadingModuleTab;
   setActiveTab: React.Dispatch<React.SetStateAction<ReadingModuleTab>>;
   mobileSheetOpen: boolean;
@@ -1292,6 +1339,7 @@ interface ReadingMobileStudyHubProps {
 
 const ReadingMobileStudyHub: React.FC<ReadingMobileStudyHubProps> = ({
   labels,
+  language,
   activeTab,
   setActiveTab,
   mobileSheetOpen,
@@ -1347,8 +1395,12 @@ const ReadingMobileStudyHub: React.FC<ReadingMobileStudyHubProps> = ({
         <div className="space-y-2">
           {grammarList.slice(0, 5).map(grammar => (
             <div key={grammar.id} className="p-3 bg-muted rounded-lg">
-              <div className="font-bold text-foreground">{grammar.title}</div>
-              <div className="text-sm text-muted-foreground">{grammar.explanation}</div>
+              <div className="font-bold text-foreground">
+                {getLocalizedGrammarTitle(grammar, language)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {getLocalizedGrammarExplanation(grammar, language)}
+              </div>
             </div>
           ))}
         </div>
@@ -1502,6 +1554,7 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
       />
       <ReadingDesktopStudyHub
         labels={labels}
+        language={language}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         notes={notes}
@@ -1531,6 +1584,7 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
 
     <ReadingMobileStudyHub
       labels={labels}
+      language={language}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       mobileSheetOpen={mobileSheetOpen}
@@ -2061,8 +2115,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       const query = baseForm ?? clickedWord;
 
       const vocabMatch = lookupInVocabList(query) ?? lookupInVocabList(clickedWord);
+      const localizedVocabMeaning = vocabMatch
+        ? getLocalizedVocabMeaning(vocabMatch, language)
+        : undefined;
       const fallbackMeaning = resolveLookupFallbackMeaning(
-        vocabMatch?.meaning,
+        localizedVocabMeaning,
         moduleText.noMeaning
       );
 
@@ -2075,7 +2132,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       setSelectedWord({
         word: clickedWord,
         lemma: baseForm,
-        meaning: resolveLookupLoadingMeaning(vocabMatch?.meaning, moduleText.loading),
+        meaning: resolveLookupLoadingMeaning(localizedVocabMeaning, moduleText.loading),
         baseForm,
         grammarMatches: [],
         contextTranslation,
@@ -2098,6 +2155,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       resolveLookupFallbackMeaning,
       resolveLookupLoadingMeaning,
       performDictionaryLookup,
+      language,
     ]
   );
 
@@ -2175,7 +2233,11 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     if (selectionToolbar) {
       const anchor =
         readerRef.current && selectionToolbar.range
-          ? buildAnchorFromRange(selectionToolbar.range, readerRef.current, `A${activeArticleIndex}`)
+          ? buildAnchorFromRange(
+              selectionToolbar.range,
+              readerRef.current,
+              `A${activeArticleIndex}`
+            )
           : null;
       const selectedText = anchor?.quote || selectionToolbar.text;
       const nextId = Date.now().toString();

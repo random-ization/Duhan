@@ -1,5 +1,13 @@
 import { Language } from '../types';
 
+export function normalizeLanguage(language?: string | null): Language {
+  const normalized = (language || '').trim().toLowerCase();
+  if (normalized.startsWith('zh') || normalized === 'cn') return 'zh';
+  if (normalized.startsWith('vi')) return 'vi';
+  if (normalized.startsWith('mn')) return 'mn';
+  return 'en';
+}
+
 /**
  * Resolves the localized content from a data object based on the current language.
  *
@@ -13,7 +21,7 @@ import { Language } from '../types';
 export function getLocalizedContent(
   data: unknown,
   field: string,
-  language: Language = 'zh'
+  language: string | Language = 'zh'
 ): string {
   if (typeof data !== 'object' || data === null) return '';
   const record = data as Record<string, unknown>;
@@ -22,15 +30,15 @@ export function getLocalizedContent(
   // If field has dots, we might want a get implementation, but for now let's assume direct access
   // or standard suffix logic.
 
-  const langStr = (language as string).toLowerCase();
+  const lang = normalizeLanguage(language);
   let suffix = '';
-  if (langStr === 'en') {
+  if (lang === 'en') {
     suffix = 'En';
-  } else if (langStr === 'vi') {
+  } else if (lang === 'vi') {
     suffix = 'Vi';
-  } else if (langStr === 'mn') {
+  } else if (lang === 'mn') {
     suffix = 'Mn';
-  } else if (langStr.startsWith('zh') || langStr === 'cn') {
+  } else if (lang === 'zh') {
     suffix = 'Zh';
   }
 

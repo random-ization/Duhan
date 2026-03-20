@@ -18,6 +18,7 @@ import { Button } from '../components/ui';
 import { useTTS } from '../hooks/useTTS';
 import { Skeleton } from '../components/common';
 import { ReviewWordsCard } from '../features/vocab/components/ReviewWordsCard';
+import { trackEvent } from '../utils/analytics';
 
 interface DailyPhraseData {
   id: string;
@@ -229,6 +230,8 @@ function getDashboardGridClassName(isEditing: boolean) {
   }
   return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)] transition-all';
 }
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 const TigerCard: React.FC<{
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -620,6 +623,26 @@ export default function DashboardPage() {
     if (dashboardView !== 'practice') return;
     navigate('/practice', { replace: true });
   }, [dashboardView, navigate]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const signupAt = user.joinDate ?? user.createdAt;
+    if (!signupAt) return;
+
+    const daysSinceSignup = Math.floor((Date.now() - signupAt) / ONE_DAY_MS);
+    if (daysSinceSignup < 1) return;
+    if (typeof globalThis.window === 'undefined') return;
+
+    const dedupeKey = `duhan:retention:day1:${user.id}`;
+    if (globalThis.window.localStorage.getItem(dedupeKey) === '1') return;
+
+    trackEvent('day1_retention', {
+      language: resolveDashboardLanguage(language),
+      userTier: user.tier || 'UNKNOWN',
+      daysSinceSignup,
+    });
+    globalThis.window.localStorage.setItem(dedupeKey, '1');
+  }, [language, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
 
   // Card groups
   const PRACTICE_CARDS = useMemo(() => new Set(['vocab', 'notes', 'typing']), []);

@@ -1216,7 +1216,7 @@
       "q2": "Are the TOPIK past papers up to date?",
       "a2": "Yes. We include publicly released papers from earlier rounds to the latest available and keep updating.",
       "q3": "Can I get a refund?",
-      "a3": "We offer a 30-day refund guarantee. Email support and we’ll refund you."
+      "a3": "We offer a 14-day refund guarantee. Email support and we’ll refund you."
     },
     "footer": {
       "about": "About",
@@ -1251,7 +1251,7 @@
     }
   },
   "pricingDetails": {
-    "refundBadge": "30-day refund guarantee",
+    "refundBadge": "14-day refund guarantee",
     "errors": {
       "checkoutFailed": "Failed to start checkout. Please try again later."
     },
@@ -1363,7 +1363,7 @@
       "title": "FAQ",
       "q1": {
         "q": "Can I get a refund if I’m not satisfied?",
-        "a": "Yes. We offer a 30-day refund guarantee. Email support and we’ll refund you."
+        "a": "Yes. We offer a 14-day refund guarantee. Email support and we’ll refund you."
       },
       "q2": {
         "q": "Can I cancel anytime?",

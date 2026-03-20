@@ -13,6 +13,7 @@ import { useAuthActions } from '@convex-dev/auth/react';
 import { User, Language, TextbookContent, TopikExam } from '../types';
 import { NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
+import { normalizeLanguage } from '../utils/languageUtils';
 
 import i18n from '../utils/i18next-config';
 
@@ -66,14 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     i18n.changeLanguage(lang);
   }, []);
 
-  const language: Language =
-    i18n.language.startsWith('zh') || i18n.language === 'cn'
-      ? 'zh'
-      : i18n.language === 'vi'
-        ? 'vi'
-        : i18n.language === 'mn'
-          ? 'mn'
-          : 'en';
+  const language: Language = normalizeLanguage(i18n.language);
 
   // Session Check (Load User) using Convex Auth
   const { signOut } = useAuthActions();
@@ -91,10 +85,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Session exists but viewer doc is missing; repair once by signing out stale session.
     if (viewer === null && !attemptedSessionRepairRef.current) {
       attemptedSessionRepairRef.current = true;
-      void signOut()
-        .catch(error => {
-          logger.warn('Session repair signOut failed', error);
-        });
+      void signOut().catch(error => {
+        logger.warn('Session repair signOut failed', error);
+      });
     }
   }, [authLoading, isAuthenticated, viewer, signOut]);
 

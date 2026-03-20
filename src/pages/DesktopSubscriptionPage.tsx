@@ -13,6 +13,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
+import { trackEvent } from '../utils/analytics';
 
 const DesktopSubscriptionPage: React.FC = () => {
   const { user } = useAuth();
@@ -286,6 +287,11 @@ const DesktopSubscriptionPage: React.FC = () => {
         <PricingSection
           onSubscribe={async plan => {
             const checkoutPlan = plan as CheckoutPlan;
+            trackEvent('checkout_start', {
+              language: i18n.language,
+              plan: checkoutPlan,
+              source: 'desktop_subscription',
+            });
             if (!user) {
               navigate(
                 `/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(checkoutPlan))}`
@@ -299,6 +305,11 @@ const DesktopSubscriptionPage: React.FC = () => {
                 userEmail: user.email || '',
                 userName: user.name || '',
                 region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+              });
+              trackEvent('checkout_success', {
+                language: i18n.language,
+                plan: checkoutPlan,
+                source: 'desktop_subscription',
               });
               globalThis.location.href = checkoutUrl;
             } catch (error) {

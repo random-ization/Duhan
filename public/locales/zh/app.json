@@ -647,7 +647,11 @@
           "sectionReading": "阅读",
           "sectionListening": "听力",
           "pageHeader": "第 {{round}} 届 TOPIK II {{paperType}} 卷 · {{period}}（{{section}}）",
-          "range": "TOPIK II {{section}}（第1题 ~ 第{{count}}题）"
+          "range": "TOPIK II {{section}}（第1题 ~ 第{{count}}题）",
+          "saveToNotebookTitle": "保存 AI 解析",
+          "saveToNotebookDescription": "请选择目标笔记本，或先创建一个后再保存。",
+          "saveToNotebookConfirm": "保存到笔记本",
+          "saveToNotebookCancel": "取消"
         }
       },
       "totalAttempts": "作答次数",
@@ -1113,7 +1117,10 @@
         "reading": "阅读",
         "textbook": "教材",
         "dictionary": "词典",
-        "practice": "练习"
+        "practice": "练习",
+        "manual": "手动",
+        "vocab": "词汇",
+        "grammar": "语法"
       },
       "editor": {
         "loading": "正在加载编辑器...",
@@ -1127,7 +1134,198 @@
         "undo": "撤销",
         "redo": "重做",
         "slashTip": "提示：输入 `/` 可快速插入块。",
-        "toggleSummary": "折叠"
+        "toggleSummary": "折叠",
+        "commandPlaceholder": "输入 / 查看命令",
+        "linkPrompt": "粘贴链接地址",
+        "slash": {
+          "title": "斜杠命令",
+          "text": {
+            "label": "Text",
+            "hint": "Plain paragraph text"
+          },
+          "h1": {
+            "label": "Heading 1",
+            "hint": "Large section title"
+          },
+          "h2": {
+            "label": "Heading 2",
+            "hint": "Medium section heading"
+          },
+          "bullet": {
+            "label": "Bullet List",
+            "hint": "Simple bullet points"
+          },
+          "ordered": {
+            "label": "Numbered List",
+            "hint": "Ordered items"
+          },
+          "todo": {
+            "label": "To-do List",
+            "hint": "Track tasks with checkboxes"
+          },
+          "quote": {
+            "label": "Quote",
+            "hint": "Emphasized quotation block"
+          },
+          "code": {
+            "label": "Code Block",
+            "hint": "Formatted code snippet"
+          },
+          "divider": {
+            "label": "Divider",
+            "hint": "Horizontal separator line"
+          },
+          "table": {
+            "label": "Table",
+            "hint": "Insert a 3x3 table"
+          }
+        },
+        "colors": {
+          "recent": "最近使用",
+          "textTitle": "文字颜色",
+          "highlightTitle": "高亮颜色",
+          "text": {
+            "default": "Default",
+            "gray": "Gray",
+            "brown": "Brown",
+            "orange": "Orange",
+            "yellow": "Yellow",
+            "green": "Green",
+            "blue": "Blue",
+            "purple": "Purple",
+            "pink": "Pink",
+            "red": "Red"
+          },
+          "highlight": {
+            "default": "Default",
+            "grayBg": "Gray BG",
+            "brownBg": "Brown BG",
+            "orangeBg": "Orange BG",
+            "yellowBg": "Yellow BG",
+            "greenBg": "Green BG",
+            "blueBg": "Blue BG",
+            "purpleBg": "Purple BG",
+            "pinkBg": "Pink BG",
+            "redBg": "Red BG"
+          }
+        },
+        "actions": {
+          "bulletList": "Bullet List",
+          "numberedList": "Numbered List",
+          "taskList": "Task List",
+          "quote": "Quote",
+          "bold": "Bold",
+          "italic": "Italic",
+          "underline": "Underline",
+          "strike": "Strike",
+          "link": "Link",
+          "textAndHighlightColors": "Text and Highlight colors",
+          "moreTools": "更多工具",
+          "h1": "Heading 1",
+          "h2": "Heading 2",
+          "h3": "Heading 3",
+          "codeBlock": "Code Block",
+          "table": "Table",
+          "divider": "Divider",
+          "undo": "Undo",
+          "redo": "Redo"
+        },
+        "study": {
+          "keyWord": "重点词",
+          "grammarTemplate": "语法模板",
+          "grammarPointShort": "语法点",
+          "mistakeTemplate": "易错点模板",
+          "mistakeShort": "易错点",
+          "exampleTemplate": "例句模板",
+          "exampleShort": "例句",
+          "clozeTemplate": "挖空模板",
+          "clozeShort": "挖空",
+          "grammarPoint": "语法点：",
+          "commonMistake": "易错点：",
+          "correctExpression": "正确表达：",
+          "reason": "原因：",
+          "exampleSentence": "例句：",
+          "translation": "翻译：",
+          "clozeFormat": "____（{{text}}）"
+        }
+      },
+      "cardType": {
+        "vocab": "生词",
+        "grammar": "语法",
+        "mistake": "错题",
+        "quoteCard": "引用笔记",
+        "note": "笔记"
+      },
+      "page": {
+        "newNoteTitle": "新建笔记",
+        "titleAllNotes": "所有笔记",
+        "subtitleAllNotes": "在这里管理你的学习沉淀，并启动智能复习。",
+        "todayReviewTitle": "今日复习任务",
+        "todayReviewSummary": "你今天有 {{count}} 项需要复习。",
+        "viewGallery": "画廊视图",
+        "viewList": "列表视图",
+        "viewTable": "表格视图",
+        "searchPlaceholder": "搜索引用或笔记...",
+        "sourceOption": "{{label}} ({{count}})",
+        "newNoteButton": "新建笔记",
+        "emptyNotes": "暂无笔记，点击“新建笔记”开始记录。",
+        "clickToViewAndEdit": "点击查看并编辑内容",
+        "table": {
+          "title": "标题",
+          "quote": "引用",
+          "source": "来源",
+          "status": "状态",
+          "updatedAt": "更新时间",
+          "emptyQuote": "—"
+        },
+        "editNote": "编辑笔记",
+        "restore": "还原",
+        "expand": "放大",
+        "saveState": {
+          "saving": "保存中...",
+          "dirty": "未保存",
+          "saved": "已保存",
+          "error": "保存失败"
+        },
+        "retrySave": "重试保存",
+        "quoteSectionTitle": "原文引用",
+        "quoteSectionHint": "保留原文强调样式",
+        "quoteMissing": "未找到引用原文",
+        "myNote": "我的笔记",
+        "quoteEditorPlaceholder": "写下你对这句原文的理解、疑问或翻译。",
+        "editorPlaceholder": "在这里开始记录你的想法..."
+      },
+      "context": {
+        "smartNotebook": "智能笔记本",
+        "smartNotebookSubtitle": "笔记本快捷视图",
+        "allNotes": "所有笔记",
+        "reviewPlan": "复习计划",
+        "reviewPlanHint": "进入今日复习任务",
+        "pendingReview": "待复习任务",
+        "startSmartReview": "开始智能复习",
+        "noNotebooks": "暂无笔记本",
+        "noNotebooksHint": "创建第一条笔记后会自动出现。"
+      }
+    },
+    "picker": {
+      "defaultTitle": "保存到笔记本",
+      "defaultDescription": "请选择目标笔记本，或先快速创建后再保存。",
+      "defaultConfirm": "保存到笔记本",
+      "defaultCancel": "取消",
+      "meta": "{{noteCount}} 条笔记 · {{reviewCount}} 条待复习",
+      "empty": "暂无笔记本，请先创建一个。",
+      "newNotebook": "新建笔记本",
+      "newNotebookPlaceholder": "例如：TOPIK 真题复盘",
+      "creating": "创建中...",
+      "create": "新建",
+      "myNotebooks": "我的笔记本",
+      "annotation": {
+        "title": "保存引用笔记",
+        "descriptionUpsert": "请选择目标笔记本。取消后仅保留标注。",
+        "descriptionSaveNote": "请选择目标笔记本。取消后不会写入笔记本。",
+        "descriptionUserActions": "请选择目标笔记本。取消后仅保留高亮/注释，不写入笔记本。",
+        "confirm": "保存到笔记本",
+        "cancel": "取消"
       }
     }
   },

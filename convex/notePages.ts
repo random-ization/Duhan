@@ -1,6 +1,11 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type MutationCtx } from './_generated/server';
+import type { Doc, Id } from './_generated/dataModel';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
+
+type NotePagesDbCtx = Pick<MutationCtx, 'db'>;
+type NotePageDoc = Doc<'note_pages'>;
+type NoteKind = 'quote_card' | 'longform_page' | 'vocab_item';
 
 const normalizeSortOrder = (value: number | undefined, fallback: number) =>
   Number.isFinite(value) ? Number(value) : fallback;
@@ -13,6 +18,9 @@ const MAX_PAGE_SCAN = 2500;
 const PREVIEW_MAX = 200;
 const SNIPPET_MAX = 280;
 const LEGACY_ALL_NOTES_MIGRATION_KEY = 'migration:legacy-all-notes:v1';
+const SOURCE_NOTEBOOK_MIGRATION_KEY = 'migration:notebook-source-buckets:v1';
+const NOTEBOOK_CONTAINER_FLAG = 'isNotebookContainer';
+const NOTEBOOK_KEY_FIELD = 'notebookKey';
 
 const blockInputValidator = v.object({
   blockKey: v.optional(v.string()),
@@ -21,6 +29,28 @@ const blockInputValidator = v.object({
   props: v.optional(v.record(v.string(), v.any())),
   sortOrder: v.number(),
 });
+
+const decodeCommonHtmlEntities = (value: string) =>
+  value
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
+const stripInlineMarkup = (value: string) =>
+  decodeCommonHtmlEntities(value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\+\+(.*?)\+\+/g, '$1')
+    .replace(/==(.*?)==/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/`(.*?)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -51,15 +81,109 @@ const parseSourceModule = (metadata: Record<string, unknown>): string | undefine
   return typeof sourceRef.module === 'string' ? sourceRef.module : undefined;
 };
 
-const toSearchableText = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return value.map(toSearchableText).join(' ');
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return Object.values(record).map(toSearchableText).join(' ');
+const isNotebookContainerMetadata = (metadata: Record<string, unknown>) =>
+  metadata[NOTEBOOK_CONTAINER_FLAG] === true;
+
+const isNotebookContainerPage = (page: { metadata?: unknown }) => {
+  const metadata = normalizeMetadata(page.metadata);
+  return isNotebookContainerMetadata(metadata);
+};
+
+const toNotebookKey = (value: string) => value.trim().toLowerCase();
+
+type SourceNotebookBucket = {
+  key: string;
+  title: string;
+  icon: string;
+};
+
+const resolveSourceNotebookBucket = (sourceModule?: string): SourceNotebookBucket => {
+  const normalized = normalizeSourceModule(sourceModule);
+  if (normalized.includes('TOPIK')) {
+    return { key: 'topik', title: 'TOPIK', icon: '🧠' };
   }
-  return '';
+  if (
+    normalized.includes('READING') ||
+    normalized.includes('NEWS') ||
+    normalized.includes('TEXTBOOK')
+  ) {
+    return { key: 'reading', title: 'Reading', icon: '📖' };
+  }
+  if (normalized.includes('VOCAB') || normalized.includes('DICTIONARY')) {
+    return { key: 'vocabulary', title: 'Vocabulary', icon: '🗂️' };
+  }
+  if (normalized.includes('GRAMMAR')) {
+    return { key: 'grammar', title: 'Grammar', icon: '🧩' };
+  }
+  return { key: 'manual', title: 'Manual', icon: '📝' };
+};
+
+const getNotebookKey = (metadata: Record<string, unknown>) => {
+  const keyValue = metadata[NOTEBOOK_KEY_FIELD];
+  if (typeof keyValue !== 'string' || !keyValue.trim()) return undefined;
+  return toNotebookKey(keyValue);
+};
+
+const normalizeNoteKind = (value: unknown): NoteKind | undefined => {
+  if (value === 'quote_card' || value === 'longform_page' || value === 'vocab_item') {
+    return value;
+  }
+  return undefined;
+};
+
+const NON_CONTENT_TEXT_KEYS = new Set([
+  'color',
+  'type',
+  'attrs',
+  'marks',
+  'id',
+  'class',
+  'className',
+  'style',
+  'href',
+  'target',
+  'rel',
+  'start',
+  'end',
+  'offset',
+  'sortOrder',
+  'source',
+  'sourceRef',
+  'annotationId',
+  'module',
+  'contentId',
+  'blockId',
+  'anchorKey',
+  'status',
+  'pinned',
+  'createdAt',
+  'updatedAt',
+]);
+
+const extractDisplayText = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(extractDisplayText).join(' ').trim();
+  const record = asRecord(value);
+  if (!record) return '';
+
+  const prioritized = [
+    typeof record.text === 'string' ? record.text : '',
+    typeof record.quote === 'string' ? record.quote : '',
+    typeof record.note === 'string' ? record.note : '',
+    extractDisplayText(record.content),
+  ]
+    .filter(item => item.trim().length > 0)
+    .join(' ')
+    .trim();
+  if (prioritized) return prioritized;
+
+  const parts: string[] = [];
+  for (const [key, item] of Object.entries(record)) {
+    if (NON_CONTENT_TEXT_KEYS.has(key)) continue;
+    const text = extractDisplayText(item).trim();
+    if (text) parts.push(text);
+  }
+  return parts.join(' ').trim();
 };
 
 const buildSnippet = (haystack: string, needle: string) => {
@@ -71,7 +195,11 @@ const buildSnippet = (haystack: string, needle: string) => {
   return haystack.slice(start, end).trim();
 };
 
-const blockKeyFor = (block: { blockKey?: string; sortOrder: number }, index: number, now: number) => {
+const blockKeyFor = (
+  block: { blockKey?: string; sortOrder: number },
+  index: number,
+  now: number
+) => {
   const explicit = block.blockKey?.trim();
   if (explicit) return explicit;
   return `block-${now}-${block.sortOrder}-${index}`;
@@ -89,11 +217,11 @@ const anchorKeyFor = (args: {
     .map(item => item.replaceAll('|', '\\|'))
     .join('|');
 
-const normalizeSourceModule = (value?: string) => (value?.trim().toUpperCase() || 'PRACTICE');
+const normalizeSourceModule = (value?: string) => value?.trim().toUpperCase() || 'PRACTICE';
 
-const normalizeNoteType = (value?: string) => (value?.trim().toLowerCase() || 'manual');
+const normalizeNoteType = (value?: string) => value?.trim().toLowerCase() || 'manual';
 
-const normalizeStatus = (value?: string) => (value?.trim() || 'Inbox');
+const normalizeStatus = (value?: string) => value?.trim() || 'Inbox';
 
 const normalizeColor = (value?: string) => {
   if (!value) return '';
@@ -126,7 +254,7 @@ const buildSearchTextFromBlocks = (
   tags: string[] | undefined,
   blocks: Array<{ content: unknown }>
 ) => {
-  const blockText = blocks.map(block => toSearchableText(block.content)).join(' ');
+  const blockText = blocks.map(block => extractDisplayText(block.content)).join(' ');
   return `${title} ${(tags || []).join(' ')} ${blockText}`.trim().slice(0, 8000);
 };
 
@@ -167,8 +295,24 @@ const editorDocHasHighlight = (value: unknown): boolean => {
 };
 
 const blockToEditorNode = (block: { blockType: string; content: unknown }) => {
-  const text = toSearchableText(block.content).trim();
-  const textNode = text ? [{ type: 'text', text }] : undefined;
+  const text = extractDisplayText(block.content).trim();
+  const quoteColor =
+    block.blockType === 'quote'
+      ? normalizeColor(
+          typeof asRecord(block.content)?.color === 'string'
+            ? String(asRecord(block.content)?.color)
+            : ''
+        )
+      : '';
+  const textNode = text
+    ? [
+        {
+          type: 'text',
+          text,
+          ...(quoteColor ? { marks: [{ type: 'highlight', attrs: { color: quoteColor } }] } : {}),
+        },
+      ]
+    : undefined;
 
   if (block.blockType === 'heading_1') {
     return { type: 'heading', attrs: { level: 1 }, content: textNode };
@@ -198,7 +342,11 @@ const blockToEditorNode = (block: { blockType: string; content: unknown }) => {
     return {
       type: 'taskList',
       content: [
-        { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: textNode }] },
+        {
+          type: 'taskItem',
+          attrs: { checked: false },
+          content: [{ type: 'paragraph', content: textNode }],
+        },
       ],
     };
   }
@@ -213,7 +361,9 @@ const extractEditorDocFromBlocks = (
   return normalizeEditorDoc(tiptapBlock.content);
 };
 
-const blocksToEditorDoc = (blocks: Array<{ blockType: string; content: unknown; sortOrder: number }>) => {
+const blocksToEditorDoc = (
+  blocks: Array<{ blockType: string; content: unknown; sortOrder: number }>
+) => {
   const fromStored = extractEditorDocFromBlocks(blocks);
   if (fromStored) return fromStored;
 
@@ -232,7 +382,9 @@ const derivePageIndexesFromBlocks = (args: {
 }) => {
   const editorDoc = blocksToEditorDoc(args.blocks);
   const docText = extractEditorDocText(editorDoc).trim();
-  const searchableText = `${args.title} ${(args.tags || []).join(' ')} ${docText}`.trim().slice(0, 8000);
+  const searchableText = `${args.title} ${(args.tags || []).join(' ')} ${docText}`
+    .trim()
+    .slice(0, 8000);
   const detected = detectNoteAndHighlight(args.blocks);
   const hasHighlight = detected.hasHighlight || editorDocHasHighlight(editorDoc);
   const hasNote = detected.hasNote || docText.length > 0;
@@ -253,7 +405,7 @@ const detectNoteAndHighlight = (
     if (block.blockType !== 'paragraph') return false;
     const key = block.blockKey || '';
     if (key === 'note' || key === 'legacy-content') return true;
-    return isNonEmptyString(toSearchableText(block.content));
+    return isNonEmptyString(extractDisplayText(block.content));
   });
   const hasHighlight = blocks.some(block => {
     if (block.blockType === 'quote') {
@@ -267,15 +419,33 @@ const detectNoteAndHighlight = (
   return { hasNote, hasHighlight };
 };
 
-const parseSourceModuleFromPage = (page: {
-  sourceModule?: string;
-  metadata?: unknown;
-}) => page.sourceModule || parseSourceModule(normalizeMetadata(page.metadata));
+const extractQuoteAndNoteFromBlocks = (
+  blocks: Array<{ blockType: string; blockKey?: string; content: unknown }>
+) => {
+  let quoteText = '';
+  let noteText = '';
 
-const parseNoteTypeFromPage = (page: {
-  noteType?: string;
-  metadata?: unknown;
-}) => {
+  for (const block of blocks) {
+    const text = extractDisplayText(block.content).trim();
+    if (!text) continue;
+
+    if (!quoteText && (block.blockKey === 'quote' || block.blockType === 'quote')) {
+      quoteText = text;
+      continue;
+    }
+
+    if (!noteText && (block.blockKey === 'note' || block.blockType === 'paragraph')) {
+      noteText = text;
+    }
+  }
+
+  return { quoteText, noteText };
+};
+
+const parseSourceModuleFromPage = (page: { sourceModule?: string; metadata?: unknown }) =>
+  page.sourceModule || parseSourceModule(normalizeMetadata(page.metadata));
+
+const parseNoteTypeFromPage = (page: { noteType?: string; metadata?: unknown }) => {
   if (typeof page.noteType === 'string' && page.noteType.trim()) return page.noteType;
   const metadata = normalizeMetadata(page.metadata);
   return typeof metadata.noteType === 'string' && metadata.noteType.trim()
@@ -283,28 +453,44 @@ const parseNoteTypeFromPage = (page: {
     : 'manual';
 };
 
-const parsePageStatus = (page: {
-  status?: string;
+const parseNoteKindFromPage = (page: {
+  noteType?: string;
   metadata?: unknown;
-}) => {
+  sourceModule?: string;
+}): NoteKind => {
+  const metadata = normalizeMetadata(page.metadata);
+  const explicit = normalizeNoteKind(metadata.noteKind);
+  if (explicit) return explicit;
+
+  const noteType = normalizeNoteType(parseNoteTypeFromPage(page));
+  if (noteType.includes('vocab')) return 'vocab_item';
+
+  if (parseSourceModuleFromPage(page) || asRecord(metadata.sourceRef)) {
+    return 'quote_card';
+  }
+
+  return 'longform_page';
+};
+
+const isNotebookVisibleNotePage = (page: {
+  noteType?: string;
+  metadata?: unknown;
+  sourceModule?: string;
+}) => parseNoteKindFromPage(page) !== 'vocab_item';
+
+const parsePageStatus = (page: { status?: string; metadata?: unknown }) => {
   if (typeof page.status === 'string' && page.status.trim()) return page.status;
   const metadata = normalizeMetadata(page.metadata);
   return typeof metadata.status === 'string' && metadata.status.trim() ? metadata.status : 'Inbox';
 };
 
-const parsePagePinned = (page: {
-  pinned?: boolean;
-  metadata?: unknown;
-}) => {
+const parsePagePinned = (page: { pinned?: boolean; metadata?: unknown }) => {
   if (typeof page.pinned === 'boolean') return page.pinned;
   const metadata = normalizeMetadata(page.metadata);
   return metadata.pinned === true;
 };
 
-const parseLastReviewedAt = (page: {
-  lastReviewedAt?: number;
-  metadata?: unknown;
-}) => {
+const parseLastReviewedAt = (page: { lastReviewedAt?: number; metadata?: unknown }) => {
   if (typeof page.lastReviewedAt === 'number') return page.lastReviewedAt;
   const metadata = normalizeMetadata(page.metadata);
   return typeof metadata.lastReviewedAt === 'number' ? metadata.lastReviewedAt : undefined;
@@ -331,6 +517,7 @@ export const listPages = query({
     return pages
       .filter(page => {
         if (!includeArchived && page.isArchived) return false;
+        if (!isNotebookContainerPage(page) && !isNotebookVisibleNotePage(page)) return false;
         if (args.parentPageId === undefined) return !page.parentPageId;
         return page.parentPageId === args.parentPageId;
       })
@@ -350,6 +537,7 @@ export const listPages = query({
         const metadata = normalizeMetadata(page.metadata);
         const sourceModule = parseSourceModuleFromPage(page);
         const noteType = parseNoteTypeFromPage(page);
+        const noteKind = parseNoteKindFromPage(page);
         const status = parsePageStatus(page);
         const pinned = parsePagePinned(page);
         const lastReviewedAt = parseLastReviewedAt(page);
@@ -368,6 +556,7 @@ export const listPages = query({
           status,
           sourceModule,
           noteType,
+          noteKind,
           dedupeKey: page.dedupeKey,
           previewText: page.previewText,
           searchText: page.searchText,
@@ -378,6 +567,150 @@ export const listPages = query({
           updatedAt: page.updatedAt,
         };
       });
+  },
+});
+
+export const listNotebooks = query({
+  args: {},
+  handler: async ctx => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) {
+      return {
+        notebooks: [] as Array<{
+          id: string;
+          title: string;
+          icon?: string;
+          sortOrder: number;
+          noteCount: number;
+          reviewCount: number;
+          sourceModule: string | null;
+          updatedAt: number;
+          createdAt: number;
+        }>,
+        totals: {
+          notebooks: 0,
+          notes: 0,
+          unassigned: 0,
+        },
+      };
+    }
+
+    const pages = await ctx.db
+      .query('note_pages')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(MAX_PAGE_SCAN);
+
+    const activePages = pages.filter(page => !page.isArchived);
+    const notebooks = activePages.filter(page => isNotebookContainerPage(page));
+    const notebookIdSet = new Set(notebooks.map(page => String(page._id)));
+
+    const noteRows = activePages.filter(
+      page => !isNotebookContainerPage(page) && isNotebookVisibleNotePage(page)
+    );
+    const noteCounts = new Map<string, { noteCount: number; reviewCount: number }>();
+    let unassigned = 0;
+    for (const note of noteRows) {
+      if (!note.parentPageId || !notebookIdSet.has(String(note.parentPageId))) {
+        unassigned += 1;
+        continue;
+      }
+      const key = String(note.parentPageId);
+      const status = parsePageStatus(note).trim().toLowerCase();
+      const entry = noteCounts.get(key) || { noteCount: 0, reviewCount: 0 };
+      entry.noteCount += 1;
+      if (status !== 'reviewed') entry.reviewCount += 1;
+      noteCounts.set(key, entry);
+    }
+
+    const items = notebooks
+      .map(page => {
+        const metadata = normalizeMetadata(page.metadata);
+        const counts = noteCounts.get(String(page._id)) || { noteCount: 0, reviewCount: 0 };
+        return {
+          id: page._id,
+          title: page.title,
+          icon: page.icon,
+          sortOrder: page.sortOrder ?? Number.MAX_SAFE_INTEGER,
+          noteCount: counts.noteCount,
+          reviewCount: counts.reviewCount,
+          sourceModule:
+            typeof metadata.sourceModule === 'string' ? String(metadata.sourceModule) : null,
+          updatedAt: page.updatedAt,
+          createdAt: page.createdAt,
+        };
+      })
+      .sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        return b.updatedAt - a.updatedAt;
+      });
+
+    return {
+      notebooks: items,
+      totals: {
+        notebooks: items.length,
+        notes: noteRows.length,
+        unassigned,
+      },
+    };
+  },
+});
+
+export const createNotebook = mutation({
+  args: {
+    name: v.string(),
+    icon: v.optional(v.string()),
+    sourceModule: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const now = Date.now();
+    const title = args.name.trim();
+    if (!title) {
+      throw new ConvexError({ code: 'INVALID_ARGUMENT', message: 'Notebook name is required' });
+    }
+
+    const normalizedTitle = title.toLowerCase();
+    const allPages = await ctx.db
+      .query('note_pages')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(MAX_PAGE_SCAN);
+
+    const existing = allPages.find(page => {
+      if (page.isArchived) return false;
+      if (!isNotebookContainerPage(page)) return false;
+      return page.title.trim().toLowerCase() === normalizedTitle;
+    });
+    if (existing) {
+      return { success: true, id: existing._id, created: false };
+    }
+
+    const sourceBucket = resolveSourceNotebookBucket(args.sourceModule);
+    const notebookKey = toNotebookKey(args.sourceModule ? sourceBucket.key : title);
+    const id = await ctx.db.insert('note_pages', {
+      userId,
+      title,
+      icon: args.icon || sourceBucket.icon || '📒',
+      tags: ['notebook'],
+      sourceModule: args.sourceModule ? normalizeSourceModule(args.sourceModule) : undefined,
+      noteType: 'manual',
+      dedupeKey: undefined,
+      status: 'Collections',
+      pinned: false,
+      isArchived: false,
+      isTemplate: false,
+      sortOrder: now,
+      metadata: normalizeMetadata({
+        status: 'Collections',
+        pinned: false,
+        [NOTEBOOK_CONTAINER_FLAG]: true,
+        [NOTEBOOK_KEY_FIELD]: notebookKey,
+        sourceModule: args.sourceModule ? normalizeSourceModule(args.sourceModule) : undefined,
+      }),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true, id, created: true };
   },
 });
 
@@ -422,6 +755,7 @@ export const getPage = query({
     const metadata = normalizeMetadata(page.metadata);
     const sourceModule = parseSourceModuleFromPage(page);
     const noteType = parseNoteTypeFromPage(page);
+    const noteKind = parseNoteKindFromPage(page);
     const status = parsePageStatus(page);
     const pinned = parsePagePinned(page);
     const lastReviewedAt = parseLastReviewedAt(page);
@@ -432,6 +766,11 @@ export const getPage = query({
       tags: page.tags ?? [],
       blocks: sortedBlocks,
     });
+    const blockContent = extractQuoteAndNoteFromBlocks(sortedBlocks);
+    const metadataQuoteText =
+      typeof metadata.quoteText === 'string' ? String(metadata.quoteText).trim() : '';
+    const metadataNoteText =
+      typeof metadata.noteText === 'string' ? String(metadata.noteText).trim() : '';
 
     return {
       page: {
@@ -449,6 +788,9 @@ export const getPage = query({
         status,
         sourceModule,
         noteType,
+        noteKind,
+        quoteText: metadataQuoteText || blockContent.quoteText,
+        noteText: metadataNoteText || blockContent.noteText,
         dedupeKey: page.dedupeKey,
         previewText: page.previewText,
         searchText: page.searchText,
@@ -460,15 +802,15 @@ export const getPage = query({
       },
       editorDoc: derived.editorDoc,
       blocks: sortedBlocks.map(block => ({
-          id: block._id,
-          blockKey: block.blockKey,
-          blockType: block.blockType,
-          content: block.content,
-          props: block.props ?? {},
-          sortOrder: block.sortOrder,
-          createdAt: block.createdAt,
-          updatedAt: block.updatedAt,
-        })),
+        id: block._id,
+        blockKey: block.blockKey,
+        blockType: block.blockType,
+        content: block.content,
+        props: block.props ?? {},
+        sortOrder: block.sortOrder,
+        createdAt: block.createdAt,
+        updatedAt: block.updatedAt,
+      })),
       backlinks: sourcePages
         .filter((item): item is NonNullable<typeof item> => !!item)
         .map(item => ({ id: item._id, title: item.title, icon: item.icon })),
@@ -516,6 +858,7 @@ export const search = query({
     reviewed: v.optional(v.boolean()),
     hasNote: v.optional(v.boolean()),
     hasHighlight: v.optional(v.boolean()),
+    notebookId: v.optional(v.id('note_pages')),
     updatedAfter: v.optional(v.number()),
     updatedBefore: v.optional(v.number()),
     limit: v.optional(v.number()),
@@ -527,34 +870,22 @@ export const search = query({
     const queryText = (args.query || '').trim();
     const limit = Math.max(1, Math.min(args.limit ?? 40, MAX_SEARCH_LIMIT));
     const sourceFilters = new Set(
-      [
-        ...(args.sourceModules || []),
-        ...(args.sourceModule ? [args.sourceModule] : []),
-      ]
+      [...(args.sourceModules || []), ...(args.sourceModule ? [args.sourceModule] : [])]
         .map(normalizeSourceModule)
         .filter(Boolean)
     );
     const typeFilters = new Set(
-      [
-        ...(args.noteTypes || []),
-        ...(args.noteType ? [args.noteType] : []),
-      ]
+      [...(args.noteTypes || []), ...(args.noteType ? [args.noteType] : [])]
         .map(normalizeNoteType)
         .filter(Boolean)
     );
     const statusFilters = new Set(
-      [
-        ...(args.statuses || []),
-        ...(args.status ? [args.status] : []),
-      ]
+      [...(args.statuses || []), ...(args.status ? [args.status] : [])]
         .map(item => item.trim())
         .filter(Boolean)
     );
     const tagFilters = new Set(
-      [
-        ...(args.tags || []),
-        ...(args.tag ? [args.tag] : []),
-      ]
+      [...(args.tags || []), ...(args.tag ? [args.tag] : [])]
         .map(item => item.trim())
         .filter(Boolean)
     );
@@ -566,11 +897,14 @@ export const search = query({
 
     const withText = await Promise.all(
       pages
-        .filter(page => !page.isArchived)
+        .filter(page => !page.isArchived && !isNotebookContainerPage(page))
         .map(async page => {
+          if (!isNotebookVisibleNotePage(page)) return null;
+          if (args.notebookId && page.parentPageId !== args.notebookId) return null;
           const metadata = normalizeMetadata(page.metadata);
           const sourceModule = parseSourceModuleFromPage(page);
           const noteType = parseNoteTypeFromPage(page);
+          const noteKind = parseNoteKindFromPage(page);
           const status = parsePageStatus(page);
           const pinned = parsePagePinned(page);
           const reviewedAt = parseLastReviewedAt(page);
@@ -588,9 +922,12 @@ export const search = query({
           if (args.updatedBefore !== undefined && page.updatedAt >= args.updatedBefore) return null;
           if (args.updatedAfter !== undefined && page.updatedAt <= args.updatedAfter) return null;
 
-          let blocks:
-            | Array<{ blockType: string; blockKey?: string; content: unknown; sortOrder: number }>
-            | null = null;
+          let blocks: Array<{
+            blockType: string;
+            blockKey?: string;
+            content: unknown;
+            sortOrder: number;
+          }> | null = null;
           const ensureBlocks = async () => {
             if (blocks) return blocks;
             blocks = await ctx.db
@@ -613,9 +950,18 @@ export const search = query({
           if (args.hasHighlight !== undefined && hasHighlight !== args.hasHighlight) return null;
 
           let searchText = (page.searchText || '').trim();
+          let quoteText =
+            typeof metadata.quoteText === 'string' ? String(metadata.quoteText).trim() : '';
+          let noteText =
+            typeof metadata.noteText === 'string' ? String(metadata.noteText).trim() : '';
           if (!searchText || queryText) {
             const rows = await ensureBlocks();
             searchText = buildSearchTextFromBlocks(page.title, tags, rows);
+            if (!quoteText || !noteText) {
+              const extracted = extractQuoteAndNoteFromBlocks(rows);
+              quoteText = quoteText || extracted.quoteText;
+              noteText = noteText || extracted.noteText;
+            }
           }
 
           if (queryText && !searchText.toLowerCase().includes(queryText.toLowerCase())) return null;
@@ -626,6 +972,7 @@ export const search = query({
             metadata,
             sourceModule,
             noteType,
+            noteKind,
             status,
             pinned,
             reviewedAt,
@@ -633,6 +980,8 @@ export const search = query({
             hasHighlight: Boolean(hasHighlight),
             searchText,
             previewText,
+            quoteText,
+            noteText,
           };
         })
     );
@@ -647,7 +996,8 @@ export const search = query({
       });
 
     const sliced = matched.slice(0, limit);
-    const nextCursor = matched.length > limit ? sliced[sliced.length - 1]?.page.updatedAt || null : null;
+    const nextCursor =
+      matched.length > limit ? sliced[sliced.length - 1]?.page.updatedAt || null : null;
 
     return {
       items: sliced.map(item => ({
@@ -659,13 +1009,18 @@ export const search = query({
         pinned: item.pinned,
         sourceModule: item.sourceModule,
         noteType: item.noteType,
+        noteKind: item.noteKind,
         hasNote: item.hasNote,
         hasHighlight: item.hasHighlight,
         sourceRef: asRecord(item.metadata.sourceRef),
+        quoteText: item.quoteText,
+        noteText: item.noteText,
         lastReviewedAt: item.reviewedAt ?? null,
         updatedAt: item.page.updatedAt,
         createdAt: item.page.createdAt,
-        snippet: buildSnippet(item.searchText || item.previewText, queryText).slice(0, SNIPPET_MAX),
+        snippet: queryText
+          ? buildSnippet(item.searchText || item.previewText, queryText).slice(0, SNIPPET_MAX)
+          : (item.previewText || item.searchText || '').trim().slice(0, SNIPPET_MAX),
       })),
       nextCursor,
     };
@@ -680,6 +1035,7 @@ export const listFacets = query({
     statuses: v.optional(v.array(v.string())),
     hasNote: v.optional(v.boolean()),
     hasHighlight: v.optional(v.boolean()),
+    notebookId: v.optional(v.id('note_pages')),
     updatedAfter: v.optional(v.number()),
     updatedBefore: v.optional(v.number()),
   },
@@ -691,7 +1047,12 @@ export const listFacets = query({
         todayAdded: 0,
         withNote: 0,
         withHighlight: 0,
-        sources: [] as Array<{ key: string; count: number; unreviewed: number; todayAdded: number }>,
+        sources: [] as Array<{
+          key: string;
+          count: number;
+          unreviewed: number;
+          todayAdded: number;
+        }>,
         noteTypes: [] as Array<{ key: string; count: number }>,
         statuses: [] as Array<{ key: string; count: number }>,
       };
@@ -723,6 +1084,9 @@ export const listFacets = query({
 
     for (const page of pages) {
       if (page.isArchived) continue;
+      if (isNotebookContainerPage(page)) continue;
+      if (!isNotebookVisibleNotePage(page)) continue;
+      if (args.notebookId && page.parentPageId !== args.notebookId) continue;
       const sourceModule = normalizeSourceModule(parseSourceModuleFromPage(page));
       const noteType = normalizeNoteType(parseNoteTypeFromPage(page));
       const status = parsePageStatus(page);
@@ -744,7 +1108,11 @@ export const listFacets = query({
         hasNote = detected.hasNote;
         hasHighlight = detected.hasHighlight;
         if (queryText) {
-          const searchText = ((page.searchText || '') + ' ' + buildSearchTextFromBlocks(page.title, page.tags, blocks)).toLowerCase();
+          const searchText = (
+            (page.searchText || '') +
+            ' ' +
+            buildSearchTextFromBlocks(page.title, page.tags, blocks)
+          ).toLowerCase();
           if (!searchText.includes(queryText)) continue;
         }
       }
@@ -822,7 +1190,10 @@ export const createPage = mutation({
       icon: args.icon,
       cover: args.cover,
       tags: args.tags,
-      metadata: normalizeMetadata(args.metadata),
+      metadata: normalizeMetadata({
+        ...normalizeMetadata(args.metadata),
+        noteKind: 'longform_page',
+      }),
       isTemplate: args.isTemplate ?? false,
       isArchived: false,
       sortOrder: normalizeSortOrder(args.sortOrder, now),
@@ -1067,6 +1438,7 @@ export const listReviewQueue = query({
       .map((row, index) => {
         const page = pages[index];
         if (!page || page.userId !== userId) return null;
+        if (!isNotebookVisibleNotePage(page)) return null;
         const metadata = normalizeMetadata(page.metadata);
         return {
           id: row._id,
@@ -1148,6 +1520,12 @@ export const saveBlocks = mutation({
           sortOrder: index,
         })),
       });
+      const extracted = extractQuoteAndNoteFromBlocks(sorted);
+      const metadata = normalizeMetadata(page.metadata);
+      const nextNoteKind =
+        extracted.quoteText || parseNoteKindFromPage(page) === 'quote_card'
+          ? 'quote_card'
+          : parseNoteKindFromPage(page);
 
       await ctx.db.patch(args.pageId, {
         updatedAt: now,
@@ -1155,6 +1533,12 @@ export const saveBlocks = mutation({
         searchText: derived.searchText,
         hasNote: derived.hasNote,
         hasHighlight: derived.hasHighlight,
+        metadata: {
+          ...metadata,
+          noteKind: nextNoteKind,
+          quoteText: extracted.quoteText,
+          noteText: extracted.noteText,
+        },
       });
       return { success: true, count: sorted.length, mode: 'replace' };
     }
@@ -1230,6 +1614,12 @@ export const saveBlocks = mutation({
         tags: page.tags ?? [],
         blocks: finalRows,
       });
+      const extracted = extractQuoteAndNoteFromBlocks(finalRows);
+      const metadata = normalizeMetadata(page.metadata);
+      const nextNoteKind =
+        extracted.quoteText || parseNoteKindFromPage(page) === 'quote_card'
+          ? 'quote_card'
+          : parseNoteKindFromPage(page);
 
       await ctx.db.patch(args.pageId, {
         updatedAt: now,
@@ -1237,6 +1627,12 @@ export const saveBlocks = mutation({
         searchText: derived.searchText,
         hasNote: derived.hasNote,
         hasHighlight: derived.hasHighlight,
+        metadata: {
+          ...metadata,
+          noteKind: nextNoteKind,
+          quoteText: extracted.quoteText,
+          noteText: extracted.noteText,
+        },
       });
     }
 
@@ -1278,9 +1674,11 @@ export const saveEditorDoc = mutation({
       updatedAt: now,
     });
 
-    const searchableText = `${page.title} ${(page.tags || []).join(' ')} ${extractEditorDocText(doc)}`
-      .trim()
-      .slice(0, 8000);
+    const searchableText =
+      `${page.title} ${(page.tags || []).join(' ')} ${extractEditorDocText(doc)}`
+        .trim()
+        .slice(0, 8000);
+    const metadata = normalizeMetadata(page.metadata);
 
     await ctx.db.patch(args.pageId, {
       updatedAt: now,
@@ -1288,6 +1686,12 @@ export const saveEditorDoc = mutation({
       searchText: searchableText,
       hasNote: extractEditorDocText(doc).trim().length > 0,
       hasHighlight: editorDocHasHighlight(doc),
+      metadata: {
+        ...metadata,
+        noteKind: 'longform_page',
+        quoteText: '',
+        noteText: extractEditorDocText(doc).trim(),
+      },
     });
 
     return { success: true };
@@ -1295,6 +1699,7 @@ export const saveEditorDoc = mutation({
 });
 
 type IngestSourceArgs = {
+  notebookId?: Id<'note_pages'>;
   sourceModule: string;
   sourceRef?: Record<string, unknown>;
   noteType?: string;
@@ -1329,26 +1734,26 @@ type IngestSourceArgs = {
 };
 
 const resolvePageTitle = (args: IngestSourceArgs) => {
-  const explicit = args.title?.trim();
+  const explicit = stripInlineMarkup(args.title?.trim() || '');
   if (explicit) return explicit.slice(0, 120);
-  const quote = args.quote?.trim();
+  const quote = stripInlineMarkup(args.quote?.trim() || '');
   if (quote) return quote.length > 72 ? `${quote.slice(0, 72)}...` : quote;
-  const note = args.note?.trim();
+  const note = stripInlineMarkup(args.note?.trim() || '');
   if (note) return note.length > 72 ? `${note.slice(0, 72)}...` : note;
   return 'Untitled';
 };
 
 const pickPreviewFromBlocks = (blocks: Array<{ content: unknown }>) => {
   for (const block of blocks) {
-    const text = toSearchableText(block.content).trim();
+    const text = extractDisplayText(block.content).trim();
     if (text) return text.slice(0, PREVIEW_MAX);
   }
   return '';
 };
 
 const findExistingPageBySourceRef = async (
-  ctx: any,
-  userId: string,
+  ctx: NotePagesDbCtx,
+  userId: Id<'users'>,
   sourceRef: Record<string, unknown>
 ) => {
   const anchorKey = typeof sourceRef.anchorKey === 'string' ? sourceRef.anchorKey : '';
@@ -1360,10 +1765,11 @@ const findExistingPageBySourceRef = async (
 
   const rows = await ctx.db
     .query('note_pages')
-    .withIndex('by_user', (q: any) => q.eq('userId', userId))
+    .withIndex('by_user', q => q.eq('userId', userId))
     .take(MAX_PAGE_SCAN);
 
-  return rows.find((row: any) => {
+  return rows.find(row => {
+    if (isNotebookContainerPage(row)) return false;
     const metadata = normalizeMetadata(row.metadata);
     const rowSourceRef = asRecord(metadata.sourceRef);
     if (!rowSourceRef) return false;
@@ -1377,10 +1783,29 @@ const findExistingPageBySourceRef = async (
   });
 };
 
+const resolveNotebookContainerForIngest = async (
+  ctx: NotePagesDbCtx,
+  userId: Id<'users'>,
+  notebookId?: Id<'note_pages'>
+) => {
+  if (!notebookId) return null;
+  const notebook = await ctx.db.get(notebookId);
+  if (!notebook) {
+    throw new ConvexError({ code: 'INVALID_ARGUMENT', message: 'Notebook does not exist' });
+  }
+  if (notebook.userId !== userId) {
+    throw new ConvexError({ code: 'FORBIDDEN', message: 'Notebook does not belong to user' });
+  }
+  if (!isNotebookContainerPage(notebook)) {
+    throw new ConvexError({ code: 'INVALID_ARGUMENT', message: 'Target page is not a notebook' });
+  }
+  return notebook;
+};
+
 const deletePageCascade = async (
-  ctx: any,
-  userId: string,
-  pageId: string,
+  ctx: NotePagesDbCtx,
+  userId: Id<'users'>,
+  pageId: Id<'note_pages'>,
   softDelete: boolean
 ) => {
   const page = await ctx.db.get(pageId);
@@ -1393,19 +1818,19 @@ const deletePageCascade = async (
   const [blocks, queueRows, sourceLinks, targetLinks] = await Promise.all([
     ctx.db
       .query('note_blocks')
-      .withIndex('by_user_page', (q: any) => q.eq('userId', userId).eq('pageId', pageId))
+      .withIndex('by_user_page', q => q.eq('userId', userId).eq('pageId', pageId))
       .collect(),
     ctx.db
       .query('note_review_queue')
-      .withIndex('by_user_page', (q: any) => q.eq('userId', userId).eq('pageId', pageId))
+      .withIndex('by_user_page', q => q.eq('userId', userId).eq('pageId', pageId))
       .collect(),
     ctx.db
       .query('note_links')
-      .withIndex('by_user_source', (q: any) => q.eq('userId', userId).eq('sourcePageId', pageId))
+      .withIndex('by_user_source', q => q.eq('userId', userId).eq('sourcePageId', pageId))
       .collect(),
     ctx.db
       .query('note_links')
-      .withIndex('by_user_target', (q: any) => q.eq('userId', userId).eq('targetPageId', pageId))
+      .withIndex('by_user_target', q => q.eq('userId', userId).eq('targetPageId', pageId))
       .collect(),
   ]);
 
@@ -1418,8 +1843,8 @@ const deletePageCascade = async (
 };
 
 export const ingestFromSourceInternal = async (
-  ctx: any,
-  userId: string,
+  ctx: NotePagesDbCtx,
+  userId: Id<'users'>,
   args: IngestSourceArgs
 ) => {
   const now = Date.now();
@@ -1487,12 +1912,16 @@ export const ingestFromSourceInternal = async (
       noteType,
     });
 
-  let existingPage: any | undefined;
+  let existingPage: NotePageDoc | null | undefined;
+  const notebookContainer = await resolveNotebookContainerForIngest(ctx, userId, args.notebookId);
   if (dedupeKey) {
     existingPage = await ctx.db
       .query('note_pages')
-      .withIndex('by_user_dedupeKey', (q: any) => q.eq('userId', userId).eq('dedupeKey', dedupeKey))
+      .withIndex('by_user_dedupeKey', q => q.eq('userId', userId).eq('dedupeKey', dedupeKey))
       .first();
+    if (existingPage && isNotebookContainerPage(existingPage)) {
+      existingPage = undefined;
+    }
   }
   if (!existingPage) {
     existingPage = await findExistingPageBySourceRef(ctx, userId, sourceRef);
@@ -1503,12 +1932,15 @@ export const ingestFromSourceInternal = async (
     .filter(Boolean);
 
   const title = resolvePageTitle(args);
+  const normalizedQuoteText = args.quote?.trim() || '';
+  const normalizedNoteText = args.note?.trim() || '';
   let pageId = existingPage?._id;
   let created = false;
 
   if (!pageId) {
     pageId = await ctx.db.insert('note_pages', {
       userId,
+      parentPageId: notebookContainer?._id,
       title,
       icon: '📝',
       tags: mergedTags,
@@ -1526,6 +1958,9 @@ export const ingestFromSourceInternal = async (
         sourceRef,
         noteType,
         dedupeKey,
+        noteKind: 'quote_card',
+        quoteText: normalizedQuoteText,
+        noteText: normalizedNoteText,
       }),
       createdAt: now,
       updatedAt: now,
@@ -1535,6 +1970,7 @@ export const ingestFromSourceInternal = async (
     const page = await ctx.db.get(pageId);
     const metadata = normalizeMetadata(page?.metadata);
     await ctx.db.patch(pageId, {
+      ...(notebookContainer ? { parentPageId: notebookContainer._id } : {}),
       title: title || page?.title || 'Untitled',
       tags: [...new Set([...(page?.tags || []), ...mergedTags])],
       sourceModule,
@@ -1549,6 +1985,9 @@ export const ingestFromSourceInternal = async (
         sourceRef,
         noteType,
         dedupeKey,
+        noteKind: 'quote_card',
+        quoteText: normalizedQuoteText,
+        noteText: normalizedNoteText,
       },
       updatedAt: now,
     });
@@ -1556,7 +1995,7 @@ export const ingestFromSourceInternal = async (
 
   const existingBlocks = await ctx.db
     .query('note_blocks')
-    .withIndex('by_user_page', (q: any) => q.eq('userId', userId).eq('pageId', pageId))
+    .withIndex('by_user_page', q => q.eq('userId', userId).eq('pageId', pageId))
     .collect();
   const byKey = new Map<string, (typeof existingBlocks)[number]>();
   for (const row of existingBlocks) {
@@ -1662,17 +2101,17 @@ export const ingestFromSourceInternal = async (
 
   const finalBlocks = await ctx.db
     .query('note_blocks')
-    .withIndex('by_user_page', (q: any) => q.eq('userId', userId).eq('pageId', pageId))
+    .withIndex('by_user_page', q => q.eq('userId', userId).eq('pageId', pageId))
     .collect();
-  const sortedBlocks = finalBlocks
-    .slice()
-    .sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+  const sortedBlocks = finalBlocks.slice().sort((a, b) => a.sortOrder - b.sortOrder);
   const detected = detectNoteAndHighlight(sortedBlocks);
-  const previewText =
-    (args.note?.trim() || args.quote?.trim() || pickPreviewFromBlocks(sortedBlocks) || '').slice(
-      0,
-      PREVIEW_MAX
-    );
+  const extracted = extractQuoteAndNoteFromBlocks(sortedBlocks);
+  const previewText = (
+    args.quote?.trim() ||
+    args.note?.trim() ||
+    pickPreviewFromBlocks(sortedBlocks) ||
+    ''
+  ).slice(0, PREVIEW_MAX);
   const searchText = buildSearchTextFromBlocks(title, mergedTags, sortedBlocks);
 
   await ctx.db.patch(pageId, {
@@ -1685,13 +2124,24 @@ export const ingestFromSourceInternal = async (
     hasHighlight: detected.hasHighlight,
     previewText,
     searchText,
+    metadata: {
+      ...normalizeMetadata((await ctx.db.get(pageId))?.metadata),
+      status,
+      pinned,
+      sourceRef,
+      noteType,
+      dedupeKey,
+      noteKind: 'quote_card',
+      quoteText: extracted.quoteText || normalizedQuoteText,
+      noteText: extracted.noteText || normalizedNoteText,
+    },
     updatedAt: now,
   });
 
   if (args.createReviewQueue !== false) {
     const existingQueue = await ctx.db
       .query('note_review_queue')
-      .withIndex('by_user_page', (q: any) => q.eq('userId', userId).eq('pageId', pageId))
+      .withIndex('by_user_page', q => q.eq('userId', userId).eq('pageId', pageId))
       .collect();
 
     const scheduledFor = args.scheduledFor ?? now;
@@ -1715,11 +2165,20 @@ export const ingestFromSourceInternal = async (
     }
   }
 
-  return { success: true, pageId, created, dedupeKey, sourceRef, hasNote: detected.hasNote, hasHighlight: detected.hasHighlight };
+  return {
+    success: true,
+    pageId,
+    created,
+    dedupeKey,
+    sourceRef,
+    hasNote: detected.hasNote,
+    hasHighlight: detected.hasHighlight,
+  };
 };
 
 export const ingestFromSource = mutation({
   args: {
+    notebookId: v.optional(v.id('note_pages')),
     sourceModule: v.string(),
     sourceRef: v.optional(v.record(v.string(), v.any())),
     noteType: v.optional(v.string()),
@@ -1761,7 +2220,7 @@ export const deleteBySourceRef = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    let page: any | null = null;
+    let page: NotePageDoc | null | undefined;
 
     if (args.pageId) {
       page = await ctx.db.get(args.pageId);
@@ -1769,7 +2228,9 @@ export const deleteBySourceRef = mutation({
     } else if (args.dedupeKey) {
       page = await ctx.db
         .query('note_pages')
-        .withIndex('by_user_dedupeKey', q => q.eq('userId', userId).eq('dedupeKey', args.dedupeKey!))
+        .withIndex('by_user_dedupeKey', q =>
+          q.eq('userId', userId).eq('dedupeKey', args.dedupeKey!)
+        )
         .first();
     } else if (args.sourceRef) {
       page = await findExistingPageBySourceRef(ctx, userId, args.sourceRef);
@@ -1830,8 +2291,9 @@ export const upsertFromAnnotation = mutation({
       pageId: result.pageId,
       created: result.created,
       anchorKey:
-        (typeof result.sourceRef?.anchorKey === 'string' ? String(result.sourceRef.anchorKey) : '') ||
-        anchorKeyFor(args),
+        (typeof result.sourceRef?.anchorKey === 'string'
+          ? String(result.sourceRef.anchorKey)
+          : '') || anchorKeyFor(args),
     };
   },
 });
@@ -1855,7 +2317,9 @@ export const createLink = mutation({
 
     const existing = await ctx.db
       .query('note_links')
-      .withIndex('by_user_source', q => q.eq('userId', userId).eq('sourcePageId', args.sourcePageId))
+      .withIndex('by_user_source', q =>
+        q.eq('userId', userId).eq('sourcePageId', args.sourcePageId)
+      )
       .collect();
 
     const duplicate = existing.some(item => item.targetPageId === args.targetPageId);
@@ -1883,7 +2347,9 @@ export const removeLink = mutation({
     const userId = await getAuthUserId(ctx);
     const rows = await ctx.db
       .query('note_links')
-      .withIndex('by_user_source', q => q.eq('userId', userId).eq('sourcePageId', args.sourcePageId))
+      .withIndex('by_user_source', q =>
+        q.eq('userId', userId).eq('sourcePageId', args.sourcePageId)
+      )
       .collect();
 
     const targets = rows.filter(item => item.targetPageId === args.targetPageId);
@@ -2024,8 +2490,180 @@ const serializeLegacyNotebookContent = (content: unknown): string => {
   if (!record) return '';
   if (typeof record.text === 'string') return record.text;
   if (typeof record.notes === 'string') return record.notes;
-  return toSearchableText(content);
+  return extractDisplayText(content);
 };
+
+export const migrateNotesIntoSourceNotebooks = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const dryRun = args.dryRun ?? false;
+    const limit = Math.max(1, Math.min(args.limit ?? MAX_PAGE_SCAN, 12000));
+
+    const marker = await ctx.db
+      .query('note_pages')
+      .withIndex('by_user_dedupeKey', q =>
+        q.eq('userId', userId).eq('dedupeKey', SOURCE_NOTEBOOK_MIGRATION_KEY)
+      )
+      .first();
+
+    if (marker) {
+      return {
+        success: true,
+        dryRun,
+        alreadyMigrated: true,
+        movedNotes: 0,
+        createdNotebooks: 0,
+      };
+    }
+
+    const pages = await ctx.db
+      .query('note_pages')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(limit);
+
+    const activePages = pages.filter(page => !page.isArchived);
+    const notebookPages = activePages.filter(page => isNotebookContainerPage(page));
+
+    const notebookByKey = new Map<string, (typeof notebookPages)[number]>();
+    for (const notebook of notebookPages) {
+      const metadata = normalizeMetadata(notebook.metadata);
+      const metadataKey = getNotebookKey(metadata);
+      if (metadataKey) {
+        notebookByKey.set(metadataKey, notebook);
+      } else {
+        notebookByKey.set(toNotebookKey(notebook.title), notebook);
+      }
+    }
+
+    const candidates = activePages.filter(page => {
+      if (isNotebookContainerPage(page)) return false;
+      if (page.parentPageId) return false;
+      if (page.dedupeKey === LEGACY_ALL_NOTES_MIGRATION_KEY) return false;
+      if (page.dedupeKey === SOURCE_NOTEBOOK_MIGRATION_KEY) return false;
+      const tags = page.tags || [];
+      if (tags.includes('migration') || tags.includes('legacy')) return false;
+      return true;
+    });
+
+    const assignments = candidates.map(page => {
+      const metadata = normalizeMetadata(page.metadata);
+      const sourceRef = asRecord(metadata.sourceRef);
+      const sourceModule =
+        parseSourceModuleFromPage(page) ||
+        (typeof sourceRef?.module === 'string' ? String(sourceRef.module) : undefined);
+      const bucket = resolveSourceNotebookBucket(sourceModule);
+      return {
+        page,
+        bucket,
+        key: toNotebookKey(bucket.key),
+      };
+    });
+
+    const bucketSummary = new Map<
+      string,
+      { key: string; title: string; icon: string; count: number }
+    >();
+    for (const item of assignments) {
+      const existing = bucketSummary.get(item.key) || {
+        key: item.key,
+        title: item.bucket.title,
+        icon: item.bucket.icon,
+        count: 0,
+      };
+      existing.count += 1;
+      bucketSummary.set(item.key, existing);
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+        alreadyMigrated: false,
+        movedNotes: assignments.length,
+        createdNotebooks: [...bucketSummary.keys()].filter(key => !notebookByKey.has(key)).length,
+        buckets: [...bucketSummary.values()].sort((a, b) => b.count - a.count),
+      };
+    }
+
+    const now = Date.now();
+    let createdNotebooks = 0;
+    for (const bucket of bucketSummary.values()) {
+      if (notebookByKey.has(bucket.key)) continue;
+      const notebookId = await ctx.db.insert('note_pages', {
+        userId,
+        title: bucket.title,
+        icon: bucket.icon,
+        tags: ['notebook', bucket.key],
+        sourceModule: normalizeSourceModule(bucket.title),
+        noteType: 'manual',
+        status: 'Collections',
+        pinned: false,
+        isArchived: false,
+        isTemplate: false,
+        sortOrder: now + createdNotebooks,
+        metadata: normalizeMetadata({
+          status: 'Collections',
+          pinned: false,
+          [NOTEBOOK_CONTAINER_FLAG]: true,
+          [NOTEBOOK_KEY_FIELD]: bucket.key,
+          sourceModule: normalizeSourceModule(bucket.title),
+        }),
+        createdAt: now,
+        updatedAt: now,
+      });
+      const notebook = await ctx.db.get(notebookId);
+      if (notebook) notebookByKey.set(bucket.key, notebook);
+      createdNotebooks += 1;
+    }
+
+    let movedNotes = 0;
+    for (const item of assignments) {
+      const notebook = notebookByKey.get(item.key);
+      if (!notebook) continue;
+      if (item.page.parentPageId === notebook._id) continue;
+      await ctx.db.patch(item.page._id, {
+        parentPageId: notebook._id,
+        updatedAt: now,
+      });
+      movedNotes += 1;
+    }
+
+    await ctx.db.insert('note_pages', {
+      userId,
+      title: 'Notebook Source Migration Marker',
+      icon: '✅',
+      tags: ['migration', 'notebook'],
+      dedupeKey: SOURCE_NOTEBOOK_MIGRATION_KEY,
+      status: 'Collections',
+      pinned: false,
+      isArchived: true,
+      isTemplate: false,
+      sortOrder: now,
+      metadata: normalizeMetadata({
+        status: 'Collections',
+        pinned: false,
+        migratedAt: now,
+        markerOnly: true,
+        migration: SOURCE_NOTEBOOK_MIGRATION_KEY,
+      }),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      success: true,
+      dryRun: false,
+      alreadyMigrated: false,
+      movedNotes,
+      createdNotebooks,
+      buckets: [...bucketSummary.values()].sort((a, b) => b.count - a.count),
+    };
+  },
+});
 
 export const migrateLegacyAnnotationsWithNotes = mutation({
   args: {

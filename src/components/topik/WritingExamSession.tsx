@@ -802,7 +802,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
   onSubmitted,
   onExit,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // ── Convex mutations ──────────────────────────────────────────────────────
   const saveDraft = useMutation(api.topikWriting.saveDraft);
@@ -897,7 +897,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
         // Final save before submit
         const answersRecord = buildAnswersRecord();
         await saveDraft({ sessionId, answers: answersRecord });
-        await submitSession({ sessionId });
+        await submitSession({ sessionId, language: i18n.language });
         setIsSubmitted(true);
         onSubmitted?.(answersRecord);
       } catch {
@@ -912,6 +912,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
       sessionId,
       saveDraft,
       submitSession,
+      i18n.language,
       onSubmitted,
     ]
   );

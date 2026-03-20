@@ -518,6 +518,9 @@ export interface GrammarPointData {
 
   displayOrder?: number;
   customNote?: string;
+  customNoteEn?: string;
+  customNoteVi?: string;
+  customNoteMn?: string;
   // User progress
   status?: 'NEW' | 'LEARNING' | 'MASTERED';
   proficiency?: number; // 0-100

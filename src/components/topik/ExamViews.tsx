@@ -26,6 +26,13 @@ import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { buildAnchorFromRange } from '../../features/annotation-kit/utils/selection';
 import { Button } from '../ui';
 import { Textarea } from '../ui';
+import { useContextualSidebar } from '../../hooks/useContextualSidebar';
+import {
+  ContextualCountBadge,
+  ContextualEmptyState,
+  ContextualListItemButton,
+  ContextualSection,
+} from '../layout/contextualSidebarBlocks';
 
 const PAPER_MAX_WIDTH = 'max-w-[900px]';
 
@@ -129,7 +136,9 @@ const findMatchingAnnotation = (
   annotations.find(
     annotation =>
       annotation.contextKey === contextKey &&
-      (anchor && typeof annotation.startOffset === 'number' && typeof annotation.endOffset === 'number'
+      (anchor &&
+      typeof annotation.startOffset === 'number' &&
+      typeof annotation.endOffset === 'number'
         ? annotation.startOffset === anchor.start &&
           annotation.endOffset === anchor.end &&
           (!anchor.blockId || annotation.blockId === anchor.blockId)
@@ -137,11 +146,13 @@ const findMatchingAnnotation = (
       (annotation.text === selectedText || annotation.selectedText === selectedText)
   );
 
-const ANNOTATION_COLOR_BADGE_CLASS: Record<string, string> = {
-  yellow: 'bg-yellow-100 text-yellow-800',
-  green: 'bg-green-100 text-green-800',
-  blue: 'bg-blue-100 text-blue-800',
-  pink: 'bg-pink-100 text-pink-800',
+const resolveAnnotationBadgeTone = (
+  color: AnnotationColor | null | undefined
+): 'default' | 'accent' | 'warning' | 'success' => {
+  if (color === 'green') return 'success';
+  if (color === 'blue') return 'accent';
+  if (color === 'yellow') return 'warning';
+  return 'default';
 };
 
 const resolveDictionaryMeaning = (bestMatch: any): { meaning: string; partOfSpeech: string } => {
@@ -690,6 +701,7 @@ const AnnotationSidebar = ({
   onSaveEdit,
   onDelete,
   onBeginEdit,
+  embedded = false,
 }: {
   labels: ReturnType<typeof getLabels>;
   sidebarAnnotations: Annotation[];
@@ -701,20 +713,21 @@ const AnnotationSidebar = ({
   onSaveEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onBeginEdit: (annotation: Annotation) => void;
+  embedded?: boolean;
 }) => (
-  <div className="w-80 shrink-0 hidden lg:block ml-6">
-    <div className="bg-card rounded-2xl shadow-sm border border-border sticky top-24 flex flex-col max-h-[calc(100vh-120px)] max-h-[calc(100dvh-120px)] overflow-hidden">
-      <div className="p-4 border-b border-border bg-muted">
-        <h4 className="font-bold text-muted-foreground flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-indigo-500" />
-          {labels.annotate || 'Notes'}
-        </h4>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+  <div className={embedded ? 'w-full' : 'w-80 shrink-0 hidden lg:block ml-6'}>
+    <ContextualSection
+      title={labels.annotate || 'Notes'}
+      badge={<ContextualCountBadge value={sidebarAnnotations.length} tone="accent" />}
+      withRail
+    >
+      <div className="max-h-[34vh] space-y-2 overflow-y-auto pr-1">
         {sidebarAnnotations.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm italic">
-            {labels.noNotes || 'No notes yet'}
-          </div>
+          <ContextualEmptyState
+            icon={MessageSquare}
+            title={labels.noNotes || 'No notes yet'}
+            subtitle={labels.clickToAddNote || 'Select text and add your first note.'}
+          />
         ) : (
           sidebarAnnotations.map(annotation => {
             const isEditing = editingAnnotationId === annotation.id;
@@ -725,9 +738,16 @@ const AnnotationSidebar = ({
                 <div
                   key={annotation.id}
                   id={`sidebar-card-${annotation.id}`}
-                  className="bg-card p-3 rounded-lg border-2 border-indigo-500 shadow-md scroll-mt-20"
+                  className="scroll-mt-20 rounded-lg border p-3 shadow-sm"
+                  style={{
+                    borderColor: 'var(--sb-focus-ring, hsl(var(--ring)))',
+                    backgroundColor: 'var(--sb-surface, hsl(var(--card)))',
+                  }}
                 >
-                  <div className="text-xs font-bold mb-2 text-muted-foreground">
+                  <div
+                    className="mb-2 text-xs font-bold"
+                    style={{ color: 'var(--sb-muted-text, hsl(var(--muted-foreground)))' }}
+                  >
                     {labels.editingNote || 'Editing note'}: &quot;
                     {annotation.text.substring(0, 15)}
                     ...&quot;
@@ -741,7 +761,7 @@ const AnnotationSidebar = ({
                         onSaveEdit(annotation.id);
                       }
                     }}
-                    className="w-full border border-border rounded-lg p-2 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
+                    className="mb-2 w-full resize-none rounded-lg border border-border p-2 text-sm shadow-none outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)]"
                     rows={3}
                     autoFocus
                   />
@@ -751,7 +771,7 @@ const AnnotationSidebar = ({
                       variant="ghost"
                       size="auto"
                       onClick={onCancelEdit}
-                      className="px-3 py-1 text-xs text-muted-foreground hover:bg-muted rounded"
+                      className="rounded px-3 py-1 text-xs"
                     >
                       {labels.cancel || 'Cancel'}
                     </Button>
@@ -759,7 +779,11 @@ const AnnotationSidebar = ({
                       type="button"
                       size="auto"
                       onClick={() => onSaveEdit(annotation.id)}
-                      className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 flex items-center gap-1"
+                      className="flex items-center gap-1 rounded px-3 py-1 text-xs"
+                      style={{
+                        backgroundColor: 'var(--sb-active-bg, hsl(var(--accent)))',
+                        color: 'var(--sb-active-text, hsl(var(--accent-foreground)))',
+                      }}
                     >
                       <Check className="w-3 h-3" /> {labels.save || 'Save'}
                     </Button>
@@ -774,36 +798,18 @@ const AnnotationSidebar = ({
                 id={`sidebar-card-${annotation.id}`}
                 className="group relative scroll-mt-20"
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  className={`p-3 rounded-lg border transition-all cursor-pointer w-full text-left !whitespace-normal outline-none focus:ring-2 focus:ring-indigo-500/50
-                        ${
-                          isActive
-                            ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-300 dark:border-indigo-400/40 shadow-md'
-                            : 'bg-muted border-border hover:border-indigo-200 dark:hover:border-indigo-400/40 hover:shadow-sm'
-                        }`}
+                <ContextualListItemButton
+                  label={`${annotation.text.substring(0, 20)}...`}
+                  subtitle={annotation.note || labels.clickToAddNote || 'Click to add note...'}
+                  active={isActive}
                   onClick={() => onBeginEdit(annotation)}
-                  >
-                    <div
-                      className={`text-xs font-bold mb-1 px-1.5 py-0.5 rounded w-fit ${
-                      ANNOTATION_COLOR_BADGE_CLASS[annotation.color || 'yellow'] ||
-                      ANNOTATION_COLOR_BADGE_CLASS.yellow
-                    }`}
-                  >
-                    {annotation.text.substring(0, 20)}...
-                  </div>
-                  {annotation.note ? (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                      {annotation.note}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      {labels.clickToAddNote || 'Click to add note...'}
-                    </p>
-                  )}
-                </Button>
+                  trailing={
+                    <ContextualCountBadge
+                      value={(annotation.color || 'tag').slice(0, 1).toUpperCase()}
+                      tone={resolveAnnotationBadgeTone(annotation.color)}
+                    />
+                  }
+                />
 
                 <Button
                   type="button"
@@ -813,7 +819,8 @@ const AnnotationSidebar = ({
                     e.stopPropagation();
                     onDelete(annotation.id);
                   }}
-                  className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
+                  style={{ color: 'var(--sb-danger-text, hsl(0 72% 55%))' }}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
@@ -822,7 +829,7 @@ const AnnotationSidebar = ({
           })
         )}
       </div>
-    </div>
+    </ContextualSection>
   </div>
 );
 
@@ -1311,14 +1318,6 @@ const ExamReviewLayout = ({
   onTextSelect,
   onAnnotationClick,
   activeAnnotationId,
-  sidebarAnnotations,
-  editingAnnotationId,
-  editNoteInput,
-  setEditNoteInput,
-  onCancelEdit,
-  onSaveEdit,
-  onDeleteAnnotation,
-  onBeginEditAnnotation,
   showAnnotationMenu,
   menuPosition,
   selectionText,
@@ -1360,14 +1359,6 @@ const ExamReviewLayout = ({
   onTextSelect: (questionIndex: number, e?: React.MouseEvent) => void;
   onAnnotationClick: (questionIndex: number, annotationId: string, e: React.MouseEvent) => void;
   activeAnnotationId: string | null;
-  sidebarAnnotations: Annotation[];
-  editingAnnotationId: string | null;
-  editNoteInput: string;
-  setEditNoteInput: (value: string) => void;
-  onCancelEdit: () => void;
-  onSaveEdit: (id: string) => void;
-  onDeleteAnnotation: (id: string) => void;
-  onBeginEditAnnotation: (annotation: Annotation) => void;
   showAnnotationMenu: boolean;
   menuPosition: { top: number; left: number } | null;
   selectionText: string;
@@ -1418,19 +1409,6 @@ const ExamReviewLayout = ({
         onAnnotationClick={onAnnotationClick}
         activeAnnotationId={activeAnnotationId}
         reviewCopy={reviewCopy}
-      />
-
-      <AnnotationSidebar
-        labels={labels}
-        sidebarAnnotations={sidebarAnnotations}
-        editingAnnotationId={editingAnnotationId}
-        activeAnnotationId={activeAnnotationId}
-        editNoteInput={editNoteInput}
-        setEditNoteInput={setEditNoteInput}
-        onCancelEdit={onCancelEdit}
-        onSaveEdit={onSaveEdit}
-        onDelete={onDeleteAnnotation}
-        onBeginEdit={onBeginEditAnnotation}
       />
     </div>
 
@@ -1736,32 +1714,38 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     };
 
     // Update note from sidebar edit
-    const handleUpdateNote = (id: string) => {
-      const ann = currentAnnotations.find(a => a.id === id);
-      if (ann) {
-        onSaveAnnotation({ ...ann, note: editNoteInput });
-      }
-      setEditingAnnotationId(null);
-      setActiveAnnotationId(null);
-    };
+    const handleUpdateNote = useCallback(
+      (id: string) => {
+        const ann = currentAnnotations.find(a => a.id === id);
+        if (ann) {
+          onSaveAnnotation({ ...ann, note: editNoteInput });
+        }
+        setEditingAnnotationId(null);
+        setActiveAnnotationId(null);
+      },
+      [currentAnnotations, editNoteInput, onSaveAnnotation]
+    );
 
     // Delete annotation
-    const handleDeleteAnnotation = (id: string) => {
-      const ann = currentAnnotations.find(a => a.id === id);
-      if (ann) {
-        onSaveAnnotation({ ...ann, color: null, note: '' });
-      }
-    };
+    const handleDeleteAnnotation = useCallback(
+      (id: string) => {
+        const ann = currentAnnotations.find(a => a.id === id);
+        if (ann) {
+          onSaveAnnotation({ ...ann, color: null, note: '' });
+        }
+      },
+      [currentAnnotations, onSaveAnnotation]
+    );
 
-    const handleBeginEditAnnotation = (annotation: Annotation) => {
+    const handleBeginEditAnnotation = useCallback((annotation: Annotation) => {
       setActiveAnnotationId(annotation.id);
       setEditingAnnotationId(annotation.id);
       setEditNoteInput(annotation.note || '');
-    };
+    }, []);
 
-    const handleCancelEditAnnotation = () => {
+    const handleCancelEditAnnotation = useCallback(() => {
       setEditingAnnotationId(null);
-    };
+    }, []);
 
     // Save selection to Vocab Notebook
     const handleSaveToVocab = useCallback(
@@ -1838,6 +1822,45 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
       setSelectedColor(val);
     };
 
+    const reviewContextSidebarContent = useMemo(
+      () => (
+        <div className="w-full">
+          <AnnotationSidebar
+            embedded
+            labels={labels}
+            sidebarAnnotations={sidebarAnnotations}
+            editingAnnotationId={editingAnnotationId}
+            activeAnnotationId={activeAnnotationId}
+            editNoteInput={editNoteInput}
+            setEditNoteInput={setEditNoteInput}
+            onCancelEdit={handleCancelEditAnnotation}
+            onSaveEdit={handleUpdateNote}
+            onDelete={handleDeleteAnnotation}
+            onBeginEdit={handleBeginEditAnnotation}
+          />
+        </div>
+      ),
+      [
+        activeAnnotationId,
+        editNoteInput,
+        editingAnnotationId,
+        handleBeginEditAnnotation,
+        handleCancelEditAnnotation,
+        handleDeleteAnnotation,
+        handleUpdateNote,
+        labels,
+        sidebarAnnotations,
+      ]
+    );
+
+    useContextualSidebar({
+      id: `topik-review-context-${exam.id}`,
+      title: labels.annotate || 'Notes',
+      subtitle: 'TOPIK review annotations',
+      content: reviewContextSidebarContent,
+      enabled: true,
+    });
+
     return (
       <ExamReviewLayout
         labels={labels}
@@ -1871,14 +1894,6 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
         onTextSelect={handleTextSelect}
         onAnnotationClick={handleAnnotationClick}
         activeAnnotationId={activeAnnotationId}
-        sidebarAnnotations={sidebarAnnotations}
-        editingAnnotationId={editingAnnotationId}
-        editNoteInput={editNoteInput}
-        setEditNoteInput={setEditNoteInput}
-        onCancelEdit={handleCancelEditAnnotation}
-        onSaveEdit={handleUpdateNote}
-        onDeleteAnnotation={handleDeleteAnnotation}
-        onBeginEditAnnotation={handleBeginEditAnnotation}
         showAnnotationMenu={showAnnotationMenu}
         menuPosition={menuPosition}
         selectionText={selectionText}

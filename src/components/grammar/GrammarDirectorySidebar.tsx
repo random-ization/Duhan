@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Input } from '../ui';
+import { Button, Input } from '../ui';
 import { useTranslation } from 'react-i18next';
-import i18n from 'i18next';
 import { Search, ChevronDown, CheckCircle2 } from 'lucide-react';
 
 interface GrammarDirectorySidebarProps {
@@ -10,6 +9,48 @@ interface GrammarDirectorySidebarProps {
   onSearchChange: (q: string) => void;
   selectedGrammarId?: string;
   onSelectGrammar: (grammarId: string, unitId: number) => void;
+  embedded?: boolean;
+}
+
+type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
+
+function resolveSupportedLanguage(language?: string): SupportedLanguage {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return 'en';
+  if (normalized.startsWith('vi')) return 'vi';
+  if (normalized.startsWith('mn')) return 'mn';
+  return 'zh';
+}
+
+function getLocalizedGrammarTitle(
+  grammar: {
+    title: string;
+    titleEn?: string;
+    titleZh?: string;
+    titleVi?: string;
+    titleMn?: string;
+  },
+  language: SupportedLanguage
+): string {
+  if (language === 'en') return grammar.titleEn || grammar.title;
+  if (language === 'vi') return grammar.titleVi || grammar.title;
+  if (language === 'mn') return grammar.titleMn || grammar.title;
+  return grammar.titleZh || grammar.title;
+}
+
+function getLocalizedGrammarSummary(
+  grammar: { summary?: string; summaryEn?: string; summaryVi?: string; summaryMn?: string },
+  language: SupportedLanguage
+): string {
+  const candidates =
+    language === 'en'
+      ? [grammar.summaryEn, grammar.summary, grammar.summaryVi, grammar.summaryMn]
+      : language === 'vi'
+        ? [grammar.summaryVi, grammar.summaryEn, grammar.summary, grammar.summaryMn]
+        : language === 'mn'
+          ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
+          : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
+  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
 }
 
 const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
@@ -18,8 +59,10 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
   onSearchChange,
   selectedGrammarId,
   onSelectGrammar,
+  embedded = false,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = resolveSupportedLanguage(i18n.language);
   const [expandedUnits, setExpandedUnits] = useState<Set<number>>(new Set([1]));
   const selectedUnitId = useMemo(() => {
     if (!selectedGrammarId) return null;
@@ -63,7 +106,8 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     const filtered = q
       ? courseGrammars.filter(
           g =>
-            g.title.toLowerCase().includes(q) || (g.summary && g.summary.toLowerCase().includes(q))
+            getLocalizedGrammarTitle(g, language).toLowerCase().includes(q) ||
+            getLocalizedGrammarSummary(g, language).toLowerCase().includes(q)
         )
       : courseGrammars;
 
@@ -82,7 +126,7 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     });
 
     return { unitsMap: map, unitStats: stats };
-  }, [courseGrammars, searchQuery]);
+  }, [courseGrammars, searchQuery, language]);
 
   const sortedUnitIds = Array.from(unitsMap.keys()).sort((a, b) => a - b);
 
@@ -99,10 +143,16 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
   };
 
   return (
-    <aside className="w-80 bg-card border-r-2 border-slate-900 dark:border-border shadow-[4px_0px_0px_0px_#0f172a] dark:shadow-[4px_0px_0px_0px_rgba(148,163,184,0.26)] flex flex-col z-20 shrink-0 m-4 rounded-xl overflow-hidden">
-      <div className="p-4 border-b-2 border-slate-900 dark:border-border bg-slate-50 dark:bg-slate-900/50">
+    <aside
+      className={
+        embedded
+          ? 'w-full bg-card border border-border shadow-sm flex flex-col overflow-hidden rounded-xl'
+          : 'w-80 bg-card border-r-2 border-border shadow-pop-sm flex flex-col z-20 shrink-0 m-4 rounded-xl overflow-hidden'
+      }
+    >
+      <div className="p-4 border-b-2 border-border bg-muted/40">
         <h1 className="font-black text-xl italic tracking-tight text-foreground flex items-center gap-2">
-          <span className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-1.5 rounded leading-none pt-0.5">
+          <span className="bg-primary text-primary-foreground px-1.5 rounded leading-none pt-0.5">
             H
           </span>
           {t('grammarModule.directoryTitle', 'Grammar workbook')}
@@ -113,13 +163,13 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
             placeholder={t('grammarModule.searchPlaceholder', 'Search grammar points...')}
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full pl-10 py-2 border-2 border-slate-900 dark:border-border rounded-xl text-sm font-bold focus-visible:shadow-[4px_4px_0px_0px_#0f172a] dark:focus-visible:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)] outline-none bg-background shadow-none transition-shadow"
+            className="w-full pl-10 py-2 border-2 border-border rounded-xl text-sm font-bold focus-visible:shadow-pop-sm outline-none bg-background shadow-none transition-shadow"
           />
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-900 scrollbar-track-transparent dark:scrollbar-thumb-slate-100">
+      <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {sortedUnitIds.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 opacity-50">
             <Search className="w-10 h-10 mb-2" />
@@ -138,24 +188,27 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
           return (
             <div
               key={unitId}
-              className="border-2 border-slate-900 dark:border-border rounded-xl overflow-hidden bg-background shadow-[2px_2px_0px_0px_#0f172a] dark:shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)]"
+              className="border-2 border-border rounded-xl overflow-hidden bg-background shadow-pop-sm"
             >
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
                 onClick={() => toggleUnit(unitId)}
-                className="w-full px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between bg-muted/40 hover:bg-muted transition-colors"
               >
                 <div className="flex flex-col items-start gap-1">
                   <span className="text-xs font-black text-foreground text-left leading-tight">
                     {getUnitName(unitId)}
                   </span>
                   <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-slate-900 dark:bg-slate-100 transition-all duration-500"
+                        className="h-full bg-primary transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500">
+                    <span className="text-[10px] font-bold text-muted-foreground">
                       {stats.completed}/{stats.total}
                     </span>
                   </div>
@@ -163,10 +216,10 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                 />
-              </button>
+              </Button>
 
               {isExpanded && (
-                <ul className="p-2 space-y-1 bg-white dark:bg-slate-950 border-t-2 border-slate-900 dark:border-border">
+                <ul className="p-2 space-y-1 bg-card border-t-2 border-border">
                   {items.map((g, index) => {
                     const isActive = selectedGrammarId === g.id;
                     const isMastered = g.status === 'MASTERED';
@@ -179,31 +232,25 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
                                                     px-3 py-2 rounded-lg font-bold text-sm cursor-pointer transition-all border-2
                                                     ${
                                                       isActive
-                                                        ? 'bg-slate-900 text-white border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 dark:shadow-[2px_2px_0px_0px_rgba(148,163,184,0.26)]'
-                                                        : 'text-slate-600 dark:text-slate-400 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                                                        ? 'bg-primary text-primary-foreground border-primary shadow-pop-sm'
+                                                        : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'
                                                     }
                                                 `}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span
-                              className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full border shrink-0 ${isActive ? 'bg-white/20 border-white/30' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'}`}
+                              className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full border shrink-0 ${isActive ? 'bg-primary-foreground/20 border-primary-foreground/30' : 'bg-muted border-border text-muted-foreground'}`}
                             >
                               {index + 1}
                             </span>
                             <span className="truncate">
-                              {i18n.language === 'zh'
-                                ? g.titleZh || g.title
-                                : i18n.language === 'vi'
-                                  ? g.titleVi || g.title
-                                  : i18n.language === 'mn'
-                                    ? g.titleMn || g.title
-                                    : g.titleEn || g.title}
+                              {getLocalizedGrammarTitle(g, language)}
                             </span>
                           </div>
                           {isMastered && (
                             <CheckCircle2
-                              className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}
+                              className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-foreground'}`}
                             />
                           )}
                         </div>

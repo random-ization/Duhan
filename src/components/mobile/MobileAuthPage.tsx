@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { resolveSafeReturnTo } from '../../utils/navigation';
 import { Button } from '../ui';
 import { Input } from '../ui';
+import { trackEvent } from '../../utils/analytics';
 
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
@@ -77,6 +78,13 @@ export const MobileAuthPage: React.FC = () => {
   const handleSocialLogin = async (provider: 'google' | 'kakao', fallbackKey: string) => {
     setLoading(true);
     setError(null);
+    if (!isLogin) {
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: provider,
+        platform: 'mobile',
+      });
+    }
     try {
       const result = await withTimeout(
         signIn(provider, { redirectTo: postAuthRedirectUrl }),
@@ -107,6 +115,14 @@ export const MobileAuthPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    if (!isLogin) {
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: 'password',
+        platform: 'mobile',
+      });
+    }
+
     try {
       if (isLogin) {
         await withTimeout(
@@ -129,6 +145,11 @@ export const MobileAuthPage: React.FC = () => {
           }),
           AUTH_REQUEST_TIMEOUT_MS
         );
+        trackEvent('signup_success', {
+          language: currentLanguage,
+          method: 'password',
+          platform: 'mobile',
+        });
       }
     } catch (err: unknown) {
       console.error('Auth error:', err);

@@ -8,12 +8,19 @@ import { BottomSheet } from '../common/BottomSheet';
 import { useTranslation } from 'react-i18next';
 
 // Must align with what Desktop uses
-const matchesSearchQuery = (point: GrammarPoint, query: string): boolean => {
+const matchesSearchQuery = (point: GrammarPoint, query: string, language: Language): boolean => {
   const q = query.toLowerCase();
   if (point.pattern.toLowerCase().includes(q)) return true;
-  if (point.explanation.toLowerCase().includes(q)) return true;
+  const explanation = (
+    getLocalizedContent(point, 'explanation', language) || point.explanation
+  ).toLowerCase();
+  if (explanation.includes(q)) return true;
   return point.usages.some(
-    usage => usage.example.toLowerCase().includes(q) || usage.translation.toLowerCase().includes(q)
+    usage =>
+      usage.example.toLowerCase().includes(q) ||
+      (getLocalizedContent(usage, 'translation', language) || usage.translation)
+        .toLowerCase()
+        .includes(q)
   );
 };
 
@@ -40,11 +47,11 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
     if (!query) return groupedPoints;
     const result: Record<number, GrammarPoint[]> = {};
     Object.entries(groupedPoints).forEach(([unitKey, points]) => {
-      const matches = points.filter(p => matchesSearchQuery(p, query));
+      const matches = points.filter(p => matchesSearchQuery(p, query, language));
       if (matches.length > 0) result[Number(unitKey)] = matches;
     });
     return result;
-  }, [groupedPoints, searchQuery]);
+  }, [groupedPoints, language, searchQuery]);
 
   const units = Object.keys(filteredData)
     .map(Number)

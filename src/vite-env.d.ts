@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string; // Optional, defaults to localhost
   readonly VITE_CDN_URL?: string; // Optional
   readonly VITE_I18N_VERSION?: string;
+  readonly VITE_SENTRY_DSN?: string; // Optional
+  readonly VITE_ANALYTICS_DEBUG?: string; // Optional
 }
 
 interface ImportMeta {

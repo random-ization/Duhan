@@ -22,6 +22,7 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -54,6 +55,13 @@ const getShuffleThumbClass = (enabled: boolean): string =>
   `absolute top-1 w-5 h-5 bg-card rounded-full transition-all ${enabled ? 'left-6' : 'left-1'}`;
 
 const withFallback = (value: string | undefined, fallback: string): string => value || fallback;
+const getLocalizedMeaning = (word: VocabBookItemDto, language: string): string =>
+  getLocalizedContent(word, 'meaning', language) ||
+  word.meaning ||
+  word.meaningEn ||
+  word.meaningVi ||
+  word.meaningMn ||
+  '';
 
 type ExportModalCopy = {
   exportPdfButton: string;
@@ -845,7 +853,7 @@ const VocabBookPage: React.FC = () => {
                     <div className="px-5 pb-5">
                       <div className="pt-3 border-t-2 border-dashed border-border">
                         <div className="text-muted-foreground font-bold leading-relaxed">
-                          {word.meaning}
+                          {getLocalizedMeaning(word, language)}
                         </div>
                       </div>
                     </div>

@@ -9,6 +9,7 @@ import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
+import { trackEvent } from '../utils/analytics';
 import {
   ArrowRight,
   PlayCircle,
@@ -257,8 +258,18 @@ const LandingNav = ({
   mobileMenuOpen: boolean;
   setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const language = normalizeLandingSeoLanguage(i18n.language);
+
+  const trackLandingCta = (ctaId: string, placement: string, target: string) => {
+    trackEvent('landing_cta_click', {
+      language,
+      ctaId,
+      placement,
+      target,
+    });
+  };
 
   return (
     <nav
@@ -287,7 +298,7 @@ const LandingNav = ({
           </a>
           <a
             href="#fsrs"
-            className="hover:text-[#FFDE59] dark:hover:text-amber-300 transition-colors"
+            className="hover:text-brand-yellow dark:hover:text-amber-300 transition-colors"
           >
             {t('landing.nav.fsrs')}
           </a>
@@ -304,7 +315,10 @@ const LandingNav = ({
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/register')}
+            onClick={() => {
+              trackLandingCta('nav_register', 'landing_nav_desktop', '/register');
+              navigate('/register');
+            }}
             className="bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             {t('landing.nav.cta')}
@@ -366,6 +380,7 @@ const LandingNav = ({
             variant="ghost"
             size="auto"
             onClick={() => {
+              trackLandingCta('mobile_nav_register', 'landing_nav_mobile', '/register');
               navigate('/register');
               setMobileMenuOpen(false);
             }}
@@ -380,11 +395,12 @@ const LandingNav = ({
 };
 
 const LandingHero = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const language = normalizeLandingSeoLanguage(i18n.language);
 
   return (
-    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[radial-gradient(110%_110%_at_50%_0%,#e9edff_0%,#ffffff_58%)] dark:bg-[radial-gradient(120%_120%_at_50%_0%,rgba(167,139,250,0.30)_0%,rgba(129,140,248,0.10)_38%,#020617_78%)]">
+    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[radial-gradient(110%_110%_at_50%_0%,hsl(var(--primary)/0.12)_0%,hsl(var(--background))_58%)] dark:bg-[radial-gradient(120%_120%_at_50%_0%,hsl(var(--primary)/0.30)_0%,hsl(var(--primary)/0.10)_38%,hsl(var(--background))_78%)]">
       <motion.div
         initial="hidden"
         whileInView="visible"
@@ -413,8 +429,16 @@ const LandingHero = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/register')}
-            className="px-10 py-5 bg-[#FFDE59] dark:bg-amber-300 border-2 border-foreground text-foreground text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
+            onClick={() => {
+              trackEvent('landing_cta_click', {
+                language,
+                ctaId: 'hero_primary_register',
+                placement: 'landing_hero',
+                target: '/register',
+              });
+              navigate('/register');
+            }}
+            className="px-10 py-5 bg-brand-yellow dark:bg-amber-300 border-2 border-foreground text-foreground text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
           >
             {t('landing.hero.ctaPrimary')}
             <ArrowRight className="w-5 h-5" />
@@ -601,9 +625,9 @@ const LandingTopik = () => {
                       type="button"
                       variant="ghost"
                       size="auto"
-                      className="p-3 bg-emerald-600 dark:bg-emerald-400 text-white dark:text-primary-foreground border border-emerald-600 dark:border-emerald-300 rounded-lg shadow-md cursor-pointer flex gap-3 items-center"
+                      className="p-3 bg-emerald-600 dark:bg-emerald-400 text-primary-foreground dark:text-primary-foreground border border-emerald-600 dark:border-emerald-300 rounded-lg shadow-md cursor-pointer flex gap-3 items-center"
                     >
-                      <div className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[10px]">
+                      <div className="w-5 h-5 rounded-full border-2 border-primary-foreground/40 flex items-center justify-center text-[10px]">
                         ✓
                       </div>
                       {t('landing.topik.mockChoice2')}
@@ -652,7 +676,7 @@ const LandingFsrs = () => {
         >
           <motion.div
             variants={fadeInUp}
-            className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFDE59]/30 dark:bg-amber-300/20 text-foreground rounded-lg font-bold text-sm mb-6"
+            className="inline-flex items-center gap-2 px-3 py-1 bg-brand-yellow/30 dark:bg-amber-300/20 text-foreground rounded-lg font-bold text-sm mb-6"
           >
             <BrainCircuit className="w-4 h-4" />
             {t('landing.fsrs.badge')}
@@ -663,7 +687,7 @@ const LandingFsrs = () => {
           >
             {t('landing.fsrs.titleLine1')}
             <br />
-            <span className="text-[#FFDE59] dark:text-amber-300 drop-shadow-sm [text-shadow:1px_1px_0_#000] dark:[text-shadow:none]">
+            <span className="text-brand-yellow dark:text-amber-300 drop-shadow-sm">
               {t('landing.fsrs.titleHighlight')}
             </span>
           </motion.h2>
@@ -700,7 +724,7 @@ const LandingFsrs = () => {
           transition={{ duration: 0.8 }}
           className="md:w-1/2 relative"
         >
-          <div className="absolute -inset-4 bg-gradient-to-tr from-[#FFDE59]/20 to-orange-100 dark:from-amber-300/20 dark:to-orange-400/15 rounded-full blur-3xl opacity-60" />
+          <div className="absolute -inset-4 bg-gradient-to-tr from-brand-yellow/20 to-orange-100 dark:from-amber-300/20 dark:to-orange-400/15 rounded-full blur-3xl opacity-60" />
           <div className="relative grid gap-6">
             <div className="bg-card p-6 rounded-2xl shadow-2xl border-2 border-foreground transform md:-rotate-3 z-20">
               <div className="flex justify-between items-start mb-8">
@@ -760,7 +784,7 @@ const LandingFsrs = () => {
                 </Button>
               </div>
             </div>
-            <div className="absolute top-4 left-4 w-full h-full bg-[#FFDE59]/30 dark:bg-amber-300/20 rounded-2xl border-2 border-foreground -z-10 transform rotate-2" />
+            <div className="absolute top-4 left-4 w-full h-full bg-brand-yellow/30 dark:bg-amber-300/20 rounded-2xl border-2 border-foreground -z-10 transform rotate-2" />
           </div>
         </motion.div>
       </div>
@@ -834,7 +858,7 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
           className="md:w-1/2 relative"
         >
           <div className="bg-card rounded-3xl shadow-2xl border border-border overflow-hidden max-w-md mx-auto">
-            <div className="bg-violet-600 dark:bg-violet-500 p-6 text-white dark:text-primary-foreground">
+            <div className="bg-violet-600 dark:bg-violet-500 p-6 text-primary-foreground dark:text-primary-foreground">
               <div className="font-bold text-lg mb-1">{t('landing.ai.chatTitle')}</div>
               <div className="text-violet-200 dark:text-violet-100 text-sm">
                 {t('landing.ai.chatSubtitle')}
@@ -845,7 +869,7 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
                 <div className="w-10 h-10 rounded-full bg-muted flex-shrink-0 overflow-hidden">
                   <img src={userAvatar} alt={t('landing.ai.userAlt')} className="w-full h-full" />
                 </div>
-                <div className="bg-violet-600 dark:bg-violet-500 text-white dark:text-primary-foreground p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]">
+                <div className="bg-violet-600 dark:bg-violet-500 text-primary-foreground dark:text-primary-foreground p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]">
                   <p className="text-sm">{t('landing.ai.userQuestion')}</p>
                   <p className="text-xs bg-card/20 mt-2 p-2 rounded">
                     {t('landing.ai.userExample')}
@@ -1043,7 +1067,7 @@ const LandingToolbox = ({
                       </div>
 
                       <div
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-tl from-slate-300 to-card shadow-sm"
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-tl from-border to-card shadow-sm"
                         style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }}
                       />
                     </div>
@@ -1053,7 +1077,7 @@ const LandingToolbox = ({
                       variant="ghost"
                       size="auto"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-amber-400 dark:bg-amber-300 text-foreground font-bold rounded-xl hover:bg-amber-500 dark:hover:bg-amber-200 hover:text-white dark:hover:text-foreground transition-colors shadow-lg shadow-amber-100 dark:shadow-amber-400/20 flex justify-center gap-2 items-center mt-auto"
+                      className="w-full py-3 bg-amber-400 dark:bg-amber-300 text-foreground font-bold rounded-xl hover:bg-amber-500 dark:hover:bg-amber-200 hover:text-primary-foreground dark:hover:text-foreground transition-colors shadow-lg shadow-amber-100 dark:shadow-amber-400/20 flex justify-center gap-2 items-center mt-auto"
                     >
                       <Download className="w-4 h-4" /> {t('landing.toolbox.card1Cta')}
                     </Button>
@@ -1134,7 +1158,7 @@ const LandingToolbox = ({
                       variant="ghost"
                       size="auto"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-pink-500 dark:bg-pink-400 text-white dark:text-primary-foreground font-bold rounded-xl hover:bg-pink-600 dark:hover:bg-pink-300 transition-colors shadow-lg shadow-pink-100 dark:shadow-pink-400/20 mt-auto flex justify-center items-center"
+                      className="w-full py-3 bg-pink-500 dark:bg-pink-400 text-primary-foreground dark:text-primary-foreground font-bold rounded-xl hover:bg-pink-600 dark:hover:bg-pink-300 transition-colors shadow-lg shadow-pink-100 dark:shadow-pink-400/20 mt-auto flex justify-center items-center"
                     >
                       {t('landing.toolbox.card2Cta')}
                     </Button>
@@ -1200,7 +1224,7 @@ const LandingToolbox = ({
                       variant="ghost"
                       size="auto"
                       onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-violet-600 dark:bg-violet-400 text-white dark:text-primary-foreground font-bold rounded-xl hover:bg-violet-700 dark:hover:bg-violet-300 transition-colors shadow-lg shadow-violet-100 dark:shadow-violet-400/20 mt-auto flex justify-center items-center"
+                      className="w-full py-3 bg-violet-600 dark:bg-violet-400 text-primary-foreground dark:text-primary-foreground font-bold rounded-xl hover:bg-violet-700 dark:hover:bg-violet-300 transition-colors shadow-lg shadow-violet-100 dark:shadow-violet-400/20 mt-auto flex justify-center items-center"
                     >
                       {t('landing.toolbox.card3Cta')}
                     </Button>
@@ -1317,7 +1341,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/learn?module=typing')}
-                className="px-8 py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center gap-2 group"
+                className="px-8 py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all shadow-lg flex items-center gap-2 group"
               >
                 <span>{t('landing.typing.cta')}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -1402,7 +1426,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
                         </div>
                       ))}
                       {/* Active Key */}
-                      <div className="bg-blue-500 dark:bg-blue-400 border-b-2 border-blue-600 dark:border-blue-300 text-white dark:text-primary-foreground rounded-md flex items-center justify-center font-bold shadow-md transform translate-y-px w-8 h-8 md:w-10 md:h-10 relative text-xs md:text-sm">
+                      <div className="bg-blue-500 dark:bg-blue-400 border-b-2 border-blue-600 dark:border-blue-300 text-primary-foreground dark:text-primary-foreground rounded-md flex items-center justify-center font-bold shadow-md transform translate-y-px w-8 h-8 md:w-10 md:h-10 relative text-xs md:text-sm">
                         ㄹ<span className="absolute top-0.5 right-1 text-[8px] opacity-70">F</span>
                       </div>
                       {['ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'].map(k => (
@@ -1446,7 +1470,18 @@ const LandingPricing = ({
   navigate: (path: string) => void;
   prices: VariantPrices | null;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = normalizeLandingSeoLanguage(i18n.language);
+
+  const navigateWithLandingCta = (ctaId: string, target: string, placement: string) => {
+    trackEvent('landing_cta_click', {
+      language,
+      ctaId,
+      placement,
+      target,
+    });
+    navigate(target);
+  };
 
   // Price Calculation Helpers
   const getPrice = (
@@ -1504,18 +1539,18 @@ const LandingPricing = ({
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-xl mx-auto bg-[#E9FBF4] dark:bg-emerald-400/12 border-2 border-[#10B981] dark:border-emerald-300/50 rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
+            className="max-w-xl mx-auto bg-emerald-50 dark:bg-emerald-400/12 border-2 border-brand-green dark:border-emerald-300/50 rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
           >
             <div className="flex items-start gap-4 min-w-0">
-              <div className="w-12 h-12 bg-[#10B981] dark:bg-emerald-400 rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
-                <Gift className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-brand-green dark:bg-emerald-400 rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
+                <Gift className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-heading font-extrabold text-foreground">
                     {t('pricingDetails.promo.card.title')}
                   </h3>
-                  <span className="bg-[#FFDE59] dark:bg-amber-300 text-foreground border border-foreground rounded px-2 py-0.5 text-[10px] font-black">
+                  <span className="bg-brand-yellow dark:bg-amber-300 text-foreground border border-foreground rounded px-2 py-0.5 text-[10px] font-black">
                     {t('pricingDetails.promo.card.badge')}
                   </span>
                 </div>
@@ -1528,7 +1563,13 @@ const LandingPricing = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => navigate('/pricing/details?plan=ANNUAL&source=landing')}
+              onClick={() =>
+                navigateWithLandingCta(
+                  'promo_annual',
+                  '/pricing/details?plan=ANNUAL&source=landing',
+                  'landing_pricing_promo'
+                )
+              }
               className="bg-card text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.card.cta')}
@@ -1564,7 +1605,9 @@ const LandingPricing = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => navigate('/register')}
+              onClick={() =>
+                navigateWithLandingCta('pricing_free_register', '/register', 'landing_pricing_free')
+              }
               className="w-full py-3 rounded-xl border border-border font-bold hover:bg-muted"
             >
               {t('landing.pricing.free.cta')}
@@ -1573,31 +1616,31 @@ const LandingPricing = ({
 
           <motion.div
             variants={fadeInUp}
-            className={`p-8 text-white dark:text-primary-foreground rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-[#FFDE59] dark:border-amber-300 overflow-hidden ${
-              showLocalizedPromo ? 'bg-[#173C41] dark:bg-primary' : 'bg-primary'
+            className={`p-8 text-primary-foreground dark:text-primary-foreground rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-brand-yellow dark:border-amber-300 overflow-hidden ${
+              showLocalizedPromo ? 'bg-brand-dark dark:bg-primary' : 'bg-primary'
             }`}
           >
             {showLocalizedPromo ? (
-              <div className="absolute top-5 right-5 bg-[#10B981] dark:bg-emerald-400 text-foreground border-2 border-foreground px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
+              <div className="absolute top-5 right-5 bg-brand-green dark:bg-emerald-400 text-foreground border-2 border-foreground px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
                 {t('pricingDetails.promo.activated')}
               </div>
             ) : (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#FFDE59] dark:bg-amber-300 text-foreground px-4 py-1 rounded-full text-xs font-bold uppercase">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-yellow dark:bg-amber-300 text-foreground px-4 py-1 rounded-full text-xs font-bold uppercase">
                 {t('landing.pricing.pro.badge')}
               </div>
             )}
 
-            <div className="font-bold text-lg mb-2 text-[#FFDE59] dark:text-amber-300">
+            <div className="font-bold text-lg mb-2 text-brand-yellow dark:text-amber-300">
               {t('landing.pricing.pro.title')}
             </div>
 
             {showLocalizedPromo ? (
               <>
                 <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-3xl font-black text-[#10B981] dark:text-emerald-300">
+                  <span className="text-3xl font-black text-brand-green dark:text-emerald-300">
                     $
                   </span>
-                  <span className="text-6xl font-extrabold text-[#10B981] dark:text-emerald-300">
+                  <span className="text-6xl font-extrabold text-brand-green dark:text-emerald-300">
                     {proPriceDisplay}
                   </span>
                   <span className="text-muted-foreground text-sm">
@@ -1642,8 +1685,14 @@ const LandingPricing = ({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/pricing/details?plan=ANNUAL&source=landing')}
-              className="w-full py-4 bg-[#FFDE59] dark:bg-amber-300 text-foreground rounded-xl font-bold shadow-lg hover:bg-yellow-300 dark:hover:bg-amber-200 transition-colors"
+              onClick={() =>
+                navigateWithLandingCta(
+                  'pricing_pro_checkout',
+                  '/pricing/details?plan=ANNUAL&source=landing',
+                  'landing_pricing_pro'
+                )
+              }
+              className="w-full py-4 bg-brand-yellow dark:bg-amber-300 text-foreground rounded-xl font-bold shadow-lg hover:bg-yellow-300 dark:hover:bg-amber-200 transition-colors"
             >
               {showLocalizedPromo
                 ? t('pricingDetails.promo.subscribe')
@@ -1671,7 +1720,13 @@ const LandingPricing = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => navigate('/pricing/details?plan=LIFETIME&source=landing')}
+              onClick={() =>
+                navigateWithLandingCta(
+                  'pricing_lifetime_checkout',
+                  '/pricing/details?plan=LIFETIME&source=landing',
+                  'landing_pricing_lifetime'
+                )
+              }
               className="w-full py-3 rounded-xl border border-border font-bold hover:bg-card"
             >
               {t('landing.pricing.lifetime.cta')}
@@ -1911,7 +1966,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen font-landing antialiased text-foreground overflow-x-hidden bg-background selection:bg-[#FFDE59] dark:selection:bg-amber-300 selection:text-foreground">
+    <div className="min-h-screen font-landing antialiased text-foreground overflow-x-hidden bg-background selection:bg-brand-yellow dark:selection:bg-amber-300 selection:text-foreground">
       <Seo
         title={localizedSeoTitle}
         description={localizedSeoDescription}

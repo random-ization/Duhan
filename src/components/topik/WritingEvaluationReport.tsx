@@ -346,7 +346,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
   originalAnswers = {},
   onBack,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const result = useQuery(api.aiWritingEvaluation.getEvaluations, { sessionId });
   const retriggerEvaluation = useMutation(api.topikWriting.submitSession);
   const [retrying, setRetrying] = useState(false);
@@ -395,7 +395,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
         onRetry={() => {
           setRetrying(true);
           setRetryError(null);
-          void retriggerEvaluation({ sessionId })
+          void retriggerEvaluation({ sessionId, language: i18n.language })
             .catch((error: unknown) => {
               const msg =
                 error instanceof Error

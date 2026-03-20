@@ -63,11 +63,17 @@ interface VocabItem {
   id: string;
   korean: string;
   meaning: string;
+  meaningEn?: string;
+  meaningVi?: string;
+  meaningMn?: string;
   pronunciation?: string;
   hanja?: string;
   pos?: string;
   exampleSentence?: string;
   exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
 }
 
 interface DictionaryEntry {
@@ -209,6 +215,10 @@ function resolveTranslationLanguage(language: Language): 'en' | 'zh' | 'vi' | 'm
     return language;
   }
   return undefined;
+}
+
+function getLocalizedVocabMeaning(vocab: VocabItem, language: Language): string {
+  return getLocalizedContent(vocab as never, 'meaning', language) || vocab.meaning;
 }
 
 function getUniqueUnitIndices(units: { unitIndex: number }[] | undefined) {
@@ -447,6 +457,9 @@ function handleListeningWordClick({
     : undefined;
   const query = baseForm || clickedWord;
   const vocabMatch = lookupInVocabList(query) || lookupInVocabList(clickedWord);
+  const localizedVocabMeaning = vocabMatch
+    ? getLocalizedVocabMeaning(vocabMatch, language)
+    : undefined;
   const segmentIndex = wordElement.dataset.segIndex
     ? Number.parseInt(wordElement.dataset.segIndex, 10)
     : undefined;
@@ -465,7 +478,7 @@ function handleListeningWordClick({
   setSelectedWord({
     word: clickedWord,
     lemma: baseForm,
-    meaning: vocabMatch?.meaning || labels.dashboard?.common?.loading || 'Looking up...',
+    meaning: localizedVocabMeaning || labels.dashboard?.common?.loading || 'Looking up...',
     baseForm,
     grammarMatches: [],
     contextTranslation,
@@ -608,9 +621,14 @@ const FlashcardPopover: React.FC<FlashcardPopoverProps> = ({
               <div className="space-y-1">
                 {grammarMatches.slice(0, 5).map(g => (
                   <div key={g.id} className="text-xs text-muted-foreground">
-                    <span className="font-bold">{g.title}</span>
-                    {g.summary ? (
-                      <span className="text-muted-foreground"> · {g.summary}</span>
+                    <span className="font-bold">
+                      {getLocalizedContent(g as never, 'title', language) || g.title}
+                    </span>
+                    {getLocalizedContent(g as never, 'summary', language) || g.summary ? (
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {getLocalizedContent(g as never, 'summary', language) || g.summary}
+                      </span>
                     ) : null}
                   </div>
                 ))}

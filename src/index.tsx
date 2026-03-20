@@ -11,6 +11,7 @@ import { ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import { getConvexUrl } from './utils/convexConfig';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
+import { initSentry } from './utils/sentry';
 
 const CHUNK_RELOAD_GUARD_KEY = 'duhan:chunk-reload-attempted';
 
@@ -43,6 +44,7 @@ if (typeof globalThis.window !== 'undefined') {
 
 const convexUrl = getConvexUrl();
 const convex = new ConvexReactClient(convexUrl);
+initSentry();
 registerServiceWorker();
 
 const rootElement = document.getElementById('root');

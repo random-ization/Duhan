@@ -211,8 +211,9 @@ export const saveDraft = mutation({
 export const submitSession = mutation({
   args: {
     sessionId: v.id('topik_writing_sessions'),
+    language: v.optional(v.string()),
   },
-  handler: async (ctx, { sessionId }) => {
+  handler: async (ctx, { sessionId, language }) => {
     const userId = await getAuthUserId(ctx);
     const now = Date.now();
 
@@ -227,6 +228,7 @@ export const submitSession = mutation({
       // Self-heal: if evaluation worker failed previously, allow retrigger.
       await ctx.scheduler.runAfter(0, api.aiWritingEvaluation.evaluateSubmission, {
         sessionId,
+        language,
       });
       return { submitted: true, alreadySubmitted: true };
     }
@@ -237,6 +239,7 @@ export const submitSession = mutation({
     });
     await ctx.scheduler.runAfter(0, api.aiWritingEvaluation.evaluateSubmission, {
       sessionId,
+      language,
     });
 
     return { submitted: true, alreadySubmitted: false };

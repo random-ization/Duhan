@@ -1,15 +1,18 @@
+import { captureException, captureMessage } from './sentry';
+
 export const logError = (error: Error | string, context?: unknown) => {
   if (import.meta.env.DEV) {
     console.error('[Error]', error, context);
   } else {
-    // Integration point for error tracking services (Sentry, LogRocket, etc.)
-    // Sentry.captureException(error);
+    captureException(error, { context });
   }
 };
 
 export const logWarn = (message: string, context?: unknown) => {
   if (import.meta.env.DEV) {
     console.warn('[Warn]', message, context);
+  } else {
+    captureMessage(message, 'warning', { context });
   }
 };
 

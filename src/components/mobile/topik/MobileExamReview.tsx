@@ -19,6 +19,7 @@ import { useAction, useMutation } from 'convex/react';
 import { aRef, NOTE_PAGES } from '../../../utils/convexRefs';
 import { Button } from '../../ui';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
+import { useNotebookPicker } from '../../../contexts/NotebookPickerContext';
 
 interface MobileExamReviewProps {
   exam: TopikExam;
@@ -148,7 +149,7 @@ const ReviewSaveToast: React.FC<{ show: boolean; saveError: string | null; t: Tr
 export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   exam,
   userAnswers,
-  language: _language,
+  language,
   onBack,
   onReset,
 }) => {
@@ -173,12 +174,19 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   // Convex Actions
   const analyzeQuestionAction = useAction(
     aRef<
-      { question: string; options: string[]; correctAnswer: number; type: string },
+      {
+        question: string;
+        options: string[];
+        correctAnswer: number;
+        type: string;
+        language?: string;
+      },
       { success?: boolean; data?: AIAnalysis }
     >('ai:analyzeQuestion')
   );
 
   const ingestFromSource = useMutation(NOTE_PAGES.ingestFromSource);
+  const { pickNotebook } = useNotebookPicker();
 
   // Reset AI state when question is changed
   React.useEffect(() => {
@@ -203,6 +211,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         options: question.options,
         correctAnswer: question.correctAnswer ?? 0,
         type: 'TOPIK_QUESTION',
+        language,
       })) as { success?: boolean; data?: AIAnalysis };
 
       if (result?.success && result.data) {
@@ -246,8 +255,27 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
       const noteText = buildTopikAnalysisNoteText(aiAnalysis, t);
       const questionNumber =
         typeof question.number === 'number' ? question.number : currentQuestionIndex + 1;
+      const notebookId = await pickNotebook({
+        title: t('dashboard.topik.mobile.review.saveToNotebookTitle', {
+          defaultValue: 'Save AI Analysis',
+        }),
+        description: t('dashboard.topik.mobile.review.saveToNotebookDescription', {
+          defaultValue: 'Choose a notebook, or create one before saving.',
+        }),
+        confirmText: t('dashboard.topik.mobile.review.saveToNotebookConfirm', {
+          defaultValue: 'Save to Notebook',
+        }),
+        cancelText: t('dashboard.topik.mobile.review.saveToNotebookCancel', {
+          defaultValue: 'Cancel',
+        }),
+      });
+      if (!notebookId) {
+        setIsSaving(false);
+        return;
+      }
 
       const result = await ingestFromSource({
+        notebookId,
         sourceModule: 'TOPIK_ANALYSIS',
         sourceRef: {
           module: 'TOPIK_ANALYSIS',
@@ -510,6 +538,21 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     const currentQuestion = exam.questions[currentQuestionIndex];
     const userAnswer = userAnswers[currentQuestionIndex];
     const isCorrect = userAnswer === currentQuestion.correctAnswer;
+    const localizedExplanation =
+      language === 'en'
+        ? currentQuestion.explanationEn || currentQuestion.explanation
+        : language === 'vi'
+          ? currentQuestion.explanationVi ||
+            currentQuestion.explanationEn ||
+            currentQuestion.explanation
+          : language === 'mn'
+            ? currentQuestion.explanationMn ||
+              currentQuestion.explanationEn ||
+              currentQuestion.explanation
+            : currentQuestion.explanation ||
+              currentQuestion.explanationEn ||
+              currentQuestion.explanationVi ||
+              currentQuestion.explanationMn;
 
     // Custom renderer for review mode options
     // We override the default renderer's option display slightly by passing props,
@@ -750,7 +793,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             <QuestionContent />
 
             {/* Explanation */}
-            {currentQuestion.explanation && (
+            {localizedExplanation && (
               <div className="bg-indigo-50/50 dark:bg-indigo-500/12 rounded-3xl p-6 border border-indigo-100 dark:border-indigo-300/20 mb-8">
                 <h3 className="font-bold text-indigo-900 dark:text-indigo-200 mb-2 flex items-center gap-2 text-sm">
                   <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/18 flex items-center justify-center">
@@ -759,7 +802,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   {t('dashboard.topik.mobile.review.explanation', { defaultValue: 'Explanation' })}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed font-serif whitespace-pre-wrap">
-                  {currentQuestion.explanation}
+                  {localizedExplanation}
                 </p>
               </div>
             )}

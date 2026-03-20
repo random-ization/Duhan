@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnchorFromRange } from '../../src/features/annotation-kit/utils/selection';
+import {
+  buildAnchorFromRange,
+  classifySelectionKind,
+} from '../../src/features/annotation-kit/utils/selection';
 
 describe('buildAnchorFromRange', () => {
   it('computes stable offsets and quote from selection range', () => {
@@ -20,5 +23,19 @@ describe('buildAnchorFromRange', () => {
     expect(anchor?.end).toBe(12);
 
     document.body.removeChild(container);
+  });
+});
+
+describe('classifySelectionKind', () => {
+  it('treats a single token as a word', () => {
+    expect(classifySelectionKind('안녕하세요')).toBe('word');
+  });
+
+  it('treats a short multi-token selection as a phrase', () => {
+    expect(classifySelectionKind('정말 좋아요')).toBe('phrase');
+  });
+
+  it('treats a punctuated clause as a sentence', () => {
+    expect(classifySelectionKind('오늘은 날씨가 정말 좋네요.')).toBe('sentence');
   });
 });

@@ -127,6 +127,9 @@ export const getDetails = query({
           id: word._id,
           korean: word.word,
           meaning: word.meaning,
+          meaningEn: app.meaningEn ?? word.meaningEn,
+          meaningVi: app.meaningVi ?? word.meaningVi,
+          meaningMn: app.meaningMn ?? word.meaningMn,
           pos: word.partOfSpeech,
           pronunciation: word.pronunciation,
           hanja: word.hanja,
@@ -134,6 +137,9 @@ export const getDetails = query({
           // Context
           exampleSentence: app.exampleSentence,
           exampleMeaning: app.exampleMeaning,
+          exampleMeaningEn: app.exampleMeaningEn,
+          exampleMeaningVi: app.exampleMeaningVi,
+          exampleMeaningMn: app.exampleMeaningMn,
         };
       })
       .filter(Boolean);
@@ -151,11 +157,24 @@ export const getDetails = query({
         return {
           id: grammar._id,
           title: grammar.title,
+          titleEn: grammar.titleEn,
+          titleZh: grammar.titleZh,
+          titleVi: grammar.titleVi,
+          titleMn: grammar.titleMn,
           summary: grammar.summary,
+          summaryEn: grammar.summaryEn,
+          summaryVi: grammar.summaryVi,
+          summaryMn: grammar.summaryMn,
           explanation: grammar.explanation,
+          explanationEn: grammar.explanationEn,
+          explanationVi: grammar.explanationVi,
+          explanationMn: grammar.explanationMn,
           type: grammar.type,
           displayOrder: cg.displayOrder,
           customNote: cg.customNote,
+          customNoteEn: cg.customNoteEn,
+          customNoteVi: cg.customNoteVi,
+          customNoteMn: cg.customNoteMn,
           // Add other fields as needed
         };
       })

@@ -17,6 +17,7 @@ import { resolveSafeReturnTo } from '../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
+import { trackEvent } from '../utils/analytics';
 
 // Google OAuth Config - Removed legacy config
 // const GOOGLE_CLIENT_ID ...
@@ -73,6 +74,13 @@ export default function DesktopAuthPage() {
   };
 
   const handleGoogleLogin = async () => {
+    if (!isLogin) {
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: 'google',
+        platform: 'desktop',
+      });
+    }
     try {
       await signIn('google', { redirectTo: postAuthRedirectUrl });
     } catch (e: unknown) {
@@ -81,6 +89,13 @@ export default function DesktopAuthPage() {
   };
 
   const handleKakaoLogin = async () => {
+    if (!isLogin) {
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: 'kakao',
+        platform: 'desktop',
+      });
+    }
     try {
       await signIn('kakao', { redirectTo: postAuthRedirectUrl });
     } catch (e: unknown) {
@@ -92,6 +107,14 @@ export default function DesktopAuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!isLogin) {
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: 'password',
+        platform: 'desktop',
+      });
+    }
 
     try {
       if (isLogin) {
@@ -110,6 +133,12 @@ export default function DesktopAuthPage() {
           name: formData.name,
           flow: 'signUp',
           redirectTo: postAuthRedirectUrl,
+        });
+
+        trackEvent('signup_success', {
+          language: currentLanguage,
+          method: 'password',
+          platform: 'desktop',
         });
       }
     } catch (e: unknown) {

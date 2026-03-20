@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GrammarPointData } from '../../types';
+import { getLocalizedContent } from '../../utils/languageUtils';
 import { Button } from '../ui';
 
 interface MobileGrammarFeedProps {
@@ -16,7 +17,8 @@ export default function MobileGrammarFeed({
   onToggleStatus,
   isLoading,
 }: MobileGrammarFeedProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = (i18n.language || 'zh') as never;
   if (isLoading) {
     return (
       <div className="p-4 space-y-3">
@@ -84,9 +86,11 @@ export default function MobileGrammarFeed({
                   <span className="text-[10px] font-bold text-muted-foreground">{point.level}</span>
                 )}
               </div>
-              <h3 className="text-lg font-black text-foreground leading-tight">{point.title}</h3>
+              <h3 className="text-lg font-black text-foreground leading-tight">
+                {getLocalizedContent(point as never, 'title', language) || point.title}
+              </h3>
               <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5 font-medium">
-                {point.summary}
+                {getLocalizedContent(point as never, 'summary', language) || point.summary}
               </p>
             </div>
 

@@ -16,6 +16,13 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
 import AnnotationToolbar from '../features/annotation-kit/components/AnnotationToolbar';
 import { useScopedAnnotations } from '../features/annotation-kit/hooks/useScopedAnnotations';
+import type { AnnotationSelectionKind } from '../features/annotation-kit/types';
+import { classifySelectionKind } from '../features/annotation-kit/utils/selection';
+import { useContextualSidebar } from '../hooks/useContextualSidebar';
+import {
+  ContextualCountBadge,
+  ContextualSection,
+} from '../components/layout/contextualSidebarBlocks';
 
 type NewsArticle = {
   _id: string;
@@ -112,6 +119,7 @@ type SelectionToolbarState = {
   y: number;
   text: string;
   anchor: NoteAnchor | null;
+  selectionKind: AnnotationSelectionKind;
 };
 
 const STOPWORDS = new Set([
@@ -1313,78 +1321,113 @@ const ReadingArticleSidebar: React.FC<{
   setHoveredNoteId,
   getNoteVisualState,
 }) => (
-  <aside className="flex min-h-[82vh] flex-col border-t border-border bg-muted md:border-t-0">
-    <div className="flex border-b border-border bg-card">
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={() => setPanelTab('ai')}
-        className={`flex-1 py-4 text-sm font-bold ${
-          panelTab === 'ai'
-            ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
-            : 'text-muted-foreground hover:text-muted-foreground'
-        }`}
-      >
-        ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={() => setPanelTab('notes')}
-        className={`flex-1 py-4 text-sm font-bold ${
-          panelTab === 'notes'
-            ? 'border-b-2 border-primary text-primary dark:text-primary-foreground'
-            : 'text-muted-foreground hover:text-muted-foreground'
-        }`}
-      >
-        📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
-      </Button>
-    </div>
+  <div className="space-y-3">
+    <ContextualSection
+      title={t('readingArticle.backToDiscovery', { defaultValue: 'Reading' })}
+      badge={
+        <ContextualCountBadge
+          value={
+            panelTab === 'ai'
+              ? t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })
+              : t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })
+          }
+          tone="accent"
+        />
+      }
+    >
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted p-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => setPanelTab('ai')}
+          className="rounded-md px-2 py-1.5 text-xs font-bold"
+          style={{
+            backgroundColor:
+              panelTab === 'ai' ? 'var(--sb-active-bg, hsl(var(--accent)))' : 'transparent',
+            color:
+              panelTab === 'ai'
+                ? 'var(--sb-active-text, hsl(var(--accent-foreground)))'
+                : 'var(--sb-muted-text, hsl(var(--muted-foreground)))',
+          }}
+        >
+          ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => setPanelTab('notes')}
+          className="rounded-md px-2 py-1.5 text-xs font-bold"
+          style={{
+            backgroundColor:
+              panelTab === 'notes' ? 'var(--sb-active-bg, hsl(var(--accent)))' : 'transparent',
+            color:
+              panelTab === 'notes'
+                ? 'var(--sb-active-text, hsl(var(--accent-foreground)))'
+                : 'var(--sb-muted-text, hsl(var(--muted-foreground)))',
+          }}
+        >
+          📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
+        </Button>
+      </div>
+    </ContextualSection>
 
-    <div className="flex-1 space-y-6 overflow-y-auto p-5">
-      {panelTab === 'ai' ? (
-        <ReadingArticleAiTab
-          t={t}
-          aiAnalysisLoading={aiAnalysisLoading}
-          aiAnalysisError={aiAnalysisError}
-          summary={summary}
-          vocabulary={vocabulary}
-          onWordClick={onWordClick}
-          onSaveVocabularyItem={onSaveVocabularyItem}
-          savingWordKey={savingWordKey}
-          savedWords={savedWords}
-          grammar={grammar}
+    <ContextualSection
+      title={
+        panelTab === 'ai'
+          ? t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })
+          : t('readingArticle.notes.title', { defaultValue: 'Notes' })
+      }
+      badge={
+        <ContextualCountBadge
+          value={panelTab === 'ai' ? vocabulary.length + grammar.length : notes.length}
         />
-      ) : (
-        <ReadingArticleNotesTab
-          t={t}
-          activeWord={activeWord}
-          dictionaryQuery={dictionaryQuery}
-          dictionaryLoading={dictionaryLoading}
-          dictionaryError={dictionaryError}
-          dictionaryFallbackLoading={dictionaryFallbackLoading}
-          dictionaryFallbackError={dictionaryFallbackError}
-          dictionaryFallback={dictionaryFallback}
-          dictionaryEntries={dictionaryEntries}
-          onSaveDictionaryEntry={onSaveDictionaryEntry}
-          onSaveDictionaryFallback={onSaveDictionaryFallback}
-          savingWordKey={savingWordKey}
-          savedWords={savedWords}
-          noteSyncError={noteSyncError}
-          draftNote={draftNote}
-          onDraftCommentChange={onDraftCommentChange}
-          onDiscardDraftNote={onDiscardDraftNote}
-          onSaveDraftNote={onSaveDraftNote}
-          notes={notes}
-          focusNote={focusNote}
-          setHoveredNoteId={setHoveredNoteId}
-          getNoteVisualState={getNoteVisualState}
-        />
-      )}
-    </div>
-  </aside>
+      }
+    >
+      <div className="space-y-4">
+        {panelTab === 'ai' ? (
+          <ReadingArticleAiTab
+            t={t}
+            aiAnalysisLoading={aiAnalysisLoading}
+            aiAnalysisError={aiAnalysisError}
+            summary={summary}
+            vocabulary={vocabulary}
+            onWordClick={onWordClick}
+            onSaveVocabularyItem={onSaveVocabularyItem}
+            savingWordKey={savingWordKey}
+            savedWords={savedWords}
+            grammar={grammar}
+          />
+        ) : (
+          <ReadingArticleNotesTab
+            t={t}
+            activeWord={activeWord}
+            dictionaryQuery={dictionaryQuery}
+            dictionaryLoading={dictionaryLoading}
+            dictionaryError={dictionaryError}
+            dictionaryFallbackLoading={dictionaryFallbackLoading}
+            dictionaryFallbackError={dictionaryFallbackError}
+            dictionaryFallback={dictionaryFallback}
+            dictionaryEntries={dictionaryEntries}
+            onSaveDictionaryEntry={onSaveDictionaryEntry}
+            onSaveDictionaryFallback={onSaveDictionaryFallback}
+            savingWordKey={savingWordKey}
+            savedWords={savedWords}
+            noteSyncError={noteSyncError}
+            draftNote={draftNote}
+            onDraftCommentChange={onDraftCommentChange}
+            onDiscardDraftNote={onDiscardDraftNote}
+            onSaveDraftNote={onSaveDraftNote}
+            notes={notes}
+            focusNote={focusNote}
+            setHoveredNoteId={setHoveredNoteId}
+            getNoteVisualState={getNoteVisualState}
+          />
+        )}
+      </div>
+    </ContextualSection>
+  </div>
 );
 
 const ReadingTranslationToggleButton: React.FC<{
@@ -1508,6 +1551,7 @@ const ReadingSelectionToolbar: React.FC<{
   noteColor: NoteColor;
   setNoteColor: React.Dispatch<React.SetStateAction<NoteColor>>;
   onLookupSelection: () => void;
+  onSaveSelectionWord: (text: string) => Promise<void>;
   startNoteFromSelection: () => void;
   onClose: () => void;
 }> = ({
@@ -1516,6 +1560,7 @@ const ReadingSelectionToolbar: React.FC<{
   noteColor,
   setNoteColor,
   onLookupSelection,
+  onSaveSelectionWord,
   startNoteFromSelection,
   onClose,
 }) => {
@@ -1528,13 +1573,21 @@ const ReadingSelectionToolbar: React.FC<{
         position={{ left: selectionToolbar.x, top: selectionToolbar.y }}
         selectedColor={noteColor}
         selectionText={selectionToolbar.text}
+        selectionKind={selectionToolbar.selectionKind}
         labels={{
           addNote: t('readingArticle.toolbar.note', { defaultValue: 'Note' }),
+          sentenceNote: t('readingArticle.toolbar.saveAsQuoteNote', {
+            defaultValue: '作为句子笔记保存',
+          }),
+          saveToVocab: t('readingArticle.toolbar.saveToVocab', {
+            defaultValue: '保存到生词本',
+          }),
           lookup: t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' }),
           close: t('dashboard.common.close', { defaultValue: 'Close' }),
         }}
         onAddNote={startNoteFromSelection}
         onLookup={onLookupSelection}
+        onSaveToVocab={onSaveSelectionWord}
         onHighlight={color => {
           if (!color) return;
           setNoteColor(color as NoteColor);
@@ -1564,12 +1617,7 @@ function renderReadingArticleState(args: {
     );
   }
   if (article === undefined) {
-    return (
-      <div className="grid gap-4 md:grid-cols-[minmax(0,_1fr)_360px]">
-        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />
-      </div>
-    );
+    return <div className="h-[76vh] animate-pulse rounded-3xl bg-muted" />;
   }
   if (article === null) {
     return (
@@ -1691,6 +1739,7 @@ export default function ReadingArticlePage() {
     y: 0,
     text: '',
     anchor: null,
+    selectionKind: 'phrase',
   });
   const [noteColor, setNoteColor] = useState<NoteColor>('yellow');
   const [notes, setNotes] = useState<ReaderNote[]>([]);
@@ -2024,6 +2073,7 @@ export default function ReadingArticlePage() {
         y: Math.max(72, rect.top - 14),
         text,
         anchor,
+        selectionKind: classifySelectionKind(text),
       });
     };
 
@@ -2054,10 +2104,10 @@ export default function ReadingArticlePage() {
       speak,
     });
 
-  const onWordClick = (word: string) => {
+  const onWordClick = useCallback((word: string) => {
     setActiveWord(word);
     setPanelTab('notes');
-  };
+  }, []);
 
   const runAIDictionaryFallback = useCallback(
     async (query: string) => {
@@ -2215,6 +2265,62 @@ export default function ReadingArticlePage() {
     });
   }, [dictionaryFallback, saveWordToReview, t]);
 
+  const onSaveSelectionWord = useCallback(
+    async (text: string) => {
+      const query = normalizeInlineWhitespace(text);
+      if (!query) return;
+
+      setActiveWord(query);
+      setPanelTab('notes');
+      setSelectionToolbar(prev => ({ ...prev, visible: false }));
+
+      try {
+        const result = await searchDictionary({
+          query,
+          translationLang,
+          num: 5,
+          part: 'word',
+          sort: 'popular',
+        });
+        const firstEntry = result.entries?.[0];
+
+        if (firstEntry) {
+          await saveWordToReview({
+            word: firstEntry.word,
+            meaning:
+              getDictionaryMeaning(firstEntry) ||
+              t('readingArticle.dictionaryFallbackMeaning', {
+                defaultValue: 'Reading dictionary meaning',
+              }),
+            partOfSpeech: firstEntry.pos,
+            source: 'READING_SELECTION_WORD',
+          });
+          return;
+        }
+
+        const fallback = await explainWordFallback({
+          word: query,
+          context: findContextSentence(cleanedBodyText, query),
+          language: translationLang,
+        });
+
+        if (fallback) {
+          await saveWordToReview({
+            word: fallback.word,
+            meaning:
+              fallback.meaning ||
+              t('readingArticle.aiMeaningFallback', { defaultValue: 'AI explanation' }),
+            partOfSpeech: fallback.pos,
+            source: 'READING_SELECTION_WORD_AI',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to save selected word to vocab:', error);
+      }
+    },
+    [cleanedBodyText, explainWordFallback, saveWordToReview, searchDictionary, t, translationLang]
+  );
+
   const startNoteFromSelection = () => {
     const quote = normalizeInlineWhitespace(selectionToolbar.text);
     const anchor = selectionToolbar.anchor;
@@ -2232,11 +2338,11 @@ export default function ReadingArticlePage() {
     setSelectionToolbar(prev => ({ ...prev, visible: false }));
   };
 
-  const onDraftCommentChange = (value: string) => {
+  const onDraftCommentChange = useCallback((value: string) => {
     setDraftNote(prev => (prev ? { ...prev, comment: value } : prev));
-  };
+  }, []);
 
-  const onSaveDraftNote = async () => {
+  const onSaveDraftNote = useCallback(async () => {
     if (!draftNote) return;
     const quote = normalizeInlineWhitespace(draftNote.quote);
     const nextNote: ReaderNote = {
@@ -2251,14 +2357,19 @@ export default function ReadingArticlePage() {
     setDraftNote(null);
     setNoteSyncError(null);
     try {
-      const paragraphText = normalizeInlineWhitespace(paragraphs[nextNote.anchor.paragraphIndex] || '');
+      const paragraphText = normalizeInlineWhitespace(
+        paragraphs[nextNote.anchor.paragraphIndex] || ''
+      );
       await upsertScopedAnnotation({
         anchor: {
           blockId: `P${nextNote.anchor.paragraphIndex}`,
           start: nextNote.anchor.start,
           end: nextNote.anchor.end,
           quote: nextNote.quote,
-          contextBefore: paragraphText.slice(Math.max(0, nextNote.anchor.start - 36), nextNote.anchor.start),
+          contextBefore: paragraphText.slice(
+            Math.max(0, nextNote.anchor.start - 36),
+            nextNote.anchor.start
+          ),
           contextAfter: paragraphText.slice(nextNote.anchor.end, nextNote.anchor.end + 36),
         },
         note: nextNote.comment,
@@ -2274,20 +2385,28 @@ export default function ReadingArticlePage() {
           })
       );
     }
-  };
+  }, [annotationScopeId, draftNote, paragraphs, t, upsertScopedAnnotation]);
 
-  const onDiscardDraftNote = () => {
+  const onDiscardDraftNote = useCallback(() => {
     discardDraftNoteSelection(setSelectedNoteId, setDraftNote);
-  };
+  }, []);
 
-  const getNoteVisualState = (noteId: string): NoteVisualState =>
-    resolveReadingNoteVisualState(noteId, hoveredNoteId, selectedNoteId);
+  const dictionaryEntries = useMemo(
+    () => dictionaryResult?.entries ?? [],
+    [dictionaryResult?.entries]
+  );
+
+  const getNoteVisualState = useCallback(
+    (noteId: string): NoteVisualState =>
+      resolveReadingNoteVisualState(noteId, hoveredNoteId, selectedNoteId),
+    [hoveredNoteId, selectedNoteId]
+  );
 
   const increaseFontSize = () => {
     setFontSize(previous => getNextReadingFontSize(previous));
   };
 
-  const focusNote = (noteId: string) => {
+  const focusNote = useCallback((noteId: string) => {
     setSelectedNoteId(noteId);
     requestAnimationFrame(() => {
       const container = contentRef.current;
@@ -2296,7 +2415,86 @@ export default function ReadingArticlePage() {
       if (!(el instanceof HTMLElement)) return;
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-  };
+  }, []);
+
+  const contextualSidebarContent = useMemo(
+    () => (
+      <ReadingArticleSidebar
+        panelTab={panelTab}
+        setPanelTab={setPanelTab}
+        t={t}
+        aiAnalysisLoading={aiAnalysisLoading}
+        aiAnalysisError={aiAnalysisError}
+        summary={summary}
+        vocabulary={vocabulary}
+        onWordClick={onWordClick}
+        onSaveVocabularyItem={onSaveVocabularyItem}
+        savingWordKey={savingWordKey}
+        savedWords={savedWords}
+        grammar={grammar}
+        activeWord={activeWord}
+        dictionaryQuery={dictionaryQuery}
+        dictionaryLoading={dictionaryLoading}
+        dictionaryError={dictionaryError}
+        dictionaryFallbackLoading={dictionaryFallbackLoading}
+        dictionaryFallbackError={dictionaryFallbackError}
+        dictionaryFallback={dictionaryFallback}
+        dictionaryEntries={dictionaryEntries}
+        onSaveDictionaryEntry={onSaveDictionaryEntry}
+        onSaveDictionaryFallback={onSaveDictionaryFallback}
+        noteSyncError={noteSyncError}
+        draftNote={draftNote}
+        onDraftCommentChange={onDraftCommentChange}
+        onDiscardDraftNote={onDiscardDraftNote}
+        onSaveDraftNote={onSaveDraftNote}
+        notes={notes}
+        focusNote={focusNote}
+        setHoveredNoteId={setHoveredNoteId}
+        getNoteVisualState={getNoteVisualState}
+      />
+    ),
+    [
+      activeWord,
+      aiAnalysisError,
+      aiAnalysisLoading,
+      dictionaryEntries,
+      dictionaryError,
+      dictionaryFallback,
+      dictionaryFallbackError,
+      dictionaryFallbackLoading,
+      dictionaryLoading,
+      dictionaryQuery,
+      draftNote,
+      focusNote,
+      getNoteVisualState,
+      grammar,
+      noteSyncError,
+      notes,
+      onDiscardDraftNote,
+      onDraftCommentChange,
+      onSaveDictionaryEntry,
+      onSaveDictionaryFallback,
+      onSaveDraftNote,
+      onSaveVocabularyItem,
+      onWordClick,
+      panelTab,
+      savedWords,
+      savingWordKey,
+      setHoveredNoteId,
+      setPanelTab,
+      summary,
+      t,
+      vocabulary,
+    ]
+  );
+
+  useContextualSidebar({
+    id: 'reading-article-context',
+    title: t('readingArticle.backToDiscovery', { defaultValue: 'Reading' }),
+    subtitle: t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' }),
+    content: contextualSidebarContent,
+    enabled: Boolean(article && articleId),
+  });
 
   const stateView = renderReadingArticleState({
     articleId,
@@ -2308,11 +2506,10 @@ export default function ReadingArticlePage() {
   const resolvedArticle = article as NewsArticle;
 
   const wordCount = Math.max(1, Math.round(cleanedBodyText.length / 2));
-  const dictionaryEntries = dictionaryResult?.entries ?? [];
 
   return (
-    <div className="relative grid min-h-[82vh] gap-0 overflow-hidden rounded-3xl border border-border bg-muted md:grid-cols-[minmax(0,_1fr)_380px]">
-      <main className="relative z-10 flex min-h-[82vh] flex-col border-border bg-card md:border-r">
+    <div className="relative min-h-[82vh] overflow-hidden rounded-3xl border border-border bg-muted">
+      <main className="relative z-10 flex min-h-[82vh] flex-col border-border bg-card">
         <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <AppBreadcrumb
@@ -2434,44 +2631,11 @@ export default function ReadingArticlePage() {
           noteColor={noteColor}
           setNoteColor={setNoteColor}
           onLookupSelection={onLookupSelection}
+          onSaveSelectionWord={onSaveSelectionWord}
           startNoteFromSelection={startNoteFromSelection}
           onClose={() => setSelectionToolbar(prev => ({ ...prev, visible: false }))}
         />
       </main>
-
-      <ReadingArticleSidebar
-        panelTab={panelTab}
-        setPanelTab={setPanelTab}
-        t={t}
-        aiAnalysisLoading={aiAnalysisLoading}
-        aiAnalysisError={aiAnalysisError}
-        summary={summary}
-        vocabulary={vocabulary}
-        onWordClick={onWordClick}
-        onSaveVocabularyItem={onSaveVocabularyItem}
-        savingWordKey={savingWordKey}
-        savedWords={savedWords}
-        grammar={grammar}
-        activeWord={activeWord}
-        dictionaryQuery={dictionaryQuery}
-        dictionaryLoading={dictionaryLoading}
-        dictionaryError={dictionaryError}
-        dictionaryFallbackLoading={dictionaryFallbackLoading}
-        dictionaryFallbackError={dictionaryFallbackError}
-        dictionaryFallback={dictionaryFallback}
-        dictionaryEntries={dictionaryEntries}
-        onSaveDictionaryEntry={onSaveDictionaryEntry}
-        onSaveDictionaryFallback={onSaveDictionaryFallback}
-        noteSyncError={noteSyncError}
-        draftNote={draftNote}
-        onDraftCommentChange={onDraftCommentChange}
-        onDiscardDraftNote={onDiscardDraftNote}
-        onSaveDraftNote={onSaveDraftNote}
-        notes={notes}
-        focusNote={focusNote}
-        setHoveredNoteId={setHoveredNoteId}
-        getNoteVisualState={getNoteVisualState}
-      />
     </div>
   );
 }

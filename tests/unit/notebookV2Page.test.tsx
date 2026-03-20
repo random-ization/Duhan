@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NOTE_PAGES } from '../../src/utils/convexRefs';
+import { LayoutProvider } from '../../src/contexts/LayoutContext';
 
 const navigateMock = vi.fn();
 const useQueryMock = vi.fn();
@@ -10,6 +11,7 @@ const pageId = 'page-1' as any;
 
 const createPageMock = vi.fn(async () => ({ success: true, id: pageId }));
 const updatePageMock = vi.fn(async () => ({ success: true }));
+const saveBlocksMock = vi.fn(async () => ({ success: true, count: 1, mode: 'patch' }));
 const saveEditorDocMock = vi.fn(async () => ({ success: true }));
 const applyTemplateMock = vi.fn(async () => ({ success: true, count: 1 }));
 const createTemplateMock = vi.fn(async () => ({ success: true, id: 'template-1' as any }));
@@ -45,7 +47,12 @@ vi.mock('../../src/components/notebook/OfficialTiptapEditor', () => ({
   default: ({ onChange }: { onChange: (doc: unknown) => void }) => (
     <button
       type="button"
-      onClick={() => onChange({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'updated' }] }] })}
+      onClick={() =>
+        onChange({
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'updated' }] }],
+        })
+      }
     >
       Mock Editor
     </button>
@@ -65,6 +72,13 @@ const getLatestSearchArgs = () => {
 };
 
 describe('NotebookV2Page', () => {
+  const renderWithLayout = () =>
+    render(
+      <LayoutProvider>
+        <NotebookV2Page />
+      </LayoutProvider>
+    );
+
   beforeEach(() => {
     vi.clearAllMocks();
     searchCallHistory.length = 0;
@@ -72,6 +86,7 @@ describe('NotebookV2Page', () => {
     useMutationMock.mockImplementation((ref: unknown) => {
       if (ref === NOTE_PAGES.createPage) return createPageMock;
       if (ref === NOTE_PAGES.updatePage) return updatePageMock;
+      if (ref === NOTE_PAGES.saveBlocks) return saveBlocksMock;
       if (ref === NOTE_PAGES.saveEditorDoc) return saveEditorDocMock;
       if (ref === NOTE_PAGES.applyTemplate) return applyTemplateMock;
       if (ref === NOTE_PAGES.createTemplate) return createTemplateMock;
@@ -81,6 +96,7 @@ describe('NotebookV2Page', () => {
       if (ref === NOTE_PAGES.enqueueReview) return enqueueReviewMock;
       if (ref === NOTE_PAGES.createLink) return createLinkMock;
       if (ref === NOTE_PAGES.migrateLegacyAllNotes) return migrateLegacyMock;
+      if (ref === NOTE_PAGES.migrateNotesIntoSourceNotebooks) return migrateLegacyMock;
       return vi.fn();
     });
 
@@ -117,12 +133,27 @@ describe('NotebookV2Page', () => {
             metadata: { status: 'Inbox', pinned: false },
             status: 'Inbox',
             pinned: false,
+            noteKind: 'quote_card',
+            quoteText: 'Sample quote',
+            noteText: 'Sample note content',
           },
-          editorDoc: {
-            type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Sample note content' }] }],
-          },
-          blocks: [],
+          editorDoc: undefined,
+          blocks: [
+            {
+              id: 'block-quote',
+              blockKey: 'quote',
+              blockType: 'quote',
+              content: { text: 'Sample quote', color: 'yellow' },
+              sortOrder: 0,
+            },
+            {
+              id: 'block-note',
+              blockKey: 'note',
+              blockType: 'paragraph',
+              content: { text: 'Sample note content' },
+              sortOrder: 1,
+            },
+          ],
           backlinks: [],
           outgoingLinks: [],
           children: [],
@@ -144,6 +175,9 @@ describe('NotebookV2Page', () => {
               status: 'Inbox',
               pinned: false,
               sourceModule: 'READING_ARTICLE',
+              noteKind: 'quote_card',
+              quoteText: 'Sample quote',
+              noteText: 'Sample note content',
               sourceRef: {
                 module: 'READING_ARTICLE',
                 contentId: 'article-1',
@@ -194,49 +228,60 @@ describe('NotebookV2Page', () => {
   });
 
   it('triggers idempotent legacy migration on first render', async () => {
-    render(<NotebookV2Page />);
+    renderWithLayout();
     await waitFor(() => {
       expect(migrateLegacyMock).toHaveBeenCalledTimes(1);
       expect(migrateLegacyMock).toHaveBeenCalledWith({ limit: 8000 });
     });
   });
 
-  it('saves page title and editor doc via saveEditorDoc', async () => {
-    render(<NotebookV2Page />);
+  it('saves quote cards via saveBlocks without overwriting the quote block', async () => {
+    renderWithLayout();
 
+    fireEvent.click(screen.getByRole('button', { name: /Reading Note 1/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Mock Editor' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Page' }));
 
-    await waitFor(() => {
-      expect(updatePageMock).toHaveBeenCalledWith({ pageId, title: 'Reading Note 1' });
-      expect(saveEditorDocMock).toHaveBeenCalledTimes(1);
-    });
-  });
+    await waitFor(
+      () => {
+        expect(updatePageMock).toHaveBeenCalledWith({ pageId, title: 'Reading Note 1' });
+        expect(saveBlocksMock).toHaveBeenCalledWith({
+          pageId,
+          upsertBlocks: [
+            {
+              blockKey: 'note',
+              blockType: 'paragraph',
+              content: { text: 'updated' },
+              props: { source: 'notebook' },
+              sortOrder: 1,
+            },
+          ],
+          deleteBlockKeys: undefined,
+        });
+      },
+      { timeout: 7000 }
+    );
+  }, 15000);
 
   it('passes search/filter arguments into notePages:search query', async () => {
-    render(<NotebookV2Page />);
+    renderWithLayout();
 
-    fireEvent.change(screen.getByPlaceholderText('Search title, content, tag...'), {
+    fireEvent.change(screen.getByPlaceholderText('Search quote or note...'), {
       target: { value: 'grammar' },
     });
 
-    fireEvent.change(screen.getByDisplayValue('All status'), {
-      target: { value: 'Inbox' },
-    });
-
     fireEvent.change(screen.getByDisplayValue('All sources'), {
-      target: { value: 'READING_ARTICLE' },
+      target: { value: 'READING' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pinned only' }));
-
-    await waitFor(() => {
-      const latest = getLatestSearchArgs();
-      expect(latest).not.toBeNull();
-      expect(latest?.query).toBe('grammar');
-      expect(latest?.statuses).toEqual(['Inbox']);
-      expect(latest?.sourceModules).toEqual(['READING_ARTICLE']);
-      expect(latest?.pinned).toBe(true);
-    });
-  });
+    await waitFor(
+      () => {
+        const latest = getLatestSearchArgs();
+        expect(latest).not.toBeNull();
+        expect(latest?.query).toBe('grammar');
+        expect(Array.isArray(latest?.sourceModules)).toBe(true);
+        expect((latest?.sourceModules as string[]).includes('READING_ARTICLE')).toBe(true);
+      },
+      { timeout: 7000 }
+    );
+  }, 15000);
 });

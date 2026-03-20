@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
 import { useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import type { Id } from '../../convex/_generated/dataModel';
 import { VocabularyItem, Mistake, Annotation, ExamAttempt } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
+import { useNotebookPicker } from '../contexts/NotebookPickerContext';
 import { toErrorMessage } from '../utils/errors';
 import { mRef, NOTE_PAGES } from '../utils/convexRefs';
 
@@ -37,8 +39,10 @@ const resolveAnnotationSourceModule = (annotation: Annotation): string => {
 };
 
 export const useUserActions = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { confirm } = useConfirmDialog();
+  const { pickNotebook } = useNotebookPicker();
 
   const saveSavedWordMutation = useMutation(
     mRef<
@@ -251,9 +255,12 @@ export const useUserActions = () => {
           (annotation.quote || annotation.text).trim() &&
           annotation.blockId
         ) {
-          const resolvedScopeType = annotation.scopeType || resolveAnnotationSourceModule(annotation);
+          const resolvedScopeType =
+            annotation.scopeType || resolveAnnotationSourceModule(annotation);
           const resolvedScopeId = annotation.scopeId || annotation.contextKey;
-          const resolvedSourceModule = resolveAnnotationSourceModule(annotation).trim().toUpperCase();
+          const resolvedSourceModule = resolveAnnotationSourceModule(annotation)
+            .trim()
+            .toUpperCase();
           const normalizedNote = annotation.note?.trim() || '';
           const clearHighlightExplicit = annotation.color === null;
           const quoteText = (annotation.quote || annotation.text).trim();
@@ -272,7 +279,27 @@ export const useUserActions = () => {
           if (clearHighlightExplicit && !normalizedNote) {
             await deleteNotePageBySourceRefMutation({ sourceRef });
           } else {
+            if (normalizedNote.length === 0) {
+              return;
+            }
+
+            const notebookId = await pickNotebook({
+              title: t('notes.picker.annotation.title', { defaultValue: 'Save quote note' }),
+              description: t('notes.picker.annotation.descriptionUserActions', {
+                defaultValue:
+                  'Select a notebook. Cancel keeps the highlight/annotation without notebook sync.',
+              }),
+              confirmText: t('notes.picker.annotation.confirm', {
+                defaultValue: 'Save to Notebook',
+              }),
+              cancelText: t('notes.picker.annotation.cancel', { defaultValue: 'Cancel' }),
+            });
+            if (!notebookId) {
+              return;
+            }
+
             await ingestNotePageFromSourceMutation({
+              notebookId,
               sourceModule: resolvedSourceModule,
               sourceRef,
               noteType: 'manual',
@@ -306,6 +333,8 @@ export const useUserActions = () => {
       upsertAnnotationByAnchorMutation,
       ingestNotePageFromSourceMutation,
       deleteNotePageBySourceRefMutation,
+      pickNotebook,
+      t,
     ]
   );
 

@@ -82,6 +82,8 @@ type InstituteLite = {
   name?: string;
   nameEn?: string;
   nameZh?: string;
+  nameVi?: string;
+  nameMn?: string;
   volume?: string;
   levels?: unknown[];
 };
@@ -511,14 +513,15 @@ export default function VocabModulePage() {
 
       const w = wordById.get(id);
       if (!w) return;
+      const meaning = getLocalizedContent(w, 'meaning', language) || w.meaning || w.english;
       void addToReviewMutation({
         word: w.korean,
-        meaning: w.meaning || w.english,
+        meaning,
         partOfSpeech: w.partOfSpeech,
         source: 'TEXTBOOK',
       });
     },
-    [addToReviewMutation, starredIds, wordById]
+    [addToReviewMutation, language, starredIds, wordById]
   );
 
   const speakWord = useCallback(
@@ -528,25 +531,16 @@ export default function VocabModulePage() {
     [speakTTS]
   );
 
-  const scopeTitle = useMemo(() => {
+  const scopeTitle = (() => {
     if (selectedUnitId === 'ALL') {
-      return (
-        course?.nameZh ?? course?.nameEn ?? course?.name ?? labels.vocab?.allUnits ?? 'All Units'
-      );
+      const localizedCourseName = course ? getLocalizedContent(course, 'name', language) : '';
+      return localizedCourseName || course?.name || labels.vocab?.allUnits || 'All Units';
     }
     if (selectedUnitId === 0) {
       return labels.vocab?.unassigned ?? 'Unassigned';
     }
     return `${labels.vocab?.unit ?? 'Unit'} ${selectedUnitId}`;
-  }, [
-    course?.name,
-    course?.nameEn,
-    course?.nameZh,
-    labels.vocab?.unit,
-    labels.vocab?.allUnits,
-    labels.vocab?.unassigned,
-    selectedUnitId,
-  ]);
+  })();
 
   const tabs = useMemo(() => buildTabs(labels), [labels]);
 

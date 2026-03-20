@@ -26,6 +26,14 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
+import { useContextualSidebar } from '../hooks/useContextualSidebar';
+import {
+  ContextualCountBadge,
+  ContextualEmptyState,
+  ContextualListItemButton,
+  ContextualPrimaryActionButton,
+  ContextualSection,
+} from '../components/layout/contextualSidebarBlocks';
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
 type ReminderLevel = 'none' | 'good' | 'warn' | 'danger';
@@ -109,6 +117,83 @@ const TopikPage: React.FC = () => {
 
   // Filter exams based on type
   const filteredExams = topikExams.filter(exam => exam.type === filterType);
+
+  const topikContextualContent = React.useMemo(
+    () => (
+      <div className="space-y-3">
+        <ContextualSection
+          title={t('dashboard.topik.examHistory')}
+          badge={<ContextualCountBadge value={examHistory.length} tone="accent" />}
+          withRail
+        >
+          {examHistory.length > 0 ? (
+            <div className="space-y-2">
+              {examHistory.slice(0, 4).map((attempt, index) => {
+                const score = attempt.score || 0;
+                const maxScore = attempt.maxScore || attempt.totalScore || 100;
+                const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+                const attemptKey = attempt.id || attempt.timestamp || `attempt-${index}`;
+                return (
+                  <ContextualListItemButton
+                    key={attemptKey}
+                    icon={History}
+                    label={attempt.examTitle || t('topikLobby.unknownExam')}
+                    subtitle={
+                      attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'
+                    }
+                    onClick={() => navigate('/topik/history')}
+                    trailing={
+                      <div className="text-right">
+                        <p className="text-xs font-black">
+                          {score}
+                          <span
+                            className="ml-0.5 text-[10px] font-semibold"
+                            style={{ color: 'var(--sb-muted-text, hsl(var(--muted-foreground)))' }}
+                          >
+                            /{maxScore}
+                          </span>
+                        </p>
+                        {percentage >= 60 ? (
+                          <ContextualCountBadge
+                            value={t('dashboard.topik.passBadge')}
+                            tone="success"
+                          />
+                        ) : null}
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <ContextualEmptyState
+              icon={Archive}
+              title={t('dashboard.topik.noHistory')}
+              subtitle={t('topikLobby.reminder.firstTime', {
+                defaultValue: 'Start your first TOPIK simulation!',
+              })}
+            />
+          )}
+        </ContextualSection>
+
+        {examHistory.length > 0 ? (
+          <ContextualPrimaryActionButton
+            label={t('topikLobby.viewAllHistory')}
+            onClick={() => navigate('/topik/history')}
+          />
+        ) : null}
+      </div>
+    ),
+    [examHistory, navigate, t]
+  );
+
+  useContextualSidebar({
+    id: 'topik-lobby-context',
+    title: t('dashboard.topik.examHistory', { defaultValue: 'Exam history' }),
+    subtitle: t('topikLobby.viewAllHistory', { defaultValue: 'View all history' }),
+    content: topikContextualContent,
+    enabled: !isMobile && !examId && !isHistoryRoute,
+  });
   // We can't use useParams readily because existing routing might not rely on it
   // But usually /topik/:examId implies params.
   // Let's assume if there is an examId passed via some mechanism or we add local state management
@@ -384,16 +469,19 @@ const TopikPage: React.FC = () => {
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                         {t('topikLobby.recommended', { defaultValue: 'Recommended' })}
                       </p>
-                      <button
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="auto"
                         onClick={() => navigate(`/topik/${recommended.id}`)}
-                        className="w-full flex items-center justify-between bg-primary text-primary-foreground rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
+                        className="w-full flex items-center justify-between rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
                       >
                         <span>{recommended.title}</span>
                         <ArrowRight
                           size={16}
                           className="group-hover:translate-x-1 transition-transform"
                         />
-                      </button>
+                      </Button>
                       <p className="text-[10px] text-muted-foreground font-medium text-center">
                         {t('topikLobby.estimatedTime', { defaultValue: 'Est. time:' })}{' '}
                         {recommended.timeLimit} {t('topikLobby.minutes', { defaultValue: 'min' })}
@@ -425,7 +513,7 @@ const TopikPage: React.FC = () => {
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
               filterType === 'READING'
-                ? 'bg-blue-600 dark:bg-blue-500 text-white dark:text-primary-foreground'
+                ? 'bg-blue-600 dark:bg-blue-500 text-primary-foreground dark:text-primary-foreground'
                 : 'text-muted-foreground hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/15'
             )}
           >
@@ -439,7 +527,7 @@ const TopikPage: React.FC = () => {
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
               filterType === 'LISTENING'
-                ? 'bg-violet-600 dark:bg-violet-500 text-white dark:text-primary-foreground'
+                ? 'bg-violet-600 dark:bg-violet-500 text-primary-foreground dark:text-primary-foreground'
                 : 'text-muted-foreground hover:text-violet-600 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/15'
             )}
           >
@@ -453,7 +541,7 @@ const TopikPage: React.FC = () => {
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
               filterType === 'WRITING'
-                ? 'bg-rose-500 dark:bg-rose-500 text-white'
+                ? 'bg-rose-500 dark:bg-rose-500 text-primary-foreground'
                 : 'text-muted-foreground hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/15'
             )}
           >
@@ -461,9 +549,9 @@ const TopikPage: React.FC = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {/* Writing Exam Grid */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="space-y-6">
             <h3 className="font-black text-xl flex items-center gap-2 text-foreground">
               <Target size={20} />{' '}
               {filterType === 'WRITING'
@@ -479,8 +567,10 @@ const TopikPage: React.FC = () => {
                   // Placeholder card using a synthetic entry
                   return (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="auto"
                         onClick={() =>
                           notify.info(
                             t('dashboard.topik.writingComingSoon', {
@@ -488,14 +578,14 @@ const TopikPage: React.FC = () => {
                             })
                           )
                         }
-                        className="flex items-stretch text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full"
+                        className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
                       >
-                        <div className="p-4 flex flex-col items-center justify-center text-white w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                        <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
                           <div
                             className="absolute inset-0 opacity-20"
                             style={{
                               backgroundImage:
-                                'repeating-linear-gradient(45deg,#fff 0,#fff 2px,transparent 2px,transparent 10px)',
+                                'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
                             }}
                           />
                           <div className="text-3xl font-black text-yellow-300 font-display z-10">
@@ -523,30 +613,32 @@ const TopikPage: React.FC = () => {
                             <span className="text-[10px] font-bold text-muted-foreground">
                               {t('dashboard.topik.clickStart')}
                             </span>
-                            <span className="bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
+                            <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
                               {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
                             </span>
                           </div>
                         </div>
-                      </button>
+                      </Button>
                     </div>
                   );
                 }
                 return (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {writingExams.map(exam => (
-                      <button
+                      <Button
                         key={exam.id}
                         type="button"
+                        variant="ghost"
+                        size="auto"
                         onClick={() => navigate(`/topik/writing/${exam.id}`)}
-                        className="flex items-stretch text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full"
+                        className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
                       >
-                        <div className="p-4 flex flex-col items-center justify-center text-white w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                        <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
                           <div
                             className="absolute inset-0 opacity-20"
                             style={{
                               backgroundImage:
-                                'repeating-linear-gradient(45deg,#fff 0,#fff 2px,transparent 2px,transparent 10px)',
+                                'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
                             }}
                           />
                           <div className="text-3xl font-black text-yellow-300 font-display z-10">
@@ -572,12 +664,12 @@ const TopikPage: React.FC = () => {
                             <span className="text-[10px] font-bold text-muted-foreground">
                               {t('dashboard.topik.clickStart')}
                             </span>
-                            <span className="bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
+                            <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
                               {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
                             </span>
                           </div>
                         </div>
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 );
@@ -595,7 +687,7 @@ const TopikPage: React.FC = () => {
                   >
                     <div
                       className={clsx(
-                        'p-4 flex flex-col items-center justify-center text-white w-full md:w-32 shrink-0 relative overflow-hidden',
+                        'p-4 flex flex-col items-center justify-center text-primary-foreground w-full md:w-32 shrink-0 relative overflow-hidden',
                         exam.type === 'READING' ? 'bg-primary' : 'bg-blue-800 dark:bg-blue-700'
                       )}
                     >
@@ -603,7 +695,7 @@ const TopikPage: React.FC = () => {
                         className="absolute inset-0 opacity-20"
                         style={{
                           backgroundImage:
-                            'repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 2px, transparent 10px)',
+                            'repeating-linear-gradient(45deg, hsl(var(--primary-foreground)) 0, hsl(var(--primary-foreground)) 2px, transparent 2px, transparent 10px)',
                         }}
                       ></div>
                       <div className="text-3xl font-black text-yellow-400 dark:text-amber-300 font-display z-10">
@@ -661,77 +753,6 @@ const TopikPage: React.FC = () => {
                 <p className="text-muted-foreground font-bold">{t('topikLobby.noExams')}</p>
               </div>
             )}
-          </div>
-
-          {/* Sidebar: Archive */}
-          {/* Sidebar: Archive */}
-          <div className="h-fit sticky top-6 space-y-6">
-            <h3 className="font-black text-xl text-foreground flex items-center gap-2">
-              <History size={20} /> {t('dashboard.topik.examHistory')}
-            </h3>
-
-            <div className="bg-card rounded-2xl border-2 border-foreground p-4 shadow-sm">
-              <div className="space-y-3">
-                {examHistory.length > 0 ? (
-                  examHistory.slice(0, 3).map((attempt, index) => {
-                    const score = attempt.score || 0;
-                    const maxScore = attempt.maxScore || attempt.totalScore || 100;
-                    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-                    const attemptKey = attempt.id || attempt.timestamp || `attempt-${index}`;
-                    return (
-                      <Button
-                        key={attemptKey}
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() => navigate('/topik/history')}
-                        className="!block relative bg-muted p-3 rounded-xl border border-border group cursor-pointer hover:bg-card hover:border-foreground transition w-full text-left"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h5 className="font-bold text-foreground text-xs">
-                              {attempt.examTitle || t('topikLobby.unknownExam')}
-                            </h5>
-                            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">
-                              {attempt.timestamp
-                                ? new Date(attempt.timestamp).toLocaleDateString()
-                                : 'N/A'}
-                            </p>
-                          </div>
-                          <span className="font-black text-sm text-foreground">
-                            {score}
-                            <span className="text-[10px] text-muted-foreground">/{maxScore}</span>
-                          </span>
-                        </div>
-                        {percentage >= 60 && (
-                          <div className="absolute top-2 right-12 border border-green-600 text-green-600 dark:border-emerald-300 dark:text-emerald-200 text-[10px] font-black px-1 py-0 rounded rotate-[-15deg] opacity-80">
-                            {t('dashboard.topik.passBadge')}
-                          </div>
-                        )}
-                      </Button>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-6">
-                    <Archive size={24} className="mx-auto text-muted-foreground mb-2" />
-                    <p className="text-xs text-muted-foreground font-bold">
-                      {t('dashboard.topik.noHistory')}
-                    </p>
-                  </div>
-                )}
-              </div>
-              {examHistory.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => navigate('/topik/history')}
-                  className="w-full mt-4 py-2 border-2 border-border rounded-xl font-bold text-xs text-muted-foreground hover:border-foreground hover:text-foreground transition"
-                >
-                  {t('topikLobby.viewAllHistory')}
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </div>

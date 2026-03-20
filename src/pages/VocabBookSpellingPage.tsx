@@ -6,6 +6,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { VOCAB } from '../utils/convexRefs';
+import { getLocalizedContent } from '../utils/languageUtils';
 import VocabQuiz from '../features/vocab/components/VocabQuiz';
 import { VocabBookSpellingSkeleton } from '../components/common';
 import { Button } from '../components/ui';
@@ -82,10 +83,16 @@ const VocabBookSpellingPage: React.FC = () => {
     return filtered.map(w => ({
       id: String(w.id),
       korean: w.word,
-      english: w.meaning,
+      english:
+        getLocalizedContent(w, 'meaning', language) ||
+        w.meaning ||
+        w.meaningEn ||
+        w.meaningVi ||
+        w.meaningMn ||
+        '',
       unit: 0,
     }));
-  }, [items, category]);
+  }, [items, category, language]);
 
   if (loading) {
     return (

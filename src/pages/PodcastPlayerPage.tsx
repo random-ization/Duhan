@@ -1880,9 +1880,10 @@ const PodcastPlayerPage: React.FC = () => {
 
   // Convex AI action
   const analyzeSentenceAction = useAction(
-    aRef<{ sentence: string; context?: string }, { success: boolean; data?: AnalysisData }>(
-      'ai:analyzeSentence'
-    )
+    aRef<
+      { sentence: string; context?: string; language?: string },
+      { success: boolean; data?: AnalysisData }
+    >('ai:analyzeSentence')
   );
 
   const analyze = async (line: TranscriptLine) => {
@@ -1899,6 +1900,7 @@ const PodcastPlayerPage: React.FC = () => {
       const result = await analyzeSentenceAction({
         sentence: line.text,
         context: line.translation || undefined,
+        language,
       });
       if (result?.success && result.data) {
         setAnalysisData(result.data);

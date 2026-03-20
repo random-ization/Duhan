@@ -235,92 +235,97 @@ function ResultScreen({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-card rounded-3xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-8">
-        <div className="text-3xl font-black text-foreground">
-          {labels.vocabTest?.resultsTitle || 'Results'}
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="bg-muted border-2 border-border rounded-2xl p-4">
-            <div className="text-2xl font-black text-foreground">
-              {stats.correctQuestions}/{Math.max(stats.totalQuestions, 1)}
-            </div>
-            <div className="text-xs font-bold text-muted-foreground">
-              {labels.vocabTest?.correct || 'Correct'}
-            </div>
+    <div className="h-full min-h-0 flex flex-col">
+      <div className="max-w-4xl mx-auto w-full flex-1 min-h-0 flex flex-col">
+        <div className="bg-card rounded-3xl border-2 border-foreground shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-8 shrink-0">
+          <div className="text-3xl font-black text-foreground">
+            {labels.vocabTest?.resultsTitle || 'Results'}
           </div>
-          <div className="bg-muted border-2 border-border rounded-2xl p-4">
-            <div className="text-2xl font-black text-foreground">
-              {Math.round((stats.correctQuestions / Math.max(stats.totalQuestions, 1)) * 100)}%
-            </div>
-            <div className="text-xs font-bold text-muted-foreground">
-              {labels.vocabTest?.accuracy || 'Accuracy'}
-            </div>
-          </div>
-          <div className="bg-muted border-2 border-border rounded-2xl p-4">
-            <div className="text-2xl font-black text-foreground">
-              {stats.seconds === null ? '--' : `${stats.seconds}s`}
-            </div>
-            <div className="text-xs font-bold text-muted-foreground">
-              {labels.vocabTest?.time || 'Time'}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={() => setStage('SETTINGS')}
-            className="px-5 py-3 rounded-2xl bg-card border-2 border-foreground text-foreground font-black"
-          >
-            {labels.vocabTest?.newTest || 'New test'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={onClose}
-            className="px-5 py-3 rounded-2xl bg-primary text-white font-black"
-          >
-            {labels.common?.close || 'Close'}
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <div className="text-lg font-black text-foreground mb-3">
-          {labels.vocabTest?.review || 'Review'}
-        </div>
-        <div className="space-y-6">
-          {cards.map((card, idx) => {
-            const a = answers[card.id];
-            const correctness = getCorrectness(card, a);
-
-            return (
-              <div key={card.id} className="rounded-3xl border-2 border-border bg-card p-6 sm:p-8">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="text-xs font-black text-muted-foreground">
-                    {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
-                  </div>
-                  {correctness && (
-                    <div
-                      className={`text-xs font-black px-3 py-1 rounded-full ${
-                        correctness.allCorrect
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {getCorrectnessLabel(card.type, correctness)}
-                    </div>
-                  )}
-                </div>
-
-                {renderReviewCard(card, a)}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="bg-muted border-2 border-border rounded-2xl p-4">
+              <div className="text-2xl font-black text-foreground">
+                {stats.correctQuestions}/{Math.max(stats.totalQuestions, 1)}
               </div>
-            );
-          })}
+              <div className="text-xs font-bold text-muted-foreground">
+                {labels.vocabTest?.correct || 'Correct'}
+              </div>
+            </div>
+            <div className="bg-muted border-2 border-border rounded-2xl p-4">
+              <div className="text-2xl font-black text-foreground">
+                {Math.round((stats.correctQuestions / Math.max(stats.totalQuestions, 1)) * 100)}%
+              </div>
+              <div className="text-xs font-bold text-muted-foreground">
+                {labels.vocabTest?.accuracy || 'Accuracy'}
+              </div>
+            </div>
+            <div className="bg-muted border-2 border-border rounded-2xl p-4">
+              <div className="text-2xl font-black text-foreground">
+                {stats.seconds === null ? '--' : `${stats.seconds}s`}
+              </div>
+              <div className="text-xs font-bold text-muted-foreground">
+                {labels.vocabTest?.time || 'Time'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              onClick={() => setStage('SETTINGS')}
+              className="px-5 py-3 rounded-2xl bg-card border-2 border-foreground text-foreground font-black"
+            >
+              {labels.vocabTest?.newTest || 'New test'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 rounded-2xl bg-primary text-white font-black"
+            >
+              {labels.common?.close || 'Close'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-8 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="text-lg font-black text-foreground mb-3">
+            {labels.vocabTest?.review || 'Review'}
+          </div>
+          <div className="space-y-6 pb-6">
+            {cards.map((card, idx) => {
+              const a = answers[card.id];
+              const correctness = getCorrectness(card, a);
+
+              return (
+                <div
+                  key={card.id}
+                  className="rounded-3xl border-2 border-border bg-card p-6 sm:p-8"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-xs font-black text-muted-foreground">
+                      {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
+                    </div>
+                    {correctness && (
+                      <div
+                        className={`text-xs font-black px-3 py-1 rounded-full ${
+                          correctness.allCorrect
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {getCorrectnessLabel(card.type, correctness)}
+                      </div>
+                    )}
+                  </div>
+
+                  {renderReviewCard(card, a)}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -1221,8 +1226,8 @@ export default function VocabTest({
   };
 
   return (
-    <div className="p-2 sm:p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full min-h-0 p-2 sm:p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="font-black text-foreground">{scopeTitle}</div>
         {showCloseButton && onClose ? (
           <Button
@@ -1238,7 +1243,7 @@ export default function VocabTest({
         ) : null}
       </div>
 
-      {renderStage()}
+      <div className="flex-1 min-h-0">{renderStage()}</div>
     </div>
   );
 }

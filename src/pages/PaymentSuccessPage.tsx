@@ -6,12 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { aRef, NoArgs } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Button } from '../components/ui';
+import { trackEvent } from '../utils/analytics';
 
 const ACTIVATION_POLL_INTERVAL_MS = 2500;
 const ACTIVATION_POLL_MAX_ATTEMPTS = 12;
 
 const PaymentSuccessPage: React.FC = () => {
-  const { t } = useTranslation();
+  const translation = useTranslation();
+  const { t } = translation;
+  const currentLanguage = translation.i18n?.language ?? 'en';
   const [searchParams] = useSearchParams();
   const provider = searchParams.get('provider');
   const sessionId = searchParams.get('session_id');
@@ -54,6 +57,15 @@ const PaymentSuccessPage: React.FC = () => {
       }, 2500);
     };
 
+    const markPaymentActivationSuccess = () => {
+      const normalizedProvider =
+        provider === 'lemonsqueezy' || provider === 'creem' ? provider : 'unknown';
+      trackEvent('payment_activation_success', {
+        language: currentLanguage,
+        provider: normalizedProvider,
+      });
+    };
+
     const pollUntilActivated = async () => {
       for (let attempt = 1; attempt <= ACTIVATION_POLL_MAX_ATTEMPTS; attempt += 1) {
         const activation = await getSubscriptionActivationStatus({});
@@ -93,6 +105,7 @@ const PaymentSuccessPage: React.FC = () => {
         }
 
         setStatus('success');
+        markPaymentActivationSuccess();
         setMessage(
           t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
         );
@@ -115,6 +128,7 @@ const PaymentSuccessPage: React.FC = () => {
         }
 
         setStatus('success');
+        markPaymentActivationSuccess();
         setMessage(
           t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
         );
@@ -147,6 +161,7 @@ const PaymentSuccessPage: React.FC = () => {
         }
 
         setStatus('success');
+        markPaymentActivationSuccess();
         setMessage(
           t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
         );
@@ -178,6 +193,7 @@ const PaymentSuccessPage: React.FC = () => {
     verifyPaymentSession,
     getSubscriptionActivationStatus,
     t,
+    currentLanguage,
     retryVersion,
   ]);
 

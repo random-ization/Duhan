@@ -28,7 +28,8 @@
 ## 用户提示与日志
 
 - 用户可见提示统一使用 [notify](file:///Users/ryan/Documents/GitHub/hangyeol/src/utils/notify.ts)（基于 `react-hot-toast`）。
-- 调试/告警日志统一使用 [logger](file:///Users/ryan/Documents/GitHub/hangyeol/src/utils/logger.ts)，线上默认不输出（预留对接 Sentry/LogRocket 的入口）。
+- 调试/告警日志统一使用 [logger](file:///Users/ryan/Documents/GitHub/hangyeol/src/utils/logger.ts)。
+- 前端错误追踪通过 [sentry.ts](file:///Users/ryan/Documents/GitHub/hangyeol/src/utils/sentry.ts)（`VITE_SENTRY_DSN`）接入；后端关键支付链路通过 [convex/sentry.ts](file:///Users/ryan/Documents/GitHub/hangyeol/convex/sentry.ts)（`SENTRY_DSN`）上报。
 
 ## SEO 与预渲染
 

@@ -8,11 +8,20 @@ import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '@/hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import { VOCAB, qRef, NoArgs } from '@/utils/convexRefs';
+import { useContextualSidebar } from '@/hooks/useContextualSidebar';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import {
+  ContextualCountBadge,
+  ContextualListItemButton,
+  ContextualPrimaryActionButton,
+  ContextualSection,
+} from '@/components/layout/contextualSidebarBlocks';
 
 export default function ReviewDashboardPage() {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const [now] = useState(() => Date.now());
+  const isMobile = useIsMobile();
 
   const reviewSummary = useQuery(VOCAB.getReviewSummary, {}) || null;
   const reviewQueue = useQuery(VOCAB.getDueForReview) || [];
@@ -33,9 +42,70 @@ export default function ReviewDashboardPage() {
       ? Math.round((reviewSummary.mastered / reviewSummary.total) * 100)
       : 0;
   const visibleDueItems = dueItems.slice(0, 200);
+  const reviewSidebarContent = (
+    <div className="space-y-3">
+      <ContextualSection
+        title={t('reviewPage.sidebar.views', { defaultValue: 'Views' })}
+        badge={<ContextualCountBadge value={dueNowCount} tone="warning" />}
+        withRail
+      >
+        <ContextualListItemButton
+          icon={Sparkles}
+          label={t('reviewPage.dashboard.title', { defaultValue: 'Daily Review' })}
+          subtitle={t('reviewPage.sidebar.dailyHint', {
+            defaultValue: 'Start from your due queue',
+          })}
+          active
+          onClick={() => navigate('/review')}
+        />
+        <ContextualListItemButton
+          icon={Clock}
+          label={t('reviewPage.sidebar.quickMode', { defaultValue: 'Quick Review' })}
+          subtitle={t('reviewPage.modes.quick.desc', {
+            defaultValue: '10 random due words • 2 mins',
+          })}
+          trailing={<ContextualCountBadge value={Math.min(dueNowCount, 10)} tone="accent" />}
+          onClick={() => navigate('/review/quiz?mode=quick')}
+        />
+      </ContextualSection>
+
+      <ContextualSection title={t('reviewPage.modes.title', { defaultValue: 'Choose a Mode' })}>
+        <ContextualListItemButton
+          icon={Brain}
+          label={t('reviewPage.modes.full.title', { defaultValue: 'Full Review' })}
+          subtitle={t('reviewPage.modes.full.desc', {
+            count: dueNowCount,
+            defaultValue: `Clear all ${dueNowCount} due words`,
+          })}
+          onClick={() => navigate('/review/quiz?mode=full')}
+        />
+        <ContextualListItemButton
+          icon={Target}
+          label={t('reviewPage.modes.weak.title', { defaultValue: 'Weakest Words' })}
+          subtitle={t('reviewPage.modes.weak.desc', {
+            defaultValue: 'Focus on difficult items',
+          })}
+          onClick={() => navigate('/review/quiz?mode=weak')}
+        />
+      </ContextualSection>
+
+      <ContextualPrimaryActionButton
+        label={t('reviewPage.modes.full.btn', { defaultValue: 'Start All' })}
+        onClick={() => navigate('/review/quiz?mode=full')}
+      />
+    </div>
+  );
+
+  useContextualSidebar({
+    id: 'review-dashboard-context',
+    title: t('reviewPage.dashboard.title', { defaultValue: 'Daily Review' }),
+    subtitle: t('reviewPage.sidebar.subtitle', { defaultValue: 'Keep your queue under control' }),
+    content: reviewSidebarContent,
+    enabled: !isMobile,
+  });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 font-sans pb-24">
+    <div className="min-h-screen bg-background p-4 md:p-8 font-sans pb-24">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -44,16 +114,16 @@ export default function ReviewDashboardPage() {
               variant="ghost"
               size="icon"
               onClick={() => navigate('/practice')}
-              className="rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+              className="rounded-full hover:bg-muted"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
                 <Sparkles className="w-8 h-8 text-amber-500" />
                 {t('reviewPage.dashboard.title', { defaultValue: 'Daily Review' })}
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              <p className="text-muted-foreground mt-1 font-medium">
                 {t('reviewPage.dashboard.subtitle', {
                   count: dueNowCount,
                   defaultValue: `Keep your streak alive! You have ${dueNowCount} words due.`,
@@ -63,9 +133,9 @@ export default function ReviewDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2 bg-card rounded-full border border-border shadow-sm">
               <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
-              <span className="font-bold text-slate-700 dark:text-slate-200">
+              <span className="font-bold text-foreground">
                 {t('reviewPage.dashboard.streakDays', {
                   days: streak,
                   defaultValue: `${streak} Days`,
@@ -102,7 +172,7 @@ export default function ReviewDashboardPage() {
         {/* Main Review Modes */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-xl font-bold text-foreground">
               {t('reviewPage.modes.title', { defaultValue: 'Choose a Mode' })}
             </h2>
           </div>
@@ -153,7 +223,7 @@ export default function ReviewDashboardPage() {
         <div className="pt-4">
           <Tabs defaultValue="due" className="w-full">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 {t('reviewPage.queue.title', { defaultValue: 'Word Queue' })}
               </h2>
               <TabsList>
@@ -168,9 +238,9 @@ export default function ReviewDashboardPage() {
 
             <TabsContent value="due">
               <Card>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[400px] overflow-y-auto">
+                <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
                   {dueItems.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500">
+                    <div className="p-8 text-center text-muted-foreground">
                       {t('reviewPage.queue.empty_due', {
                         defaultValue: 'No words due for review! Good job.',
                       })}
@@ -179,17 +249,15 @@ export default function ReviewDashboardPage() {
                     visibleDueItems.map(item => (
                       <div
                         key={item.id}
-                        className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
                             {item.word.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white text-lg">
-                              {item.word}
-                            </p>
-                            <p className="text-sm text-slate-500">{item.meaning}</p>
+                            <p className="font-bold text-foreground text-lg">{item.word}</p>
+                            <p className="text-sm text-muted-foreground">{item.meaning}</p>
                           </div>
                         </div>
                         <Badge
@@ -202,7 +270,7 @@ export default function ReviewDashboardPage() {
                     ))
                   )}
                   {dueItems.length > visibleDueItems.length && (
-                    <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                    <div className="p-3 text-center text-xs text-muted-foreground">
                       {t('reviewPage.queue.previewLimited', {
                         count: visibleDueItems.length,
                         total: dueItems.length,
@@ -215,7 +283,7 @@ export default function ReviewDashboardPage() {
             </TabsContent>
 
             <TabsContent value="learned">
-              <div className="p-8 text-center text-slate-500">
+              <div className="p-8 text-center text-muted-foreground">
                 {t('reviewPage.queue.empty_mastered', {
                   defaultValue: 'List of mastered words will appear here.',
                 })}
@@ -242,10 +310,10 @@ function StatsCard({ icon, label, value, subtext }: StatsCardProps) {
     <Card className="border shadow-sm">
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl">{icon}</div>
+          <div className="p-3 bg-muted rounded-xl">{icon}</div>
           <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{value}</h3>
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            <h3 className="text-2xl font-bold text-foreground">{value}</h3>
           </div>
         </div>
         <div className="mt-4 flex items-center text-xs font-medium text-emerald-600">
@@ -282,10 +350,10 @@ function ModeCard({
 }: ModeCardProps) {
   return (
     <Card
-      className={`relative overflow-hidden border-2 ${recommended ? 'border-indigo-500 dark:border-indigo-500 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'} transition-all`}
+      className={`relative overflow-hidden border-2 ${recommended ? 'border-indigo-500 dark:border-indigo-500 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20' : 'border-border hover:border-primary/40'} transition-all`}
     >
       {recommended && (
-        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-xl">
+        <div className="absolute top-0 right-0 bg-indigo-500 text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-bl-xl">
           {recommendedText || 'RECOMMENDED'}
         </div>
       )}
@@ -295,8 +363,8 @@ function ModeCard({
         >
           {icon}
         </div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{title}</h3>
-        <p className="text-slate-500 font-medium mb-6 flex-1">{description}</p>
+        <h3 className="text-xl font-bold text-foreground mb-1">{title}</h3>
+        <p className="text-muted-foreground font-medium mb-6 flex-1">{description}</p>
         <Button
           onClick={onClick}
           className={`w-full ${recommended ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}

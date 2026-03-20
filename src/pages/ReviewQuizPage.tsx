@@ -1,13 +1,21 @@
 import React, { useMemo, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Brain, Clock, Loader2, Target, Zap } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
 import { Button } from '../components/ui';
 import { useTranslation } from 'react-i18next';
+import { useContextualSidebar } from '../hooks/useContextualSidebar';
+import { useIsMobile } from '../hooks/useIsMobile';
+import {
+  ContextualCountBadge,
+  ContextualListItemButton,
+  ContextualPrimaryActionButton,
+  ContextualSection,
+} from '../components/layout/contextualSidebarBlocks';
 
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 
@@ -29,6 +37,7 @@ const ReviewQuizPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const labels = useMemo(() => getLabels(language), [language]);
   const [params] = useSearchParams();
 
@@ -80,6 +89,73 @@ const ReviewQuizPage: React.FC = () => {
   }, [mode, t]);
 
   const loading = reviewQueue === undefined;
+  const quizSidebarContent = useMemo(
+    () => (
+      <div className="space-y-3">
+        <ContextualSection
+          title={t('reviewPage.modes.title', { defaultValue: 'Choose a Mode' })}
+          badge={<ContextualCountBadge value={words.length} tone="accent" />}
+          withRail
+        >
+          <ContextualListItemButton
+            icon={Zap}
+            label={t('reviewPage.modes.quick.title', { defaultValue: 'Quick Review' })}
+            subtitle={t('reviewPage.modes.quick.desc', {
+              defaultValue: '10 random due words • 2 mins',
+            })}
+            active={mode === 'quick'}
+            onClick={() => navigate('/review/quiz?mode=quick')}
+          />
+          <ContextualListItemButton
+            icon={Brain}
+            label={t('reviewPage.modes.full.title', { defaultValue: 'Full Review' })}
+            subtitle={t('reviewPage.modes.full.desc', {
+              count: dueItems.length,
+              defaultValue: `Clear all ${dueItems.length} due words`,
+            })}
+            active={mode === 'full'}
+            onClick={() => navigate('/review/quiz?mode=full')}
+          />
+          <ContextualListItemButton
+            icon={Target}
+            label={t('reviewPage.modes.weak.title', { defaultValue: 'Weakest Words' })}
+            subtitle={t('reviewPage.modes.weak.desc', {
+              defaultValue: 'Focus on difficult items',
+            })}
+            active={mode === 'weak'}
+            onClick={() => navigate('/review/quiz?mode=weak')}
+          />
+        </ContextualSection>
+
+        <ContextualSection title={t('reviewPage.queue.title', { defaultValue: 'Word Queue' })}>
+          <ContextualListItemButton
+            icon={Clock}
+            label={t('reviewPage.queue.due', { defaultValue: 'Due Review' })}
+            subtitle={t('reviewPage.sidebar.queueHint', {
+              defaultValue: 'Words ready in this round',
+            })}
+            trailing={<ContextualCountBadge value={dueItems.length} tone="warning" />}
+          />
+        </ContextualSection>
+
+        <ContextualPrimaryActionButton
+          label={t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' })}
+          onClick={() => navigate('/review')}
+        />
+      </div>
+    ),
+    [dueItems.length, mode, navigate, t, words.length]
+  );
+
+  useContextualSidebar({
+    id: 'review-quiz-context',
+    title: modeLabel,
+    subtitle: t('reviewPage.sidebar.quizSubtitle', {
+      defaultValue: 'Switch mode without leaving this page',
+    }),
+    content: quizSidebarContent,
+    enabled: !isMobile,
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-indigo-400/8 dark:via-background dark:to-indigo-300/8">

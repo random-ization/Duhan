@@ -218,6 +218,9 @@ const getWordByLemmaQueryRef = makeFunctionReference<
   {
     word: string;
     meaning: string;
+    meaningEn?: string;
+    meaningVi?: string;
+    meaningMn?: string;
     partOfSpeech: string;
     pronunciation?: string;
     hanja?: string;
@@ -230,6 +233,9 @@ const getWordByLemmaQueryRef = makeFunctionReference<
   {
     word: string;
     meaning: string;
+    meaningEn?: string;
+    meaningVi?: string;
+    meaningMn?: string;
     partOfSpeech: string;
     pronunciation?: string;
     hanja?: string;
@@ -260,6 +266,59 @@ async function getGrammarPointsForMatching(
   cachedGrammarPoints = all;
   cachedGrammarPointsAt = now;
   return all;
+}
+
+type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
+
+function resolveSupportedLanguage(language?: string): SupportedLanguage {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return 'en';
+  if (normalized.startsWith('vi')) return 'vi';
+  if (normalized.startsWith('mn')) return 'mn';
+  return 'zh';
+}
+
+function localizeGrammarText(
+  grammar: GrammarMatch,
+  field: 'title' | 'summary',
+  language: SupportedLanguage
+): string {
+  if (field === 'title') {
+    const candidates =
+      language === 'en'
+        ? [grammar.titleEn, grammar.title, grammar.titleVi, grammar.titleMn]
+        : language === 'vi'
+          ? [grammar.titleVi, grammar.titleEn, grammar.title, grammar.titleMn]
+          : language === 'mn'
+            ? [grammar.titleMn, grammar.titleEn, grammar.title, grammar.titleVi]
+            : [grammar.titleZh, grammar.title, grammar.titleEn, grammar.titleVi, grammar.titleMn];
+    return candidates.find(value => typeof value === 'string' && value.trim().length > 0) || '';
+  }
+
+  const candidates =
+    language === 'en'
+      ? [grammar.summaryEn, grammar.summary, grammar.summaryVi, grammar.summaryMn]
+      : language === 'vi'
+        ? [grammar.summaryVi, grammar.summaryEn, grammar.summary, grammar.summaryMn]
+        : language === 'mn'
+          ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
+          : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
+  return candidates.find(value => typeof value === 'string' && value.trim().length > 0) || '';
+}
+
+function localizeWordMeaning(
+  word: { meaning: string; meaningEn?: string; meaningVi?: string; meaningMn?: string },
+  language: SupportedLanguage
+): string {
+  const candidates =
+    language === 'en'
+      ? [word.meaningEn, word.meaning, word.meaningVi, word.meaningMn]
+      : language === 'vi'
+        ? [word.meaningVi, word.meaningEn, word.meaning, word.meaningMn]
+        : language === 'mn'
+          ? [word.meaningMn, word.meaningEn, word.meaning, word.meaningVi]
+          : [word.meaning, word.meaningEn, word.meaningVi, word.meaningMn];
+  return candidates.find(value => typeof value === 'string' && value.trim().length > 0) || '';
 }
 
 function pickWordTokens(
@@ -300,6 +359,7 @@ export const lookupWithMorphology = action({
     num: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const responseLanguage = resolveSupportedLanguage(args.translationLang);
     const text = args.contextText || args.surface;
     let tokenGroup: ReturnType<typeof pickWordTokens> | null = null;
     let tokens: TokenInfo[] = [];
@@ -340,8 +400,8 @@ export const lookupWithMorphology = action({
           .slice(0, 5)
           .map(g => ({
             id: g.id,
-            title: g.title,
-            summary: g.summary,
+            title: localizeGrammarText(g, 'title', responseLanguage),
+            summary: localizeGrammarText(g, 'summary', responseLanguage),
             type: g.type,
             level: g.level,
           }));
@@ -406,7 +466,7 @@ export const lookupWithMorphology = action({
       wordFromDb: wordFromDb
         ? {
             word: wordFromDb.word,
-            meaning: wordFromDb.meaning,
+            meaning: localizeWordMeaning(wordFromDb, responseLanguage),
             partOfSpeech: wordFromDb.partOfSpeech,
             pronunciation: wordFromDb.pronunciation,
             hanja: wordFromDb.hanja,

@@ -20,7 +20,10 @@ interface MobileGrammarDetailSheetProps {
   ) => void;
 }
 
-type AiCheckResponse = { success?: boolean; data?: { nuance?: unknown } } | null;
+type AiCheckResponse = {
+  success?: boolean;
+  data?: { nuance?: unknown; isCorrect?: unknown; corrected?: unknown };
+} | null;
 
 type AiFeedbackState = {
   isCorrect: boolean;
@@ -28,6 +31,7 @@ type AiFeedbackState = {
   correctedSentence?: string;
   progress?: { proficiency: number; status: string };
 };
+type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
 
 const NEGATIVE_FEEDBACK_MARKERS = ['incorrect', '\u9519\u8BEF', 'Incorrect'] as const;
 
@@ -49,13 +53,99 @@ const getRulesObject = (grammar: GrammarPointData): Record<string, unknown> =>
 
 const getExamples = (
   grammar: GrammarPointData
-): Array<{ kr?: string; cn?: string; en?: string }> =>
+): Array<{ kr?: string; cn?: string; en?: string; vi?: string; mn?: string }> =>
   Array.isArray(grammar.examples)
-    ? (grammar.examples as Array<{ kr?: string; cn?: string; en?: string }>)
+    ? (grammar.examples as Array<{
+        kr?: string;
+        cn?: string;
+        en?: string;
+        vi?: string;
+        mn?: string;
+      }>)
     : [];
 
-const getExampleTranslation = (example: { cn?: string; en?: string }): string =>
-  example.cn ?? example.en ?? '';
+const resolveSupportedLanguage = (language?: string): SupportedLanguage => {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return 'en';
+  if (normalized.startsWith('vi')) return 'vi';
+  if (normalized.startsWith('mn')) return 'mn';
+  if (normalized.startsWith('zh') || normalized.startsWith('cn')) return 'zh';
+  return 'zh';
+};
+
+const getLocalizedTitle = (grammar: GrammarPointData, language: SupportedLanguage): string => {
+  if (language === 'en') return grammar.titleEn || grammar.title;
+  if (language === 'vi') return grammar.titleVi || grammar.title;
+  if (language === 'mn') return grammar.titleMn || grammar.title;
+  return grammar.titleZh || grammar.title;
+};
+
+const getLocalizedSummary = (grammar: GrammarPointData, language: SupportedLanguage): string => {
+  const candidates =
+    language === 'en'
+      ? [grammar.summaryEn, grammar.summary, grammar.summaryVi, grammar.summaryMn]
+      : language === 'vi'
+        ? [grammar.summaryVi, grammar.summaryEn, grammar.summary, grammar.summaryMn]
+        : language === 'mn'
+          ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
+          : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
+
+  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+};
+
+const getLocalizedExplanation = (
+  grammar: GrammarPointData,
+  language: SupportedLanguage
+): string => {
+  const candidates =
+    language === 'en'
+      ? [grammar.explanationEn, grammar.explanation, grammar.explanationVi, grammar.explanationMn]
+      : language === 'vi'
+        ? [grammar.explanationVi, grammar.explanationEn, grammar.explanation, grammar.explanationMn]
+        : language === 'mn'
+          ? [
+              grammar.explanationMn,
+              grammar.explanationEn,
+              grammar.explanation,
+              grammar.explanationVi,
+            ]
+          : [
+              grammar.explanation,
+              grammar.explanationEn,
+              grammar.explanationVi,
+              grammar.explanationMn,
+            ];
+
+  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+};
+
+const getExampleTranslation = (
+  example: { cn?: string; en?: string; vi?: string; mn?: string },
+  language: SupportedLanguage
+): string => {
+  const candidates =
+    language === 'en'
+      ? [example.en, example.cn, example.vi, example.mn]
+      : language === 'vi'
+        ? [example.vi, example.en, example.cn, example.mn]
+        : language === 'mn'
+          ? [example.mn, example.en, example.cn, example.vi]
+          : [example.cn, example.en, example.vi, example.mn];
+  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+};
+
+const getLocalizedCustomNote = (grammar: GrammarPointData, language: SupportedLanguage): string => {
+  const candidates =
+    language === 'en'
+      ? [grammar.customNoteEn, grammar.customNote, grammar.customNoteVi, grammar.customNoteMn]
+      : language === 'vi'
+        ? [grammar.customNoteVi, grammar.customNoteEn, grammar.customNote, grammar.customNoteMn]
+        : language === 'mn'
+          ? [grammar.customNoteMn, grammar.customNoteEn, grammar.customNote, grammar.customNoteVi]
+          : [grammar.customNote, grammar.customNoteEn, grammar.customNoteVi, grammar.customNoteMn];
+
+  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+};
 
 const isEmptySentence = (sentence: string): boolean => sentence.trim().length === 0;
 
@@ -73,7 +163,7 @@ export default function MobileGrammarDetailSheet({
   const checkAction = useAction(
     aRef<
       { sentence: string; context: string; language?: string },
-      { success?: boolean; data?: { nuance?: unknown } }
+      { success?: boolean; data?: { nuance?: unknown; isCorrect?: unknown; corrected?: unknown } }
     >('ai:analyzeSentence')
   );
 
@@ -104,7 +194,7 @@ export default function MobileGrammarDetailSheet({
     try {
       const response = await checkAction({
         sentence: practiceSentence.trim(),
-        context: grammar.title,
+        context: getLocalizedTitle(grammar, resolveSupportedLanguage(i18n.language)),
         language: i18n.language,
       });
 
@@ -113,8 +203,13 @@ export default function MobileGrammarDetailSheet({
         // Logic duplicated from desktop component
         const feedback = getFeedbackText(res.data.nuance);
         const isFeedbackNegative = isNegativeFeedback(feedback);
-
-        const finalIsCorrect = !isFeedbackNegative;
+        const aiIsCorrect =
+          typeof res.data.isCorrect === 'boolean' ? res.data.isCorrect : undefined;
+        const finalIsCorrect = aiIsCorrect ?? !isFeedbackNegative;
+        const correctedSentence =
+          typeof res.data.corrected === 'string' && res.data.corrected.trim().length > 0
+            ? res.data.corrected.trim()
+            : undefined;
 
         // Progress Update
         let progress: { proficiency: number; status: string } | undefined = undefined;
@@ -139,6 +234,7 @@ export default function MobileGrammarDetailSheet({
         setAiFeedback({
           isCorrect: finalIsCorrect,
           feedback,
+          correctedSentence,
           progress,
         });
       }
@@ -168,6 +264,11 @@ export default function MobileGrammarDetailSheet({
 
   const rulesObject = getRulesObject(grammar);
   const examples = getExamples(grammar);
+  const language = resolveSupportedLanguage(i18n.language);
+  const localizedTitle = getLocalizedTitle(grammar, language);
+  const localizedSummary = getLocalizedSummary(grammar, language);
+  const localizedExplanation = getLocalizedExplanation(grammar, language);
+  const localizedCustomNote = getLocalizedCustomNote(grammar, language);
   const proficiency = aiFeedback?.progress?.proficiency ?? grammar.proficiency ?? 0;
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
   const isCheckDisabled = isChecking || isEmptySentence(practiceSentence);
@@ -192,7 +293,7 @@ export default function MobileGrammarDetailSheet({
                 <span className="text-xs font-bold text-muted-foreground">{grammar.level}</span>
               </div>
               <h2 className="text-3xl font-black text-foreground leading-tight mb-2">
-                {grammar.title}
+                {localizedTitle}
               </h2>
               <div className="flex items-center gap-3">
                 <div className="flex-1 w-24 h-2 bg-muted rounded-full overflow-hidden">
@@ -232,7 +333,7 @@ export default function MobileGrammarDetailSheet({
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Summary */}
             <div className="text-base font-bold text-muted-foreground leading-relaxed bg-yellow-50 p-4 rounded-xl border-2 border-yellow-100">
-              {grammar.summary}
+              {localizedSummary}
             </div>
 
             {/* Explanation */}
@@ -241,7 +342,7 @@ export default function MobileGrammarDetailSheet({
                 {t('grammarDetail.explanation')}
               </h3>
               <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {grammar.explanation}
+                {localizedExplanation}
               </div>
             </div>
 
@@ -278,11 +379,24 @@ export default function MobileGrammarDetailSheet({
                     className="bg-muted border-2 border-border rounded-xl p-4 active:bg-muted transition-colors"
                   >
                     <p className="font-bold text-foreground mb-1">{ex.kr}</p>
-                    <p className="text-sm text-muted-foreground">{getExampleTranslation(ex)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {getExampleTranslation(ex, language)}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
+
+            {localizedCustomNote ? (
+              <div>
+                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
+                  {t('grammarDetail.customNote')}
+                </h3>
+                <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted border border-border rounded-xl p-4">
+                  {localizedCustomNote}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* AI Practice input fixed at bottom */}

@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { ANNOTATIONS, NOTE_PAGES } from '../../../utils/convexRefs';
 import type { AnnotationKitColor, AnnotationAnchor } from '../types';
+import { useNotebookPicker } from '../../../contexts/NotebookPickerContext';
 
 export interface ScopedAnnotation {
   id: string;
@@ -46,6 +48,8 @@ export const useScopedAnnotations = ({
   const updateNote = useMutation(ANNOTATIONS.updateNote);
   const ingestFromSource = useMutation(NOTE_PAGES.ingestFromSource);
   const deleteBySourceRef = useMutation(NOTE_PAGES.deleteBySourceRef);
+  const { pickNotebook } = useNotebookPicker();
+  const { t } = useTranslation();
 
   const annotations = (rows ?? []) as ScopedAnnotation[];
   const resolvedSourceModule = (sourceModule || scopeType).trim().toUpperCase();
@@ -112,7 +116,25 @@ export const useScopedAnnotations = ({
       return result;
     }
 
+    if (normalizedNote.length === 0) {
+      return result;
+    }
+
+    let notebookId: Id<'note_pages'> | null = null;
+    notebookId = await pickNotebook({
+      title: t('notes.picker.annotation.title', { defaultValue: 'Save quote note' }),
+      description: t('notes.picker.annotation.descriptionUpsert', {
+        defaultValue: 'Select a notebook for this note. Cancel keeps the annotation only.',
+      }),
+      confirmText: t('notes.picker.annotation.confirm', { defaultValue: 'Save to Notebook' }),
+      cancelText: t('notes.picker.annotation.cancel', { defaultValue: 'Cancel' }),
+    });
+    if (!notebookId) {
+      return result;
+    }
+
     await ingestFromSource({
+      notebookId,
       sourceModule: resolvedSourceModule,
       sourceRef: buildSourceRef({
         anchor,
@@ -193,7 +215,24 @@ export const useScopedAnnotations = ({
           },
         });
       } else {
+        if (!normalizedNote) {
+          return result;
+        }
+
+        const notebookId = await pickNotebook({
+          title: t('notes.picker.annotation.title', { defaultValue: 'Save quote note' }),
+          description: t('notes.picker.annotation.descriptionSaveNote', {
+            defaultValue: 'Select a notebook for this note. Cancel skips notebook sync.',
+          }),
+          confirmText: t('notes.picker.annotation.confirm', { defaultValue: 'Save to Notebook' }),
+          cancelText: t('notes.picker.annotation.cancel', { defaultValue: 'Cancel' }),
+        });
+        if (!notebookId) {
+          return result;
+        }
+
         await ingestFromSource({
+          notebookId,
           sourceModule: resolvedSourceModule,
           sourceRef: {
             module: resolvedSourceModule,

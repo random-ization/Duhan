@@ -13,6 +13,7 @@ import { logger } from '../utils/logger';
 import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
+import { trackEvent } from '../utils/analytics';
 import {
   Check,
   ChevronDown,
@@ -56,6 +57,10 @@ export default function PricingDetailsPage() {
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const meta = getRouteMeta(location.pathname);
+  const checkoutSource = useMemo(() => {
+    const source = new URLSearchParams(location.search).get('source');
+    return source || 'pricing_details';
+  }, [location.search]);
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
     const { cycle, plan } = parseSelectedPlanFromSearch(location.search);
@@ -184,6 +189,12 @@ export default function PricingDetailsPage() {
   };
 
   const startCheckout = async (plan: CheckoutPlan) => {
+    trackEvent('checkout_start', {
+      language: i18n.language,
+      plan,
+      source: checkoutSource,
+    });
+
     if (!user) {
       redirectTo(buildPricingDetailsPath(plan));
       return;
@@ -202,6 +213,12 @@ export default function PricingDetailsPage() {
         },
         { retries: 1, initialDelayMs: 250 }
       );
+
+      trackEvent('checkout_success', {
+        language: i18n.language,
+        plan,
+        source: checkoutSource,
+      });
       globalThis.location.assign(checkoutUrl);
     } catch (err) {
       logger.error('Failed to create checkout', err);
@@ -218,7 +235,7 @@ export default function PricingDetailsPage() {
     : t('pricingDetails.plans.pro.cta');
 
   return (
-    <div className="min-h-screen bg-muted text-foreground font-landing antialiased selection:bg-[#FFDE59] selection:text-foreground">
+    <div className="min-h-screen bg-muted text-foreground font-landing antialiased selection:bg-brand-yellow selection:text-foreground">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -227,15 +244,17 @@ export default function PricingDetailsPage() {
       />
 
       {showLocalizedPromo && (
-        <div className="w-full bg-[#EC4899] border-b-2 border-foreground h-12 sticky top-0 z-50">
+        <div className="w-full bg-brand-pink border-b-2 border-foreground h-12 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-7 h-7 bg-card rounded-lg border-2 border-foreground flex items-center justify-center flex-shrink-0">
-                <Gift className="w-4 h-4 text-[#EC4899]" />
+                <Gift className="w-4 h-4 text-brand-pink" />
               </div>
-              <div className="text-white text-sm font-bold truncate">
+              <div className="text-primary-foreground text-sm font-bold truncate">
                 {t('pricingDetails.promo.banner.prefix')}
-                <span className="text-[#FFDE59]">{t('pricingDetails.promo.banner.highlight')}</span>
+                <span className="text-brand-yellow">
+                  {t('pricingDetails.promo.banner.highlight')}
+                </span>
                 {t('pricingDetails.promo.banner.suffix')}
               </div>
             </div>
@@ -244,7 +263,7 @@ export default function PricingDetailsPage() {
               variant="ghost"
               size="auto"
               onClick={() => startCheckout(proPlanId)}
-              className="bg-[#FFDE59] text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
+              className="bg-brand-yellow text-foreground border-2 border-foreground rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.banner.cta')}
             </Button>
@@ -265,7 +284,7 @@ export default function PricingDetailsPage() {
             <span className="font-heading font-bold text-xl">{t('common.appName')}</span>
           </LocalizedLink>
           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-full border border-border">
-            <ShieldCheck className="w-4 h-4 text-[#10B981]" />
+            <ShieldCheck className="w-4 h-4 text-brand-green" />
             {t('pricingDetails.refundBadge')}
           </div>
         </div>
@@ -274,17 +293,17 @@ export default function PricingDetailsPage() {
       {showLocalizedPromo && (
         <section className="pt-10 px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="max-w-xl mx-auto bg-[#E9FBF4] border-2 border-[#10B981] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4">
+            <div className="max-w-xl mx-auto bg-emerald-50 dark:bg-emerald-400/12 border-2 border-brand-green rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4">
               <div className="flex items-start gap-4 min-w-0">
-                <div className="w-12 h-12 bg-[#10B981] rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
-                  <Gift className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-brand-green rounded-full border-2 border-foreground flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-heading font-extrabold text-foreground">
                       {t('pricingDetails.promo.card.title')}
                     </h3>
-                    <span className="bg-[#FFDE59] text-foreground border border-foreground rounded px-2 py-0.5 text-[10px] font-black">
+                    <span className="bg-brand-yellow text-foreground border border-foreground rounded px-2 py-0.5 text-[10px] font-black">
                       {t('pricingDetails.promo.card.badge')}
                     </span>
                   </div>
@@ -312,7 +331,7 @@ export default function PricingDetailsPage() {
           {t('pricingDetails.hero.titlePrefix')}
           <span className="relative inline-block px-2">
             <span className="relative z-10">{t('pricingDetails.hero.titleHighlight')}</span>
-            <span className="absolute inset-0 bg-[#FFDE59] transform -rotate-2 -z-0 rounded border-2 border-foreground" />
+            <span className="absolute inset-0 bg-brand-yellow transform -rotate-2 -z-0 rounded border-2 border-foreground" />
           </span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
@@ -329,7 +348,7 @@ export default function PricingDetailsPage() {
             onClick={() => setBillingCycle('monthly')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
               billingCycle === 'monthly'
-                ? 'bg-[#0F172A] text-white shadow-sm'
+                ? 'bg-brand-dark text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
@@ -342,7 +361,7 @@ export default function PricingDetailsPage() {
             onClick={() => setBillingCycle('quarterly')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
               billingCycle === 'quarterly'
-                ? 'bg-[#0F172A] text-white shadow-sm'
+                ? 'bg-brand-dark text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
@@ -355,7 +374,7 @@ export default function PricingDetailsPage() {
             onClick={() => setBillingCycle('annual')}
             className={`w-full sm:w-auto px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 relative ${
               billingCycle === 'annual'
-                ? 'bg-[#0F172A] text-white shadow-sm'
+                ? 'bg-brand-dark text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground bg-card'
             }`}
           >
@@ -413,21 +432,21 @@ export default function PricingDetailsPage() {
           </div>
 
           <div
-            className={`rounded-3xl border-2 border-foreground p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
-              showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
+            className={`rounded-3xl border-2 border-foreground p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-primary-foreground order-1 md:order-2 ${
+              showLocalizedPromo ? 'bg-brand-dark' : 'bg-brand-dark'
             }`}
           >
             {showLocalizedPromo ? (
-              <div className="absolute top-4 right-4 bg-[#10B981] text-foreground border-2 border-foreground px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
+              <div className="absolute top-4 right-4 bg-brand-green text-foreground border-2 border-foreground px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
                 {t('pricingDetails.promo.activated')}
               </div>
             ) : (
-              <div className="absolute top-0 right-0 bg-[#FFDE59] text-foreground border-l-2 border-b-2 border-foreground px-4 py-1.5 rounded-bl-xl font-bold text-xs uppercase tracking-wider">
+              <div className="absolute top-0 right-0 bg-brand-yellow text-foreground border-l-2 border-b-2 border-foreground px-4 py-1.5 rounded-bl-xl font-bold text-xs uppercase tracking-wider">
                 {t('pricingDetails.plans.pro.badge')}
               </div>
             )}
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-[#FFDE59]">
+              <h3 className="text-xl font-bold text-brand-yellow">
                 {t('pricingDetails.plans.pro.title')}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -437,8 +456,8 @@ export default function PricingDetailsPage() {
             {showLocalizedPromo ? (
               <div className="mb-8">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-[#10B981]">$</span>
-                  <span className="text-7xl font-heading font-extrabold text-[#10B981]">
+                  <span className="text-3xl font-black text-brand-green">$</span>
+                  <span className="text-7xl font-heading font-extrabold text-brand-green">
                     {proPrice.amount}
                   </span>
                   <span className="text-muted-foreground font-medium">{proPrice.period}</span>
@@ -456,7 +475,7 @@ export default function PricingDetailsPage() {
               <>
                 <div className="mb-2 h-16 flex items-baseline gap-1">
                   <span className="text-2xl font-bold text-muted-foreground">$</span>
-                  <span className="text-6xl font-heading font-extrabold text-white">
+                  <span className="text-6xl font-heading font-extrabold text-primary-foreground">
                     {proPrice.amount}
                   </span>
                   <span className="text-muted-foreground font-medium">{proPrice.period}</span>
@@ -476,8 +495,8 @@ export default function PricingDetailsPage() {
               loadingIconClassName="w-5 h-5"
               className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-foreground flex justify-center items-center gap-2 ${
                 showLocalizedPromo
-                  ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_#ffffff]'
-                  : 'bg-[#FFDE59] text-foreground shadow-[4px_4px_0px_0px_#ffffff]'
+                  ? 'bg-brand-green text-primary-foreground shadow-pop'
+                  : 'bg-brand-yellow text-foreground shadow-pop'
               }`}
             >
               {buttonLabel}
@@ -497,7 +516,7 @@ export default function PricingDetailsPage() {
                 t('pricingDetails.plans.pro.features.f5'),
               ].map(item => (
                 <li key={item} className="flex gap-3 items-start">
-                  <div className="bg-[#10B981]/20 p-0.5 rounded text-[#10B981] flex-shrink-0">
+                  <div className="bg-brand-green/20 p-0.5 rounded text-brand-green flex-shrink-0">
                     <Check className="w-4 h-4" />
                   </div>
                   <span>{item}</span>
@@ -507,9 +526,9 @@ export default function PricingDetailsPage() {
           </div>
 
           <div className="bg-card rounded-3xl border-2 border-foreground p-6 md:p-8 flex flex-col shadow-pop hover:shadow-[0_0_20px_rgba(255,222,89,0.5)] transition-shadow relative overflow-hidden order-3">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899]" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-purple to-brand-pink" />
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-[#8B5CF6]">
+              <h3 className="text-xl font-bold text-brand-purple">
                 {t('pricingDetails.plans.lifetime.title')}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -534,15 +553,15 @@ export default function PricingDetailsPage() {
             </Button>
             <ul className="space-y-4 text-sm text-muted-foreground flex-1">
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-[#8B5CF6] flex-shrink-0" />
+                <Check className="w-5 h-5 text-brand-purple flex-shrink-0" />
                 {t('pricingDetails.plans.lifetime.features.f1')}
               </li>
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-[#8B5CF6] flex-shrink-0" />
+                <Check className="w-5 h-5 text-brand-purple flex-shrink-0" />
                 {t('pricingDetails.plans.lifetime.features.f2')}
               </li>
               <li className="flex gap-3">
-                <Check className="w-5 h-5 text-[#8B5CF6] flex-shrink-0" />
+                <Check className="w-5 h-5 text-brand-purple flex-shrink-0" />
                 {t('pricingDetails.plans.lifetime.features.f3')}
               </li>
             </ul>
@@ -569,7 +588,7 @@ export default function PricingDetailsPage() {
                   <th className="p-4 md:p-6 w-1/4 font-bold text-center text-muted-foreground">
                     {t('pricingDetails.table.th2')}
                   </th>
-                  <th className="p-4 md:p-6 w-1/4 font-bold text-center bg-[#FFDE59]/20 border-l-2 border-foreground text-foreground">
+                  <th className="p-4 md:p-6 w-1/4 font-bold text-center bg-brand-yellow/20 border-l-2 border-foreground text-foreground">
                     {t('pricingDetails.table.th3')}
                   </th>
                 </tr>
@@ -590,7 +609,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground">
                     {t('pricingDetails.table.fsrs.dailyLimitFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981]">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground text-brand-green">
                     <div className="inline-flex items-center justify-center gap-1">
                       <InfinityIcon className="w-4 h-4" /> {t('pricingDetails.table.unlimited')}
                     </div>
@@ -603,7 +622,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground flex justify-center gap-1 items-center">
                     <Check className="w-4 h-4" /> {t('pricingDetails.table.freeOpen')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground">
                     <div className="inline-flex items-center justify-center gap-1">
                       <Check className="w-4 h-4" /> {t('pricingDetails.table.fullAccess')}
                     </div>
@@ -618,7 +637,7 @@ export default function PricingDetailsPage() {
                       {t('pricingDetails.table.fsrs.testModeFree')}
                     </span>
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981]">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground text-brand-green">
                     {t('pricingDetails.table.fsrs.testModePro')}
                   </td>
                 </tr>
@@ -638,7 +657,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.topik.scopeFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-[#10B981] text-xs">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground text-brand-green text-xs">
                     {t('pricingDetails.table.topik.scopePro')}
                   </td>
                 </tr>
@@ -649,7 +668,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.topik.examFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-xs">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground text-xs">
                     {t('pricingDetails.table.topik.examPro')}
                   </td>
                 </tr>
@@ -660,7 +679,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground">
                     <Minus className="w-5 h-5 mx-auto" />
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground">
                     {t('pricingDetails.table.supported')}
                   </td>
                 </tr>
@@ -680,7 +699,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.tools.mediaFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground text-xs">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground text-xs">
                     {t('pricingDetails.table.tools.mediaPro')}
                   </td>
                 </tr>
@@ -689,7 +708,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground text-xs">
                     {t('pricingDetails.table.tools.aiFree')}
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground">
                     <div className="inline-flex items-center justify-center gap-1">
                       <InfinityIcon className="w-4 h-4" /> {t('pricingDetails.table.unlimited')}
                     </div>
@@ -700,7 +719,7 @@ export default function PricingDetailsPage() {
                   <td className="p-4 text-center text-muted-foreground">
                     <X className="w-4 h-4 mx-auto" />
                   </td>
-                  <td className="p-4 text-center font-bold bg-[#FFDE59]/5 border-l-2 border-foreground">
+                  <td className="p-4 text-center font-bold bg-brand-yellow/5 border-l-2 border-foreground">
                     {t('pricingDetails.table.tools.pdfPro')}
                   </td>
                 </tr>

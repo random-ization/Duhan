@@ -288,6 +288,9 @@ export type UnitGrammarDto = {
   updatedAt: number;
   // Course Context
   customNote: string | undefined;
+  customNoteEn: string | undefined;
+  customNoteVi: string | undefined;
+  customNoteMn: string | undefined;
   unitId: number;
   // Progress
   status: string;
@@ -395,6 +398,9 @@ export const getUnitGrammar = query({
           updatedAt: grammar.updatedAt,
           // Course Context
           customNote: link.customNote,
+          customNoteEn: link.customNoteEn,
+          customNoteVi: link.customNoteVi,
+          customNoteMn: link.customNoteMn,
           unitId: link.unitId,
           // Progress
           status: userProgress?.status || 'NOT_STARTED',

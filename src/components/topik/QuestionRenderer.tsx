@@ -6,6 +6,7 @@ import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
 import { aRef, NOTE_PAGES } from '../../utils/convexRefs';
 import { Button } from '../ui';
+import { useNotebookPicker } from '../../contexts/NotebookPickerContext';
 
 interface QuestionRendererProps {
   question: TopikQuestion;
@@ -48,6 +49,10 @@ interface ReviewCopy {
   analysis: string;
   wrongOptions: string;
   optionLabel: string;
+  pickerTitle: string;
+  pickerDescription: string;
+  pickerConfirm: string;
+  pickerCancel: string;
 }
 
 // Korean serif font for authentic TOPIK paper look
@@ -159,6 +164,10 @@ const getReviewCopy = (labels: ReturnType<typeof getLabels>): ReviewCopy => {
     keyPoint = 'Key Point',
     analysis = 'Analysis',
     wrongOptions = 'Wrong Options',
+    saveToNotebookTitle = 'Save AI Analysis',
+    saveToNotebookDescription = 'Choose a notebook, or create one before saving.',
+    saveToNotebookConfirm = 'Save to Notebook',
+    saveToNotebookCancel = 'Cancel',
   } = review ?? {};
 
   return {
@@ -177,6 +186,10 @@ const getReviewCopy = (labels: ReturnType<typeof getLabels>): ReviewCopy => {
     analysis,
     wrongOptions,
     optionLabel: common?.option || 'Option',
+    pickerTitle: saveToNotebookTitle,
+    pickerDescription: saveToNotebookDescription,
+    pickerConfirm: saveToNotebookConfirm,
+    pickerCancel: saveToNotebookCancel,
   };
 };
 
@@ -504,24 +517,42 @@ const AIAnalysisSection = ({
   );
 };
 
+const getLocalizedQuestionExplanation = (question: TopikQuestion, language: Language): string => {
+  if (language === 'en') return question.explanationEn || question.explanation || '';
+  if (language === 'vi')
+    return question.explanationVi || question.explanationEn || question.explanation || '';
+  if (language === 'mn')
+    return question.explanationMn || question.explanationEn || question.explanation || '';
+  return (
+    question.explanation ||
+    question.explanationEn ||
+    question.explanationVi ||
+    question.explanationMn ||
+    ''
+  );
+};
+
 const ExplanationView = ({
   showCorrect,
   question,
+  language,
   labels,
   isInline = false,
 }: {
   showCorrect: boolean;
   question: TopikQuestion;
+  language: Language;
   labels: { explanation?: string };
   isInline?: boolean;
 }) => {
-  if (!showCorrect || !question.explanation) return null;
+  const localizedExplanation = getLocalizedQuestionExplanation(question, language);
+  if (!showCorrect || !localizedExplanation) return null;
   return (
     <div
       className={`mt-4 ${isInline ? 'ml-8' : ''} p-4 bg-muted border-l-4 border-foreground text-sm font-sans`}
     >
       <div className="font-bold mb-1">{labels.explanation || '해설'}</div>
-      <div className="leading-relaxed">{question.explanation}</div>
+      <div className="leading-relaxed">{localizedExplanation}</div>
     </div>
   );
 };
@@ -579,6 +610,7 @@ const QuestionMainContent = ({
   onAnnotationClick,
   hidePassage,
   isInline,
+  language,
   highlightText,
   getOptionStatus,
   labels,
@@ -600,6 +632,7 @@ const QuestionMainContent = ({
   onAnnotationClick?: (annotationId: string, e: React.MouseEvent) => void;
   hidePassage: boolean;
   isInline: boolean;
+  language: Language;
   highlightText: (t: string) => string;
   getOptionStatus: (i: number) => 'correct' | 'incorrect' | null;
   labels: { explanation?: string };
@@ -677,6 +710,7 @@ const QuestionMainContent = ({
         <ExplanationView
           showCorrect={showCorrect}
           question={question}
+          language={language}
           labels={labels}
           isInline={isInline}
         />
@@ -767,16 +801,26 @@ const useQuestionReviewActions = ({
   question,
   questionIndex,
   correctAnswer,
+  language,
   contextPrefix,
   optionLabel,
+  pickerTitle,
+  pickerDescription,
+  pickerConfirm,
+  pickerCancel,
   aiErrorMessage,
   saveFailedMessage,
 }: {
   question: TopikQuestion;
   questionIndex: number;
   correctAnswer?: number;
+  language: Language;
   contextPrefix: string;
   optionLabel: string;
+  pickerTitle: string;
+  pickerDescription: string;
+  pickerConfirm: string;
+  pickerCancel: string;
   aiErrorMessage: string;
   saveFailedMessage: string;
 }) => {
@@ -790,12 +834,19 @@ const useQuestionReviewActions = ({
 
   const analyzeQuestionAction = useAction(
     aRef<
-      { question: string; options: string[]; correctAnswer: number; type: string },
+      {
+        question: string;
+        options: string[];
+        correctAnswer: number;
+        type: string;
+        language?: string;
+      },
       { success?: boolean; data?: AIAnalysis }
     >('ai:analyzeQuestion')
   );
 
   const ingestFromSource = useMutation(NOTE_PAGES.ingestFromSource);
+  const { pickNotebook } = useNotebookPicker();
 
   const triggerSaveToast = useCallback((error: string | null = null) => {
     setSaveError(error);
@@ -820,6 +871,7 @@ const useQuestionReviewActions = ({
         options: question.options,
         correctAnswer: correctAnswer ?? 0,
         type: 'TOPIK_QUESTION',
+        language,
       })) as { success?: boolean; data?: AIAnalysis };
 
       if (result?.success && result.data) setAiAnalysis(result.data);
@@ -830,7 +882,15 @@ const useQuestionReviewActions = ({
     } finally {
       setAiLoading(false);
     }
-  }, [aiLoading, aiAnalysis, analyzeQuestionAction, question, correctAnswer, aiErrorMessage]);
+  }, [
+    aiLoading,
+    aiAnalysis,
+    analyzeQuestionAction,
+    question,
+    correctAnswer,
+    aiErrorMessage,
+    language,
+  ]);
 
   const handleSaveToNotebook = useCallback(async () => {
     if (!aiAnalysis || isSaving || isSaved) return;
@@ -846,10 +906,19 @@ const useQuestionReviewActions = ({
       const noteText = buildTopikAnalysisNoteText(aiAnalysis, optionLabel);
       const questionNumber =
         typeof question.number === 'number' ? question.number : questionIndex + 1;
-
-      console.log('[Save to Notebook] Saving...', { title, source: 'TOPIK_ANALYSIS' });
+      const notebookId = await pickNotebook({
+        title: pickerTitle,
+        description: pickerDescription,
+        confirmText: pickerConfirm,
+        cancelText: pickerCancel,
+      });
+      if (!notebookId) {
+        setIsSaving(false);
+        return;
+      }
 
       const result = await ingestFromSource({
+        notebookId,
         sourceModule: 'TOPIK_ANALYSIS',
         sourceRef: {
           module: 'TOPIK_ANALYSIS',
@@ -869,8 +938,6 @@ const useQuestionReviewActions = ({
         contentTitle: `TOPIK ${contentId}`,
       });
 
-      console.log('[Save to Notebook] Result:', result);
-
       if (!result) throw new Error('Save failed');
       setIsSaved(true);
       triggerSaveToast();
@@ -886,10 +953,14 @@ const useQuestionReviewActions = ({
     isSaved,
     question,
     questionIndex,
-    correctAnswer,
     contextPrefix,
     optionLabel,
+    pickerTitle,
+    pickerDescription,
+    pickerConfirm,
+    pickerCancel,
     ingestFromSource,
+    pickNotebook,
     triggerSaveToast,
     saveFailedMessage,
   ]);
@@ -1075,8 +1146,13 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
       question,
       questionIndex,
       correctAnswer,
+      language,
       contextPrefix,
       optionLabel: reviewCopy.optionLabel,
+      pickerTitle: reviewCopy.pickerTitle,
+      pickerDescription: reviewCopy.pickerDescription,
+      pickerConfirm: reviewCopy.pickerConfirm,
+      pickerCancel: reviewCopy.pickerCancel,
       aiErrorMessage: reviewCopy.aiErrorMessage,
       saveFailedMessage: reviewCopy.saveFailedMessage,
     });
@@ -1102,6 +1178,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = React.memo(
           onAnnotationClick={onAnnotationClick}
           hidePassage={hidePassage}
           isInline={showInlineNumber}
+          language={language}
           highlightText={highlightText}
           getOptionStatus={getOptionStatus}
           labels={labels}

@@ -5,6 +5,10 @@ import { toErrorMessage } from './errors';
 import { readString } from './validation';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
+import { assertProductionRuntimeEnv } from './env';
+import { captureServerException } from './sentry';
+
+assertProductionRuntimeEnv();
 
 type GrantAccessArgs = {
   customerEmail: string;
@@ -112,6 +116,11 @@ export const createCheckoutSession = action({
       return { checkoutUrl: checkout.checkoutUrl };
     } catch (error: unknown) {
       console.error('[Checkout] API Error:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'payments',
+        operation: 'createCheckoutSession',
+        plan: args.plan,
+      });
 
       // Fallback to direct payment link if API fails
       const paymentPath = isTestMode ? 'test/payment' : 'payment';
@@ -141,6 +150,10 @@ export const verifyPaymentSession = action({
       return { success: false, status: checkout.status };
     } catch (error: unknown) {
       console.error('Error verifying payment session:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'payments',
+        operation: 'verifyPaymentSession',
+      });
       return { success: false, error: toErrorMessage(error) };
     }
   },
@@ -236,6 +249,10 @@ export const handleWebhook = action({
       return { success: true };
     } catch (error: unknown) {
       console.error('Webhook processing error:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'payments',
+        operation: 'handleWebhook',
+      });
       return { success: false, error: toErrorMessage(error) };
     }
   },

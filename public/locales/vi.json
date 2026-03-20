@@ -1134,7 +1134,7 @@
       "q2": "Đề TOPIK có cập nhật không?",
       "a2": "Có. Chúng tôi thu thập đề công khai và cập nhật khi có đợt mới.",
       "q3": "Có hoàn tiền không?",
-      "a3": "Có bảo đảm hoàn tiền trong 30 ngày. Email hỗ trợ để được hoàn tiền."
+      "a3": "Có bảo đảm hoàn tiền trong 14 ngày. Email hỗ trợ để được hoàn tiền."
     },
     "footer": {
       "about": "Giới thiệu",
@@ -1198,7 +1198,7 @@
     }
   },
   "pricingDetails": {
-    "refundBadge": "Hoàn tiền trong 30 ngày",
+    "refundBadge": "Hoàn tiền trong 14 ngày",
     "errors": {
       "checkoutFailed": "Không thể bắt đầu thanh toán. Vui lòng thử lại."
     },
@@ -1310,7 +1310,7 @@
       "title": "Câu hỏi thường gặp",
       "q1": {
         "q": "Không hài lòng có hoàn tiền không?",
-        "a": "Có. Chúng tôi có bảo đảm hoàn tiền 30 ngày. Hãy email hỗ trợ để được hoàn tiền."
+        "a": "Có. Chúng tôi có bảo đảm hoàn tiền 14 ngày. Hãy email hỗ trợ để được hoàn tiền."
       },
       "q2": {
         "q": "Tôi có thể hủy bất cứ lúc nào không?",

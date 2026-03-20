@@ -30,7 +30,14 @@ type GrammarPoint = {
   id: string;
   unitId: number | string;
   title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
   summary: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
   status?: string;
 };
 
@@ -391,12 +398,14 @@ const grammarStatusBadge = (
 
 const GrammarSection = ({
   t,
+  language,
   loadingGrammar,
   grammarPoints,
   instituteId,
   navigate,
 }: {
   t: (key: string, opts?: Record<string, unknown>) => string;
+  language: Language;
   loadingGrammar: boolean;
   grammarPoints: GrammarPoint[];
   instituteId?: string;
@@ -442,6 +451,10 @@ const GrammarSection = ({
         grammarPoints.length > 0 &&
         grammarPoints.map(gp => {
           const badge = grammarStatusBadge(gp.status, t);
+          const localizedTitle =
+            getLocalizedContent(gp as never, 'title', language as never) || gp.title;
+          const localizedSummary =
+            getLocalizedContent(gp as never, 'summary', language as never) || gp.summary;
           return (
             <div
               key={gp.id}
@@ -451,9 +464,9 @@ const GrammarSection = ({
                 UNIT {String(gp.unitId).padStart(2, '0')}
               </div>
               <div className="text-purple-600 dark:text-purple-300 font-black text-2xl mb-2">
-                {gp.title}
+                {localizedTitle}
               </div>
-              <div className="text-muted-foreground font-bold text-sm mb-1">{gp.summary}</div>
+              <div className="text-muted-foreground font-bold text-sm mb-1">{localizedSummary}</div>
 
               <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                 <span className={badge.className}>{badge.label}</span>
@@ -667,6 +680,7 @@ export default function CourseDashboard() {
         <ModuleGrid modules={modules} navigate={navigate} />
         <GrammarSection
           t={t}
+          language={language}
           loadingGrammar={loadingGrammar}
           grammarPoints={grammarPoints}
           instituteId={instituteId}

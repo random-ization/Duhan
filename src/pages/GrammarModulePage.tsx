@@ -17,25 +17,32 @@ import MobileGrammarView from '../components/mobile/MobileGrammarView';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { useLayoutActions } from '../contexts/LayoutContext';
+import { getLocalizedContent } from '../utils/languageUtils';
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const isMobile = useIsMobile();
+  const { clearContextualSidebar } = useLayoutActions();
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
 
-  const { user } = useAuth();
+  const { user, language } = useAuth();
 
   const instituteQuery = useQuery(INSTITUTES.get, instituteId ? { id: instituteId } : 'skip');
   const allCourseGrammar = useQuery(
     GRAMMARS.getByCourse,
     instituteId ? { courseId: instituteId } : 'skip'
   );
-  const instituteName = instituteQuery?.name || instituteId || '';
+  const instituteName =
+    (instituteQuery && getLocalizedContent(instituteQuery, 'name', language)) ||
+    instituteQuery?.name ||
+    instituteId ||
+    '';
 
   const totalUnits = useMemo(() => {
     if (Array.isArray(allCourseGrammar) && allCourseGrammar.length > 0) {
@@ -118,44 +125,53 @@ const GrammarModulePage: React.FC = () => {
     });
   };
 
-  const handleToggleStatus = async (grammarId: string) => {
-    if (!user) return;
+  const handleToggleStatus = useCallback(
+    async (grammarId: string) => {
+      if (!user) return;
 
-    // Determine new status (toggle logic)
-    const current = grammarListWithUpdates.find(g => g.id === grammarId);
-    const newStatus = current?.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
+      // Determine new status (toggle logic)
+      const current = grammarListWithUpdates.find(g => g.id === grammarId);
+      const newStatus = current?.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
 
-    // Optimistic update
-    setLocalUpdates(prev => {
-      const next = new Map(prev);
-      next.set(grammarId, { ...prev.get(grammarId), status: newStatus });
-      return next;
-    });
-
-    try {
-      await updateStatusMutation({
-        grammarId: grammarId as unknown as Id<'grammar_points'>,
-        status: newStatus,
-      });
-    } catch (error) {
-      console.error('Failed to toggle status:', toErrorMessage(error));
-      // Revert optimistic update on error
+      // Optimistic update
       setLocalUpdates(prev => {
         const next = new Map(prev);
-        next.delete(grammarId);
+        next.set(grammarId, { ...prev.get(grammarId), status: newStatus });
         return next;
       });
-    }
-  };
+
+      try {
+        await updateStatusMutation({
+          grammarId: grammarId as unknown as Id<'grammar_points'>,
+          status: newStatus,
+        });
+      } catch (error) {
+        console.error('Failed to toggle status:', toErrorMessage(error));
+        // Revert optimistic update on error
+        setLocalUpdates(prev => {
+          const next = new Map(prev);
+          next.delete(grammarId);
+          return next;
+        });
+      }
+    },
+    [grammarListWithUpdates, updateStatusMutation, user]
+  );
 
   // Filtered points based on search
   const displayedPoints = useMemo(() => {
     if (!searchQuery.trim()) return grammarListWithUpdates;
     const q = searchQuery.toLowerCase();
-    return grammarListWithUpdates.filter(
-      p => p.title.toLowerCase().includes(q) || p.summary.toLowerCase().includes(q)
-    );
-  }, [grammarListWithUpdates, searchQuery]);
+    return grammarListWithUpdates.filter(point => {
+      const title = (getLocalizedContent(point, 'title', language) || point.title).toLowerCase();
+      const summary = (
+        getLocalizedContent(point, 'summary', language) ||
+        point.summary ||
+        ''
+      ).toLowerCase();
+      return title.includes(q) || summary.includes(q);
+    });
+  }, [grammarListWithUpdates, language, searchQuery]);
 
   const currentIndex = useMemo(() => {
     if (!selectedGrammarId || !grammarListWithUpdates) return -1;
@@ -173,6 +189,10 @@ const GrammarModulePage: React.FC = () => {
       setSelectedGrammarId(grammarListWithUpdates[currentIndex - 1].id);
     }
   };
+
+  useEffect(() => {
+    clearContextualSidebar();
+  }, [clearContextualSidebar]);
 
   if (instituteQuery === undefined) {
     return (
@@ -254,7 +274,11 @@ const GrammarModulePage: React.FC = () => {
           hasPrev={currentIndex > 0}
         />
 
-        <GrammarAuxiliaryPane grammar={selectedGrammar} onToggleStatus={handleToggleStatus} />
+        <GrammarAuxiliaryPane
+          grammar={selectedGrammar}
+          onToggleStatus={handleToggleStatus}
+          isLoading={isGrammarLoading}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { BookOpen, GraduationCap, XCircle, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { sanitizeHtml } from '../../utils/sanitize';
 
 // Type icons mapping
 const TYPE_CONFIG: Record<
@@ -68,6 +69,11 @@ const formatRelativeTime = (
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 };
 
+const toPreviewHtml = (preview: string | null): string => {
+  if (!preview) return '';
+  return sanitizeHtml(preview.replace(/\n/g, '<br />'));
+};
+
 interface NoteCardProps {
   type: string;
   title: string;
@@ -82,6 +88,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ type, title, preview, tags, created
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.GENERAL;
   const Icon = config.icon;
   const dateLocale = getDateLocale(i18n.resolvedLanguage || i18n.language || 'en');
+  const previewHtml = toPreviewHtml(preview);
 
   return (
     <motion.div
@@ -112,8 +119,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ type, title, preview, tags, created
 
       {/* Body */}
       <div className="p-4">
-        {preview ? (
-          <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{preview}</p>
+        {previewHtml ? (
+          <div
+            className="text-sm text-muted-foreground line-clamp-3 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
         ) : (
           <p className="text-sm text-muted-foreground italic">
             {t('notes.previewEmpty', { defaultValue: 'No preview available yet' })}

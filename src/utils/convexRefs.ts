@@ -701,6 +701,27 @@ export const NOTE_PAGES = {
     { parentPageId?: Id<'note_pages'>; includeArchived?: boolean; limit?: number },
     unknown[]
   >('notePages:listPages'),
+  listNotebooks: qRef<
+    NoArgs,
+    {
+      notebooks: Array<{
+        id: Id<'note_pages'>;
+        title: string;
+        icon?: string;
+        sortOrder: number;
+        noteCount: number;
+        reviewCount: number;
+        sourceModule: string | null;
+        updatedAt: number;
+        createdAt: number;
+      }>;
+      totals: {
+        notebooks: number;
+        notes: number;
+        unassigned: number;
+      };
+    }
+  >('notePages:listNotebooks'),
   search: qRef<
     {
       query?: string;
@@ -716,6 +737,7 @@ export const NOTE_PAGES = {
       reviewed?: boolean;
       hasNote?: boolean;
       hasHighlight?: boolean;
+      notebookId?: Id<'note_pages'>;
       updatedAfter?: number;
       updatedBefore?: number;
       limit?: number;
@@ -730,6 +752,7 @@ export const NOTE_PAGES = {
       statuses?: string[];
       hasNote?: boolean;
       hasHighlight?: boolean;
+      notebookId?: Id<'note_pages'>;
       updatedAfter?: number;
       updatedBefore?: number;
     },
@@ -744,7 +767,9 @@ export const NOTE_PAGES = {
     }
   >('notePages:listFacets'),
   getPage: qRef<{ pageId: Id<'note_pages'> }, unknown>('notePages:getPage'),
-  listReviewQueue: qRef<{ status?: string; limit?: number }, unknown[]>('notePages:listReviewQueue'),
+  listReviewQueue: qRef<{ status?: string; limit?: number }, unknown[]>(
+    'notePages:listReviewQueue'
+  ),
   listTemplates: qRef<NoArgs, unknown[]>('notePages:listTemplates'),
   createPage: mRef<
     {
@@ -759,6 +784,14 @@ export const NOTE_PAGES = {
     },
     { success: boolean; id: Id<'note_pages'> }
   >('notePages:createPage'),
+  createNotebook: mRef<
+    {
+      name: string;
+      icon?: string;
+      sourceModule?: string;
+    },
+    { success: boolean; id: Id<'note_pages'>; created: boolean }
+  >('notePages:createNotebook'),
   updatePage: mRef<
     {
       pageId: Id<'note_pages'>;
@@ -783,9 +816,10 @@ export const NOTE_PAGES = {
     { pageId: Id<'note_pages'>; archived: boolean },
     { success: boolean; error?: string }
   >('notePages:archivePage'),
-  togglePin: mRef<{ pageId: Id<'note_pages'>; pinned: boolean }, { success: boolean; error?: string }>(
-    'notePages:togglePin'
-  ),
+  togglePin: mRef<
+    { pageId: Id<'note_pages'>; pinned: boolean },
+    { success: boolean; error?: string }
+  >('notePages:togglePin'),
   markReviewed: mRef<
     { pageId: Id<'note_pages'>; reviewedAt?: number; queueStatus?: string },
     { success: boolean; reviewedAt?: number; error?: string }
@@ -846,6 +880,7 @@ export const NOTE_PAGES = {
   >('notePages:upsertFromAnnotation'),
   ingestFromSource: mRef<
     {
+      notebookId?: Id<'note_pages'>;
       sourceModule: string;
       sourceRef?: Record<string, unknown>;
       noteType?: string;
@@ -947,4 +982,15 @@ export const NOTE_PAGES = {
       createdAnnotationPages?: number;
     }
   >('notePages:migrateLegacyAllNotes'),
+  migrateNotesIntoSourceNotebooks: mRef<
+    { dryRun?: boolean; limit?: number },
+    {
+      success: boolean;
+      dryRun: boolean;
+      alreadyMigrated?: boolean;
+      movedNotes?: number;
+      createdNotebooks?: number;
+      buckets?: Array<{ key: string; title: string; icon: string; count: number }>;
+    }
+  >('notePages:migrateNotesIntoSourceNotebooks'),
 };

@@ -150,6 +150,7 @@ npm run start
 - `VITE_API_URL`：前端 API 基路径（当前代码默认同域 `/api` 思路）。
 - `VITE_CONVEX_URL`：前端直连 Convex 基地址（建议本地显式设置）。
 - `VITE_APP_URL`：用于支付回跳、重置密码等前端绝对链接。
+- `VITE_SENTRY_DSN`：前端错误追踪 DSN（生产建议开启）。
 
 ### Convex 核心
 
@@ -158,6 +159,7 @@ npm run start
 - `CONVEX_URL`：Convex URL。
 - `SITE_URL`：站点主域名。
 - `NODE_ENV`：环境标识。
+- `SENTRY_DSN`：后端错误追踪 DSN（生产建议开启）。
 
 ### AI / 转写
 
@@ -212,6 +214,7 @@ npm run start
 - `npm run build`：构建生产包（包含 SEO 生成 + 预渲染）。
 - `npm run start`：以预览模式启动产物。
 - `npm run preview`：Vite preview。
+- `npm run env:validate`：生产环境关键变量校验（`NODE_ENV=production` 时生效）。
 
 ### 代码质量
 
@@ -323,6 +326,9 @@ npm run start
 - 已包含 `vercel.json`：
   - 多语言重定向规则
   - 安全响应头（CSP、X-Frame-Options 等）
+- 已包含 GitHub Actions CI：`.github/workflows/ci.yml`
+  - `quality`：lint/typecheck/guard/test/build/seo 审计
+  - `e2e-smoke`：Playwright smoke（自动启动 dev server）
 
 ### Convex HTTP 端点
 
@@ -359,9 +365,15 @@ npm run start
 
 ### 4) E2E 失败
 
-- 先启动开发服务器：`npm run dev`
+- Playwright 默认会自动启动开发服务器（`playwright.config.ts` 的 `webServer`）。
+- 如需连接已运行环境，请设置 `PLAYWRIGHT_BASE_URL`。
 - 检查 `PLAYWRIGHT_BASE_URL` 与本地访问端口是否一致。
 
 ---
 
 如需进一步拆分为「开发者 README」和「运维部署 README」，建议在 `docs/` 下新增 `DEVELOPMENT.md` 与 `OPERATIONS.md`，主 README 只保留入口导航。
+
+发布与推广相关文档：
+
+- `docs/ANALYTICS_EVENT_DICTIONARY.md`
+- `docs/LAUNCH_RUNBOOK.md`

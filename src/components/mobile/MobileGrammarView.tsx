@@ -1,6 +1,7 @@
 import { Search, ChevronLeft } from 'lucide-react';
 import { GrammarPointData } from '../../types';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedContent } from '../../utils/languageUtils';
 import MobileUnitChips from './MobileUnitChips';
 import MobileGrammarFeed from './MobileGrammarFeed';
 import MobileGrammarDetailSheet from './MobileGrammarDetailSheet';
@@ -41,18 +42,22 @@ export default function MobileGrammarView({
   onProficiencyUpdate,
   instituteId,
 }: MobileGrammarViewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = (i18n.language || 'zh') as never;
   const navigate = useLocalizedNavigate();
 
   // Filter grammar points based on search query
   const filteredPoints = grammarPoints.filter(g => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return (
-      g.title.toLowerCase().includes(query) ||
-      g.summary.toLowerCase().includes(query) ||
-      g.explanation.toLowerCase().includes(query)
-    );
+    const title = (getLocalizedContent(g as never, 'title', language) || g.title).toLowerCase();
+    const summary = (
+      getLocalizedContent(g as never, 'summary', language) || g.summary
+    ).toLowerCase();
+    const explanation = (
+      getLocalizedContent(g as never, 'explanation', language) || g.explanation
+    ).toLowerCase();
+    return title.includes(query) || summary.includes(query) || explanation.includes(query);
   });
 
   return (

@@ -30,13 +30,27 @@ interface LayoutActions {
   toggleMobileMenu: () => void;
   setSidebarHidden: (hidden: boolean) => void;
   setFooterHidden: (hidden: boolean) => void;
+  setContextualSidebar: (sidebar: ContextualSidebarState, ownerId?: string) => void;
+  clearContextualSidebar: (id?: string, ownerId?: string) => void;
 }
 
 export interface LayoutContextType extends LayoutDashboardState, LayoutChromeState, LayoutActions {}
 
+export interface ContextualSidebarState {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  content: ReactNode;
+}
+
+type StoredContextualSidebarState = ContextualSidebarState & {
+  __ownerId: string;
+};
+
 const LayoutDashboardStateContext = createContext<LayoutDashboardState | undefined>(undefined);
 const LayoutChromeStateContext = createContext<LayoutChromeState | undefined>(undefined);
 const LayoutActionsContext = createContext<LayoutActions | undefined>(undefined);
+const ContextualSidebarStateContext = createContext<ContextualSidebarState | null>(null);
 
 export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -77,6 +91,22 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [footerHidden, setFooterHidden] = useState(false);
+  const [contextualSidebar, setContextualSidebarState] =
+    useState<StoredContextualSidebarState | null>(null);
+  const setContextualSidebar = useCallback((sidebar: ContextualSidebarState, ownerId?: string) => {
+    setContextualSidebarState({
+      ...sidebar,
+      __ownerId: ownerId || 'layout-default-owner',
+    });
+  }, []);
+  const clearContextualSidebar = useCallback((id?: string, ownerId?: string) => {
+    setContextualSidebarState(prev => {
+      if (!prev) return null;
+      if (id && prev.id !== id) return prev;
+      if (ownerId && prev.__ownerId !== ownerId) return prev;
+      return null;
+    });
+  }, []);
 
   const dashboardState = useMemo<LayoutDashboardState>(
     () => ({
@@ -103,15 +133,26 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       toggleMobileMenu,
       setSidebarHidden,
       setFooterHidden,
+      setContextualSidebar,
+      clearContextualSidebar,
     }),
-    [toggleEditMode, updateCardOrder, resetLayout, toggleMobileMenu]
+    [
+      toggleEditMode,
+      updateCardOrder,
+      resetLayout,
+      toggleMobileMenu,
+      setContextualSidebar,
+      clearContextualSidebar,
+    ]
   );
 
   return (
     <LayoutActionsContext.Provider value={actions}>
       <LayoutDashboardStateContext.Provider value={dashboardState}>
         <LayoutChromeStateContext.Provider value={chromeState}>
-          {children}
+          <ContextualSidebarStateContext.Provider value={contextualSidebar}>
+            {children}
+          </ContextualSidebarStateContext.Provider>
         </LayoutChromeStateContext.Provider>
       </LayoutDashboardStateContext.Provider>
     </LayoutActionsContext.Provider>
@@ -141,6 +182,8 @@ export const useLayoutActions = () => {
   }
   return context;
 };
+
+export const useContextualSidebarState = () => useContext(ContextualSidebarStateContext);
 
 export const useLayout = () => {
   const dashboard = useLayoutDashboardState();

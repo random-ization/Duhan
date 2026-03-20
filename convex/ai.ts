@@ -10,6 +10,9 @@ import type { Doc, Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
 import { hasActiveSubscription } from './subscription';
 import { FREE_DAILY_AI_CALL_LIMIT, SUBSCRIBER_DAILY_AI_CALL_LIMIT } from './queryLimits';
+import { assertProductionRuntimeEnv } from './env';
+
+assertProductionRuntimeEnv();
 
 // Helper: No-op fallback for logging
 const logAI = (msg: string) => console.log(`[AI] ${msg}`);
@@ -93,11 +96,20 @@ const READING_RESPONSE_LANGUAGE_LABELS: Record<SupportedTranslationLanguage, str
   mn: 'Монгол хэл',
 };
 
-function resolveReadingResponseLanguage(lang?: string) {
-  const normalized = normalizeTargetLanguage(lang) || 'zh';
+function resolveAiOutputLanguage(lang?: string) {
+  const code = normalizeTargetLanguage(lang) || 'zh';
   return {
-    code: normalized,
-    label: READING_RESPONSE_LANGUAGE_LABELS[normalized] || '简体中文',
+    code,
+    englishLabel: TARGET_LANGUAGE_LABELS[code] || 'Simplified Chinese',
+    nativeLabel: READING_RESPONSE_LANGUAGE_LABELS[code] || '简体中文',
+  };
+}
+
+function resolveReadingResponseLanguage(lang?: string) {
+  const normalized = resolveAiOutputLanguage(lang);
+  return {
+    code: normalized.code,
+    label: normalized.nativeLabel,
   };
 }
 
@@ -168,10 +180,10 @@ function normalizeReadingAnalysisPayload(
 ): ReadingAnalysisResult | null {
   const parsed = payload as
     | {
-      summary?: unknown;
-      vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
-      grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
-    }
+        summary?: unknown;
+        vocabulary?: Array<{ term?: unknown; meaning?: unknown; level?: unknown }>;
+        grammar?: Array<{ pattern?: unknown; explanation?: unknown; example?: unknown }>;
+      }
     | null
     | undefined;
   if (!parsed || typeof parsed !== 'object') return null;
@@ -182,23 +194,23 @@ function normalizeReadingAnalysisPayload(
       : fallbackSummary;
   const vocabulary = Array.isArray(parsed.vocabulary)
     ? parsed.vocabulary
-      .map(item => ({
-        term: typeof item.term === 'string' ? item.term.trim() : '',
-        meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
-        level: typeof item.level === 'string' ? item.level.trim() : '',
-      }))
-      .filter(item => Boolean(item.term))
-      .slice(0, 8)
+        .map(item => ({
+          term: typeof item.term === 'string' ? item.term.trim() : '',
+          meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+          level: typeof item.level === 'string' ? item.level.trim() : '',
+        }))
+        .filter(item => Boolean(item.term))
+        .slice(0, 8)
     : [];
   const grammar = Array.isArray(parsed.grammar)
     ? parsed.grammar
-      .map(item => ({
-        pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
-        explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
-        example: typeof item.example === 'string' ? item.example.trim() : '',
-      }))
-      .filter(item => Boolean(item.pattern))
-      .slice(0, 4)
+        .map(item => ({
+          pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
+          explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
+          example: typeof item.example === 'string' ? item.example.trim() : '',
+        }))
+        .filter(item => Boolean(item.pattern))
+        .slice(0, 4)
     : [];
 
   return {
@@ -841,11 +853,13 @@ export const requestTranscript = action({
     const callbackBase = baseCallback.includes('/webhook/deepgram')
       ? baseCallback.replace(/\/$/, '')
       : `${baseCallback.replace(/\/$/, '')}/webhook/deepgram`;
-    const callbackUrl = `${callbackBase}?episodeId=${encodeURIComponent(args.episodeId)}${normalizedTargetLang ? `&language=${encodeURIComponent(normalizedTargetLang)}` : ''
-      }${process.env.DEEPGRAM_CALLBACK_TOKEN
+    const callbackUrl = `${callbackBase}?episodeId=${encodeURIComponent(args.episodeId)}${
+      normalizedTargetLang ? `&language=${encodeURIComponent(normalizedTargetLang)}` : ''
+    }${
+      process.env.DEEPGRAM_CALLBACK_TOKEN
         ? `&token=${encodeURIComponent(process.env.DEEPGRAM_CALLBACK_TOKEN)}`
         : ''
-      }`;
+    }`;
 
     const deepgramLang = 'ko';
 
@@ -1048,6 +1062,7 @@ export const analyzeSentence = action({
     }
 
     const client = new OpenAI({ apiKey });
+    const responseLanguage = resolveAiOutputLanguage(args.language);
 
     try {
       const completion = await client.chat.completions.create({
@@ -1056,9 +1071,8 @@ export const analyzeSentence = action({
           {
             role: 'system',
             content: `You are a strict Korean language teacher. Analyze the given sentence for a language learner.
-The user is validting a sentence they wrote based on a specific grammar point (Context).
-
-Response Language: ${args.language || 'Chinese'} (Translate the explanation and nuance into this language).
+The user is validating a sentence they wrote based on a specific grammar point (Context).
+All explanatory text must be in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
 
 Validation Rules:
 1. Strict Grammar Check: If there are ANY spelling errors, particle errors, or conjugation errors, mark nuances.nuance as "Incorrect" or provide specific correction.
@@ -1067,6 +1081,7 @@ Validation Rules:
 
 Return a JSON object with:
 {
+  "isCorrect": boolean,
   "vocabulary": [{ "word": string, "root": string, "meaning": string, "type": string }],
   "grammar": [{ "structure": string, "explanation": string }],
   "nuance": string (If correct: "Correct! [Reason]". If incorrect: "Incorrect. [Detailed correction]"),
@@ -1111,6 +1126,7 @@ export const analyzeQuestion = action({
     options: v.array(v.string()),
     correctAnswer: v.number(),
     type: v.optional(v.string()),
+    language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_topik_question');
@@ -1118,6 +1134,7 @@ export const analyzeQuestion = action({
     if (!apiKey) return null;
 
     const client = new OpenAI({ apiKey });
+    const responseLanguage = resolveAiOutputLanguage(args.language);
 
     try {
       const completion = await client.chat.completions.create({
@@ -1125,17 +1142,17 @@ export const analyzeQuestion = action({
         messages: [
           {
             role: 'system',
-            content: `你是一位TOPIK考试辅导老师。请用中文为学生分析这道题目。
-
-请返回JSON格式：
+            content: `You are a TOPIK exam tutor.
+Respond in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
+Return strict JSON only:
 {
-  "translation": string (题目的中文翻译),
-  "keyPoint": string (这道题考察的知识点),
-  "analysis": string (详细解析，为什么正确答案是对的),
-  "wrongOptions": { "1": string, "2": string, ... } (分析每个错误选项为什么是错的)
+  "translation": string (translation of the question in output language),
+  "keyPoint": string (what knowledge point this question tests),
+  "analysis": string (why the correct answer is right),
+  "wrongOptions": { "1": string, "2": string, ... } (why each wrong option is wrong)
 }
-
-注意：所有内容必须用中文回答。`,
+All textual fields must be in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
+Do not include markdown or extra text.`,
           },
           {
             role: 'user',
@@ -1443,7 +1460,7 @@ export const batchTranslate = action({
 export const generateVideoAnalysis = action({
   args: {
     videoUrl: v.string(),
-    language: v.optional(v.string()), // Target language for translation (default: Chinese)
+    language: v.optional(v.string()), // Target language for translation (defaults to zh)
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'generate_video_analysis');
@@ -1504,10 +1521,11 @@ export const generateVideoAnalysis = action({
         }))
         .filter(s => s.text.length > 0);
 
-      // 4. Translate if needed (Default to Chinese if not specified, or checks args)
-      const targetLang = args.language || 'Chinese';
+      // 4. Translate if needed.
+      const targetLangCode = normalizeTargetLanguage(args.language) || 'zh';
+      const targetLangLabel = TARGET_LANGUAGE_LABELS[targetLangCode] || 'Simplified Chinese';
 
-      console.log(`[AI] Translating ${baseSegments.length} segments to ${targetLang}...`);
+      console.log(`[AI] Translating ${baseSegments.length} segments to ${targetLangLabel}...`);
 
       if (baseSegments.length > 0) {
         const response = await client.chat.completions.create({
@@ -1515,7 +1533,7 @@ export const generateVideoAnalysis = action({
           messages: [
             {
               role: 'system',
-              content: `Translate the following Korean video transcript segments into ${targetLang}. 
+              content: `Translate the following Korean video transcript segments into ${targetLangLabel}.
               Return a JSON object with a "translations" array of strings, strictly matching the order and count of the input.
               Keep the translation concise and natural for subtitles.`,
             },
@@ -1620,11 +1638,16 @@ Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},
         items = Object.values(parsed).find(v => Array.isArray(v)) || [];
       }
 
-      const valid = (items as Array<{ prompt?: Record<string, string>; answer?: Record<string, string> }>)
-        .filter(item =>
-          item.prompt && typeof item.prompt === 'object' &&
-          item.answer && typeof item.answer === 'object' &&
-          (item.prompt.zh || item.prompt.en)
+      const valid = (
+        items as Array<{ prompt?: Record<string, string>; answer?: Record<string, string> }>
+      )
+        .filter(
+          item =>
+            item.prompt &&
+            typeof item.prompt === 'object' &&
+            item.answer &&
+            typeof item.answer === 'object' &&
+            (item.prompt.zh || item.prompt.en)
         )
         .slice(0, 3);
 
@@ -1637,11 +1660,13 @@ Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},
 
 export const classifyGrammars = action({
   args: {
-    grammars: v.array(v.object({
-      id: v.id('grammar_points'),
-      title: v.string(),
-      summary: v.string(),
-    })),
+    grammars: v.array(
+      v.object({
+        id: v.id('grammar_points'),
+        title: v.string(),
+        summary: v.string(),
+      })
+    ),
   },
   handler: async (_ctx, args) => {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -1650,21 +1675,21 @@ export const classifyGrammars = action({
     const client = new OpenAI({ apiKey });
 
     const categories = [
-      "1: 猜测与推断 (Speculation)",
-      "2: 对照与转折 (Contrast)",
-      "3: 原因与理由 (Cause & Reason)",
-      "4: 目的与意图 (Purpose)",
-      "5: 进行与完成 (Aspect)",
-      "6: 状态与其持续 (State)",
-      "7: 程度与限定 (Degree)",
-      "8: 假设与假定 (Hypothesis)",
-      "9: 让步与包含 (Concession)",
-      "10: 机会与改变 (Opportunity)",
-      "11: 传闻与引用 (Indirect Speech)",
-      "12: 必然与经历 (Necessity)",
-      "13: 罗列与顺序 (Listing)",
-      "14: 基准与范围 (Standard)",
-      "15: 助词与添意 (Particles)"
+      '1: 猜测与推断 (Speculation)',
+      '2: 对照与转折 (Contrast)',
+      '3: 原因与理由 (Cause & Reason)',
+      '4: 目的与意图 (Purpose)',
+      '5: 进行与完成 (Aspect)',
+      '6: 状态与其持续 (State)',
+      '7: 程度与限定 (Degree)',
+      '8: 假设与假定 (Hypothesis)',
+      '9: 让步与包含 (Concession)',
+      '10: 机会与改变 (Opportunity)',
+      '11: 传闻与引用 (Indirect Speech)',
+      '12: 必然与经历 (Necessity)',
+      '13: 罗列与顺序 (Listing)',
+      '14: 基准与范围 (Standard)',
+      '15: 助词与添意 (Particles)',
     ];
 
     const prompt = `Classify the following Korean grammar points into one of these 15 categories. Return a JSON object mapping the grammar ID to the category number (1-15).
@@ -1695,11 +1720,10 @@ Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
   },
 });
 
-
 export const translateGrammarSections = action({
   args: {
     enContent: v.string(),
-    targetLangs: v.array(v.string())
+    targetLangs: v.array(v.string()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -1723,12 +1747,12 @@ Return a raw JSON object only:
 }`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: 'gpt-4o-mini',
       messages: [
-        { role: "system", content: "You return only raw JSON." },
-        { role: "user", content: prompt }
+        { role: 'system', content: 'You return only raw JSON.' },
+        { role: 'user', content: prompt },
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     });
 
     const content = response.choices[0].message.content;
@@ -1742,5 +1766,5 @@ Return a raw JSON object only:
       }
     }
     return filtered;
-  }
+  },
 });

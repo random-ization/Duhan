@@ -6,6 +6,7 @@ import { motion, type PanInfo } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels, type Labels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
 import { notify } from '../utils/notify';
@@ -13,6 +14,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { VocabBookImmersiveSkeleton } from '../components/common';
 import { Button } from '../components/ui';
 import type { VocabBookItemDto } from '../../convex/vocab';
+import type { Language } from '../types';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED' | 'ALL';
 type ImmersiveMode = 'BROWSE' | 'RECALL';
@@ -23,6 +25,7 @@ const PREFETCH_THRESHOLD = 8;
 
 interface WordCardProps {
   current: VocabBookItemDto;
+  language: Language;
   mode: ImmersiveMode;
   revealed: boolean;
   onReveal: () => void;
@@ -37,7 +40,16 @@ interface WordCardProps {
   labels: Labels;
 }
 
-const resolveExampleMeaning = (current: VocabBookItemDto) =>
+const resolveLocalizedMeaning = (current: VocabBookItemDto, language: Language) =>
+  getLocalizedContent(current, 'meaning', language) ||
+  current.meaning ||
+  current.meaningEn ||
+  current.meaningVi ||
+  current.meaningMn ||
+  '';
+
+const resolveExampleMeaning = (current: VocabBookItemDto, language: Language) =>
+  getLocalizedContent(current, 'exampleMeaning', language) ||
   current.exampleMeaning ||
   current.exampleMeaningEn ||
   current.exampleMeaningVi ||
@@ -45,15 +57,18 @@ const resolveExampleMeaning = (current: VocabBookItemDto) =>
 
 const WordCardBrowseContent = ({
   current,
+  language,
   labels,
 }: {
   current: VocabBookItemDto;
+  language: Language;
   labels: Labels;
 }) => {
-  const exampleMeaning = resolveExampleMeaning(current);
+  const meaning = resolveLocalizedMeaning(current, language);
+  const exampleMeaning = resolveExampleMeaning(current, language);
   return (
     <div className="mt-6 space-y-4">
-      <p className="text-muted-foreground text-lg font-bold">{current.meaning}</p>
+      <p className="text-muted-foreground text-lg font-bold">{meaning}</p>
       {current.exampleSentence && (
         <div className="rounded-2xl bg-muted border-2 border-border p-4">
           <p className="font-bold text-muted-foreground">{current.exampleSentence}</p>
@@ -71,18 +86,21 @@ const WordCardBrowseContent = ({
 
 const WordCardRecallContent = ({
   current,
+  language,
   revealed,
   onReveal,
   onFlipBack,
   labels,
 }: {
   current: VocabBookItemDto;
+  language: Language;
   revealed: boolean;
   onReveal: () => void;
   onFlipBack: () => void;
   labels: Labels;
 }) => {
-  const exampleMeaning = resolveExampleMeaning(current);
+  const meaning = resolveLocalizedMeaning(current, language);
+  const exampleMeaning = resolveExampleMeaning(current, language);
   return (
     <div className="mt-6 [perspective:1400px]">
       <motion.div
@@ -123,7 +141,7 @@ const WordCardRecallContent = ({
           className="absolute inset-0 rounded-2xl bg-muted border-2 border-border p-5 flex flex-col"
         >
           <div className="flex-1">
-            <p className="text-muted-foreground text-lg font-black">{current.meaning}</p>
+            <p className="text-muted-foreground text-lg font-black">{meaning}</p>
             {exampleMeaning && (
               <p className="mt-2 text-muted-foreground font-medium">{exampleMeaning}</p>
             )}
@@ -145,6 +163,7 @@ const WordCardRecallContent = ({
 
 const WordCard: React.FC<WordCardProps> = ({
   current,
+  language,
   mode,
   revealed,
   onReveal,
@@ -171,10 +190,11 @@ const WordCard: React.FC<WordCardProps> = ({
 
   const bodyContent =
     mode === 'BROWSE' ? (
-      <WordCardBrowseContent current={current} labels={labels} />
+      <WordCardBrowseContent current={current} language={language} labels={labels} />
     ) : (
       <WordCardRecallContent
         current={current}
+        language={language}
         revealed={revealed}
         onReveal={onReveal}
         onFlipBack={onFlipBack}
@@ -322,6 +342,7 @@ const ImmersiveContent = ({
   total,
   labels,
   current,
+  language,
   mode,
   revealed,
   setRevealed,
@@ -340,6 +361,7 @@ const ImmersiveContent = ({
   total: number;
   labels: Labels;
   current?: VocabBookItemDto;
+  language: Language;
   mode: ImmersiveMode;
   revealed: boolean;
   setRevealed: React.Dispatch<React.SetStateAction<boolean>>;
@@ -375,6 +397,7 @@ const ImmersiveContent = ({
     <div className="space-y-5">
       <WordCard
         current={current}
+        language={language}
         mode={mode}
         revealed={revealed}
         onReveal={() => setRevealed(true)}
@@ -738,6 +761,7 @@ const VocabBookImmersivePage: React.FC = () => {
           loading={loading}
           total={total}
           labels={labels}
+          language={language}
           mode={mode}
           revealed={revealed}
           setRevealed={setRevealed}
@@ -759,6 +783,7 @@ const VocabBookImmersivePage: React.FC = () => {
             total={total}
             labels={labels}
             current={current}
+            language={language}
             mode={mode}
             revealed={revealed}
             setRevealed={setRevealed}

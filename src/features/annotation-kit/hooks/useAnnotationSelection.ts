@@ -1,7 +1,11 @@
-import { useCallback, useState, type RefObject } from 'react';
+import { useCallback, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { useOutsideDismiss } from '../../../hooks/useOutsideDismiss';
 import type { AnnotationToolbarState } from '../types';
-import { buildAnchorFromRange, getToolbarPositionFromRect } from '../utils/selection';
+import {
+  buildAnchorFromRange,
+  classifySelectionKind,
+  getToolbarPositionFromRect,
+} from '../utils/selection';
 
 interface UseAnnotationSelectionOptions {
   containerRef: RefObject<HTMLElement | null>;
@@ -33,7 +37,7 @@ export const useAnnotationSelection = ({
   });
 
   const captureSelection = useCallback(
-    (blockId: string, e?: React.MouseEvent | MouseEvent) => {
+    (blockId: string, e?: ReactMouseEvent | MouseEvent) => {
       const selection = globalThis.window.getSelection();
       const container = containerRef.current;
 
@@ -56,7 +60,8 @@ export const useAnnotationSelection = ({
       }
 
       const rect = range.getBoundingClientRect();
-      const position = getToolbarPositionFromRect(rect,
+      const position = getToolbarPositionFromRect(
+        rect,
         e ? { x: e.clientX, y: e.clientY } : undefined
       );
 
@@ -65,6 +70,7 @@ export const useAnnotationSelection = ({
         position,
         selectionText: anchor.quote,
         anchor,
+        selectionKind: classifySelectionKind(anchor.quote),
       });
 
       return anchor;

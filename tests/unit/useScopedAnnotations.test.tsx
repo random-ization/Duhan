@@ -5,6 +5,7 @@ import { useScopedAnnotations } from '../../src/features/annotation-kit/hooks/us
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
+const pickNotebookMock = vi.fn();
 
 const upsertByAnchorMock = vi.fn();
 const deleteByIdMock = vi.fn();
@@ -15,6 +16,19 @@ const deleteBySourceRefMock = vi.fn();
 vi.mock('convex/react', () => ({
   useQuery: (ref: unknown, args: unknown) => useQueryMock(ref, args),
   useMutation: (ref: unknown) => useMutationMock(ref),
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
+    i18n: { language: 'en', resolvedLanguage: 'en' },
+  }),
+}));
+
+vi.mock('../../src/contexts/NotebookPickerContext', () => ({
+  useNotebookPicker: () => ({
+    pickNotebook: pickNotebookMock,
+  }),
 }));
 
 describe('useScopedAnnotations', () => {
@@ -34,6 +48,7 @@ describe('useScopedAnnotations', () => {
       hasHighlight: true,
     });
     deleteBySourceRefMock.mockResolvedValue({ success: true });
+    pickNotebookMock.mockResolvedValue('notebook-1');
 
     useQueryMock.mockReturnValue([]);
 
@@ -90,6 +105,7 @@ describe('useScopedAnnotations', () => {
     });
 
     expect(ingestFromSourceMock).toHaveBeenCalledWith({
+      notebookId: 'notebook-1',
       sourceModule: 'READING_ARTICLE',
       sourceRef: {
         module: 'READING_ARTICLE',
@@ -121,6 +137,15 @@ describe('useScopedAnnotations', () => {
       contentTitle: 'Article title',
       annotationId: 'ann-1',
     });
+    expect(pickNotebookMock).toHaveBeenCalledTimes(1);
+    expect(pickNotebookMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.any(String),
+        description: expect.any(String),
+        confirmText: expect.any(String),
+        cancelText: expect.any(String),
+      })
+    );
   });
 
   it('still syncs notebook asset for highlight-only annotations', async () => {
@@ -147,7 +172,8 @@ describe('useScopedAnnotations', () => {
     });
 
     expect(upsertByAnchorMock).toHaveBeenCalledTimes(1);
-    expect(ingestFromSourceMock).toHaveBeenCalledTimes(1);
+    expect(ingestFromSourceMock).not.toHaveBeenCalled();
     expect(deleteBySourceRefMock).not.toHaveBeenCalled();
+    expect(pickNotebookMock).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
+import { useTranslation } from 'react-i18next';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
@@ -28,6 +29,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  MoreHorizontal,
   Minus,
   Quote,
   Redo2,
@@ -63,30 +65,35 @@ type ColorOption = {
   value: string | null;
 };
 
-const TEXT_COLORS: ColorOption[] = [
-  { label: 'Default', value: null },
-  { label: 'Gray', value: '#6b7280' },
-  { label: 'Brown', value: '#b7791f' },
-  { label: 'Orange', value: '#dd6b20' },
-  { label: 'Yellow', value: '#ca8a04' },
-  { label: 'Green', value: '#15803d' },
-  { label: 'Blue', value: '#0369a1' },
-  { label: 'Purple', value: '#7e22ce' },
-  { label: 'Pink', value: '#be185d' },
-  { label: 'Red', value: '#dc2626' },
+type ColorTokenDef = {
+  key: string;
+  value: string | null;
+};
+
+const TEXT_COLOR_TOKENS: ColorTokenDef[] = [
+  { key: 'default', value: null },
+  { key: 'gray', value: '#6b7280' },
+  { key: 'brown', value: '#b7791f' },
+  { key: 'orange', value: '#dd6b20' },
+  { key: 'yellow', value: '#ca8a04' },
+  { key: 'green', value: '#15803d' },
+  { key: 'blue', value: '#0369a1' },
+  { key: 'purple', value: '#7e22ce' },
+  { key: 'pink', value: '#be185d' },
+  { key: 'red', value: '#dc2626' },
 ];
 
-const HIGHLIGHT_COLORS: ColorOption[] = [
-  { label: 'Default', value: null },
-  { label: 'Gray BG', value: '#e5e7eb' },
-  { label: 'Brown BG', value: '#f3e8d5' },
-  { label: 'Orange BG', value: '#ffedd5' },
-  { label: 'Yellow BG', value: '#fef3c7' },
-  { label: 'Green BG', value: '#dcfce7' },
-  { label: 'Blue BG', value: '#dbeafe' },
-  { label: 'Purple BG', value: '#ede9fe' },
-  { label: 'Pink BG', value: '#fce7f3' },
-  { label: 'Red BG', value: '#fee2e2' },
+const HIGHLIGHT_COLOR_TOKENS: ColorTokenDef[] = [
+  { key: 'default', value: null },
+  { key: 'grayBg', value: '#e5e7eb' },
+  { key: 'brownBg', value: '#f3e8d5' },
+  { key: 'orangeBg', value: '#ffedd5' },
+  { key: 'yellowBg', value: '#fef3c7' },
+  { key: 'greenBg', value: '#dcfce7' },
+  { key: 'blueBg', value: '#dbeafe' },
+  { key: 'purpleBg', value: '#ede9fe' },
+  { key: 'pinkBg', value: '#fce7f3' },
+  { key: 'redBg', value: '#fee2e2' },
 ];
 
 const ToolButton: React.FC<{
@@ -135,14 +142,6 @@ const getSlashMatch = (
     left: box ? coords.left - box.left : 16,
     top: box ? coords.bottom - box.top + 6 : 36,
   };
-};
-
-const askForLink = (currentHref: string | null): string | null => {
-  const next = globalThis.window.prompt('Paste link URL', currentHref || 'https://');
-  if (next === null) return null;
-  const normalized = next.trim();
-  if (!normalized) return '';
-  return normalized;
 };
 
 const toRecentColors = (current: string[], next: string | null) => {
@@ -204,22 +203,44 @@ export interface OfficialTiptapEditorProps {
   value: JSONContent;
   placeholder?: string;
   onChange: (doc: JSONContent) => void;
+  preset?: 'full' | 'study';
 }
 
 export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
   value,
   onChange,
   placeholder,
+  preset = 'full',
 }) => {
+  const { t } = useTranslation();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const toolbarColorRef = useRef<HTMLDivElement | null>(null);
   const bubbleColorRef = useRef<HTMLDivElement | null>(null);
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [slashState, setSlashState] = useState<SlashState | null>(null);
   const [toolbarColorOpen, setToolbarColorOpen] = useState(false);
   const [bubbleColorOpen, setBubbleColorOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [recentTextColors, setRecentTextColors] = useState<string[]>([]);
   const [recentHighlightColors, setRecentHighlightColors] = useState<string[]>([]);
+
+  const textColors = useMemo<ColorOption[]>(
+    () =>
+      TEXT_COLOR_TOKENS.map(item => ({
+        value: item.value,
+        label: t(`notes.v2.editor.colors.text.${item.key}`, { defaultValue: item.key }),
+      })),
+    [t]
+  );
+  const highlightColors = useMemo<ColorOption[]>(
+    () =>
+      HIGHLIGHT_COLOR_TOKENS.map(item => ({
+        value: item.value,
+        label: t(`notes.v2.editor.colors.highlight.${item.key}`, { defaultValue: item.key }),
+      })),
+    [t]
+  );
 
   const editor = useEditor({
     extensions: [
@@ -242,23 +263,32 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
       TableHeader,
       TableCell,
       Placeholder.configure({
-        placeholder: placeholder || 'Type / for commands',
+        placeholder:
+          placeholder ||
+          t('notes.v2.editor.commandPlaceholder', { defaultValue: 'Type / for commands' }),
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
     content: value || EMPTY_DOC,
     editorProps: {
       attributes: {
-        class: 'notion-editor-content min-h-[460px] px-14 py-10 text-[15px] text-foreground focus:outline-none',
+        class:
+          'notion-editor-content min-h-[460px] px-14 py-10 text-[15px] text-foreground focus:outline-none',
       },
     },
     onUpdate: ({ editor: nextEditor }: any) => {
       onChange(nextEditor.getJSON());
-      const match = getSlashMatch(nextEditor as NonNullable<ReturnType<typeof useEditor>>, wrapperRef.current);
+      const match = getSlashMatch(
+        nextEditor as NonNullable<ReturnType<typeof useEditor>>,
+        wrapperRef.current
+      );
       setSlashState(match);
     },
     onSelectionUpdate: ({ editor: nextEditor }: any) => {
-      const match = getSlashMatch(nextEditor as NonNullable<ReturnType<typeof useEditor>>, wrapperRef.current);
+      const match = getSlashMatch(
+        nextEditor as NonNullable<ReturnType<typeof useEditor>>,
+        wrapperRef.current
+      );
       setSlashState(match);
     },
   });
@@ -281,6 +311,9 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
       if (bubbleColorRef.current && !bubbleColorRef.current.contains(node)) {
         setBubbleColorOpen(false);
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(node)) {
+        setMoreMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', onPointerDown);
     return () => {
@@ -292,76 +325,83 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
     () => [
       {
         id: 'paragraph',
-        label: 'Text',
-        hint: 'Plain paragraph text',
+        label: t('notes.v2.editor.slash.text.label', { defaultValue: 'Text' }),
+        hint: t('notes.v2.editor.slash.text.hint', { defaultValue: 'Plain paragraph text' }),
         keywords: ['text', 'paragraph'],
         run: current => current.chain().focus().setParagraph().run(),
       },
       {
         id: 'h1',
-        label: 'Heading 1',
-        hint: 'Large section title',
+        label: t('notes.v2.editor.slash.h1.label', { defaultValue: 'Heading 1' }),
+        hint: t('notes.v2.editor.slash.h1.hint', { defaultValue: 'Large section title' }),
         keywords: ['h1', 'heading', 'title'],
         run: current => current.chain().focus().toggleHeading({ level: 1 }).run(),
       },
       {
         id: 'h2',
-        label: 'Heading 2',
-        hint: 'Medium section heading',
+        label: t('notes.v2.editor.slash.h2.label', { defaultValue: 'Heading 2' }),
+        hint: t('notes.v2.editor.slash.h2.hint', { defaultValue: 'Medium section heading' }),
         keywords: ['h2', 'heading', 'subtitle'],
         run: current => current.chain().focus().toggleHeading({ level: 2 }).run(),
       },
       {
         id: 'bullet',
-        label: 'Bullet List',
-        hint: 'Simple bullet points',
+        label: t('notes.v2.editor.slash.bullet.label', { defaultValue: 'Bullet List' }),
+        hint: t('notes.v2.editor.slash.bullet.hint', { defaultValue: 'Simple bullet points' }),
         keywords: ['list', 'bullet', 'ul'],
         run: current => current.chain().focus().toggleBulletList().run(),
       },
       {
         id: 'ordered',
-        label: 'Numbered List',
-        hint: 'Ordered items',
+        label: t('notes.v2.editor.slash.ordered.label', { defaultValue: 'Numbered List' }),
+        hint: t('notes.v2.editor.slash.ordered.hint', { defaultValue: 'Ordered items' }),
         keywords: ['number', 'ordered', 'ol'],
         run: current => current.chain().focus().toggleOrderedList().run(),
       },
       {
         id: 'todo',
-        label: 'To-do List',
-        hint: 'Track tasks with checkboxes',
+        label: t('notes.v2.editor.slash.todo.label', { defaultValue: 'To-do List' }),
+        hint: t('notes.v2.editor.slash.todo.hint', {
+          defaultValue: 'Track tasks with checkboxes',
+        }),
         keywords: ['task', 'todo', 'checkbox'],
         run: current => current.chain().focus().toggleTaskList().run(),
       },
       {
         id: 'quote',
-        label: 'Quote',
-        hint: 'Emphasized quotation block',
+        label: t('notes.v2.editor.slash.quote.label', { defaultValue: 'Quote' }),
+        hint: t('notes.v2.editor.slash.quote.hint', {
+          defaultValue: 'Emphasized quotation block',
+        }),
         keywords: ['quote', 'blockquote'],
         run: current => current.chain().focus().toggleBlockquote().run(),
       },
       {
         id: 'code',
-        label: 'Code Block',
-        hint: 'Formatted code snippet',
+        label: t('notes.v2.editor.slash.code.label', { defaultValue: 'Code Block' }),
+        hint: t('notes.v2.editor.slash.code.hint', { defaultValue: 'Formatted code snippet' }),
         keywords: ['code', 'snippet'],
         run: current => current.chain().focus().toggleCodeBlock().run(),
       },
       {
         id: 'divider',
-        label: 'Divider',
-        hint: 'Horizontal separator line',
+        label: t('notes.v2.editor.slash.divider.label', { defaultValue: 'Divider' }),
+        hint: t('notes.v2.editor.slash.divider.hint', {
+          defaultValue: 'Horizontal separator line',
+        }),
         keywords: ['divider', 'line', 'hr'],
         run: current => current.chain().focus().setHorizontalRule().run(),
       },
       {
         id: 'table',
-        label: 'Table',
-        hint: 'Insert a 3x3 table',
+        label: t('notes.v2.editor.slash.table.label', { defaultValue: 'Table' }),
+        hint: t('notes.v2.editor.slash.table.hint', { defaultValue: 'Insert a 3x3 table' }),
         keywords: ['table', 'grid'],
-        run: current => current.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+        run: current =>
+          current.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
       },
     ],
-    []
+    [t]
   );
 
   const visibleSlashCommands = useMemo(() => {
@@ -377,7 +417,10 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
   }, [slashCommands, slashState?.query]);
 
   const recentColors = useMemo(() => {
-    const merged = [...recentTextColors, ...recentHighlightColors.filter(c => !recentTextColors.includes(c))];
+    const merged = [
+      ...recentTextColors,
+      ...recentHighlightColors.filter(c => !recentTextColors.includes(c)),
+    ];
     return merged.slice(0, 6);
   }, [recentTextColors, recentHighlightColors]);
 
@@ -391,13 +434,17 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
   const toggleLink = () => {
     if (!editor) return;
     const currentHref = editor.getAttributes('link').href as string | null;
-    const nextHref = askForLink(currentHref);
+    const nextHref = globalThis.window.prompt(
+      t('notes.v2.editor.linkPrompt', { defaultValue: 'Paste link URL' }),
+      currentHref || 'https://'
+    );
     if (nextHref === null) return;
-    if (nextHref === '') {
+    const normalizedHref = nextHref.trim();
+    if (!normalizedHref) {
       editor.chain().focus().unsetLink().run();
       return;
     }
-    editor.chain().focus().setLink({ href: nextHref }).run();
+    editor.chain().focus().setLink({ href: normalizedHref }).run();
   };
 
   const setTextColor = (color: string | null) => {
@@ -426,12 +473,140 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
   };
 
   const activeTextColor = (editor?.getAttributes('textStyle').color as string | undefined) || null;
-  const activeHighlightColor = (editor?.getAttributes('highlight').color as string | undefined) || null;
+  const activeHighlightColor =
+    (editor?.getAttributes('highlight').color as string | undefined) || null;
+  const isStudyPreset = preset === 'study';
+
+  const insertLearningTemplate = (kind: 'grammar' | 'mistake' | 'example') => {
+    if (!editor) return;
+    if (kind === 'grammar') {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: t('notes.v2.editor.study.grammarPoint', { defaultValue: 'Grammar Point:' }),
+            },
+          ],
+        })
+        .run();
+      return;
+    }
+    if (kind === 'mistake') {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: 'bulletList',
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: t('notes.v2.editor.study.commonMistake', {
+                        defaultValue: 'Common Mistake:',
+                      }),
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: t('notes.v2.editor.study.correctExpression', {
+                        defaultValue: 'Correct Expression:',
+                      }),
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: t('notes.v2.editor.study.reason', { defaultValue: 'Reason:' }),
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        })
+        .run();
+      return;
+    }
+    editor
+      .chain()
+      .focus()
+      .insertContent([
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: t('notes.v2.editor.study.exampleSentence', {
+                defaultValue: 'Example Sentence:',
+              }),
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: t('notes.v2.editor.study.translation', { defaultValue: 'Translation:' }),
+            },
+          ],
+        },
+      ])
+      .run();
+  };
+
+  const applyCloze = () => {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    const selected = editor.state.doc.textBetween(from, to, ' ').trim();
+    if (selected) {
+      editor
+        .chain()
+        .focus()
+        .insertContent(
+          t('notes.v2.editor.study.clozeFormat', {
+            text: selected,
+            defaultValue: '____ ({{text}})',
+          })
+        )
+        .run();
+      return;
+    }
+    editor.chain().focus().insertContent('____').run();
+  };
 
   const renderColorPanel = () => (
     <div className="w-[270px] rounded-2xl border border-border bg-card p-3 shadow-2xl">
       <div>
-        <p className="text-sm font-semibold text-foreground">Recently Used</p>
+        <p className="text-sm font-semibold text-foreground">
+          {t('notes.v2.editor.colors.recent', { defaultValue: 'Recently Used' })}
+        </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {recentColors.length === 0 ? (
             <span className="inline-flex h-8 w-8 rounded-full border border-border" />
@@ -447,7 +622,10 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border hover:border-foreground/40"
                 title={color}
               >
-                <span className="h-[22px] w-[22px] rounded-full" style={{ backgroundColor: color }} />
+                <span
+                  className="h-[22px] w-[22px] rounded-full"
+                  style={{ backgroundColor: color }}
+                />
               </button>
             ))
           )}
@@ -455,9 +633,11 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
       </div>
 
       <div className="mt-3.5">
-        <p className="text-sm font-semibold text-foreground">Text Color</p>
+        <p className="text-sm font-semibold text-foreground">
+          {t('notes.v2.editor.colors.textTitle', { defaultValue: 'Text Color' })}
+        </p>
         <div className="mt-2 grid grid-cols-5 gap-1.5">
-          {TEXT_COLORS.map(item => (
+          {textColors.map(item => (
             <ColorToken
               key={item.label}
               type="text"
@@ -471,9 +651,11 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
       </div>
 
       <div className="mt-3.5">
-        <p className="text-sm font-semibold text-foreground">Highlight Color</p>
+        <p className="text-sm font-semibold text-foreground">
+          {t('notes.v2.editor.colors.highlightTitle', { defaultValue: 'Highlight Color' })}
+        </p>
         <div className="mt-2 grid grid-cols-5 gap-1.5">
-          {HIGHLIGHT_COLORS.map(item => (
+          {highlightColors.map(item => (
             <ColorToken
               key={item.label}
               type="highlight"
@@ -489,66 +671,95 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
   );
 
   if (!editor) {
-    return <div className="rounded-xl border border-border bg-muted p-4 text-sm">Loading editor...</div>;
+    return (
+      <div className="rounded-xl border border-border bg-muted p-4 text-sm">
+        {t('notes.v2.editor.loading', { defaultValue: 'Loading editor...' })}
+      </div>
+    );
   }
 
   return (
-    <div ref={wrapperRef} className="notion-editor-shell relative rounded-2xl border border-border bg-card shadow-sm">
+    <div
+      ref={wrapperRef}
+      className="notion-editor-shell relative rounded-2xl border border-border bg-card shadow-sm"
+    >
       <div className="sticky top-0 z-20 border-b border-border/80 bg-card/85 px-3 py-2 backdrop-blur">
         <div className="flex flex-wrap items-center gap-1">
-          <ToolButton label="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-            <Heading1 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-            <Heading2 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-            <Heading3 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Bullet List" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.bulletList', { defaultValue: 'Bullet List' })}
+            active={editor.isActive('bulletList')}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
             <List className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Numbered List" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.numberedList', { defaultValue: 'Numbered List' })}
+            active={editor.isActive('orderedList')}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
             <ListOrdered className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Task List" active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.taskList', { defaultValue: 'Task List' })}
+            active={editor.isActive('taskList')}
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
             <CheckSquare className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Quote" active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.quote', { defaultValue: 'Quote' })}
+            active={editor.isActive('blockquote')}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          >
             <Quote className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Code Block" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
-            <Code2 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Table" active={editor.isActive('table')} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-            <Table2 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Divider" active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-            <Minus className="h-4 w-4" />
           </ToolButton>
 
           <span className="mx-1 h-5 w-px bg-border" />
 
-          <ToolButton label="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.bold', { defaultValue: 'Bold' })}
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
             <Bold className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Italic" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
-            <Italic className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton label="Underline" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          {!isStudyPreset ? (
+            <ToolButton
+              label={t('notes.v2.editor.actions.italic', { defaultValue: 'Italic' })}
+              active={editor.isActive('italic')}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+            >
+              <Italic className="h-4 w-4" />
+            </ToolButton>
+          ) : null}
+          <ToolButton
+            label={t('notes.v2.editor.actions.underline', { defaultValue: 'Underline' })}
+            active={editor.isActive('underline')}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
             <UnderlineIcon className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Strike" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.strike', { defaultValue: 'Strike' })}
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
             <Strikethrough className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Link" active={editor.isActive('link')} onClick={toggleLink}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.link', { defaultValue: 'Link' })}
+            active={editor.isActive('link')}
+            onClick={toggleLink}
+          >
             <Link2 className="h-4 w-4" />
           </ToolButton>
 
           <div ref={toolbarColorRef} className="relative">
             <button
               type="button"
-              title="Text and Highlight colors"
+              title={t('notes.v2.editor.actions.textAndHighlightColors', {
+                defaultValue: 'Text and Highlight colors',
+              })}
               onMouseDown={event => {
                 event.preventDefault();
                 setBubbleColorOpen(false);
@@ -560,20 +771,193 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
                   : 'hover:bg-muted/70 hover:text-foreground'
               }`}
             >
-              <span style={{ color: activeTextColor || undefined }} className="text-lg font-medium leading-none">
+              <span
+                style={{ color: activeTextColor || undefined }}
+                className="text-lg font-medium leading-none"
+              >
                 A
               </span>
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            {toolbarColorOpen ? <div className="absolute right-0 top-10 z-30">{renderColorPanel()}</div> : null}
+            {toolbarColorOpen ? (
+              <div className="absolute right-0 top-10 z-30">{renderColorPanel()}</div>
+            ) : null}
+          </div>
+
+          {isStudyPreset ? (
+            <>
+              <span className="mx-1 h-5 w-px bg-border" />
+              <ToolButton
+                label={t('notes.v2.editor.study.keyWord', { defaultValue: 'Key Word' })}
+                active={editor.isActive('underline') && editor.isActive('highlight')}
+                onClick={() =>
+                  editor
+                    .chain()
+                    .focus()
+                    .toggleUnderline()
+                    .toggleHighlight({
+                      color: 'var(--editor-highlight-yellow, hsl(var(--accent)))',
+                    })
+                    .run()
+                }
+              >
+                <span className="text-xs font-semibold">
+                  {t('notes.v2.editor.study.keyWord', { defaultValue: 'Key Word' })}
+                </span>
+              </ToolButton>
+              <ToolButton
+                label={t('notes.v2.editor.study.grammarTemplate', {
+                  defaultValue: 'Grammar Template',
+                })}
+                active={false}
+                onClick={() => insertLearningTemplate('grammar')}
+              >
+                <span className="text-xs font-semibold">
+                  {t('notes.v2.editor.study.grammarPointShort', { defaultValue: 'Grammar' })}
+                </span>
+              </ToolButton>
+              <ToolButton
+                label={t('notes.v2.editor.study.mistakeTemplate', {
+                  defaultValue: 'Mistake Template',
+                })}
+                active={false}
+                onClick={() => insertLearningTemplate('mistake')}
+              >
+                <span className="text-xs font-semibold">
+                  {t('notes.v2.editor.study.mistakeShort', { defaultValue: 'Mistake' })}
+                </span>
+              </ToolButton>
+              <ToolButton
+                label={t('notes.v2.editor.study.exampleTemplate', {
+                  defaultValue: 'Example Template',
+                })}
+                active={false}
+                onClick={() => insertLearningTemplate('example')}
+              >
+                <span className="text-xs font-semibold">
+                  {t('notes.v2.editor.study.exampleShort', { defaultValue: 'Example' })}
+                </span>
+              </ToolButton>
+              <ToolButton
+                label={t('notes.v2.editor.study.clozeTemplate', {
+                  defaultValue: 'Cloze Template',
+                })}
+                active={false}
+                onClick={applyCloze}
+              >
+                <span className="text-xs font-semibold">
+                  {t('notes.v2.editor.study.clozeShort', { defaultValue: 'Cloze' })}
+                </span>
+              </ToolButton>
+            </>
+          ) : null}
+
+          <span className="mx-1 h-5 w-px bg-border" />
+
+          <div ref={moreMenuRef} className="relative">
+            <ToolButton
+              label={t('notes.v2.editor.actions.moreTools', { defaultValue: 'More tools' })}
+              active={moreMenuOpen}
+              onClick={() => setMoreMenuOpen(prev => !prev)}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </ToolButton>
+            {moreMenuOpen ? (
+              <div className="absolute left-0 top-10 z-30 w-52 rounded-xl border border-border bg-card p-1.5 shadow-xl">
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor.chain().focus().toggleHeading({ level: 1 }).run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Heading1 className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.h1', { defaultValue: 'Heading 1' })}
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor.chain().focus().toggleHeading({ level: 2 }).run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Heading2 className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.h2', { defaultValue: 'Heading 2' })}
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor.chain().focus().toggleHeading({ level: 3 }).run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Heading3 className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.h3', { defaultValue: 'Heading 3' })}
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor.chain().focus().toggleCodeBlock().run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Code2 className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.codeBlock', { defaultValue: 'Code Block' })}
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor
+                      .chain()
+                      .focus()
+                      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                      .run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Table2 className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.table', { defaultValue: 'Table' })}
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={event => {
+                    event.preventDefault();
+                    editor.chain().focus().setHorizontalRule().run();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Minus className="h-4 w-4" />{' '}
+                  {t('notes.v2.editor.actions.divider', { defaultValue: 'Divider' })}
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <span className="mx-1 h-5 w-px bg-border" />
 
-          <ToolButton label="Undo" active={false} onClick={() => editor.chain().focus().undo().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.undo', { defaultValue: 'Undo' })}
+            active={false}
+            onClick={() => editor.chain().focus().undo().run()}
+          >
             <Undo2 className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Redo" active={false} onClick={() => editor.chain().focus().redo().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.redo', { defaultValue: 'Redo' })}
+            active={false}
+            onClick={() => editor.chain().focus().redo().run()}
+          >
             <Redo2 className="h-4 w-4" />
           </ToolButton>
         </div>
@@ -581,23 +965,41 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
 
       <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
         <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-card/95 p-1.5 text-foreground shadow-xl">
-          <ToolButton label="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.bold', { defaultValue: 'Bold' })}
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
             <Bold className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Italic" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.italic', { defaultValue: 'Italic' })}
+            active={editor.isActive('italic')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
             <Italic className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Underline" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.underline', { defaultValue: 'Underline' })}
+            active={editor.isActive('underline')}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
             <UnderlineIcon className="h-4 w-4" />
           </ToolButton>
-          <ToolButton label="Strike" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <ToolButton
+            label={t('notes.v2.editor.actions.strike', { defaultValue: 'Strike' })}
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
             <Strikethrough className="h-4 w-4" />
           </ToolButton>
 
           <div ref={bubbleColorRef} className="relative">
             <button
               type="button"
-              title="Text and Highlight colors"
+              title={t('notes.v2.editor.actions.textAndHighlightColors', {
+                defaultValue: 'Text and Highlight colors',
+              })}
               onMouseDown={event => {
                 event.preventDefault();
                 setToolbarColorOpen(false);
@@ -609,12 +1011,17 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
                   : 'hover:bg-muted/70 hover:text-foreground'
               }`}
             >
-              <span style={{ color: activeTextColor || undefined }} className="text-lg font-medium leading-none">
+              <span
+                style={{ color: activeTextColor || undefined }}
+                className="text-lg font-medium leading-none"
+              >
                 A
               </span>
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            {bubbleColorOpen ? <div className="absolute right-0 top-10 z-30">{renderColorPanel()}</div> : null}
+            {bubbleColorOpen ? (
+              <div className="absolute right-0 top-10 z-30">{renderColorPanel()}</div>
+            ) : null}
           </div>
         </div>
       </BubbleMenu>
@@ -627,7 +1034,7 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
           style={{ left: `${slashState.left}px`, top: `${slashState.top}px` }}
         >
           <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Slash Commands
+            {t('notes.v2.editor.slash.title', { defaultValue: 'Slash Commands' })}
           </p>
           <div className="space-y-1">
             {visibleSlashCommands.slice(0, 8).map(item => (

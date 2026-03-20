@@ -6,6 +6,10 @@ import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 import { toErrorMessage } from './errors';
 import { getPath, isRecord, parseJson, readString } from './validation';
+import { assertProductionRuntimeEnv } from './env';
+import { captureServerException, captureServerMessage } from './sentry';
+
+assertProductionRuntimeEnv();
 
 const readStringish = (value: unknown, path: readonly string[]): string | undefined => {
   const v = getPath(value, path);
@@ -222,6 +226,11 @@ export const createCheckout = action({
       return { checkoutUrl };
     } catch (error: unknown) {
       console.error('[LemonSqueezy] Error creating checkout:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'lemonsqueezy',
+        operation: 'createCheckout',
+        plan: args.plan,
+      });
       throw error instanceof Error ? error : new Error(toErrorMessage(error));
     }
   },
@@ -276,6 +285,10 @@ export const getVariantPrices = action({
       variants = parseVariantPrices(data);
     } catch (error: unknown) {
       console.error('[LemonSqueezy] Failed to load variant prices:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'lemonsqueezy',
+        operation: 'getVariantPrices',
+      });
       return prices;
     } finally {
       clearTimeout(timeout);
@@ -341,12 +354,20 @@ export const handleWebhook = action({
 
     if (!webhookSecret) {
       console.error(`Missing ${WEBHOOK_SECRET_ENV} environment variable`);
+      await captureServerMessage(`Missing ${WEBHOOK_SECRET_ENV}`, 'error', {
+        module: 'lemonsqueezy',
+        operation: 'handleWebhook',
+      });
       return { success: false, error: 'Webhook secret not configured' };
     }
 
     // Verify signature
     if (!verifySignature(args.body, args.signature, webhookSecret)) {
       console.error('[LemonSqueezy] Invalid webhook signature');
+      await captureServerMessage('Invalid LemonSqueezy webhook signature', 'warning', {
+        module: 'lemonsqueezy',
+        operation: 'handleWebhook',
+      });
       return { success: false, error: 'Invalid signature' };
     }
 
@@ -356,6 +377,10 @@ export const handleWebhook = action({
       payload = parseJson(args.body);
     } catch {
       console.error('[LemonSqueezy] Failed to parse webhook body');
+      await captureServerMessage('Failed to parse LemonSqueezy webhook payload', 'warning', {
+        module: 'lemonsqueezy',
+        operation: 'handleWebhook',
+      });
       return { success: false, error: 'Invalid JSON' };
     }
 
@@ -383,6 +408,10 @@ export const handleWebhook = action({
       return { success: true };
     } catch (error: unknown) {
       console.error('[LemonSqueezy] Error processing webhook:', toErrorMessage(error));
+      await captureServerException(error, {
+        module: 'lemonsqueezy',
+        operation: 'handleWebhook',
+      });
       return { success: false, error: toErrorMessage(error) };
     }
   },

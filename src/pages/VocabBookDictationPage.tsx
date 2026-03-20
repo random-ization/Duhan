@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
 import { VocabBookDictationSkeleton } from '../components/common';
@@ -29,6 +30,9 @@ type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 
 const KOREAN_VOICE = 'ko-KR-SunHiNeural';
 const ZH_VOICE = 'zh-CN-XiaoxiaoNeural';
+const EN_VOICE = 'en-US-JennyNeural';
+const VI_VOICE = 'vi-VN-HoaiMyNeural';
+const MN_VOICE = 'mn-MN-YesuiNeural';
 
 const PLAY_COUNT_OPTIONS = [1, 2, 3] as const;
 const GAP_SECOND_OPTIONS = [2, 4, 6, 8] as const;
@@ -36,6 +40,22 @@ const PAGE_SIZE = 80;
 const PREFETCH_THRESHOLD = 10;
 
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+const resolveMeaningVoice = (language?: string): string => {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return EN_VOICE;
+  if (normalized.startsWith('vi')) return VI_VOICE;
+  if (normalized.startsWith('mn')) return MN_VOICE;
+  return ZH_VOICE;
+};
+
+const getLocalizedMeaning = (word: VocabBookItemDto, language?: string): string =>
+  getLocalizedContent(word as never, 'meaning', (language || 'zh') as never) ||
+  word.meaning ||
+  word.meaningEn ||
+  word.meaningVi ||
+  word.meaningMn ||
+  '';
 
 const formatTemplate = (template: string, vars: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
@@ -506,6 +526,7 @@ const VocabBookDictationPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = useMemo(() => getLabels(language), [language]);
+  const meaningVoice = useMemo(() => resolveMeaningVoice(language), [language]);
   const [params] = useSearchParams();
   const { speak, stop } = useTTS();
 
@@ -610,11 +631,8 @@ const VocabBookDictationPage: React.FC = () => {
     if (!w) return;
 
     const gapMs = gapSeconds * 1000;
-    const promptText =
-      mode === 'HEAR_PRONUNCIATION'
-        ? w.word
-        : w.meaning || w.meaningEn || w.meaningVi || w.meaningMn || '';
-    const voice = mode === 'HEAR_PRONUNCIATION' ? KOREAN_VOICE : ZH_VOICE;
+    const promptText = mode === 'HEAR_PRONUNCIATION' ? w.word : getLocalizedMeaning(w, language);
+    const voice = mode === 'HEAR_PRONUNCIATION' ? KOREAN_VOICE : meaningVoice;
 
     if (!promptText) return;
 

@@ -7,13 +7,9 @@ import NoteCard from '../components/notebook/NoteCard';
 import NoteDetailModal from '../components/notebook/NoteDetailModal';
 import type { NotebookListResult } from '../components/notebook/types';
 import { qRef } from '../utils/convexRefs';
-import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Tabs, TabsList, TabsTrigger } from '../components/ui';
 import NotebookV2Page from './NotebookV2Page';
-
-const ENABLE_NOTEBOOK_V2 = true;
 
 // Tab configuration
 const TABS = [
@@ -31,7 +27,7 @@ interface Note {
   createdAt: string;
 }
 
-const DesktopNotebookPage: React.FC = () => {
+export const DesktopNotebookPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState('ALL');
@@ -229,17 +225,7 @@ const EmptyState: React.FC<{
 );
 
 const NotebookPage: React.FC = () => {
-  const forceLegacyFromQuery =
-    typeof globalThis.window !== 'undefined' &&
-    new URLSearchParams(globalThis.window.location.search).get('legacyNotebook') === '1';
-
-  if (ENABLE_NOTEBOOK_V2 && !forceLegacyFromQuery) {
-    return <NotebookV2Page />;
-  }
-
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileNotebookPage />;
-  return <DesktopNotebookPage />;
+  return <NotebookV2Page />;
 };
 
 export default NotebookPage;

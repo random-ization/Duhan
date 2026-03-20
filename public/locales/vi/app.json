@@ -623,7 +623,11 @@
           "sectionReading": "Đọc",
           "sectionListening": "Nghe",
           "pageHeader": "TOPIK II vòng {{round}} mã {{paperType}} · {{period}} ({{section}})",
-          "range": "TOPIK II {{section}} (Câu 1 ~ Câu {{count}})"
+          "range": "TOPIK II {{section}} (Câu 1 ~ Câu {{count}})",
+          "saveToNotebookTitle": "Lưu phân tích AI",
+          "saveToNotebookDescription": "Chọn sổ tay hoặc tạo mới trước khi lưu.",
+          "saveToNotebookConfirm": "Lưu vào sổ tay",
+          "saveToNotebookCancel": "Hủy"
         }
       },
       "totalAttempts": "Số lần thi",
@@ -1108,7 +1112,10 @@
         "reading": "Đọc",
         "textbook": "Giáo trình",
         "dictionary": "Từ điển",
-        "practice": "Luyện tập"
+        "practice": "Luyện tập",
+        "manual": "Thủ công",
+        "vocab": "Từ vựng",
+        "grammar": "Ngữ pháp"
       },
       "editor": {
         "loading": "Đang tải trình soạn thảo...",
@@ -1122,7 +1129,198 @@
         "undo": "Hoàn tác",
         "redo": "Làm lại",
         "slashTip": "Mẹo: gõ `/` để chèn khối nhanh.",
-        "toggleSummary": "Thu gọn"
+        "toggleSummary": "Thu gọn",
+        "commandPlaceholder": "Gõ / để xem lệnh",
+        "linkPrompt": "Dán URL liên kết",
+        "slash": {
+          "title": "Lệnh Slash",
+          "text": {
+            "label": "Text",
+            "hint": "Plain paragraph text"
+          },
+          "h1": {
+            "label": "Heading 1",
+            "hint": "Large section title"
+          },
+          "h2": {
+            "label": "Heading 2",
+            "hint": "Medium section heading"
+          },
+          "bullet": {
+            "label": "Bullet List",
+            "hint": "Simple bullet points"
+          },
+          "ordered": {
+            "label": "Numbered List",
+            "hint": "Ordered items"
+          },
+          "todo": {
+            "label": "To-do List",
+            "hint": "Track tasks with checkboxes"
+          },
+          "quote": {
+            "label": "Quote",
+            "hint": "Emphasized quotation block"
+          },
+          "code": {
+            "label": "Code Block",
+            "hint": "Formatted code snippet"
+          },
+          "divider": {
+            "label": "Divider",
+            "hint": "Horizontal separator line"
+          },
+          "table": {
+            "label": "Table",
+            "hint": "Insert a 3x3 table"
+          }
+        },
+        "colors": {
+          "recent": "Dùng gần đây",
+          "textTitle": "Màu chữ",
+          "highlightTitle": "Màu tô sáng",
+          "text": {
+            "default": "Default",
+            "gray": "Gray",
+            "brown": "Brown",
+            "orange": "Orange",
+            "yellow": "Yellow",
+            "green": "Green",
+            "blue": "Blue",
+            "purple": "Purple",
+            "pink": "Pink",
+            "red": "Red"
+          },
+          "highlight": {
+            "default": "Default",
+            "grayBg": "Gray BG",
+            "brownBg": "Brown BG",
+            "orangeBg": "Orange BG",
+            "yellowBg": "Yellow BG",
+            "greenBg": "Green BG",
+            "blueBg": "Blue BG",
+            "purpleBg": "Purple BG",
+            "pinkBg": "Pink BG",
+            "redBg": "Red BG"
+          }
+        },
+        "actions": {
+          "bulletList": "Bullet List",
+          "numberedList": "Numbered List",
+          "taskList": "Task List",
+          "quote": "Quote",
+          "bold": "Bold",
+          "italic": "Italic",
+          "underline": "Underline",
+          "strike": "Strike",
+          "link": "Link",
+          "textAndHighlightColors": "Text and Highlight colors",
+          "moreTools": "Công cụ khác",
+          "h1": "Heading 1",
+          "h2": "Heading 2",
+          "h3": "Heading 3",
+          "codeBlock": "Code Block",
+          "table": "Table",
+          "divider": "Divider",
+          "undo": "Undo",
+          "redo": "Redo"
+        },
+        "study": {
+          "keyWord": "Từ khóa",
+          "grammarTemplate": "Mẫu ngữ pháp",
+          "grammarPointShort": "Ngữ pháp",
+          "mistakeTemplate": "Mẫu lỗi sai",
+          "mistakeShort": "Lỗi sai",
+          "exampleTemplate": "Mẫu ví dụ",
+          "exampleShort": "Ví dụ",
+          "clozeTemplate": "Mẫu điền khuyết",
+          "clozeShort": "Điền khuyết",
+          "grammarPoint": "Điểm ngữ pháp:",
+          "commonMistake": "Lỗi thường gặp:",
+          "correctExpression": "Cách diễn đạt đúng:",
+          "reason": "Lý do:",
+          "exampleSentence": "Câu ví dụ:",
+          "translation": "Bản dịch:",
+          "clozeFormat": "____ ({{text}})"
+        }
+      },
+      "cardType": {
+        "vocab": "Từ vựng",
+        "grammar": "Ngữ pháp",
+        "mistake": "Lỗi sai",
+        "quoteCard": "Ghi chú trích dẫn",
+        "note": "Ghi chú"
+      },
+      "page": {
+        "newNoteTitle": "Ghi chú mới",
+        "titleAllNotes": "Tất cả ghi chú",
+        "subtitleAllNotes": "Quản lý toàn bộ ghi chú học tập và bắt đầu ôn tập thông minh.",
+        "todayReviewTitle": "Nhiệm vụ ôn tập hôm nay",
+        "todayReviewSummary": "Bạn có {{count}} mục cần ôn hôm nay.",
+        "viewGallery": "Xem dạng thẻ",
+        "viewList": "Xem dạng danh sách",
+        "viewTable": "Xem dạng bảng",
+        "searchPlaceholder": "Tìm trích dẫn hoặc ghi chú...",
+        "sourceOption": "{{label}} ({{count}})",
+        "newNoteButton": "Ghi chú mới",
+        "emptyNotes": "Chưa có ghi chú. Nhấn “Ghi chú mới” để bắt đầu.",
+        "clickToViewAndEdit": "Nhấn để xem và chỉnh sửa",
+        "table": {
+          "title": "Tiêu đề",
+          "quote": "Trích dẫn",
+          "source": "Nguồn",
+          "status": "Trạng thái",
+          "updatedAt": "Cập nhật",
+          "emptyQuote": "—"
+        },
+        "editNote": "Chỉnh sửa ghi chú",
+        "restore": "Khôi phục",
+        "expand": "Phóng to",
+        "saveState": {
+          "saving": "Đang lưu...",
+          "dirty": "Chưa lưu",
+          "saved": "Đã lưu",
+          "error": "Lưu thất bại"
+        },
+        "retrySave": "Thử lưu lại",
+        "quoteSectionTitle": "Đoạn trích gốc",
+        "quoteSectionHint": "Giữ định dạng nhấn mạnh từ nguồn",
+        "quoteMissing": "Không tìm thấy đoạn trích gốc",
+        "myNote": "Ghi chú của tôi",
+        "quoteEditorPlaceholder": "Viết hiểu biết, câu hỏi hoặc bản dịch của bạn cho câu này.",
+        "editorPlaceholder": "Bắt đầu viết suy nghĩ của bạn tại đây..."
+      },
+      "context": {
+        "smartNotebook": "Sổ tay thông minh",
+        "smartNotebookSubtitle": "Xem nhanh sổ tay",
+        "allNotes": "Tất cả ghi chú",
+        "reviewPlan": "Kế hoạch ôn tập",
+        "reviewPlanHint": "Mở danh sách ôn tập hôm nay",
+        "pendingReview": "Mục chờ ôn",
+        "startSmartReview": "Bắt đầu ôn tập thông minh",
+        "noNotebooks": "Chưa có sổ tay",
+        "noNotebooksHint": "Tạo ghi chú đầu tiên để tự động tạo sổ tay."
+      }
+    },
+    "picker": {
+      "defaultTitle": "Lưu vào sổ tay",
+      "defaultDescription": "Chọn sổ tay hoặc tạo nhanh trước khi lưu.",
+      "defaultConfirm": "Lưu vào sổ tay",
+      "defaultCancel": "Hủy",
+      "meta": "{{noteCount}} ghi chú · {{reviewCount}} chờ ôn",
+      "empty": "Chưa có sổ tay. Hãy tạo một sổ tay trước.",
+      "newNotebook": "Tạo sổ tay mới",
+      "newNotebookPlaceholder": "Ví dụ: TOPIK ôn tập",
+      "creating": "Đang tạo...",
+      "create": "Tạo",
+      "myNotebooks": "Sổ tay của tôi",
+      "annotation": {
+        "title": "Lưu ghi chú trích dẫn",
+        "descriptionUpsert": "Chọn sổ tay cho ghi chú này. Hủy sẽ chỉ giữ đánh dấu.",
+        "descriptionSaveNote": "Chọn sổ tay cho ghi chú này. Hủy sẽ bỏ qua đồng bộ sổ tay.",
+        "descriptionUserActions": "Chọn sổ tay. Hủy sẽ chỉ giữ highlight/chú thích.",
+        "confirm": "Lưu vào sổ tay",
+        "cancel": "Hủy"
       }
     }
   },

@@ -416,6 +416,9 @@ export default defineSchema({
 
     displayOrder: v.number(),
     customNote: v.optional(v.string()),
+    customNoteEn: v.optional(v.string()),
+    customNoteVi: v.optional(v.string()),
+    customNoteMn: v.optional(v.string()),
   }).index('by_course_unit', ['courseId', 'unitId']),
 
   // User Grammar Progress

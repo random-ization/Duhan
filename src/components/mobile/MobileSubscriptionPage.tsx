@@ -9,6 +9,7 @@ import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
 import { buildPricingDetailsPath } from '../../utils/subscriptionPlan';
+import { trackEvent } from '../../utils/analytics';
 import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { Button } from '../ui';
 
@@ -85,6 +86,12 @@ export const MobileSubscriptionPage: React.FC = () => {
   }, [getVariantPrices]);
 
   const handleSubscribe = async () => {
+    trackEvent('checkout_start', {
+      language: i18n.language,
+      plan: billingInterval,
+      source: 'mobile_subscription',
+    });
+
     if (!user) {
       navigate(`/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(billingInterval))}`);
       return;
@@ -103,6 +110,11 @@ export const MobileSubscriptionPage: React.FC = () => {
         },
         { retries: 1, initialDelayMs: 250 }
       );
+      trackEvent('checkout_success', {
+        language: i18n.language,
+        plan: billingInterval,
+        source: 'mobile_subscription',
+      });
       globalThis.location.href = checkoutUrl;
     } catch (error) {
       const err = error as Error;

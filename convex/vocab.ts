@@ -1793,8 +1793,11 @@ export const getVocabBookPage = query({
 
             if (searchQuery) {
               const loweredWord = word.word.toLowerCase();
-              const loweredMeaning = (word.meaning || '').toLowerCase();
-              if (!loweredWord.includes(searchQuery) && !loweredMeaning.includes(searchQuery)) {
+              const loweredMeanings = [word.meaning, word.meaningEn, word.meaningVi, word.meaningMn]
+                .filter((item): item is string => typeof item === 'string')
+                .map(item => item.toLowerCase());
+              const matchedMeaning = loweredMeanings.some(item => item.includes(searchQuery));
+              if (!loweredWord.includes(searchQuery) && !matchedMeaning) {
                 continue;
               }
             }

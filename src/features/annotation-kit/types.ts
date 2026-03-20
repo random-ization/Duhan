@@ -1,4 +1,5 @@
 export type AnnotationKitColor = 'yellow' | 'green' | 'blue' | 'pink' | null;
+export type AnnotationSelectionKind = 'word' | 'phrase' | 'sentence';
 
 export interface AnnotationAnchor {
   blockId: string;
@@ -19,4 +20,5 @@ export interface AnnotationToolbarState {
   position: AnnotationToolbarPosition | null;
   selectionText: string;
   anchor: AnnotationAnchor | null;
+  selectionKind?: AnnotationSelectionKind;
 }

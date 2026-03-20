@@ -3,13 +3,21 @@ import { Volume2, Plus, ArrowRight, Book } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../common/BottomSheet';
 import { useTTS } from '../../hooks/useTTS';
+import { getLocalizedContent } from '../../utils/languageUtils';
 import { Button } from '../ui';
 
 // Define types locally or import if shared (mocking for speed/self-containment)
 interface GrammarMatch {
   id: string;
   title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
   summary: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
   type: string;
   level: string;
 }
@@ -35,8 +43,9 @@ export function MobileDictionarySheet({
   onClose,
   onSave,
 }: Readonly<MobileDictionarySheetProps>) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { speak } = useTTS();
+  const language = (i18n.language || 'zh') as never;
 
   // Safety check for grammarMatches being undefined
   const safeGrammarMatches = useMemo(() => grammarMatches || [], [grammarMatches]);
@@ -100,12 +109,16 @@ export function MobileDictionarySheet({
               {safeGrammarMatches.map(g => (
                 <div key={g.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-foreground">{g.title}</span>
+                    <span className="font-bold text-foreground">
+                      {getLocalizedContent(g as never, 'title', language) || g.title}
+                    </span>
                     <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
                       {g.level}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-snug">{g.summary}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">
+                    {getLocalizedContent(g as never, 'summary', language) || g.summary}
+                  </p>
                 </div>
               ))}
             </div>
@@ -122,7 +135,7 @@ export function MobileDictionarySheet({
             className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-[20px] font-bold text-lg shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Plus strokeWidth={3} size={20} />
-            {t('mobileDictionarySheet.saveToNotebook', { defaultValue: 'Save to Notebook' })}
+            {t('mobileDictionarySheet.saveToNotebook', { defaultValue: 'Save to Vocab' })}
           </Button>
         </div>
       </div>

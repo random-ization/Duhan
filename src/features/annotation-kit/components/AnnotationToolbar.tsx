@@ -4,10 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../../components/ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../../../components/ui';
-import type { AnnotationKitColor, AnnotationToolbarPosition } from '../types';
+import type {
+  AnnotationKitColor,
+  AnnotationSelectionKind,
+  AnnotationToolbarPosition,
+} from '../types';
+import { classifySelectionKind } from '../utils/selection';
 
 interface AnnotationToolbarLabels {
   addNote?: string;
+  sentenceNote?: string;
   saveToVocab?: string;
   lookup?: string;
   close?: string;
@@ -20,6 +26,7 @@ interface AnnotationToolbarProps {
   position: AnnotationToolbarPosition | null;
   selectedColor: AnnotationKitColor;
   selectionText?: string;
+  selectionKind?: AnnotationSelectionKind;
   labels?: AnnotationToolbarLabels;
   onAddNote: () => void;
   onHighlight: (color: AnnotationKitColor) => void;
@@ -51,6 +58,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   position,
   selectedColor,
   selectionText,
+  selectionKind,
   labels,
   onAddNote,
   onHighlight,
@@ -63,6 +71,8 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [vocabSaving, setVocabSaving] = useState(false);
   const [vocabSaved, setVocabSaved] = useState(false);
+  const effectiveSelectionKind = selectionKind || classifySelectionKind(selectionText || '');
+  const isWordSelection = effectiveSelectionKind === 'word';
 
   if (!visible || !position) return null;
 
@@ -101,92 +111,124 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       }}
     >
       <div className="bg-card shadow-xl border border-border rounded-lg flex items-center p-1 gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={onAddNote}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
-        >
-          <FileText className="w-4 h-4 text-muted-foreground" />
-          {labels?.addNote || t('addNote', { defaultValue: 'Add note' })}
-        </Button>
-
-        <div className="w-px h-4 bg-muted" />
-
-        <div className="relative">
-          <DropdownMenu open={showColorPicker} onOpenChange={setShowColorPicker}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
-              >
-                <div className="relative">
-                  <Type className="w-4 h-4 text-muted-foreground" />
-                  <div
-                    className={`absolute -bottom-1 left-0 right-0 h-1 rounded-sm ${COLORS.find(c => c.name === selectedColor)?.indicator || (selectedColor ? '' : 'bg-muted')}`}
-                  />
-                </div>
-                <ChevronDown className="w-3 h-3 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              unstyled
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card shadow-lg rounded-lg border border-border p-2 flex gap-1 z-[60]"
+        {isWordSelection && onSaveToVocab && selectionText ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={handleSaveToVocab}
+            disabled={vocabSaving || vocabSaved}
+            loading={vocabSaving}
+            loadingText={
+              labels?.saving || t('annotationMenu.saving', { defaultValue: 'Saving...' })
+            }
+            className={getSaveBtnClass()}
+          >
+            {vocabSaved ? (
+              <>
+                <Check className="w-4 h-4" />
+                {labels?.saved || t('saved', { defaultValue: 'Saved' })}
+              </>
+            ) : (
+              <>
+                <BookOpen className="w-4 h-4" />
+                {labels?.saveToVocab ||
+                  t('annotationMenu.saveToVocab', { defaultValue: 'Save to Vocab' })}
+              </>
+            )}
+          </Button>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onAddNote}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
             >
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              {labels?.addNote || t('addNote', { defaultValue: 'Add note' })}
+            </Button>
+
+            <div className="w-px h-4 bg-muted" />
+
+            <div className="relative">
+              <DropdownMenu open={showColorPicker} onOpenChange={setShowColorPicker}>
+                <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="auto"
-                    onClick={() => {
-                      onColorChange?.(null);
-                      onHighlight(null);
-                      setShowColorPicker(false);
-                    }}
-                    aria-label={t('annotationMenu.none', { defaultValue: 'None' })}
-                    className={`w-6 h-6 rounded-full border border-border bg-card transition-all ${
-                      selectedColor === null ? 'ring-2 ring-slate-400 ring-offset-1' : 'hover:scale-110'
-                    }`}
-                  />
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent side="top">
-                    {t('annotationMenu.none', { defaultValue: 'None' })}
-                  </TooltipContent>
-                </TooltipPortal>
-              </Tooltip>
-              {COLORS.map(color => (
-                <Tooltip key={color.name}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={() => {
-                        onColorChange?.(color.name);
-                        onHighlight(color.name);
-                        setShowColorPicker(false);
-                      }}
-                      aria-label={color.name}
-                      className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${
-                        selectedColor === color.name
-                          ? `ring-2 ${color.ringClass} ring-offset-1`
-                          : 'hover:scale-110'
-                      }`}
-                    />
-                  </TooltipTrigger>
-                  <TooltipPortal>
-                    <TooltipContent side="top">{color.name}</TooltipContent>
-                  </TooltipPortal>
-                </Tooltip>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                  >
+                    <div className="relative">
+                      <Type className="w-4 h-4 text-muted-foreground" />
+                      <div
+                        className={`absolute -bottom-1 left-0 right-0 h-1 rounded-sm ${COLORS.find(c => c.name === selectedColor)?.indicator || (selectedColor ? '' : 'bg-muted')}`}
+                      />
+                    </div>
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  unstyled
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card shadow-lg rounded-lg border border-border p-2 flex gap-1 z-[60]"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="auto"
+                        onClick={() => {
+                          onColorChange?.(null);
+                          onHighlight(null);
+                          setShowColorPicker(false);
+                        }}
+                        aria-label={t('annotationMenu.none', { defaultValue: 'None' })}
+                        className={`w-6 h-6 rounded-full border border-border bg-card transition-all ${
+                          selectedColor === null
+                            ? 'ring-2 ring-slate-400 ring-offset-1'
+                            : 'hover:scale-110'
+                        }`}
+                      />
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent side="top">
+                        {t('annotationMenu.none', { defaultValue: 'None' })}
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                  {COLORS.map(color => (
+                    <Tooltip key={color.name}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="auto"
+                          onClick={() => {
+                            onColorChange?.(color.name);
+                            onHighlight(color.name);
+                            setShowColorPicker(false);
+                          }}
+                          aria-label={color.name}
+                          className={`w-6 h-6 rounded-full ${color.bgClass} transition-all ${
+                            selectedColor === color.name
+                              ? `ring-2 ${color.ringClass} ring-offset-1`
+                              : 'hover:scale-110'
+                          }`}
+                        />
+                      </TooltipTrigger>
+                      <TooltipPortal>
+                        <TooltipContent side="top">{color.name}</TooltipContent>
+                      </TooltipPortal>
+                    </Tooltip>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        )}
 
         {onLookup && (
           <>
@@ -203,34 +245,22 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
           </>
         )}
 
-        {onSaveToVocab && selectionText && (
+        {isWordSelection ? (
           <>
             <div className="w-px h-4 bg-muted" />
             <Button
               type="button"
               variant="ghost"
               size="auto"
-              onClick={handleSaveToVocab}
-              disabled={vocabSaving || vocabSaved}
-              loading={vocabSaving}
-              loadingText={labels?.saving || t('annotationMenu.saving', { defaultValue: 'Saving...' })}
-              className={getSaveBtnClass()}
+              onClick={onAddNote}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
             >
-              {vocabSaved ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  {labels?.saved || t('saved', { defaultValue: 'Saved' })}
-                </>
-              ) : (
-                <>
-                  <BookOpen className="w-4 h-4" />
-                  {labels?.saveToVocab ||
-                    t('annotationMenu.saveToVocab', { defaultValue: 'Save to Vocab' })}
-                </>
-              )}
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              {labels?.sentenceNote ||
+                t('notes.detail.quote', { defaultValue: 'Save as quote note' })}
             </Button>
           </>
-        )}
+        ) : null}
 
         <div className="w-px h-4 bg-muted" />
         <Button

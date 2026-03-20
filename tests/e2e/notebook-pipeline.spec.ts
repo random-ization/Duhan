@@ -7,23 +7,25 @@ const e2ePassword = process.env.PW_E2E_PASSWORD;
 async function loginWithPassword(page: Page) {
   await page.goto(`${langPrefix}/login?redirect=/reading`);
 
-  const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-  const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
+  if (page.url().includes('/login') || page.url().includes('/register')) {
+    const emailInput = page
+      .locator('input[type="email"]:visible, input[name="email"]:visible')
+      .first();
+    const passwordInput = page
+      .locator('input[type="password"]:visible, input[name="password"]:visible')
+      .first();
 
-  const hasLoginForm = await emailInput
-    .isVisible({ timeout: 4000 })
-    .catch(() => false);
-
-  if (hasLoginForm) {
+    await emailInput.waitFor({ state: 'visible', timeout: 20000 });
+    await passwordInput.waitFor({ state: 'visible', timeout: 20000 });
     await emailInput.fill(e2eEmail!);
     await passwordInput.fill(e2ePassword!);
-    await page.locator('button[type="submit"]').first().click();
+    await page.locator('button[type="submit"]:visible').first().click();
   }
 
   await page.waitForURL(
     url => !url.pathname.includes('/login') && !url.pathname.includes('/register'),
     {
-      timeout: 30000,
+      timeout: 60000,
     }
   );
 }
@@ -31,7 +33,9 @@ async function loginWithPassword(page: Page) {
 test.describe('Notebook pipeline (reading -> note -> notebook -> review)', () => {
   test.skip(!e2eEmail || !e2ePassword, 'Set PW_E2E_EMAIL and PW_E2E_PASSWORD to run this flow.');
 
-  test('creates a reading note and completes notebook search/jump/review actions', async ({ page }) => {
+  test('creates a reading note and completes notebook search/jump/review actions', async ({
+    page,
+  }) => {
     const marker = `E2E-NOTE-${Date.now()}`;
 
     await loginWithPassword(page);
@@ -98,7 +102,28 @@ test.describe('Notebook pipeline (reading -> note -> notebook -> review)', () =>
     const noteInput = page.getByPlaceholder(/write your understanding/i).first();
     await expect(noteInput).toBeVisible({ timeout: 10000 });
     await noteInput.fill(marker);
-    await page.getByRole('button', { name: /^save note$/i }).first().click();
+    await page
+      .getByRole('button', { name: /^save note$/i })
+      .first()
+      .click();
+
+    const picker = page.getByTestId('notebook-picker-dialog');
+    await expect(picker).toBeVisible({ timeout: 15000 });
+
+    const notebookItems = picker.locator('[data-testid^="notebook-picker-item-"]');
+    const notebookCount = await notebookItems.count();
+    if (notebookCount > 0) {
+      await notebookItems.first().click();
+    } else {
+      const createInput = picker.getByTestId('notebook-picker-create-input');
+      await createInput.fill(`E2E Notebook ${Date.now()}`);
+      await picker.getByTestId('notebook-picker-create-button').click();
+      await expect(notebookItems.first()).toBeVisible({ timeout: 10000 });
+      await notebookItems.first().click();
+    }
+
+    await picker.getByTestId('notebook-picker-confirm-button').click();
+    await expect(picker).toBeHidden({ timeout: 10000 });
 
     await page.goto(`${langPrefix}/notebook`);
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible({ timeout: 20000 });

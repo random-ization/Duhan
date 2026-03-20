@@ -9,7 +9,7 @@ test.describe('Mobile Preview UI', () => {
 
     await page.waitForSelector('text=DuHan', { timeout: 15000 });
     await expect(page.getByText('DuHan')).toBeVisible();
-    await expect(page.getByPlaceholder('搜索课程、视频、播客…')).toBeVisible();
+    await expect(page.getByPlaceholder(/search courses|搜索课程/i)).toBeVisible();
 
     const bottomNav = page.getByRole('navigation');
     if (testInfo.project.name.toLowerCase().includes('mobile')) {
@@ -25,10 +25,13 @@ test.describe('Mobile Preview UI', () => {
 
     const dialog = page.getByRole('dialog');
 
-    await page.getByRole('button', { name: 'Open panel' }).click();
+    await page
+      .getByRole('button', { name: /open panel/i })
+      .first()
+      .click();
     await expect(dialog).toHaveClass(/translate-y-0/);
 
-    await page.getByRole('button', { name: 'Close panel' }).click();
+    await page.getByRole('button', { name: /close panel/i }).click();
     await expect(dialog).toHaveClass(/translate-y-\[105%\]/);
 
     if (!testInfo.project.name.toLowerCase().includes('mobile')) {
@@ -40,7 +43,7 @@ test.describe('Mobile Preview UI', () => {
     await page.goto(`${langPrefix}/preview/mobile`);
 
     if (testInfo.project.name.toLowerCase().includes('mobile')) {
-      const tab = page.getByRole('button', { name: '课程' });
+      const tab = page.getByRole('button', { name: /courses|课程/i });
       await tab.click();
       await expect(tab).toHaveClass(/outline/);
     } else {

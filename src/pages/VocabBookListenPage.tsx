@@ -17,6 +17,7 @@ import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
+import { getLocalizedContent } from '../utils/languageUtils';
 import { VOCAB } from '../utils/convexRefs';
 import { useTTS } from '../hooks/useTTS';
 import { VocabBookListenSkeleton } from '../components/common';
@@ -32,6 +33,39 @@ const PREFETCH_THRESHOLD = 10;
 
 const KOREAN_VOICE = 'ko-KR-SunHiNeural';
 const ZH_VOICE = 'zh-CN-XiaoxiaoNeural';
+const EN_VOICE = 'en-US-JennyNeural';
+const VI_VOICE = 'vi-VN-HoaiMyNeural';
+const MN_VOICE = 'mn-MN-YesuiNeural';
+
+function resolveMeaningVoice(language?: string): string {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return EN_VOICE;
+  if (normalized.startsWith('vi')) return VI_VOICE;
+  if (normalized.startsWith('mn')) return MN_VOICE;
+  return ZH_VOICE;
+}
+
+function getLocalizedMeaning(word: VocabBookItemDto, language?: string): string {
+  return (
+    getLocalizedContent(word as never, 'meaning', (language || 'zh') as never) ||
+    word.meaning ||
+    word.meaningEn ||
+    word.meaningVi ||
+    word.meaningMn ||
+    ''
+  );
+}
+
+function getLocalizedExampleMeaning(word: VocabBookItemDto, language?: string): string {
+  return (
+    getLocalizedContent(word as never, 'exampleMeaning', (language || 'zh') as never) ||
+    word.exampleMeaning ||
+    word.exampleMeaningEn ||
+    word.exampleMeaningVi ||
+    word.exampleMeaningMn ||
+    ''
+  );
+}
 
 function rateForSpeed(speed: number): string {
   if (speed <= 0.8) return '-20%';
@@ -44,6 +78,7 @@ const VocabBookListenPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
   const labels = useMemo(() => getLabels(language), [language]);
+  const meaningVoice = useMemo(() => resolveMeaningVoice(language), [language]);
   const [params] = useSearchParams();
   const { speak, stop } = useTTS();
 
@@ -151,7 +186,7 @@ const VocabBookListenPage: React.FC = () => {
   };
 
   const speakLocalizedMeaning = async (text: string) => {
-    await speak(text, { voice: ZH_VOICE });
+    await speak(text, { voice: meaningVoice });
   };
 
   const speakKorean = async (text: string, rate?: string) => {
@@ -181,7 +216,7 @@ const VocabBookListenPage: React.FC = () => {
     if (myRunId !== runIdRef.current) return;
 
     if (playMeaning) {
-      const meaning = word.meaning || word.meaningEn || word.meaningVi || word.meaningMn;
+      const meaning = getLocalizedMeaning(word, language);
       if (meaning) {
         await speakLocalizedMeaning(meaning);
       }
@@ -194,11 +229,7 @@ const VocabBookListenPage: React.FC = () => {
     }
 
     if (playExampleTranslation) {
-      const ex =
-        word.exampleMeaning ||
-        word.exampleMeaningEn ||
-        word.exampleMeaningVi ||
-        word.exampleMeaningMn;
+      const ex = getLocalizedExampleMeaning(word, language);
       if (ex) {
         await speakLocalizedMeaning(ex);
       }
@@ -497,7 +528,7 @@ const VocabBookListenPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-black text-foreground truncate">
-              {current.meaning || current.meaningEn || '...'}
+              {getLocalizedMeaning(current, language) || '...'}
             </p>
             {current.exampleSentence && (
               <p className="text-xs font-bold text-muted-foreground truncate mt-0.5">
