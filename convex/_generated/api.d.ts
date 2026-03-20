@@ -61,6 +61,7 @@ import type * as queryLimits from '../queryLimits.js';
 import type * as seedMutations from '../seedMutations.js';
 import type * as seedTopikGrammar from '../seedTopikGrammar.js';
 import type * as seedYsk from '../seedYsk.js';
+import type * as sentry from '../sentry.js';
 import type * as settings from '../settings.js';
 import type * as setupDailyPhrases from '../setupDailyPhrases.js';
 import type * as spacesConfig from '../spacesConfig.js';
@@ -148,6 +149,7 @@ declare const fullApi: ApiFromModules<{
   seedMutations: typeof seedMutations;
   seedTopikGrammar: typeof seedTopikGrammar;
   seedYsk: typeof seedYsk;
+  sentry: typeof sentry;
   settings: typeof settings;
   setupDailyPhrases: typeof setupDailyPhrases;
   spacesConfig: typeof spacesConfig;
