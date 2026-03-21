@@ -358,7 +358,7 @@ const SubscriptionChannelCard = ({
       type="button"
       size="auto"
       onClick={() => navigate(buildChannelPath(channel), { state: { channel } })}
-      className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal"
+      className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal whitespace-normal"
     >
       <div className="w-full aspect-square rounded-xl border-2 border-border overflow-hidden bg-muted">
         <img
@@ -368,7 +368,9 @@ const SubscriptionChannelCard = ({
         />
       </div>
       <div className="min-w-0">
-        <h4 className="font-black text-sm text-foreground line-clamp-2">{channel.title}</h4>
+        <h4 className="font-black text-sm text-foreground line-clamp-2 break-words [overflow-wrap:anywhere]">
+          {channel.title}
+        </h4>
         <p className="text-xs font-bold text-muted-foreground line-clamp-1 mt-1">
           {channel.author}
         </p>
@@ -594,7 +596,7 @@ const TrendingSection = ({
               navigate(`/podcasts/channel${query ? `?${query}` : ''}`, { state: { channel: pod } });
             }}
             variant="ghost"
-            className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal"
+            className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal whitespace-normal"
           >
             <div className="relative w-full aspect-square rounded-xl border-2 border-border overflow-hidden bg-muted">
               <img
@@ -609,7 +611,9 @@ const TrendingSection = ({
               </Badge>
             </div>
             <div className="min-w-0">
-              <h4 className="font-black text-sm text-foreground line-clamp-2">{pod.title}</h4>
+              <h4 className="font-black text-sm text-foreground line-clamp-2 break-words [overflow-wrap:anywhere]">
+                {pod.title}
+              </h4>
               {pod.author && pod.author.trim() && pod.author.trim().toLowerCase() !== 'unknown' && (
                 <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{pod.author}</p>
               )}

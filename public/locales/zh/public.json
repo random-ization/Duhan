@@ -126,6 +126,27 @@
     "roadmap": "通过 TOPIK 练习、词汇复习和语法训练，构建你的学习路线图。",
     "collectionName": "韩语学习指南"
   },
+  "coursesLibrary": {
+    "badge": "教材库",
+    "title": "选择教材",
+    "summary": "共收录 {{count}} 本教材，按出版社分组",
+    "searchPlaceholder": "搜索教材...",
+    "noResults": "未找到相关教材",
+    "publisherBadge": "出版社",
+    "booksCount": "{{count}} 本书",
+    "levelTag": "{{level}}级",
+    "unitsCount": "{{count}} 单元",
+    "units": "单元",
+    "publishers": {
+      "oer": "开放教育资源",
+      "yonsei": "延世大学",
+      "seoulNational": "首尔大学",
+      "chungAng": "中央大学",
+      "topikGrammarCollection": "TOPIK语法合集"
+    },
+    "otherPublisher": "其他",
+    "viewAll": "查看全部"
+  },
   "landing": {
     "seo": {
       "title": "DuHan - 在线学习韩语 | 交互式韩语学习平台",
@@ -525,20 +546,20 @@
     "originalLabel": "原价",
     "promo": {
       "activated": "地区优惠激活",
-      "verifyNow": "立即认证",
+      "verifyNow": "查看优惠",
       "subscribe": "以优惠价订阅",
-      "kycReserved": "认证入口已预留，稍后接入 KYC。",
+      "kycReserved": "地区优惠已自动生效，无需认证。",
       "banner": {
-        "prefix": "完成手机号认证，解锁地区优惠价：",
+        "prefix": "中国地区专属优惠价：",
         "highlight": "$1.9",
         "suffix": "/月 起",
-        "cta": "立即认证 →"
+        "cta": "查看优惠详情 →"
       },
       "card": {
         "title": "中国地区专属优惠",
         "badge": "低至 $1.9",
-        "description": "我们为中国地区提供 PPP (购买力平价) 专属价格。完成手机号认证后解锁优惠价。",
-        "cta": "立即认证"
+        "description": "我们为中国地区提供 PPP (购买力平价) 专属价格。无需手机认证，当前即可享受优惠。",
+        "cta": "立即订阅"
       }
     }
   },

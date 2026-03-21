@@ -932,7 +932,7 @@ export const handleDeepgramCallback = action({
 export const getTranscript = action({
   args: { episodeId: v.string(), language: v.optional(v.string()) },
   handler: async (ctx, args): Promise<{ segments: TranscriptSegment[] | null }> => {
-    await guardAiAction(ctx, 'get_transcript');
+    const userId = await requireAuthenticatedUser(ctx);
     const record = (await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
       episodeId: args.episodeId,
     })) as TranscriptRecord | null;
@@ -956,6 +956,7 @@ export const getTranscript = action({
       return { segments: merged };
     }
 
+    await enforceAiDailyLimit(ctx, userId, 'get_transcript');
     const translations = await translateSegmentTexts(record.segments, normalizedTargetLang);
     if (translations.length > 0) {
       await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
@@ -1020,7 +1021,6 @@ Return a JSON object with a "tokens" key containing an array of:
           { role: 'user', content: args.text },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0,
         max_tokens: 4000,
       });
       const usage = completion.usage;
@@ -1094,7 +1094,6 @@ Return a JSON object with:
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
       });
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
@@ -1256,7 +1255,6 @@ export const analyzeReadingArticle = action({
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.2,
       });
 
       const usage = completion.usage;
@@ -1349,7 +1347,6 @@ export const explainWordFallback = action({
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.2,
       });
 
       const usage = completion.usage;

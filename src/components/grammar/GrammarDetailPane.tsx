@@ -216,8 +216,8 @@ function getLocalizedCustomNote(grammar: GrammarPointData, language: SupportedLa
 }
 
 const EmptyGrammarState: React.FC<{ t: TranslateFn }> = ({ t }) => (
-  <main className="flex-1 flex flex-col h-full overflow-y-auto relative p-6">
-    <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-border shadow-pop-card p-10 mt-2 mb-10 flex flex-col items-center justify-center min-h-[50vh] opacity-50">
+  <main className="flex-1 flex flex-col h-full overflow-y-auto relative p-3">
+    <div className="w-full bg-card rounded-2xl border-2 border-border shadow-pop-card p-10 flex flex-col items-center justify-center min-h-[50vh] opacity-50">
       <Sparkles className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
       <h2 className="text-xl font-bold text-muted-foreground">
         {t('grammarDetail.selectPrompt', 'Select a grammar point to view details')}
@@ -507,8 +507,8 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
   >;
 
   return (
-    <main className="flex-1 flex flex-col h-full overflow-y-auto scrollbar-hide relative p-6">
-      <div className="max-w-4xl w-full mx-auto bg-card rounded-2xl border-2 border-border shadow-pop-card p-10 mt-2 mb-10">
+    <main className="flex-1 flex flex-col h-full overflow-y-auto scrollbar-hide relative p-3">
+      <div className="w-full bg-card rounded-2xl border-2 border-border shadow-pop-card p-8 lg:p-10">
         <GrammarHeader grammar={grammar} language={language} typeStyles={typeStyles} />
 
         <article className="prose prose-slate dark:prose-invert max-w-none">

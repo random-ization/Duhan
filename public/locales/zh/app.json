@@ -368,7 +368,8 @@
       "oer": "开放教育资源",
       "yonsei": "延世大学",
       "seoulNational": "首尔大学",
-      "chungAng": "中央大学"
+      "chungAng": "中央大学",
+      "topikGrammarCollection": "TOPIK语法合集"
     },
     "otherPublisher": "其他",
     "viewAll": "查看全部"
@@ -1598,7 +1599,7 @@
       "ACTION_PLAY": "播放",
       "ACTION_EXPLORE": "探索频道",
       "ACTION_SEARCH": "搜索韩语播客...",
-      "ACTION_REGENERATE": "重新生成字幕 (修正排版)",
+      "ACTION_REGENERATE": "重新生成字幕",
       "ACTION_REGENERATE_CONFIRM": "重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？",
       "PLAYER_TRANSLATION_TITLE": "翻译字幕",
       "PLAYER_TRANSLATION_DESC": "显示中文翻译",

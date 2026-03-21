@@ -30,7 +30,6 @@ const VocabBookSpellingPage: React.FC = () => {
 
   const [pageCursor, setPageCursor] = React.useState<string | null>(null);
   const [loadedItems, setLoadedItems] = React.useState<VocabBookItemDto[]>([]);
-  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
 
   const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
@@ -44,12 +43,10 @@ const VocabBookSpellingPage: React.FC = () => {
   React.useEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
-    setNextCursor(null);
   }, [category, q]);
 
   React.useEffect(() => {
     if (!vocabBookPage) return;
-    setNextCursor(vocabBookPage.nextCursor);
     setLoadedItems(prev => {
       if (pageCursor === null) return vocabBookPage.items;
       const existing = new Set(prev.map(item => String(item.id)));
@@ -61,7 +58,7 @@ const VocabBookSpellingPage: React.FC = () => {
     }
   }, [vocabBookPage, pageCursor]);
 
-  const loading = vocabBookPage === undefined || nextCursor !== null;
+  const loading = vocabBookPage === undefined && loadedItems.length === 0;
   const items = useMemo(() => loadedItems, [loadedItems]);
 
   const words = useMemo(() => {
@@ -160,7 +157,6 @@ const VocabBookSpellingPage: React.FC = () => {
           words={words}
           language={language}
           variant="learn"
-          settingsLocked
           presetSettings={{
             multipleChoice: false,
             writingMode: true,

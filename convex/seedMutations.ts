@@ -76,13 +76,13 @@ const YSK_INSTITUTE_SEED: Record<
   },
   'topik-grammar': {
     id: 'topik-grammar',
-    name: 'TOPIK Grammar Core',
-    nameEn: 'TOPIK Grammar Core',
-    nameZh: 'TOPIK 语法核心',
-    nameVi: 'TOPIK Grammar Core',
-    nameMn: 'TOPIK Grammar Core',
+    name: 'TOPIK Grammar Collection',
+    nameEn: 'TOPIK Grammar Collection',
+    nameZh: 'TOPIK语法合集',
+    nameVi: 'Bộ sưu tập Ngữ pháp TOPIK',
+    nameMn: 'TOPIK дүрмийн эмхэтгэл',
     levels: [{ level: 1, units: 6 }],
-    publisher: 'Hanabira',
+    publisher: 'TOPIK Grammar Collection',
     displayLevel: 'TOPIK I-II',
     totalUnits: 6,
     volume: '1',
@@ -90,27 +90,25 @@ const YSK_INSTITUTE_SEED: Record<
 };
 
 function resolveInstituteSeed(courseId: string) {
-  return YSK_INSTITUTE_SEED[courseId] ?? {
-    id: courseId,
-    name: courseId,
-    nameEn: courseId,
-    nameZh: courseId,
-    nameVi: courseId,
-    nameMn: courseId,
-    levels: [{ level: 1, units: 12 }],
-    publisher: 'OER',
-    displayLevel: '1',
-    totalUnits: 12,
-    volume: '1',
-  };
+  return (
+    YSK_INSTITUTE_SEED[courseId] ?? {
+      id: courseId,
+      name: courseId,
+      nameEn: courseId,
+      nameZh: courseId,
+      nameVi: courseId,
+      nameMn: courseId,
+      levels: [{ level: 1, units: 12 }],
+      publisher: 'OER',
+      displayLevel: '1',
+      totalUnits: 12,
+      volume: '1',
+    }
+  );
 }
 
 function normalizeGrammarTitleKey(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[–—]/g, '-')
-    .replace(/\s+/g, ' ');
+  return value.trim().toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ');
 }
 
 function isLowQualityText(value: string | undefined): boolean {
@@ -346,7 +344,8 @@ export const migrateYsk2UnitIndexToOneBased = internalMutation({
     for (const progress of userCourseProgress) {
       if (progress.courseId !== courseId) continue;
       const nextCompleted = progress.completedUnits.map(mapUnit);
-      const nextLast = progress.lastUnitIndex !== undefined ? mapUnit(progress.lastUnitIndex) : undefined;
+      const nextLast =
+        progress.lastUnitIndex !== undefined ? mapUnit(progress.lastUnitIndex) : undefined;
       const completedChanged =
         JSON.stringify(progress.completedUnits) !== JSON.stringify(nextCompleted);
       const lastChanged = progress.lastUnitIndex !== nextLast;
@@ -379,7 +378,8 @@ export const migrateYsk2UnitIndexToOneBased = internalMutation({
 
       const patch: Partial<typeof institute> = {};
       if (institute.totalUnits !== normalizedUnitCount) patch.totalUnits = normalizedUnitCount;
-      if (JSON.stringify(nextLevels) !== JSON.stringify(institute.levels)) patch.levels = nextLevels;
+      if (JSON.stringify(nextLevels) !== JSON.stringify(institute.levels))
+        patch.levels = nextLevels;
 
       if (Object.keys(patch).length > 0) {
         instituteUpdated = true;
@@ -476,11 +476,16 @@ export const normalizeYskInstituteAndPublisher = internalMutation({
       }
     } else {
       const publisherPatch: Partial<typeof publisher> = {};
-      if (publisher.nameKo !== publisherPayload.nameKo) publisherPatch.nameKo = publisherPayload.nameKo;
-      if (publisher.nameZh !== publisherPayload.nameZh) publisherPatch.nameZh = publisherPayload.nameZh;
-      if (publisher.nameEn !== publisherPayload.nameEn) publisherPatch.nameEn = publisherPayload.nameEn;
-      if (publisher.nameVi !== publisherPayload.nameVi) publisherPatch.nameVi = publisherPayload.nameVi;
-      if (publisher.nameMn !== publisherPayload.nameMn) publisherPatch.nameMn = publisherPayload.nameMn;
+      if (publisher.nameKo !== publisherPayload.nameKo)
+        publisherPatch.nameKo = publisherPayload.nameKo;
+      if (publisher.nameZh !== publisherPayload.nameZh)
+        publisherPatch.nameZh = publisherPayload.nameZh;
+      if (publisher.nameEn !== publisherPayload.nameEn)
+        publisherPatch.nameEn = publisherPayload.nameEn;
+      if (publisher.nameVi !== publisherPayload.nameVi)
+        publisherPatch.nameVi = publisherPayload.nameVi;
+      if (publisher.nameMn !== publisherPayload.nameMn)
+        publisherPatch.nameMn = publisherPayload.nameMn;
 
       if (Object.keys(publisherPatch).length > 0) {
         publisherUpdated = true;
@@ -808,7 +813,12 @@ export const upsertCourseGrammar = internalMutation({
     const explanationMn = args.explanationMn?.trim() || undefined;
     const type = args.type?.trim() || 'GRAMMAR';
     const level = args.level?.trim() || 'Beginner';
-    const normalizeLocalizedText = (value: { zh?: string; en?: string; vi?: string; mn?: string }) => {
+    const normalizeLocalizedText = (value: {
+      zh?: string;
+      en?: string;
+      vi?: string;
+      mn?: string;
+    }) => {
       const next = {
         zh: value.zh?.trim() || undefined,
         en: value.en?.trim() || undefined,
@@ -826,7 +836,9 @@ export const upsertCourseGrammar = internalMutation({
           comparative: args.sections.comparative
             ? normalizeLocalizedText(args.sections.comparative)
             : undefined,
-          cultural: args.sections.cultural ? normalizeLocalizedText(args.sections.cultural) : undefined,
+          cultural: args.sections.cultural
+            ? normalizeLocalizedText(args.sections.cultural)
+            : undefined,
           commonMistakes: args.sections.commonMistakes
             ? normalizeLocalizedText(args.sections.commonMistakes)
             : undefined,
@@ -880,19 +892,21 @@ export const upsertCourseGrammar = internalMutation({
       const forceReplaceContent = args.forceReplaceContent === true;
       const shouldPatchSummary =
         (forceReplaceContent && !!summary) ||
-        (!!summary && (!existingByExactTitle.summary || isLowQualityText(existingByExactTitle.summary))) ||
+        (!!summary &&
+          (!existingByExactTitle.summary || isLowQualityText(existingByExactTitle.summary))) ||
         (summary.length > existingByExactTitle.summary.length + 40 &&
           isLowQualityText(existingByExactTitle.summary));
       const shouldPatchExplanation =
         (forceReplaceContent && !!explanation) ||
         (!!explanation &&
-          (!existingByExactTitle.explanation || isLowQualityText(existingByExactTitle.explanation))) ||
+          (!existingByExactTitle.explanation ||
+            isLowQualityText(existingByExactTitle.explanation))) ||
         (explanation.length > existingByExactTitle.explanation.length + 80 &&
           isLowQualityText(existingByExactTitle.explanation));
       const shouldPatchExamples =
         (forceReplaceContent && hasUsefulGrammarExamples(examples)) ||
-        hasUsefulGrammarExamples(examples) &&
-        !hasUsefulGrammarExamples(existingByExactTitle.examples);
+        (hasUsefulGrammarExamples(examples) &&
+          !hasUsefulGrammarExamples(existingByExactTitle.examples));
       const shouldPatchSummaryEn =
         (forceReplaceContent && !!summaryEn) ||
         (!!summaryEn &&
@@ -921,11 +935,11 @@ export const upsertCourseGrammar = internalMutation({
           (!existingByExactTitle.explanationMn ||
             isLowQualityText(existingByExactTitle.explanationMn)));
       const shouldPatchSections =
-        (forceReplaceContent && hasSections) ||
-        (hasSections && !existingByExactTitle.sections);
+        (forceReplaceContent && hasSections) || (hasSections && !existingByExactTitle.sections);
       const shouldPatchQuizItems =
         (forceReplaceContent && quizItems.length > 0) ||
-        (quizItems.length > 0 && (!existingByExactTitle.quizItems || existingByExactTitle.quizItems.length === 0));
+        (quizItems.length > 0 &&
+          (!existingByExactTitle.quizItems || existingByExactTitle.quizItems.length === 0));
       const shouldPatchSourceMeta =
         (forceReplaceContent && !!sourceMeta) || (!!sourceMeta && !existingByExactTitle.sourceMeta);
 
@@ -1281,7 +1295,9 @@ const normalizeMeaningValue = (raw: string, word?: string): string | null => {
         !looksLikeGrammarGloss(candidate) &&
         candidate.split(/\s+/).length >= 2
     ) ||
-    englishCandidates.find(candidate => !isGenericMeaning(candidate) && !looksLikeGrammarGloss(candidate)) ||
+    englishCandidates.find(
+      candidate => !isGenericMeaning(candidate) && !looksLikeGrammarGloss(candidate)
+    ) ||
     englishCandidates.find(candidate => !isGenericMeaning(candidate)) ||
     englishCandidates[0];
 
@@ -1305,7 +1321,10 @@ const normalizeMeaningValue = (raw: string, word?: string): string | null => {
     }
   }
 
-  if (normalizedCandidates.length > 1 && normalizedCandidates.every(candidate => !isEnglishGlossCandidate(candidate))) {
+  if (
+    normalizedCandidates.length > 1 &&
+    normalizedCandidates.every(candidate => !isEnglishGlossCandidate(candidate))
+  ) {
     // Multiple non-English candidates are usually extraction artifacts; skip these ambiguous rows.
     return null;
   }
@@ -1478,7 +1497,10 @@ export const sanitizeCourseVocabularyWordForms = internalMutation({
         const duplicateAppearance = await ctx.db
           .query('vocabulary_appearances')
           .withIndex('by_word_course_unit', q =>
-            q.eq('wordId', existingTarget._id).eq('courseId', appearance.courseId).eq('unitId', appearance.unitId)
+            q
+              .eq('wordId', existingTarget._id)
+              .eq('courseId', appearance.courseId)
+              .eq('unitId', appearance.unitId)
           )
           .unique();
 
@@ -1595,7 +1617,8 @@ export const localizeYskCourse = internalMutation({
 
     for (const appearance of appearances) {
       const baseMeaning = appearance.meaning?.trim() || appearance.meaningEn?.trim() || '';
-      const baseExample = appearance.exampleMeaning?.trim() || appearance.exampleMeaningEn?.trim() || '';
+      const baseExample =
+        appearance.exampleMeaning?.trim() || appearance.exampleMeaningEn?.trim() || '';
       if (!baseMeaning && !baseExample) continue;
 
       const patch: Partial<typeof appearance> = {};
@@ -1695,7 +1718,8 @@ function looksLikeBrokenReadingLine(value: string): boolean {
   if (/^[가-힣\s]{1,20}\s*:\s*(?:다|요|네|아니요|맞아요|아니에요)[.!?]?$/.test(line)) return true;
   if (/^[가-힣\s]{1,16}\s*:\s*[가-힣]{1,3}[.!?]?$/.test(line)) return true;
   if (/^(?:읽고\s*쓰기|듣기\s*스크립트|듣기\s*대본|읽기\s*자료)\s*$/i.test(line)) return true;
-  if (/^(?:\d+\s*[.)]\s*)?[가-힣]{1,16}\s*\/\s*[가-힣]{1,16}(?:\s*[.,!?])*$/.test(line)) return true;
+  if (/^(?:\d+\s*[.)]\s*)?[가-힣]{1,16}\s*\/\s*[가-힣]{1,16}(?:\s*[.,!?])*$/.test(line))
+    return true;
   if (/^\S+\s*\(\s*\)\s*\d+\s*[–-]\s*\d+/.test(line)) return true;
   if (
     line.length <= 18 &&

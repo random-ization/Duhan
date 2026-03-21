@@ -33,14 +33,17 @@ interface EvaluatingScreenProps {
   onRetry?: () => void;
   retrying?: boolean;
   retryError?: string | null;
+  retryCooldownSeconds?: number;
 }
 
 const EvaluatingScreen: React.FC<EvaluatingScreenProps> = ({
   onRetry,
   retrying = false,
   retryError = null,
+  retryCooldownSeconds = 0,
 }) => {
   const { t } = useTranslation();
+  const retryDisabled = retrying || retryCooldownSeconds > 0;
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
       {/* Orbiting glow animation */}
@@ -94,12 +97,17 @@ const EvaluatingScreen: React.FC<EvaluatingScreenProps> = ({
             variant="ghost"
             size="auto"
             onClick={onRetry}
-            disabled={retrying}
+            disabled={retryDisabled}
             className="px-4 py-2 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition disabled:opacity-60"
           >
             {retrying
               ? t('topikWriting.report.retriggering', { defaultValue: 'Retrying...' })
-              : t('topikWriting.report.retrigger', { defaultValue: 'Retry Evaluation' })}
+              : retryCooldownSeconds > 0
+                ? t('topikWriting.report.retriggerCooldown', {
+                    count: retryCooldownSeconds,
+                    defaultValue: 'Retry in {{count}}s',
+                  })
+                : t('topikWriting.report.retrigger', { defaultValue: 'Retry Evaluation' })}
           </Button>
           {retryError && (
             <p className="text-xs text-destructive font-medium text-center">{retryError}</p>
@@ -194,6 +202,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const correctedText = evaluation.correctedText?.trim();
 
   const DIMENSION_CONFIG = [
     {
@@ -308,9 +317,8 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                   {t('topikWriting.report.aiCorrected', { defaultValue: 'AI Polished Version' })}
                 </div>
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-400/20 rounded-xl p-3 min-h-[80px]">
-                  {(evaluation.correctedText ?? evaluation.dimensions.taskAccomplishment > 0)
-                    ? evaluation.correctedText
-                    : t('topikWriting.report.noCorrection', { defaultValue: '(No correction)' })}
+                  {correctedText ||
+                    t('topikWriting.report.noCorrection', { defaultValue: '(No correction)' })}
                 </p>
               </div>
             </div>
@@ -351,6 +359,17 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
   const retriggerEvaluation = useMutation(api.topikWriting.submitSession);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [retryCooldownUntil, setRetryCooldownUntil] = useState(0);
+  const [retryNow, setRetryNow] = useState(() => Date.now());
+  const retryCooldownSeconds = Math.max(0, Math.ceil((retryCooldownUntil - retryNow) / 1000));
+
+  React.useEffect(() => {
+    if (retryCooldownUntil <= Date.now()) return;
+    const timer = globalThis.window.setInterval(() => {
+      setRetryNow(Date.now());
+    }, 1000);
+    return () => globalThis.window.clearInterval(timer);
+  }, [retryCooldownUntil]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (result === undefined) {
@@ -393,9 +412,14 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
     return (
       <EvaluatingScreen
         onRetry={() => {
+          if (retryCooldownSeconds > 0) return;
           setRetrying(true);
           setRetryError(null);
           void retriggerEvaluation({ sessionId, language: i18n.language })
+            .then(() => {
+              setRetryCooldownUntil(Date.now() + 8000);
+              setRetryNow(Date.now());
+            })
             .catch((error: unknown) => {
               const msg =
                 error instanceof Error
@@ -409,6 +433,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
         }}
         retrying={retrying}
         retryError={retryError}
+        retryCooldownSeconds={retryCooldownSeconds}
       />
     );
   }

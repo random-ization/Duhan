@@ -368,7 +368,8 @@
       "oer": "Open Educational Resources",
       "yonsei": "Yonsei University",
       "seoulNational": "Seoul National University",
-      "chungAng": "Chung-Ang University"
+      "chungAng": "Chung-Ang University",
+      "topikGrammarCollection": "TOPIK Grammar Collection"
     },
     "otherPublisher": "Other",
     "viewAll": "View All"
@@ -1589,7 +1590,7 @@
       "ACTION_PLAY": "Play",
       "ACTION_EXPLORE": "Explore channel",
       "ACTION_SEARCH": "Search Korean podcasts...",
-      "ACTION_REGENERATE": "Regenerate subtitles (fix formatting)",
+      "ACTION_REGENERATE": "Regenerate subtitles",
       "ACTION_REGENERATE_CONFIRM": "Regenerating subtitles may take 1-2 minutes. Continue?",
       "PLAYER_TRANSLATION_TITLE": "Subtitle translation",
       "PLAYER_TRANSLATION_DESC": "Show translated subtitles",

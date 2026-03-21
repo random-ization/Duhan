@@ -15,8 +15,9 @@ type PublisherTheme = {
   levelText: string;
 };
 
-type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'default';
+type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'topikGrammar' | 'default';
 type KnownPublisherKey = Exclude<PublisherKey, 'default'>;
+const PRIORITY_COURSE_ID = 'topik-grammar';
 
 const PUBLISHER_THEMES: Record<PublisherKey, PublisherTheme> = {
   oer: {
@@ -47,6 +48,13 @@ const PUBLISHER_THEMES: Record<PublisherKey, PublisherTheme> = {
     levelBg: 'bg-emerald-50 dark:bg-emerald-400/14',
     levelText: 'text-emerald-700 dark:text-emerald-200',
   },
+  topikGrammar: {
+    gradient: 'from-cyan-500 to-cyan-600 dark:from-cyan-300 dark:to-cyan-400',
+    chipBg: 'bg-cyan-100 dark:bg-cyan-400/18',
+    chipText: 'text-cyan-700 dark:text-cyan-200',
+    levelBg: 'bg-cyan-50 dark:bg-cyan-400/14',
+    levelText: 'text-cyan-700 dark:text-cyan-200',
+  },
   default: {
     gradient: 'from-muted-foreground to-foreground',
     chipBg: 'bg-muted',
@@ -61,6 +69,7 @@ const PUBLISHER_TRANSLATION_KEYS: Record<KnownPublisherKey, string> = {
   yonsei: 'coursesLibrary.publishers.yonsei',
   seoulNational: 'coursesLibrary.publishers.seoulNational',
   chungAng: 'coursesLibrary.publishers.chungAng',
+  topikGrammar: 'coursesLibrary.publishers.topikGrammarCollection',
 };
 
 const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
@@ -68,6 +77,7 @@ const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
   yonsei: '연세대학교',
   seoulNational: '서울대학교',
   chungAng: '중앙대학교',
+  topikGrammar: 'TOPIK 문법 모음집',
 };
 
 const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
@@ -75,6 +85,7 @@ const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
   yonsei: 'Yonsei University',
   seoulNational: 'Seoul National University',
   chungAng: 'Chung-Ang University',
+  topikGrammar: 'TOPIK Grammar Collection',
 };
 
 const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
@@ -82,6 +93,11 @@ const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
   { key: 'yonsei', pattern: /(yonsei|연세대학교|\u5ef6\u4e16\u5927\u5b66)/i },
   { key: 'seoulNational', pattern: /(seoul national|snu|서울대학교|\u9996\u5c14\u5927\u5b66)/i },
   { key: 'chungAng', pattern: /(chung-?ang|중앙대학교|\u4e2d\u592e\u5927\u5b66)/i },
+  {
+    key: 'topikGrammar',
+    pattern:
+      /(hanabira|topik[-\s]?grammar|topik grammar collection|topik语法合集|topik 문법 모음집)/i,
+  },
 ];
 
 function resolvePublisherKey(publisher: string): KnownPublisherKey | undefined {
@@ -219,6 +235,13 @@ const MobileCoursesOverview: React.FC = () => {
     };
   }, []);
 
+  const getCourseEntryPath = useCallback((course: Course) => {
+    if (course.id === PRIORITY_COURSE_ID) {
+      return `/course/${course.id}/grammar`;
+    }
+    return `/course/${course.id}`;
+  }, []);
+
   const groupedCourses = useMemo(() => {
     if (!courses) return {};
     const groups: Record<string, Course[]> = {};
@@ -240,11 +263,27 @@ const MobileCoursesOverview: React.FC = () => {
     }
 
     for (const key of Object.keys(groups)) {
-      groups[key].sort((a, b) => a.name.localeCompare(b.name));
+      groups[key].sort((a, b) => {
+        const aPriorityRank = a.id === PRIORITY_COURSE_ID ? 0 : 1;
+        const bPriorityRank = b.id === PRIORITY_COURSE_ID ? 0 : 1;
+        if (aPriorityRank !== bPriorityRank) return aPriorityRank - bPriorityRank;
+        return a.name.localeCompare(b.name);
+      });
     }
 
     return groups;
   }, [courses, searchQuery, t]);
+
+  const groupedPublisherEntries = useMemo(() => {
+    return Object.entries(groupedCourses).sort(([publisherA, coursesA], [publisherB, coursesB]) => {
+      const aHasPriorityCourse = coursesA.some(course => course.id === PRIORITY_COURSE_ID);
+      const bHasPriorityCourse = coursesB.some(course => course.id === PRIORITY_COURSE_ID);
+      if (aHasPriorityCourse !== bHasPriorityCourse) {
+        return aHasPriorityCourse ? -1 : 1;
+      }
+      return publisherA.localeCompare(publisherB);
+    });
+  }, [groupedCourses]);
 
   const totalCourseCount = courses?.length || 0;
 
@@ -303,14 +342,14 @@ const MobileCoursesOverview: React.FC = () => {
           </div>
         )}
 
-        {!isLoading && Object.keys(groupedCourses).length === 0 && (
+        {!isLoading && groupedPublisherEntries.length === 0 && (
           <div className="text-center py-16 text-muted-foreground font-bold">
             {t('coursesLibrary.noResults')}
           </div>
         )}
 
         {!isLoading &&
-          Object.entries(groupedCourses).map(([publisher, groupCourses]) => {
+          groupedPublisherEntries.map(([publisher, groupCourses]) => {
             const theme = getTheme(publisher);
             const label = getPublisherLabel(publisher);
 
@@ -342,7 +381,7 @@ const MobileCoursesOverview: React.FC = () => {
                         variant="ghost"
                         size="auto"
                         key={course._id || course.id}
-                        onClick={() => navigate(`/course/${course.id}`)}
+                        onClick={() => navigate(getCourseEntryPath(course))}
                         className="group relative w-full min-h-[170px] !flex !flex-col !items-start !justify-between !whitespace-normal rounded-2xl border border-border bg-card p-3 text-left shadow-sm transition-all active:scale-[0.99]"
                       >
                         <div

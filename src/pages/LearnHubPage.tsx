@@ -81,7 +81,7 @@ const LearnHubPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -95,12 +95,12 @@ const LearnHubPage: React.FC = () => {
 
       <section className="mx-auto max-w-6xl px-6 py-16 md:py-20">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
             <BookOpen className="h-3.5 w-3.5" />
             {t('learnHub.badge', { defaultValue: 'DuHan Learn Hub' })}
           </div>
           <h1 className="mt-4 text-3xl font-black leading-tight md:text-5xl">{hub.title}</h1>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
+          <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
             {hub.description}
           </p>
         </div>
@@ -109,18 +109,18 @@ const LearnHubPage: React.FC = () => {
           {guides.map((guide, index) => (
             <article
               key={guide.key}
-              className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {hub.cardPrefix} {String(index + 1).padStart(2, '0')}
               </div>
               <h2 className="mt-2 text-xl font-extrabold leading-snug">{guide.content.title}</h2>
               {!guide.isLocalized ? (
-                <div className="mt-2 inline-flex rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">
                   {t('learnHub.englishContent', { defaultValue: 'English content' })}
                 </div>
               ) : null}
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
                 {guide.content.description}
               </p>
               <Button
@@ -138,8 +138,8 @@ const LearnHubPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="mt-12 rounded-2xl border border-border bg-muted p-6 md:flex md:items-center md:justify-between">
-          <p className="text-sm font-medium text-muted-foreground md:text-base">
+        <div className="mt-12 rounded-2xl border border-slate-200 bg-slate-100 p-6 md:flex md:items-center md:justify-between">
+          <p className="text-sm font-medium text-slate-600 md:text-base">
             {t('learnHub.roadmap', {
               defaultValue:
                 'Build your own study roadmap with TOPIK practice, vocab review, and grammar drills.',
@@ -149,7 +149,7 @@ const LearnHubPage: React.FC = () => {
             asChild
             variant="ghost"
             size="auto"
-            className="mt-4 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground md:mt-0"
+            className="mt-4 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white md:mt-0"
           >
             <LocalizedLink to="/register">{hub.ctaLabel}</LocalizedLink>
           </Button>

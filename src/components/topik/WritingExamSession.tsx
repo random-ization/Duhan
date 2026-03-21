@@ -828,6 +828,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasAutoSubmitted = useRef(false);
+  const handleSubmitRef = useRef<(forced?: boolean) => Promise<void>>(async () => {});
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -839,18 +840,18 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
         clearInterval(interval);
         if (!hasAutoSubmitted.current) {
           hasAutoSubmitted.current = true;
-          void handleSubmit(true);
+          void handleSubmitRef.current(true);
         }
       }
     }, 1000);
 
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endTime]);
 
   // ── Debounced auto-save ───────────────────────────────────────────────────
   useEffect(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (isSubmitting || isExiting || isSubmitted) return;
 
     setSaveStatus('idle');
     autoSaveTimerRef.current = setTimeout(async () => {
@@ -870,7 +871,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [localAnswers, sessionId, saveDraft]);
+  }, [localAnswers, sessionId, saveDraft, isSubmitting, isExiting, isSubmitted]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleAnswerChange = useCallback((qNum: number, text: string) => {
@@ -889,6 +890,10 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
     async (_forced = false) => {
       if (isSubmitting || isSubmitted || isExiting) return;
 
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
       setIsSubmitting(true);
       setShowConfirm(false);
       setShowExitConfirm(false);
@@ -917,9 +922,17 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
     ]
   );
 
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
   const handleExit = useCallback(async () => {
     if (isSubmitting || isSubmitted || isExiting) return;
 
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     setIsExiting(true);
     setShowExitConfirm(false);
 

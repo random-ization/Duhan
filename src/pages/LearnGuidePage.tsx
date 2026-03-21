@@ -101,7 +101,7 @@ const LearnGuidePage: React.FC = () => {
 
   if (!guideKey) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-slate-50 text-slate-900">
         <Seo
           title={pageCopy.guideNotFoundTitle}
           description={pageCopy.guideNotFoundDesc}
@@ -109,12 +109,12 @@ const LearnGuidePage: React.FC = () => {
         />
         <div className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 text-center">
           <h1 className="text-3xl font-black">{pageCopy.guideNotFoundHeading}</h1>
-          <p className="mt-3 text-muted-foreground">{pageCopy.guideNotFoundBody}</p>
+          <p className="mt-3 text-slate-600">{pageCopy.guideNotFoundBody}</p>
           <Button
             asChild
             variant="ghost"
             size="auto"
-            className="mt-6 rounded-xl border border-border px-4 py-2"
+            className="mt-6 rounded-xl border border-slate-200 bg-white px-4 py-2"
           >
             <LocalizedLink to="/learn">{pageCopy.backToLearnHub}</LocalizedLink>
           </Button>
@@ -246,7 +246,7 @@ const LearnGuidePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -263,7 +263,7 @@ const LearnGuidePage: React.FC = () => {
           asChild
           variant="ghost"
           size="auto"
-          className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <LocalizedLink to="/learn">
             <ArrowLeft className="h-4 w-4" />
@@ -271,28 +271,31 @@ const LearnGuidePage: React.FC = () => {
           </LocalizedLink>
         </Button>
 
-        <header className="mt-6 border-b border-border pb-8">
+        <header className="mt-6 border-b border-slate-200 pb-8">
           <h1 className="text-3xl font-black leading-tight md:text-5xl">{guide.title}</h1>
           {publishedDateLabel || updatedDateLabel ? (
-            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {publishedDateLabel ? `${pageCopy.publishedPrefix} ${publishedDateLabel}` : ''}
               {publishedDateLabel && updatedDateLabel ? ' · ' : ''}
               {updatedDateLabel ? `${pageCopy.updatedPrefix} ${updatedDateLabel}` : ''}
             </p>
           ) : null}
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
+          <p className="mt-4 text-base leading-relaxed text-slate-600 md:text-lg">
             {guide.description}
           </p>
-          <p className="mt-5 rounded-xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-5 rounded-xl bg-slate-100 p-4 text-sm leading-relaxed text-slate-600">
             {guide.intro}
           </p>
         </header>
 
         <div className="mt-9 space-y-8">
           {guide.sections.map(section => (
-            <section key={section.heading} className="rounded-2xl border border-border bg-card p-6">
+            <section
+              key={section.heading}
+              className="rounded-2xl border border-slate-200 bg-white p-6"
+            >
               <h2 className="text-xl font-extrabold">{section.heading}</h2>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground md:text-base">
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-600 md:text-base">
                 {section.paragraphs.map(paragraph => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -302,7 +305,7 @@ const LearnGuidePage: React.FC = () => {
                   {section.bullets.map(bullet => (
                     <li
                       key={bullet}
-                      className="flex items-start gap-2 text-sm text-muted-foreground md:text-base"
+                      className="flex items-start gap-2 text-sm text-slate-600 md:text-base"
                     >
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
                       <span>{bullet}</span>
@@ -314,15 +317,18 @@ const LearnGuidePage: React.FC = () => {
           ))}
         </div>
 
-        <section className="mt-10 rounded-2xl border border-border bg-muted p-6">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-slate-100 p-6">
           <h2 className="text-2xl font-black">{pageCopy.faqTitle}</h2>
           <div className="mt-4 space-y-4">
             {guide.faqs.map(faq => (
-              <details key={faq.question} className="rounded-xl border border-border bg-card p-4">
+              <details
+                key={faq.question}
+                className="rounded-xl border border-slate-200 bg-white p-4"
+              >
                 <summary className="cursor-pointer text-sm font-bold md:text-base">
                   {faq.question}
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 md:text-base">
                   {faq.answer}
                 </p>
               </details>
@@ -331,17 +337,17 @@ const LearnGuidePage: React.FC = () => {
         </section>
 
         {relatedGuides.length > 0 ? (
-          <section className="mt-10 rounded-2xl border border-border bg-card p-6">
+          <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6">
             <h2 className="text-2xl font-black">{pageCopy.relatedTitle}</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {relatedGuides.map(related => (
                 <a
                   key={related.key}
                   href={related.href}
-                  className="group rounded-xl border border-border p-4 transition hover:-translate-y-0.5 hover:bg-muted"
+                  className="group rounded-xl border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:bg-slate-50"
                 >
                   <h3 className="text-base font-extrabold">{related.content.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
                     {related.content.description}
                   </p>
                   <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-indigo-600 group-hover:text-indigo-700">
@@ -354,16 +360,16 @@ const LearnGuidePage: React.FC = () => {
           </section>
         ) : null}
 
-        <section className="mt-10 rounded-2xl border border-border bg-card p-6 md:flex md:items-center md:justify-between">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 md:flex md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-black">{pageCopy.readyTitle}</h2>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">{pageCopy.readyBody}</p>
+            <p className="mt-2 text-sm text-slate-600 md:text-base">{pageCopy.readyBody}</p>
           </div>
           <Button
             asChild
             variant="ghost"
             size="auto"
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground md:mt-0"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white md:mt-0"
           >
             <LocalizedLink to={guide.ctaTo}>
               {guide.ctaLabel}

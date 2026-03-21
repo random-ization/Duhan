@@ -87,6 +87,27 @@
     "roadmap": "Xây dựng lộ trình học của bạn với luyện TOPIK, ôn từ vựng và luyện ngữ pháp.",
     "collectionName": "Hướng dẫn học tiếng Hàn"
   },
+  "coursesLibrary": {
+    "badge": "Thư viện",
+    "title": "Chọn giáo trình",
+    "summary": "Có {{count}} giáo trình, được nhóm theo nhà xuất bản",
+    "searchPlaceholder": "Tìm kiếm giáo trình...",
+    "noResults": "Không tìm thấy giáo trình phù hợp",
+    "publisherBadge": "Nhà xuất bản",
+    "booksCount": "{{count}} sách",
+    "levelTag": "Cấp {{level}}",
+    "unitsCount": "{{count}} bài",
+    "units": "bài",
+    "publishers": {
+      "oer": "Tài nguyên giáo dục mở",
+      "yonsei": "Đại học Yonsei",
+      "seoulNational": "Đại học Quốc gia Seoul",
+      "chungAng": "Đại học Chung-Ang",
+      "topikGrammarCollection": "Bộ sưu tập Ngữ pháp TOPIK"
+    },
+    "otherPublisher": "Khác",
+    "viewAll": "Xem tất cả"
+  },
   "landing": {
     "seo": {
       "title": "DuHan - Học tiếng Hàn trực tuyến | Nền tảng học tương tác",
@@ -486,20 +507,20 @@
     "originalLabel": "Giá gốc",
     "promo": {
       "activated": "Ưu đãi khu vực đã kích hoạt",
-      "verifyNow": "Xác minh ngay",
+      "verifyNow": "Xem ưu đãi",
       "subscribe": "Đăng ký giá ưu đãi",
-      "kycReserved": "Đã giữ chỗ nút xác minh, sẽ tích hợp KYC sau.",
+      "kycReserved": "Ưu đãi khu vực đã khả dụng, không cần xác minh.",
       "banner": {
-        "prefix": "Xác minh số điện thoại để mở giá ưu đãi: ",
+        "prefix": "Ưu đãi giá theo khu vực: ",
         "highlight": "$1.9",
         "suffix": "/tháng từ",
-        "cta": "Xác minh ngay →"
+        "cta": "Xem ưu đãi →"
       },
       "card": {
         "title": "Ưu đãi đặc biệt cho Việt Nam",
         "badge": "Từ $1.9",
-        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Hoàn tất xác minh số điện thoại để mở khóa mức giá ưu đãi.",
-        "cta": "Xác minh ngay"
+        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Không cần xác minh số điện thoại để nhận mức giá ưu đãi.",
+        "cta": "Đăng ký ngay"
       }
     }
   },

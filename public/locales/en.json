@@ -1383,20 +1383,20 @@
     "originalLabel": "Original",
     "promo": {
       "activated": "Regional discount active",
-      "verifyNow": "Verify now",
-      "subscribe": "Subscribe with discount",
-      "kycReserved": "KYC button reserved; integration coming soon.",
+      "verifyNow": "View offer",
+      "subscribe": "Subscribe with regional pricing",
+      "kycReserved": "Regional pricing is available now. No verification required.",
       "banner": {
-        "prefix": "",
-        "highlight": "",
-        "suffix": "",
-        "cta": "Verify →"
+        "prefix": "Regional pricing offer: ",
+        "highlight": "$1.9",
+        "suffix": "/month from",
+        "cta": "View offer →"
       },
       "card": {
-        "title": "",
-        "badge": "",
-        "description": "",
-        "cta": ""
+        "title": "Regional pricing offer",
+        "badge": "From $1.9",
+        "description": "We support PPP regional pricing. No phone verification is required to access this discount.",
+        "cta": "Subscribe now"
       }
     }
   },
@@ -1821,7 +1821,7 @@
       "ACTION_PLAY": "播放",
       "ACTION_EXPLORE": "探索频道",
       "ACTION_SEARCH": "搜索韩语播客...",
-      "ACTION_REGENERATE": "重新生成字幕 (修正排版)",
+      "ACTION_REGENERATE": "重新生成字幕",
       "ACTION_REGENERATE_CONFIRM": "重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？",
       "PLAYER_TRANSLATION_TITLE": "翻译字幕",
       "PLAYER_TRANSLATION_DESC": "显示中文翻译",

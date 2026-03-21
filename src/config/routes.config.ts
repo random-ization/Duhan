@@ -8,6 +8,9 @@ export interface RouteUiConfig {
   hasBottomNav: boolean;
   hasHeader: boolean;
   hasFooter: boolean;
+  usePatternBackground: boolean;
+  useDesktopContainerPadding: boolean;
+  useDesktopMaxWidth: boolean;
   headerType: MobileHeaderType;
   headerAction: MobileHeaderAction;
   headerTitle: string;
@@ -20,6 +23,9 @@ const DEFAULT_ROUTE_UI_CONFIG: RouteUiConfig = {
   hasBottomNav: true,
   hasHeader: true,
   hasFooter: true,
+  usePatternBackground: true,
+  useDesktopContainerPadding: true,
+  useDesktopMaxWidth: true,
   headerType: 'section',
   headerAction: 'none',
   headerTitle: 'common.appName',
@@ -64,14 +70,20 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitle: 'nav.courses',
     headerTitleDefault: 'Courses',
   }),
-  course: () => ({
-    hasFooter: false,
-    hasHeader: false,
-    headerType: 'detail',
-    headerAction: 'more',
-    headerTitle: 'course.title',
-    headerTitleDefault: 'Course',
-  }),
+  course: segments => {
+    const isGrammarWorkspace = segments[2] === 'grammar';
+    return {
+      hasFooter: false,
+      hasHeader: false,
+      usePatternBackground: !isGrammarWorkspace,
+      useDesktopContainerPadding: !isGrammarWorkspace,
+      useDesktopMaxWidth: !isGrammarWorkspace,
+      headerType: 'detail',
+      headerAction: 'more',
+      headerTitle: 'course.title',
+      headerTitleDefault: 'Course',
+    };
+  },
   practice: () => ({
     hasFooter: false,
     headerType: 'section',
@@ -86,14 +98,20 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitle: 'nav.media',
     headerTitleDefault: 'Media',
   }),
-  reading: () => ({
-    hasFooter: false,
-    hasHeader: false,
-    headerType: 'section',
-    headerAction: 'none',
-    headerTitle: 'nav.reading',
-    headerTitleDefault: 'Reading',
-  }),
+  reading: segments => {
+    const isReadingDetail = segments.length > 1;
+    return {
+      hasFooter: false,
+      hasHeader: false,
+      usePatternBackground: !isReadingDetail,
+      useDesktopContainerPadding: !isReadingDetail,
+      useDesktopMaxWidth: !isReadingDetail,
+      headerType: 'section',
+      headerAction: 'none',
+      headerTitle: 'nav.reading',
+      headerTitleDefault: 'Reading',
+    };
+  },
   topik: segments => {
     if (segments[1] === 'writing') {
       return {

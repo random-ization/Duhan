@@ -50,16 +50,23 @@ export default function AppLayout() {
   const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;
   const shouldShowFooter = !footerHidden && routeUiConfig.hasFooter;
   const allowRouteMotion = shouldAnimateRoutes();
+  const shouldUseDesktopPadding =
+    routeUiConfig.hasDesktopSidebar && routeUiConfig.useDesktopContainerPadding;
+  const shouldUseDesktopMaxWidth =
+    routeUiConfig.hasDesktopSidebar && routeUiConfig.useDesktopMaxWidth;
+  const mainBackgroundStyle = routeUiConfig.usePatternBackground
+    ? {
+        backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
+        backgroundSize: '24px 24px',
+      }
+    : undefined;
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
       {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
       <main
         className="flex-1 h-screen h-[100dvh] overflow-y-auto relative scroll-smooth"
-        style={{
-          backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
-          backgroundSize: '24px 24px',
-        }}
+        style={mainBackgroundStyle}
       >
         <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
         <GlobalModalContainer />
@@ -69,14 +76,14 @@ export default function AppLayout() {
         )}
 
         <div
-          className={`min-h-full flex flex-col ${routeUiConfig.hasDesktopSidebar ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
+          className={`min-h-full flex flex-col ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
           {allowRouteMotion ? (
             <LayoutGroup id="app-route-layout">
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
                   key={location.pathname}
-                  className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+                  className={`flex-1 w-full ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
@@ -91,7 +98,7 @@ export default function AppLayout() {
           ) : (
             <div
               key={location.pathname}
-              className={`flex-1 w-full ${routeUiConfig.hasDesktopSidebar ? 'max-w-[1400px] mx-auto' : ''}`}
+              className={`flex-1 w-full ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
             >
               <Suspense fallback={<ContentSkeleton />}>
                 <Outlet />

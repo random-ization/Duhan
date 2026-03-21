@@ -25,7 +25,12 @@ import { api } from '../../convex/_generated/api';
 
 type PageState =
   | { phase: 'loading' }
-  | { phase: 'exam'; sessionId: Id<'topik_writing_sessions'>; endTime: number }
+  | {
+      phase: 'exam';
+      sessionId: Id<'topik_writing_sessions'>;
+      endTime: number;
+      initialAnswers: Record<string, string>;
+    }
   | { phase: 'report'; sessionId: Id<'topik_writing_sessions'>; answers: Record<string, string> };
 
 type WritingQuestionType = 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY';
@@ -67,11 +72,13 @@ const TopikWritingPage: React.FC = () => {
     if (!examId || !user || !exam || !exam._id) return;
 
     startSession({ examId: exam._id as Id<'topik_exams'> })
-      .then(sessionId => {
-        // endTime = now + 50 min (same as backend); backend is source of truth
-        // but we show an optimistic countdown. The session doc will correct it.
-        const endTime = Date.now() + 50 * 60 * 1000;
-        setPageState({ phase: 'exam', sessionId, endTime });
+      .then(session => {
+        setPageState({
+          phase: 'exam',
+          sessionId: session.sessionId,
+          endTime: session.endTime,
+          initialAnswers: session.answers ?? {},
+        });
       })
       .catch(err => {
         console.error('Failed to start writing session', err);
@@ -174,7 +181,7 @@ const TopikWritingPage: React.FC = () => {
       examId={examId}
       endTime={state.endTime}
       questions={resolvedQuestions}
-      initialAnswers={{}}
+      initialAnswers={state.initialAnswers}
       onSubmitted={submittedAnswers => {
         setPageState({
           phase: 'report',

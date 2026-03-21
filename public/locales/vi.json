@@ -1330,20 +1330,20 @@
     "originalLabel": "Giá gốc",
     "promo": {
       "activated": "Ưu đãi khu vực đã kích hoạt",
-      "verifyNow": "Xác minh ngay",
+      "verifyNow": "Xem ưu đãi",
       "subscribe": "Đăng ký giá ưu đãi",
-      "kycReserved": "Đã giữ chỗ nút xác minh, sẽ tích hợp KYC sau.",
+      "kycReserved": "Ưu đãi khu vực đã khả dụng, không cần xác minh.",
       "banner": {
-        "prefix": "Xác minh số điện thoại để mở giá ưu đãi: ",
+        "prefix": "Ưu đãi giá theo khu vực: ",
         "highlight": "$1.9",
         "suffix": "/tháng từ",
-        "cta": "Xác minh ngay →"
+        "cta": "Xem ưu đãi →"
       },
       "card": {
         "title": "Ưu đãi đặc biệt cho Việt Nam",
         "badge": "Từ $1.9",
-        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Hoàn tất xác minh số điện thoại để mở khóa mức giá ưu đãi.",
-        "cta": "Xác minh ngay"
+        "description": "Chúng tôi hỗ trợ giá PPP theo khu vực. Không cần xác minh số điện thoại để nhận mức giá ưu đãi.",
+        "cta": "Đăng ký ngay"
       }
     }
   },

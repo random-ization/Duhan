@@ -11,7 +11,7 @@ import { getCourseCoverTransitionName } from '../utils/viewTransitions';
 import { Button, Input } from '../components/ui';
 
 type PublisherTheme = { bg: string; text: string; accent: string; border: string; light: string };
-type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'default';
+type PublisherKey = 'oer' | 'yonsei' | 'seoulNational' | 'chungAng' | 'topikGrammar' | 'default';
 type KnownPublisherKey = Exclude<PublisherKey, 'default'>;
 
 interface PublisherLabelSource {
@@ -51,6 +51,13 @@ const PUBLISHER_THEMES: Record<PublisherKey, PublisherTheme> = {
     border: 'border-emerald-900 dark:border-emerald-300/50',
     light: 'bg-emerald-50 dark:bg-emerald-400/10',
   },
+  topikGrammar: {
+    bg: 'bg-cyan-100 dark:bg-cyan-400/16',
+    text: 'text-cyan-700 dark:text-cyan-200',
+    accent: 'bg-cyan-500 dark:bg-cyan-400/70',
+    border: 'border-cyan-900 dark:border-cyan-300/50',
+    light: 'bg-cyan-50 dark:bg-cyan-400/10',
+  },
   default: {
     bg: 'bg-muted',
     text: 'text-muted-foreground',
@@ -65,6 +72,7 @@ const PUBLISHER_TRANSLATION_KEYS: Record<KnownPublisherKey, string> = {
   yonsei: 'coursesLibrary.publishers.yonsei',
   seoulNational: 'coursesLibrary.publishers.seoulNational',
   chungAng: 'coursesLibrary.publishers.chungAng',
+  topikGrammar: 'coursesLibrary.publishers.topikGrammarCollection',
 };
 
 const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
@@ -72,6 +80,7 @@ const PUBLISHER_KO_FALLBACK: Record<KnownPublisherKey, string> = {
   yonsei: '연세대학교',
   seoulNational: '서울대학교',
   chungAng: '중앙대학교',
+  topikGrammar: 'TOPIK 문법 모음집',
 };
 
 const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
@@ -79,6 +88,7 @@ const PUBLISHER_EN_FALLBACK: Record<KnownPublisherKey, string> = {
   yonsei: 'Yonsei University',
   seoulNational: 'Seoul National University',
   chungAng: 'Chung-Ang University',
+  topikGrammar: 'TOPIK Grammar Collection',
 };
 
 const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
@@ -86,9 +96,15 @@ const PUBLISHER_MATCHERS: Array<{ key: KnownPublisherKey; pattern: RegExp }> = [
   { key: 'yonsei', pattern: /(yonsei|연세대학교|\u5ef6\u4e16\u5927\u5b66)/i },
   { key: 'seoulNational', pattern: /(seoul national|snu|서울대학교|\u9996\u5c14\u5927\u5b66)/i },
   { key: 'chungAng', pattern: /(chung-?ang|중앙대학교|\u4e2d\u592e\u5927\u5b66)/i },
+  {
+    key: 'topikGrammar',
+    pattern:
+      /(hanabira|topik[-\s]?grammar|topik grammar collection|topik语法合集|topik 문법 모음집)/i,
+  },
 ];
 
 const SEARCH_LANGUAGES: Array<'en' | 'zh' | 'vi' | 'mn'> = ['en', 'zh', 'vi', 'mn'];
+const PRIORITY_COURSE_ID = 'topik-grammar';
 
 function resolvePublisherKey(publisher: string): KnownPublisherKey | undefined {
   const normalizedPublisher = publisher.trim();
@@ -168,10 +184,7 @@ const CoursesOverview: React.FC = () => {
       const data = publishersByName.get(publisher);
       const normalizedLang = normalizeLanguageTag(currentLang);
       const publisherKey = resolvePublisherKey(publisher);
-      const primary =
-        data?.nameKo ??
-        (publisherKey ? PUBLISHER_KO_FALLBACK[publisherKey] : undefined) ??
-        publisher;
+      const fallbackKo = publisherKey ? PUBLISHER_KO_FALLBACK[publisherKey] : undefined;
       const localizedFromData = getPublisherDataLabel(data, normalizedLang);
       const localizedFromI18n = publisherKey
         ? String(
@@ -183,7 +196,14 @@ const CoursesOverview: React.FC = () => {
         : undefined;
       const localized =
         normalizedLang === 'ko' ? undefined : (localizedFromData ?? localizedFromI18n);
-      const displayLocalized = localized === primary ? undefined : localized;
+      const primary =
+        publisherKey === 'topikGrammar'
+          ? (localized ?? data?.nameKo ?? fallbackKo ?? publisher)
+          : (data?.nameKo ?? fallbackKo ?? publisher);
+      const displayLocalized =
+        normalizedLang === 'ko' || publisherKey === 'topikGrammar' || localized === primary
+          ? undefined
+          : localized;
       return {
         primary,
         localized: displayLocalized,
@@ -251,7 +271,9 @@ const CoursesOverview: React.FC = () => {
     // Sort courses within group?
     Object.keys(groups).forEach(key => {
       groups[key].sort((a, b) => {
-        // Try to sort by volume/level if possible
+        const aPriorityRank = a.id === PRIORITY_COURSE_ID ? 0 : 1;
+        const bPriorityRank = b.id === PRIORITY_COURSE_ID ? 0 : 1;
+        if (aPriorityRank !== bPriorityRank) return aPriorityRank - bPriorityRank;
         return a.name.localeCompare(b.name);
       });
     });
@@ -259,9 +281,20 @@ const CoursesOverview: React.FC = () => {
     return groups;
   }, [courses, searchQuery, t, getPublisherSearchValues]);
 
+  const groupedPublisherEntries = useMemo(() => {
+    return Object.entries(groupedCourses).sort(([publisherA, coursesA], [publisherB, coursesB]) => {
+      const aHasPriorityCourse = coursesA.some(course => course.id === PRIORITY_COURSE_ID);
+      const bHasPriorityCourse = coursesB.some(course => course.id === PRIORITY_COURSE_ID);
+      if (aHasPriorityCourse !== bHasPriorityCourse) {
+        return aHasPriorityCourse ? -1 : 1;
+      }
+      return publisherA.localeCompare(publisherB);
+    });
+  }, [groupedCourses]);
+
   // Auto-expand if searching or if only one group
   useEffect(() => {
-    const groups = Object.keys(groupedCourses);
+    const groups = groupedPublisherEntries.map(([publisher]) => publisher);
     if (groups.length === 1 || (searchQuery && groups.length > 0)) {
       const target = groups[0];
       // Use a small timeout to avoid synchronous setState during effect which can trigger cascading render warnings
@@ -270,7 +303,7 @@ const CoursesOverview: React.FC = () => {
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [groupedCourses, searchQuery]);
+  }, [groupedPublisherEntries, searchQuery]);
 
   const toggleDrawer = (publisher: string) => {
     if (expandedPublisher === publisher) {
@@ -293,6 +326,13 @@ const CoursesOverview: React.FC = () => {
       displayLevel: course.displayLevel,
       totalUnits: course.totalUnits,
     };
+  }, []);
+
+  const getCourseEntryPath = useCallback((course: Course) => {
+    if (course.id === PRIORITY_COURSE_ID) {
+      return `/course/${course.id}/grammar`;
+    }
+    return `/course/${course.id}`;
   }, []);
 
   // Return mobile version on small screens (after all hooks)
@@ -356,22 +396,30 @@ const CoursesOverview: React.FC = () => {
           </div>
         )}
 
-        {!isLoading && Object.keys(groupedCourses).length === 0 && (
+        {!isLoading && groupedPublisherEntries.length === 0 && (
           <div className="text-center py-20 text-muted-foreground font-bold">
             {t('coursesLibrary.noResults')}
           </div>
         )}
 
-        {Object.entries(groupedCourses).map(([publisher, groupCourses]) => {
+        {groupedPublisherEntries.map(([publisher, groupCourses]) => {
           const theme = getTheme(publisher);
-          const isOpen = expandedPublisher === publisher;
+          const directEntryCourse = groupCourses.find(course => course.id === PRIORITY_COURSE_ID);
+          const isDirectEntryPublisher = Boolean(directEntryCourse);
+          const isOpen = !isDirectEntryPublisher && expandedPublisher === publisher;
           const publisherData = publishersByName.get(publisher);
           const displayNames = getPublisherNames(publisher);
 
           return (
             <div key={publisher} className={`group ${isOpen ? 'drawer-open' : ''}`}>
               <Button
-                onClick={() => toggleDrawer(publisher)}
+                onClick={() => {
+                  if (directEntryCourse) {
+                    navigate(getCourseEntryPath(directEntryCourse));
+                    return;
+                  }
+                  toggleDrawer(publisher);
+                }}
                 variant="ghost"
                 size="auto"
                 className="w-full relative z-20 text-left transition-transform active:scale-[0.99] !flex !whitespace-normal !justify-start !items-stretch !shadow-none !border-0"
@@ -426,124 +474,130 @@ const CoursesOverview: React.FC = () => {
 
                   <div className="flex items-center gap-6 w-full md:w-auto justify-end">
                     <div
-                      className={`w-10 h-10 border-2 border-foreground rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-primary text-primary-foreground' : 'bg-card'}`}
+                      className={`w-10 h-10 border-2 border-foreground rounded-full flex items-center justify-center transition-all ${isOpen || isDirectEntryPublisher ? 'bg-primary text-primary-foreground' : 'bg-card'}`}
                     >
-                      <ChevronDown
-                        className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-                      />
+                      {isDirectEntryPublisher ? (
+                        <ChevronRight className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown
+                          className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
               </Button>
 
               {/* Drawer Content */}
-              <div
-                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-              >
+              {!isDirectEntryPublisher && (
                 <div
-                  className={`overflow-hidden rounded-b-2xl -mt-[2px] z-0 transition-all ${isOpen ? 'bg-card border-2 border-t-0 border-foreground shadow-[5px_5px_0px_0px_rgba(15,23,42,1)]' : 'border-0 shadow-none bg-transparent'}`}
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                 >
                   <div
-                    className={`px-6 pt-6 pb-8 ${theme.light}`}
-                    style={{
-                      backgroundImage:
-                        'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
-                      backgroundSize: '12px 12px',
-                    }}
+                    className={`overflow-hidden rounded-b-2xl -mt-[2px] z-0 transition-all ${isOpen ? 'bg-card border-2 border-t-0 border-foreground shadow-[5px_5px_0px_0px_rgba(15,23,42,1)]' : 'border-0 shadow-none bg-transparent'}`}
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
-                      {groupCourses.map(course =>
-                        (() => {
-                          const uiMeta = getCourseUiMeta(course);
-                          return (
-                            <Button
-                              key={course._id || course.id}
-                              onClick={() => navigate(`/course/${course.id}`)}
-                              variant="ghost"
-                              size="auto"
-                              className="flex w-full bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all overflow-hidden group/card min-h-[104px] text-left !justify-start !items-stretch !whitespace-normal"
-                            >
-                              {/* Left: Level Strip */}
-                              <div
-                                className={`w-16 ${theme.accent} border-r-2 border-foreground flex flex-col items-center justify-center relative overflow-hidden px-1 self-stretch`}
+                    <div
+                      className={`px-6 pt-6 pb-8 ${theme.light}`}
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
+                        backgroundSize: '12px 12px',
+                      }}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[minmax(104px,auto)]">
+                        {groupCourses.map(course =>
+                          (() => {
+                            const uiMeta = getCourseUiMeta(course);
+                            return (
+                              <Button
+                                key={course._id || course.id}
+                                onClick={() => navigate(getCourseEntryPath(course))}
+                                variant="ghost"
+                                size="auto"
+                                className="flex w-full bg-card border-2 border-foreground rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all overflow-hidden group/card min-h-[104px] text-left !justify-start !items-stretch !whitespace-normal"
                               >
-                                {/* Diagonal stripes pattern overlay */}
+                                {/* Left: Level Strip */}
                                 <div
-                                  className="absolute inset-0 opacity-10"
-                                  style={{
-                                    backgroundImage:
-                                      'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)',
-                                    backgroundSize: '4px 4px',
-                                  }}
-                                ></div>
+                                  className={`w-16 ${theme.accent} border-r-2 border-foreground flex flex-col items-center justify-center relative overflow-hidden px-1 self-stretch`}
+                                >
+                                  {/* Diagonal stripes pattern overlay */}
+                                  <div
+                                    className="absolute inset-0 opacity-10"
+                                    style={{
+                                      backgroundImage:
+                                        'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)',
+                                      backgroundSize: '4px 4px',
+                                    }}
+                                  ></div>
 
-                                <span className="text-base font-black text-primary-foreground leading-none relative z-10 whitespace-nowrap">
-                                  {uiMeta.displayLevel
-                                    ? t('coursesLibrary.levelTag', { level: uiMeta.displayLevel })
-                                    : '?'}
-                                </span>
-                              </div>
-
-                              {/* Center: Content */}
-                              <div className="flex-1 px-4 py-3 flex flex-col justify-center min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-black text-lg text-foreground leading-snug group-hover/card:text-primary transition-colors line-clamp-2 break-words">
-                                    {course.name}
-                                  </h3>
-                                  {course.volume && (
-                                    <span className="shrink-0 text-[10px] font-black bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border uppercase">
-                                      VOL.{course.volume}
-                                    </span>
-                                  )}
+                                  <span className="text-base font-black text-primary-foreground leading-none relative z-10 whitespace-nowrap">
+                                    {uiMeta.displayLevel
+                                      ? t('coursesLibrary.levelTag', { level: uiMeta.displayLevel })
+                                      : '?'}
+                                  </span>
                                 </div>
-                                <div className="flex items-center gap-3 mt-1">
-                                  <div className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                                    <Layers size={14} />
-                                    {t('coursesLibrary.unitsCount', {
-                                      count: uiMeta.totalUnits || 10,
-                                    })}
+
+                                {/* Center: Content */}
+                                <div className="flex-1 px-4 py-3 flex flex-col justify-center min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-black text-lg text-foreground leading-snug group-hover/card:text-primary transition-colors line-clamp-2 break-words">
+                                      {course.name}
+                                    </h3>
+                                    {course.volume && (
+                                      <span className="shrink-0 text-[10px] font-black bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border uppercase">
+                                        VOL.{course.volume}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <div className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                                      <Layers size={14} />
+                                      {t('coursesLibrary.unitsCount', {
+                                        count: uiMeta.totalUnits || 10,
+                                      })}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Right: Shared Cover + Arrow */}
-                              <div className="w-[76px] border-l-2 border-dashed border-border flex flex-col items-center justify-center gap-2 bg-muted group-hover/card:bg-accent transition-colors self-stretch p-2">
-                                <div
-                                  className="w-10 h-14 rounded-lg border border-border bg-card overflow-hidden shadow-sm"
-                                  style={
-                                    {
-                                      viewTransitionName: getCourseCoverTransitionName(course.id),
-                                    } as React.CSSProperties
-                                  }
-                                >
-                                  {course.coverUrl ? (
-                                    <img
-                                      src={course.coverUrl}
-                                      alt={course.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : course.id === 'ysk-1' ? (
-                                    <div className="w-full h-full grid place-items-center bg-amber-50 dark:bg-amber-400/12">
-                                      <span className="text-[9px] font-black text-amber-600 dark:text-amber-200">
-                                        YSK
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-full grid place-items-center bg-indigo-50 dark:bg-indigo-400/12">
-                                      <BookMarked className="w-4 h-4 text-indigo-300 dark:text-indigo-200/75" />
-                                    </div>
-                                  )}
+                                {/* Right: Shared Cover + Arrow */}
+                                <div className="w-[76px] border-l-2 border-dashed border-border flex flex-col items-center justify-center gap-2 bg-muted group-hover/card:bg-accent transition-colors self-stretch p-2">
+                                  <div
+                                    className="w-10 h-14 rounded-lg border border-border bg-card overflow-hidden shadow-sm"
+                                    style={
+                                      {
+                                        viewTransitionName: getCourseCoverTransitionName(course.id),
+                                      } as React.CSSProperties
+                                    }
+                                  >
+                                    {course.coverUrl ? (
+                                      <img
+                                        src={course.coverUrl}
+                                        alt={course.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : course.id === 'ysk-1' ? (
+                                      <div className="w-full h-full grid place-items-center bg-amber-50 dark:bg-amber-400/12">
+                                        <span className="text-[9px] font-black text-amber-600 dark:text-amber-200">
+                                          YSK
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="w-full h-full grid place-items-center bg-indigo-50 dark:bg-indigo-400/12">
+                                        <BookMarked className="w-4 h-4 text-indigo-300 dark:text-indigo-200/75" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover/card:text-foreground transition-colors" />
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover/card:text-foreground transition-colors" />
-                              </div>
-                            </Button>
-                          );
-                        })()
-                      )}
+                              </Button>
+                            );
+                          })()
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}

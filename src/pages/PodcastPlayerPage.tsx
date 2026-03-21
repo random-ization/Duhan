@@ -133,7 +133,7 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     translationSubtitle: 'Translated subtitles',
     showTranslationTemplate: 'Show {{language}} translation',
     generating: 'Generating...',
-    regenerateSubtitle: 'Regenerate subtitles (fix formatting)',
+    regenerateSubtitle: 'Regenerate subtitles',
     regenerateTitle: 'Regenerate subtitles?',
     regenerateDescription:
       'Regenerating subtitles may take 1-2 minutes. The current subtitle cache will be cleared and requested again. Continue?',
@@ -187,7 +187,7 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     translationSubtitle: '\u7ffb\u8bd1\u5b57\u5e55',
     showTranslationTemplate: '\u663e\u793a{{language}}\u7ffb\u8bd1',
     generating: '\u751f\u6210\u4e2d...',
-    regenerateSubtitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55 (\u4fee\u6b63\u6392\u7248)',
+    regenerateSubtitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55',
     regenerateTitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55\uff1f',
     regenerateDescription:
       '\u91cd\u65b0\u751f\u6210\u5b57\u5e55\u53ef\u80fd\u9700\u8981 1-2 \u5206\u949f\uff0c\u5f53\u524d\u5b57\u5e55\u7f13\u5b58\u4f1a\u88ab\u6e05\u7a7a\u5e76\u91cd\u65b0\u8bf7\u6c42\u3002\u786e\u5b9a\u7ee7\u7eed\u5417\uff1f',
@@ -240,7 +240,7 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     translationSubtitle: 'Phu de dich',
     showTranslationTemplate: 'Hien ban dich {{language}}',
     generating: 'Dang tao...',
-    regenerateSubtitle: 'Tao lai phu de (sua dinh dang)',
+    regenerateSubtitle: 'Tao lai phu de',
     regenerateTitle: 'Tao lai phu de?',
     regenerateDescription:
       'Tao lai phu de co the mat 1-2 phut. Bo nho dem phu de hien tai se duoc xoa va yeu cau lai. Ban co muon tiep tuc khong?',
@@ -293,7 +293,7 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     translationSubtitle: 'Орчуулгын хадмал',
     showTranslationTemplate: '{{language}} орчуулгыг харуулах',
     generating: 'Үүсгэж байна...',
-    regenerateSubtitle: 'Хадмалыг дахин үүсгэх (формат засах)',
+    regenerateSubtitle: 'Хадмалыг дахин үүсгэх',
     regenerateTitle: 'Хадмалыг дахин үүсгэх үү?',
     regenerateDescription:
       'Хадмалыг дахин үүсгэхэд 1-2 минут шаардагдаж магадгүй. Одоогийн хадмал кэшийг цэвэрлээд дахин хүсэлт илгээнэ. Үргэлжлүүлэх үү?',
@@ -468,13 +468,13 @@ const TranscriptLineRow: React.FC<{
         <Button
           type="button"
           variant="ghost"
-          className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0"
+          className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0 whitespace-normal"
           onClick={() => onSeek(line.start)}
         >
           <div className="flex w-full flex-col items-start space-y-2">
             <div
               className={`
-                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1
+                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1 whitespace-normal break-words [overflow-wrap:anywhere]
                                                     ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
                                                 `}
             >
@@ -505,7 +505,7 @@ const TranscriptLineRow: React.FC<{
             {showTranslation && (
               <p
                 className={`
-                                                        text-base leading-relaxed transition-colors border-l-2 pl-3
+                                                        text-base leading-relaxed transition-colors border-l-2 pl-3 whitespace-normal break-words [overflow-wrap:anywhere]
                                                         ${
                                                           isActive
                                                             ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
@@ -928,10 +928,6 @@ function loadTranscriptFromLocalCache(id: string, language: string): TranscriptL
     };
     if (parsed.language && parsed.language !== language) return null;
     if (!parsed.segments || parsed.segments.length === 0) return null;
-    const hasTranslation = parsed.segments.some(
-      segment => typeof segment.translation === 'string' && segment.translation.trim().length > 0
-    );
-    if (!hasTranslation && language) return null;
     console.log('[Transcript] Loaded from localStorage (instant)');
     return parsed.segments;
   } catch {
@@ -1122,10 +1118,38 @@ async function handleTranscriptLoadFailure(args: {
 }
 
 function formatPlaybackTime(seconds: number) {
-  if (!seconds) return '00:00';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  if (safeSeconds <= 0) return '00:00';
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainingSeconds = Math.floor(safeSeconds % 60);
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+function parseDurationToSeconds(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 0 ? value : 0;
+  }
+  if (typeof value !== 'string') return 0;
+  const text = value.trim();
+  if (!text) return 0;
+
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const numeric = Number.parseFloat(text);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+  }
+
+  const parts = text.split(':').map(part => Number.parseInt(part, 10));
+  if (!parts.every(part => Number.isFinite(part) && part >= 0)) return 0;
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return minutes * 60 + seconds;
+  }
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+  return 0;
 }
 
 function buildEpisodeHash(episode: Pick<PodcastEpisode, 'title' | 'audioUrl'>) {
@@ -1384,6 +1408,25 @@ const PodcastPlayerPage: React.FC = () => {
   const formatTime = formatPlaybackTime;
   const getEpisodeId = useCallback(() => getEpisodeIdForTranscript(episode), [episode]);
   const getEpisodeKey = useCallback(() => getEpisodeKeyForHistory(episode), [episode]);
+  const fallbackDuration = useMemo(
+    () => parseDurationToSeconds(episode.duration ?? episode.itunes?.duration),
+    [episode.duration, episode.itunes?.duration]
+  );
+  const effectiveDuration = useMemo(() => {
+    if (Number.isFinite(duration) && duration > 0) {
+      return Math.max(duration, fallbackDuration);
+    }
+    return fallbackDuration;
+  }, [duration, fallbackDuration]);
+  const safeCurrentTime = useMemo(() => Math.max(0, currentTime), [currentTime]);
+  const remainingTime = useMemo(
+    () => Math.max(0, effectiveDuration - safeCurrentTime),
+    [effectiveDuration, safeCurrentTime]
+  );
+  const progressPercent = useMemo(() => {
+    if (effectiveDuration <= 0) return 0;
+    return Math.min(100, Math.max(0, (safeCurrentTime / effectiveDuration) * 100));
+  }, [effectiveDuration, safeCurrentTime]);
   const episodeKey = useMemo(() => getEpisodeKey(), [getEpisodeKey]);
   const historyBase = useMemo(
     () => getHistoryBaseRecord(episodeKey, episode, channel),
@@ -1395,10 +1438,50 @@ const PodcastPlayerPage: React.FC = () => {
     []
   );
 
-  const waitForTranscriptFromS3 = useCallback(
-    async (episodeId: string) =>
-      waitForTranscriptFromS3WithDelays(episodeId, [5000, 5000, 10000, 10000, 15000, 15000, 20000]),
-    []
+  const waitForTranscriptReady = useCallback(
+    async (episodeId: string) => {
+      const pollDelays = [0, 2000, 3000, 5000, 8000, 10000, 12000, 15000];
+      for (const delay of pollDelays) {
+        if (delay > 0) {
+          await waitMilliseconds(delay);
+        }
+        const dbResult = await getTranscript({ episodeId });
+        if (dbResult?.segments && dbResult.segments.length > 0) {
+          return dbResult.segments;
+        }
+        const s3Result = await loadTranscriptFromS3Cache(episodeId);
+        if (s3Result && Array.isArray(s3Result) && s3Result.length > 0) {
+          return s3Result;
+        }
+      }
+      return null;
+    },
+    [getTranscript]
+  );
+
+  const hydrateTranscriptTranslationsInBackground = useCallback(
+    (episodeId: string, targetLanguage: string, loadKey: string) => {
+      if (!targetLanguage) return;
+      void (async () => {
+        try {
+          const translated = await getTranscript({ episodeId, language: targetLanguage });
+          const translatedSegments = translated?.segments;
+          if (!translatedSegments || translatedSegments.length === 0) return;
+          if (getEpisodeId() !== episodeId) return;
+          applyLoadedTranscript({
+            segments: translatedSegments,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            transcriptLoadedKeyRef,
+          });
+          saveTranscriptToLocalCache(episodeId, targetLanguage, translatedSegments);
+        } catch (translationError) {
+          logger.warn('[Transcript] Background translation failed', translationError);
+        }
+      })();
+    },
+    [getEpisodeId, getTranscript]
   );
 
   const resolveTranscriptAudioUrl = useCallback(
@@ -1447,37 +1530,34 @@ const PodcastPlayerPage: React.FC = () => {
           setTranscriptLoading,
           transcriptLoadedKeyRef,
         });
+        if (!shouldMarkTranscriptLoaded(localData, targetLanguage)) {
+          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+        }
         transcriptLoadKeyRef.current = null;
         return;
       }
 
       try {
         // Step 1: S3 Cache
-        let prefilledFromS3 = false;
-        if (CDN_DOMAIN) {
-          try {
-            const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
-            const s3Res = await fetch(s3Url);
-            if (s3Res.ok) {
-              const data = await s3Res.json();
-              const segments = data.segments || data;
-              applyLoadedTranscript({
-                segments,
-                targetLanguage,
-                loadKey,
-                setTranscript,
-                setTranscriptLoading,
-                transcriptLoadedKeyRef,
-              });
-              prefilledFromS3 = true;
-            }
-          } catch {
-            /* Ignore S3 error */
+        const s3Segments = await loadTranscriptFromS3Cache(episodeId);
+        if (s3Segments && Array.isArray(s3Segments) && s3Segments.length > 0) {
+          applyLoadedTranscript({
+            segments: s3Segments,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            setTranscriptLoading,
+            transcriptLoadedKeyRef,
+          });
+          saveTranscriptToLocalCache(episodeId, targetLanguage, s3Segments);
+          if (!shouldMarkTranscriptLoaded(s3Segments, targetLanguage)) {
+            hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           }
+          return;
         }
 
         // Step 1.5: Convex DB fallback (if CDN missing)
-        const dbResult = await getTranscript({ episodeId, language: targetLanguage });
+        const dbResult = await getTranscript({ episodeId });
         if (dbResult?.segments && dbResult.segments.length > 0) {
           applyLoadedTranscript({
             segments: dbResult.segments,
@@ -1488,6 +1568,7 @@ const PodcastPlayerPage: React.FC = () => {
             transcriptLoadedKeyRef,
           });
           saveTranscriptToLocalCache(episodeId, targetLanguage, dbResult.segments);
+          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           return;
         }
 
@@ -1505,30 +1586,19 @@ const PodcastPlayerPage: React.FC = () => {
         const kickoffError = getTranscriptKickoffError(kickoff);
         if (kickoffError) throw new Error(kickoffError);
 
-        const s3Ready = await waitForTranscriptFromS3(episodeId);
-        if (s3Ready && !prefilledFromS3) {
+        const readySegments = await waitForTranscriptReady(episodeId);
+        if (readySegments && readySegments.length > 0) {
           applyLoadedTranscript({
-            segments: s3Ready,
+            segments: readySegments,
             targetLanguage,
             loadKey,
             setTranscript,
             setTranscriptLoading,
             transcriptLoadedKeyRef,
           });
-          prefilledFromS3 = true;
-        }
-
-        const dbFallback = await getTranscript({ episodeId, language: targetLanguage });
-        if (dbFallback?.segments && dbFallback.segments.length > 0) {
-          applyLoadedTranscript({
-            segments: dbFallback.segments,
-            targetLanguage,
-            loadKey,
-            setTranscript,
-            transcriptLoadedKeyRef,
-          });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, dbFallback.segments);
-        } else if (!s3Ready) {
+          saveTranscriptToLocalCache(episodeId, targetLanguage, readySegments);
+          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+        } else {
           throw new Error(copy.transcriptTimeout);
         }
       } catch (err) {
@@ -1563,7 +1633,8 @@ const PodcastPlayerPage: React.FC = () => {
       mockTranscript,
       resolveTranscriptAudioUrl,
       retryLoadTranscriptFromS3,
-      waitForTranscriptFromS3,
+      waitForTranscriptReady,
+      hydrateTranscriptTranslationsInBackground,
       language,
     ]
   );
@@ -1620,8 +1691,7 @@ const PodcastPlayerPage: React.FC = () => {
       }).catch(console.error);
 
       if (historyBase.episodeUrl) {
-        const resolvedDuration =
-          typeof episode.duration === 'number' ? episode.duration : duration || undefined;
+        const resolvedDuration = effectiveDuration || undefined;
         recordHistory({
           ...historyBase,
           progress: Math.floor(currentTime),
@@ -1671,20 +1741,19 @@ const PodcastPlayerPage: React.FC = () => {
 
   // 1.6 Apply Resume Time (Wait for Metadata)
   useEffect(() => {
-    if (resumeTime !== null && audioRef.current && duration > 0 && !isLoading) {
+    if (resumeTime !== null && audioRef.current && effectiveDuration > 0 && !isLoading) {
       console.log(`[Resume] Seeking to ${resumeTime}s`);
       audioRef.current.currentTime = resumeTime;
       setResumeTime(null); // Clear once applied
     }
-  }, [resumeTime, duration, isLoading]);
+  }, [resumeTime, effectiveDuration, isLoading]);
 
   // 1.7 Save Progress Periodically
   // 1.7 Save Progress Periodically
   useEffect(() => {
     const interval = setInterval(() => {
       if (isPlaying && currentTime > 5 && historyBase.episodeUrl) {
-        const resolvedDuration =
-          typeof episode.duration === 'number' ? episode.duration : duration || undefined;
+        const resolvedDuration = effectiveDuration || undefined;
         recordHistory({
           ...historyBase,
           progress: Math.floor(currentTime),
@@ -1693,7 +1762,7 @@ const PodcastPlayerPage: React.FC = () => {
       }
     }, 10000); // Save every 10 seconds
     return () => clearInterval(interval);
-  }, [isPlaying, currentTime, historyBase, recordHistory, episode.duration, duration]);
+  }, [isPlaying, currentTime, historyBase, recordHistory, effectiveDuration]);
 
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
@@ -1731,7 +1800,8 @@ const PodcastPlayerPage: React.FC = () => {
 
   const seekTo = (time: number) => {
     if (audioRef.current) {
-      const t = Math.max(0, Math.min(time, duration));
+      const maxDuration = effectiveDuration > 0 ? effectiveDuration : Number.POSITIVE_INFINITY;
+      const t = Math.max(0, Math.min(time, maxDuration));
       audioRef.current.currentTime = t;
       setCurrentTime(t);
     }
@@ -2101,7 +2171,7 @@ const PodcastPlayerPage: React.FC = () => {
         {/* Right Column: Transcript Stream */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto scroll-smooth bg-muted/50 pb-10 md:pb-12 relative"
+          className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth bg-muted/50 pb-10 md:pb-12 relative"
         >
           {/* Auto-Scroll Floating Toggle */}
           <div className="sticky top-4 right-4 z-20 flex justify-end px-4 pointer-events-none">
@@ -2156,7 +2226,9 @@ const PodcastPlayerPage: React.FC = () => {
                     onClick={e => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const pct = (e.clientX - rect.left) / rect.width;
-                      seekTo(pct * duration);
+                      if (effectiveDuration > 0) {
+                        seekTo(pct * effectiveDuration);
+                      }
                     }}
                   >
                     <span className="sr-only">{copy.seek}</span>
@@ -2164,14 +2236,14 @@ const PodcastPlayerPage: React.FC = () => {
                   <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full relative"
-                      style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                      style={{ width: `${progressPercent}%` }}
                     >
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-full shadow border-2 border-card scale-0 group-hover:scale-100 transition-transform" />
                     </div>
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground font-medium mt-1 select-none">
-                    <span>{formatTime(currentTime)}</span>
-                    <span>-{formatTime(duration - currentTime)}</span>
+                    <span>{formatTime(safeCurrentTime)}</span>
+                    <span>-{formatTime(remainingTime)}</span>
                   </div>
                 </div>
 
@@ -2279,8 +2351,19 @@ const PodcastPlayerPage: React.FC = () => {
         ref={audioRef}
         src={episode.audioUrl}
         onTimeUpdate={handleTimeUpdate}
+        onDurationChange={e => {
+          const mediaDuration = e.currentTarget.duration;
+          if (Number.isFinite(mediaDuration) && mediaDuration > 0) {
+            setDuration(prev => (prev > 0 ? Math.max(prev, mediaDuration) : mediaDuration));
+          }
+        }}
         onLoadedMetadata={e => {
-          setDuration(e.currentTarget.duration);
+          const mediaDuration = e.currentTarget.duration;
+          if (Number.isFinite(mediaDuration) && mediaDuration > 0) {
+            setDuration(prev => (prev > 0 ? Math.max(prev, mediaDuration) : mediaDuration));
+          } else if (fallbackDuration > 0) {
+            setDuration(prev => (prev > 0 ? prev : fallbackDuration));
+          }
           setIsLoading(false);
         }}
         onEnded={() => setIsPlaying(false)}

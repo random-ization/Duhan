@@ -148,7 +148,14 @@ export const startSession = mutation({
   args: {
     examId: v.id('topik_exams'),
   },
-  handler: async (ctx, { examId }): Promise<Id<'topik_writing_sessions'>> => {
+  handler: async (
+    ctx,
+    { examId }
+  ): Promise<{
+    sessionId: Id<'topik_writing_sessions'>;
+    endTime: number;
+    answers: WritingAnswerMap;
+  }> => {
     const userId = await getAuthUserId(ctx);
     const now = Date.now();
 
@@ -160,20 +167,25 @@ export const startSession = mutation({
       .first();
 
     if (existing !== null) {
-      return existing._id;
+      return {
+        sessionId: existing._id,
+        endTime: existing.endTime,
+        answers: (existing.answers as WritingAnswerMap | undefined) ?? {},
+      };
     }
 
     // Create a fresh session with 50-minute window
+    const endTime = now + EXAM_DURATION_MS;
     const sessionId = await ctx.db.insert('topik_writing_sessions', {
       userId,
       examId,
       status: 'IN_PROGRESS',
       answers: {} as WritingAnswerMap,
       startTime: now,
-      endTime: now + EXAM_DURATION_MS,
+      endTime,
     });
 
-    return sessionId;
+    return { sessionId, endTime, answers: {} };
   },
 });
 

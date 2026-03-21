@@ -192,38 +192,41 @@ export const evaluateSubmission = action({
     const apiKey = process.env.OPENAI_API_KEY;
     const responseLanguage = normalizeAiResponseLanguage(language);
 
-    // 3. Evaluate each question independently
+    // 3. Evaluate each question independently.
+    // Run model calls in parallel to cut end-to-end latency for the report.
     const questionsSorted = [...questions].sort((a, b) => a.number - b.number);
+    const evaluated = await Promise.all(
+      questionsSorted.map(async q => {
+        const answerText = answers[String(q.number)] ?? '';
 
-    for (let i = 0; i < questionsSorted.length; i++) {
-      const q = questionsSorted[i];
-      const answerText = answers[String(q.number)] ?? '';
-      const isLast = i === questionsSorted.length - 1;
+        if (!apiKey) {
+          // ── MOCK fallback when no API key is set ──
+          return { question: q, result: mockEvaluation(q, answerText, responseLanguage) };
+        }
 
-      let evalResult: AiEvalResult;
-
-      if (!apiKey) {
-        // ── MOCK fallback when no API key is set ──
-        evalResult = mockEvaluation(q, answerText, responseLanguage);
-      } else {
         try {
           // ── Real OpenAI call ──
-          evalResult = await callOpenAI(apiKey, q, answerText, responseLanguage);
+          const result = await callOpenAI(apiKey, q, answerText, responseLanguage);
+          return { question: q, result };
         } catch (error) {
           console.warn(`OpenAI evaluation failed for Q${q.number}, fallback to mock`, error);
-          evalResult = mockEvaluation(q, answerText, responseLanguage);
+          return { question: q, result: mockEvaluation(q, answerText, responseLanguage) };
         }
-      }
+      })
+    );
 
+    // Persist in sorted order so finalization remains deterministic.
+    for (let i = 0; i < evaluated.length; i += 1) {
+      const { question, result } = evaluated[i];
       await ctx.runMutation(internal.aiWritingEvaluation.saveEvaluation, {
         sessionId,
         userId,
-        questionNumber: q.number,
-        score: evalResult.score,
-        dimensions: evalResult.dimensions,
-        feedbackText: evalResult.feedbackText,
-        correctedText: evalResult.correctedText,
-        isLastQuestion: isLast,
+        questionNumber: question.number,
+        score: result.score,
+        dimensions: result.dimensions,
+        feedbackText: result.feedbackText,
+        correctedText: result.correctedText,
+        isLastQuestion: i === evaluated.length - 1,
       });
     }
 
@@ -391,7 +394,7 @@ async function callOpenAI(
       type: 'image_url',
       image_url: {
         url: question.image!.trim(),
-        detail: 'high',
+        detail: 'auto',
       },
     });
   }

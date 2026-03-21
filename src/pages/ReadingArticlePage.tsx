@@ -2508,8 +2508,8 @@ export default function ReadingArticlePage() {
   const wordCount = Math.max(1, Math.round(cleanedBodyText.length / 2));
 
   return (
-    <div className="relative min-h-[82vh] overflow-hidden rounded-3xl border border-border bg-muted">
-      <main className="relative z-10 flex min-h-[82vh] flex-col border-border bg-card">
+    <div className="relative h-full min-h-full overflow-hidden border border-border bg-muted">
+      <main className="relative z-10 flex h-full min-h-full flex-col border-border bg-card">
         <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <AppBreadcrumb
@@ -2575,7 +2575,7 @@ export default function ReadingArticlePage() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12" ref={contentRef}>
-          <div className="mx-auto w-full max-w-2xl">
+          <div className="mx-auto w-full max-w-4xl">
             <h1 className="mb-6 text-3xl font-black leading-tight text-foreground">
               {resolvedArticle.title}
             </h1>

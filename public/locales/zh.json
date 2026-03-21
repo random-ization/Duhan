@@ -1399,20 +1399,20 @@
     "originalLabel": "原价",
     "promo": {
       "activated": "地区优惠激活",
-      "verifyNow": "立即认证",
+      "verifyNow": "查看优惠",
       "subscribe": "以优惠价订阅",
-      "kycReserved": "认证入口已预留，稍后接入 KYC。",
+      "kycReserved": "地区优惠已自动生效，无需认证。",
       "banner": {
-        "prefix": "完成手机号认证，解锁地区优惠价：",
+        "prefix": "中国地区专属优惠价：",
         "highlight": "$1.9",
         "suffix": "/月 起",
-        "cta": "立即认证 →"
+        "cta": "查看优惠详情 →"
       },
       "card": {
         "title": "中国地区专属优惠",
         "badge": "低至 $1.9",
-        "description": "我们为中国地区提供 PPP (购买力平价) 专属价格。完成手机号认证后解锁优惠价。",
-        "cta": "立即认证"
+        "description": "我们为中国地区提供 PPP (购买力平价) 专属价格。无需手机认证，当前即可享受优惠。",
+        "cta": "立即订阅"
       }
     }
   },
@@ -1830,7 +1830,7 @@
       "ACTION_PLAY": "播放",
       "ACTION_EXPLORE": "探索频道",
       "ACTION_SEARCH": "搜索韩语播客...",
-      "ACTION_REGENERATE": "重新生成字幕 (修正排版)",
+      "ACTION_REGENERATE": "重新生成字幕",
       "ACTION_REGENERATE_CONFIRM": "重新生成字幕可能需要 1-2 分钟。确定要重新生成吗？",
       "PLAYER_TRANSLATION_TITLE": "翻译字幕",
       "PLAYER_TRANSLATION_DESC": "显示中文翻译",

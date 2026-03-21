@@ -126,6 +126,27 @@
     "roadmap": "Build your own study roadmap with TOPIK practice, vocab review, and grammar drills.",
     "collectionName": "Korean Learning Guides"
   },
+  "coursesLibrary": {
+    "badge": "Library",
+    "title": "Choose Textbooks",
+    "summary": "Includes {{count}} textbooks, grouped by publisher",
+    "searchPlaceholder": "Search textbooks...",
+    "noResults": "No matching textbooks found",
+    "publisherBadge": "Publisher",
+    "booksCount": "{{count}} books",
+    "levelTag": "Lv {{level}}",
+    "unitsCount": "{{count}} units",
+    "units": "Units",
+    "publishers": {
+      "oer": "Open Educational Resources",
+      "yonsei": "Yonsei University",
+      "seoulNational": "Seoul National University",
+      "chungAng": "Chung-Ang University",
+      "topikGrammarCollection": "TOPIK Grammar Collection"
+    },
+    "otherPublisher": "Other",
+    "viewAll": "View All"
+  },
   "landing": {
     "seo": {
       "title": "DuHan - Learn Korean Online | Interactive Korean Study Platform",
@@ -525,20 +546,20 @@
     "originalLabel": "Original",
     "promo": {
       "activated": "Regional discount active",
-      "verifyNow": "Verify now",
-      "subscribe": "Subscribe with discount",
-      "kycReserved": "KYC button reserved; integration coming soon.",
+      "verifyNow": "View offer",
+      "subscribe": "Subscribe with regional pricing",
+      "kycReserved": "Regional pricing is available now. No verification required.",
       "banner": {
-        "prefix": "",
-        "highlight": "",
-        "suffix": "",
-        "cta": "Verify →"
+        "prefix": "Regional pricing offer: ",
+        "highlight": "$1.9",
+        "suffix": "/month from",
+        "cta": "View offer →"
       },
       "card": {
-        "title": "",
-        "badge": "",
-        "description": "",
-        "cta": ""
+        "title": "Regional pricing offer",
+        "badge": "From $1.9",
+        "description": "We support PPP regional pricing. No phone verification is required to access this discount.",
+        "cta": "Subscribe now"
       }
     }
   },

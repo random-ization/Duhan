@@ -150,16 +150,16 @@ export default function DesktopAuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] dark:bg-background p-4 md:p-12 flex items-center justify-center font-sans">
+    <div className="min-h-screen bg-[#F0F4F8] p-4 md:p-12 flex items-center justify-center font-sans">
       <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
         noIndex={meta.noIndex}
       />
-      <div className="max-w-5xl w-full bg-card rounded-3xl md:rounded-[3rem] border-2 border-foreground shadow-pop overflow-hidden flex flex-col md:flex-row min-h-0 md:min-h-[650px]">
+      <div className="max-w-5xl w-full bg-white rounded-3xl md:rounded-[3rem] border-2 border-slate-900 shadow-pop overflow-hidden flex flex-col md:flex-row min-h-0 md:min-h-[650px]">
         {/* Left: Visuals (Game Cover) */}
-        <div className="w-full md:w-1/2 bg-indigo-600 dark:bg-indigo-500 relative flex flex-col items-center justify-center p-6 md:p-10 text-white dark:text-primary-foreground overflow-hidden">
+        <div className="w-full md:w-1/2 bg-indigo-600 relative flex flex-col items-center justify-center p-6 md:p-10 text-white overflow-hidden">
           <div
             className="absolute inset-0 opacity-20"
             style={{
@@ -179,13 +179,11 @@ export default function DesktopAuthPage() {
               <img
                 src="/logo.png"
                 alt={t('common.alt.logo')}
-                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl dark:brightness-0 dark:invert"
+                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl"
               />
             )}
             <h1 className="text-5xl font-black font-display mb-2">{t('auth.brand')}</h1>
-            <p className="text-indigo-200 dark:text-indigo-100 font-bold text-lg tracking-wide">
-              {t('auth.slogan')}
-            </p>
+            <p className="text-indigo-200 font-bold text-lg tracking-wide">{t('auth.slogan')}</p>
           </div>
 
           {/* 3D Rocket Decoration */}
@@ -199,8 +197,8 @@ export default function DesktopAuthPage() {
         </div>
 
         {/* Right: Console (Form) */}
-        <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-card relative">
-          <h2 className="text-3xl font-black mb-6 text-foreground flex items-center gap-2">
+        <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-white relative">
+          <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
             {isLogin ? t('auth.welcomeBack') : t('auth.createCharacter')}{' '}
             <Sparkles className="text-yellow-400 dark:text-amber-300 fill-current" />
           </h2>
@@ -215,13 +213,13 @@ export default function DesktopAuthPage() {
             {!isLogin && (
               <div className="relative group">
                 <User
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-300 transition"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
                   size={20}
                 />
                 <Input
                   type="text"
                   placeholder={t('auth.placeholderName')}
-                  className="h-auto w-full bg-muted shadow-none border-2 border-border rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-300 focus:bg-card transition text-foreground placeholder:text-muted-foreground"
+                  className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -231,13 +229,13 @@ export default function DesktopAuthPage() {
 
             <div className="relative group">
               <Mail
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-300 transition"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
                 size={20}
               />
               <Input
                 type="email"
                 placeholder={t('auth.placeholderEmail')}
-                className="h-auto w-full bg-muted shadow-none border-2 border-border rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-300 focus:bg-card transition text-foreground placeholder:text-muted-foreground"
+                className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                 required
@@ -246,13 +244,13 @@ export default function DesktopAuthPage() {
 
             <div className="relative group">
               <Lock
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-300 transition"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
                 size={20}
               />
               <Input
                 type="password"
                 placeholder={t('auth.placeholderPassword')}
-                className="h-auto w-full bg-muted shadow-none border-2 border-border rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-300 focus:bg-card transition text-foreground placeholder:text-muted-foreground"
+                className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -266,7 +264,7 @@ export default function DesktopAuthPage() {
                   asChild
                   variant="ghost"
                   size="auto"
-                  className="text-xs font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 inline-flex items-center gap-1 transition"
+                  className="text-xs font-bold text-slate-400 hover:text-indigo-600 inline-flex items-center gap-1 transition"
                 >
                   <LocalizedLink to="/forgot-password">
                     <HelpCircle size={14} /> {t('auth.forgotPassword')}
@@ -281,7 +279,7 @@ export default function DesktopAuthPage() {
               size="auto"
               loading={loading}
               loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
-              className="w-full mt-4 bg-primary text-primary-foreground font-black py-4 rounded-xl border-b-4 border-foreground hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
+              className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-black hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
             >
               {isLogin ? t('auth.loginButton') : t('auth.signupButton')}
               <ArrowRight size={20} />
@@ -290,11 +288,11 @@ export default function DesktopAuthPage() {
 
           {/* Social Login Divider */}
           <div className="my-8 flex items-center gap-4">
-            <div className="h-px bg-muted flex-1"></div>
-            <span className="text-xs font-bold text-muted-foreground uppercase">
+            <div className="h-px bg-slate-200 flex-1"></div>
+            <span className="text-xs font-bold text-slate-400 uppercase">
               {t('auth.orContinue')}
             </span>
-            <div className="h-px bg-muted flex-1"></div>
+            <div className="h-px bg-slate-200 flex-1"></div>
           </div>
 
           {/* Social Buttons */}
@@ -308,7 +306,7 @@ export default function DesktopAuthPage() {
               loadingIconClassName="w-4 h-4"
               variant="ghost"
               size="auto"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-border rounded-xl font-bold text-muted-foreground hover:bg-muted hover:border-border transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <img
                 src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -326,16 +324,16 @@ export default function DesktopAuthPage() {
               loadingIconClassName="w-4 h-4"
               variant="ghost"
               size="auto"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-border rounded-xl font-bold text-muted-foreground hover:bg-muted hover:border-border transition"
+              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
             >
-              <span className="bg-yellow-400 dark:bg-amber-300 text-foreground font-black text-xs px-1 rounded">
+              <span className="bg-yellow-400 text-slate-900 font-black text-xs px-1 rounded">
                 K
               </span>
               {t('auth.social.kakao')}
             </Button>
           </div>
 
-          <div className="mt-8 text-center text-xs font-bold text-muted-foreground">
+          <div className="mt-8 text-center text-xs font-bold text-slate-400">
             {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
             <Button
               type="button"
@@ -346,7 +344,7 @@ export default function DesktopAuthPage() {
               disabled={loading}
               variant="ghost"
               size="auto"
-              className="text-indigo-600 dark:text-indigo-300 hover:underline uppercase"
+              className="text-indigo-600 hover:underline uppercase"
             >
               {isLogin ? t('auth.registerAction') : t('auth.loginAction')}
             </Button>

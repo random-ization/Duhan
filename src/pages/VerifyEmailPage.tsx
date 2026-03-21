@@ -97,14 +97,14 @@ const VerifyEmailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-sm p-6">
-        <h1 className="text-2xl font-black text-foreground mb-2">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h1 className="text-2xl font-black text-slate-900 mb-2">
           {t('auth.verifyEmail', { defaultValue: 'Verify email' })}
         </h1>
 
         {!token && (
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-slate-500 mb-6">
             {t('auth.verifyEmailDescription', {
               defaultValue: 'Click the button below to send a verification email.',
             })}
@@ -115,10 +115,10 @@ const VerifyEmailPage: React.FC = () => {
           <div
             className={`mb-5 rounded-xl border p-4 text-sm ${
               state === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-400/12 dark:border-emerald-300/40 dark:text-emerald-200'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                 : state === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-700 dark:bg-rose-400/12 dark:border-rose-300/40 dark:text-rose-200'
-                  : 'bg-muted border-border text-muted-foreground'
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
             {message || t('common.loading', { defaultValue: 'Loading...' })}
@@ -133,7 +133,7 @@ const VerifyEmailPage: React.FC = () => {
             loadingText={t('common.loading', { defaultValue: 'Loading...' })}
             variant="ghost"
             size="auto"
-            className="w-full rounded-xl bg-primary text-primary-foreground font-bold py-3 disabled:opacity-60"
+            className="w-full rounded-xl bg-slate-900 text-white font-bold py-3 disabled:opacity-60"
           >
             {t('auth.sendVerificationEmail', { defaultValue: 'Send verification email' })}
           </Button>
@@ -144,7 +144,7 @@ const VerifyEmailPage: React.FC = () => {
             asChild
             variant="ghost"
             size="auto"
-            className="text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 font-semibold"
+            className="text-indigo-600 hover:text-indigo-700 font-semibold"
           >
             <LocalizedLink to="/login">
               {t('auth.backToLogin', { defaultValue: 'Back to login' })}
@@ -155,7 +155,7 @@ const VerifyEmailPage: React.FC = () => {
               asChild
               variant="ghost"
               size="auto"
-              className="text-muted-foreground hover:text-muted-foreground font-semibold"
+              className="text-slate-600 hover:text-slate-700 font-semibold"
             >
               <LocalizedLink to="/profile">
                 {t('profile.title', { defaultValue: 'Profile' })}

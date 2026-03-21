@@ -27,7 +27,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
         className={
           embedded
             ? 'w-full border border-border bg-card flex flex-col opacity-60 rounded-xl shadow-sm'
-            : 'w-80 border-l-2 border-border bg-card flex flex-col z-20 shrink-0 opacity-50 m-4 rounded-xl border-2 shadow-pop-card'
+            : 'w-80 border-l-2 border-border bg-card flex flex-col z-20 shrink-0 opacity-50 rounded-xl border-2 shadow-pop-card h-full'
         }
       >
         <div className="p-6 text-center text-muted-foreground font-black mt-10">
@@ -48,7 +48,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
       className={
         embedded
           ? 'w-full flex flex-col text-foreground gap-4'
-          : 'w-80 flex flex-col z-20 shrink-0 text-foreground m-4 gap-4'
+          : 'w-80 flex flex-col z-20 shrink-0 text-foreground gap-3 h-full'
       }
     >
       {/* Progress Card */}

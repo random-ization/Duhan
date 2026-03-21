@@ -198,26 +198,26 @@ const PaymentSuccessPage: React.FC = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-card rounded-xl shadow-lg p-8 text-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
         {status === 'loading' && (
           <div className="flex flex-col items-center">
-            <Loader2 className="w-16 h-16 text-indigo-600 dark:text-indigo-300 animate-spin mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {t('payment.processing', { defaultValue: 'Processing...' })}
             </h2>
-            <p className="text-muted-foreground">{message}</p>
+            <p className="text-gray-600">{message}</p>
           </div>
         )}
 
         {status === 'success' && (
           <div className="flex flex-col items-center">
-            <CheckCircle className="w-16 h-16 text-green-500 dark:text-emerald-300 mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {t('payment.successTitle', { defaultValue: 'Payment Successful!' })}
             </h2>
-            <p className="text-muted-foreground mb-6">{message}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-gray-600 mb-6">{message}</p>
+            <p className="text-sm text-gray-500">
               {t('payment.redirecting', { defaultValue: 'Redirecting to dashboard...' })}
             </p>
           </div>
@@ -225,11 +225,11 @@ const PaymentSuccessPage: React.FC = () => {
 
         {status === 'pending' && (
           <div className="flex flex-col items-center">
-            <Loader2 className="w-16 h-16 text-amber-500 dark:text-amber-300 animate-spin mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <Loader2 className="w-16 h-16 text-amber-500 animate-spin mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {t('payment.pendingTitle', { defaultValue: 'Payment Received' })}
             </h2>
-            <p className="text-muted-foreground mb-6">{message}</p>
+            <p className="text-gray-600 mb-6">{message}</p>
             <div className="flex w-full gap-2">
               <Button
                 onClick={() => setRetryVersion(v => v + 1)}
@@ -243,7 +243,7 @@ const PaymentSuccessPage: React.FC = () => {
                 onClick={() => navigate('/dashboard')}
                 variant="ghost"
                 size="auto"
-                className="flex-1 bg-primary text-white rounded-lg hover:bg-muted transition-colors"
+                className="flex-1 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
               >
                 {t('payment.goDashboard', { defaultValue: 'Go to Dashboard' })}
               </Button>
@@ -253,16 +253,16 @@ const PaymentSuccessPage: React.FC = () => {
 
         {status === 'error' && (
           <div className="flex flex-col items-center">
-            <AlertCircle className="w-16 h-16 text-red-500 dark:text-rose-300 mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {t('payment.errorTitle', { defaultValue: 'Something went wrong' })}
             </h2>
-            <p className="text-muted-foreground mb-6">{message}</p>
+            <p className="text-gray-600 mb-6">{message}</p>
             <Button
               onClick={() => navigate('/pricing/details')}
               variant="ghost"
               size="auto"
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-muted transition-colors"
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
             >
               {t('payment.backToPricing', { defaultValue: 'Back to Pricing' })}
             </Button>

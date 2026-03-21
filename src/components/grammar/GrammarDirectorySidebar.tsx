@@ -147,7 +147,7 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
       className={
         embedded
           ? 'w-full bg-card border border-border shadow-sm flex flex-col overflow-hidden rounded-xl'
-          : 'w-80 bg-card border-r-2 border-border shadow-pop-sm flex flex-col z-20 shrink-0 m-4 rounded-xl overflow-hidden'
+          : 'w-80 bg-card border-2 border-border shadow-pop-sm flex flex-col z-20 shrink-0 rounded-xl overflow-hidden h-full'
       }
     >
       <div className="p-4 border-b-2 border-border bg-muted/40">

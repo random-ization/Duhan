@@ -339,7 +339,8 @@
       "oer": "Нээлттэй боловсролын эх сурвалж",
       "yonsei": "Ёнсэ их сургууль",
       "seoulNational": "Сөүлийн үндэсний их сургууль",
-      "chungAng": "Чүнган их сургууль"
+      "chungAng": "Чүнган их сургууль",
+      "topikGrammarCollection": "TOPIK дүрмийн эмхэтгэл"
     },
     "otherPublisher": "Бусад",
     "viewAll": "Бүгдийг үзэх"
@@ -1593,7 +1594,7 @@
       "ACTION_PLAY": "Тоглуулах",
       "ACTION_EXPLORE": "Сувгийг судлах",
       "ACTION_SEARCH": "Солонгос подкаст хайх...",
-      "ACTION_REGENERATE": "Хадмалыг дахин үүсгэх (формат засах)",
+      "ACTION_REGENERATE": "Хадмалыг дахин үүсгэх",
       "ACTION_REGENERATE_CONFIRM": "Хадмал дахин үүсгэхэд 1-2 минут зарцуулагдаж магадгүй. Үргэлжлүүлэх үү?",
       "PLAYER_TRANSLATION_TITLE": "Хадмалын орчуулга",
       "PLAYER_TRANSLATION_DESC": "Орчуулгыг харуулах",

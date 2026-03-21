@@ -227,7 +227,7 @@ const GrammarModulePage: React.FC = () => {
   }
 
   return (
-    <div className="text-foreground h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950 dotted-bg font-sans">
+    <div className="text-foreground h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans">
       <header className="shrink-0 p-4 border-b-2 border-slate-900 dark:border-border bg-white dark:bg-card flex justify-between items-center z-20 relative shadow-[0px_4px_0px_0px_rgba(15,23,42,0.05)]">
         <div className="flex items-center gap-3">
           <Button
@@ -254,7 +254,7 @@ const GrammarModulePage: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden relative z-10 w-full max-w-[1600px] mx-auto">
+      <div className="flex-1 flex overflow-hidden relative z-10 w-full gap-3 p-3">
         <GrammarDirectorySidebar
           courseGrammars={allCourseGrammar || []}
           searchQuery={searchQuery}
