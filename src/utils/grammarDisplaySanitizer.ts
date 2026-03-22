@@ -1,5 +1,7 @@
 const ROMANIZATION_BRACKET_RE =
   /\[(?=[^\]]{2,90}\])(?=[^\]]*[A-Za-z])[A-Za-z0-9\s/.,'`~:;!?()-]+\]/g;
+const ROMANIZATION_HEADING_BRACKET_RE =
+  /(^|\n)(\s{0,3}#{1,6}[^\n\r]*?)\s*\[(?=[^\]]{2,90}\])(?=[^\]]*[A-Za-z])[A-Za-z0-9\s/.,'"`~:;!?()-]+\](?=\s*(?:\(|（|$))/g;
 const LABEL_RE =
   /(?:\u97e9\u8bed\u8bed\u6cd5\u70b9|Korean Grammar Point|Korean Grammar)\s*[:：]\s*/gi;
 const PROCESSING_KEYWORD_RE =
@@ -115,10 +117,7 @@ export function sanitizeGrammarMarkdown(input?: string | null): string {
       /(^|\n)\s*(?:\u97e9\u8bed\u8bed\u6cd5\u70b9|Korean Grammar Point|Korean Grammar)\s*[:：]\s*/gi,
       '$1'
     )
-    .replace(
-      /(^|\n)(\s{0,3}#{1,6}[^\n\r]*?)\s*\[(?=[^\]]{2,90}\])(?=[^\]]*[A-Za-z])[A-Za-z0-9\s/.,'`~-]+\](?=\s*(?:\(|（|$))/g,
-      '$1$2'
-    )
+    .replace(ROMANIZATION_HEADING_BRACKET_RE, '$1$2')
     .replace(PRONUNCIATION_LINE_RE, '$1');
   return stripPronunciationTableColumns(stripPronunciationMetadata(withoutHeadingLabels))
     .replace(/\n{3,}/g, '\n\n')
