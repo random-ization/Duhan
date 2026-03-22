@@ -6,6 +6,10 @@ import { useAction, useMutation } from 'convex/react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { aRef, mRef } from '../../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
+import {
+  sanitizeGrammarDisplayText,
+  sanitizeGrammarMarkdown,
+} from '../../utils/grammarDisplaySanitizer';
 import { Button } from '../ui'; // Assuming these exist or I should use native
 import { Input } from '../ui';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
@@ -74,10 +78,10 @@ const resolveSupportedLanguage = (language?: string): SupportedLanguage => {
 };
 
 const getLocalizedTitle = (grammar: GrammarPointData, language: SupportedLanguage): string => {
-  if (language === 'en') return grammar.titleEn || grammar.title;
-  if (language === 'vi') return grammar.titleVi || grammar.title;
-  if (language === 'mn') return grammar.titleMn || grammar.title;
-  return grammar.titleZh || grammar.title;
+  if (language === 'en') return sanitizeGrammarDisplayText(grammar.titleEn || grammar.title);
+  if (language === 'vi') return sanitizeGrammarDisplayText(grammar.titleVi || grammar.title);
+  if (language === 'mn') return sanitizeGrammarDisplayText(grammar.titleMn || grammar.title);
+  return sanitizeGrammarDisplayText(grammar.titleZh || grammar.title);
 };
 
 const getLocalizedSummary = (grammar: GrammarPointData, language: SupportedLanguage): string => {
@@ -90,7 +94,9 @@ const getLocalizedSummary = (grammar: GrammarPointData, language: SupportedLangu
           ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
           : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
 
-  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+  return sanitizeGrammarDisplayText(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
 };
 
 const getLocalizedExplanation = (
@@ -116,7 +122,9 @@ const getLocalizedExplanation = (
               grammar.explanationMn,
             ];
 
-  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+  return sanitizeGrammarMarkdown(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
 };
 
 const getExampleTranslation = (
@@ -131,7 +139,9 @@ const getExampleTranslation = (
         : language === 'mn'
           ? [example.mn, example.en, example.cn, example.vi]
           : [example.cn, example.en, example.vi, example.mn];
-  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+  return sanitizeGrammarDisplayText(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
 };
 
 const getLocalizedCustomNote = (grammar: GrammarPointData, language: SupportedLanguage): string => {

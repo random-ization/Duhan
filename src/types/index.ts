@@ -500,6 +500,12 @@ export interface GrammarPointData {
     sourceUrl?: string;
     checksum?: string;
     parserVersion?: string;
+    sourceLanguage?: 'zh' | 'en' | 'vi' | 'mn';
+    grammarKey?: string;
+    categoryStatus?: 'AUTO_OK' | 'NEEDS_REVIEW';
+    categoryConfidence?: number;
+    categoryReason?: string;
+    categoryEvidence?: string;
     importedAt: number;
   };
 

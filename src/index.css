@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin '@tailwindcss/typography';
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -318,7 +319,9 @@
   border-radius: 0.35rem;
   background: hsl(var(--muted));
   padding: 0.15rem 0.3rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   font-size: 0.88em;
 }
 

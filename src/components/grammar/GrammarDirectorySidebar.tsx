@@ -1,10 +1,28 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Input } from '../ui';
+import { Badge, Button, Card, CardContent, CardHeader, Input } from '../ui';
 import { useTranslation } from 'react-i18next';
-import { Search, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Circle, Search } from 'lucide-react';
+import { sanitizeGrammarDisplayText } from '../../utils/grammarDisplaySanitizer';
+
+type GrammarStatus = 'NEW' | 'LEARNING' | 'MASTERED';
+
+interface GrammarDirectoryItem {
+  id: string;
+  title: string;
+  titleEn?: string;
+  titleZh?: string;
+  titleVi?: string;
+  titleMn?: string;
+  summary?: string;
+  summaryEn?: string;
+  summaryVi?: string;
+  summaryMn?: string;
+  unitId: number;
+  status?: string;
+}
 
 interface GrammarDirectorySidebarProps {
-  courseGrammars: any[]; // GrammarItemDto from convex
+  courseGrammars: GrammarDirectoryItem[];
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedGrammarId?: string;
@@ -22,24 +40,29 @@ function resolveSupportedLanguage(language?: string): SupportedLanguage {
   return 'zh';
 }
 
+function normalizeStatus(value?: string): GrammarStatus {
+  if (value === 'MASTERED') return 'MASTERED';
+  if (value === 'LEARNING') return 'LEARNING';
+  return 'NEW';
+}
+
 function getLocalizedGrammarTitle(
-  grammar: {
-    title: string;
-    titleEn?: string;
-    titleZh?: string;
-    titleVi?: string;
-    titleMn?: string;
-  },
+  grammar: Pick<GrammarDirectoryItem, 'title' | 'titleEn' | 'titleZh' | 'titleVi' | 'titleMn'>,
   language: SupportedLanguage
 ): string {
-  if (language === 'en') return grammar.titleEn || grammar.title;
-  if (language === 'vi') return grammar.titleVi || grammar.title;
-  if (language === 'mn') return grammar.titleMn || grammar.title;
-  return grammar.titleZh || grammar.title;
+  const raw =
+    language === 'en'
+      ? grammar.titleEn || grammar.title
+      : language === 'vi'
+        ? grammar.titleVi || grammar.title
+        : language === 'mn'
+          ? grammar.titleMn || grammar.title
+          : grammar.titleZh || grammar.title;
+  return sanitizeGrammarDisplayText(raw);
 }
 
 function getLocalizedGrammarSummary(
-  grammar: { summary?: string; summaryEn?: string; summaryVi?: string; summaryMn?: string },
+  grammar: Pick<GrammarDirectoryItem, 'summary' | 'summaryEn' | 'summaryVi' | 'summaryMn'>,
   language: SupportedLanguage
 ): string {
   const candidates =
@@ -50,7 +73,8 @@ function getLocalizedGrammarSummary(
         : language === 'mn'
           ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
           : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
-  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+  const raw = candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
+  return sanitizeGrammarDisplayText(raw);
 }
 
 const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
@@ -63,17 +87,20 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const language = resolveSupportedLanguage(i18n.language);
+
   const [expandedUnits, setExpandedUnits] = useState<Set<number>>(new Set([1]));
+
   const selectedUnitId = useMemo(() => {
     if (!selectedGrammarId) return null;
     const grammar = courseGrammars.find(g => g.id === selectedGrammarId);
     return grammar?.unitId ?? null;
   }, [courseGrammars, selectedGrammarId]);
-  const effectiveExpandedUnits = useMemo(() => {
-    if (selectedUnitId === null || expandedUnits.has(selectedUnitId)) {
-      return expandedUnits;
-    }
-    return new Set(expandedUnits).add(selectedUnitId);
+
+  const visibleExpandedUnits = useMemo(() => {
+    if (selectedUnitId === null || expandedUnits.has(selectedUnitId)) return expandedUnits;
+    const next = new Set(expandedUnits);
+    next.add(selectedUnitId);
+    return next;
   }, [expandedUnits, selectedUnitId]);
 
   const getUnitName = (unitId: number) => {
@@ -97,10 +124,9 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     return units[unitId] || `${t('grammarModule.unitLabel', 'Unit')} ${unitId}`;
   };
 
-  // Group grammars by unit ID and calculate stats
-  const { unitsMap, unitStats } = useMemo(() => {
-    const map = new Map<number, any[]>();
-    const stats = new Map<number, { total: number; completed: number }>();
+  const { unitsMap, unitStats, masteredCount, totalCount } = useMemo(() => {
+    const map = new Map<number, GrammarDirectoryItem[]>();
+    const stats = new Map<number, { total: number; mastered: number }>();
 
     const q = searchQuery.toLowerCase().trim();
     const filtered = q
@@ -111,24 +137,39 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
         )
       : courseGrammars;
 
+    let mastered = 0;
     filtered.forEach(g => {
+      const status = normalizeStatus(g.status);
       if (!map.has(g.unitId)) {
         map.set(g.unitId, []);
-        stats.set(g.unitId, { total: 0, completed: 0 });
+        stats.set(g.unitId, { total: 0, mastered: 0 });
       }
+
       map.get(g.unitId)!.push(g);
 
       const currentStats = stats.get(g.unitId)!;
-      currentStats.total++;
-      if (g.status === 'MASTERED') {
-        currentStats.completed++;
+      currentStats.total += 1;
+
+      if (status === 'MASTERED') {
+        currentStats.mastered += 1;
+        mastered += 1;
       }
     });
 
-    return { unitsMap: map, unitStats: stats };
-  }, [courseGrammars, searchQuery, language]);
+    return {
+      unitsMap: map,
+      unitStats: stats,
+      masteredCount: mastered,
+      totalCount: filtered.length,
+    };
+  }, [courseGrammars, language, searchQuery]);
 
-  const sortedUnitIds = Array.from(unitsMap.keys()).sort((a, b) => a - b);
+  const sortedUnitIds = useMemo(
+    () => Array.from(unitsMap.keys()).sort((a, b) => a - b),
+    [unitsMap]
+  );
+
+  const progressPercent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
   const toggleUnit = (unitId: number) => {
     setExpandedUnits(prev => {
@@ -142,124 +183,153 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     });
   };
 
+  const statusMeta = (status: GrammarStatus) => {
+    if (status === 'MASTERED') {
+      return {
+        icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
+        label: t('grammarModule.statusMastered', { defaultValue: 'Mastered' }),
+      };
+    }
+    if (status === 'LEARNING') {
+      return {
+        icon: <Circle className="h-3.5 w-3.5 fill-blue-500 text-blue-500" />,
+        label: t('grammarModule.statusLearning', { defaultValue: 'Learning' }),
+      };
+    }
+    return {
+      icon: <Circle className="h-3.5 w-3.5 fill-slate-300 text-slate-300" />,
+      label: t('grammarModule.statusNew', { defaultValue: 'New' }),
+    };
+  };
+
   return (
     <aside
       className={
         embedded
-          ? 'w-full bg-card border border-border shadow-sm flex flex-col overflow-hidden rounded-xl'
-          : 'w-80 bg-card border-2 border-border shadow-pop-sm flex flex-col z-20 shrink-0 rounded-xl overflow-hidden h-full'
+          ? 'w-full min-w-0 border border-slate-200 bg-white rounded-xl overflow-hidden flex flex-col'
+          : 'w-[250px] min-h-0 shrink-0 border-r border-slate-200 bg-slate-50/80 flex flex-col h-full'
       }
     >
-      <div className="p-4 border-b-2 border-border bg-muted/40">
-        <h1 className="font-black text-xl italic tracking-tight text-foreground flex items-center gap-2">
-          <span className="bg-primary text-primary-foreground px-1.5 rounded leading-none pt-0.5">
-            H
-          </span>
-          {t('grammarModule.directoryTitle', 'Grammar workbook')}
-        </h1>
-        <div className="relative mt-4">
+      <div className="p-4 border-b border-slate-200 space-y-3">
+        <Card className="border-slate-200 shadow-none">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-slate-500">
+                {t('grammarModule.totalProgressLabel', { defaultValue: 'Total progress' })}
+              </p>
+              <Badge variant="outline" className="border-slate-200 text-slate-600 bg-white">
+                {masteredCount}/{totalCount || 0}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
             placeholder={t('grammarModule.searchPlaceholder', 'Search grammar points...')}
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full pl-10 py-2 border-2 border-border rounded-xl text-sm font-bold focus-visible:shadow-pop-sm outline-none bg-background shadow-none transition-shadow"
+            className="pl-9 h-10 border-slate-200 bg-white shadow-none"
           />
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {sortedUnitIds.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 opacity-50">
-            <Search className="w-10 h-10 mb-2" />
-            <p className="text-sm font-bold text-muted-foreground">
-              {t('common.noMatches', 'No matches')}
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <Search className="h-8 w-8 mb-2" />
+            <p className="text-sm font-medium">{t('common.noMatches', 'No matches')}</p>
           </div>
         )}
 
         {sortedUnitIds.map(unitId => {
-          const items = unitsMap.get(unitId)!;
-          const stats = unitStats.get(unitId)!;
-          const isExpanded = effectiveExpandedUnits.has(unitId);
-          const progress = Math.round((stats.completed / stats.total) * 100);
+          const items = unitsMap.get(unitId) || [];
+          const stats = unitStats.get(unitId) || { total: 0, mastered: 0 };
+          const progress = stats.total > 0 ? Math.round((stats.mastered / stats.total) * 100) : 0;
+          const isExpanded = visibleExpandedUnits.has(unitId);
 
           return (
-            <div
-              key={unitId}
-              className="border-2 border-border rounded-xl overflow-hidden bg-background shadow-pop-sm"
-            >
+            <Card key={unitId} className="border-slate-200 shadow-none bg-white overflow-hidden">
               <Button
-                type="button"
                 variant="ghost"
                 size="auto"
+                className="w-full px-3 py-2 rounded-none text-left hover:bg-slate-50"
                 onClick={() => toggleUnit(unitId)}
-                className="w-full px-4 py-3 flex items-center justify-between bg-muted/40 hover:bg-muted transition-colors"
               >
-                <div className="flex flex-col items-start gap-1">
-                  <span className="text-xs font-black text-foreground text-left leading-tight">
-                    {getUnitName(unitId)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all duration-500"
-                        style={{ width: `${progress}%` }}
-                      />
+                <div className="w-full flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">
+                      {getUnitName(unitId)}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="h-1.5 w-16 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-slate-500">
+                        {stats.mastered}/{stats.total}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold text-muted-foreground">
-                      {stats.completed}/{stats.total}
-                    </span>
                   </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  />
                 </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-                />
               </Button>
 
               {isExpanded && (
-                <ul className="p-2 space-y-1 bg-card border-t-2 border-border">
-                  {items.map((g, index) => {
-                    const isActive = selectedGrammarId === g.id;
-                    const isMastered = g.status === 'MASTERED';
+                <div className="border-t border-slate-200 p-1.5 space-y-1 bg-white">
+                  {items.map((item, index) => {
+                    const isActive = selectedGrammarId === item.id;
+                    const status = normalizeStatus(item.status);
+                    const meta = statusMeta(status);
+
                     return (
-                      <li
-                        key={g.id}
-                        onClick={() => onSelectGrammar(g.id, g.unitId)}
-                        className={`
-                                                    group/item
-                                                    px-3 py-2 rounded-lg font-bold text-sm cursor-pointer transition-all border-2
-                                                    ${
-                                                      isActive
-                                                        ? 'bg-primary text-primary-foreground border-primary shadow-pop-sm'
-                                                        : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'
-                                                    }
-                                                `}
+                      <Button
+                        key={item.id}
+                        variant="ghost"
+                        size="auto"
+                        onClick={() => onSelectGrammar(item.id, item.unitId)}
+                        className={`w-full justify-start rounded-lg px-2.5 py-2 h-auto transition-colors border ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-white text-slate-700 border-transparent hover:bg-slate-50 hover:border-slate-200'
+                        }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full border shrink-0 ${isActive ? 'bg-primary-foreground/20 border-primary-foreground/30' : 'bg-muted border-border text-muted-foreground'}`}
-                            >
-                              {index + 1}
-                            </span>
-                            <span className="truncate">
-                              {getLocalizedGrammarTitle(g, language)}
-                            </span>
-                          </div>
-                          {isMastered && (
-                            <CheckCircle2
-                              className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-foreground'}`}
-                            />
-                          )}
-                        </div>
-                      </li>
+                        <span
+                          className={`h-8 w-1 rounded-full mr-2 ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
+                          aria-hidden
+                        />
+                        <span className="mr-2 text-xs text-slate-400 w-5 text-left">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-sm font-medium">
+                            {getLocalizedGrammarTitle(item, language)}
+                          </span>
+                          <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                            {meta.icon}
+                            <span>{meta.label}</span>
+                          </span>
+                        </span>
+                      </Button>
                     );
                   })}
-                </ul>
+                </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>

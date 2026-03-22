@@ -81,6 +81,14 @@ async function guardAiAction(ctx: ActionCtx, feature: string): Promise<Id<'users
   return userId;
 }
 
+async function requireAdminAction(ctx: ActionCtx): Promise<void> {
+  const userId = await requireAuthenticatedUser(ctx);
+  const viewer = await ctx.runQuery(api.users.viewer, {});
+  if (!viewer || viewer._id !== userId || viewer.role !== 'ADMIN') {
+    throw new ConvexError('FORBIDDEN');
+  }
+}
+
 const SUPPORTED_TRANSLATION_LANGS = new Set<SupportedTranslationLanguage>(['zh', 'en', 'vi', 'mn']);
 const TARGET_LANGUAGE_LABELS: Record<SupportedTranslationLanguage, string> = {
   zh: 'Simplified Chinese',
@@ -1118,6 +1126,90 @@ Return a JSON object with:
   },
 });
 
+export const grammarTutorChat = action({
+  args: {
+    grammarTitle: v.string(),
+    grammarSummary: v.optional(v.string()),
+    grammarExplanation: v.optional(v.string()),
+    language: v.optional(v.string()),
+    messages: v.array(
+      v.object({
+        role: v.union(v.literal('assistant'), v.literal('user')),
+        content: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await guardAiAction(ctx, 'grammar_tutor_chat');
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn('OPENAI_API_KEY not set');
+      return { success: false, error: 'OPENAI_API_KEY not set' };
+    }
+
+    const client = new OpenAI({ apiKey });
+    const responseLanguage = resolveAiOutputLanguage(args.language);
+
+    const safeTitle = normalizeInlineWhitespace(args.grammarTitle).slice(0, 120);
+    const safeSummary = normalizeInlineWhitespace(args.grammarSummary || '').slice(0, 500);
+    const safeExplanation = normalizeInlineWhitespace(args.grammarExplanation || '').slice(0, 1800);
+
+    const normalizedMessages = args.messages
+      .map(message => ({
+        role: message.role,
+        content: normalizeInlineWhitespace(message.content),
+      }))
+      .filter(message => Boolean(message.content))
+      .slice(-8);
+
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-5-nano',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a concise Korean grammar tutor for language learners.
+Always respond in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
+Use a warm and practical teaching tone.
+Keep answers focused, concrete, and easy to apply.
+When useful, provide 1 short Korean example sentence with translation.
+If the learner asks for correction, explain what is wrong and give a corrected sentence.`,
+          },
+          {
+            role: 'system',
+            content: `Current grammar context:
+Title: ${safeTitle}
+Summary: ${safeSummary || 'N/A'}
+Explanation: ${safeExplanation || 'N/A'}`,
+          },
+          ...normalizedMessages,
+        ],
+      });
+
+      const usage = completion.usage;
+      await ctx.runMutation(logUsageMutation, {
+        userId,
+        feature: 'grammar_tutor_chat',
+        model: 'gpt-5-nano',
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens,
+        costUsd: 0,
+      });
+
+      const reply = completion.choices[0]?.message?.content?.trim();
+      if (!reply) {
+        return { success: false, error: 'Empty response from model' };
+      }
+
+      return { success: true, reply };
+    } catch (error) {
+      console.error('Grammar tutor chat failed:', error);
+      return { success: false, error: toErrorMessage(error) };
+    }
+  },
+});
+
 // Analyze TOPIK question (for study mode)
 export const analyzeQuestion = action({
   args: {
@@ -1714,6 +1806,456 @@ Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
     } catch (err) {
       return { success: false, error: toErrorMessage(err) };
     }
+  },
+});
+
+type TopikCategoryDefinition = {
+  id: number;
+  zh: string;
+  en: string;
+  description: string;
+  positiveSignals: string[];
+};
+
+const TOPIK_CATEGORY_DEFINITIONS: TopikCategoryDefinition[] = [
+  {
+    id: 1,
+    zh: '推测与推断',
+    en: 'Speculation & Inference',
+    description: '表达说话者的猜测、推断、可能性判断或委婉判断。',
+    positiveSignals: ['推测', '猜测', '可能', '看来', '似乎', 'inference', 'seems', 'guess'],
+  },
+  {
+    id: 2,
+    zh: '对比与转折',
+    en: 'Contrast & Shift',
+    description: '表达前后内容对照、转折、让步后反转、语义逆向连接。',
+    positiveSignals: ['但是', '然而', '转折', '对比', 'contrast', 'however', 'while'],
+  },
+  {
+    id: 3,
+    zh: '原因与理由',
+    en: 'Cause & Reason',
+    description: '表达原因、依据、理由、因果关系。',
+    positiveSignals: ['因为', '所以', '理由', '原因', 'cause', 'reason', 'because'],
+  },
+  {
+    id: 4,
+    zh: '目的与意图',
+    en: 'Purpose & Intent',
+    description: '表达目的、打算、意图、计划趋向。',
+    positiveSignals: ['为了', '打算', '意图', '目的', 'purpose', 'intend', 'plan'],
+  },
+  {
+    id: 5,
+    zh: '进展与完成',
+    en: 'Progress & Completion',
+    description: '表达进行、变化过程、结果完成或动作终结。',
+    positiveSignals: ['开始', '结束', '完成', '过程', 'progress', 'completion', 'ended up'],
+  },
+  {
+    id: 6,
+    zh: '状态与持续',
+    en: 'State & Continuity',
+    description: '表达状态保持、持续、习惯或长期特征。',
+    positiveSignals: ['一直', '持续', '状态', '习惯', 'state', 'continuity', 'ongoing'],
+  },
+  {
+    id: 7,
+    zh: '程度与限制',
+    en: 'Degree & Limits',
+    description: '表达程度变化、上限下限、限定范围、强弱差异。',
+    positiveSignals: ['程度', '越', '最', '限制', 'degree', 'limit', 'extent'],
+  },
+  {
+    id: 8,
+    zh: '假设与前提',
+    en: 'Hypothesis & Condition',
+    description: '表达条件、假设、前提成立与否。',
+    positiveSignals: ['如果', '假设', '前提', '条件', 'if', 'suppose', 'condition'],
+  },
+  {
+    id: 9,
+    zh: '让步与包含',
+    en: 'Concession & Inclusion',
+    description: '表达尽管、即使、包含、附加范围。',
+    positiveSignals: ['尽管', '即使', '包含', '连', 'concession', 'even if', 'including'],
+  },
+  {
+    id: 10,
+    zh: '机会与变化',
+    en: 'Chance & Change',
+    description: '表达机会、转机、变化趋势与状态转换。',
+    positiveSignals: ['机会', '变化', '转变', 'chance', 'change', 'turning point'],
+  },
+  {
+    id: 11,
+    zh: '引述与传闻',
+    en: 'Quotation & Reported Speech',
+    description: '表达引用、转述、听说、间接引语。',
+    positiveSignals: ['听说', '据说', '引用', '转述', 'reported', 'quotation', 'indirect speech'],
+  },
+  {
+    id: 12,
+    zh: '必要与经验',
+    en: 'Necessity & Experience',
+    description: '表达必须、应当、经验有无、义务与经历。',
+    positiveSignals: ['必须', '需要', '经验', '应该', 'must', 'need', 'experience'],
+  },
+  {
+    id: 13,
+    zh: '列举与顺序',
+    en: 'Listing & Sequence',
+    description: '表达并列、列举、顺序先后。',
+    positiveSignals: ['首先', '然后', '列举', '顺序', 'listing', 'sequence', 'first'],
+  },
+  {
+    id: 14,
+    zh: '标准与范围',
+    en: 'Standard & Scope',
+    description: '表达依据标准、范围界定、比较基准。',
+    positiveSignals: ['标准', '范围', '按照', '基准', 'standard', 'scope', 'based on'],
+  },
+  {
+    id: 15,
+    zh: '助词与语气',
+    en: 'Particles & Nuance',
+    description: '表达语气、助词功能、细微语用差异。',
+    positiveSignals: ['助词', '语气', '口气', 'particle', 'nuance', 'tone'],
+  },
+];
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA <= 0 || normB <= 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+function toTopikSemanticsError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+export const adminClassifyTopikBySemantics = action({
+  args: {
+    items: v.array(
+      v.object({
+        key: v.string(),
+        language: v.union(v.literal('zh'), v.literal('en')),
+        title: v.string(),
+        summary: v.optional(v.string()),
+        explanation: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (_ctx, args) => {
+    await requireAdminAction(_ctx);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { success: false, error: 'OPENAI_API_KEY not set', results: [] };
+
+    const client = new OpenAI({ apiKey });
+    const categoryTexts = TOPIK_CATEGORY_DEFINITIONS.map(
+      category =>
+        `Category ${category.id}: ${category.zh} / ${category.en}. ${category.description}. Signals: ${category.positiveSignals.join(', ')}`
+    );
+    const itemTexts = args.items.map(item => {
+      const summary = (item.summary || '').slice(0, 500);
+      const explanation = (item.explanation || '').slice(0, 1200);
+      return `${item.title}\n${summary}\n${explanation}`;
+    });
+
+    const embeddingCategoryByKey = new Map<
+      string,
+      { categoryId: number; score: number; channel: string }
+    >();
+
+    try {
+      const categoryEmbeddingResponse = await client.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: categoryTexts,
+      });
+      const itemEmbeddingResponse = await client.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: itemTexts,
+      });
+
+      const categoryVectors = categoryEmbeddingResponse.data.map(row => row.embedding);
+      const itemVectors = itemEmbeddingResponse.data.map(row => row.embedding);
+
+      args.items.forEach((item, index) => {
+        const vector = itemVectors[index] || [];
+        let bestCategory = TOPIK_CATEGORY_DEFINITIONS[0]?.id || 15;
+        let bestScore = -1;
+        categoryVectors.forEach((categoryVector, catIndex) => {
+          const score = cosineSimilarity(vector, categoryVector);
+          if (score > bestScore) {
+            bestScore = score;
+            bestCategory = TOPIK_CATEGORY_DEFINITIONS[catIndex]?.id || 15;
+          }
+        });
+        embeddingCategoryByKey.set(item.key, {
+          categoryId: bestCategory,
+          score: clamp01((bestScore + 1) / 2),
+          channel: 'embedding',
+        });
+      });
+    } catch (error) {
+      console.warn('[adminClassifyTopikBySemantics] embedding channel failed:', error);
+      for (const item of args.items) {
+        embeddingCategoryByKey.set(item.key, { categoryId: 15, score: 0.35, channel: 'fallback' });
+      }
+    }
+
+    const llmPrompt = `你是韩语语法专家。请将每条语法按“含义”归入以下 15 类之一，并给出证据短句。
+分类：
+${TOPIK_CATEGORY_DEFINITIONS.map(c => `${c.id}. ${c.zh} / ${c.en}: ${c.description}`).join('\n')}
+
+输入数据：
+${args.items
+  .map(
+    item =>
+      `KEY=${item.key}\nLANG=${item.language}\nTITLE=${item.title}\nSUMMARY=${item.summary || ''}\nEXPLANATION=${(item.explanation || '').slice(0, 900)}`
+  )
+  .join('\n\n---\n\n')}
+
+仅返回 JSON：
+{"results":[{"key":"...","categoryId":1,"confidence":0.0-1.0,"reason":"...","evidence":"..."}, ...]}`;
+
+    let llmResults: Array<{
+      key: string;
+      categoryId: number;
+      confidence: number;
+      reason?: string;
+      evidence?: string;
+    }> = [];
+    try {
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: llmPrompt }],
+        response_format: { type: 'json_object' as const },
+        temperature: 0.1,
+      });
+      const content = completion.choices[0]?.message?.content || '';
+      const parsed = JSON.parse(content) as {
+        results?: Array<{
+          key?: string;
+          categoryId?: number;
+          confidence?: number;
+          reason?: string;
+          evidence?: string;
+        }>;
+      };
+      llmResults = (parsed.results || [])
+        .filter(item => typeof item.key === 'string')
+        .map(item => ({
+          key: item.key as string,
+          categoryId: Math.max(1, Math.min(15, Math.floor(item.categoryId || 15))),
+          confidence: clamp01(Number(item.confidence ?? 0.5)),
+          reason: item.reason,
+          evidence: item.evidence,
+        }));
+    } catch (error) {
+      return {
+        success: false,
+        error: `LLM channel failed: ${toTopikSemanticsError(error)}`,
+        results: [],
+      };
+    }
+
+    const llmByKey = new Map(llmResults.map(item => [item.key, item]));
+    const finalResults = args.items.map(item => {
+      const embedding = embeddingCategoryByKey.get(item.key) || {
+        categoryId: 15,
+        score: 0.35,
+        channel: 'fallback',
+      };
+      const llm = llmByKey.get(item.key);
+      const hasLlm = Boolean(llm);
+      const llmCategory = llm?.categoryId ?? embedding.categoryId;
+      const llmConfidence = clamp01(llm?.confidence ?? 0.35);
+      const agrees = llmCategory === embedding.categoryId;
+      const combinedConfidence = hasLlm
+        ? agrees
+          ? clamp01((llmConfidence + embedding.score) / 2)
+          : clamp01(Math.max(llmConfidence * 0.75, embedding.score * 0.75))
+        : embedding.score;
+      const finalCategoryId =
+        agrees || llmConfidence >= 0.82 || !hasLlm ? llmCategory : embedding.categoryId;
+      const status: 'AUTO_OK' | 'NEEDS_REVIEW' = hasLlm
+        ? agrees && combinedConfidence >= 0.72
+          ? 'AUTO_OK'
+          : 'NEEDS_REVIEW'
+        : embedding.score >= 0.72
+          ? 'AUTO_OK'
+          : 'NEEDS_REVIEW';
+
+      return {
+        key: item.key,
+        categoryId: finalCategoryId,
+        confidence: combinedConfidence,
+        status,
+        reason:
+          llm?.reason ||
+          `embedding=${embedding.categoryId}(${embedding.score.toFixed(2)}), llm=${llmCategory}(${llmConfidence.toFixed(2)})`,
+        evidence: llm?.evidence || '',
+        channels: {
+          embeddingCategoryId: embedding.categoryId,
+          embeddingScore: embedding.score,
+          llmCategoryId: llmCategory,
+          llmConfidence,
+        },
+      };
+    });
+
+    return {
+      success: true,
+      results: finalResults,
+    };
+  },
+});
+
+export const adminRunTopikQualityRepair = action({
+  args: {
+    courseId: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+    apply: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminAction(ctx);
+
+    const courseId = args.courseId?.trim() || 'topik-grammar';
+    const batchSize = Math.max(1, Math.min(200, Math.floor(args.batchSize ?? 40)));
+
+    const summarize = (
+      results: Array<{
+        total?: number;
+        scanned?: number;
+        changed?: number;
+        summariesRegenerated?: number;
+        issueCounts?: {
+          processingKeyword?: number;
+          labelPrefix?: number;
+          romanization?: number;
+          mergedMarker?: number;
+          noisyTitleSuffix?: number;
+        };
+        samples?: Array<{ grammarId: string; beforeTitle: string; afterTitle: string }>;
+        errors?: string[];
+      }>
+    ) => {
+      const summary = {
+        batches: results.length,
+        total: 0,
+        scanned: 0,
+        changed: 0,
+        summariesRegenerated: 0,
+        issueCounts: {
+          processingKeyword: 0,
+          labelPrefix: 0,
+          romanization: 0,
+          mergedMarker: 0,
+          noisyTitleSuffix: 0,
+        },
+        samples: [] as Array<{ grammarId: string; beforeTitle: string; afterTitle: string }>,
+        errors: [] as string[],
+      };
+
+      for (const result of results) {
+        summary.total = Math.max(summary.total, result.total ?? 0);
+        summary.scanned += result.scanned ?? 0;
+        summary.changed += result.changed ?? 0;
+        summary.summariesRegenerated += result.summariesRegenerated ?? 0;
+        summary.issueCounts.processingKeyword += result.issueCounts?.processingKeyword ?? 0;
+        summary.issueCounts.labelPrefix += result.issueCounts?.labelPrefix ?? 0;
+        summary.issueCounts.romanization += result.issueCounts?.romanization ?? 0;
+        summary.issueCounts.mergedMarker += result.issueCounts?.mergedMarker ?? 0;
+        summary.issueCounts.noisyTitleSuffix += result.issueCounts?.noisyTitleSuffix ?? 0;
+
+        for (const sample of result.samples || []) {
+          if (summary.samples.length >= 40) break;
+          summary.samples.push(sample);
+        }
+        for (const error of result.errors || []) {
+          if (summary.errors.length >= 80) break;
+          summary.errors.push(error);
+        }
+      }
+
+      return summary;
+    };
+
+    const runPass = async (dryRun: boolean) => {
+      let offset = 0;
+      const results: Array<{
+        total?: number;
+        scanned?: number;
+        changed?: number;
+        summariesRegenerated?: number;
+        issueCounts?: {
+          processingKeyword?: number;
+          labelPrefix?: number;
+          romanization?: number;
+          mergedMarker?: number;
+          noisyTitleSuffix?: number;
+        };
+        samples?: Array<{ grammarId: string; beforeTitle: string; afterTitle: string }>;
+        errors?: string[];
+      }> = [];
+
+      while (true) {
+        const result = await ctx.runMutation(api.grammars.adminSanitizeTopikCourseBatch, {
+          courseId,
+          offset,
+          limit: batchSize,
+          dryRun,
+        });
+        results.push(result);
+        offset += result.scanned ?? 0;
+        if ((result.scanned ?? 0) === 0 || offset >= (result.total ?? 0)) break;
+      }
+
+      return summarize(results);
+    };
+
+    const dryRunSummary = await runPass(true);
+
+    if (args.apply !== true) {
+      return {
+        success: true,
+        courseId,
+        batchSize,
+        mode: 'dry-run',
+        dryRunSummary,
+      };
+    }
+
+    const applySummary = await runPass(false);
+    const verifySummary = await runPass(true);
+
+    return {
+      success: true,
+      courseId,
+      batchSize,
+      mode: 'apply',
+      dryRunSummary,
+      applySummary,
+      verifySummary,
+    };
   },
 });
 

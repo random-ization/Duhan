@@ -11,6 +11,7 @@ export interface RouteUiConfig {
   usePatternBackground: boolean;
   useDesktopContainerPadding: boolean;
   useDesktopMaxWidth: boolean;
+  lockMainScroll: boolean;
   headerType: MobileHeaderType;
   headerAction: MobileHeaderAction;
   headerTitle: string;
@@ -26,6 +27,7 @@ const DEFAULT_ROUTE_UI_CONFIG: RouteUiConfig = {
   usePatternBackground: true,
   useDesktopContainerPadding: true,
   useDesktopMaxWidth: true,
+  lockMainScroll: false,
   headerType: 'section',
   headerAction: 'none',
   headerTitle: 'common.appName',
@@ -78,6 +80,7 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       usePatternBackground: !isGrammarWorkspace,
       useDesktopContainerPadding: !isGrammarWorkspace,
       useDesktopMaxWidth: !isGrammarWorkspace,
+      lockMainScroll: isGrammarWorkspace,
       headerType: 'detail',
       headerAction: 'more',
       headerTitle: 'course.title',

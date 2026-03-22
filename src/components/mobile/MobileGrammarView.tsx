@@ -2,6 +2,10 @@ import { Search, ChevronLeft } from 'lucide-react';
 import { GrammarPointData } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { getLocalizedContent } from '../../utils/languageUtils';
+import {
+  sanitizeGrammarDisplayText,
+  sanitizeGrammarMarkdown,
+} from '../../utils/grammarDisplaySanitizer';
 import MobileUnitChips from './MobileUnitChips';
 import MobileGrammarFeed from './MobileGrammarFeed';
 import MobileGrammarDetailSheet from './MobileGrammarDetailSheet';
@@ -50,11 +54,13 @@ export default function MobileGrammarView({
   const filteredPoints = grammarPoints.filter(g => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    const title = (getLocalizedContent(g as never, 'title', language) || g.title).toLowerCase();
-    const summary = (
+    const title = sanitizeGrammarDisplayText(
+      getLocalizedContent(g as never, 'title', language) || g.title
+    ).toLowerCase();
+    const summary = sanitizeGrammarDisplayText(
       getLocalizedContent(g as never, 'summary', language) || g.summary
     ).toLowerCase();
-    const explanation = (
+    const explanation = sanitizeGrammarMarkdown(
       getLocalizedContent(g as never, 'explanation', language) || g.explanation
     ).toLowerCase();
     return title.includes(query) || summary.includes(query) || explanation.includes(query);

@@ -48,6 +48,16 @@ export const DICTIONARY = {
 };
 
 export const AI = {
+  grammarTutorChat: aRef<
+    {
+      grammarTitle: string;
+      grammarSummary?: string;
+      grammarExplanation?: string;
+      language?: string;
+      messages: Array<{ role: 'assistant' | 'user'; content: string }>;
+    },
+    { success?: boolean; reply?: string; error?: string } | null
+  >('ai:grammarTutorChat'),
   analyzeReadingArticle: aRef<
     {
       title: string;
@@ -85,6 +95,35 @@ export const AI = {
       translations: string[];
     } | null
   >('ai:translateReadingParagraphs'),
+  adminClassifyTopikBySemantics: aRef<
+    {
+      items: Array<{
+        key: string;
+        language: 'zh' | 'en';
+        title: string;
+        summary?: string;
+        explanation?: string;
+      }>;
+    },
+    {
+      success: boolean;
+      error?: string;
+      results: Array<{
+        key: string;
+        categoryId: number;
+        confidence: number;
+        status: 'AUTO_OK' | 'NEEDS_REVIEW';
+        reason?: string;
+        evidence?: string;
+        channels?: {
+          embeddingCategoryId: number;
+          embeddingScore: number;
+          llmCategoryId: number;
+          llmConfidence: number;
+        };
+      }>;
+    } | null
+  >('ai:adminClassifyTopikBySemantics'),
 };
 
 export const UNITS = {
@@ -120,9 +159,11 @@ export const UNITS = {
  * GRAMMAR REFS
  */
 export const GRAMMARS = {
-  getStats: qRef<{ courseId: string }, GrammarStatsDto>('grammars:getStats'),
-  getByCourse: qRef<{ courseId: string }, GrammarItemDto[]>('grammars:getByCourse'),
-  getUnitGrammar: qRef<{ courseId: string; unitId: number }, UnitGrammarDto[]>(
+  getStats: qRef<{ courseId: string; language?: string }, GrammarStatsDto>('grammars:getStats'),
+  getByCourse: qRef<{ courseId: string; language?: string }, GrammarItemDto[]>(
+    'grammars:getByCourse'
+  ),
+  getUnitGrammar: qRef<{ courseId: string; unitId: number; language?: string }, UnitGrammarDto[]>(
     'grammars:getUnitGrammar'
   ),
   search: qRef<{ query: string }, GrammarItemDto[]>('grammars:search'),
@@ -164,6 +205,59 @@ export const GRAMMARS = {
       results: { success: number; failed: number; newGrammars: number; errors: string[] };
     }
   >('grammars:bulkImport'),
+  adminPreserveTopikViMnSnapshot: mRef<
+    { courseId: string },
+    { success: boolean; courseId: string; count: number; snapshot: unknown[] }
+  >('grammars:adminPreserveTopikViMnSnapshot'),
+  adminResetTopikCourseLinks: mRef<
+    { courseId: string; deleteOrphanGrammars?: boolean },
+    { success: boolean; courseId: string; deletedLinks: number; deletedOrphans: number }
+  >('grammars:adminResetTopikCourseLinks'),
+  adminImportTopikMarkdownByLanguage: mRef<
+    {
+      courseId: string;
+      language: 'zh' | 'en' | 'vi' | 'mn';
+      items: Array<{
+        title: string;
+        titleEn?: string;
+        titleZh?: string;
+        summary?: string;
+        summaryEn?: string;
+        explanation?: string;
+        explanationEn?: string;
+        grammarKey?: string;
+        sourcePath?: string;
+        checksum?: string;
+        categoryId?: number;
+        categoryConfidence?: number;
+        categoryStatus?: 'AUTO_OK' | 'NEEDS_REVIEW';
+        categoryReason?: string;
+        categoryEvidence?: string;
+      }>;
+      defaultCategoryId?: number;
+    },
+    {
+      success: boolean;
+      courseId: string;
+      language: string;
+      created: number;
+      linked: number;
+      errors: string[];
+    }
+  >('grammars:adminImportTopikMarkdownByLanguage'),
+  adminApplyTopikReviewDecisions: mRef<
+    {
+      decisions: Array<{
+        linkId: string;
+        categoryId: number;
+        confidence?: number;
+        status?: 'AUTO_OK' | 'NEEDS_REVIEW';
+        reason?: string;
+        evidence?: string;
+      }>;
+    },
+    { success: boolean; updated: number; errors: string[] }
+  >('grammars:adminApplyTopikReviewDecisions'),
 };
 
 /**

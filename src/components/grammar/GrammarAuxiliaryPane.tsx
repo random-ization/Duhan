@@ -1,150 +1,281 @@
-import React, { useState } from 'react';
-import { Button, Textarea } from '../ui';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Bot, SendHorizonal, Sparkles, UserRound } from 'lucide-react';
+import { useAction } from 'convex/react';
 import { useTranslation } from 'react-i18next';
+
 import { GrammarPointData } from '../../types';
+import { aRef } from '../../utils/convexRefs';
+import {
+  sanitizeGrammarDisplayText,
+  sanitizeGrammarMarkdown,
+} from '../../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../../utils/languageUtils';
-import { Sparkles } from 'lucide-react';
+import { Button, Card, CardContent, CardHeader, Input } from '../ui';
+
+type ChatRole = 'assistant' | 'user';
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  content: string;
+  pending?: boolean;
+};
 
 interface GrammarAuxiliaryPaneProps {
   grammar: GrammarPointData | null;
-  onToggleStatus: (grammarId: string) => void;
-  isLoading?: boolean;
   embedded?: boolean;
 }
 
+const MAX_CONTEXT_MESSAGES = 8;
+
 const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
   grammar,
-  onToggleStatus,
-  isLoading,
   embedded = false,
 }) => {
   const { t, i18n } = useTranslation();
-  const [sentenceInput, setSentenceInput] = useState('');
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const askGrammarTutor = useAction(
+    aRef<
+      {
+        grammarTitle: string;
+        grammarSummary?: string;
+        grammarExplanation?: string;
+        language?: string;
+        messages: { role: 'assistant' | 'user'; content: string }[];
+      },
+      { success?: boolean; reply?: string; error?: string } | null
+    >('ai:grammarTutorChat')
+  );
+
+  const localizedTitle = useMemo(() => {
+    if (!grammar) return '';
+    return sanitizeGrammarDisplayText(
+      getLocalizedContent(grammar as never, 'title', i18n.language as never) || grammar.title
+    );
+  }, [grammar, i18n.language]);
+
+  const localizedSummary = useMemo(() => {
+    if (!grammar) return '';
+    return sanitizeGrammarDisplayText(
+      getLocalizedContent(grammar as never, 'summary', i18n.language as never) || grammar.summary
+    );
+  }, [grammar, i18n.language]);
+
+  const localizedExplanation = useMemo(() => {
+    if (!grammar) return '';
+    return sanitizeGrammarMarkdown(
+      getLocalizedContent(grammar as never, 'explanation', i18n.language as never) ||
+        grammar.explanation
+    );
+  }, [grammar, i18n.language]);
+
+  useEffect(() => {
+    if (!grammar) {
+      setMessages([]);
+      return;
+    }
+
+    setMessages([
+      {
+        id: `assistant-init-${grammar.id}`,
+        role: 'assistant',
+        content: t('grammarModule.aiTutorGreeting', {
+          defaultValue:
+            'Hi, I am your AI grammar tutor. Ask me about usage, similar grammar, or sentence practice.',
+        }),
+      },
+    ]);
+    setInput('');
+    setIsSending(false);
+  }, [grammar, t]);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [messages]);
+
+  const sendMessage = async () => {
+    const userText = input.trim();
+    if (!grammar || !userText || isSending) return;
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: userText,
+    };
+    const pendingMessageId = `assistant-pending-${Date.now()}`;
+    const pendingMessage: ChatMessage = {
+      id: pendingMessageId,
+      role: 'assistant',
+      content: t('grammarModule.aiTutorThinking', { defaultValue: 'Thinking...' }),
+      pending: true,
+    };
+
+    const conversationHistory = [
+      ...messages.filter(m => !m.pending).map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: userText },
+    ].slice(-MAX_CONTEXT_MESSAGES);
+
+    setMessages(prev => [...prev, userMessage, pendingMessage]);
+    setInput('');
+    setIsSending(true);
+
+    try {
+      const response = await askGrammarTutor({
+        grammarTitle: localizedTitle,
+        grammarSummary: localizedSummary,
+        grammarExplanation: localizedExplanation,
+        language: i18n.language,
+        messages: conversationHistory,
+      });
+
+      const reply =
+        response?.success && response.reply
+          ? response.reply
+          : t('grammarModule.aiTutorError', {
+              defaultValue: 'Sorry, I cannot answer right now. Please try again later.',
+            });
+
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === pendingMessageId ? { ...message, content: reply, pending: false } : message
+        )
+      );
+    } catch {
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === pendingMessageId
+            ? {
+                ...message,
+                content: t('grammarModule.aiTutorError', {
+                  defaultValue: 'Sorry, I cannot answer right now. Please try again later.',
+                }),
+                pending: false,
+              }
+            : message
+        )
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   if (!grammar) {
     return (
       <aside
         className={
           embedded
-            ? 'w-full border border-border bg-card flex flex-col opacity-60 rounded-xl shadow-sm'
-            : 'w-80 border-l-2 border-border bg-card flex flex-col z-20 shrink-0 opacity-50 rounded-xl border-2 shadow-pop-card h-full'
+            ? 'w-full min-w-0 flex flex-col'
+            : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white'
         }
       >
-        <div className="p-6 text-center text-muted-foreground font-black mt-10">
-          <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center opacity-20">
-            <Sparkles className="w-8 h-8" />
-          </div>
-          {t('grammarModule.selectGrammarHint', 'Select a grammar point to begin studying')}
-        </div>
+        <Card className="h-full min-h-0 border-0 rounded-none shadow-none">
+          <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500">
+            <Sparkles className="h-10 w-10 mb-3" />
+            <p className="text-sm font-medium">
+              {t('grammarModule.selectGrammarHint', {
+                defaultValue: 'Select a grammar point to begin studying',
+              })}
+            </p>
+          </CardContent>
+        </Card>
       </aside>
     );
   }
-
-  const isMastered = grammar.status === 'MASTERED';
-  const progressPercent = grammar.proficiency || (isMastered ? 100 : 0);
 
   return (
     <aside
       className={
         embedded
-          ? 'w-full flex flex-col text-foreground gap-4'
-          : 'w-80 flex flex-col z-20 shrink-0 text-foreground gap-3 h-full'
+          ? 'w-full min-w-0 flex flex-col'
+          : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white'
       }
     >
-      {/* Progress Card */}
-      <div className="bg-card border-2 border-border rounded-xl shadow-pop-card p-6 overflow-hidden relative">
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <div className="flex flex-col">
-            <span className="font-black text-xs uppercase tracking-tighter text-muted-foreground">
-              {t('grammarModule.proficiency', 'STUDY PROGRESS')}
-            </span>
-            <span className="font-black text-xl italic uppercase">
-              {t('grammarModule.status', 'Proficiency')}
-            </span>
-          </div>
-          <Button
-            onClick={() => onToggleStatus(grammar.id)}
-            disabled={isLoading}
-            className={`
-                            h-10 px-4 font-black text-xs border-2 border-border transition-all
-                            shadow-pop-sm
-                            active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
-                            ${
-                              isMastered
-                                ? 'bg-emerald-500 hover:bg-emerald-600 text-primary-foreground'
-                                : 'bg-card hover:bg-muted text-foreground'
-                            }
-                        `}
-          >
-            {isMastered
-              ? t('grammarModule.unmarkMastery', 'Mastered')
-              : t('grammarModule.markMastery', 'Mark learned')}
-          </Button>
-        </div>
-
-        {/* Circular indicator logic or just a bolder progress bar */}
-        <div className="relative pt-1">
-          <div className="flex mb-2 items-center justify-between">
-            <div>
-              <span className="text-xs font-black inline-block py-1 px-2 uppercase rounded-full bg-primary text-primary-foreground">
-                {grammar.status || 'NEW'}
+      <Card className="h-full min-h-0 border-0 rounded-none shadow-none flex flex-col">
+        <CardHeader className="shrink-0 pb-4 border-b border-slate-200">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center">
+                <Bot className="h-4 w-4" />
               </span>
-            </div>
-            <div className="text-right">
-              <span className="text-xl font-black inline-block text-foreground">
-                {progressPercent}%
-              </span>
-            </div>
-          </div>
-          <div className="overflow-hidden h-4 mb-4 text-xs flex rounded-full bg-muted border-2 border-border shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]">
-            <div
-              style={{ width: `${progressPercent}%` }}
-              className="shadow-none flex flex-col text-center whitespace-nowrap text-primary-foreground justify-center bg-primary border-r-2 border-border transition-all duration-500"
-            />
-          </div>
-        </div>
-
-        {/* Visual Flair Pattern */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 -mr-8 -mt-8 rounded-full blur-2xl" />
-      </div>
-
-      {/* AI Checker Card */}
-      <div className="bg-primary border-2 border-border rounded-xl shadow-pop-card flex-1 flex flex-col overflow-hidden">
-        <div className="p-5 border-b-2 border-border flex items-center justify-between bg-primary/80">
-          <h3 className="font-black text-primary-foreground text-sm uppercase tracking-widest flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            AI SEN-CHECKER
-          </h3>
-          <div className="w-2 h-2 rounded-full bg-primary-foreground animate-pulse" />
-        </div>
-
-        <div className="p-5 flex-1 flex flex-col gap-4">
-          <div>
-            <p className="text-[10px] font-black text-indigo-100 uppercase mb-2">
-              {t('grammarModule.sentencePracticeWith', 'Sentence practice with:')}
-            </p>
-            <div className="bg-primary/70 text-primary-foreground px-3 py-2 rounded-lg font-bold border border-primary-foreground/20 inline-block text-sm">
-              {getLocalizedContent(grammar as never, 'title', i18n.language as never) ||
-                grammar.title}
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {t('grammarModule.aiTutorTitle', { defaultValue: 'AI Grammar Tutor' })}
+                </p>
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                  {t('grammarModule.aiTutorOnline', { defaultValue: 'Online' })}
+                </p>
+              </div>
             </div>
           </div>
+        </CardHeader>
 
-          <Textarea
-            rows={6}
-            className="flex-1 w-full p-4 border-2 border-border rounded-xl text-sm font-bold focus-visible:shadow-pop-sm shadow-none outline-none resize-none bg-card text-foreground transition-shadow placeholder:text-muted-foreground"
-            placeholder={t(
-              'grammarModule.aiPlaceholder',
-              'Type your sentence here and let AI check it...'
-            )}
-            value={sentenceInput}
-            onChange={e => setSentenceInput(e.target.value)}
-          />
+        <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
+          <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
+            {messages.map(message => {
+              const isUser = message.role === 'user';
+              return (
+                <div
+                  key={message.id}
+                  className={`flex items-start gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  {!isUser ? (
+                    <span className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center shrink-0">
+                      <Bot className="h-4 w-4" />
+                    </span>
+                  ) : null}
 
-          <Button className="w-full py-6 bg-card text-foreground font-black rounded-xl border-2 border-border uppercase tracking-widest hover:translate-x-[2px] hover:translate-y-[2px] transition-transform shadow-pop">
-            {t('grammarModule.checkNow', 'Check now')}
-          </Button>
-        </div>
-      </div>
+                  <div
+                    className={`max-w-[85%] rounded-2xl border px-3 py-2 text-sm leading-relaxed ${
+                      isUser
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+
+                  {isUser ? (
+                    <span className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 inline-flex items-center justify-center shrink-0">
+                      <UserRound className="h-4 w-4" />
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="sticky bottom-0 shrink-0 border-t border-slate-200 bg-white p-3">
+            <div className="flex items-center gap-2">
+              <Input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void sendMessage();
+                  }
+                }}
+                placeholder={t('grammarModule.aiTutorPlaceholder', {
+                  defaultValue: 'Ask a question and press Enter...',
+                })}
+                className="border-slate-200 bg-white shadow-none"
+              />
+              <Button
+                onClick={() => void sendMessage()}
+                disabled={isSending || input.trim().length === 0}
+                className="h-11 px-3 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-none"
+              >
+                <SendHorizonal className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </aside>
   );
 };

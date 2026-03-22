@@ -101,6 +101,14 @@ const GrammarSourceMetaValidator = v.object({
   sourceUrl: v.optional(v.string()),
   checksum: v.optional(v.string()),
   parserVersion: v.optional(v.string()),
+  sourceLanguage: v.optional(
+    v.union(v.literal('zh'), v.literal('en'), v.literal('vi'), v.literal('mn'))
+  ),
+  grammarKey: v.optional(v.string()),
+  categoryStatus: v.optional(v.union(v.literal('AUTO_OK'), v.literal('NEEDS_REVIEW'))),
+  categoryConfidence: v.optional(v.number()),
+  categoryReason: v.optional(v.string()),
+  categoryEvidence: v.optional(v.string()),
   importedAt: v.number(),
 });
 
