@@ -119,8 +119,8 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
       remarkPlugins={[remarkGfm]}
       components={{
         blockquote: ({ children }) => (
-          <blockquote className="my-6 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 not-italic text-slate-700">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-blue-700">
+          <blockquote className="my-6 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 not-italic text-slate-700 dark:border-blue-400/30 dark:bg-blue-500/12 dark:text-slate-200">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-blue-700 dark:text-blue-200">
               <Lightbulb className="h-4 w-4" />
               Note
             </div>
@@ -128,38 +128,40 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
           </blockquote>
         ),
         table: ({ children }) => (
-          <div className="my-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="my-6 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
             <table className="m-0 w-full border-separate border-spacing-0 text-sm">
               {children}
             </table>
           </div>
         ),
-        thead: ({ children }) => <thead className="bg-slate-100">{children}</thead>,
+        thead: ({ children }) => (
+          <thead className="bg-slate-100 dark:bg-slate-900">{children}</thead>
+        ),
         tbody: ({ children }) => (
-          <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60">
+          <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60 dark:[&_tr:nth-child(even)]:bg-slate-900/80 dark:[&_tr:hover]:bg-blue-500/10">
             {children}
           </tbody>
         ),
         th: ({ children }) => (
-          <th className="border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 last:border-r-0">
+          <th className="border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-200">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border-b border-r border-slate-200 px-3 py-2 align-top text-slate-700 last:border-r-0">
+          <td className="border-b border-r border-slate-200 px-3 py-2 align-top text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-300">
             {children}
           </td>
         ),
         code: ({ inline, className, children, ...props }: any) =>
           inline ? (
             <code
-              className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-700"
+              className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-700 dark:bg-slate-800 dark:text-slate-200"
               {...props}
             >
               {children}
             </code>
           ) : (
-            <pre className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-slate-100">
+            <pre className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-slate-100 dark:border-slate-800 dark:bg-slate-900">
               <code className={className} {...props}>
                 {children}
               </code>
@@ -174,8 +176,8 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 
 const EmptyGrammarState: React.FC<{ t: TranslateFn }> = ({ t }) => (
   <main className="flex-1 min-h-0 overflow-y-auto p-6">
-    <Card className="h-full border-slate-200 shadow-none">
-      <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500">
+    <Card className="h-full border-slate-200 shadow-none dark:border-slate-800 dark:bg-slate-900">
+      <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
         <Sparkles className="h-10 w-10 mb-3" />
         <p className="text-sm font-medium">
           {t('grammarDetail.selectPrompt', {
@@ -196,18 +198,18 @@ const GrammarExtendedSection: React.FC<{
 
   const toneClasses =
     tone === 'warning'
-      ? 'border-amber-200 bg-amber-50/70'
+      ? 'border-amber-200 bg-amber-50/70 dark:border-amber-400/30 dark:bg-amber-500/10'
       : tone === 'info'
-        ? 'border-blue-200 bg-blue-50/70'
-        : 'border-slate-200 bg-slate-50/80';
+        ? 'border-blue-200 bg-blue-50/70 dark:border-blue-400/30 dark:bg-blue-500/10'
+        : 'border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/80';
 
   return (
     <Card className={`border ${toneClasses} shadow-none my-6`}>
       <CardHeader className="pb-2">
-        <h4 className="text-sm font-semibold text-slate-700">{title}</h4>
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h4>
       </CardHeader>
       <CardContent>
-        <div className="grammar-prose prose prose-slate max-w-none prose-sm prose-p:text-slate-700 prose-li:text-slate-700">
+        <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none prose-sm prose-p:text-slate-700 prose-li:text-slate-700 dark:prose-p:text-slate-300 dark:prose-li:text-slate-300">
           <MarkdownRenderer content={content} />
         </div>
       </CardContent>
@@ -224,28 +226,28 @@ const GrammarRulesSection: React.FC<{
 
   return (
     <section className="mt-10">
-      <h3 className="text-base font-semibold text-slate-900 mb-3">
+      <h3 className="text-base font-semibold text-slate-900 mb-3 dark:text-slate-100">
         {t('grammarDetail.rules', { defaultValue: 'Conjugation rules' })}
       </h3>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <table className="w-full text-sm border-separate border-spacing-0">
-          <thead className="bg-slate-100">
+          <thead className="bg-slate-100 dark:bg-slate-900">
             <tr>
-              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-r border-slate-200">
+              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-r border-slate-200 dark:border-slate-800 dark:text-slate-200">
                 {t('grammarDetail.condition', { defaultValue: 'Condition' })}
               </th>
-              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-slate-200">
+              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-slate-200 dark:border-slate-800 dark:text-slate-200">
                 {t('grammarDetail.rule', { defaultValue: 'Rule' })}
               </th>
             </tr>
           </thead>
-          <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60">
+          <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60 dark:[&_tr:nth-child(even)]:bg-slate-900/80 dark:[&_tr:hover]:bg-blue-500/10">
             {entries.map(([key, value]) => (
               <tr key={key}>
-                <td className="px-3 py-2 text-slate-700 border-b border-r border-slate-200 align-top">
+                <td className="px-3 py-2 text-slate-700 border-b border-r border-slate-200 align-top dark:border-slate-800 dark:text-slate-300">
                   {key}
                 </td>
-                <td className="px-3 py-2 text-blue-700 border-b border-slate-200 align-top">
+                <td className="px-3 py-2 text-blue-700 border-b border-slate-200 align-top dark:border-slate-800 dark:text-blue-200">
                   {String(value)}
                 </td>
               </tr>
@@ -266,7 +268,7 @@ const GrammarExamplesSection: React.FC<{
 
   return (
     <section className="mt-10 space-y-3">
-      <h3 className="text-base font-semibold text-slate-900">
+      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
         {t('grammarDetail.examples', { defaultValue: 'Usage examples' })}
       </h3>
       {examples.map((example, index) => {
@@ -274,11 +276,11 @@ const GrammarExamplesSection: React.FC<{
         return (
           <Card
             key={`${index}-${example.kr}`}
-            className="border-slate-200 shadow-none bg-slate-50/70"
+            className="border-slate-200 shadow-none bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/80"
           >
             <CardContent className="pt-5">
-              <p className="font-medium text-slate-900">{example.kr}</p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="font-medium text-slate-900 dark:text-slate-100">{example.kr}</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {getLocalizedExampleTranslation(example, language)}
               </p>
             </CardContent>
@@ -298,7 +300,7 @@ const GrammarQuizSection: React.FC<{
 
   return (
     <section className="mt-10 space-y-3">
-      <h3 className="text-base font-semibold text-slate-900">
+      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
         {t('grammarDetail.quizzes', { defaultValue: 'Practice quizzes' })}
       </h3>
       {quizItems.map((quiz, index) => {
@@ -307,13 +309,16 @@ const GrammarQuizSection: React.FC<{
         if (!prompt) return null;
 
         return (
-          <Card key={`quiz-${index}`} className="border-slate-200 shadow-none">
+          <Card
+            key={`quiz-${index}`}
+            className="border-slate-200 shadow-none dark:border-slate-800 dark:bg-slate-900"
+          >
             <CardContent className="pt-5">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 Q{index + 1}. {prompt}
               </p>
               {answer ? (
-                <p className="text-sm text-blue-700 mt-2">
+                <p className="text-sm text-blue-700 mt-2 dark:text-blue-200">
                   {t('grammarDetail.answerShort', { defaultValue: 'Ans.' })} {answer}
                 </p>
               ) : null}
@@ -332,19 +337,19 @@ const GrammarNavigation: React.FC<{
   hasNext?: boolean;
   t: TranslateFn;
 }> = ({ onPrev, onNext, hasPrev, hasNext, t }) => (
-  <div className="mt-10 pt-6 border-t border-slate-200 flex items-center gap-3">
+  <div className="mt-10 pt-6 border-t border-slate-200 flex items-center gap-3 dark:border-slate-800">
     <Button
       variant="outline"
       onClick={onPrev}
       disabled={!hasPrev}
-      className="border-slate-200 text-slate-700"
+      className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
     >
       {t('common.prev', { defaultValue: 'Previous' })}
     </Button>
     <Button
       onClick={onNext}
       disabled={!hasNext}
-      className="bg-blue-600 hover:bg-blue-700 text-white shadow-none border-0"
+      className="bg-blue-600 hover:bg-blue-700 text-white shadow-none border-0 dark:bg-blue-500 dark:hover:bg-blue-400"
     >
       {t('common.next', { defaultValue: 'Next' })}
     </Button>
@@ -377,29 +382,33 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
   >;
 
   return (
-    <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-slate-100/40">
-      <Card className="border-slate-200 shadow-none bg-white">
+    <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-slate-100/40 dark:bg-slate-950">
+      <Card className="border-slate-200 shadow-none bg-white dark:border-slate-800 dark:bg-slate-950">
         <CardContent className="pt-6">
           {!hasFullMarkdownDocument ? (
-            <header className="mb-6 border-b border-slate-200 pb-5">
+            <header className="mb-6 border-b border-slate-200 pb-5 dark:border-slate-800">
               <div className="flex items-center gap-2 mb-2 text-xs">
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 font-medium">
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 font-medium dark:bg-slate-800 dark:text-slate-300">
                   {grammar.type}
                 </span>
                 {grammar.level ? (
-                  <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 font-medium">
+                  <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-200">
                     {grammar.level}
                   </span>
                 ) : null}
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">{localizedTitle}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                {localizedTitle}
+              </h1>
               {localizedSummary ? (
-                <p className="mt-2 text-slate-600 leading-relaxed">{localizedSummary}</p>
+                <p className="mt-2 text-slate-600 leading-relaxed dark:text-slate-400">
+                  {localizedSummary}
+                </p>
               ) : null}
             </header>
           ) : null}
 
-          <article className="grammar-prose prose prose-slate max-w-none prose-p:text-slate-700 prose-li:text-slate-700 prose-headings:text-slate-900 prose-a:text-blue-700">
+          <article className="grammar-prose prose prose-slate dark:prose-invert max-w-none prose-p:text-slate-700 prose-li:text-slate-700 prose-headings:text-slate-900 prose-a:text-blue-700 dark:prose-p:text-slate-300 dark:prose-li:text-slate-300 dark:prose-headings:text-slate-100 dark:prose-strong:text-slate-100 dark:prose-a:text-blue-300">
             <MarkdownRenderer content={markdownDocument} />
 
             {!hasFullMarkdownDocument ? (

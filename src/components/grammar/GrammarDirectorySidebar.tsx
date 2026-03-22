@@ -197,7 +197,9 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
       };
     }
     return {
-      icon: <Circle className="h-3.5 w-3.5 fill-slate-300 text-slate-300" />,
+      icon: (
+        <Circle className="h-3.5 w-3.5 fill-slate-300 text-slate-300 dark:fill-slate-600 dark:text-slate-600" />
+      ),
       label: t('grammarModule.statusNew', { defaultValue: 'New' }),
     };
   };
@@ -206,24 +208,27 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     <aside
       className={
         embedded
-          ? 'w-full min-w-0 border border-slate-200 bg-white rounded-xl overflow-hidden flex flex-col'
-          : 'w-[250px] min-h-0 shrink-0 border-r border-slate-200 bg-slate-50/80 flex flex-col h-full'
+          ? 'w-full min-w-0 border border-slate-200 bg-white rounded-xl overflow-hidden flex flex-col dark:border-slate-800 dark:bg-slate-950'
+          : 'w-[250px] min-h-0 shrink-0 border-r border-slate-200 bg-slate-50/80 flex flex-col h-full dark:border-slate-800 dark:bg-slate-950/80'
       }
     >
-      <div className="p-4 border-b border-slate-200 space-y-3">
-        <Card className="border-slate-200 shadow-none">
+      <div className="p-4 border-b border-slate-200 space-y-3 dark:border-slate-800">
+        <Card className="border-slate-200 shadow-none dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="pb-2 pt-4 px-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {t('grammarModule.totalProgressLabel', { defaultValue: 'Total progress' })}
               </p>
-              <Badge variant="outline" className="border-slate-200 text-slate-600 bg-white">
+              <Badge
+                variant="outline"
+                className="border-slate-200 text-slate-600 bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+              >
                 {masteredCount}/{totalCount || 0}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+            <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
               <div
                 className="h-full rounded-full bg-blue-500 transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -233,20 +238,20 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
         </Card>
 
         <div className="relative">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <Input
             type="text"
             placeholder={t('grammarModule.searchPlaceholder', 'Search grammar points...')}
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            className="pl-9 h-10 border-slate-200 bg-white shadow-none"
+            className="pl-9 h-10 border-slate-200 bg-white shadow-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {sortedUnitIds.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
             <Search className="h-8 w-8 mb-2" />
             <p className="text-sm font-medium">{t('common.noMatches', 'No matches')}</p>
           </div>
@@ -259,38 +264,41 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
           const isExpanded = visibleExpandedUnits.has(unitId);
 
           return (
-            <Card key={unitId} className="border-slate-200 shadow-none bg-white overflow-hidden">
+            <Card
+              key={unitId}
+              className="border-slate-200 shadow-none bg-white overflow-hidden dark:border-slate-800 dark:bg-slate-900"
+            >
               <Button
                 variant="ghost"
                 size="auto"
-                className="w-full px-3 py-2 rounded-none text-left hover:bg-slate-50"
+                className="w-full px-3 py-2 rounded-none text-left hover:bg-slate-50 dark:hover:bg-slate-800"
                 onClick={() => toggleUnit(unitId)}
               >
                 <div className="w-full flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">
+                    <p className="text-xs font-semibold text-slate-700 truncate dark:text-slate-200">
                       {getUnitName(unitId)}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
-                      <div className="h-1.5 w-16 rounded-full bg-slate-200 overflow-hidden">
+                      <div className="h-1.5 w-16 rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
                         <div
                           className="h-full rounded-full bg-blue-500"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         {stats.mastered}/{stats.total}
                       </span>
                     </div>
                   </div>
                   <ChevronDown
-                    className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    className={`h-4 w-4 text-slate-500 transition-transform dark:text-slate-400 ${isExpanded ? 'rotate-180' : ''}`}
                   />
                 </div>
               </Button>
 
               {isExpanded && (
-                <div className="border-t border-slate-200 p-1.5 space-y-1 bg-white">
+                <div className="border-t border-slate-200 p-1.5 space-y-1 bg-white dark:border-slate-800 dark:bg-slate-900">
                   {items.map((item, index) => {
                     const isActive = selectedGrammarId === item.id;
                     const status = normalizeStatus(item.status);
@@ -304,22 +312,22 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
                         onClick={() => onSelectGrammar(item.id, item.unitId)}
                         className={`w-full justify-start rounded-lg px-2.5 py-2 h-auto transition-colors border ${
                           isActive
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-white text-slate-700 border-transparent hover:bg-slate-50 hover:border-slate-200'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30'
+                            : 'bg-white text-slate-700 border-transparent hover:bg-slate-50 hover:border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:border-slate-700'
                         }`}
                       >
                         <span
                           className={`h-8 w-1 rounded-full mr-2 ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
                           aria-hidden
                         />
-                        <span className="mr-2 text-xs text-slate-400 w-5 text-left">
+                        <span className="mr-2 text-xs text-slate-400 w-5 text-left dark:text-slate-500">
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1 text-left">
                           <span className="block truncate text-sm font-medium">
                             {getLocalizedGrammarTitle(item, language)}
                           </span>
-                          <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                          <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                             {meta.icon}
                             <span>{meta.label}</span>
                           </span>

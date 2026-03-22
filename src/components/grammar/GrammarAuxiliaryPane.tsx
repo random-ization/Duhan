@@ -169,11 +169,11 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
         className={
           embedded
             ? 'w-full min-w-0 flex flex-col'
-            : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white'
+            : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'
         }
       >
         <Card className="h-full min-h-0 border-0 rounded-none shadow-none">
-          <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500">
+          <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
             <Sparkles className="h-10 w-10 mb-3" />
             <p className="text-sm font-medium">
               {t('grammarModule.selectGrammarHint', {
@@ -191,18 +191,18 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
       className={
         embedded
           ? 'w-full min-w-0 flex flex-col'
-          : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white'
+          : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'
       }
     >
       <Card className="h-full min-h-0 border-0 rounded-none shadow-none flex flex-col">
-        <CardHeader className="shrink-0 pb-4 border-b border-slate-200">
+        <CardHeader className="shrink-0 pb-4 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center">
+              <span className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center dark:bg-blue-500/15 dark:text-blue-200">
                 <Bot className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   {t('grammarModule.aiTutorTitle', { defaultValue: 'AI Grammar Tutor' })}
                 </p>
                 <p className="text-xs text-emerald-600 flex items-center gap-1">
@@ -224,7 +224,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
                   className={`flex items-start gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
                   {!isUser ? (
-                    <span className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center shrink-0">
+                    <span className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center shrink-0 dark:bg-blue-500/15 dark:text-blue-200">
                       <Bot className="h-4 w-4" />
                     </span>
                   ) : null}
@@ -232,15 +232,15 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
                   <div
                     className={`max-w-[85%] rounded-2xl border px-3 py-2 text-sm leading-relaxed ${
                       isUser
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                        ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-400'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'
                     }`}
                   >
                     {message.content}
                   </div>
 
                   {isUser ? (
-                    <span className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 inline-flex items-center justify-center shrink-0">
+                    <span className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 inline-flex items-center justify-center shrink-0 dark:bg-slate-800 dark:text-slate-300">
                       <UserRound className="h-4 w-4" />
                     </span>
                   ) : null}
@@ -249,7 +249,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
             })}
           </div>
 
-          <div className="sticky bottom-0 shrink-0 border-t border-slate-200 bg-white p-3">
+          <div className="sticky bottom-0 shrink-0 border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center gap-2">
               <Input
                 value={input}
@@ -263,12 +263,12 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
                 placeholder={t('grammarModule.aiTutorPlaceholder', {
                   defaultValue: 'Ask a question and press Enter...',
                 })}
-                className="border-slate-200 bg-white shadow-none"
+                className="border-slate-200 bg-white shadow-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
               <Button
                 onClick={() => void sendMessage()}
                 disabled={isSending || input.trim().length === 0}
-                className="h-11 px-3 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-none"
+                className="h-11 px-3 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-none dark:bg-blue-500 dark:hover:bg-blue-400"
               >
                 <SendHorizonal className="h-4 w-4" />
               </Button>

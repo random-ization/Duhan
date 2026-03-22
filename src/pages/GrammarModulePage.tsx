@@ -209,8 +209,8 @@ const GrammarModulePage: React.FC = () => {
 
   if (instituteQuery === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="text-lg font-semibold text-slate-500 animate-pulse">
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+        <div className="text-lg font-semibold text-slate-500 animate-pulse dark:text-slate-400">
           {t('loading', { defaultValue: 'Loading...' })}
         </div>
       </div>
@@ -257,17 +257,17 @@ const GrammarModulePage: React.FC = () => {
 
   const statusClass =
     selectedStatus === 'MASTERED'
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/30'
       : selectedStatus === 'LEARNING'
-        ? 'bg-blue-50 text-blue-700 border-blue-200'
-        : 'bg-slate-100 text-slate-600 border-slate-200';
+        ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30'
+        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
 
   const gridStyle = isAiPanelOpen
     ? { gridTemplateColumns: '250px minmax(0,1fr) 320px' }
     : { gridTemplateColumns: '250px minmax(0,1fr)' };
 
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-slate-100 text-slate-900">
+    <div className="h-full min-h-0 overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div
         className="h-full min-h-0 grid transition-[grid-template-columns] duration-300"
         style={gridStyle}
@@ -284,7 +284,7 @@ const GrammarModulePage: React.FC = () => {
         />
 
         <section className="min-w-0 min-h-0 flex flex-col">
-          <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
+          <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <AppBreadcrumb
@@ -298,7 +298,7 @@ const GrammarModulePage: React.FC = () => {
                     { label: t('nav.grammar', { defaultValue: 'Grammar' }) },
                   ]}
                 />
-                <p className="mt-2 truncate text-sm text-slate-600">
+                <p className="mt-2 truncate text-sm text-slate-600 dark:text-slate-400">
                   {selectedTitle ||
                     t('grammarDetail.selectPrompt', {
                       defaultValue: 'Select a grammar point to view details',
@@ -310,7 +310,7 @@ const GrammarModulePage: React.FC = () => {
                 <Badge variant="outline" className={statusClass}>
                   {statusLabel}
                 </Badge>
-                <div className="hidden xl:block w-24 h-2 rounded-full bg-slate-200 overflow-hidden">
+                <div className="hidden xl:block w-24 h-2 rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
                   <div
                     className="h-full rounded-full bg-blue-500 transition-all duration-300"
                     style={{ width: `${selectedProficiency}%` }}
@@ -318,7 +318,7 @@ const GrammarModulePage: React.FC = () => {
                 </div>
                 <Button
                   variant="outline"
-                  className="border-slate-200 text-slate-700"
+                  className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   disabled={!desktopSelectedGrammar || isGrammarLoading}
                   onClick={() => {
                     if (desktopSelectedGrammar) {
@@ -333,7 +333,7 @@ const GrammarModulePage: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={() => setIsAiPanelOpen(prev => !prev)}
-                  className="border-slate-200 text-slate-700"
+                  className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   {isAiPanelOpen ? (
                     <>
