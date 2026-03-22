@@ -9,7 +9,7 @@ import {
   sanitizeGrammarDisplayText,
   sanitizeGrammarMarkdown,
 } from '../../utils/grammarDisplaySanitizer';
-import { Button, Card, CardContent, CardHeader } from '../ui';
+import { Badge, Button, Card, CardContent, CardHeader } from '../ui';
 
 type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string;
 type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
@@ -83,6 +83,16 @@ function getLocalizedCustomNote(grammar: GrammarPointData, language: SupportedLa
   return grammar.customNote || '';
 }
 
+function resolveRulesObject(grammar: GrammarPointData): Record<string, unknown> {
+  const conjugationRules =
+    grammar.conjugationRules && typeof grammar.conjugationRules === 'object'
+      ? (grammar.conjugationRules as Record<string, unknown>)
+      : {};
+  const construction = grammar.construction || {};
+
+  return Object.keys(conjugationRules).length > 0 ? conjugationRules : construction;
+}
+
 function buildMarkdownFromSections(
   sections: GrammarPointData['sections'],
   language: SupportedLanguage
@@ -111,31 +121,101 @@ function buildMarkdownFromSections(
   return blocks.join('\n\n');
 }
 
-const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+function normalizeHeadingComparison(input: string): string {
+  return sanitizeGrammarDisplayText(input)
+    .toLowerCase()
+    .replace(/^[~\-–—]+/, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function stripLeadingDuplicateHeading(markdown: string, title: string): string {
+  const trimmed = markdown.trimStart();
+  const match = trimmed.match(/^#\s+(.+?)(?:\r?\n|$)/);
+  if (!match) return markdown;
+
+  const heading = match[1]?.trim() || '';
+  const normalizedHeading = normalizeHeadingComparison(heading);
+  const normalizedTitle = normalizeHeadingComparison(title);
+
+  if (!normalizedHeading || !normalizedTitle) return markdown;
+
+  const isEquivalent =
+    normalizedHeading === normalizedTitle ||
+    normalizedHeading.startsWith(normalizedTitle) ||
+    normalizedTitle.startsWith(normalizedHeading);
+
+  if (!isEquivalent) return markdown;
+
+  return trimmed
+    .slice(match[0].length)
+    .replace(/^\s*\n+/, '')
+    .trim();
+}
+
+const MarkdownRenderer: React.FC<{ content: string; t: TranslateFn }> = ({ content, t }) => {
   if (!content.trim()) return null;
 
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        h1: ({ children }) => (
+          <h1 className="mt-12 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl">
+            {children}
+          </h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="mt-14 mb-6 flex items-center gap-3 border-b border-slate-200 pb-3 text-xl font-bold tracking-tight text-slate-900 dark:border-slate-800 dark:text-slate-100 md:text-2xl">
+            <span className="text-lg font-black text-indigo-500 dark:text-indigo-300">❖</span>
+            <span>{children}</span>
+          </h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="mb-4 mt-8 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            {children}
+          </h3>
+        ),
+        p: ({ children }) => (
+          <p className="my-5 text-[1.04rem] leading-8 text-slate-700 dark:text-slate-300">
+            {children}
+          </p>
+        ),
+        ul: ({ children }) => (
+          <ul className="my-5 list-disc space-y-2 pl-6 marker:text-indigo-400 dark:marker:text-indigo-300">
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="my-5 list-decimal space-y-3 pl-6 marker:font-semibold marker:text-indigo-500 dark:marker:text-indigo-300">
+            {children}
+          </ol>
+        ),
+        li: ({ children }) => (
+          <li className="pl-1 text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
+            {children}
+          </li>
+        ),
+        hr: () => <hr className="my-10 border-0 h-px bg-slate-200 dark:bg-slate-800" />,
         blockquote: ({ children }) => (
-          <blockquote className="my-6 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 not-italic text-slate-700 dark:border-blue-400/30 dark:bg-blue-500/12 dark:text-slate-200">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-blue-700 dark:text-blue-200">
+          <blockquote className="my-7 rounded-2xl border-l-4 border-indigo-500 bg-indigo-50/85 px-5 py-4 not-italic text-slate-700 shadow-sm dark:border-indigo-300 dark:bg-indigo-500/12 dark:text-slate-200">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700 dark:text-indigo-200">
               <Lightbulb className="h-4 w-4" />
-              Note
+              {t('grammarDetail.learningNote', { defaultValue: 'Learning note' })}
             </div>
             <div>{children}</div>
           </blockquote>
         ),
         table: ({ children }) => (
-          <div className="my-6 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+          <div className="my-7 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <table className="m-0 w-full border-separate border-spacing-0 text-sm">
               {children}
             </table>
           </div>
         ),
         thead: ({ children }) => (
-          <thead className="bg-slate-100 dark:bg-slate-900">{children}</thead>
+          <thead className="bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+            {children}
+          </thead>
         ),
         tbody: ({ children }) => (
           <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60 dark:[&_tr:nth-child(even)]:bg-slate-900/80 dark:[&_tr:hover]:bg-blue-500/10">
@@ -143,30 +223,37 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
           </tbody>
         ),
         th: ({ children }) => (
-          <th className="border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-200">
+          <th className="border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-600 last:border-r-0 dark:border-slate-800 dark:text-slate-300">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border-b border-r border-slate-200 px-3 py-2 align-top text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-300">
+          <td className="border-b border-r border-slate-200 px-4 py-3 align-top text-sm text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-300">
             {children}
           </td>
         ),
-        code: ({ inline, className, children, ...props }: any) =>
-          inline ? (
-            <code
-              className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              {...props}
-            >
-              {children}
-            </code>
-          ) : (
-            <pre className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-slate-100 dark:border-slate-800 dark:bg-slate-900">
-              <code className={className} {...props}>
-                {children}
-              </code>
-            </pre>
-          ),
+        strong: ({ children }) => (
+          <strong className="rounded-md bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-700 dark:bg-indigo-500/12 dark:text-indigo-200">
+            {children}
+          </strong>
+        ),
+        pre: ({ children }) => (
+          <pre className="my-6 overflow-x-auto rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-5 text-slate-100 shadow-lg dark:border-slate-700 dark:from-slate-900 dark:to-slate-950">
+            {children}
+          </pre>
+        ),
+        code: ({ inline, className, children, ...props }: any) => (
+          <code
+            className={
+              inline
+                ? 'rounded-md bg-slate-100 px-2 py-1 text-[0.9em] font-semibold text-indigo-700 dark:bg-slate-800 dark:text-indigo-200'
+                : className
+            }
+            {...props}
+          >
+            {children}
+          </code>
+        ),
       }}
     >
       {content}
@@ -193,7 +280,8 @@ const GrammarExtendedSection: React.FC<{
   title: string;
   content: string;
   tone?: 'default' | 'warning' | 'info';
-}> = ({ title, content, tone = 'default' }) => {
+  t: TranslateFn;
+}> = ({ title, content, tone = 'default', t }) => {
   if (!content) return null;
 
   const toneClasses =
@@ -209,8 +297,8 @@ const GrammarExtendedSection: React.FC<{
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h4>
       </CardHeader>
       <CardContent>
-        <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none prose-sm prose-p:text-slate-700 prose-li:text-slate-700 dark:prose-p:text-slate-300 dark:prose-li:text-slate-300">
-          <MarkdownRenderer content={content} />
+        <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none prose-sm">
+          <MarkdownRenderer content={content} t={t} />
         </div>
       </CardContent>
     </Card>
@@ -226,17 +314,17 @@ const GrammarRulesSection: React.FC<{
 
   return (
     <section className="mt-10">
-      <h3 className="text-base font-semibold text-slate-900 mb-3 dark:text-slate-100">
+      <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
         {t('grammarDetail.rules', { defaultValue: 'Conjugation rules' })}
       </h3>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <table className="w-full text-sm border-separate border-spacing-0">
-          <thead className="bg-slate-100 dark:bg-slate-900">
+          <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-r border-slate-200 dark:border-slate-800 dark:text-slate-200">
+              <th className="px-4 py-3 text-left text-xs uppercase tracking-[0.12em] text-slate-600 font-semibold border-b border-r border-slate-200 dark:border-slate-800 dark:text-slate-300">
                 {t('grammarDetail.condition', { defaultValue: 'Condition' })}
               </th>
-              <th className="px-3 py-2 text-left text-slate-700 font-semibold border-b border-slate-200 dark:border-slate-800 dark:text-slate-200">
+              <th className="px-4 py-3 text-left text-xs uppercase tracking-[0.12em] text-slate-600 font-semibold border-b border-slate-200 dark:border-slate-800 dark:text-slate-300">
                 {t('grammarDetail.rule', { defaultValue: 'Rule' })}
               </th>
             </tr>
@@ -244,10 +332,10 @@ const GrammarRulesSection: React.FC<{
           <tbody className="[&_tr:nth-child(even)]:bg-slate-50/80 [&_tr:hover]:bg-blue-50/60 dark:[&_tr:nth-child(even)]:bg-slate-900/80 dark:[&_tr:hover]:bg-blue-500/10">
             {entries.map(([key, value]) => (
               <tr key={key}>
-                <td className="px-3 py-2 text-slate-700 border-b border-r border-slate-200 align-top dark:border-slate-800 dark:text-slate-300">
+                <td className="px-4 py-3 text-slate-700 border-b border-r border-slate-200 align-top dark:border-slate-800 dark:text-slate-300">
                   {key}
                 </td>
-                <td className="px-3 py-2 text-blue-700 border-b border-slate-200 align-top dark:border-slate-800 dark:text-blue-200">
+                <td className="px-4 py-3 text-indigo-700 font-medium border-b border-slate-200 align-top dark:border-slate-800 dark:text-indigo-200">
                   {String(value)}
                 </td>
               </tr>
@@ -268,7 +356,7 @@ const GrammarExamplesSection: React.FC<{
 
   return (
     <section className="mt-10 space-y-3">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
         {t('grammarDetail.examples', { defaultValue: 'Usage examples' })}
       </h3>
       {examples.map((example, index) => {
@@ -276,13 +364,20 @@ const GrammarExamplesSection: React.FC<{
         return (
           <Card
             key={`${index}-${example.kr}`}
-            className="border-slate-200 shadow-none bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/80"
+            className="border-slate-200 bg-white shadow-sm transition-colors hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-400/30"
           >
             <CardContent className="pt-5">
-              <p className="font-medium text-slate-900 dark:text-slate-100">{example.kr}</p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                {getLocalizedExampleTranslation(example, language)}
-              </p>
+              <div className="flex items-start gap-4">
+                <div className="mt-1 text-xl opacity-60">💬</div>
+                <div className="min-w-0">
+                  <p className="text-lg font-bold tracking-wide text-slate-900 dark:text-slate-100">
+                    {example.kr}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    {getLocalizedExampleTranslation(example, language)}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         );
@@ -300,7 +395,7 @@ const GrammarQuizSection: React.FC<{
 
   return (
     <section className="mt-10 space-y-3">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
         {t('grammarDetail.quizzes', { defaultValue: 'Practice quizzes' })}
       </h3>
       {quizItems.map((quiz, index) => {
@@ -311,12 +406,13 @@ const GrammarQuizSection: React.FC<{
         return (
           <Card
             key={`quiz-${index}`}
-            className="border-slate-200 shadow-none dark:border-slate-800 dark:bg-slate-900"
+            className="border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
           >
             <CardContent className="pt-5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Q{index + 1}. {prompt}
-              </p>
+              <div className="mb-3 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-700 dark:bg-indigo-500/12 dark:text-indigo-200">
+                Practice {index + 1}
+              </div>
+              <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{prompt}</p>
               {answer ? (
                 <p className="text-sm text-blue-700 mt-2 dark:text-blue-200">
                   {t('grammarDetail.answerShort', { defaultValue: 'Ans.' })} {answer}
@@ -372,44 +468,47 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
   const localizedSummary = sanitizeGrammarDisplayText(getLocalizedSummary(grammar, language));
   const localizedExplanation = getLocalizedExplanation(grammar, language);
   const hasFullMarkdownDocument = localizedExplanation.trim().length > 0;
-  const markdownDocument = sanitizeGrammarMarkdown(
-    localizedExplanation || buildMarkdownFromSections(grammar.sections, language)
+  const markdownDocument = stripLeadingDuplicateHeading(
+    sanitizeGrammarMarkdown(
+      localizedExplanation || buildMarkdownFromSections(grammar.sections, language)
+    ),
+    localizedTitle
   );
   const customNote = getLocalizedCustomNote(grammar, language);
-  const rulesObject = (grammar.conjugationRules || grammar.construction || {}) as Record<
-    string,
-    unknown
-  >;
+  const rulesObject = resolveRulesObject(grammar);
 
   return (
-    <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-slate-100/40 dark:bg-slate-950">
-      <Card className="border-slate-200 shadow-none bg-white dark:border-slate-800 dark:bg-slate-950">
-        <CardContent className="pt-6">
-          {!hasFullMarkdownDocument ? (
-            <header className="mb-6 border-b border-slate-200 pb-5 dark:border-slate-800">
-              <div className="flex items-center gap-2 mb-2 text-xs">
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 font-medium dark:bg-slate-800 dark:text-slate-300">
-                  {grammar.type}
-                </span>
-                {grammar.level ? (
-                  <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-200">
-                    {grammar.level}
-                  </span>
-                ) : null}
-              </div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                {localizedTitle}
-              </h1>
-              {localizedSummary ? (
-                <p className="mt-2 text-slate-600 leading-relaxed dark:text-slate-400">
-                  {localizedSummary}
-                </p>
+    <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+      <div className="mx-auto w-full max-w-4xl px-8 py-10 pb-24 lg:px-12 xl:px-16">
+        <article className="grammar-prose prose prose-slate dark:prose-invert max-w-none">
+          <header
+            data-testid="grammar-reader-hero"
+            className="mb-10 rounded-[28px] border border-slate-200 bg-white px-6 py-7 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+          >
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Badge className="rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200">
+                {grammar.type}
+              </Badge>
+              {grammar.level ? (
+                <Badge className="rounded-md bg-indigo-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">
+                  {grammar.level}
+                </Badge>
               ) : null}
-            </header>
-          ) : null}
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 md:text-4xl">
+              {localizedTitle}
+            </h1>
+            {localizedSummary ? (
+              <p className="mt-4 text-lg font-medium leading-8 text-slate-500 dark:text-slate-400">
+                {localizedSummary}
+              </p>
+            ) : null}
+          </header>
 
-          <article className="grammar-prose prose prose-slate dark:prose-invert max-w-none prose-p:text-slate-700 prose-li:text-slate-700 prose-headings:text-slate-900 prose-a:text-blue-700 dark:prose-p:text-slate-300 dark:prose-li:text-slate-300 dark:prose-headings:text-slate-100 dark:prose-strong:text-slate-100 dark:prose-a:text-blue-300">
-            <MarkdownRenderer content={markdownDocument} />
+          <div className="rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="[&>p:first-of-type]:rounded-2xl [&>p:first-of-type]:border [&>p:first-of-type]:border-slate-200 [&>p:first-of-type]:bg-slate-50/90 [&>p:first-of-type]:px-5 [&>p:first-of-type]:py-4 [&>p:first-of-type]:shadow-sm dark:[&>p:first-of-type]:border-slate-800 dark:[&>p:first-of-type]:bg-slate-900/80">
+              <MarkdownRenderer content={markdownDocument} t={t as TranslateFn} />
+            </div>
 
             {!hasFullMarkdownDocument ? (
               <>
@@ -431,21 +530,22 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
               <GrammarExtendedSection
                 title={t('grammarDetail.customNote', { defaultValue: 'Instructor note' })}
                 content={customNote}
+                t={t as TranslateFn}
               />
             ) : null}
-          </article>
 
-          {!hasFullMarkdownDocument ? (
-            <GrammarNavigation
-              onPrev={onPrev}
-              onNext={onNext}
-              hasPrev={hasPrev}
-              hasNext={hasNext}
-              t={t as TranslateFn}
-            />
-          ) : null}
-        </CardContent>
-      </Card>
+            {!hasFullMarkdownDocument ? (
+              <GrammarNavigation
+                onPrev={onPrev}
+                onNext={onNext}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                t={t as TranslateFn}
+              />
+            ) : null}
+          </div>
+        </article>
+      </div>
     </main>
   );
 };
