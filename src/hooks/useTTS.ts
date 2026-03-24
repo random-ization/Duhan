@@ -85,6 +85,16 @@ function buildSpeakRequestDedupeKey(args: SpeakActionArgs): string {
   return `${args.voice || ''}|${args.rate || ''}|${args.pitch || ''}|${args.skipCache ? '1' : '0'}|${args.text}`;
 }
 
+function decodeBase64ToUint8Array(base64: string): Uint8Array {
+  const byteCharacters = atob(base64);
+  const byteLength = byteCharacters.length;
+  const byteArray = new Uint8Array(byteLength);
+  for (let i = 0; i < byteLength; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+  return byteArray;
+}
+
 function runSpeakActionWithDedupe(
   speakAction: SpeakActionFn,
   args: SpeakActionArgs
@@ -606,13 +616,7 @@ function writeSessionInlineCache(
 
 // Helper: Convert base64 to Blob
 function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteCharacters = atob(base64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.codePointAt(i) || 0;
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mimeType });
+  return new Blob([decodeBase64ToUint8Array(base64)], { type: mimeType });
 }
 
 /**

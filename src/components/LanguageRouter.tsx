@@ -63,6 +63,22 @@ const getStoredUserLanguage = (): Language | null => {
   return null;
 };
 
+export const detectLanguageFastPath = (): Language | null => {
+  const userLanguage = getStoredUserLanguage();
+  if (userLanguage) return userLanguage;
+
+  const browserLang = getBrowserPreferredLanguage();
+  if (browserLang) return browserLang;
+
+  const stored = localStorage.getItem('preferredLanguage');
+  const normalizedStored = stored ? stored.toLowerCase() : null;
+  if (normalizedStored && isValidLanguage(normalizedStored)) {
+    return normalizedStored;
+  }
+
+  return null;
+};
+
 const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', hash = '') => {
   const normalizedPathname = normalizeLocalizedPathname(pathname);
   const segments = normalizedPathname.split('/').filter(Boolean);
@@ -76,31 +92,16 @@ const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', h
 
 // Get language from URL or detect from browser
 export const detectLanguage = async (): Promise<Language> => {
-  const stored = localStorage.getItem('preferredLanguage');
-  const normalizedStored = stored ? stored.toLowerCase() : null;
-  const userLanguage = getStoredUserLanguage();
-
-  // 1. If user explicitly chose a language, prioritize it above all else
-  if (userLanguage) {
-    return userLanguage;
+  const fastPath = detectLanguageFastPath();
+  if (fastPath) {
+    return fastPath;
   }
 
-  // 2. Browser language detection
-  const browserLang = getBrowserPreferredLanguage();
-  if (browserLang) {
-    return browserLang;
-  }
-
-  // 3. Geo-location detection (fallback only when browser language is unavailable)
+  // Geo-location detection (fallback only when browser language is unavailable)
   const country = await fetchUserCountry();
   if (country === 'CN') return 'zh';
   if (country === 'VN') return 'vi';
   if (country === 'MN') return 'mn';
-
-  // 4. Fallback to stored preference (legacy logic or auto-saved)
-  if (normalizedStored && isValidLanguage(normalizedStored)) {
-    return normalizedStored;
-  }
 
   return DEFAULT_LANGUAGE;
 };

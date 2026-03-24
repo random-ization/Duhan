@@ -9,6 +9,7 @@ import {
   LanguageRouter,
   DEFAULT_LANGUAGE,
   detectLanguage,
+  detectLanguageFastPath,
   isValidLanguage,
   normalizeLocalizedPathname,
 } from './components/LanguageRouter';
@@ -76,7 +77,13 @@ const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
   keepPathname = true,
 }) => {
   const location = useLocation();
-  const [target, setTarget] = useState<string | null>(null);
+  const [target, setTarget] = useState<string | null>(() => {
+    const fastLang = detectLanguageFastPath();
+    if (!fastLang) return null;
+    const nextPathname = keepPathname ? normalizeLocalizedPathname(location.pathname) : '/';
+    const normalizedPath = nextPathname === '/' ? '' : nextPathname;
+    return `/${fastLang}${normalizedPath}${location.search}${location.hash}`;
+  });
 
   useEffect(() => {
     let cancelled = false;
