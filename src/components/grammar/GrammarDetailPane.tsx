@@ -285,7 +285,6 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
           rendered.push(
             wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
           );
-          pendingMask = null;
         } else {
           rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
         }
@@ -297,7 +296,6 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
         rendered.push(
           wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
         );
-        pendingMask = null;
       } else {
         rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
       }
