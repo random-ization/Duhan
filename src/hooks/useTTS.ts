@@ -85,8 +85,18 @@ function buildSpeakRequestDedupeKey(args: SpeakActionArgs): string {
   return `${args.voice || ''}|${args.rate || ''}|${args.pitch || ''}|${args.skipCache ? '1' : '0'}|${args.text}`;
 }
 
+/**
+ * Decodes base64 audio into a byte array for Blob construction.
+ * Uses charCodeAt intentionally because atob returns a binary string (0-255 per char),
+ * which is faster and more accurate than codePointAt for this payload shape.
+ */
 function decodeBase64ToUint8Array(base64: string): Uint8Array {
-  const byteCharacters = atob(base64);
+  let byteCharacters = '';
+  try {
+    byteCharacters = atob(base64);
+  } catch {
+    throw new Error('Failed to decode TTS audio payload');
+  }
   const byteLength = byteCharacters.length;
   const byteArray = new Uint8Array(byteLength);
   for (let i = 0; i < byteLength; i++) {

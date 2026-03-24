@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   detectLanguageFastPath,
   normalizeLocalizedPathname,
 } from '../../src/components/LanguageRouter';
+
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe('normalizeLocalizedPathname', () => {
   it('normalizes language prefix casing and trims trailing slash', () => {
@@ -41,18 +45,21 @@ describe('detectLanguageFastPath', () => {
     localStorage.removeItem('preferredLanguage');
     localStorage.removeItem('preferredLanguageSource');
     const originalNavigator = globalThis.navigator;
-    Object.defineProperty(globalThis, 'navigator', {
-      value: {
-        ...originalNavigator,
-        languages: ['vi-VN', 'en-US'],
-        language: 'vi-VN',
-      },
-      configurable: true,
-    });
-    expect(detectLanguageFastPath()).toBe('vi');
-    Object.defineProperty(globalThis, 'navigator', {
-      value: originalNavigator,
-      configurable: true,
-    });
+    try {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          ...originalNavigator,
+          languages: ['vi-VN', 'en-US'],
+          language: 'vi-VN',
+        },
+        configurable: true,
+      });
+      expect(detectLanguageFastPath()).toBe('vi');
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: originalNavigator,
+        configurable: true,
+      });
+    }
   });
 });
