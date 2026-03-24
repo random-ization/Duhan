@@ -200,26 +200,33 @@ function normalizeReadingAnalysisPayload(
     typeof parsed.summary === 'string' && parsed.summary.trim()
       ? parsed.summary.trim()
       : fallbackSummary;
-  const vocabulary = Array.isArray(parsed.vocabulary)
-    ? parsed.vocabulary
-        .map(item => ({
-          term: typeof item.term === 'string' ? item.term.trim() : '',
-          meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
-          level: typeof item.level === 'string' ? item.level.trim() : '',
-        }))
-        .filter(item => Boolean(item.term))
-        .slice(0, 8)
-    : [];
-  const grammar = Array.isArray(parsed.grammar)
-    ? parsed.grammar
-        .map(item => ({
-          pattern: typeof item.pattern === 'string' ? item.pattern.trim() : '',
-          explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
-          example: typeof item.example === 'string' ? item.example.trim() : '',
-        }))
-        .filter(item => Boolean(item.pattern))
-        .slice(0, 4)
-    : [];
+  const vocabulary: ReadingVocabularyItem[] = [];
+  if (Array.isArray(parsed.vocabulary)) {
+    for (const item of parsed.vocabulary) {
+      const term = typeof item.term === 'string' ? item.term.trim() : '';
+      if (!term) continue;
+      vocabulary.push({
+        term,
+        meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+        level: typeof item.level === 'string' ? item.level.trim() : '',
+      });
+      if (vocabulary.length >= 8) break;
+    }
+  }
+
+  const grammar: ReadingGrammarItem[] = [];
+  if (Array.isArray(parsed.grammar)) {
+    for (const item of parsed.grammar) {
+      const pattern = typeof item.pattern === 'string' ? item.pattern.trim() : '';
+      if (!pattern) continue;
+      grammar.push({
+        pattern,
+        explanation: typeof item.explanation === 'string' ? item.explanation.trim() : '',
+        example: typeof item.example === 'string' ? item.example.trim() : '',
+      });
+      if (grammar.length >= 4) break;
+    }
+  }
 
   return {
     summary,
@@ -695,14 +702,20 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       try {
         translations = await requestBatchTranslations(segmentTexts, true);
       } catch (e) {
-        console.warn(`[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`, e instanceof Error ? e.message : e);
+        console.warn(
+          `[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`,
+          e instanceof Error ? e.message : e
+        );
       }
 
       if (!translations.some(item => item.trim().length > 0)) {
         try {
           translations = await requestBatchTranslations(segmentTexts, false);
         } catch (e) {
-          console.error(`[AI] Batch ${chunk.index} fallback translation failed:`, e instanceof Error ? e.message : e);
+          console.error(
+            `[AI] Batch ${chunk.index} fallback translation failed:`,
+            e instanceof Error ? e.message : e
+          );
         }
       }
 

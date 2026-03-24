@@ -63,6 +63,15 @@ const getStoredUserLanguage = (): Language | null => {
   return null;
 };
 
+const getStoredLanguageFallback = (): Language | null => {
+  const stored = localStorage.getItem('preferredLanguage');
+  const normalizedStored = stored ? stored.toLowerCase() : null;
+  if (normalizedStored && isValidLanguage(normalizedStored)) {
+    return normalizedStored;
+  }
+  return null;
+};
+
 export const detectLanguageFastPath = (): Language | null => {
   const userLanguage = getStoredUserLanguage();
   if (userLanguage) return userLanguage;
@@ -70,13 +79,7 @@ export const detectLanguageFastPath = (): Language | null => {
   const browserLang = getBrowserPreferredLanguage();
   if (browserLang) return browserLang;
 
-  const stored = localStorage.getItem('preferredLanguage');
-  const normalizedStored = stored ? stored.toLowerCase() : null;
-  if (normalizedStored && isValidLanguage(normalizedStored)) {
-    return normalizedStored;
-  }
-
-  return null;
+  return getStoredLanguageFallback();
 };
 
 const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', hash = '') => {
