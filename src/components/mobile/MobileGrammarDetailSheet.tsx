@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { X, Trophy, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Trophy, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { GrammarPointData } from '../../types';
 import { useAction, useMutation } from 'convex/react';
 import type { Id } from '../../../convex/_generated/dataModel';
@@ -9,8 +11,14 @@ import { useTranslation } from 'react-i18next';
 import {
   sanitizeGrammarDisplayText,
   sanitizeGrammarMarkdown,
+  stripLeadingDuplicateHeading,
+  GRAMMAR_MASK_ANSWER_TOKEN,
+  GRAMMAR_MASK_TRANSLATION_TOKEN,
+  GRAMMAR_MASK_TRANSLATION_START_TOKEN,
+  GRAMMAR_MASK_ANSWER_START_TOKEN,
 } from '../../utils/grammarDisplaySanitizer';
-import { Button } from '../ui'; // Assuming these exist or I should use native
+import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
+import { Button } from '../ui';
 import { Input } from '../ui';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
 
@@ -127,6 +135,125 @@ const getLocalizedExplanation = (
   );
 };
 
+const RED_EYE_STORAGE_KEY = 'grammar_mobile_red_eye';
+
+function extractTextContent(node: React.ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractTextContent).join('');
+  if (React.isValidElement(node))
+    return extractTextContent((node.props as { children?: React.ReactNode }).children);
+  return '';
+}
+
+function getRedEyeMaskClass(enabled: boolean): string {
+  return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
+}
+
+function getNodeMaskKind(node: any): 'translation' | 'answer' | null {
+  const value =
+    node?.properties?.['data-grammar-mask'] ??
+    node?.data?.hProperties?.['data-grammar-mask'] ??
+    null;
+  return value === 'translation' || value === 'answer' ? value : null;
+}
+
+const MarkdownRenderer: React.FC<{
+  content: string;
+  redEyeEnabled: boolean;
+}> = ({ content, redEyeEnabled }) => {
+  if (!content.trim()) return null;
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkGrammarMasking]}
+      components={{
+        h1: ({ children }) => (
+          <h1 className="mt-6 mb-4 text-2xl font-black text-foreground">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="mt-8 mb-4 flex items-center gap-2 border-b border-border pb-2 text-xl font-bold text-foreground">
+            <span className="text-indigo-500">❖</span>
+            {children}
+          </h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="mt-6 mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+            {children}
+          </h3>
+        ),
+        p: ({ children, node }) => {
+          const rawText = extractTextContent(children);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind =
+            nodeMaskKind ||
+            (rawText.trim().includes(GRAMMAR_MASK_ANSWER_TOKEN) ||
+            rawText.trim().includes(GRAMMAR_MASK_ANSWER_START_TOKEN)
+              ? 'answer'
+              : rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_TOKEN) ||
+                  rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_START_TOKEN)
+                ? 'translation'
+                : null);
+
+          return (
+            <p
+              className={`my-3 text-sm leading-relaxed text-muted-foreground ${
+                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
+              }`}
+            >
+              {children}
+            </p>
+          );
+        },
+        ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
+        ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
+        li: ({ children, node }) => {
+          const rawText = extractTextContent(children);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind =
+            nodeMaskKind ||
+            (rawText.trim().includes(GRAMMAR_MASK_ANSWER_TOKEN)
+              ? 'answer'
+              : rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_TOKEN)
+                ? 'translation'
+                : null);
+          return (
+            <li
+              className={`text-sm leading-relaxed text-muted-foreground ${
+                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
+              }`}
+            >
+              {children}
+            </li>
+          );
+        },
+        strong: ({ children }) => (
+          <strong className="rounded bg-indigo-50 px-1 font-bold text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300">
+            {children}
+          </strong>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="my-4 rounded-xl border-l-4 border-indigo-500 bg-indigo-50/50 p-4 italic text-muted-foreground dark:bg-indigo-950/20">
+            {children}
+          </blockquote>
+        ),
+        table: ({ children }) => (
+          <div className="my-4 overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-xs text-left">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border-b border-border bg-muted px-3 py-2 font-bold">{children}</th>
+        ),
+        td: ({ children }) => (
+          <td className="border-b border-border px-3 py-2 align-top">{children}</td>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+};
+
 const getExampleTranslation = (
   example: { cn?: string; en?: string; vi?: string; mn?: string },
   language: SupportedLanguage
@@ -169,6 +296,14 @@ export default function MobileGrammarDetailSheet({
   const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(RED_EYE_STORAGE_KEY) === '1';
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
+  }, [redEyeEnabled]);
 
   const checkAction = useAction(
     aRef<
@@ -277,7 +412,10 @@ export default function MobileGrammarDetailSheet({
   const language = resolveSupportedLanguage(i18n.language);
   const localizedTitle = getLocalizedTitle(grammar, language);
   const localizedSummary = getLocalizedSummary(grammar, language);
-  const localizedExplanation = getLocalizedExplanation(grammar, language);
+  const localizedExplanation = stripLeadingDuplicateHeading(
+    getLocalizedExplanation(grammar, language),
+    localizedTitle
+  );
   const localizedCustomNote = getLocalizedCustomNote(grammar, language);
   const proficiency = aiFeedback?.progress?.proficiency ?? grammar.proficiency ?? 0;
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
@@ -332,6 +470,18 @@ export default function MobileGrammarDetailSheet({
               <Button
                 variant="ghost"
                 size="auto"
+                onClick={() => setRedEyeEnabled(prev => !prev)}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                  redEyeEnabled
+                    ? 'bg-red-50 border-red-300 text-red-600'
+                    : 'bg-card border-border text-muted-foreground'
+                }`}
+              >
+                {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="auto"
                 onClick={handleToggleStatus}
                 className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                   status === 'MASTERED'
@@ -357,13 +507,8 @@ export default function MobileGrammarDetailSheet({
             </div>
 
             {/* Explanation */}
-            <div>
-              <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
-                {t('grammarDetail.explanation')}
-              </h3>
-              <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {localizedExplanation}
-              </div>
+            <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none">
+              <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
             </div>
 
             {/* Rules */}

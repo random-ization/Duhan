@@ -8,6 +8,8 @@ import { cn } from '../../../lib/utils';
 import { BottomSheet } from '../../../components/common/BottomSheet';
 import { Button } from '../../../components/ui';
 import { Input } from '../../../components/ui';
+import { getPosColorClass } from '../../../utils/posColors';
+
 import { ExtendedVocabularyItem, VocabSettings, SessionStats, QuestionType } from '../types';
 import { shuffleArray } from '../utils';
 
@@ -113,9 +115,11 @@ const MobileQuestionCard: React.FC<{
         <Volume2 className="w-6 h-6" />
       </Button>
     )}
-    {currentItem.pos && (
-      <span className="mt-4 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-bold uppercase">
-        {currentItem.pos}
+    {(currentItem.partOfSpeech || currentItem.pos) && (
+      <span
+        className={`mt-4 px-3 py-1 rounded-full text-xs font-bold uppercase inline-block ${getPosColorClass(currentItem.partOfSpeech || currentItem.pos)}`}
+      >
+        {currentItem.partOfSpeech || currentItem.pos}
       </span>
     )}
   </div>

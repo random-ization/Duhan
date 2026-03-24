@@ -88,6 +88,7 @@ const VocabBookSpellingPage: React.FC = () => {
         w.meaningMn ||
         '',
       unit: 0,
+      partOfSpeech: w.partOfSpeech as string | undefined,
     }));
   }, [items, category, language]);
 

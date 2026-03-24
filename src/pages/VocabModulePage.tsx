@@ -442,6 +442,8 @@ export default function VocabModulePage() {
         korean: w.korean,
         english: getLocalizedContent(w, 'meaning', language) || w.english,
         unit: w.unit,
+        partOfSpeech: w.partOfSpeech,
+        pos: w.pos,
       })),
     [filteredWords, language]
   );

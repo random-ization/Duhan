@@ -15,6 +15,7 @@ import {
   sanitizeGrammarDisplayText,
   sanitizeGrammarMarkdown,
   stripGrammarMaskTokens,
+  stripLeadingDuplicateHeading,
 } from '../../utils/grammarDisplaySanitizer';
 import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
 import { Badge, Button, Card, CardContent, CardHeader } from '../ui';
@@ -414,37 +415,6 @@ function buildMarkdownFromSections(
     .filter(Boolean);
 
   return blocks.join('\n\n');
-}
-
-function normalizeHeadingComparison(input: string): string {
-  return sanitizeGrammarDisplayText(input)
-    .toLowerCase()
-    .replace(/^[~\-–—]+/, '')
-    .replace(/[^\p{L}\p{N}]+/gu, '');
-}
-
-function stripLeadingDuplicateHeading(markdown: string, title: string): string {
-  const trimmed = markdown.trimStart();
-  const match = trimmed.match(/^#\s+(.+?)(?:\r?\n|$)/);
-  if (!match) return markdown;
-
-  const heading = match[1]?.trim() || '';
-  const normalizedHeading = normalizeHeadingComparison(heading);
-  const normalizedTitle = normalizeHeadingComparison(title);
-
-  if (!normalizedHeading || !normalizedTitle) return markdown;
-
-  const isEquivalent =
-    normalizedHeading === normalizedTitle ||
-    normalizedHeading.startsWith(normalizedTitle) ||
-    normalizedTitle.startsWith(normalizedHeading);
-
-  if (!isEquivalent) return markdown;
-
-  return trimmed
-    .slice(match[0].length)
-    .replace(/^\s*\n+/, '')
-    .trim();
 }
 
 const MarkdownRenderer: React.FC<{

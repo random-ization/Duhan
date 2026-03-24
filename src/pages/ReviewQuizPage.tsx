@@ -78,6 +78,7 @@ const ReviewQuizPage: React.FC = () => {
       korean: item.word,
       english: item.meaning,
       unit: 0,
+      partOfSpeech: (item as any).partOfSpeech,
     }));
   }, [reviewQueue, dueItems, mode]);
 

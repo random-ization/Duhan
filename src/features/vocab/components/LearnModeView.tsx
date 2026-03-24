@@ -7,6 +7,7 @@ import { shuffleArray } from '../utils';
 import { useTTS } from '../../../hooks/useTTS';
 import { Button } from '../../../components/ui';
 import { Input } from '../../../components/ui';
+import { getPosColorClass } from '../../../utils/posColors';
 
 interface LearnModeViewProps {
   words: ExtendedVocabularyItem[];
@@ -213,9 +214,11 @@ const LearnModeViewInner: React.FC<LearnModeViewProps> = React.memo(
                 )}
               </div>
 
-              {currentItem.pos && (
-                <div className="inline-block px-3 py-1 bg-card/70 text-muted-foreground text-xs font-medium rounded-full">
-                  {currentItem.pos}
+              {(currentItem.partOfSpeech || currentItem.pos) && (
+                <div
+                  className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getPosColorClass(currentItem.partOfSpeech || currentItem.pos)}`}
+                >
+                  {currentItem.partOfSpeech || currentItem.pos}
                 </div>
               )}
             </div>

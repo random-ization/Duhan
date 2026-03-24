@@ -4,6 +4,7 @@ import { ExtendedVocabItem } from '../../pages/VocabModulePage';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Button } from '../ui';
+import { getPosColorClass } from '../../utils/posColors';
 
 interface MobileFlashcardPlayerProps {
   readonly words: ExtendedVocabItem[]; // Current filtered words
@@ -91,7 +92,9 @@ export default function MobileFlashcardPlayer({
             className="absolute inset-0 backface-hidden bg-card rounded-3xl border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           >
-            <div className="absolute top-4 left-4 px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase">
+            <div
+              className={`absolute top-4 left-4 px-2 py-1 rounded text-[10px] font-bold uppercase ${getPosColorClass(currentWord.partOfSpeech || 'Word')}`}
+            >
               {currentWord.partOfSpeech || 'Word'}
             </div>
 

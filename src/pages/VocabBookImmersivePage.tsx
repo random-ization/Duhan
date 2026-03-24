@@ -15,6 +15,7 @@ import { VocabBookImmersiveSkeleton } from '../components/common';
 import { Button } from '../components/ui';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Language } from '../types';
+import { getPosColorClass } from '../utils/posColors';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED' | 'ALL';
 type ImmersiveMode = 'BROWSE' | 'RECALL';
@@ -220,7 +221,9 @@ const WordCard: React.FC<WordCardProps> = ({
                 {current.word}
               </h1>
               {current.partOfSpeech && (
-                <span className="px-3 py-1 rounded-2xl bg-muted border-2 border-border text-xs font-black text-muted-foreground">
+                <span
+                  className={`px-3 py-1 rounded-2xl border-2 border-border text-xs font-black ${getPosColorClass(current.partOfSpeech)}`}
+                >
                   {current.partOfSpeech}
                 </span>
               )}

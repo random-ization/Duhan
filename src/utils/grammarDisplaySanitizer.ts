@@ -22,16 +22,14 @@ const PRONUNCIATION_TABLE_HEADER_RE =
 const MARKDOWN_TABLE_SEPARATOR_RE = /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
 const ANSWER_LABEL_CORE_RE =
   /(?:参考答案|测验参考答案|示例答案|答案|改正|修正|reference answers?|answers?|correction|correct answer)/i;
-const ANSWER_HEADING_LINE_RE =
-  new RegExp(
-    `^\\s{0,3}(?:#{1,6}\\s*)?(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]?\\s*$`,
-    'i'
-  );
-const ANSWER_INLINE_LINE_RE =
-  new RegExp(
-    `^\\s*(?:[-*+]\\s+|\\d+\\.\\s+)?(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]\\s*.+$`,
-    'i'
-  );
+const ANSWER_HEADING_LINE_RE = new RegExp(
+  `^\\s{0,3}(?:#{1,6}\\s*)?(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]?\\s*$`,
+  'i'
+);
+const ANSWER_INLINE_LINE_RE = new RegExp(
+  `^\\s*(?:[-*+]\\s+|\\d+\\.\\s+)?(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]\\s*.+$`,
+  'i'
+);
 const NUMBERED_ITEM_RE = /^\s*\d+\.\s+/;
 const MARKDOWN_HEADING_RE = /^\s{0,3}#{1,6}\s+/;
 const HANGUL_RE = /[\u3131-\u318E\uAC00-\uD7A3]/;
@@ -41,11 +39,13 @@ const QUIZ_SECTION_HEADING_RE =
   /^\s{0,3}#{1,6}\s+(?:\d+\.\s*)?(?:\u5feb\u901f\u590d\u4e60\u6d4b\u9a8c|\u7ec3\u4e60\u6d4b\u9a8c|\u5b9e\u6218\u6f14\u7ec3|quick review quiz(?:zes)?|practice quiz(?:zes)?)\s*$/i;
 const EXAMPLE_SECTION_HEADING_RE =
   /^\s{0,3}#{1,6}\s+(?:\d+\.\s*)?(?:\u8bed\u5883\u793a\u4f8b|\u4f8b\u53e5|\u793a\u4f8b|context examples?|usage examples?|example sentences?|examples?)\s*$/i;
-const EXPLICIT_EXAMPLE_PREFIX_RE = /(?:^|[\s>*-])(?:\*{1,2})?(?:\u4f8b[:：]|\u793a\u4f8b[:：]|example[:：])\s*/i;
-const INLINE_TRANSLATION_PAREN_RE = /([（(][^()\n\r]*(?:\p{Script=Han}|[A-Za-z])[^()\n\r]*[）)])\s*$/u;
+const EXPLICIT_EXAMPLE_PREFIX_RE =
+  /(?:^|[\s>*-])(?:\*{1,2})?(?:\u4f8b[:：]|\u793a\u4f8b[:：]|example[:：])\s*/i;
+const INLINE_TRANSLATION_PAREN_RE =
+  /([（(][^()\n\r]*(?:\p{Script=Han}|[A-Za-z])[^()\n\r]*[）)])\s*$/u;
 const SIMPLE_LATIN_LABEL_RE = /^[A-Za-z][A-Za-z\s-]{0,18}$/;
 const KOREAN_SENTENCE_END_RE =
-  /(?:요|다|까|죠|네|나요|습니다|어요|아요|였다|이었다|입니다|인가요|군요|겠어요|려나|을까요|ㄹ까요)[.!?。！？]?\s*$/u;
+  /(?:요|다|까|죠|네|나요|습니다|어요|아요|였다|이었다|입니다|인가요|군요|겠어요|려na|을까요|ㄹ까요)[.!?。！？]?\s*$/u;
 export const GRAMMAR_MASK_TRANSLATION_TOKEN = '@@GRAMMAR_MASK_TRANSLATION@@';
 export const GRAMMAR_MASK_ANSWER_TOKEN = '@@GRAMMAR_MASK_ANSWER@@';
 export const GRAMMAR_MASK_TRANSLATION_START_TOKEN = '@@GRAMMAR_MASK_TRANSLATION_START@@';
@@ -269,8 +269,12 @@ function normalizeNestedExampleTranslations(input: string): string {
       const level = headingMatch[2].length;
       const headingText = stripMarkdownFormatting(headingMatch[3]).trim();
       if (level <= 2) {
-        inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(`${headingMatch[1]}${headingMatch[2]} ${headingText}`);
-      } else if (EXAMPLE_SECTION_HEADING_RE.test(`${headingMatch[1]}${headingMatch[2]} ${headingText}`)) {
+        inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(
+          `${headingMatch[1]}${headingMatch[2]} ${headingText}`
+        );
+      } else if (
+        EXAMPLE_SECTION_HEADING_RE.test(`${headingMatch[1]}${headingMatch[2]} ${headingText}`)
+      ) {
         inExampleSection = true;
       }
       output.push(line);
@@ -284,7 +288,7 @@ function normalizeNestedExampleTranslations(input: string): string {
     }
 
     const isPrimaryExampleLine =
-      NUMBERED_ITEM_RE.test(trimmed) && HANGUL_RE.test(trimmed) ||
+      (NUMBERED_ITEM_RE.test(trimmed) && HANGUL_RE.test(trimmed)) ||
       (/^\s*[-*+]\s+/.test(trimmed) && HANGUL_RE.test(trimmed));
 
     if (
@@ -322,7 +326,7 @@ function normalizeInlineExampleTranslations(input: string): string {
 
     if (headingMatch) {
       const level = headingMatch[2].length;
-      const _headingText = stripMarkdownFormatting(headingMatch[3]).trim();
+      stripMarkdownFormatting(headingMatch[3]).trim();
       if (level <= 2) {
         inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(trimmed);
       } else if (EXAMPLE_SECTION_HEADING_RE.test(trimmed)) {
@@ -333,7 +337,10 @@ function normalizeInlineExampleTranslations(input: string): string {
     }
 
     const shouldMaskExampleLine = inExampleSection || EXPLICIT_EXAMPLE_PREFIX_RE.test(trimmed);
-    const withParentheticalMask = maskInlineParentheticalTranslationLine(line, shouldMaskExampleLine);
+    const withParentheticalMask = maskInlineParentheticalTranslationLine(
+      line,
+      shouldMaskExampleLine
+    );
     output.push(maskSameLineTrailingTranslation(withParentheticalMask, shouldMaskExampleLine));
   }
 
@@ -370,7 +377,11 @@ function normalizeReviewQuizMarkdown(input: string): string {
     if (inAnswerSection && MARKDOWN_HEADING_RE.test(trimmed) && !isAnswerHeadingLine(trimmed)) {
       inAnswerSection = false;
     }
-    if (inQuizSection && MARKDOWN_HEADING_RE.test(trimmed) && !QUIZ_SECTION_HEADING_RE.test(trimmed)) {
+    if (
+      inQuizSection &&
+      MARKDOWN_HEADING_RE.test(trimmed) &&
+      !QUIZ_SECTION_HEADING_RE.test(trimmed)
+    ) {
       inQuizSection = false;
       inAnswerSection = false;
     }
@@ -419,9 +430,7 @@ function normalizeReviewQuizMarkdown(input: string): string {
   return output.join('\n');
 }
 
-export function getGrammarMaskKind(
-  input?: string | null
-): 'translation' | 'answer' | null {
+export function getGrammarMaskKind(input?: string | null): 'translation' | 'answer' | null {
   if (!input) return null;
   if (
     input.includes(GRAMMAR_MASK_ANSWER_TOKEN) ||
@@ -555,5 +564,37 @@ export function sanitizeGrammarMarkdown(input?: string | null): string {
     )
   )
     .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function normalizeHeadingComparison(input: string): string {
+  return sanitizeGrammarDisplayText(input)
+    .toLowerCase()
+    .replace(/^[~\-–—]+/, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+export function stripLeadingDuplicateHeading(markdown: string, title: string): string {
+  if (!markdown) return '';
+  const trimmed = markdown.trimStart();
+  const match = trimmed.match(/^#\s+(.+?)(?:\r?\n|$)/);
+  if (!match) return markdown;
+
+  const heading = match[1]?.trim() || '';
+  const normalizedHeading = normalizeHeadingComparison(heading);
+  const normalizedTitle = normalizeHeadingComparison(title);
+
+  if (!normalizedHeading || !normalizedTitle) return markdown;
+
+  const isEquivalent =
+    normalizedHeading === normalizedTitle ||
+    normalizedHeading.startsWith(normalizedTitle) ||
+    normalizedTitle.startsWith(normalizedHeading);
+
+  if (!isEquivalent) return markdown;
+
+  return trimmed
+    .slice(match[0].length)
+    .replace(/^\s*\n+/, '')
     .trim();
 }

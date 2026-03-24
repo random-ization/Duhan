@@ -4,7 +4,7 @@ import { ExtendedVocabularyItem, VocabSettings } from '../types';
 import { Language } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
-import { getPosStyle } from '../utils';
+import { getPosColorClass } from '../../../utils/posColors';
 import { useTTS } from '../../../hooks/useTTS';
 import { Button } from '../../../components/ui';
 
@@ -98,7 +98,7 @@ const ListView: React.FC<ListViewProps> = React.memo(({ words, settings, languag
                       <Volume2 className="w-4 h-4" />
                     </Button>
                     <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded ${getPosStyle(
+                      className={`px-2 py-0.5 text-xs font-medium rounded ${getPosColorClass(
                         word.partOfSpeech ?? word.pos ?? 'NOUN'
                       )}`}
                     >

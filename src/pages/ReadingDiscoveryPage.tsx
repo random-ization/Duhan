@@ -438,12 +438,19 @@ const ArticleNewsCard: React.FC<{
   );
 };
 
-const CuratedArticleCard: React.FC<{ item: CuratedArticle }> = ({ item }) => {
+const CuratedArticleCard: React.FC<{ item: CuratedArticle; onOpen?: (id: string) => void }> = ({
+  item,
+  onOpen,
+}) => {
   const styles = getCardToneStyles(item.tone);
   return (
-    <article
+    <Button
       key={item.id}
-      className={`group flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={() => onOpen?.(item.id)}
+      className={`group !flex h-full !items-stretch !justify-start flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
     >
       <div className="mb-4 flex items-center gap-3">
         <div
@@ -479,7 +486,7 @@ const CuratedArticleCard: React.FC<{ item: CuratedArticle }> = ({ item }) => {
           🔖 {item.bookmarkText}
         </span>
       </div>
-    </article>
+    </Button>
   );
 };
 
@@ -519,7 +526,7 @@ const ArchiveContent: React.FC<{
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       {curatedArticles.map(item => (
-        <CuratedArticleCard key={item.id} item={item} />
+        <CuratedArticleCard key={item.id} item={item} onOpen={onOpen} />
       ))}
     </div>
   );

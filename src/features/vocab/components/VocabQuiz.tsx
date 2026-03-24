@@ -8,6 +8,8 @@ import { logger } from '../../../utils/logger';
 import { notify } from '../../../utils/notify';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
 import { Button, Checkbox, Input, Radio } from '../../../components/ui';
+import { getPosColorClass } from '../../../utils/posColors';
+
 import { useFSRSProgress } from '../hooks/useVocabProgress';
 
 interface VocabItem {
@@ -15,6 +17,8 @@ interface VocabItem {
   readonly korean: string;
   readonly english: string;
   readonly unit: number;
+  readonly pos?: string;
+  readonly partOfSpeech?: string;
 }
 
 interface QuizSettings {
@@ -592,16 +596,33 @@ interface QuestionDisplayProps {
   promptText: string;
   questionText: string;
   isLearn: boolean;
+  targetWord?: VocabItem;
 }
 
-const QuestionDisplay: React.FC<QuestionDisplayProps> = ({ promptText, questionText, isLearn }) => (
-  <div className={`text-center ${isLearn ? 'mb-8' : 'mb-10'}`}>
+const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
+  promptText,
+  questionText,
+  isLearn,
+  targetWord,
+}) => (
+  <div
+    className={`text-center flex flex-col items-center justify-center ${isLearn ? 'mb-8' : 'mb-10'}`}
+  >
     <p className={`text-sm text-muted-foreground font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
       {promptText}
     </p>
-    <h2 className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-foreground`}>
-      {questionText}
-    </h2>
+    <div className="flex flex-col items-center gap-3">
+      <h2 className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-foreground`}>
+        {questionText}
+      </h2>
+      {(targetWord?.partOfSpeech || targetWord?.pos) && (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-bold uppercase inline-block ${getPosColorClass(targetWord.partOfSpeech || targetWord.pos)}`}
+        >
+          {targetWord.partOfSpeech || targetWord.pos}
+        </span>
+      )}
+    </div>
   </div>
 );
 
@@ -1593,7 +1614,12 @@ const QuizContent: React.FC<QuizContentProps> = ({
         isLearn={isLearn}
       />
 
-      <QuestionDisplay promptText={promptText} questionText={questionText} isLearn={isLearn} />
+      <QuestionDisplay
+        promptText={promptText}
+        questionText={questionText}
+        isLearn={isLearn}
+        targetWord={currentQuestion.targetWord}
+      />
 
       {!isWriting && currentQuestion.options && (
         <MCOptions

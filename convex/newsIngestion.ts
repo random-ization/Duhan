@@ -61,7 +61,7 @@ const BLOCKED_URL_PATTERNS = [
 ];
 
 const MIN_ARTICLE_BODY_LENGTH = 220;
-const MAX_ARTICLE_BODY_LENGTH = 500;
+const MAX_ARTICLE_BODY_LENGTH = 50000;
 const MIN_ARTICLE_HANGUL_COUNT = 100;
 const MIN_ARTICLE_SENTENCE_COUNT = 3;
 const USER_FEED_NEWS_LIMIT = 24;
@@ -674,9 +674,7 @@ async function fetchArticleCandidates(ctx: ReadCtx, limit: number): Promise<News
     .withIndex('by_source_published', q => q.eq('sourceKey', WIKI_SOURCE_KEY))
     .order('desc')
     .take(Math.min(Math.max(limit, USER_FEED_ARTICLE_LIMIT), USER_FEED_MAX_ARTICLE_SCAN));
-  return rows.filter(
-    row => row.status === 'active' && (row.bodyText?.length ?? 0) <= MAX_ARTICLE_BODY_LENGTH
-  );
+  return rows.filter(row => row.status === 'active');
 }
 
 function pickFeedIds(
