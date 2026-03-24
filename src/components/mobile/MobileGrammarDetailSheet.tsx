@@ -294,7 +294,12 @@ export default function MobileGrammarDetailSheet({
           className="fixed bottom-0 left-0 right-0 bg-card rounded-t-[2rem] z-[61] h-[85dvh] flex flex-col shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-muted p-6 pb-4 border-b border-border flex items-start justify-between shrink-0">
+          <div
+            className="bg-muted p-6 pb-4 border-b border-border flex items-start justify-between shrink-0 select-none print:hidden"
+            onCopy={e => e.preventDefault()}
+            onContextMenu={e => e.preventDefault()}
+            onDragStart={e => e.preventDefault()}
+          >
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-black uppercase">
@@ -340,7 +345,12 @@ export default function MobileGrammarDetailSheet({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div
+            className="flex-1 overflow-y-auto p-6 space-y-6 select-none print:hidden"
+            onCopy={e => e.preventDefault()}
+            onContextMenu={e => e.preventDefault()}
+            onDragStart={e => e.preventDefault()}
+          >
             {/* Summary */}
             <div className="text-base font-bold text-muted-foreground leading-relaxed bg-yellow-50 p-4 rounded-xl border-2 border-yellow-100">
               {localizedSummary}

@@ -37,14 +37,24 @@ const READER_FONT_SCALE_OPTIONS: Array<{
   titleKey: string;
   titleDefault: string;
 }> = [
-  { value: 'compact', label: 'A-', titleKey: 'grammarDetail.fontScaleCompact', titleDefault: 'Compact' },
+  {
+    value: 'compact',
+    label: 'A-',
+    titleKey: 'grammarDetail.fontScaleCompact',
+    titleDefault: 'Compact',
+  },
   {
     value: 'comfortable',
     label: 'A',
     titleKey: 'grammarDetail.fontScaleComfortable',
     titleDefault: 'Comfortable',
   },
-  { value: 'relaxed', label: 'A+', titleKey: 'grammarDetail.fontScaleRelaxed', titleDefault: 'Relaxed' },
+  {
+    value: 'relaxed',
+    label: 'A+',
+    titleKey: 'grammarDetail.fontScaleRelaxed',
+    titleDefault: 'Relaxed',
+  },
   { value: 'large', label: 'A++', titleKey: 'grammarDetail.fontScaleLarge', titleDefault: 'Large' },
 ];
 
@@ -140,18 +150,14 @@ interface GrammarDetailPaneProps {
 }
 
 function isReaderFontScale(value: string): value is ReaderFontScale {
-  return (
-    value === 'compact' ||
-    value === 'comfortable' ||
-    value === 'relaxed' ||
-    value === 'large'
-  );
+  return value === 'compact' || value === 'comfortable' || value === 'relaxed' || value === 'large';
 }
 
 function extractTextContent(node: React.ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractTextContent).join('');
-  if (React.isValidElement(node)) return extractTextContent((node.props as { children?: React.ReactNode }).children);
+  if (React.isValidElement(node))
+    return extractTextContent((node.props as { children?: React.ReactNode }).children);
   return '';
 }
 
@@ -174,20 +180,13 @@ function wrapMaskedInlineNode(
   key: string
 ): React.ReactNode {
   return (
-    <span
-      key={key}
-      data-grammar-mask={maskKind}
-      className={getRedEyeMaskClass(redEyeEnabled)}
-    >
+    <span key={key} data-grammar-mask={maskKind} className={getRedEyeMaskClass(redEyeEnabled)}>
       {node}
     </span>
   );
 }
 
-function renderMaskedTextSegments(
-  input: string,
-  redEyeEnabled: boolean
-): React.ReactNode[] {
+function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.ReactNode[] {
   const segments: React.ReactNode[] = [];
   let remaining = input;
   let key = 0;
@@ -217,7 +216,9 @@ function renderMaskedTextSegments(
 
     if (next.kind === 'translation-line' || next.kind === 'answer-line') {
       const token =
-        next.kind === 'translation-line' ? GRAMMAR_MASK_TRANSLATION_TOKEN : GRAMMAR_MASK_ANSWER_TOKEN;
+        next.kind === 'translation-line'
+          ? GRAMMAR_MASK_TRANSLATION_TOKEN
+          : GRAMMAR_MASK_ANSWER_TOKEN;
       const maskedContent = stripGrammarMaskTokens(remaining.slice(next.index + token.length));
       segments.push(
         <span
@@ -262,10 +263,7 @@ function renderMaskedTextSegments(
   return segments;
 }
 
-function renderMaskedNode(
-  node: React.ReactNode,
-  redEyeEnabled: boolean
-): React.ReactNode {
+function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.ReactNode {
   if (typeof node === 'string' || typeof node === 'number') {
     return renderMaskedTextSegments(String(node), redEyeEnabled);
   }
@@ -546,7 +544,8 @@ const MarkdownRenderer: React.FC<{
               ? 'answer'
               : rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
                 ? 'translation'
-                : LEADING_ANSWER_LABEL_RE.test(cleanText) || LEADING_CORRECTION_LABEL_RE.test(cleanText)
+                : LEADING_ANSWER_LABEL_RE.test(cleanText) ||
+                    LEADING_CORRECTION_LABEL_RE.test(cleanText)
                   ? 'answer'
                   : null;
           return (
@@ -1013,10 +1012,7 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
     window.localStorage.setItem(READER_RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
   }, [redEyeEnabled]);
 
-  const readerVars = useMemo(
-    () => READER_FONT_SCALE_VARS[fontScale] as CSSProperties,
-    [fontScale]
-  );
+  const readerVars = useMemo(() => READER_FONT_SCALE_VARS[fontScale] as CSSProperties, [fontScale]);
 
   if (!grammar) return <EmptyGrammarState t={t as TranslateFn} />;
 
@@ -1035,7 +1031,12 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
   const rulesObject = resolveRulesObject(grammar);
 
   return (
-    <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+    <main
+      className="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-950 select-none print:hidden"
+      onCopy={e => e.preventDefault()}
+      onContextMenu={e => e.preventDefault()}
+      onDragStart={e => e.preventDefault()}
+    >
       <ReaderDisplayControls
         fontScale={fontScale}
         onChange={setFontScale}
